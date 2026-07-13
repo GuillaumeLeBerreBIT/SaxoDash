@@ -1,0 +1,22 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Python / Django (backend/)
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+.pytest_cache/
+staticfiles/
+media/
+
+# Node / Vite (frontend/)
+node_modules/
+dist/
+frontend/.vite/
+
+# Env files (both apps)
+.env
+.env.local
