@@ -10,6 +10,15 @@
 > for it, run it. Use superpowers:executing-plans as the checkpoint
 > structure, but replace every "implement this" step with "coach the
 > user through implementing this."
+>
+> **Git is hands-off**: the user commits on their own schedule. Don't run
+> `git add`/`git commit` — leave "Commit" steps unchecked even once the
+> rest of a task is done; they're not part of this plan's tracked state.
+>
+> **Progress so far**: project package is named `backend` (not
+> `saxodash` — `startproject backend .` was run instead), all code
+> snippets below already reflect this. Task 1 steps 1–4 are done and
+> checked off; `manage.py check` passes.
 
 **Goal:** A running Django REST Framework API serving Position,
 Transaction, and BankAccount/net-worth data (seeded mock data) behind
