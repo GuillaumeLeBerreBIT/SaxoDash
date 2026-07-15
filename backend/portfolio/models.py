@@ -3,7 +3,7 @@ from django.db import models
 class Position(models.Model):
     TYPE_CHOICES = [('STOCK', 'Stock'), ('ETF', 'ETF')]
     
-    ticker = models.CharField(max_length=10, unique=True, null=False)
+    ticker = models.CharField(max_length=10, unique=True)
     name = models.CharField(max_length=100)
     qty = models.IntegerField()
     avg_cost = models.DecimalField(max_digits=12, decimal_places=2)
