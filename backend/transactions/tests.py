@@ -3,7 +3,7 @@ from datetime import datetime, date
 from django.test import TestCase
 from transactions.models import Transaction
 from decimal import Decimal
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 
@@ -31,8 +31,8 @@ class TransactioModelTest(TestCase):
 class TransactionAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
         Transaction.objects.create(
             date=date(2026, 1, 10), type='BUY', instrument='NVIDIA', ticker='NVDA',

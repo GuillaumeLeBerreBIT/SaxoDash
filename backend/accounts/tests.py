@@ -2,7 +2,7 @@ from django.test import TestCase
 from decimal import Decimal
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
 from accounts.services import get_total_bank_balance
@@ -38,8 +38,8 @@ class BankAccountServiceTest(TestCase):
 class AccountsAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
         Position.objects.create(
             ticker='NVDA', name='NVIDIA', qty=10,

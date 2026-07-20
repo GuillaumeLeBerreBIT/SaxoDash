@@ -5,7 +5,7 @@ from portfolio.serializers import PositionSerializer
 from portfolio.services import get_positions_total_value
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
-from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 # Create your tests here.
@@ -49,8 +49,8 @@ class PositionSerializerTest(TestCase):
 class PortfolioAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
         Position.objects.create(
             ticker='NVDA', name='NVIDIA', qty=10,
             avg_cost=Decimal('100.00'), current_price=Decimal('150.00'),
