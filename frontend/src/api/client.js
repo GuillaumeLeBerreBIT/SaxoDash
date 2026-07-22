@@ -13,6 +13,7 @@ const setTokens = ({ access, refresh }) => {
 const clearTokens = () => {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  localStorage.removeItem("username");
 };
 
 export async function login(username, password) {
@@ -23,6 +24,11 @@ export async function login(username, password) {
   });
   if (!res.ok) throw new Error("Invalid credentials");
   setTokens(await res.json());
+  localStorage.setItem("username", username);
+}
+
+export function getUsername() {
+  return localStorage.getItem("username");
 }
 
 async function refreshAccessToken() {
