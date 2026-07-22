@@ -1,5 +1,56 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --animate-pagein: pagein 200ms ease-out both;
+  @keyframes pagein {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+html, body {
+  background: #09090b;
+  color: #fafafa;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
 body {
   margin: 0;
 }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(900px 420px at 62% -80px, rgba(59, 130, 246, 0.055), transparent 70%);
+}
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+button, a, [role="button"], tr, input, select {
+  transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+}
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #27272a; border-radius: 6px; }
+*::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+.num { font-variant-numeric: tabular-nums; }
+.recharts-cartesian-axis-tick-value { fill: #71717a !important; font-size: 11px; }
+.recharts-tooltip-wrapper { outline: none; }
