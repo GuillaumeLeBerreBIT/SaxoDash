@@ -87,22 +87,27 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
       <div className={`border-t border-white/[0.06] ${collapsed ? 'p-2' : 'p-3'}`}>
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
-          <div className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-medium flex items-center justify-center shrink-0">
+          <div
+            title={collapsed ? username : undefined}
+            className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-medium flex items-center justify-center shrink-0"
+          >
             {initials}
           </div>
           {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] text-zinc-100 font-medium leading-tight truncate">{username}</div>
-              <div className="text-[11px] text-zinc-500 leading-tight">Personal</div>
-            </div>
+            <>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] text-zinc-100 font-medium leading-tight truncate">{username}</div>
+                <div className="text-[11px] text-zinc-500 leading-tight">Personal</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Log out"
+                className="w-7 h-7 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800/60 flex items-center justify-center shrink-0"
+              >
+                <LogOut size={14} />
+              </button>
+            </>
           )}
-          <button
-            onClick={handleLogout}
-            title="Log out"
-            className="w-7 h-7 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800/60 flex items-center justify-center shrink-0"
-          >
-            <LogOut size={14} />
-          </button>
         </div>
       </div>
     </aside>
