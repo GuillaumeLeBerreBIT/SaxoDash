@@ -1,6 +1,6 @@
-import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, List, LineChart, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { getUsername } from '../api/client'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { LayoutDashboard, Briefcase, List, LineChart, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
+import { getUsername, logout } from '../api/client'
 
 const items = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -9,8 +9,14 @@ const items = [
 ]
 
 export default function Sidebar({ collapsed, setCollapsed }) {
+  const navigate = useNavigate()
   const username = getUsername() || 'Account'
   const initials = username.slice(0, 2).toUpperCase()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
   const width = collapsed ? 64 : 220
   const labelCls = `whitespace-nowrap overflow-hidden transition-[opacity,width] duration-300 ease-out ${
     collapsed ? 'opacity-0 w-0' : 'opacity-100'
@@ -85,11 +91,18 @@ export default function Sidebar({ collapsed, setCollapsed }) {
             {initials}
           </div>
           {!collapsed && (
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-[13px] text-zinc-100 font-medium leading-tight truncate">{username}</div>
               <div className="text-[11px] text-zinc-500 leading-tight">Personal</div>
             </div>
           )}
+          <button
+            onClick={handleLogout}
+            title="Log out"
+            className="w-7 h-7 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800/60 flex items-center justify-center shrink-0"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
       </div>
     </aside>

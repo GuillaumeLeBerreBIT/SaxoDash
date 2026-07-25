@@ -31,10 +31,14 @@ export function getUsername() {
   return localStorage.getItem("username");
 }
 
+export function logout() {
+  clearTokens();
+}
+
 async function refreshAccessToken() {
   const { refresh } = getTokens();
   if (!refresh) return false;
-  const res = fetch(`${BASE_URL}/api/token/refresh/`, {
+  const res = await fetch(`${BASE_URL}/api/token/refresh/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh }),
