@@ -35,6 +35,10 @@ export function logout() {
   clearTokens();
 }
 
+export function isAuthenticated() {
+  return Boolean(getTokens().access);
+}
+
 async function refreshAccessToken() {
   const { refresh } = getTokens();
   if (!refresh) return false;
