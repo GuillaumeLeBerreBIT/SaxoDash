@@ -109,10 +109,10 @@ export default function Dashboard() {
 
         <Card className="col-span-2">
           <CardHeader title="Allocation" subtitle="By position" />
-          <div className="mt-3 h-[200px] flex items-center">
+          <div className="mt-3 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={summary.allocation} dataKey="value" nameKey="ticker" innerRadius={55} outerRadius={85} paddingAngle={2} stroke="#18181b" strokeWidth={2}>
+                <Pie data={summary.allocation} dataKey="value" nameKey="ticker" innerRadius={55} outerRadius={85} paddingAngle={2} stroke="#18181b" strokeWidth={2} isAnimationActive={false}>
                   {summary.allocation.map((e, i) => (
                     <Cell key={i} fill={e.color} />
                   ))}

@@ -129,7 +129,7 @@ export default function Portfolio() {
                   <td className="px-2 py-3" />
                   <td className="px-2 py-3 text-right num text-zinc-100 font-medium">{fmtEur(totals.value)}</td>
                   <td className="px-2 py-3 text-right num text-blue-400 font-medium">{fmtEur(totals.pnl, { sign: true })}</td>
-                  <td className="px-5 py-3 text-right num text-zinc-300">100,0%</td>
+                  <td className="px-5 py-3 text-right num text-zinc-300">100.0%</td>
                 </tr>
               </tbody>
             </table>

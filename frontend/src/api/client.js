@@ -39,18 +39,30 @@ export function isAuthenticated() {
   return Boolean(getTokens().access);
 }
 
-async function refreshAccessToken() {
-  const { refresh } = getTokens();
-  if (!refresh) return false;
-  const res = await fetch(`${BASE_URL}/api/token/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-  });
+let refreshPromise = null;
 
-  if (!res.ok) return false;
-  setTokens(await res.json());
-  return true;
+async function refreshAccessToken() {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const { refresh } = getTokens();
+    if (!refresh) return false;
+    const res = await fetch(`${BASE_URL}/api/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+
+    if (!res.ok) return false;
+    setTokens(await res.json());
+    return true;
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
 async function apiFetch(path, options = {}) {
