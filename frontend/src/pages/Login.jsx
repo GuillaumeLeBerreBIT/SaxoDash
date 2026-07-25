@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { LineChart } from 'lucide-react'
 import { login } from '../api/client'
 
@@ -8,13 +8,14 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
     try {
       await login(username, password)
-      navigate('/')
+      navigate(location.state?.from?.pathname ?? '/')
     } catch {
       setError('Invalid username or password')
     }
