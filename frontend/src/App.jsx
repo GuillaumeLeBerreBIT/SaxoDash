@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
 import Transactions from './pages/Transactions'
 import Login from './pages/Login'
+import NotFound from './pages/NotFound'
 
 function App() {
 
@@ -18,6 +19,7 @@ function App() {
           <Route path='transactions' element={<Transactions />} />
         </Route>
       </Route>
+      <Route path='*' element={<NotFound />} />
     </Routes>
   )
 }
