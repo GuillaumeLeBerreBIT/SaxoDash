@@ -1,12 +1,16 @@
+import random
 from decimal import Decimal
-from datetime import date
+from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from portfolio.models import Position
+from portfolio.services import get_positions_total_value
 from transactions.models import Transaction
 from accounts.models import BankAccount
+from accounts.services import get_total_bank_balance
+from core.models import NetWorthSnapshot
 
 
 POSITIONS = [
@@ -75,6 +79,39 @@ BANK_ACCOUNTS = [
 ]
 
 
+def build_networth_snapshots(portfolio_target, bank_target, days=365):
+    rng = random.Random(42)
+    today = date.today()
+
+    def walk(target, start_ratio, noise_pct, jump_chance=0.0, jump_range=(0, 0)):
+        values = []
+        v = target * Decimal(str(start_ratio))
+        for i in range(days):
+            remaining = max(days - i, 1)
+            drift = (target - v) / Decimal(remaining)
+            noise = v * Decimal(str(rng.uniform(-noise_pct, noise_pct)))
+            jump = Decimal('0')
+            if jump_chance and rng.random() < jump_chance:
+                jump = Decimal(str(rng.uniform(*jump_range)))
+            v = max(v + drift + noise + jump, Decimal('0'))
+            values.append(v)
+        values[-1] = target
+        return values
+
+    portfolio_values = walk(portfolio_target, 0.62, 0.015)
+    bank_values = walk(bank_target, 0.75, 0.01,
+                       jump_chance=0.06, jump_range=(-300, 500))
+
+    snapshots = []
+    for i in range(days):
+        d = today - timedelta(days=days - 1 - i)
+        pv = portfolio_values[i].quantize(Decimal('0.01'))
+        bv = bank_values[i].quantize(Decimal('0.01'))
+        snapshots.append(NetWorthSnapshot(
+            date=d, portfolio_value=pv, bank_total=bv, net_worth=pv + bv))
+    return snapshots
+
+
 class Command(BaseCommand):
     help = 'Seed the database with demo data (idempotent: clears then re-seeds)'
 
@@ -83,12 +120,20 @@ class Command(BaseCommand):
         Position.objects.all().delete()
         Transaction.objects.all().delete()
         BankAccount.objects.all().delete()
+        NetWorthSnapshot.objects.all().delete()
 
         Position.objects.bulk_create([Position(**p) for p in POSITIONS])
-        Transaction.objects.bulk_create([Transaction(**t) for t in TRANSACTIONS])
-        BankAccount.objects.bulk_create([BankAccount(**b) for b in BANK_ACCOUNTS])
+        Transaction.objects.bulk_create(
+            [Transaction(**t) for t in TRANSACTIONS])
+        BankAccount.objects.bulk_create(
+            [BankAccount(**b) for b in BANK_ACCOUNTS])
+
+        snapshots = build_networth_snapshots(
+            get_positions_total_value(), get_total_bank_balance(),
+        )
+        NetWorthSnapshot.objects.bulk_create(snapshots)
 
         self.stdout.write(self.style.SUCCESS(
             f'Seeded {len(POSITIONS)} positions, {len(TRANSACTIONS)} transactions, '
-            f'{len(BANK_ACCOUNTS)} bank accounts.'
+            f'{len(BANK_ACCOUNTS)} bank accounts, {len(snapshots)} net worth snapshots.'
         ))

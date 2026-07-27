@@ -6,6 +6,7 @@ from decimal import Decimal
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
+from transactions.services import get_monthly_cash_flow
 
 class TransactioModelTest(TestCase):
     def test_create_transaction(self):
@@ -68,3 +69,64 @@ class TransactionAPITest(APITestCase):
         response = self.client.get('/api/transactions/?date_from=2026-02-01&date_to=2026-12-31')
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['type'], 'DIVIDEND')
+
+
+class MonthlyCashFlowServiceTest(TestCase):
+    def setUp(self):
+        Transaction.objects.create(
+            date=date(2026, 6, 1), type='DEPOSIT', instrument='Cash Deposit',
+            ticker='-', qty=Decimal('1'), price=Decimal('1000.00'), account='Saxo',
+        )
+        Transaction.objects.create(
+            date=date(2026, 6, 15), type='DIVIDEND', instrument='NVIDIA Corporation',
+            ticker='NVDA', qty=Decimal('1'), price=Decimal('50.00'), account='Saxo',
+        )
+        Transaction.objects.create(
+            date=date(2026, 6, 20), type='FEE', instrument='Brokerage Fee',
+            ticker='-', qty=Decimal('1'), price=Decimal('10.00'), account='Saxo',
+        )
+        Transaction.objects.create(
+            date=date(2026, 6, 10), type='BUY', instrument='NVIDIA Corporation',
+            ticker='NVDA', qty=Decimal('2'), price=Decimal('700.00'), account='Saxo',
+        )
+        Transaction.objects.create(
+            date=date(2026, 7, 5), type='DEPOSIT', instrument='Cash Deposit',
+            ticker='-', qty=Decimal('1'), price=Decimal('300.00'), account='Saxo',
+        )
+
+    def test_groups_by_month_and_sums_inflow_outflow(self):
+        result = get_monthly_cash_flow()
+        by_month = {row['month']: row for row in result}
+
+        self.assertEqual(by_month['2026-06']['inflow'], Decimal('1050.00'))
+        self.assertEqual(by_month['2026-06']['outflow'], Decimal('10.00'))
+        self.assertEqual(by_month['2026-07']['inflow'], Decimal('300.00'))
+        self.assertEqual(by_month['2026-07']['outflow'], Decimal('0'))
+
+    def test_ordered_by_month_ascending(self):
+        result = get_monthly_cash_flow()
+        months = [row['month'] for row in result]
+        self.assertEqual(months, sorted(months))
+
+
+class CashFlowAPITest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='alex', password='pw')
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        Transaction.objects.create(
+            date=date(2026, 6, 1), type='DEPOSIT', instrument='Cash Deposit',
+            ticker='-', qty=Decimal('1'), price=Decimal('500.00'), account='Saxo',
+        )
+
+    def test_requires_auth(self):
+        self.client.credentials()
+        response = self.client.get('/api/transactions/cash-flow/')
+        self.assertEqual(response.status_code, 401)
+
+    def test_returns_monthly_rows(self):
+        response = self.client.get('/api/transactions/cash-flow/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, [
+            {'month': '2026-06', 'inflow': '500.00', 'outflow': '0.00'},
+        ])
