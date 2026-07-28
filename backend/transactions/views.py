@@ -3,7 +3,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView, Response
 from .models import Transaction
 from .filters import TransactionFilter
-from .serializers import TransactionSerializer
+from .serializers import TransactionSerializer, CashFlowRowSerializer
 from .services import get_monthly_cash_flow
 from django_filters.rest_framework import DjangoFilterBackend
 # Create your views here.
@@ -17,4 +17,5 @@ class TransactionListView(ListAPIView):
 class CashFlowView(APIView):
 
     def get(self, request):
-        return Response(get_monthly_cash_flow())
+        serializer = CashFlowRowSerializer(get_monthly_cash_flow(), many=True)
+        return Response(serializer.data)

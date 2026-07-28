@@ -21,7 +21,7 @@ def get_monthly_cash_flow():
                     output_field=MONEY_FIELD,
                 )
             ),
-            outflow=(
+            outflow=Sum(
                 Case(
                     When(type='FEE', then=AMOUNT),
                     default=Decimal('0'),
