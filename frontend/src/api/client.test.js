@@ -5,6 +5,8 @@ import {
   isAuthenticated,
   getUsername,
   getPositions,
+  getNetWorthHistory,
+  getCashFlow,
 } from './client'
 
 function jsonResponse(body, ok = true, status = ok ? 200 : 400) {
@@ -134,5 +136,45 @@ describe('apiFetch (via getPositions)', () => {
     expect(localStorage.getItem('access')).toBeNull()
     expect(localStorage.getItem('refresh')).toBeNull()
     expect(window.location.href).toBe('/login')
+  })
+})
+
+describe('getNetWorthHistory / getCashFlow', () => {
+  it('requests net worth history with the given range', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse([{ date: '2026-07-01', net_worth: '1000.00' }]))
+
+    const result = await getNetWorthHistory('6M')
+
+    expect(result).toEqual([{ date: '2026-07-01', net_worth: '1000.00' }])
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/core/net-worth-history/?range=6M'),
+      expect.anything()
+    )
+  })
+
+  it('defaults range to ALL when not provided', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse([]))
+
+    await getNetWorthHistory()
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/core/net-worth-history/?range=ALL'),
+      expect.anything()
+    )
+  })
+
+  it('requests monthly cash flow', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse([{ month: '2026-06', inflow: '500.00', outflow: '10.00' }]))
+
+    const result = await getCashFlow()
+
+    expect(result).toEqual([{ month: '2026-06', inflow: '500.00', outflow: '10.00' }])
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/transactions/cash-flow/'),
+      expect.anything()
+    )
   })
 })

@@ -9,5 +9,5 @@ export const chartTooltipProps = {
   },
   labelStyle: { color: '#a1a1aa', fontSize: '11px', marginBottom: '4px' },
   itemStyle: { color: '#fafafa', padding: '1px 0' },
-  cursor: { stroke: 'rgba(255,255,255,0.1)' },
+  cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
 }

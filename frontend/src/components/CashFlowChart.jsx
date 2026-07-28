@@ -1,0 +1,57 @@
+import { useEffect, useState } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { getCashFlow } from '../api/client'
+import { fmtEur } from '../lib/format'
+import { chartTooltipProps } from '../lib/charts'
+import { Card, CardHeader } from './ui'
+
+export default function CashFlowChart() {
+  const [data, setData] = useState([])
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getCashFlow()
+      .then((res) => {
+        if (!cancelled) setData(res)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load cash flow')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (error) {
+    return (
+      <Card>
+        <div className="text-red-400 text-sm">{error}</div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Monthly cash flow" subtitle="Deposits & dividends vs. fees" />
+      <div className="mt-4 h-[220px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fill: '#71717a', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              width={70}
+              tickFormatter={(v) => fmtEur(v, { decimals: 0 })}
+            />
+            <Tooltip {...chartTooltipProps} formatter={(v, n) => [fmtEur(v), n]} />
+            <Bar dataKey="inflow" name="Inflow" fill="#34d399" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            <Bar dataKey="outflow" name="Outflow" fill="#f87171" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
+  )
+}
