@@ -2,33 +2,15 @@ import { useEffect, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getNetWorthHistory } from '../api/client'
 import { fmtEur } from '../lib/format'
-import { chartTooltipProps } from '../lib/charts'
+import { chartTooltipProps, formatAxisDate } from '../lib/charts'
+import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 
-const RANGES = ['1M', '3M', '6M', '1Y', 'ALL']
 const VIEWS = [
   { key: 'ALL', label: 'All' },
   { key: 'INVESTMENTS', label: 'Investments' },
   { key: 'BANK', label: 'Bank' },
 ]
-
-function formatAxisDate(value) {
-  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-}
-
-function Pill({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-[11.5px] px-2.5 py-1 rounded-md font-medium transition-colors ${
-        active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
 
 export default function NetWorthChart() {
   const [range, setRange] = useState('6M')
@@ -76,13 +58,7 @@ export default function NetWorthChart() {
                 </Pill>
               ))}
             </div>
-            <div className="flex items-center gap-1">
-              {RANGES.map((r) => (
-                <Pill key={r} active={range === r} onClick={() => setRange(r)}>
-                  {r}
-                </Pill>
-              ))}
-            </div>
+            <RangePills value={range} onChange={setRange} />
           </div>
         }
       />

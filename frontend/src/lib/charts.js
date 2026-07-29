@@ -11,3 +11,7 @@ export const chartTooltipProps = {
   itemStyle: { color: '#fafafa', padding: '1px 0' },
   cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
 }
+
+export function formatAxisDate(value) {
+  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}

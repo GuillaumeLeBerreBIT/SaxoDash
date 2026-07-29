@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { getPortfolioSummary, getPositions, getNetWorth } from '../api/client'
 import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
+import PortfolioValueChart from '../components/PortfolioValueChart'
+import GainersLosersChart from '../components/GainersLosersChart'
 
 const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
 
@@ -70,6 +72,8 @@ export default function Portfolio() {
           </div>
         </div>
       </Card>
+
+      <PortfolioValueChart />
 
       <div className="grid grid-cols-20 gap-4" style={{ gridTemplateColumns: '65fr 35fr' }}>
         <Card padding={false}>
@@ -172,6 +176,8 @@ export default function Portfolio() {
           </Card>
         </div>
       </div>
+
+      <GainersLosersChart positions={positions} />
     </div>
   )
 }
