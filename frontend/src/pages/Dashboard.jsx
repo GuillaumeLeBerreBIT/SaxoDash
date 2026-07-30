@@ -7,7 +7,6 @@ import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, StatCard, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
 import NetWorthChart from '../components/NetWorthChart'
-import CashFlowChart from '../components/CashFlowChart'
 
 const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
 
@@ -139,8 +138,6 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
-
-      <CashFlowChart />
 
       <Card padding={false}>
         <div className="p-5 pb-3">
