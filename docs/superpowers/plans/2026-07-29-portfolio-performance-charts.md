@@ -1,5 +1,7 @@
 # Portfolio Performance Charts Implementation Plan
 
+> **Status: ✅ COMPLETE (2026-07-29)** — All 5 tasks implemented, task-reviewed, and whole-branch reviewed (ready to merge). Frontend 18/18 tests pass; lint + build clean; verified in-browser on the Portfolio page. Executed subagent-driven in stage-only mode (changes staged; user commits).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add two performance charts to the Portfolio page — an investment-value-over-time area chart and a gainers/losers P&L% bar chart — reusing existing endpoints with no backend changes.
@@ -32,7 +34,7 @@
 
 This task has no unit test (the affected components are visually verified per the codebase precedent). Its verification is: lint clean, existing test suite still green, build succeeds, and the Net worth chart still renders/behaves in the browser.
 
-- [ ] **Step 1: Create the shared `RangePills` module**
+- [x] **Step 1: Create the shared `RangePills` module**
 
 Create `frontend/src/components/RangePills.jsx`:
 
@@ -66,7 +68,7 @@ export function RangePills({ value, onChange }) {
 }
 ```
 
-- [ ] **Step 2: Add `formatAxisDate` to `lib/charts.js`**
+- [x] **Step 2: Add `formatAxisDate` to `lib/charts.js`**
 
 Append to `frontend/src/lib/charts.js` (after the existing `chartTooltipProps` export):
 
@@ -76,7 +78,7 @@ export function formatAxisDate(value) {
 }
 ```
 
-- [ ] **Step 3: Refactor `NetWorthChart.jsx` to use the shared pieces**
+- [x] **Step 3: Refactor `NetWorthChart.jsx` to use the shared pieces**
 
 Replace the entire contents of `frontend/src/components/NetWorthChart.jsx` with (imports updated; local `RANGES`, `Pill`, and `formatAxisDate` removed; range row now uses `<RangePills>`; the Investments/Bank/All toggle keeps using the shared `Pill`):
 
@@ -209,7 +211,7 @@ export default function NetWorthChart() {
 }
 ```
 
-- [ ] **Step 4: Verify lint, tests, and build**
+- [x] **Step 4: Verify lint, tests, and build**
 
 Run:
 ```bash
@@ -220,7 +222,7 @@ npm run build
 ```
 Expected: lint clean, all existing tests pass (14), build succeeds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/components/RangePills.jsx frontend/src/lib/charts.js frontend/src/components/NetWorthChart.jsx
@@ -239,7 +241,7 @@ git commit -m "refactor: extract shared RangePills and formatAxisDate"
 - Produces: `toGainersLosersData(positions) → Array<{ ticker: string, pnlPct: number }>` — maps each position to its ticker and numeric `pnl_pct`, sorted descending (best P&L% first). Empty input returns `[]`.
 - Consumes: position objects shaped like the `getPositions()` response (each has `ticker` and `pnl_pct`, where `pnl_pct` is a decimal string like `'50.00'`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/lib/performance.test.js`:
 
@@ -273,12 +275,12 @@ describe('toGainersLosersData', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd frontend && npm test`
 Expected: FAIL — `toGainersLosersData is not a function` / import error from `./performance`.
 
-- [ ] **Step 3: Implement the helper**
+- [x] **Step 3: Implement the helper**
 
 Create `frontend/src/lib/performance.js`:
 
@@ -290,12 +292,12 @@ export function toGainersLosersData(positions) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `cd frontend && npm test`
 Expected: all tests pass (existing 14 + 4 new = 18).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/lib/performance.js frontend/src/lib/performance.test.js
@@ -315,7 +317,7 @@ git commit -m "feat: add toGainersLosersData helper"
 
 Visually verified in-browser (Task 5), consistent with the codebase precedent — no automated test for this component.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `frontend/src/components/PortfolioValueChart.jsx`:
 
@@ -405,12 +407,12 @@ export default function PortfolioValueChart() {
 }
 ```
 
-- [ ] **Step 2: Lint**
+- [x] **Step 2: Lint**
 
 Run: `cd frontend && npm run lint`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/PortfolioValueChart.jsx
@@ -430,7 +432,7 @@ git commit -m "feat: add PortfolioValueChart component"
 
 Visually verified in-browser (Task 5) — no automated test for this component; the data logic it relies on is covered by Task 2.
 
-- [ ] **Step 1: Create the component**
+- [x] **Step 1: Create the component**
 
 Create `frontend/src/components/GainersLosersChart.jsx`:
 
@@ -480,12 +482,12 @@ export default function GainersLosersChart({ positions }) {
 }
 ```
 
-- [ ] **Step 2: Lint**
+- [x] **Step 2: Lint**
 
 Run: `cd frontend && npm run lint`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add frontend/src/components/GainersLosersChart.jsx
@@ -502,7 +504,7 @@ git commit -m "feat: add GainersLosersChart component"
 **Interfaces:**
 - Consumes: `PortfolioValueChart` (default export from `../components/PortfolioValueChart`, Task 3); `GainersLosersChart` (default export from `../components/GainersLosersChart`, Task 4). `Portfolio.jsx` already holds `positions` in state and fetches it.
 
-- [ ] **Step 1: Add the imports**
+- [x] **Step 1: Add the imports**
 
 In `frontend/src/pages/Portfolio.jsx`, add after the existing `import { Card, CardHeader, PageHeader, Badge } from '../components/ui'` line:
 
@@ -511,7 +513,7 @@ import PortfolioValueChart from '../components/PortfolioValueChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 ```
 
-- [ ] **Step 2: Render `PortfolioValueChart` under the summary card**
+- [x] **Step 2: Render `PortfolioValueChart` under the summary card**
 
 The summary card is the first `<Card>` block (the `grid grid-cols-3` net-worth summary). Immediately after its closing `</Card>` and before the `<div className="grid grid-cols-20 gap-4" ...>` holdings grid, insert:
 
@@ -522,7 +524,7 @@ The summary card is the first `<Card>` block (the `grid grid-cols-3` net-worth s
 
 So the order becomes: summary `</Card>` → `<PortfolioValueChart />` → holdings/sidebar grid.
 
-- [ ] **Step 3: Render `GainersLosersChart` below the holdings grid**
+- [x] **Step 3: Render `GainersLosersChart` below the holdings grid**
 
 Immediately after the closing `</div>` of the `grid grid-cols-20` holdings/sidebar grid (the last element before the outer container's closing `</div>`), insert:
 
@@ -532,7 +534,7 @@ Immediately after the closing `</div>` of the `grid grid-cols-20` holdings/sideb
 
 So the order becomes: holdings/sidebar grid `</div>` → `<GainersLosersChart positions={positions} />` → outer `</div>`.
 
-- [ ] **Step 4: Run all frontend checks**
+- [x] **Step 4: Run all frontend checks**
 
 Run:
 ```bash
@@ -543,13 +545,13 @@ npm run build
 ```
 Expected: lint clean, all tests pass (18), build succeeds.
 
-- [ ] **Step 5: Manually verify in the browser**
+- [x] **Step 5: Manually verify in the browser**
 
 Run `cd backend && python manage.py runserver` (one terminal) and `cd frontend && npm run dev` (another), then open the app, log in, and on the Portfolio page confirm:
 - Below the summary card, the **Portfolio value** area chart renders an emerald filled area for the default 6M range, and clicking each range pill (1M/3M/6M/1Y/All) reloads it with a different date span.
 - Below the holdings/sidebar grid, the **Gainers & losers** chart shows one horizontal bar per holding, sorted best→worst top-to-bottom, green bars for positive P&L% and red for negative.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/pages/Portfolio.jsx
