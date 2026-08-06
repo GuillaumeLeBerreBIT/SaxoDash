@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APITestCase
 from django.contrib.auth.models import User
 from transactions.services import get_monthly_cash_flow
-
+from django.db.utils import IntegrityError
 class TransactioModelTest(TestCase):
     def test_create_transaction(self):
         tx = Transaction.objects.create(
@@ -130,3 +130,28 @@ class CashFlowAPITest(APITestCase):
         self.assertEqual(response.data, [
             {'month': '2026-06', 'inflow': '500.00', 'outflow': '0.00'},
         ])
+
+class TransactionSaxoTradeIdTest(TestCase):
+    def test_multiple_transactions_without_saxo_trade_id_are_allowed(self):
+        Transaction.objects.create(
+            date=date(2026, 1, 1), type='DEPOSIT', instrument='Cash Deposit',
+            ticker='-', qty=Decimal('1'), price=Decimal('100.00'), account='Saxo',
+        )
+        Transaction.objects.create(
+            date=date(2026, 1, 2), type='DEPOSIT', instrument='Cash Deposit',
+            ticker='-', qty=Decimal('1'), price=Decimal('200.00'), account='Saxo',
+        )
+        self.assertEqual(Transaction.objects.filter(saxo_trade_id__isnull=True).count(), 2)
+
+    def test_saxo_trade_id_is_unique_when_set(self):
+        Transaction.objects.create(
+            date=date(2026, 1, 1), type='SELL', instrument='NVIDIA', ticker='NVDA',
+            qty=Decimal('5'), price=Decimal('850.00'), account='Saxo',
+            saxo_trade_id='abc123',
+        )
+        with self.assertRaises(IntegrityError):
+            Transaction.objects.create(
+                date=date(2026, 1, 2), type='SELL', instrument='NVIDIA', ticker='NVDA',
+                qty=Decimal('5'), price=Decimal('860.00'), account='Saxo',
+                saxo_trade_id='abc123',
+            )
