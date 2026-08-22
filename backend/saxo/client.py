@@ -77,4 +77,4 @@ def get_account_balance(access_token):
 
 
 def get_closed_positions(access_token):
-    return _get(access_token, '/port/v1/closedpositions/me').get('Data', [])
+    return _get(access_token, '/port/v1/closedpositions/me')

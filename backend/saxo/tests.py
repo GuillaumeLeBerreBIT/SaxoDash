@@ -80,3 +80,15 @@ class SaxoClientTest(TestCase):
         mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
         with self.assertRaises(client.SaxoAPIError):
             client.get_positions('token')
+            
+    @patch('saxo.client.requests.get')
+    def test_get_closed_positions_returns_bare_list(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [{'ClosedPositionUniqueId': 1}])
+        result = client.get_closed_positions('token')
+        self.assertEqual(result, [{'ClosedPositionUniqueId': 1}])
+
+    @patch('saxo.client.requests.get')
+    def test_get_closed_positions_raises_on_api_error(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
+        with self.assertRaises(client.SaxoAPIError):
+            client.get_closed_positions('token')
