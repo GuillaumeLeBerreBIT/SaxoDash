@@ -6,10 +6,45 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from backend import settings
 from .models import SaxoCredential
+from datetime import date as date_cls
+from decimal import Decimal
+from django.contrib.auth.models import User
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+
+
+from . import mapping
 from . import client
 
 TEST_KEY = Fernet.generate_key().decode()
 
+SAMPLE_POSITION = {
+    'PositionBase': {
+        'Amount': 15,
+        'OpenPrice': 412.30,
+        'AssetType': 'Stock',
+    },
+    'PositionView': {
+        'CurrentPrice': 875.40,
+    },
+    'DisplayAndFormat': {
+        'Symbol': 'NVDA:xnas',
+        'Description': 'NVIDIA Corporation',
+    },
+}
+
+SAMPLE_CLOSED_POSITION = {
+    'ClosedPositionUniqueId': 987654321,
+    'ClosedPosition': {
+        'ExecutionTimeClose': '2026-06-01T14:32:00Z',
+        'Amount': -2,
+        'ClosingPrice': 410.00,
+    },
+    'DisplayAndFormat': {
+        'Symbol': 'MSFT:xnas',
+        'Description': 'Microsoft Corporation',
+    },
+}
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
 class SaxoCredentialModelTest(TestCase):
@@ -92,3 +127,89 @@ class SaxoClientTest(TestCase):
         mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
         with self.assertRaises(client.SaxoAPIError):
             client.get_closed_positions('token')
+
+class ToPositionFieldsTest(TestCase):
+    def test_maps_core_fields(self):
+        fields = mapping.to_position_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['ticker'], 'NVDA')
+        self.assertEqual(fields['name'], 'NVIDIA Corporation')
+        self.assertEqual(fields['qty'], 15)
+        self.assertEqual(fields['avg_cost'], Decimal('412.30'))
+        self.assertEqual(fields['current_price'], Decimal('875.40'))
+        self.assertEqual(fields['type'], 'STOCK')
+
+    def test_sector_and_color_are_always_present(self):
+        fields = mapping.to_position_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['sector'], 'Uncategorized')
+        self.assertTrue(fields['color'].startswith('#'))
+        self.assertEqual(len(fields['color']), 7)
+
+    def test_color_is_deterministic_per_ticker(self):
+        a = mapping.to_position_fields(SAMPLE_POSITION)
+        b = mapping.to_position_fields(SAMPLE_POSITION)
+        self.assertEqual(a['color'], b['color'])
+
+
+class ToTransactionFieldsTest(TestCase):
+    def test_maps_core_fields(self):
+        fields = mapping.to_transaction_fields(SAMPLE_CLOSED_POSITION)
+        self.assertEqual(fields['saxo_trade_id'], '987654321')
+        self.assertEqual(fields['date'], date_cls(2026, 6, 1))
+        self.assertEqual(fields['type'], 'SELL')
+        self.assertEqual(fields['instrument'], 'Microsoft Corporation')
+        self.assertEqual(fields['ticker'], 'MSFT')
+        self.assertEqual(fields['qty'], Decimal('2'))
+        self.assertEqual(fields['price'], Decimal('410.00'))
+        self.assertEqual(fields['account'], 'Saxo')
+        
+class SaxoConnectViewTest(APITestCase):
+    def test_redirects_to_saxo_authorize_url_and_sets_session_state(self):
+        response = self.client.get('/api/saxo/connect/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('sim.logonvalidation.net/authorize', response.url)
+        self.assertIn('saxo_oauth_state', self.client.session)
+
+
+class SaxoCallbackViewTest(APITestCase):
+    def test_rejects_mismatched_state(self):
+        session = self.client.session
+        session['saxo_oauth_state'] = 'expected-state'
+        session.save()
+
+        response = self.client.get('/api/saxo/callback/?code=abc&state=wrong-state')
+        self.assertEqual(response.status_code, 400)
+
+    @patch('saxo.views.client.exchange_code_for_token')
+    def test_saves_credential_on_success(self, mock_exchange):
+        mock_exchange.return_value = {
+            'access_token': 'new-access', 'refresh_token': 'new-refresh', 'expires_in': 1200,
+        }
+        session = self.client.session
+        session['saxo_oauth_state'] = 'matching-state'
+        session.save()
+
+        response = self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(SaxoCredential.objects.count(), 1)
+        self.assertEqual(SaxoCredential.objects.first().access_token, 'new-access')
+
+
+class SaxoStatusViewTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='alex', password='pw')
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+    def test_reports_not_connected_when_no_credential(self):
+        response = self.client.get('/api/saxo/status/')
+        self.assertEqual(response.data, {'connected': False})
+
+    def test_reports_connected_details_when_credential_exists(self):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(minutes=20),
+        )
+        response = self.client.get('/api/saxo/status/')
+        self.assertTrue(response.data['connected'])
+        self.assertEqual(response.data['environment'], 'sim')
+        self.assertFalse(response.data['needs_reauth'])

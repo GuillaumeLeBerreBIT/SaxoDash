@@ -26,4 +26,5 @@ urlpatterns = [
     path('api/core/', include('core.urls')),
     path('api/transactions/', include('transactions.urls')),
     path('api/accounts/', include('accounts.urls')),
+    path('api/saxo/', include('saxo.urls')),
 ]
