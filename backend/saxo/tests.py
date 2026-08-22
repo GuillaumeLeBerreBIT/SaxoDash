@@ -213,3 +213,102 @@ class SaxoStatusViewTest(APITestCase):
         self.assertTrue(response.data['connected'])
         self.assertEqual(response.data['environment'], 'sim')
         self.assertFalse(response.data['needs_reauth'])
+
+from portfolio.models import Position
+from transactions.models import Transaction
+from . import tasks
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class RefreshSaxoTokenTaskTest(TestCase):
+    def test_does_nothing_when_token_not_near_expiry(self):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        with patch('saxo.tasks.client.refresh_access_token') as mock_refresh:
+            tasks.refresh_saxo_token()
+            mock_refresh.assert_not_called()
+
+    @patch('saxo.tasks.client.refresh_access_token')
+    def test_refreshes_when_near_expiry(self, mock_refresh):
+        mock_refresh.return_value = {
+            'access_token': 'new-a', 'refresh_token': 'new-b', 'expires_in': 1200,
+        }
+        cred = SaxoCredential.objects.create(
+            access_token='old-a', refresh_token='old-b',
+            expires_at=timezone.now() + timedelta(minutes=2),
+        )
+        tasks.refresh_saxo_token()
+        cred.refresh_from_db()
+        self.assertEqual(cred.access_token, 'new-a')
+        self.assertFalse(cred.needs_reauth)
+
+    @patch('saxo.tasks.client.refresh_access_token')
+    def test_marks_needs_reauth_on_failure(self, mock_refresh):
+        mock_refresh.side_effect = client.SaxoAuthError('expired')
+        cred = SaxoCredential.objects.create(
+            access_token='old-a', refresh_token='old-b',
+            expires_at=timezone.now() + timedelta(minutes=2),
+        )
+        tasks.refresh_saxo_token()
+        cred.refresh_from_db()
+        self.assertTrue(cred.needs_reauth)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncPositionsTaskTest(TestCase):
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_creates_positions_from_saxo_data(self, mock_get_positions):
+        mock_get_positions.return_value = [SAMPLE_POSITION]
+        tasks.sync_positions()
+        self.assertEqual(Position.objects.count(), 1)
+        self.assertEqual(Position.objects.first().ticker, 'NVDA')
+        self.cred.refresh_from_db()
+        self.assertIsNotNone(self.cred.last_synced_at)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_removes_positions_no_longer_present(self, mock_get_positions):
+        Position.objects.create(
+            ticker='OLD', name='Old Corp', qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK', color='#000000',
+        )
+        mock_get_positions.return_value = [SAMPLE_POSITION]
+        tasks.sync_positions()
+        self.assertFalse(Position.objects.filter(ticker='OLD').exists())
+        self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_skips_malformed_rows_without_aborting(self, mock_get_positions):
+        mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
+        tasks.sync_positions()
+        self.assertEqual(Position.objects.count(), 1)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncTransactionsTaskTest(TestCase):
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_creates_transactions_from_saxo_data(self, mock_get_closed):
+        mock_get_closed.return_value = [SAMPLE_CLOSED_POSITION]
+        tasks.sync_transactions()
+        self.assertEqual(Transaction.objects.count(), 1)
+        self.assertEqual(Transaction.objects.first().saxo_trade_id, '987654321')
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_upserts_on_repeated_sync(self, mock_get_closed):
+        mock_get_closed.return_value = [SAMPLE_CLOSED_POSITION]
+        tasks.sync_transactions()
+        tasks.sync_transactions()
+        self.assertEqual(Transaction.objects.count(), 1)
