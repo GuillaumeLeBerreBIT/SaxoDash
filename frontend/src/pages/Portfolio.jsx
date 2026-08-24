@@ -4,6 +4,7 @@ import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
 import PortfolioValueChart from '../components/PortfolioValueChart'
 import GainersLosersChart from '../components/GainersLosersChart'
+import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 
 const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
 
@@ -49,7 +50,7 @@ export default function Portfolio() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Portfolio" subtitle="Holdings and allocation" />
+      <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
 
       <Card>
         <div className="grid grid-cols-3 gap-0">

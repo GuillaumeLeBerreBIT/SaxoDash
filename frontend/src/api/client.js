@@ -98,3 +98,5 @@ export const getBankAccounts = () => apiFetch('/api/accounts/')
 export const getNetWorth = () => apiFetch('/api/accounts/net-worth/')
 export const getNetWorthHistory = (range = 'ALL') => apiFetch(`/api/core/net-worth-history/?range=${range}`)
 export const getCashFlow = () => apiFetch('/api/transactions/cash-flow/')
+export const getSaxoStatus = () => apiFetch('/api/saxo/status/')
+export const connectSaxo = () => { window.location.href = `${BASE_URL}/api/saxo/connect/` }
