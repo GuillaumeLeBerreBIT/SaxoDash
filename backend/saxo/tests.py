@@ -177,7 +177,8 @@ class SaxoCallbackViewTest(APITestCase):
         session.save()
 
         response = self.client.get('/api/saxo/callback/?code=abc&state=wrong-state')
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('saxo=error', response.url)
 
     @patch('saxo.views.client.exchange_code_for_token')
     def test_saves_credential_on_success(self, mock_exchange):
@@ -189,7 +190,8 @@ class SaxoCallbackViewTest(APITestCase):
         session.save()
 
         response = self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('saxo=connected', response.url)
         self.assertEqual(SaxoCredential.objects.count(), 1)
         self.assertEqual(SaxoCredential.objects.first().access_token, 'new-access')
 

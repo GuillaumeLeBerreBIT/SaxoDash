@@ -91,6 +91,8 @@ CORS_ALLOWED_ORIGINS = [
     if o.strip()
 ]
 
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
 ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
