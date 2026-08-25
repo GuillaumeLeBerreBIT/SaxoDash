@@ -1,6 +1,7 @@
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.shortcuts import redirect
 from django.utils import timezone
 from rest_framework.permissions import AllowAny
@@ -28,18 +29,18 @@ class SaxoCallbackView(APIView):
         expected_state = request.session.pop('saxo_oauth_state', None)
         
         if not code or not state or state != expected_state:
-            return Response({'error': 'Invalid or missing OAuth state'}, status=400)
-        
+            return redirect(f"{settings.FRONTEND_URL}/portfolio?saxo=error")
+
         token_data = client.exchange_code_for_token(code)
-        
+
         SaxoCredential.objects.all().delete()
         SaxoCredential.objects.create(
             access_token=token_data['access_token'],
             refresh_token=token_data['refresh_token'],
             expires_at=timezone.now() + timedelta(seconds=token_data['expires_in']),
         )
-        
-        return Response({'connected': True})
+
+        return redirect(f"{settings.FRONTEND_URL}/portfolio?saxo=connected")
     
 class SaxoStatusView(APIView):
     

@@ -12,13 +12,20 @@ def to_position_fields(saxo_position):
     display = saxo_position.get('DisplayAndFormat', {})
     
     ticker = display.get('Symbol', '').split(':')[0]
-    
+
+    # Saxo returns CurrentPrice: 0.0 with CurrentPriceType: 'None' when no live
+    # price feed is available (e.g. market closed) - fall back to the position's
+    # open price rather than showing a $0 mark.
+    current_price = view.get('CurrentPrice', base['OpenPrice'])
+    if view.get('CurrentPriceType') == 'None':
+        current_price = base['OpenPrice']
+
     return {
         'ticker': ticker,
         'name': display.get('Description', ''),
         'qty': int(base['Amount']),
         'avg_cost': Decimal(str(base['OpenPrice'])),
-        'current_price': Decimal(str(view.get('CurrentPrice', base['OpenPrice']))),
+        'current_price': Decimal(str(current_price)),
         'sector': 'Uncategorized',
         'type': 'STOCK' if base.get('AssetType') == 'Stock' else 'ETF',
         'color': _color_for_ticker(ticker),
