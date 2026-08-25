@@ -57,10 +57,11 @@ def refresh_access_token(refresh_token):
     return response.json()
 
 
-def _get(access_token, path):
+def _get(access_token, path, params=None):
     response = requests.get(
         f'{API_BASE_URL}{path}',
         headers={'Authorization': f'Bearer {access_token}'},
+        params=params,
         timeout=10,
     )
     if not response.ok:
@@ -69,7 +70,8 @@ def _get(access_token, path):
 
 
 def get_positions(access_token):
-    return _get(access_token, '/port/v1/positions/me').get('Data', [])
+    params = {'FieldGroups': 'DisplayAndFormat,PositionBase,PositionView'}
+    return _get(access_token, '/port/v1/positions/me', params=params).get('Data', [])
 
 
 def get_account_balance(access_token):
