@@ -80,3 +80,15 @@ def get_account_balance(access_token):
 
 def get_closed_positions(access_token):
     return _get(access_token, '/port/v1/closedpositions/me')
+
+def get_client_key(access_token):
+    return _get(access_token=access_token, path='/port/v1/clients/me')['ClientKey']
+
+def get_transactions(access_token, from_date, to_date):
+    params = {
+        'ClientKey': get_client_key(access_token),
+        'FromDate':from_date,
+        'ToDate': to_date
+    }
+    
+    return _get(access_token, '/hist/v1/transactions', params=params).get('Data', [])

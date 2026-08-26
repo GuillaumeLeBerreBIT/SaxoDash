@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, date
 
 from celery import shared_task
 from django.utils import timezone
@@ -8,6 +8,7 @@ from transactions.models import Transaction
 
 from . import client, mapping
 from .models import SaxoCredential
+from accounts.models import BankAccount
 
 REFRESH_MARGIN = timedelta(minutes=5)
 
@@ -57,12 +58,19 @@ def sync_positions():
 
 @shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
 def sync_transactions():
+    import logging
+    logger = logging.getLogger(__name__)
     credential = SaxoCredential.objects.first()
     if not credential or credential.needs_reauth:
         return
 
-    saxo_activity = client.get_closed_positions(credential.access_token)
-
+    saxo_activity = client.get_transactions(
+        credential.access_token,
+        from_date=(date.today() - timedelta(days=30)).isoformat(),
+        to_date=date.today().isoformat()
+        )
+    logger.info('Raw Saxo transactions: %s', saxo_activity)
+    
     for raw_activity in saxo_activity:
         try:
             fields = mapping.to_transaction_fields(raw_activity)
@@ -74,3 +82,13 @@ def sync_transactions():
 
     credential.last_synced_at = timezone.now()
     credential.save(update_fields=['last_synced_at'])
+    
+@shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
+def sync_account_balance():
+    credential = SaxoCredential.objects.first()
+    if not credential or credential.needs_reauth:
+        return
+    
+    saxo_balance = client.get_account_balance(credential.access_token)
+    fields = mapping.to_account_fields(saxo_balance=saxo_balance)
+    BankAccount.objects.update_or_create(bank='Saxo', defaults=fields)

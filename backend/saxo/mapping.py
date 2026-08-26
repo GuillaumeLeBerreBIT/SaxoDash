@@ -45,3 +45,14 @@ def to_transaction_fields(saxo_closed_position):
         'price': Decimal(str(base['ClosingPrice'])),
         'account': 'Saxo',
     }
+    
+def to_account_fields(saxo_balance):
+    return {
+        'type': 'Cash',
+        'iban_masked': '-',
+        'balance': Decimal(str(saxo_balance['CashBalance'])),
+        'available': Decimal(str(saxo_balance['CollateralAvailable'])),
+        'gradient': 'from-slate-600 to-slate-800',
+        'accent': '#334155',
+    }
+    
