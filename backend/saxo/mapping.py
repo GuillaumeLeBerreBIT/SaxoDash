@@ -31,18 +31,32 @@ def to_position_fields(saxo_position):
         'color': _color_for_ticker(ticker),
     }
     
-def to_transaction_fields(saxo_closed_position):
-    base = saxo_closed_position['ClosedPosition']
-    display = saxo_closed_position.get('DisplayAndFormat', {})
-    
+def to_transaction_fields(saxo_position):
+    """Map one Saxo *open position* to an entry-trade ledger row.
+
+    Sourced from /port/v1/positions/me, not /hist/v1/transactions: the SIM
+    environment never populates the historical transactions endpoint (verified
+    2026-08-27 - empty for the full year), so the open position is the only
+    record of the entry trade. `saxo_trade_id` is the PositionId, so repeated
+    syncs upsert the same row instead of duplicating it. A negative Amount is a
+    short sale, so it maps to SELL.
+
+    Exit trades (closing a long) are not covered here yet - they come from
+    /port/v1/closedpositions/me, which had zero rows in SIM on 2026-08-27, so
+    that mapping is deferred until a real closed-position payload exists.
+    """
+    base = saxo_position['PositionBase']
+    display = saxo_position.get('DisplayAndFormat', {})
+    amount = base['Amount']
+
     return {
-        'saxo_trade_id': str(saxo_closed_position['ClosedPositionUniqueId']),
-        'date': date.fromisoformat(base['ExecutionTimeClose'][:10]),
-        'type': 'SELL',
+        'saxo_trade_id': str(saxo_position['PositionId']),
+        'date': date.fromisoformat(base['ExecutionTimeOpen'][:10]),
+        'type': 'BUY' if amount >= 0 else 'SELL',
         'instrument': display.get('Description', ''),
         'ticker': display.get('Symbol', '').split(':')[0],
-        'qty': Decimal(str(abs(base['Amount']))),
-        'price': Decimal(str(base['ClosingPrice'])),
+        'qty': Decimal(str(abs(amount))),
+        'price': Decimal(str(base['OpenPrice'])),
         'account': 'Saxo',
     }
     

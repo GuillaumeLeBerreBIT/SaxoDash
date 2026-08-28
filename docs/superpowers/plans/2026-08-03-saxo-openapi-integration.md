@@ -1275,14 +1275,14 @@ git commit -m "feat: add Celery tasks for Saxo token refresh and data sync"
 
 **Interfaces:** none produced — this task wires Task 7's tasks into `django-celery-beat`'s scheduler and is the final regression/verification gate for the whole backend milestone.
 
-- [ ] **Step 1: Create a superuser if you don't already have one**
+- [x] **Step 1: Create a superuser if you don't already have one**
 
 ```bash
 cd backend && python manage.py createsuperuser
 ```
 (Skip if you already log into `/admin/`.)
 
-- [ ] **Step 2: Register the three periodic tasks via Django admin**
+- [x] **Step 2: Register the three periodic tasks via Django admin**
 
 ```bash
 cd backend && python manage.py runserver
@@ -1293,11 +1293,11 @@ Visit `http://localhost:8000/admin/django_celery_beat/periodictask/add/`. Create
 |---|---|---|
 | Refresh Saxo token | `saxo.tasks.refresh_saxo_token` | every 10 minutes |
 | Sync Saxo positions | `saxo.tasks.sync_positions` | every 30 minutes |
-| Sync Saxo transactions | `saxo.tasks.sync_transactions` | every 60 minutes |
+| Sync Saxo transactions | `saxo.tasks.sync_transactions` | ~~every 60 minutes~~ moved to a nightly crontab (`0 1 * * *` UTC) on 2026-08-26, see Task 10 |
 
 Leave each "Enabled" checkbox checked.
 
-- [ ] **Step 3: Run the worker and beat scheduler**
+- [x] **Step 3: Run the worker and beat scheduler**
 
 In two separate terminals (with `runserver` still going in a third, and Redis running):
 ```bash
@@ -1307,7 +1307,7 @@ cd backend && celery -A backend worker -l info
 cd backend && celery -A backend beat -l info
 ```
 
-- [ ] **Step 4: Trigger an immediate sync manually rather than waiting for the schedule**
+- [x] **Step 4: Trigger an immediate sync manually rather than waiting for the schedule**
 
 ```bash
 cd backend && python manage.py shell -c "from saxo.tasks import sync_positions, sync_transactions; sync_positions.delay(); sync_transactions.delay()"
@@ -1318,19 +1318,25 @@ cd backend && python manage.py shell -c "from portfolio.models import Position; 
 ```
 Expected: non-zero counts reflecting your SIM account's actual positions/closed trades (place a simulated trade first in Saxo's SIM platform if both are empty).
 
-- [ ] **Step 5: Full regression gate**
+Done 2026-08-26 — verified with 5 real SIM positions (GOOGL, META, MSFT, MRVL, NBIS).
+
+- [x] **Step 5: Full regression gate**
 
 ```bash
 cd backend && python manage.py test
 ```
 Expected: every app's test suite passes, including all `saxo` tests from Tasks 2–7 and the existing `core`/`portfolio`/`transactions`/`accounts` suites (unaffected).
 
-- [ ] **Step 6: Confirm the existing frontend still renders real data with zero frontend changes**
+**Status as of 2026-08-27: PASSING — `Ran 63 tests ... OK`.** The 2 stale errors were fixed in Task 10 Step 3 (mock target swapped `get_closed_positions` → `get_transactions`).
+
+- [x] **Step 6: Confirm the existing frontend still renders real data with zero frontend changes**
 
 ```bash
 cd frontend && npm run dev
 ```
 Open the app, log in, visit Portfolio and Transactions. Expected: the existing charts/tables (unchanged since the chart milestone) now render your real SIM positions/trades instead of the old seed data — no frontend code was touched to make this happen, confirming the backend/frontend seam holds.
+
+Portfolio confirmed 2026-08-26. Transactions page still shows nothing from Saxo — expected, see Task 10 (transaction mapping not yet rewritten for the new endpoint).
 
 ---
 
@@ -1347,7 +1353,7 @@ Open the app, log in, visit Portfolio and Transactions. Expected: the existing c
 
 This task has no unit test — visually verified in-browser, per the codebase's existing chart-component precedent (no automated tests for presentational components).
 
-- [ ] **Step 1: Add the API client functions**
+- [x] **Step 1: Add the API client functions**
 
 In `frontend/src/api/client.js`, after the last line (`export const getCashFlow = () => apiFetch('/api/transactions/cash-flow/')`), add:
 
@@ -1356,7 +1362,7 @@ export const getSaxoStatus = () => apiFetch('/api/saxo/status/')
 export const connectSaxo = () => { window.location.href = `${BASE_URL}/api/saxo/connect/` }
 ```
 
-- [ ] **Step 2: Create the status component**
+- [x] **Step 2: Create the status component**
 
 Create `frontend/src/components/SaxoConnectionStatus.jsx`:
 
@@ -1400,7 +1406,9 @@ export default function SaxoConnectionStatus() {
 }
 ```
 
-- [ ] **Step 3: Wire it into Portfolio.jsx**
+- [x] **Step 3: Wire it into Portfolio.jsx**
+
+(Shipped version also grew a `?saxo=error` query-param check for a "Connection failed" badge, beyond this snippet — added during the 2026-08-25 OAuth-redirect UX fix, not part of this plan's original scope.)
 
 In `frontend/src/pages/Portfolio.jsx`, change:
 ```js
@@ -1425,23 +1433,62 @@ to:
       <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
 ```
 
-- [ ] **Step 4: Run lint and build**
+- [x] **Step 4: Run lint and build**
 
 ```bash
 cd frontend && npm run lint && npm run build
 ```
 Expected: both clean.
 
-- [ ] **Step 5: Manually verify in the browser**
+- [x] **Step 5: Manually verify in the browser**
 
 With the backend running and a `SaxoCredential` already connected from Task 6 Step 7, open Portfolio. Expected: an emerald "Saxo connected" badge appears next to the page title. To check the disconnected state, temporarily delete the credential (`python manage.py shell -c "from saxo.models import SaxoCredential; SaxoCredential.objects.all().delete()"`) and reload — expected: a blue "Connect Saxo" button appears, and clicking it starts the real OAuth flow from Task 6 Step 7.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/api/client.js frontend/src/components/SaxoConnectionStatus.jsx frontend/src/pages/Portfolio.jsx
 git commit -m "feat: add Saxo connection status to Portfolio page"
 ```
+
+Committed 2026-08-24 as `a569f44`.
+
+---
+
+### Task 10: Account cash-balance sync + transaction-sync source migration (added 2026-08-26, not in original plan)
+
+**Files:**
+- Modify: `backend/saxo/client.py` — add `get_client_key()`, `get_transactions()`
+- Modify: `backend/saxo/mapping.py` — add `to_account_fields()`
+- Modify: `backend/saxo/tasks.py` — add `sync_account_balance`; swap `sync_transactions`'s source call
+
+**Why:** two gaps found during real-SIM-trade testing on 2026-08-26 (buying META/MSFT/MRVL/NBIS alongside the seeded GOOGL): (1) `get_account_balance` existed in `client.py` since Task 4 but nothing synced it anywhere — Saxo cash never reached the seeded `Saxo` `BankAccount` row; (2) `sync_transactions` only ever read `/port/v1/closedpositions/me`, so open/buy trades never reached the ledger at all, and every synced row was hardcoded `'SELL'` regardless of actual direction.
+
+- [x] **Step 1: Cash balance sync — `get_account_balance` → `BankAccount`**
+
+Added `mapping.to_account_fields(saxo_balance)` mapping `CashBalance`/`CollateralAvailable` to `balance`/`available`, and `sync_account_balance` task doing `BankAccount.objects.update_or_create(bank='Saxo', defaults=fields)` — updates the existing seeded placeholder row (`Saxo | Cash | 850.00`) rather than duplicating it.
+
+Caught and fixed during review, before commit: `@shared_task(autoretry_for=(client.SaxoAPIError), ...)` — missing trailing comma made this a bare class, not a 1-tuple; Celery's `add_autoretry_behaviour` does `tuple(autoretry_for)` internally and raised `TypeError: 'type' object is not iterable`, breaking task registration for the *entire* Celery app, not just this task. Also caught: `bank='saxo'` (lowercase) wouldn't have matched the seeded `bank='Saxo'` row, silently creating a duplicate. Both fixed before commit; verified via `sync_account_balance.apply()` → real balance (`994104.45`) landed in the single existing `Saxo` row.
+
+Registered as a periodic task in `django-celery-beat` (2026-08-27): `"Update Saxo Account Balace"` → `saxo.tasks.sync_account_balance`, every 30 minutes, enabled. See Step 5.
+
+- [x] **Step 2: Transaction sync source — abandoned `/hist/v1/transactions`, derive from open positions instead** (2026-08-27)
+
+The `/hist/v1/transactions` route was tried first (added `get_client_key()` → `/port/v1/clients/me`, `get_transactions()` with a required `ClientKey` param, verified live `200` with a `{"__count","Data"}` envelope). **Dead end in SIM:** `/hist/v1/transactions` returns `{"__count":0,"Data":[]}` for the full year, and `/port/v1/closedpositions/me` is `[]` — SIM never populates historical transactions, settlement lag is not the cause. Waiting does not help.
+
+Chosen approach (user decision 2026-08-27): **`sync_transactions` derives entry trades from `client.get_positions()`.** Each open position → one ledger row via `mapping.to_transaction_fields(saxo_position)`: `saxo_trade_id = PositionId` (idempotent upsert), `date` from `PositionBase.ExecutionTimeOpen`, `price` from `OpenPrice`, `qty`/`type` from `Amount` (negative ⇒ short ⇒ `SELL`, else `BUY`). Mapping written against a real captured META position, not a guessed schema. `get_client_key()`/`get_transactions()` removed from `client.py`; `get_closed_positions()` kept for the deferred SELL side.
+
+Verified live 2026-08-27: manual `sync_transactions()` created 5 BUY rows (GOOGL/META/MSFT/MRVL/NBIS) with correct dates/prices/qty. Full suite `Ran 65 tests ... OK`.
+
+`sync_transactions`'s periodic schedule stays on the nightly crontab (`0 1 * * *` UTC) set on 2026-08-26.
+
+- [x] **Step 3: Fix the regression this caused — `SyncTransactionsTaskTest`** (2026-08-27)
+
+`SyncTransactionsTaskTest.test_creates_transactions_from_saxo_data` / `.test_upserts_on_repeated_sync` now `@patch('saxo.tasks.client.get_transactions')` (whole function mocked, so the internal `get_client_key` call never fires). Return payload still uses `SAMPLE_CLOSED_POSITION` because `to_transaction_fields` is not yet rewritten (Step 4) — the sample will be swapped for a real `/hist/v1/transactions` row at the same time as the mapping. Full suite: `Ran 63 tests ... OK`.
+
+- [x] **Step 4: Rewrite `mapping.to_transaction_fields` against real data** (2026-08-27) — done as part of Step 2. Maps a real open-position payload → BUY/SELL row. **Still open, minor:** the SELL side for *closing an existing long* (`/port/v1/closedpositions/me`) — SIM had zero closed positions on 2026-08-27, so `closed_position → SELL` mapping is deferred until a SIM position is actually closed and its real payload can be inspected. Entry trades are fully covered.
+
+- [x] **Step 5: Register `sync_account_balance` as a periodic task** (2026-08-27) — `"Update Saxo Account Balace"` → `saxo.tasks.sync_account_balance`, `IntervalSchedule` every 30 minutes, enabled. (Name has a typo — cosmetic only, task path is correct.)
 
 ---
 

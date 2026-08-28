@@ -19,10 +19,12 @@ from . import client
 TEST_KEY = Fernet.generate_key().decode()
 
 SAMPLE_POSITION = {
+    'PositionId': '5027270864',
     'PositionBase': {
         'Amount': 15,
         'OpenPrice': 412.30,
         'AssetType': 'Stock',
+        'ExecutionTimeOpen': '2026-08-26T18:30:31.645781Z',
     },
     'PositionView': {
         'CurrentPrice': 875.40,
@@ -30,19 +32,6 @@ SAMPLE_POSITION = {
     'DisplayAndFormat': {
         'Symbol': 'NVDA:xnas',
         'Description': 'NVIDIA Corporation',
-    },
-}
-
-SAMPLE_CLOSED_POSITION = {
-    'ClosedPositionUniqueId': 987654321,
-    'ClosedPosition': {
-        'ExecutionTimeClose': '2026-06-01T14:32:00Z',
-        'Amount': -2,
-        'ClosingPrice': 410.00,
-    },
-    'DisplayAndFormat': {
-        'Symbol': 'MSFT:xnas',
-        'Description': 'Microsoft Corporation',
     },
 }
 
@@ -151,16 +140,22 @@ class ToPositionFieldsTest(TestCase):
 
 
 class ToTransactionFieldsTest(TestCase):
-    def test_maps_core_fields(self):
-        fields = mapping.to_transaction_fields(SAMPLE_CLOSED_POSITION)
-        self.assertEqual(fields['saxo_trade_id'], '987654321')
-        self.assertEqual(fields['date'], date_cls(2026, 6, 1))
-        self.assertEqual(fields['type'], 'SELL')
-        self.assertEqual(fields['instrument'], 'Microsoft Corporation')
-        self.assertEqual(fields['ticker'], 'MSFT')
-        self.assertEqual(fields['qty'], Decimal('2'))
-        self.assertEqual(fields['price'], Decimal('410.00'))
+    def test_maps_open_position_to_buy_row(self):
+        fields = mapping.to_transaction_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['saxo_trade_id'], '5027270864')
+        self.assertEqual(fields['date'], date_cls(2026, 8, 26))
+        self.assertEqual(fields['type'], 'BUY')
+        self.assertEqual(fields['instrument'], 'NVIDIA Corporation')
+        self.assertEqual(fields['ticker'], 'NVDA')
+        self.assertEqual(fields['qty'], Decimal('15'))
+        self.assertEqual(fields['price'], Decimal('412.30'))
         self.assertEqual(fields['account'], 'Saxo')
+
+    def test_negative_amount_maps_to_sell(self):
+        short = {**SAMPLE_POSITION, 'PositionBase': {**SAMPLE_POSITION['PositionBase'], 'Amount': -4}}
+        fields = mapping.to_transaction_fields(short)
+        self.assertEqual(fields['type'], 'SELL')
+        self.assertEqual(fields['qty'], Decimal('4'))
         
 class SaxoConnectViewTest(APITestCase):
     def test_redirects_to_saxo_authorize_url_and_sets_session_state(self):
@@ -301,16 +296,25 @@ class SyncTransactionsTaskTest(TestCase):
             expires_at=timezone.now() + timedelta(hours=1),
         )
 
-    @patch('saxo.tasks.client.get_closed_positions')
-    def test_creates_transactions_from_saxo_data(self, mock_get_closed):
-        mock_get_closed.return_value = [SAMPLE_CLOSED_POSITION]
+    @patch('saxo.tasks.client.get_positions')
+    def test_creates_buy_transactions_from_open_positions(self, mock_get_positions):
+        mock_get_positions.return_value = [SAMPLE_POSITION]
         tasks.sync_transactions()
         self.assertEqual(Transaction.objects.count(), 1)
-        self.assertEqual(Transaction.objects.first().saxo_trade_id, '987654321')
+        txn = Transaction.objects.first()
+        self.assertEqual(txn.saxo_trade_id, '5027270864')
+        self.assertEqual(txn.type, 'BUY')
+        self.assertEqual(txn.ticker, 'NVDA')
 
-    @patch('saxo.tasks.client.get_closed_positions')
-    def test_upserts_on_repeated_sync(self, mock_get_closed):
-        mock_get_closed.return_value = [SAMPLE_CLOSED_POSITION]
+    @patch('saxo.tasks.client.get_positions')
+    def test_upserts_on_repeated_sync(self, mock_get_positions):
+        mock_get_positions.return_value = [SAMPLE_POSITION]
         tasks.sync_transactions()
+        tasks.sync_transactions()
+        self.assertEqual(Transaction.objects.count(), 1)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_skips_malformed_rows_without_aborting(self, mock_get_positions):
+        mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
         tasks.sync_transactions()
         self.assertEqual(Transaction.objects.count(), 1)

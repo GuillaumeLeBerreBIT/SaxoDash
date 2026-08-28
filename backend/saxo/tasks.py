@@ -1,4 +1,4 @@
-from datetime import timedelta, date
+from datetime import timedelta
 
 from celery import shared_task
 from django.utils import timezone
@@ -58,22 +58,20 @@ def sync_positions():
 
 @shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
 def sync_transactions():
-    import logging
-    logger = logging.getLogger(__name__)
     credential = SaxoCredential.objects.first()
     if not credential or credential.needs_reauth:
         return
 
-    saxo_activity = client.get_transactions(
-        credential.access_token,
-        from_date=(date.today() - timedelta(days=30)).isoformat(),
-        to_date=date.today().isoformat()
-        )
-    logger.info('Raw Saxo transactions: %s', saxo_activity)
-    
-    for raw_activity in saxo_activity:
+    # SIM never populates /hist/v1/transactions, so entry trades are derived
+    # from the currently-open positions instead (mapping.to_transaction_fields).
+    # Exit trades (SELL-side of a closed long) will be added from
+    # /port/v1/closedpositions/me once a real closed-position payload exists to
+    # map against - it was empty in SIM on 2026-08-27.
+    saxo_positions = client.get_positions(credential.access_token)
+
+    for raw_position in saxo_positions:
         try:
-            fields = mapping.to_transaction_fields(raw_activity)
+            fields = mapping.to_transaction_fields(raw_position)
         except (KeyError, TypeError):
             continue
         Transaction.objects.update_or_create(
