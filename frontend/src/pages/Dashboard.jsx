@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { getPortfolioSummary, getPositions, getNetWorth, getTransactions } from '../api/client'
+import { useNetWorth, usePortfolioSummary, usePositions, useTransactions } from '../api/queries'
 import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, StatCard, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
@@ -11,25 +10,22 @@ import NetWorthChart from '../components/NetWorthChart'
 const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
 
 export default function Dashboard() {
-  const [summary, setSummary] = useState(null)
-  const [positions, setPositions] = useState([])
-  const [netWorth, setNetWorth] = useState(null)
-  const [recentTx, setRecentTx] = useState([])
-  const [error, setError] = useState(null)
+  const summaryQuery = usePortfolioSummary()
+  const positionsQuery = usePositions()
+  const netWorthQuery = useNetWorth()
+  const recentTxQuery = useTransactions('?page_size=5')
 
-  useEffect(() => {
-    Promise.all([getPortfolioSummary(), getPositions(), getNetWorth(), getTransactions('?page_size=5')])
-      .then(([summaryRes, positionsRes, netWorthRes, txRes]) => {
-        setSummary(summaryRes)
-        setPositions(positionsRes)
-        setNetWorth(netWorthRes)
-        setRecentTx(txRes.results ?? txRes)
-      })
-      .catch(() => setError('Failed to load dashboard data'))
-  }, [])
+  const failed =
+    summaryQuery.error || positionsQuery.error || netWorthQuery.error || recentTxQuery.error
 
-  if (error) return <div className="text-red-400 text-sm">{error}</div>
-  if (!summary || !netWorth) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
+  if (!summaryQuery.data || !netWorthQuery.data)
+    return <div className="text-zinc-500 text-sm">Loading…</div>
+
+  const summary = summaryQuery.data
+  const netWorth = netWorthQuery.data
+  const positions = positionsQuery.data ?? []
+  const recentTx = recentTxQuery.data ?? []
 
   const totalPnl = Number(summary.total_pnl)
   const totalPnlPct = Number(summary.total_pnl_pct)

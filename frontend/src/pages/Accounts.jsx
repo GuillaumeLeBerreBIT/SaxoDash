@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { getBankAccounts } from '../api/client'
+import { useBankAccounts } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { Card, PageHeader, StatCard } from '../components/ui'
 import BankBalanceChart from '../components/BankBalanceChart'
@@ -7,17 +6,10 @@ import AccountBreakdownChart from '../components/AccountBreakdownChart'
 import CashFlowChart from '../components/CashFlowChart'
 
 export default function Accounts() {
-  const [accounts, setAccounts] = useState(null)
-  const [error, setError] = useState(null)
+  const { data: accounts, isLoading, error } = useBankAccounts()
 
-  useEffect(() => {
-    getBankAccounts()
-      .then((res) => setAccounts(res.results ?? res))
-      .catch(() => setError('Failed to load accounts'))
-  }, [])
-
-  if (error) return <div className="text-red-400 text-sm">{error}</div>
-  if (!accounts) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (error) return <div className="text-red-400 text-sm">Failed to load accounts</div>
+  if (isLoading || !accounts) return <div className="text-zinc-500 text-sm">Loading…</div>
 
   const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
 

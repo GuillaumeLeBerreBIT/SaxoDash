@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getNetWorthHistory } from '../api/client'
+import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps, formatAxisDate } from '../lib/charts'
 import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
+import { chartPlaceholderFor } from '../lib/chartState'
 
 const VIEWS = [
   { key: 'ALL', label: 'All' },
@@ -15,30 +16,10 @@ const VIEWS = [
 export default function NetWorthChart() {
   const [range, setRange] = useState('6M')
   const [view, setView] = useState('ALL')
-  const [data, setData] = useState([])
-  const [error, setError] = useState(null)
+  const { data, isLoading, error } = useNetWorthHistory(range)
 
-  useEffect(() => {
-    let cancelled = false
-    getNetWorthHistory(range)
-      .then((res) => {
-        if (!cancelled) setData(res)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load net worth history')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [range])
-
-  if (error) {
-    return (
-      <Card>
-        <div className="text-red-400 text-sm">{error}</div>
-      </Card>
-    )
-  }
+  // Lines need two points; a single snapshot with dot={false} draws nothing.
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
 
   const showInvestments = view === 'ALL' || view === 'INVESTMENTS'
   const showBank = view === 'ALL' || view === 'BANK'
@@ -63,6 +44,7 @@ export default function NetWorthChart() {
         }
       />
       <div className="mt-4 h-[260px]">
+        {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -120,6 +102,7 @@ export default function NetWorthChart() {
             )}
           </LineChart>
         </ResponsiveContainer>
+        )}
       </div>
     </Card>
   )

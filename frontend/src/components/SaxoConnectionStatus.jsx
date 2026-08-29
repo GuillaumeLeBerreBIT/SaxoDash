@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
-import { getSaxoStatus, connectSaxo } from '../api/client'
+import { connectSaxo } from '../api/client'
+import { useSaxoStatus } from '../api/queries'
 import { Badge } from './ui'
 
 export default function SaxoConnectionStatus() {
-  const [status, setStatus] = useState(null)
+  const { data: status } = useSaxoStatus()
   const [error] = useState(
     () => new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
 
   useEffect(() => {
-    getSaxoStatus().then(setStatus).catch(() => setStatus(null))
-
     if (error) {
       window.history.replaceState({}, '', window.location.pathname)
     }

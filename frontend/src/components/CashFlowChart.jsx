@@ -1,40 +1,21 @@
-import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getCashFlow } from '../api/client'
+import { useCashFlow } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps } from '../lib/charts'
 import { Card, CardHeader } from './ui'
+import { chartPlaceholderFor } from '../lib/chartState'
 
 export default function CashFlowChart() {
-  const [data, setData] = useState([])
-  const [error, setError] = useState(null)
+  const { data, isLoading, error } = useCashFlow()
 
-  useEffect(() => {
-    let cancelled = false
-    getCashFlow()
-      .then((res) => {
-        if (!cancelled) setData(res)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load cash flow')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (error) {
-    return (
-      <Card>
-        <div className="text-red-400 text-sm">{error}</div>
-      </Card>
-    )
-  }
+  // Bars render fine from a single month, so one point is enough here.
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220 })
 
   return (
     <Card>
       <CardHeader title="Monthly cash flow" subtitle="Deposits & dividends vs. fees" />
       <div className="mt-4 h-[220px]">
+        {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -51,6 +32,7 @@ export default function CashFlowChart() {
             <Bar dataKey="outflow" name="Outflow" fill="#f87171" radius={[3, 3, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
+        )}
       </div>
     </Card>
   )

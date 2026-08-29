@@ -1,37 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getNetWorthHistory } from '../api/client'
+import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps, formatAxisDate } from '../lib/charts'
 import { RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
+import { chartPlaceholderFor } from '../lib/chartState'
 
 export default function PortfolioValueChart() {
   const [range, setRange] = useState('6M')
-  const [data, setData] = useState([])
-  const [error, setError] = useState(null)
+  const { data, isLoading, error } = useNetWorthHistory(range)
 
-  useEffect(() => {
-    let cancelled = false
-    getNetWorthHistory(range)
-      .then((res) => {
-        if (!cancelled) setData(res)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load portfolio history')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [range])
-
-  if (error) {
-    return (
-      <Card>
-        <div className="text-red-400 text-sm">{error}</div>
-      </Card>
-    )
-  }
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
 
   return (
     <Card>
@@ -41,6 +21,7 @@ export default function PortfolioValueChart() {
         right={<RangePills value={range} onChange={setRange} />}
       />
       <div className="mt-4 h-[260px]">
+        {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
@@ -77,6 +58,7 @@ export default function PortfolioValueChart() {
             />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
     </Card>
   )

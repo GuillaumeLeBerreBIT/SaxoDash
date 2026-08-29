@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { getPortfolioSummary, getPositions, getNetWorth } from '../api/client'
+import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
 import PortfolioValueChart from '../components/PortfolioValueChart'
@@ -9,23 +8,19 @@ import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
 
 export default function Portfolio() {
-  const [summary, setSummary] = useState(null)
-  const [positions, setPositions] = useState([])
-  const [netWorth, setNetWorth] = useState(null)
-  const [error, setError] = useState(null)
+  const summaryQuery = usePortfolioSummary()
+  const positionsQuery = usePositions()
+  const netWorthQuery = useNetWorth()
 
-  useEffect(() => {
-    Promise.all([getPortfolioSummary(), getPositions(), getNetWorth()])
-      .then(([summaryRes, positionsRes, netWorthRes]) => {
-        setSummary(summaryRes)
-        setPositions(positionsRes)
-        setNetWorth(netWorthRes)
-      })
-      .catch(() => setError('Failed to load portfolio data'))
-  }, [])
+  const failed = summaryQuery.error || positionsQuery.error || netWorthQuery.error
 
-  if (error) return <div className="text-red-400 text-sm">{error}</div>
-  if (!summary || !netWorth) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (failed) return <div className="text-red-400 text-sm">Failed to load portfolio data</div>
+  if (!summaryQuery.data || !netWorthQuery.data)
+    return <div className="text-zinc-500 text-sm">Loading…</div>
+
+  const summary = summaryQuery.data
+  const netWorth = netWorthQuery.data
+  const positions = positionsQuery.data ?? []
 
   const totals = positions.reduce(
     (s, p) => ({

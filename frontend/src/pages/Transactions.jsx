@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
-import { getTransactions } from '../api/client'
+import { useTransactions } from '../api/queries'
 import { fmtEur, fmtNum } from '../lib/format'
 import { Card, PageHeader, Badge } from '../components/ui'
 
@@ -20,17 +20,14 @@ function toCsv(rows) {
 }
 
 export default function Transactions() {
-  const [allTx, setAllTx] = useState([])
-  const [error, setError] = useState(null)
+  const { data, isLoading, error } = useTransactions('?page_size=1000')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [page, setPage] = useState(1)
 
-  useEffect(() => {
-    getTransactions('?page_size=1000')
-      .then((res) => setAllTx(res.results ?? res))
-      .catch(() => setError('Failed to load transactions'))
-  }, [])
+  // Stable identity so the filter memo below doesn't rerun on every render
+  // while the query is still resolving.
+  const allTx = useMemo(() => data ?? [], [data])
 
   const filtered = useMemo(
     () =>
@@ -56,7 +53,8 @@ export default function Transactions() {
     URL.revokeObjectURL(url)
   }
 
-  if (error) return <div className="text-red-400 text-sm">{error}</div>
+  if (error) return <div className="text-red-400 text-sm">Failed to load transactions</div>
+  if (isLoading) return <div className="text-zinc-500 text-sm">Loading…</div>
 
   return (
     <div className="space-y-5">
