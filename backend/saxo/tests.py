@@ -15,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from . import mapping
 from . import client
+from . import checks
 
 TEST_KEY = Fernet.generate_key().decode()
 
@@ -213,6 +214,7 @@ class SaxoStatusViewTest(APITestCase):
 
 from portfolio.models import Position
 from transactions.models import Transaction
+from accounts.models import BankAccount
 from . import tasks
 
 
@@ -318,3 +320,127 @@ class SyncTransactionsTaskTest(TestCase):
         mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
         tasks.sync_transactions()
         self.assertEqual(Transaction.objects.count(), 1)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class ExpiredCredentialGuardTest(TestCase):
+    """The sync tasks must not call Saxo with an access token that has expired.
+
+    Doing so returns 401, which raises SaxoAPIError and burns all three
+    autoretries on a request that cannot succeed. refresh_saxo_token is what
+    repairs the credential, so the sync tasks skip and pick it up next tick.
+    """
+
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_sync_positions_skips_expired_token(self, mock_get_positions):
+        tasks.sync_positions()
+        mock_get_positions.assert_not_called()
+        self.assertEqual(Position.objects.count(), 0)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_sync_transactions_skips_expired_token(self, mock_get_positions):
+        tasks.sync_transactions()
+        mock_get_positions.assert_not_called()
+        self.assertEqual(Transaction.objects.count(), 0)
+
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_sync_account_balance_skips_expired_token(self, mock_get_balance):
+        tasks.sync_account_balance()
+        mock_get_balance.assert_not_called()
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_unexpired_token_still_syncs(self, mock_get_positions):
+        self.cred.expires_at = timezone.now() + timedelta(hours=1)
+        self.cred.save(update_fields=['expires_at'])
+        mock_get_positions.return_value = [SAMPLE_POSITION]
+        tasks.sync_positions()
+        mock_get_positions.assert_called_once()
+
+    @patch('saxo.tasks.client.refresh_access_token')
+    def test_refresh_task_still_runs_on_expired_token(self, mock_refresh):
+        # The guard must NOT apply here: an expired access token is precisely
+        # this task's trigger. It authenticates with the refresh token.
+        mock_refresh.return_value = {
+            'access_token': 'new-a', 'refresh_token': 'new-b', 'expires_in': 1200,
+        }
+        tasks.refresh_saxo_token()
+        mock_refresh.assert_called_once()
+        self.cred.refresh_from_db()
+        self.assertEqual(self.cred.access_token, 'new-a')
+        self.assertGreater(self.cred.expires_at, timezone.now())
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncAccountBalanceTaskTest(TestCase):
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_updates_the_existing_saxo_account_row(self, mock_get_balance):
+        # The seeded 'Saxo' row must be updated in place, not duplicated - the
+        # bug this task shipped with was bank='saxo' failing to match it.
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-',
+            balance=Decimal('850.00'), available=Decimal('850.00'),
+        )
+        mock_get_balance.return_value = {
+            'CashBalance': 994104.45, 'CollateralAvailable': 992000.10,
+        }
+        tasks.sync_account_balance()
+
+        self.assertEqual(BankAccount.objects.filter(bank='Saxo').count(), 1)
+        account = BankAccount.objects.get(bank='Saxo')
+        self.assertEqual(account.balance, Decimal('994104.45'))
+        self.assertEqual(account.available, Decimal('992000.10'))
+
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_creates_the_row_when_absent(self, mock_get_balance):
+        mock_get_balance.return_value = {
+            'CashBalance': 100.00, 'CollateralAvailable': 100.00,
+        }
+        tasks.sync_account_balance()
+        self.assertEqual(BankAccount.objects.get(bank='Saxo').balance, Decimal('100.00'))
+
+
+class SaxoEnvironmentTest(TestCase):
+    @override_settings(SAXO_ENVIRONMENT='sim')
+    def test_sim_uses_sim_hosts(self):
+        self.assertIn('sim.logonvalidation.net', client.build_authorize_url('s'))
+
+    @override_settings(SAXO_ENVIRONMENT='live')
+    def test_live_uses_live_hosts(self):
+        self.assertIn('live.logonvalidation.net', client.build_authorize_url('s'))
+
+    @override_settings(SAXO_ENVIRONMENT='sim')
+    def test_check_passes_on_known_environment(self):
+        self.assertEqual(checks.check_environment(app_configs=None), [])
+
+    @override_settings(SAXO_ENVIRONMENT='prod')
+    def test_check_errors_on_unknown_environment(self):
+        errors = checks.check_environment(app_configs=None)
+        self.assertEqual([e.id for e in errors], ['saxo.E003'])
+
+
+class TokenEncryptionKeyCheckTest(TestCase):
+    @override_settings(SAXO_TOKEN_ENCRYPTION_KEY='')
+    def test_errors_when_key_is_unset(self):
+        errors = checks.check_token_encryption_key(app_configs=None)
+        self.assertEqual([e.id for e in errors], ['saxo.E001'])
+
+    @override_settings(SAXO_TOKEN_ENCRYPTION_KEY='not-a-fernet-key')
+    def test_errors_when_key_is_malformed(self):
+        errors = checks.check_token_encryption_key(app_configs=None)
+        self.assertEqual([e.id for e in errors], ['saxo.E002'])
+
+    @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
+    def test_passes_on_a_valid_key(self):
+        self.assertEqual(checks.check_token_encryption_key(app_configs=None), [])

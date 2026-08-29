@@ -12,6 +12,29 @@ from accounts.models import BankAccount
 
 REFRESH_MARGIN = timedelta(minutes=5)
 
+
+def _usable_credential():
+    """The credential the sync tasks may call Saxo with, or None to skip.
+
+    An access token past its `expires_at` is treated as unusable rather than
+    tried anyway: calling Saxo with it returns 401, which surfaces as a
+    SaxoAPIError and burns all three autoretries on a request that cannot
+    succeed. `refresh_saxo_token` runs every 10 minutes and is what repairs
+    this, so skipping is the correct response - the next sync tick picks up
+    the refreshed token.
+
+    Deliberately NOT used by `refresh_saxo_token`: an expired access token is
+    exactly when that task must run. It authenticates with the longer-lived
+    refresh token, so expiry is its trigger, not its blocker.
+    """
+    credential = SaxoCredential.objects.first()
+    if not credential or credential.needs_reauth:
+        return None
+    if credential.expires_at <= timezone.now():
+        return None
+    return credential
+
+
 @shared_task
 def refresh_saxo_token():
     credential = SaxoCredential.objects.first()
@@ -36,8 +59,8 @@ def refresh_saxo_token():
     
 @shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
 def sync_positions():
-    credential = SaxoCredential.objects.first()
-    if not credential or credential.needs_reauth:
+    credential = _usable_credential()
+    if not credential:
         return
 
     saxo_positions = client.get_positions(credential.access_token)
@@ -58,8 +81,8 @@ def sync_positions():
 
 @shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
 def sync_transactions():
-    credential = SaxoCredential.objects.first()
-    if not credential or credential.needs_reauth:
+    credential = _usable_credential()
+    if not credential:
         return
 
     # SIM never populates /hist/v1/transactions, so entry trades are derived
@@ -83,10 +106,10 @@ def sync_transactions():
     
 @shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
 def sync_account_balance():
-    credential = SaxoCredential.objects.first()
-    if not credential or credential.needs_reauth:
+    credential = _usable_credential()
+    if not credential:
         return
-    
+
     saxo_balance = client.get_account_balance(credential.access_token)
     fields = mapping.to_account_fields(saxo_balance=saxo_balance)
     BankAccount.objects.update_or_create(bank='Saxo', defaults=fields)
