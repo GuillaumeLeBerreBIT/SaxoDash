@@ -169,6 +169,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+SAXO_ENVIRONMENT = os.environ.get('SAXO_ENVIRONMENT', 'sim')
 SAXO_KEY = os.environ.get('SAXO_KEY', '')
 SAXO_SECRET = os.environ.get('SAXO_SECRET', '')
 SAXO_REDIRECT_URI = os.environ.get('SAXO_REDIRECT_URI', 'http://localhost:8000/api/saxo/callback/')

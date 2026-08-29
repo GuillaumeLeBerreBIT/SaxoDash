@@ -1,8 +1,31 @@
 import requests
 from django.conf import settings
 
-AUTH_BASE_URL = 'https://sim.logonvalidation.net'
-API_BASE_URL = 'https://gateway.saxobank.com/sim/openapi'
+# Keyed by SAXO_ENVIRONMENT. Previously both URLs were hardcoded to sim, which
+# made SaxoCredential.environment a decorative field: going live meant editing
+# this module. Now it is a config change.
+ENVIRONMENTS = {
+    'sim': {
+        'auth': 'https://sim.logonvalidation.net',
+        'api': 'https://gateway.saxobank.com/sim/openapi',
+    },
+    'live': {
+        'auth': 'https://live.logonvalidation.net',
+        'api': 'https://gateway.saxobank.com/openapi',
+    },
+}
+
+
+def _base_urls():
+    return ENVIRONMENTS[settings.SAXO_ENVIRONMENT]
+
+
+def _auth_base_url():
+    return _base_urls()['auth']
+
+
+def _api_base_url():
+    return _base_urls()['api']
 
 class SaxoAuthError(Exception):
     """Raised when the OAuth token exchange or refresh fails."""
@@ -20,12 +43,12 @@ def build_authorize_url(state):
         'state': state,
     }
     query = '&'.join(f'{k}={v}' for k, v in params.items())
-    return f'{AUTH_BASE_URL}/authorize?{query}'
+    return f'{_auth_base_url()}/authorize?{query}'
 
 
 def exchange_code_for_token(code):
     response = requests.post(
-        f'{AUTH_BASE_URL}/token',
+        f'{_auth_base_url()}/token',
         data={
             'grant_type': 'authorization_code',
             'code': code,
@@ -42,7 +65,7 @@ def exchange_code_for_token(code):
 
 def refresh_access_token(refresh_token):
     response = requests.post(
-        f'{AUTH_BASE_URL}/token',
+        f'{_auth_base_url()}/token',
         data={
             'grant_type': 'refresh_token',
             'refresh_token': refresh_token,
@@ -59,7 +82,7 @@ def refresh_access_token(refresh_token):
 
 def _get(access_token, path, params=None):
     response = requests.get(
-        f'{API_BASE_URL}{path}',
+        f'{_api_base_url()}{path}',
         headers={'Authorization': f'Bearer {access_token}'},
         params=params,
         timeout=10,
