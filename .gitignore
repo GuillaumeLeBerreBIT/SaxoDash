@@ -5,12 +5,16 @@
 
 # Python / Django (backend/)
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.sqlite3
 .pytest_cache/
 staticfiles/
 media/
+
+# Redis snapshot written into backend/ by the local broker
+dump.rdb
 
 # Node / Vite (frontend/)
 node_modules/
