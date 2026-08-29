@@ -2,11 +2,20 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps } from '../lib/charts'
 import { toAccountBreakdownData } from '../lib/accounts'
-import { Card, CardHeader } from './ui'
+import { Card, CardHeader, ChartPlaceholder } from './ui'
 
 export default function AccountBreakdownChart({ accounts }) {
   const data = toAccountBreakdownData(accounts)
   const total = data.reduce((sum, d) => sum + d.value, 0)
+
+  if (data.length === 0) {
+    return (
+      <Card>
+        <CardHeader title="Balance by account" subtitle="Share of total balance" />
+        <ChartPlaceholder height={200}>No accounts connected yet</ChartPlaceholder>
+      </Card>
+    )
+  }
 
   return (
     <Card>

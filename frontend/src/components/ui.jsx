@@ -76,6 +76,24 @@ const badgeTones = {
   emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15',
 }
 
+/** Fills a chart's space with a message instead of rendering an empty plot.
+ *
+ *  Recharts draws nothing at all for a zero- or one-point series when dots are
+ *  disabled, so without this a chart that loaded perfectly well looks broken.
+ */
+export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
+  return (
+    <div
+      className={`flex items-center justify-center text-center px-6 text-[12px] ${
+        tone === 'red' ? 'text-red-400' : 'text-zinc-500'
+      }`}
+      style={{ height }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function Badge({ tone = 'zinc', children, className = '' }) {
   return (
     <span

@@ -2,10 +2,19 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveCo
 import { fmtPct } from '../lib/format'
 import { chartTooltipProps } from '../lib/charts'
 import { toGainersLosersData } from '../lib/performance'
-import { Card, CardHeader } from './ui'
+import { Card, CardHeader, ChartPlaceholder } from './ui'
 
 export default function GainersLosersChart({ positions }) {
   const data = toGainersLosersData(positions)
+
+  if (data.length === 0) {
+    return (
+      <Card>
+        <CardHeader title="Gainers & losers" subtitle="Unrealised P&L % per holding" />
+        <ChartPlaceholder height={260}>No holdings to compare yet</ChartPlaceholder>
+      </Card>
+    )
+  }
 
   return (
     <Card>
