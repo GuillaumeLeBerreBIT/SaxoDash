@@ -25,8 +25,9 @@ explanation of what it does and why, then ask whether the user wants to
 write it themselves from the example or have you apply it directly.
 Don't default silently to one or the other.
 
-**Testing**: backend only for this milestone (DRF `APITestCase` per app).
-No frontend tests yet.
+**Testing**: backend is the primary coverage (DRF `APITestCase` per app).
+The frontend has a small vitest suite too — `lib/` helpers, the API client,
+and a few components — so add/adjust specs alongside frontend changes.
 
 **Frontend design/polish**: use the `ui-ux-pro-max`, `frontend-design`,
 and `dataviz` skills when doing visual/UX work rather than improvising —
@@ -34,11 +35,20 @@ they already cover this project's needs.
 
 ## Stack
 
-- Backend: Django + DRF, SQLite (dev), session auth, single user.
-- Frontend: Vite + React 18 (JavaScript, not TS), React Router, Recharts,
+- Backend: Django + DRF, SQLite (dev), JWT auth (SimpleJWT), single user.
+- Frontend: Vite + React 19 (JavaScript, not TS), React Router, Recharts,
   Lucide icons, Tailwind. Components are the mockup's own bespoke
   primitives ported as-is — no MUI. `shadcn/ui` may be introduced in a
   later milestone when Research/Banking need dropdowns/modals/comboboxes.
+
+## Code style
+
+Keep inline comments short. Add one only when the code genuinely can't say it
+itself — a non-obvious "why", a gotcha, a reference. Don't narrate what the
+code does, and don't paste multi-line rationale into a comment: that
+explanation belongs in the chat or PR description, not the source. (Some
+existing comments are more verbose than this — don't treat them as a
+template.)
 
 ## Open decision (not yet made)
 
