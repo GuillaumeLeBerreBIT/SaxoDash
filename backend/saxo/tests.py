@@ -212,6 +212,22 @@ class SaxoStatusViewTest(APITestCase):
         self.assertEqual(response.data['environment'], 'sim')
         self.assertFalse(response.data['needs_reauth'])
 
+    def test_needs_reauth_when_token_expired_well_past_refresh_window(self):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+        response = self.client.get('/api/saxo/status/')
+        self.assertTrue(response.data['needs_reauth'])
+
+    def test_no_reauth_flap_during_normal_refresh_window(self):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() - timedelta(minutes=2),
+        )
+        response = self.client.get('/api/saxo/status/')
+        self.assertFalse(response.data['needs_reauth'])
+
 from portfolio.models import Position
 from transactions.models import Transaction
 from accounts.models import BankAccount

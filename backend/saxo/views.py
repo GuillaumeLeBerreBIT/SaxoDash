@@ -43,14 +43,22 @@ class SaxoCallbackView(APIView):
         return redirect(f"{settings.FRONTEND_URL}/portfolio?saxo=connected")
     
 class SaxoStatusView(APIView):
-    
+
+    # Past this much expiry the refresh cycle has clearly failed (worker down
+    # or refresh token dead), even if needs_reauth was never set.
+    REAUTH_GRACE = timedelta(minutes=15)
+
     def get(self, request):
         credential = SaxoCredential.objects.first()
         if not credential:
             return Response({'connected': False})
+        needs_reauth = (
+            credential.needs_reauth
+            or credential.expires_at <= timezone.now() - self.REAUTH_GRACE
+        )
         return Response({
             'connected': True,
             'environment': credential.environment,
-            'needs_reauth': credential.needs_reauth,
+            'needs_reauth': needs_reauth,
             'last_synced_at': credential.last_synced_at,
         })

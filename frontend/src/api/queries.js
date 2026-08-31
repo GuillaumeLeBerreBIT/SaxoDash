@@ -66,5 +66,11 @@ export function useCashFlow() {
 }
 
 export function useSaxoStatus() {
-  return useQuery({ queryKey: queryKeys.saxoStatus, queryFn: getSaxoStatus })
+  return useQuery({
+    queryKey: queryKeys.saxoStatus,
+    queryFn: getSaxoStatus,
+    // Connection can break server-side with no user action; recheck often.
+    refetchOnMount: 'always',
+    refetchInterval: 60_000,
+  })
 }
