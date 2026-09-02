@@ -1,0 +1,93 @@
+/** Pure helpers for the Research page.
+ *
+ *  Kept out of the components so the fiddly parts - which instrument a symbol
+ *  actually refers to, how a range maps onto a candle count - can be tested
+ *  without rendering a chart.
+ */
+
+export const INTERVALS = ['1W', '1M', '3M', '6M', '1Y', 'ALL']
+
+// Trading days, not calendar days: Saxo returns one daily candle per session.
+export const RANGE_COUNTS = { '1W': 7, '1M': 22, '3M': 66, '6M': 130, '1Y': 252, ALL: 504 }
+
+// Saxo's Horizon is in minutes; 1440 is one daily candle. v1 is daily only.
+export const DAILY_HORIZON = 1440
+
+/** Saxo's spelling of an instrument's type.
+ *
+ *  Position.type is the app's own STOCK/ETF label and Saxo says Stock/Etf, so
+ *  it cannot be passed through. Synced positions carry Saxo's own asset_type;
+ *  this only has to guess for rows that predate that sync.
+ */
+export function saxoAssetType(position) {
+  if (!position) return null
+  if (position.asset_type) return position.asset_type
+  return position.type === 'ETF' ? 'Etf' : 'Stock'
+}
+
+/** The {uic, assetType} pair every market-data call needs, or null.
+ *
+ *  A held instrument answers this from the portfolio without a Saxo call. For
+ *  anything else - or a position synced before uic existed - the first exact
+ *  match from an instrument search stands in.
+ */
+export function resolveInstrument({ symbol, positions = [], results = [] }) {
+  const held = positions.find((p) => p.ticker === symbol)
+  if (held?.uic) return { uic: held.uic, assetType: saxoAssetType(held) }
+
+  const match = results.find((r) => r.symbol === symbol) ?? results[0]
+  if (match?.uic) return { uic: match.uic, assetType: match.asset_type }
+
+  return null
+}
+
+/** Quotes keyed by uic, so a list of rows is O(1) per lookup rather than O(n). */
+export function quotesByUic(quotes = []) {
+  return new Map(quotes.map((quote) => [quote.uic, quote]))
+}
+
+/** Percentage move from the first to the last bar of the loaded range. */
+export function periodChange(bars = []) {
+  if (bars.length < 2) return null
+  const first = bars[0].close
+  if (!first) return null
+  return ((bars[bars.length - 1].close - first) / first) * 100
+}
+
+/** What the loaded candles alone can say about an instrument.
+ *
+ *  Deliberately scoped to the range on screen rather than labelled 52-week:
+ *  the numbers are only as wide as the bars that were actually fetched.
+ */
+export function rangeStats(bars = []) {
+  if (bars.length === 0) return null
+
+  let high = -Infinity
+  let low = Infinity
+  let volume = 0
+
+  for (const bar of bars) {
+    if (bar.high > high) high = bar.high
+    if (bar.low < low) low = bar.low
+    volume += bar.volume
+  }
+
+  const last = bars[bars.length - 1].close
+  return {
+    high,
+    low,
+    last,
+    avgVolume: volume / bars.length,
+    // Where the last close sits between the low and the high, as a percentage.
+    positionInRange: high === low ? 100 : ((last - low) / (high - low)) * 100,
+  }
+}
+
+/** Percentage move of one bar against the one before it. */
+export function barChange(bars = [], index) {
+  const at = index ?? bars.length - 1
+  const bar = bars[at]
+  const previous = bars[at - 1]
+  if (!bar || !previous || !previous.close) return null
+  return ((bar.close - previous.close) / previous.close) * 100
+}

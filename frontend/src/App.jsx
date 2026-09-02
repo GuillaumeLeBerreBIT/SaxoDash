@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
+import Research from './pages/Research'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
@@ -19,6 +20,7 @@ function App() {
           <Route path='portfolio' element={<Portfolio />} />
           <Route path='transactions' element={<Transactions />} />
           <Route path='accounts' element={<Accounts />} />
+          <Route path='research' element={<Research />} />
         </Route>
       </Route>
       <Route path='*' element={<NotFound />} />
