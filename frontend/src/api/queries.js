@@ -50,9 +50,8 @@ export function useNetWorth() {
   return useQuery({ queryKey: queryKeys.netWorth, queryFn: getNetWorth })
 }
 
-// NetWorthChart, PortfolioValueChart and BankBalanceChart all render from this
-// endpoint. Sharing one query key per range means three components mounting
-// together fire one request, not three.
+// Sharing one query key per range means charts mounting together on a page fire
+// one request, not one each.
 export function useNetWorthHistory(range = 'ALL') {
   return useQuery({
     queryKey: queryKeys.netWorthHistory(range),

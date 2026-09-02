@@ -1,7 +1,7 @@
 import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtPct, fmtNum } from '../lib/format'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
-import PortfolioValueChart from '../components/PortfolioValueChart'
+import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 
@@ -69,7 +69,13 @@ export default function Portfolio() {
         </div>
       </Card>
 
-      <PortfolioValueChart />
+      <HistoryAreaChart
+        title="Portfolio value"
+        subtitle="Investment value over time"
+        dataKey="portfolio_value"
+        name="Portfolio"
+        color="#34d399"
+      />
 
       <div className="grid grid-cols-20 gap-4" style={{ gridTemplateColumns: '65fr 35fr' }}>
         <Card padding={false}>

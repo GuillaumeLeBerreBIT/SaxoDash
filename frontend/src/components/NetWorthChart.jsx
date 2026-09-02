@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { chartTooltipProps, formatAxisDate } from '../lib/charts'
+import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate } from '../lib/charts'
 import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
@@ -47,21 +47,9 @@ export default function NetWorthChart() {
         {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatAxisDate}
-              tick={{ fill: '#71717a', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fill: '#71717a', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-              width={70}
-              tickFormatter={(v) => fmtEur(v, { decimals: 0 })}
-            />
+            <CartesianGrid {...gridProps} />
+            <XAxis {...dateAxisProps} />
+            <YAxis {...moneyAxisProps} />
             <Tooltip {...chartTooltipProps} labelFormatter={formatAxisDate} formatter={(v, n) => [fmtEur(v), n]} />
             {showInvestments && (
               <Line

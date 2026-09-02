@@ -1,7 +1,7 @@
 import { useBankAccounts } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { Card, PageHeader, StatCard } from '../components/ui'
-import BankBalanceChart from '../components/BankBalanceChart'
+import HistoryAreaChart from '../components/HistoryAreaChart'
 import AccountBreakdownChart from '../components/AccountBreakdownChart'
 import CashFlowChart from '../components/CashFlowChart'
 
@@ -21,7 +21,13 @@ export default function Accounts() {
         <StatCard label="Total Balance" value={fmtEur(total)} note={`${accounts.length} accounts`} />
       </div>
 
-      <BankBalanceChart />
+      <HistoryAreaChart
+        title="Bank balance"
+        subtitle="Total across accounts over time"
+        dataKey="bank_total"
+        name="Bank"
+        color="#fbbf24"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -1,3 +1,5 @@
+import { fmtEur } from './format'
+
 export const chartTooltipProps = {
   contentStyle: {
     background: '#18181b',
@@ -12,6 +14,22 @@ export const chartTooltipProps = {
   cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
 }
 
+export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
+
+export const axisProps = {
+  tick: { fill: '#71717a', fontSize: 11 },
+  axisLine: false,
+  tickLine: false,
+}
+
 export function formatAxisDate(value) {
   return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
+export const dateAxisProps = { ...axisProps, dataKey: 'date', tickFormatter: formatAxisDate }
+
+export const moneyAxisProps = {
+  ...axisProps,
+  width: 70,
+  tickFormatter: (value) => fmtEur(value, { decimals: 0 }),
 }
