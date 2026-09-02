@@ -31,8 +31,21 @@ export function getUsername() {
   return localStorage.getItem("username");
 }
 
-export function logout() {
+export async function logout() {
+  const { refresh } = getTokens();
   clearTokens();
+  if (!refresh) return;
+
+  // Best effort: the local session is already gone either way.
+  try {
+    await fetch(`${BASE_URL}/api/token/logout/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+  } catch {
+    /* network down - nothing useful to do here */
+  }
 }
 
 export function isAuthenticated() {

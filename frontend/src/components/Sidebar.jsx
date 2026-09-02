@@ -14,8 +14,8 @@ export default function Sidebar({ collapsed, setCollapsed }) {
   const username = getUsername() || 'Account'
   const initials = username.slice(0, 2).toUpperCase()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login')
   }
   const width = collapsed ? 64 : 220

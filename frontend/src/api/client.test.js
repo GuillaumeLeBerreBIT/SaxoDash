@@ -50,16 +50,48 @@ describe('logout / isAuthenticated', () => {
     expect(isAuthenticated()).toBe(true)
   })
 
-  it('logout clears stored tokens and username', () => {
+  it('logout clears stored tokens and username', async () => {
     localStorage.setItem('access', 'a')
     localStorage.setItem('refresh', 'r')
     localStorage.setItem('username', 'alice')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({}, true, 205))
 
-    logout()
+    await logout()
 
     expect(localStorage.getItem('access')).toBeNull()
     expect(localStorage.getItem('refresh')).toBeNull()
     expect(localStorage.getItem('username')).toBeNull()
+  })
+
+  it('logout asks the backend to revoke the refresh token', async () => {
+    localStorage.setItem('access', 'a')
+    localStorage.setItem('refresh', 'r')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({}, true, 205))
+
+    await logout()
+
+    const [url, options] = window.fetch.mock.calls[0]
+    expect(url).toContain('/api/token/logout/')
+    expect(options.method).toBe('POST')
+    expect(JSON.parse(options.body)).toEqual({ refresh: 'r' })
+  })
+
+  it('logout still clears the session when revocation fails', async () => {
+    localStorage.setItem('access', 'a')
+    localStorage.setItem('refresh', 'r')
+    window.fetch = vi.fn().mockRejectedValue(new Error('network down'))
+
+    await expect(logout()).resolves.toBeUndefined()
+    expect(localStorage.getItem('access')).toBeNull()
+  })
+
+  it('logout does not call the backend when there is no refresh token', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn()
+
+    await logout()
+
+    expect(window.fetch).not.toHaveBeenCalled()
   })
 })
 
