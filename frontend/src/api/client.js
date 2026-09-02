@@ -52,6 +52,19 @@ export function isAuthenticated() {
   return Boolean(getTokens().access);
 }
 
+/** Carries the HTTP status so callers can tell failures apart.
+ *
+ *  The Research endpoints answer 409 when the app itself is not connected to
+ *  Saxo, which is a prompt to reconnect rather than an error to report.
+ */
+export class ApiError extends Error {
+  constructor(status) {
+    super(`Request failed: ${status}`)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 let refreshPromise = null;
 
 async function refreshAccessToken() {
@@ -100,9 +113,18 @@ async function apiFetch(path, options = {}) {
         }
     }
 
-    if (!res.ok) throw new Error(`Request failed: ${res.status}`)
-    return res.json()
+    if (!res.ok) throw new ApiError(res.status)
+
+    // DELETE answers 204 with an empty body; res.json() would throw on it.
+    return res.status === 204 ? null : res.json()
 }
+
+const jsonRequest = (path, method, body) =>
+  apiFetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
 
 export const getPositions = () => apiFetch('/api/portfolio/positions/')
 export const getPortfolioSummary = () => apiFetch('/api/portfolio/summary/')
@@ -113,3 +135,30 @@ export const getNetWorthHistory = (range = 'ALL') => apiFetch(`/api/core/net-wor
 export const getCashFlow = () => apiFetch('/api/transactions/cash-flow/')
 export const getSaxoStatus = () => apiFetch('/api/saxo/status/')
 export const connectSaxo = () => { window.location.href = `${BASE_URL}/api/saxo/connect/` }
+
+// Research: market data proxied through the backend, and watchlist CRUD.
+export const getChart = ({ uic, assetType, horizon = 1440, count = 252 }) =>
+  apiFetch(
+    `/api/research/chart/?uic=${uic}&asset_type=${assetType}&horizon=${horizon}&count=${count}`,
+  )
+
+export const getQuotes = ({ uics, assetType }) =>
+  apiFetch(`/api/research/quotes/?uics=${uics.join(',')}&asset_type=${assetType}`)
+
+export const searchInstruments = (query, assetTypes = 'Stock,Etf') =>
+  apiFetch(`/api/research/instruments/?q=${encodeURIComponent(query)}&asset_types=${assetTypes}`)
+
+export const getInstrumentDetails = ({ uic, assetType }) =>
+  apiFetch(`/api/research/instruments/${uic}/${assetType}/`)
+
+export const getWatchlists = () => apiFetch('/api/research/watchlists/')
+export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
+export const updateWatchlist = (id, patch) =>
+  jsonRequest(`/api/research/watchlists/${id}/`, 'PATCH', patch)
+export const deleteWatchlist = (id) =>
+  apiFetch(`/api/research/watchlists/${id}/`, { method: 'DELETE' })
+
+export const addWatchlistItem = (id, item) =>
+  jsonRequest(`/api/research/watchlists/${id}/items/`, 'POST', item)
+export const removeWatchlistItem = (id, itemId) =>
+  apiFetch(`/api/research/watchlists/${id}/items/${itemId}/`, { method: 'DELETE' })
