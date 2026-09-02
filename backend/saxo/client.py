@@ -1,9 +1,9 @@
+from urllib.parse import urlencode
+
 import requests
 from django.conf import settings
 
-# Keyed by SAXO_ENVIRONMENT. Previously both URLs were hardcoded to sim, which
-# made SaxoCredential.environment a decorative field: going live meant editing
-# this module. Now it is a config change.
+# Keyed by SAXO_ENVIRONMENT so going live is a config change, not an edit here.
 ENVIRONMENTS = {
     'sim': {
         'auth': 'https://sim.logonvalidation.net',
@@ -14,6 +14,19 @@ ENVIRONMENTS = {
         'api': 'https://gateway.saxobank.com/openapi',
     },
 }
+
+REQUEST_TIMEOUT = 10
+
+# Saxo error bodies can be long; enough to diagnose, not enough to flood a log.
+ERROR_BODY_LIMIT = 200
+
+
+class SaxoAuthError(Exception):
+    """Raised when the OAuth token exchange or refresh fails."""
+
+
+class SaxoAPIError(Exception):
+    """Raised when a Saxo OpenAPI request fails."""
 
 
 def _base_urls():
@@ -27,69 +40,71 @@ def _auth_base_url():
 def _api_base_url():
     return _base_urls()['api']
 
-class SaxoAuthError(Exception):
-    """Raised when the OAuth token exchange or refresh fails."""
+
+def _request(send, url, error_class, label, **kwargs):
+    try:
+        response = send(url, timeout=REQUEST_TIMEOUT, **kwargs)
+    except requests.RequestException as exc:
+        raise error_class(f'{label} failed: {exc}') from exc
+
+    if not response.ok:
+        body = response.text[:ERROR_BODY_LIMIT]
+        raise error_class(f'{label} failed: {response.status_code} {body}')
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise error_class(f'{label} returned a non-JSON body') from exc
 
 
-class SaxoAPIError(Exception):
-    """Raised when a Saxo OpenAPI request fails."""
+def _token_request(grant, label):
+    return _request(
+        requests.post,
+        f'{_auth_base_url()}/token',
+        SaxoAuthError,
+        label,
+        data={
+            **grant,
+            'redirect_uri': settings.SAXO_REDIRECT_URI,
+            'client_id': settings.SAXO_KEY,
+            'client_secret': settings.SAXO_SECRET,
+        },
+    )
+
+
+def _get(access_token, path, params=None):
+    return _request(
+        requests.get,
+        f'{_api_base_url()}{path}',
+        SaxoAPIError,
+        f'GET {path}',
+        headers={'Authorization': f'Bearer {access_token}'},
+        params=params,
+    )
 
 
 def build_authorize_url(state):
-    params = {
+    query = urlencode({
         'response_type': 'code',
         'client_id': settings.SAXO_KEY,
         'redirect_uri': settings.SAXO_REDIRECT_URI,
         'state': state,
-    }
-    query = '&'.join(f'{k}={v}' for k, v in params.items())
+    })
     return f'{_auth_base_url()}/authorize?{query}'
 
 
 def exchange_code_for_token(code):
-    response = requests.post(
-        f'{_auth_base_url()}/token',
-        data={
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': settings.SAXO_REDIRECT_URI,
-            'client_id': settings.SAXO_KEY,
-            'client_secret': settings.SAXO_SECRET,
-        },
-        timeout=10,
+    return _token_request(
+        {'grant_type': 'authorization_code', 'code': code},
+        'Token exchange',
     )
-    if not response.ok:
-        raise SaxoAuthError(f'Token exchange failed: {response.status_code} {response.text}')
-    return response.json()
 
 
 def refresh_access_token(refresh_token):
-    response = requests.post(
-        f'{_auth_base_url()}/token',
-        data={
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token,
-            'redirect_uri': settings.SAXO_REDIRECT_URI,
-            'client_id': settings.SAXO_KEY,
-            'client_secret': settings.SAXO_SECRET,
-        },
-        timeout=10,
+    return _token_request(
+        {'grant_type': 'refresh_token', 'refresh_token': refresh_token},
+        'Token refresh',
     )
-    if not response.ok:
-        raise SaxoAuthError(f'Token refresh failed: {response.status_code} {response.text}')
-    return response.json()
-
-
-def _get(access_token, path, params=None):
-    response = requests.get(
-        f'{_api_base_url()}{path}',
-        headers={'Authorization': f'Bearer {access_token}'},
-        params=params,
-        timeout=10,
-    )
-    if not response.ok:
-        raise SaxoAPIError(f'GET {path} failed: {response.status_code} {response.text}')
-    return response.json()
 
 
 def get_positions(access_token):

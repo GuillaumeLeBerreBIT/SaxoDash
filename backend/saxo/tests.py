@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 from cryptography.fernet import Fernet
 from django.db import connection
 from django.test import TestCase, override_settings
@@ -75,6 +76,19 @@ class SaxoClientTest(TestCase):
         self.assertIn('sim.logonvalidation.net/authorize', url)
         self.assertIn('state=xyz-state', url)
         self.assertIn(f'client_id={settings.SAXO_KEY}', url) if settings.SAXO_KEY else None
+
+    @override_settings(
+        SAXO_KEY='key/with+chars',
+        SAXO_REDIRECT_URI='http://localhost:8000/api/saxo/callback/',
+    )
+    def test_build_authorize_url_percent_encodes_params(self):
+        url = client.build_authorize_url('a b&c')
+        query = parse_qs(urlparse(url).query)
+
+        self.assertNotIn('redirect_uri=http://', url)
+        self.assertEqual(query['redirect_uri'], ['http://localhost:8000/api/saxo/callback/'])
+        self.assertEqual(query['client_id'], ['key/with+chars'])
+        self.assertEqual(query['state'], ['a b&c'])
 
     @patch('saxo.client.requests.post')
     def test_exchange_code_for_token_returns_json_on_success(self, mock_post):
@@ -190,6 +204,49 @@ class SaxoCallbackViewTest(APITestCase):
         self.assertIn('saxo=connected', response.url)
         self.assertEqual(SaxoCredential.objects.count(), 1)
         self.assertEqual(SaxoCredential.objects.first().access_token, 'new-access')
+
+    @override_settings(SAXO_ENVIRONMENT='live')
+    @patch('saxo.views.client.exchange_code_for_token')
+    def test_records_the_environment_the_token_was_issued_for(self, mock_exchange):
+        mock_exchange.return_value = {
+            'access_token': 'a', 'refresh_token': 'r', 'expires_in': 1200,
+        }
+        session = self.client.session
+        session['saxo_oauth_state'] = 'matching-state'
+        session.save()
+
+        self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
+        self.assertEqual(SaxoCredential.objects.first().environment, 'live')
+
+    @patch('saxo.views.client.exchange_code_for_token')
+    def test_redirects_with_error_when_exchange_fails(self, mock_exchange):
+        mock_exchange.side_effect = client.SaxoAuthError('boom')
+        session = self.client.session
+        session['saxo_oauth_state'] = 'matching-state'
+        session.save()
+
+        with self.assertLogs('saxo.views', level='ERROR'):
+            response = self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('saxo=error', response.url)
+        self.assertEqual(SaxoCredential.objects.count(), 0)
+
+    @patch('saxo.views.client.exchange_code_for_token')
+    def test_keeps_existing_credential_when_exchange_fails(self, mock_exchange):
+        SaxoCredential.objects.create(
+            access_token='old', refresh_token='old-r',
+            expires_at=timezone.now() + timedelta(minutes=20),
+        )
+        mock_exchange.side_effect = client.SaxoAuthError('boom')
+        session = self.client.session
+        session['saxo_oauth_state'] = 'matching-state'
+        session.save()
+
+        with self.assertLogs('saxo.views', level='ERROR'):
+            self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
+
+        self.assertEqual(SaxoCredential.objects.first().access_token, 'old')
 
 
 class SaxoStatusViewTest(APITestCase):

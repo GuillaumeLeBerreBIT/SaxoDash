@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 
 def _color_for_ticker(ticker):
-    digest = hashlib.md5(ticker.encode()).hexdigest()
+    digest = hashlib.md5(ticker.encode(), usedforsecurity=False).hexdigest()
     return f"#{digest[:6]}"
 
 def to_position_fields(saxo_position):

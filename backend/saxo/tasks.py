@@ -1,6 +1,8 @@
+import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone
 
 from portfolio.models import Position
@@ -10,22 +12,22 @@ from . import client, mapping
 from .models import SaxoCredential
 from accounts.models import BankAccount
 
+logger = logging.getLogger(__name__)
+
 REFRESH_MARGIN = timedelta(minutes=5)
+
+SYNC_TASK = {
+    'autoretry_for': (client.SaxoAPIError,),
+    'retry_backoff': True,
+    'max_retries': 3,
+}
 
 
 def _usable_credential():
     """The credential the sync tasks may call Saxo with, or None to skip.
 
-    An access token past its `expires_at` is treated as unusable rather than
-    tried anyway: calling Saxo with it returns 401, which surfaces as a
-    SaxoAPIError and burns all three autoretries on a request that cannot
-    succeed. `refresh_saxo_token` runs every 10 minutes and is what repairs
-    this, so skipping is the correct response - the next sync tick picks up
-    the refreshed token.
-
-    Deliberately NOT used by `refresh_saxo_token`: an expired access token is
-    exactly when that task must run. It authenticates with the longer-lived
-    refresh token, so expiry is its trigger, not its blocker.
+    Not used by `refresh_saxo_token`: an expired access token is that task's
+    trigger, not its blocker, since it authenticates with the refresh token.
     """
     credential = SaxoCredential.objects.first()
     if not credential or credential.needs_reauth:
@@ -35,76 +37,87 @@ def _usable_credential():
     return credential
 
 
+def _mapped_rows(raw_rows, to_fields):
+    for raw_row in raw_rows:
+        try:
+            yield to_fields(raw_row)
+        except (KeyError, TypeError, ValueError) as exc:
+            logger.warning(
+                'Skipping Saxo row that %s could not map: %r', to_fields.__name__, exc
+            )
+
+
+def _stamp_synced(credential):
+    credential.last_synced_at = timezone.now()
+    credential.save(update_fields=['last_synced_at'])
+
+
 @shared_task
 def refresh_saxo_token():
     credential = SaxoCredential.objects.first()
     if not credential or credential.needs_reauth:
         return
-    
+
     if credential.expires_at - timezone.now() > REFRESH_MARGIN:
         return
-    
+
     try:
         token_data = client.refresh_access_token(credential.refresh_token)
-    
+        access_token = token_data['access_token']
+        refresh_token = token_data['refresh_token']
+        expires_in = int(token_data['expires_in'])
     except client.SaxoAuthError:
+        logger.warning('Saxo token refresh rejected; re-authentication required')
         credential.needs_reauth = True
         credential.save(update_fields=['needs_reauth'])
         return
-    
-    credential.access_token = token_data['access_token']
-    credential.refresh_token = token_data['refresh_token']
-    credential.expires_at = timezone.now() + timedelta(seconds=token_data['expires_in'])
+
+    credential.access_token = access_token
+    credential.refresh_token = refresh_token
+    credential.expires_at = timezone.now() + timedelta(seconds=expires_in)
     credential.save(update_fields=['access_token', 'refresh_token', 'expires_at'])
-    
-@shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
+
+
+@shared_task(**SYNC_TASK)
 def sync_positions():
     credential = _usable_credential()
     if not credential:
         return
 
     saxo_positions = client.get_positions(credential.access_token)
-    seen_tickers = []
 
-    for raw_position in saxo_positions:
-        try:
-            fields = mapping.to_position_fields(raw_position)
-        except (KeyError, TypeError):
-            continue
-        Position.objects.update_or_create(ticker=fields['ticker'], defaults=fields)
-        seen_tickers.append(fields['ticker'])
+    # Upsert and prune together, so a failure mid-loop cannot prune against a
+    # half-built list of seen tickers.
+    with transaction.atomic():
+        seen_tickers = []
+        for fields in _mapped_rows(saxo_positions, mapping.to_position_fields):
+            Position.objects.update_or_create(ticker=fields['ticker'], defaults=fields)
+            seen_tickers.append(fields['ticker'])
 
-    Position.objects.exclude(ticker__in=seen_tickers).delete()
-    credential.last_synced_at = timezone.now()
-    credential.save(update_fields=['last_synced_at'])
+        Position.objects.exclude(ticker__in=seen_tickers).delete()
+
+    _stamp_synced(credential)
 
 
-@shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
+@shared_task(**SYNC_TASK)
 def sync_transactions():
     credential = _usable_credential()
     if not credential:
         return
 
-    # SIM never populates /hist/v1/transactions, so entry trades are derived
-    # from the currently-open positions instead (mapping.to_transaction_fields).
-    # Exit trades (SELL-side of a closed long) will be added from
-    # /port/v1/closedpositions/me once a real closed-position payload exists to
-    # map against - it was empty in SIM on 2026-08-27.
+    # SIM never populates /hist/v1/transactions, so entry trades come from open
+    # positions instead; exit trades await a real closed-position payload.
     saxo_positions = client.get_positions(credential.access_token)
 
-    for raw_position in saxo_positions:
-        try:
-            fields = mapping.to_transaction_fields(raw_position)
-        except (KeyError, TypeError):
-            continue
+    for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
         Transaction.objects.update_or_create(
             saxo_trade_id=fields['saxo_trade_id'], defaults=fields
         )
 
-    credential.last_synced_at = timezone.now()
-    credential.save(update_fields=['last_synced_at'])
-    
-@shared_task(autoretry_for=(client.SaxoAPIError,), retry_backoff=True, max_retries=3)
+    _stamp_synced(credential)
+
+
+@shared_task(**SYNC_TASK)
 def sync_account_balance():
     credential = _usable_credential()
     if not credential:
@@ -113,3 +126,5 @@ def sync_account_balance():
     saxo_balance = client.get_account_balance(credential.access_token)
     fields = mapping.to_account_fields(saxo_balance=saxo_balance)
     BankAccount.objects.update_or_create(bank='Saxo', defaults=fields)
+
+    _stamp_synced(credential)
