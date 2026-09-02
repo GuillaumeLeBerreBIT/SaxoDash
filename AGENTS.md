@@ -7,9 +7,14 @@ Read it before starting implementation work if you haven't already.
 
 A personal finance dashboard (Django REST Framework backend, Vite + React
 frontend) rebuilding the SaxoDash Claude Design mockup into a real app.
-Current milestone: Dashboard, Portfolio, Transactions pages on seeded mock
-data. Research, Earnings, Banking, and real Saxo OpenAPI / bank-aggregation
-integrations are future milestones — do not pull them forward mid-task.
+Current milestone: Dashboard, Portfolio, Transactions, Accounts and
+Research, against the live Saxo OpenAPI. Earnings, Analytics and
+bank-aggregation are future milestones — do not pull them forward mid-task.
+
+Research shipped as v1 = everything Saxo can power. Company fundamentals
+and macro series (P/E, market cap, dividend yield, analyst ratings, Buffett
+indicator) wait on a second data provider and render as ComingSoon panels
+until one is chosen.
 
 ## Working agreement (read this before writing any code)
 
@@ -70,8 +75,15 @@ accumulated learning records are what make choosing the right topic possible.
 Applies to backend-and-frontend features, infrastructure, and deploy work
 alike — the trigger is "was anything surprising here", not the size of the diff.
 
+## Decided
+
+Research page's candlestick source: **Saxo `/chart/v3/charts`**, proxied
+and cached by the `research` app, not a TradingView embed and not mock
+data. It reuses the OAuth token the portfolio sync already holds, so the
+chart, the quotes, the instrument search and "Your position" all come from
+one connection.
+
 ## Open decision (not yet made)
 
-Research page's candlestick chart data source: TradingView widget embed
-vs. Saxo OpenAPI real OHLC vs. continued synthetic mock. Deferred until
-the Research milestone — don't decide this in passing.
+The fundamentals provider behind the ComingSoon panels — FMP, Finnhub,
+EODHD or similar. Criteria and the v2 outline are in the Research plan.
