@@ -579,6 +579,20 @@ class SaxoMarketDataClientTest(TestCase):
         self.assertEqual(params['Count'], 66)
 
     @patch('saxo.client.requests.get')
+    def test_get_chart_does_not_ask_for_a_mode_without_a_time(self, mock_get):
+        # Mode picks a side of a given Time, so Saxo rejects it on its own:
+        # 400 InvalidModelState, "Time is not provided." Sending neither
+        # returns the most recent Count samples, which is what the chart wants.
+        # Confirmed against SIM 2026-09-02.
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
+
+        client.get_chart('token', 211, 'Stock', 1440, count=66)
+
+        params = mock_get.call_args.kwargs['params']
+        self.assertNotIn('Mode', params)
+        self.assertNotIn('Time', params)
+
+    @patch('saxo.client.requests.get')
     def test_get_chart_clamps_count_to_saxos_ceiling(self, mock_get):
         mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
 

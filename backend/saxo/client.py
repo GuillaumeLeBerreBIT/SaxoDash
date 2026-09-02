@@ -128,13 +128,18 @@ def get_closed_positions(access_token):
 # Market data. Uic alone is ambiguous - every one of these needs the matching
 # AssetType or Saxo answers 404.
 
-def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT, mode='UpTo'):
+def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT):
+    """The most recent `count` samples for an instrument.
+
+    No Mode and no Time: Mode picks a side of a given Time, so Saxo rejects
+    it on its own with InvalidModelState. Sending neither is what asks for
+    the latest samples. A windowed request would add both together.
+    """
     params = {
         'Uic': uic,
         'AssetType': asset_type,
         'Horizon': horizon,
         'Count': min(int(count), CHART_MAX_COUNT),
-        'Mode': mode,
     }
     return _get(access_token, '/chart/v3/charts', params=params).get('Data', [])
 
