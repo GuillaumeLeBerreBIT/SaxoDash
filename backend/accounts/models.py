@@ -1,6 +1,6 @@
 from django.db import models
 
-# Create your models here.
+
 class BankAccount(models.Model):
     bank = models.CharField(max_length=50)
     type = models.CharField(max_length=50)
@@ -9,6 +9,14 @@ class BankAccount(models.Model):
     available = models.DecimalField(max_digits=12, decimal_places=2)
     gradient = models.CharField(max_length=100, blank=True, default='')
     accent = models.CharField(max_length=20, blank=True, default='')
-    
+
+    # Stable key for synced accounts; null for ones entered by hand. `bank` is
+    # not unique because one bank can hold several accounts.
+    external_id = models.CharField(max_length=64, null=True, blank=True,
+                                   default=None, unique=True)
+
+    class Meta:
+        ordering = ['bank', 'type']
+
     def __str__(self):
         return f'{self.bank} {self.type}'

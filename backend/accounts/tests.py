@@ -71,3 +71,48 @@ class AccountsAPITest(APITestCase):
         self.assertEqual(response.data['portfolio_value'], Decimal('1500.00'))
         self.assertEqual(response.data['bank_total'], Decimal('3000.00'))
         self.assertEqual(response.data['net_worth'], Decimal('4500.00'))
+
+class SaxoExternalIdBackfillTest(TestCase):
+    """Covers the 0004 data migration, which deletes rows."""
+
+    def test_folds_case_mismatched_duplicates_onto_one_row(self):
+        from importlib import import_module
+
+        migration = import_module('accounts.migrations.0004_backfill_saxo_external_id')
+
+        BankAccount.objects.create(
+            bank='saxo', type='Cash', iban_masked='-',
+            balance=Decimal('100.00'), available=Decimal('100.00'),
+        )
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-',
+            balance=Decimal('994104.45'), available=Decimal('992000.10'),
+        )
+        BankAccount.objects.create(
+            bank='KBC', type='Savings', iban_masked='BE71 5678',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+        )
+
+        apps_stub = type('Apps', (), {'get_model': staticmethod(lambda *a: BankAccount)})
+        migration.claim_saxo_account(apps_stub, None)
+
+        saxo = BankAccount.objects.get(external_id=migration.SAXO_CASH_ACCOUNT_ID)
+        self.assertEqual(saxo.bank, 'Saxo')
+        self.assertEqual(saxo.balance, Decimal('994104.45'))
+        self.assertEqual(BankAccount.objects.filter(bank__iexact='saxo').count(), 1)
+        self.assertEqual(BankAccount.objects.count(), 2)
+
+    def test_is_a_no_op_without_a_saxo_account(self):
+        from importlib import import_module
+
+        migration = import_module('accounts.migrations.0004_backfill_saxo_external_id')
+
+        BankAccount.objects.create(
+            bank='KBC', type='Savings', iban_masked='BE71 5678',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+        )
+        apps_stub = type('Apps', (), {'get_model': staticmethod(lambda *a: BankAccount)})
+        migration.claim_saxo_account(apps_stub, None)
+
+        self.assertEqual(BankAccount.objects.count(), 1)
+        self.assertIsNone(BankAccount.objects.get().external_id)

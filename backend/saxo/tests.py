@@ -458,20 +458,19 @@ class SyncAccountBalanceTaskTest(TestCase):
         )
 
     @patch('saxo.tasks.client.get_account_balance')
-    def test_updates_the_existing_saxo_account_row(self, mock_get_balance):
-        # The seeded 'Saxo' row must be updated in place, not duplicated - the
-        # bug this task shipped with was bank='saxo' failing to match it.
+    def test_updates_the_synced_account_in_place(self, mock_get_balance):
         BankAccount.objects.create(
             bank='Saxo', type='Cash', iban_masked='-',
             balance=Decimal('850.00'), available=Decimal('850.00'),
+            external_id=mapping.SAXO_CASH_ACCOUNT_ID,
         )
         mock_get_balance.return_value = {
             'CashBalance': 994104.45, 'CollateralAvailable': 992000.10,
         }
         tasks.sync_account_balance()
 
-        self.assertEqual(BankAccount.objects.filter(bank='Saxo').count(), 1)
-        account = BankAccount.objects.get(bank='Saxo')
+        self.assertEqual(BankAccount.objects.count(), 1)
+        account = BankAccount.objects.get(external_id=mapping.SAXO_CASH_ACCOUNT_ID)
         self.assertEqual(account.balance, Decimal('994104.45'))
         self.assertEqual(account.available, Decimal('992000.10'))
 
@@ -481,7 +480,37 @@ class SyncAccountBalanceTaskTest(TestCase):
             'CashBalance': 100.00, 'CollateralAvailable': 100.00,
         }
         tasks.sync_account_balance()
-        self.assertEqual(BankAccount.objects.get(bank='Saxo').balance, Decimal('100.00'))
+
+        account = BankAccount.objects.get(external_id=mapping.SAXO_CASH_ACCOUNT_ID)
+        self.assertEqual(account.balance, Decimal('100.00'))
+        self.assertEqual(account.bank, 'Saxo')
+
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_second_account_at_the_same_bank_does_not_break_the_sync(self, mock_get_balance):
+        # update_or_create(bank='Saxo') raised MultipleObjectsReturned here.
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-',
+            balance=Decimal('850.00'), available=Decimal('850.00'),
+            external_id=mapping.SAXO_CASH_ACCOUNT_ID,
+        )
+        BankAccount.objects.create(
+            bank='Saxo', type='Savings', iban_masked='-',
+            balance=Decimal('25.00'), available=Decimal('25.00'),
+        )
+        mock_get_balance.return_value = {
+            'CashBalance': 300.00, 'CollateralAvailable': 300.00,
+        }
+        tasks.sync_account_balance()
+
+        self.assertEqual(BankAccount.objects.filter(bank='Saxo').count(), 2)
+        self.assertEqual(
+            BankAccount.objects.get(external_id=mapping.SAXO_CASH_ACCOUNT_ID).balance,
+            Decimal('300.00'),
+        )
+        # the hand-entered account is untouched
+        self.assertEqual(
+            BankAccount.objects.get(type='Savings').balance, Decimal('25.00')
+        )
 
 
 class SaxoEnvironmentTest(TestCase):

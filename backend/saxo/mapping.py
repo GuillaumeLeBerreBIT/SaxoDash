@@ -60,8 +60,12 @@ def to_transaction_fields(saxo_position):
         'account': 'Saxo',
     }
     
+SAXO_CASH_ACCOUNT_ID = 'saxo:cash'
+
+
 def to_account_fields(saxo_balance):
     return {
+        'bank': 'Saxo',
         'type': 'Cash',
         'iban_masked': '-',
         'balance': Decimal(str(saxo_balance['CashBalance'])),

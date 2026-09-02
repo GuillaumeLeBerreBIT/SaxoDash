@@ -9,6 +9,7 @@ from portfolio.models import Position
 from portfolio.services import get_positions_total_value
 from transactions.models import Transaction
 from accounts.models import BankAccount
+from saxo.mapping import SAXO_CASH_ACCOUNT_ID
 from accounts.services import get_total_bank_balance
 from core.models import NetWorthSnapshot
 
@@ -75,7 +76,8 @@ BANK_ACCOUNTS = [
          gradient='from-orange-500 to-orange-700', accent='#ea580c'),
     dict(bank='Saxo', type='Cash', iban_masked='-',
          balance=Decimal('850.00'), available=Decimal('850.00'),
-         gradient='from-slate-600 to-slate-800', accent='#334155'),
+         gradient='from-slate-600 to-slate-800', accent='#334155',
+         external_id=SAXO_CASH_ACCOUNT_ID),
 ]
 
 

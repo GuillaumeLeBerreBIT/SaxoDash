@@ -125,6 +125,8 @@ def sync_account_balance():
 
     saxo_balance = client.get_account_balance(credential.access_token)
     fields = mapping.to_account_fields(saxo_balance=saxo_balance)
-    BankAccount.objects.update_or_create(bank='Saxo', defaults=fields)
+    BankAccount.objects.update_or_create(
+        external_id=mapping.SAXO_CASH_ACCOUNT_ID, defaults=fields
+    )
 
     _stamp_synced(credential)
