@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtEur, fmtNum } from '../lib/format'
+import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Card, PageHeader, Badge } from '../components/ui'
 
 const TYPES = ['All', 'BUY', 'SELL', 'DIVIDEND', 'DEPOSIT', 'FEE']
@@ -12,12 +13,6 @@ const signedTotal = (t) =>
     : t.type === 'FEE'
     ? '-' + fmtEur(t.total)
     : fmtEur(t.total)
-
-function toCsv(rows) {
-  const header = ['Date', 'Type', 'Instrument', 'Ticker', 'Qty', 'Price', 'Total', 'Account']
-  const lines = rows.map((t) => [t.date, t.type, t.instrument, t.ticker, t.qty, t.price, t.total, t.account].join(','))
-  return [header.join(','), ...lines].join('\n')
-}
 
 export default function Transactions() {
   const { data, isLoading, error } = useTransactions('?page_size=1000')
@@ -44,7 +39,7 @@ export default function Transactions() {
   const visible = filtered.slice((page - 1) * perPage, page * perPage)
 
   function handleExport() {
-    const blob = new Blob([toCsv(filtered)], { type: 'text/csv' })
+    const blob = new Blob([toCsv(TRANSACTION_COLUMNS, filtered)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
