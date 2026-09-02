@@ -24,3 +24,6 @@ frontend/.vite/
 # Env files (both apps)
 .env
 .env.local
+
+# Teaching workspace (/teach) - local learning material, not part of the app
+learning/

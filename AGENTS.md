@@ -50,6 +50,26 @@ explanation belongs in the chat or PR description, not the source. (Some
 existing comments are more verbose than this — don't treat them as a
 template.)
 
+## Learning workspace (`learning/`, gitignored)
+
+A `/teach` workspace. Two different costs, so two different triggers:
+
+**Learning records — write these unprompted.** After work that surfaced
+something non-obvious (a bug whose cause wasn't where you'd look, a framework
+behaviour that contradicts the obvious reading, a rejected approach and why),
+append `learning/learning-records/NNNN-<slug>.md`. Cheap markdown, no design
+pass. Capture the surprise and the reasoning, not a changelog — git already has
+the changelog. Skip it when the change was routine.
+
+**Lessons — only when asked.** A lesson is a designed HTML document and it only
+pays off when the topic is genuinely the next thing worth learning. Auto-firing
+one after every sizable feature produces material on things already known,
+which trains the habit of not reading them. Wait for an explicit `/teach`; the
+accumulated learning records are what make choosing the right topic possible.
+
+Applies to backend-and-frontend features, infrastructure, and deploy work
+alike — the trigger is "was anything surprising here", not the size of the diff.
+
 ## Open decision (not yet made)
 
 Research page's candlestick chart data source: TradingView widget embed
