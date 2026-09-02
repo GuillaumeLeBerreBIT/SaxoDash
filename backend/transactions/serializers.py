@@ -9,14 +9,11 @@ class CashFlowRowSerializer(serializers.Serializer):
 
 
 class TransactionSerializer(serializers.ModelSerializer):
-    total = serializers.SerializerMethodField()
+    total = serializers.ReadOnlyField()
 
     class Meta:
         model = Transaction
         fields = [
             'id', 'date', 'type', 'instrument', 'ticker',
-                  'qty', 'price', 'account', 'total'
+            'qty', 'price', 'account', 'total',
         ]
-
-    def get_total(self, obj):
-        return obj.qty * obj.price
