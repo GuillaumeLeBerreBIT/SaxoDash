@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view()),
     path('api/token/logout/', TokenLogoutView.as_view(), name='token-logout'),
     path('api/portfolio/', include('portfolio.urls')),
+    path('api/research/', include('research.urls')),
     path('api/core/', include('core.urls')),
     path('api/transactions/', include('transactions.urls')),
     path('api/accounts/', include('accounts.urls')),

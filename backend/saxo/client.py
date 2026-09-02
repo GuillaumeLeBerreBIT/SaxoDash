@@ -20,6 +20,11 @@ REQUEST_TIMEOUT = 10
 # Saxo error bodies can be long; enough to diagnose, not enough to flood a log.
 ERROR_BODY_LIMIT = 200
 
+# Saxo rejects a chart request asking for more samples than this.
+CHART_MAX_COUNT = 1200
+
+INFOPRICE_FIELD_GROUPS = 'Quote,PriceInfo,PriceInfoDetails,InstrumentPriceDetails'
+
 
 class SaxoAuthError(Exception):
     """Raised when the OAuth token exchange or refresh fails."""
@@ -118,3 +123,35 @@ def get_account_balance(access_token):
 
 def get_closed_positions(access_token):
     return _get(access_token, '/port/v1/closedpositions/me')
+
+
+# Market data. Uic alone is ambiguous - every one of these needs the matching
+# AssetType or Saxo answers 404.
+
+def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT, mode='UpTo'):
+    params = {
+        'Uic': uic,
+        'AssetType': asset_type,
+        'Horizon': horizon,
+        'Count': min(int(count), CHART_MAX_COUNT),
+        'Mode': mode,
+    }
+    return _get(access_token, '/chart/v3/charts', params=params).get('Data', [])
+
+
+def search_instruments(access_token, keywords, asset_types='Stock,Etf'):
+    params = {'Keywords': keywords, 'AssetTypes': asset_types, '$top': 25}
+    return _get(access_token, '/ref/v1/instruments', params=params).get('Data', [])
+
+
+def get_instrument_details(access_token, uic, asset_type):
+    return _get(access_token, f'/ref/v1/instruments/details/{uic}/{asset_type}')
+
+
+def get_infoprices(access_token, uics, asset_type, field_groups=INFOPRICE_FIELD_GROUPS):
+    params = {
+        'Uics': ','.join(str(u) for u in uics),
+        'AssetType': asset_type,
+        'FieldGroups': field_groups,
+    }
+    return _get(access_token, '/trade/v1/infoprices/list', params=params).get('Data', [])

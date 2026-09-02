@@ -17,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from . import mapping
 from . import client
 from . import checks
+from . import credentials
 
 TEST_KEY = Fernet.generate_key().decode()
 
@@ -561,3 +562,97 @@ class TokenEncryptionKeyCheckTest(TestCase):
     @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
     def test_passes_on_a_valid_key(self):
         self.assertEqual(checks.check_token_encryption_key(app_configs=None), [])
+
+
+class SaxoMarketDataClientTest(TestCase):
+    @patch('saxo.client.requests.get')
+    def test_get_chart_returns_the_data_list(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'Close': 1.0}]})
+
+        result = client.get_chart('token', 211, 'Stock', 1440, count=66)
+
+        self.assertEqual(result, [{'Close': 1.0}])
+        params = mock_get.call_args.kwargs['params']
+        self.assertEqual(params['Uic'], 211)
+        self.assertEqual(params['AssetType'], 'Stock')
+        self.assertEqual(params['Horizon'], 1440)
+        self.assertEqual(params['Count'], 66)
+
+    @patch('saxo.client.requests.get')
+    def test_get_chart_clamps_count_to_saxos_ceiling(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
+
+        client.get_chart('token', 211, 'Stock', 1440, count=99_999)
+
+        self.assertEqual(mock_get.call_args.kwargs['params']['Count'], client.CHART_MAX_COUNT)
+
+    @patch('saxo.client.requests.get')
+    def test_get_chart_raises_on_api_error(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=404, text='no such uic')
+
+        with self.assertRaises(client.SaxoAPIError):
+            client.get_chart('token', 211, 'Stock', 1440)
+
+    @patch('saxo.client.requests.get')
+    def test_search_instruments_passes_keywords_and_asset_types(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'Symbol': 'NVDA:xnas'}]})
+
+        result = client.search_instruments('token', 'nvda')
+
+        self.assertEqual(result, [{'Symbol': 'NVDA:xnas'}])
+        params = mock_get.call_args.kwargs['params']
+        self.assertEqual(params['Keywords'], 'nvda')
+        self.assertEqual(params['AssetTypes'], 'Stock,Etf')
+
+    @patch('saxo.client.requests.get')
+    def test_get_instrument_details_puts_uic_and_type_in_the_path(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Uic': 211})
+
+        client.get_instrument_details('token', 211, 'Stock')
+
+        self.assertIn('/ref/v1/instruments/details/211/Stock', mock_get.call_args.args[0])
+
+    @patch('saxo.client.requests.get')
+    def test_get_infoprices_joins_the_uics_into_one_request(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'Uic': 211}]})
+
+        result = client.get_infoprices('token', [211, 212], 'Stock')
+
+        self.assertEqual(result, [{'Uic': 211}])
+        self.assertEqual(mock_get.call_args.kwargs['params']['Uics'], '211,212')
+
+    @patch('saxo.client.requests.get')
+    def test_get_infoprices_raises_on_api_error(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=429, text='too many requests')
+
+        with self.assertRaises(client.SaxoAPIError):
+            client.get_infoprices('token', [211], 'Stock')
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
+class ActiveCredentialTest(TestCase):
+    def _create(self, **overrides):
+        return SaxoCredential.objects.create(**{
+            'access_token': 'access',
+            'refresh_token': 'refresh',
+            'expires_at': timezone.now() + timedelta(minutes=20),
+            **overrides,
+        })
+
+    def test_returns_the_credential_when_it_is_usable(self):
+        self._create()
+        self.assertEqual(credentials.active_credential().access_token, 'access')
+
+    def test_raises_when_saxo_was_never_connected(self):
+        with self.assertRaises(credentials.SaxoNotConnected):
+            credentials.active_credential()
+
+    def test_raises_when_the_credential_needs_reauth(self):
+        self._create(needs_reauth=True)
+        with self.assertRaises(credentials.SaxoNotConnected):
+            credentials.active_credential()
+
+    def test_raises_when_the_access_token_has_expired(self):
+        self._create(expires_at=timezone.now() - timedelta(minutes=1))
+        with self.assertRaises(credentials.SaxoNotConnected):
+            credentials.active_credential()

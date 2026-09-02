@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'transactions',
     'accounts',
     'saxo',
+    'research',
 ]
 
 MIDDLEWARE = [
@@ -186,6 +187,14 @@ LOGGING = {
     'loggers': {
         'saxo': {'handlers': ['console'], 'level': LOG_LEVEL, 'propagate': False},
     },
+}
+
+# Redis DB 1: the Celery broker already owns DB 0.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('CACHE_URL', 'redis://localhost:6379/1'),
+    }
 }
 
 # Celery

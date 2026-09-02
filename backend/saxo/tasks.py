@@ -9,6 +9,7 @@ from portfolio.models import Position
 from transactions.models import Transaction
 
 from . import client, mapping
+from .credentials import SaxoNotConnected, active_credential
 from .models import SaxoCredential
 from accounts.models import BankAccount
 
@@ -29,12 +30,10 @@ def _usable_credential():
     Not used by `refresh_saxo_token`: an expired access token is that task's
     trigger, not its blocker, since it authenticates with the refresh token.
     """
-    credential = SaxoCredential.objects.first()
-    if not credential or credential.needs_reauth:
+    try:
+        return active_credential()
+    except SaxoNotConnected:
         return None
-    if credential.expires_at <= timezone.now():
-        return None
-    return credential
 
 
 def _mapped_rows(raw_rows, to_fields):
