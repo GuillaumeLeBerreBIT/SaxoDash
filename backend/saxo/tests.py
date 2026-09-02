@@ -153,6 +153,21 @@ class ToPositionFieldsTest(TestCase):
         b = mapping.to_position_fields(SAMPLE_POSITION)
         self.assertEqual(a['color'], b['color'])
 
+    def test_carries_saxos_own_identity_for_the_instrument(self):
+        # `type` is the app's own STOCK/ETF label; the Research page needs the
+        # Uic and the AssetType spelled the way Saxo spells them.
+        withuic = {
+            **SAMPLE_POSITION,
+            'PositionBase': {**SAMPLE_POSITION['PositionBase'], 'Uic': 211},
+        }
+        fields = mapping.to_position_fields(withuic)
+
+        self.assertEqual(fields['uic'], 211)
+        self.assertEqual(fields['asset_type'], 'Stock')
+
+    def test_uic_is_none_when_saxo_omits_it(self):
+        self.assertIsNone(mapping.to_position_fields(SAMPLE_POSITION)['uic'])
+
 
 class ToTransactionFieldsTest(TestCase):
     def test_maps_open_position_to_buy_row(self):

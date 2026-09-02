@@ -15,6 +15,13 @@ class Position(models.Model):
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     color = models.CharField(max_length=7)
 
+    # Saxo's own identity for the instrument. Null for rows that predate the
+    # sync that fills them; the Research page falls back to symbol search.
+    # `type` cannot stand in - it says ETF where Saxo says Etf, and a Uic is
+    # ambiguous without the AssetType that goes with it.
+    uic = models.PositiveIntegerField(null=True, blank=True)
+    asset_type = models.CharField(max_length=20, null=True, blank=True)
+
     class Meta:
         ordering = ['-ticker']
 

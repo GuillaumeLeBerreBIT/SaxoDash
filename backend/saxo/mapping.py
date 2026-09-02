@@ -29,6 +29,8 @@ def to_position_fields(saxo_position):
         'sector': 'Uncategorized',
         'type': 'STOCK' if base.get('AssetType') == 'Stock' else 'ETF',
         'color': _color_for_ticker(ticker),
+        'uic': base.get('Uic'),
+        'asset_type': base.get('AssetType', 'Stock'),
     }
     
 def to_transaction_fields(saxo_position):
