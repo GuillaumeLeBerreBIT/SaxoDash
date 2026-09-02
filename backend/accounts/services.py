@@ -1,7 +1,10 @@
-from .models import BankAccount
 from decimal import Decimal
 
-def get_total_bank_balance(queryset=None):
-    
-    queryset = queryset if queryset is not None else BankAccount.objects.all()
-    return sum((b.balance for b in queryset), Decimal('0'))
+from django.db.models import Sum
+
+from .models import BankAccount
+
+
+def get_total_bank_balance():
+    total = BankAccount.objects.aggregate(total=Sum('balance'))['total']
+    return total if total is not None else Decimal('0')
