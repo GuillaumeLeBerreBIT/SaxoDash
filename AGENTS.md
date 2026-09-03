@@ -16,6 +16,21 @@ and macro series (P/E, market cap, dividend yield, analyst ratings, Buffett
 indicator) wait on a second data provider and render as ComingSoon panels
 until one is chosen.
 
+## Running the stack
+
+`scripts/dev.sh` starts redis, the celery worker, celery beat, Django and
+Vite in one terminal, prefixed and colour-coded per service, each gated on a
+readiness probe so "stack up" means it. Ctrl-C (or SIGHUP) stops everything
+it started; an already-running redis is reused and left alone.
+
+Services are declared in one table near the top of the script — adding a
+sixth is one `service` line, and `--no-<name>` works for it automatically.
+Flags: `--no-redis|worker|beat|web|ui` (`--no-frontend` aliases `--no-ui`)
+and `--reclaim`, which clears leftovers from a killed run instead of dying
+on a held port. Ports come from `backend/.env` so they can't drift from the
+backend's own config; override per-run with `WEB_PORT` / `UI_PORT` /
+`REDIS_PORT`. Per-service logs land in `.dev/logs/` (gitignored).
+
 ## Working agreement (read this before writing any code)
 
 **Backend (`backend/`, Django/DRF): coach mode.**

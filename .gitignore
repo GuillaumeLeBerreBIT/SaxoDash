@@ -16,6 +16,9 @@ media/
 # Redis snapshot written into backend/ by the local broker
 dump.rdb
 
+# scripts/dev.sh runtime dir (per-service logs + redis working dir)
+.dev/
+
 # Node / Vite (frontend/)
 node_modules/
 dist/
