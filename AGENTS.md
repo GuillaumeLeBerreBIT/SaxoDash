@@ -31,6 +31,9 @@ on a held port. Ports come from `backend/.env` so they can't drift from the
 backend's own config; override per-run with `WEB_PORT` / `UI_PORT` /
 `REDIS_PORT`. Per-service logs land in `.dev/logs/` (gitignored).
 
+Full reference — flags, troubleshooting, adding a service:
+`docs/running-the-stack.md`.
+
 ## Working agreement (read this before writing any code)
 
 **Backend (`backend/`, Django/DRF): coach mode.**
