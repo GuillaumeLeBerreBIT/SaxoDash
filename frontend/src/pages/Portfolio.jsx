@@ -54,7 +54,11 @@ export default function Portfolio() {
           <div className="pr-5">
             <div className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Investment portfolio</div>
             <div className="mt-1.5 text-[18px] font-medium text-zinc-50 num">{fmtEur(summary.total_value)}</div>
-            <div className={`text-[12px] num mt-0.5 ${Number(summary.total_pnl_pct) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+            <div className={`text-[12px] num mt-0.5 ${
+              summary.total_pnl_pct == null
+                ? 'text-zinc-500'
+                : Number(summary.total_pnl_pct) >= 0 ? 'text-blue-400' : 'text-red-400'
+            }`}>
               {fmtPct(summary.total_pnl_pct)}
             </div>
           </div>

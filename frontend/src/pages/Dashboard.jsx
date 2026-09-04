@@ -29,8 +29,8 @@ export default function Dashboard() {
   const positions = positionsQuery.data ?? []
   const recentTx = recentTxQuery.data ?? []
 
+  const pnlKnown = summary.total_pnl != null
   const totalPnl = Number(summary.total_pnl)
-  const totalPnlPct = Number(summary.total_pnl_pct)
   const top5 = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
 
   return (
@@ -42,9 +42,13 @@ export default function Dashboard() {
         <StatCard
           label="Portfolio value"
           value={fmtEur(summary.total_value)}
-          badge={fmtPct(totalPnlPct)}
-          badgeTone={totalPnl >= 0 ? 'emerald' : 'red'}
-          note={`${fmtEur(totalPnl, { sign: true })} all-time`}
+          badge={fmtPct(summary.total_pnl_pct)}
+          badgeTone={!pnlKnown ? 'zinc' : totalPnl >= 0 ? 'emerald' : 'red'}
+          note={
+            pnlKnown
+              ? `${fmtEur(totalPnl, { sign: true })} all-time`
+              : 'P/L unavailable until positions sync'
+          }
         />
         <StatCard label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
       </div>

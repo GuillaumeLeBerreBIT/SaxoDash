@@ -40,7 +40,23 @@ export function oldestPricedAt(positions) {
   return stamps[0] ?? null
 }
 
-export function fmtClock(iso) {
+/** A stamp you can judge staleness from.
+ *
+ *  HH:MM alone made a sync from last Tuesday read as "09:15" - indistinguishable
+ *  from nine minutes ago, which is the exact blind spot SyncRun exists to close.
+ *  Anything not from today carries its date.
+ */
+export function fmtClock(iso, now = new Date()) {
   if (!iso) return null
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return null
+
+  const time = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  if (at.toDateString() === now.toDateString()) return time
+
+  const days = Math.floor((now - at) / 86_400_000)
+  if (days <= 6) {
+    return `${at.toLocaleDateString([], { weekday: 'short' })} ${time}`
+  }
+  return `${at.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`
 }

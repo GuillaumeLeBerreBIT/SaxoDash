@@ -2,7 +2,11 @@
 // costs and P&L are converted to the reporting currency. Use fmtMoney with the
 // position's `currency` for a price, fmtEur for anything already converted.
 
+// An absent figure is not zero: "€0.00" is a claim, a dash is not.
+export const UNKNOWN = '—'
+
 export function fmtMoney(value, currency = 'EUR', { sign = false, decimals = 2 } = {}) {
+    if (value == null || Number.isNaN(Number(value))) return UNKNOWN
     const n = Number(value)
     const formatted = new Intl.NumberFormat('en-IE', {
         style: 'currency',
@@ -27,6 +31,7 @@ export function fmtQty(value) {
 }
 
 export function fmtPct(value, { sign = true, decimals = 2 } = {}) {
+    if (value == null || Number.isNaN(Number(value))) return UNKNOWN
     const n = Number(value)
     const prefix = n < 0 ? '' : sign ? '+' : ''
     return `${prefix}${n.toFixed(decimals)}%`
