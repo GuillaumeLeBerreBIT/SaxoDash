@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 
 from .models import NetWorthSnapshot
 from .money import CurrencyMismatch, Money
@@ -214,3 +215,119 @@ class SnapshotRefreshesTest(TestCase):
         self.assertEqual(NetWorthSnapshot.objects.count(), 1)
         self.assertEqual(second.pk, first.pk)
         self.assertEqual(second.net_worth, Decimal('1500.00'))
+
+
+class RepairNetWorthHistoryTest(TestCase):
+    def setUp(self):
+        today = timezone.localdate()
+        for days_ago in [3, 2, 1, 0]:
+            NetWorthSnapshot.objects.create(
+                date=today - timedelta(days=days_ago),
+                portfolio_value=Decimal('36714.55'),
+                bank_total=Decimal('968435.55'),
+                net_worth=Decimal('1005150.10'),
+            )
+        Position.objects.create(
+            ticker='MSFT', name='Microsoft', qty=Decimal('20'),
+            avg_cost=Decimal('494.36'), current_price=Decimal('510.09'),
+            sector='Technology', type='STOCK', color='#00a4ef',
+            currency='USD', fx_rate=Decimal('0.8600895'),
+        )
+
+    def _window(self):
+        return ['--since', str(timezone.localdate() - timedelta(days=30)),
+                '--until', str(timezone.localdate() - timedelta(days=1))]
+
+    def test_dry_run_changes_nothing(self):
+        call_command('repair_networth_history', *self._window())
+        self.assertEqual(NetWorthSnapshot.objects.first().portfolio_value,
+                         Decimal('36714.55'))
+
+    def test_restating_without_a_window_refuses_rather_than_compounding(self):
+        # The command multiplies rows in place and records nothing to say it
+        # ran, so an unbounded or repeated run would corrupt correct rows.
+        with self.assertRaises(CommandError):
+            call_command('repair_networth_history', '--apply')
+        with self.assertRaises(CommandError):
+            call_command('repair_networth_history', '--since', '2026-08-01', '--apply')
+
+        self.assertEqual(NetWorthSnapshot.objects.first().portfolio_value,
+                         Decimal('36714.55'))
+
+    def test_restates_the_portfolio_leg_at_the_positions_rate(self):
+        call_command('repair_networth_history', *self._window(), '--apply')
+
+        repaired = NetWorthSnapshot.objects.exclude(date=timezone.localdate()).first()
+        self.assertEqual(repaired.portfolio_value, Decimal('31577.80'))
+        self.assertEqual(repaired.net_worth, Decimal('1000013.35'))
+
+    def test_leaves_todays_row_alone(self):
+        call_command('repair_networth_history', *self._window(), '--apply')
+
+        today = NetWorthSnapshot.objects.get(date=timezone.localdate())
+        self.assertEqual(today.portfolio_value, Decimal('36714.55'))
+
+    def test_delete_removes_everything_before_today(self):
+        call_command('repair_networth_history', '--delete', '--apply')
+
+        self.assertEqual(NetWorthSnapshot.objects.count(), 1)
+        self.assertEqual(NetWorthSnapshot.objects.first().date, timezone.localdate())
+
+    def test_since_narrows_the_range(self):
+        cutoff = timezone.localdate() - timedelta(days=1)
+        call_command('repair_networth_history', '--since', str(cutoff),
+                     '--until', str(cutoff), '--apply')
+
+        untouched = NetWorthSnapshot.objects.get(
+            date=timezone.localdate() - timedelta(days=3))
+        self.assertEqual(untouched.portfolio_value, Decimal('36714.55'))
+
+
+class RepairNetWorthHistoryTest(TestCase):
+    def setUp(self):
+        today = timezone.localdate()
+        for days_ago in [3, 2, 1, 0]:
+            NetWorthSnapshot.objects.create(
+                date=today - timedelta(days=days_ago),
+                portfolio_value=Decimal('36714.55'),
+                bank_total=Decimal('968435.55'),
+                net_worth=Decimal('1005150.10'),
+            )
+        Position.objects.create(
+            ticker='MSFT', name='Microsoft', qty=Decimal('20'),
+            avg_cost=Decimal('494.36'), current_price=Decimal('510.09'),
+            sector='Technology', type='STOCK', color='#00a4ef',
+            currency='USD', fx_rate=Decimal('0.8600895'),
+        )
+
+    def test_dry_run_changes_nothing(self):
+        call_command('repair_networth_history')
+        self.assertEqual(NetWorthSnapshot.objects.first().portfolio_value,
+                         Decimal('36714.55'))
+
+    def test_restates_the_portfolio_leg_at_the_positions_rate(self):
+        call_command('repair_networth_history', '--apply')
+
+        repaired = NetWorthSnapshot.objects.exclude(date=timezone.localdate()).first()
+        self.assertEqual(repaired.portfolio_value, Decimal('31577.80'))
+        self.assertEqual(repaired.net_worth, Decimal('1000013.35'))
+
+    def test_leaves_todays_row_alone(self):
+        call_command('repair_networth_history', '--apply')
+
+        today = NetWorthSnapshot.objects.get(date=timezone.localdate())
+        self.assertEqual(today.portfolio_value, Decimal('36714.55'))
+
+    def test_delete_removes_everything_before_today(self):
+        call_command('repair_networth_history', '--delete', '--apply')
+
+        self.assertEqual(NetWorthSnapshot.objects.count(), 1)
+        self.assertEqual(NetWorthSnapshot.objects.first().date, timezone.localdate())
+
+    def test_since_narrows_the_range(self):
+        cutoff = timezone.localdate() - timedelta(days=1)
+        call_command('repair_networth_history', '--since', str(cutoff), '--apply')
+
+        untouched = NetWorthSnapshot.objects.get(
+            date=timezone.localdate() - timedelta(days=3))
+        self.assertEqual(untouched.portfolio_value, Decimal('36714.55'))
