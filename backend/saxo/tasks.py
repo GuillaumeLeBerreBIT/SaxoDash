@@ -25,6 +25,10 @@ SYNC_TASK = {
 }
 
 
+class SyncRefused(Exception):
+    """Raised when a sync would corrupt what it is meant to keep current."""
+
+
 def synced(fn):
     """Give `fn` a usable credential and record what the run actually did.
 
@@ -106,6 +110,15 @@ def sync_positions(credential):
         for fields in _mapped_rows(saxo_positions, mapping.to_position_fields):
             Position.objects.update_or_create(ticker=fields['ticker'], defaults=fields)
             seen_tickers.append(fields['ticker'])
+
+        # Saxo returning nothing is a real "you hold nothing" and should prune.
+        # Rows that all failed to map is a bug on our side, and pruning against
+        # it would delete the whole book.
+        if saxo_positions and not seen_tickers:
+            raise SyncRefused(
+                f'Saxo returned {len(saxo_positions)} positions and none could be '
+                f'mapped; refusing to prune the portfolio to empty.'
+            )
 
         Position.objects.exclude(ticker__in=seen_tickers).delete()
 

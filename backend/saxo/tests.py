@@ -393,6 +393,22 @@ class SyncPositionsTaskTest(TestCase):
         self.assertEqual(Position.objects.count(), 0)
 
     @patch('saxo.tasks.client.get_positions')
+    def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):
+        # exclude(ticker__in=[]) matches every row, so an unguarded prune here
+        # deletes the whole book on a payload we simply failed to read.
+        Position.objects.create(
+            ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
+            color='#000000',
+        )
+        mock_get_positions.return_value = [{'unexpected': 'shape'}]
+        with self.assertRaises(tasks.SyncRefused):
+            tasks.sync_positions()
+
+        self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'failed')
+
+    @patch('saxo.tasks.client.get_positions')
     def test_records_the_price_provenance(self, mock_get_positions):
         mock_get_positions.return_value = [UNENTITLED_POSITION]
         tasks.sync_positions()
