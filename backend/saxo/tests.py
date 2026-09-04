@@ -35,6 +35,33 @@ SAMPLE_POSITION = {
     'DisplayAndFormat': {
         'Symbol': 'NVDA:xnas',
         'Description': 'NVIDIA Corporation',
+        'Currency': 'EUR',
+    },
+}
+
+# What the SIM account actually returns, captured live 2026-09-03: no
+# market-data entitlement, so no price at all - but Saxo still marks the book
+# server-side, so ProfitLossOnTrade is real and recovers the price.
+UNENTITLED_POSITION = {
+    'PositionId': '5027270852',
+    'PositionBase': {
+        'Amount': 20.0,
+        'OpenPrice': 494.36,
+        'AssetType': 'Stock',
+        'Uic': 261,
+        'ExecutionTimeOpen': '2026-08-26T18:30:31.645781Z',
+    },
+    'PositionView': {
+        'CurrentPrice': 0.0,
+        'CurrentPriceType': 'None',
+        'MarketValue': 0.0,
+        'ProfitLossOnTrade': 314.60,
+        'ConversionRateCurrent': 0.8600895,
+    },
+    'DisplayAndFormat': {
+        'Symbol': 'MSFT:xnas',
+        'Description': 'Microsoft Corp.',
+        'Currency': 'USD',
     },
 }
 
@@ -167,6 +194,62 @@ class ToPositionFieldsTest(TestCase):
 
     def test_uic_is_none_when_saxo_omits_it(self):
         self.assertIsNone(mapping.to_position_fields(SAMPLE_POSITION)['uic'])
+
+
+class UnentitledPositionPricingTest(TestCase):
+    """The account has no market-data entitlement, which is the normal case here.
+
+    Falling back to OpenPrice made value == cost and P/L == 0 for every row,
+    every day - a wrong answer that looks like a plausible right one.
+    """
+
+    def test_does_not_report_the_open_price_as_the_market_price(self):
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertNotEqual(fields['current_price'], Decimal('494.36'))
+
+    def test_derives_the_mark_from_profit_loss_on_trade(self):
+        # 494.36 + 314.60/20, and the chart close that day was 510.12.
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertEqual(fields['current_price'], Decimal('510.09'))
+        self.assertEqual(fields['price_source'], 'derived')
+
+    def test_keeps_a_live_price_when_saxo_gives_one(self):
+        fields = mapping.to_position_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['current_price'], Decimal('875.40'))
+        self.assertEqual(fields['price_source'], 'live')
+
+    def test_falls_back_to_cost_only_when_nothing_else_answers(self):
+        blind = {
+            **UNENTITLED_POSITION,
+            'PositionView': {'CurrentPrice': 0.0, 'CurrentPriceType': 'None'},
+        }
+        fields = mapping.to_position_fields(blind)
+        self.assertEqual(fields['current_price'], Decimal('494.36'))
+        self.assertEqual(fields['price_source'], 'cost')
+
+    def test_records_the_instrument_currency_and_its_rate(self):
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertEqual(fields['fx_rate'], Decimal('0.8600895'))
+
+    def test_derived_mark_is_correct_for_a_short(self):
+        # Amount and ProfitLossOnTrade are both signed, so one formula covers both.
+        short = {
+            **UNENTITLED_POSITION,
+            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': -20.0},
+            'PositionView': {
+                **UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': -314.60,
+            },
+        }
+        self.assertEqual(mapping.to_position_fields(short)['current_price'],
+                         Decimal('510.09'))
+
+    def test_fractional_quantities_survive(self):
+        fractional = {
+            **UNENTITLED_POSITION,
+            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': 2.5},
+        }
+        self.assertEqual(mapping.to_position_fields(fractional)['qty'], Decimal('2.5'))
 
 
 class ToTransactionFieldsTest(TestCase):
@@ -380,19 +463,6 @@ class SyncPositionsTaskTest(TestCase):
         self.assertEqual(Position.objects.count(), 1)
 
     @patch('saxo.tasks.client.get_positions')
-    def test_an_empty_saxo_response_still_prunes(self, mock_get_positions):
-        # Holding nothing is a real answer, and differs from failing to read.
-        Position.objects.create(
-            ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
-            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
-            color='#000000',
-        )
-        mock_get_positions.return_value = []
-        tasks.sync_positions()
-
-        self.assertEqual(Position.objects.count(), 0)
-
-    @patch('saxo.tasks.client.get_positions')
     def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):
         # exclude(ticker__in=[]) matches every row, so an unguarded prune here
         # deletes the whole book on a payload we simply failed to read.
@@ -407,6 +477,19 @@ class SyncPositionsTaskTest(TestCase):
 
         self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
         self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'failed')
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_an_empty_saxo_response_still_prunes(self, mock_get_positions):
+        # Holding nothing is a real answer, and differs from failing to read.
+        Position.objects.create(
+            ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
+            color='#000000',
+        )
+        mock_get_positions.return_value = []
+        tasks.sync_positions()
+
+        self.assertEqual(Position.objects.count(), 0)
 
     @patch('saxo.tasks.client.get_positions')
     def test_records_the_price_provenance(self, mock_get_positions):
@@ -744,85 +827,20 @@ class ActiveCredentialTest(TestCase):
         with self.assertRaises(credentials.SaxoNotConnected):
             credentials.active_credential()
 
+    def test_inside_the_grace_window_a_call_is_refused_but_reauth_is_not_asked(self):
+        self._create(expires_at=timezone.now() - timedelta(minutes=1))
+        state = credentials.connection_state()
 
-UNENTITLED_POSITION = {
-    'PositionId': '5027270852',
-    'PositionBase': {
-        'Amount': 20.0,
-        'OpenPrice': 494.36,
-        'AssetType': 'Stock',
-        'Uic': 261,
-        'ExecutionTimeOpen': '2026-08-26T18:30:31.645781Z',
-    },
-    'PositionView': {
-        'CurrentPrice': 0.0,
-        'CurrentPriceType': 'None',
-        'MarketValue': 0.0,
-        'ProfitLossOnTrade': 314.60,
-        'ConversionRateCurrent': 0.8600895,
-    },
-    'DisplayAndFormat': {
-        'Symbol': 'MSFT:xnas',
-        'Description': 'Microsoft Corp.',
-        'Currency': 'USD',
-    },
-}
+        self.assertTrue(state.connected)
+        self.assertFalse(state.usable)
+        self.assertFalse(state.needs_reauth)
 
+    def test_past_the_grace_window_the_user_has_to_act(self):
+        self._create(expires_at=timezone.now() - credentials.REAUTH_GRACE - timedelta(minutes=1))
+        state = credentials.connection_state()
 
-class UnentitledPositionPricingTest(TestCase):
-    """The account has no market-data entitlement, which is the normal case here.
-
-    Falling back to OpenPrice made value == cost and P/L == 0 for every row,
-    every day - a wrong answer that looks like a plausible right one.
-    """
-
-    def test_does_not_report_the_open_price_as_the_market_price(self):
-        fields = mapping.to_position_fields(UNENTITLED_POSITION)
-        self.assertNotEqual(fields['current_price'], Decimal('494.36'))
-
-    def test_derives_the_mark_from_profit_loss_on_trade(self):
-        # 494.36 + 314.60/20, and the chart close that day was 510.12.
-        fields = mapping.to_position_fields(UNENTITLED_POSITION)
-        self.assertEqual(fields['current_price'], Decimal('510.09'))
-        self.assertEqual(fields['price_source'], 'derived')
-
-    def test_keeps_a_live_price_when_saxo_gives_one(self):
-        fields = mapping.to_position_fields(SAMPLE_POSITION)
-        self.assertEqual(fields['current_price'], Decimal('875.40'))
-        self.assertEqual(fields['price_source'], 'live')
-
-    def test_falls_back_to_cost_only_when_nothing_else_answers(self):
-        blind = {
-            **UNENTITLED_POSITION,
-            'PositionView': {'CurrentPrice': 0.0, 'CurrentPriceType': 'None'},
-        }
-        fields = mapping.to_position_fields(blind)
-        self.assertEqual(fields['current_price'], Decimal('494.36'))
-        self.assertEqual(fields['price_source'], 'cost')
-
-    def test_records_the_instrument_currency_and_its_rate(self):
-        fields = mapping.to_position_fields(UNENTITLED_POSITION)
-        self.assertEqual(fields['currency'], 'USD')
-        self.assertEqual(fields['fx_rate'], Decimal('0.8600895'))
-
-    def test_derived_mark_is_correct_for_a_short(self):
-        # Amount and ProfitLossOnTrade are both signed, so one formula covers both.
-        short = {
-            **UNENTITLED_POSITION,
-            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': -20.0},
-            'PositionView': {
-                **UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': -314.60,
-            },
-        }
-        self.assertEqual(mapping.to_position_fields(short)['current_price'],
-                         Decimal('510.09'))
-
-    def test_fractional_quantities_survive(self):
-        fractional = {
-            **UNENTITLED_POSITION,
-            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': 2.5},
-        }
-        self.assertEqual(mapping.to_position_fields(fractional)['qty'], Decimal('2.5'))
+        self.assertFalse(state.usable)
+        self.assertTrue(state.needs_reauth)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)

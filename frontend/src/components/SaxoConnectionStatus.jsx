@@ -43,6 +43,16 @@ export default function SaxoConnectionStatus() {
     )
   }
 
+  // Expired but still inside the reauth grace: calls are already being
+  // refused, so saying "connected" here would contradict the panel below.
+  if (!status.usable) {
+    return (
+      <Badge tone="amber">
+        <span title={status.unusable_reason ?? undefined}>Reconnecting…</span>
+      </Badge>
+    )
+  }
+
   return (
     <span className="flex items-center gap-2">
       {status.last_sync_outcome && status.last_sync_outcome !== 'ok' && (

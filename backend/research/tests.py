@@ -304,6 +304,24 @@ class MarketDataViewTest(APITestCase):
 
         self.assertEqual(mock_get_chart.call_count, 2)
 
+    def test_the_status_endpoint_and_a_market_call_agree_inside_the_grace_window(self):
+        # The header used to render "Saxo connected" while the panel below it
+        # rendered "Saxo is not connected", for the 15 minutes between token
+        # expiry and the reauth grace running out.
+        SaxoCredential.objects.create(
+            access_token='access',
+            refresh_token='refresh',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+
+        chart = self.client.get('/api/research/chart/?uic=211&asset_type=Stock')
+        status_response = self.client.get('/api/saxo/status/')
+
+        self.assertEqual(chart.status_code, 409)
+        self.assertFalse(status_response.data['usable'])
+        self.assertFalse(status_response.data['needs_reauth'])
+        self.assertEqual(status_response.data['unusable_reason'], chart.data['detail'])
+
     def test_chart_rejects_a_missing_uic(self):
         self._connect_saxo()
         response = self.client.get('/api/research/chart/?asset_type=Stock')

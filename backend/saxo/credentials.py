@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import timedelta
 
 from django.utils import timezone
@@ -13,6 +14,46 @@ class SaxoNotConnected(Exception):
     """No credential usable for a Saxo call right now."""
 
 
+@dataclass(frozen=True)
+class ConnectionState:
+    """Everything anyone may ask about the app's Saxo connection.
+
+    One value rather than two predicates: the status endpoint and the
+    market-data path used to answer "connected?" separately, with different
+    thresholds, and contradicted each other on screen for the fifteen minutes
+    between token expiry and the reauth grace running out.
+    """
+
+    credential: SaxoCredential | None
+    reason: str | None
+    needs_reauth: bool
+
+    @property
+    def connected(self):
+        return self.credential is not None
+
+    @property
+    def usable(self):
+        return self.reason is None
+
+
+def connection_state():
+    credential = SaxoCredential.objects.first()
+    if not credential:
+        return ConnectionState(None, 'Saxo is not connected.', False)
+    if credential.needs_reauth:
+        return ConnectionState(credential, 'Saxo needs re-authentication.', True)
+    if credential.expires_at <= timezone.now():
+        # Expired stops calls immediately; only past the grace is it the
+        # user's problem rather than the refresh cycle's.
+        return ConnectionState(
+            credential,
+            'The Saxo access token has expired.',
+            credential.expires_at <= timezone.now() - REAUTH_GRACE,
+        )
+    return ConnectionState(credential, None, False)
+
+
 def active_credential():
     """The credential a caller may talk to Saxo with.
 
@@ -20,26 +61,10 @@ def active_credential():
     cannot proceed without it; the request-serving side turns this into a 409
     and the background tasks catch it to record a skipped run.
     """
-    credential = SaxoCredential.objects.first()
-    if not credential:
-        raise SaxoNotConnected('Saxo is not connected.')
-    if credential.needs_reauth:
-        raise SaxoNotConnected('Saxo needs re-authentication.')
-    if credential.expires_at <= timezone.now():
-        raise SaxoNotConnected('The Saxo access token has expired.')
-    return credential
-
-
-def needs_reauthentication(credential):
-    """Whether the user has to act, as opposed to the refresh cycle catching up.
-
-    Separate from `active_credential`, which refuses the moment a token expires:
-    a token seconds past expiry stops syncs but is not yet the user's problem.
-    """
-    return (
-        credential.needs_reauth
-        or credential.expires_at <= timezone.now() - REAUTH_GRACE
-    )
+    state = connection_state()
+    if not state.usable:
+        raise SaxoNotConnected(state.reason)
+    return state.credential
 
 
 def last_successful_sync():

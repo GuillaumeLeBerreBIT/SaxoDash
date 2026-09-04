@@ -66,8 +66,8 @@ class SaxoCallbackView(APIView):
 class SaxoStatusView(APIView):
 
     def get(self, request):
-        credential = SaxoCredential.objects.first()
-        if not credential:
+        state = credentials.connection_state()
+        if not state.connected:
             return Response({'connected': False})
 
         last_sync = credentials.last_successful_sync()
@@ -75,8 +75,12 @@ class SaxoStatusView(APIView):
 
         return Response({
             'connected': True,
-            'environment': credential.environment,
-            'needs_reauth': credentials.needs_reauthentication(credential),
+            'environment': state.credential.environment,
+            'needs_reauth': state.needs_reauth,
+            # What a market-data call would do right now, so the header cannot
+            # claim connected while the panel below reports the opposite.
+            'usable': state.usable,
+            'unusable_reason': state.reason,
             'last_synced_at': last_sync.ran_at if last_sync else None,
             'last_sync_outcome': last_run.outcome if last_run else None,
         })
