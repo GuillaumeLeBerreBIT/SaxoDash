@@ -18,8 +18,10 @@ class WatchlistItem(models.Model):
     symbol = models.CharField(max_length=20)
 
     # Resolved once from the search result the user picked, so rendering a rail
-    # row costs one batched quote call and no instrument lookup.
-    uic = models.PositiveIntegerField(null=True, blank=True)
+    # row costs one batched quote call and no instrument lookup. Required: a
+    # row exists to be priced, and pricing needs a Uic - and a nullable one
+    # would make the unique_together below vacuous, since NULLs never collide.
+    uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20, default='Stock')
     description = models.CharField(max_length=120, blank=True, default='')
     exchange = models.CharField(max_length=20, blank=True, default='')
@@ -28,7 +30,10 @@ class WatchlistItem(models.Model):
 
     class Meta:
         ordering = ['added_at', 'id']
-        unique_together = ('watchlist', 'symbol')
+        # The Uic, not the bare ticker: NVDA:xnas and NVDA:xetr are different
+        # instruments that share a symbol, and keying on the symbol rejected
+        # the second as a duplicate of the first.
+        unique_together = ('watchlist', 'uic')
 
     def __str__(self):
         return f'{self.symbol} in {self.watchlist.name}'

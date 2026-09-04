@@ -40,6 +40,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useQuotes.mockReturnValue({ ...idle, data: [{ uic: 211, price: 875.4, change_pct: 1.42 }] })
+  queries.useQuotesByAssetType.mockReturnValue({ data: [], isLoading: false })
   queries.useWatchlists.mockReturnValue({ ...idle, data: [] })
   queries.useWatchlistMutations.mockReturnValue({
     create: { mutate: vi.fn() },

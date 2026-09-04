@@ -10,8 +10,36 @@ export const INTERVALS = ['1W', '1M', '3M', '6M', '1Y', 'ALL']
 // Trading days, not calendar days: Saxo returns one daily candle per session.
 export const RANGE_COUNTS = { '1W': 7, '1M': 22, '3M': 66, '6M': 130, '1Y': 252, ALL: 504 }
 
-// Saxo's Horizon is in minutes; 1440 is one daily candle. v1 is daily only.
+// Saxo's Horizon is in minutes; 1440 is one daily candle. The backend admits
+// daily and coarser only - a bar is identified by its date.
 export const DAILY_HORIZON = 1440
+
+/** One instrument's identity, for a cache key on either side of the seam.
+ *
+ *  A Uic is ambiguous without its AssetType - a CFD shares a Uic with its
+ *  underlying by design - and the backend keys on both, so the frontend keys
+ *  that dropped it were pointing two instruments at one cache entry.
+ */
+export function instrumentKey(uic, assetType) {
+  return uic == null ? null : `${uic}:${assetType ?? ''}`
+}
+
+/** Watchlist rows grouped by the asset type they carry.
+ *
+ *  Saxo prices one asset type per request. Testing one spelling ("not an ETF
+ *  means a stock") put a bond in the Stock batch, and the 404 that followed
+ *  blanked every row in it rather than the one that could not be priced.
+ */
+export function uicsByAssetType(items = []) {
+  const groups = new Map()
+  for (const item of items) {
+    if (!item.uic || !item.asset_type) continue
+    const uics = groups.get(item.asset_type) ?? []
+    uics.push(item.uic)
+    groups.set(item.asset_type, uics)
+  }
+  return [...groups].map(([assetType, uics]) => ({ assetType, uics }))
+}
 
 /** Saxo's spelling of an instrument's type.
  *
@@ -25,18 +53,22 @@ export function saxoAssetType(position) {
   return position.type === 'ETF' ? 'Etf' : 'Stock'
 }
 
-/** The {uic, assetType} pair every market-data call needs, or null.
+/** The {uic, assetType, exact} triple every market-data call needs, or null.
  *
  *  A held instrument answers this from the portfolio without a Saxo call. For
- *  anything else - or a position synced before uic existed - the first exact
- *  match from an instrument search stands in.
+ *  anything else - or a position synced before uic existed - the first search
+ *  result stands in. `exact` says whether the symbol actually matched, so an
+ *  inexact fallback can be shown rather than charted silently.
  */
 export function resolveInstrument({ symbol, positions = [], results = [] }) {
   const held = positions.find((p) => p.ticker === symbol)
-  if (held?.uic) return { uic: held.uic, assetType: saxoAssetType(held) }
+  if (held?.uic) return { uic: held.uic, assetType: saxoAssetType(held), exact: true }
 
-  const match = results.find((r) => r.symbol === symbol) ?? results[0]
-  if (match?.uic) return { uic: match.uic, assetType: match.asset_type }
+  const exactMatch = results.find((r) => r.symbol === symbol)
+  const match = exactMatch ?? results[0]
+  if (match?.uic) {
+    return { uic: match.uic, assetType: match.asset_type, exact: Boolean(exactMatch) }
+  }
 
   return null
 }

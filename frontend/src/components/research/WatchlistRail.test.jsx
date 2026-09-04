@@ -32,7 +32,10 @@ function stub({ watchlists = [list], results = [] } = {}) {
   queries.useWatchlists.mockReturnValue({ ...idle, data: watchlists })
   queries.useWatchlistMutations.mockReturnValue(mutations)
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: results })
-  queries.useQuotes.mockReturnValue({ ...idle, data: [{ uic: 211, price: 875.4, change_pct: 1.42 }] })
+  queries.useQuotesByAssetType.mockReturnValue({
+    data: [{ uic: 211, price: 875.4, change_pct: 1.42 }],
+    isLoading: false,
+  })
 }
 
 const render = (props = {}) =>
@@ -61,11 +64,27 @@ describe('WatchlistRail', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   })
 
-  it('prices stocks and ETFs in separate batched calls', () => {
+  it('asks for one batch per asset type the list actually holds', () => {
     render()
 
-    expect(queries.useQuotes).toHaveBeenCalledWith([211], 'Stock')
-    expect(queries.useQuotes).toHaveBeenCalledWith([500], 'Etf')
+    expect(queries.useQuotesByAssetType).toHaveBeenCalledWith([
+      { assetType: 'Stock', uics: [211] },
+      { assetType: 'Etf', uics: [500] },
+    ])
+  })
+
+  it('does not batch a row that has no uic to price it with', () => {
+    stub({
+      watchlists: [
+        { ...list, items: [...list.items, { id: 9, symbol: 'XXX', uic: null, asset_type: 'Bond' }] },
+      ],
+    })
+    render()
+
+    expect(queries.useQuotesByAssetType).toHaveBeenCalledWith([
+      { assetType: 'Stock', uics: [211] },
+      { assetType: 'Etf', uics: [500] },
+    ])
   })
 
   it('creates a list from the name typed into the rail', async () => {

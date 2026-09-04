@@ -79,7 +79,7 @@ export default function Research() {
   const safeHover = hover != null && hover < bars.length ? hover : null
 
   const toggleList = (list) => {
-    const existing = list.items.find((item) => item.symbol === symbol)
+    const existing = list.items.find((item) => item.uic === instrument?.uic)
     if (existing) {
       removeItem.mutate({ id: list.id, itemId: existing.id })
       return

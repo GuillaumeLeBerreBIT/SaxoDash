@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   barChange,
+  instrumentKey,
   periodChange,
   quotesByUic,
   rangeStats,
   resolveInstrument,
   saxoAssetType,
+  uicsByAssetType,
 } from './research'
 
 const bars = [
@@ -36,6 +38,7 @@ describe('resolveInstrument', () => {
     expect(resolveInstrument({ symbol: 'NVDA', positions, results: [] })).toEqual({
       uic: 211,
       assetType: 'Stock',
+      exact: true,
     })
   })
 
@@ -49,13 +52,18 @@ describe('resolveInstrument', () => {
     expect(resolveInstrument({ symbol: 'NVDA', positions, results })).toEqual({
       uic: 211,
       assetType: 'Stock',
+      exact: true,
     })
   })
 
-  it('takes the first result when nothing matches exactly', () => {
+  it('takes the first result when nothing matches exactly, and says so', () => {
     const results = [{ symbol: 'NVDA:xnas', uic: 211, asset_type: 'Stock' }]
 
-    expect(resolveInstrument({ symbol: 'NVDA', results })).toEqual({ uic: 211, assetType: 'Stock' })
+    expect(resolveInstrument({ symbol: 'NVDA', results })).toEqual({
+      uic: 211,
+      assetType: 'Stock',
+      exact: false,
+    })
   })
 
   it('is null when neither source can resolve the symbol', () => {
@@ -116,5 +124,47 @@ describe('barChange', () => {
 
   it('is null for the first bar, which has nothing to compare against', () => {
     expect(barChange(bars, 0)).toBeNull()
+  })
+})
+
+
+describe('instrumentKey', () => {
+  it('carries both halves of the identity', () => {
+    expect(instrumentKey(211, 'Stock')).toBe('211:Stock')
+  })
+
+  it('separates a CFD from the underlying it shares a uic with', () => {
+    expect(instrumentKey(211, 'Stock')).not.toBe(instrumentKey(211, 'CfdOnStock'))
+  })
+
+  it('is null without a uic, so nothing is cached under a half-identity', () => {
+    expect(instrumentKey(null, 'Stock')).toBeNull()
+  })
+})
+
+describe('uicsByAssetType', () => {
+  it('groups by the type each row carries rather than testing one spelling', () => {
+    const items = [
+      { uic: 1, asset_type: 'Stock' },
+      { uic: 2, asset_type: 'Etf' },
+      { uic: 3, asset_type: 'Bond' },
+      { uic: 4, asset_type: 'Stock' },
+    ]
+
+    expect(uicsByAssetType(items)).toEqual([
+      { assetType: 'Stock', uics: [1, 4] },
+      { assetType: 'Etf', uics: [2] },
+      { assetType: 'Bond', uics: [3] },
+    ])
+  })
+
+  it('leaves out a row that cannot be priced instead of poisoning a batch', () => {
+    const items = [{ uic: 1, asset_type: 'Stock' }, { uic: null, asset_type: 'Stock' }]
+
+    expect(uicsByAssetType(items)).toEqual([{ assetType: 'Stock', uics: [1] }])
+  })
+
+  it('asks for nothing when there is nothing to price', () => {
+    expect(uicsByAssetType([])).toEqual([])
   })
 })

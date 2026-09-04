@@ -1,9 +1,14 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { Check, List, Plus, Search, X } from 'lucide-react'
 
-import { useInstrumentSearch, useQuotes, useWatchlistMutations, useWatchlists } from '../../api/queries'
+import {
+  useInstrumentSearch,
+  useQuotesByAssetType,
+  useWatchlistMutations,
+  useWatchlists,
+} from '../../api/queries'
 import { fmtNum, fmtPct } from '../../lib/format'
-import { quotesByUic } from '../../lib/research'
+import { quotesByUic, uicsByAssetType } from '../../lib/research'
 import { Card } from '../ui'
 import { Menu, MenuRow, MenuSeparator } from './menu'
 
@@ -32,22 +37,11 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
   const active = watchlists.find((list) => list.id === activeId) ?? watchlists[0] ?? null
   const items = active?.items ?? NO_ITEMS
 
-  // Saxo prices one asset type per request, so a mixed list costs two calls.
-  const stockUics = useMemo(
-    () => items.filter((i) => i.asset_type !== 'Etf' && i.uic).map((i) => i.uic),
-    [items],
-  )
-  const etfUics = useMemo(
-    () => items.filter((i) => i.asset_type === 'Etf' && i.uic).map((i) => i.uic),
-    [items],
-  )
-  const stockQuotes = useQuotes(stockUics, 'Stock')
-  const etfQuotes = useQuotes(etfUics, 'Etf')
-
-  const quotes = useMemo(
-    () => quotesByUic([...(stockQuotes.data ?? []), ...(etfQuotes.data ?? [])]),
-    [stockQuotes.data, etfQuotes.data],
-  )
+  // Saxo prices one asset type per request, so a mixed list costs one call per
+  // type - and a type whose call fails takes only its own rows down with it.
+  const quoteGroups = useMemo(() => uicsByAssetType(items), [items])
+  const { data: quoteRows } = useQuotesByAssetType(quoteGroups)
+  const quotes = useMemo(() => quotesByUic(quoteRows), [quoteRows])
 
   const createList = () => {
     const name = newName.trim()
@@ -138,7 +132,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
       {results.length > 0 ? (
         <div className="max-h-[230px] overflow-y-auto border-b border-white/[0.06]">
           {results.map((result) => {
-            const inList = items.some((item) => item.symbol === result.symbol)
+            const inList = items.some((item) => item.uic === result.uic)
             return (
               <div
                 key={`${result.uic}-${result.asset_type}`}
@@ -158,7 +152,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                 <button
                   type="button"
                   onClick={() => addResult(result)}
-                  disabled={inList || !active}
+                  disabled={inList || !active || !result.uic}
                   title={active ? undefined : 'Create a list first'}
                   aria-label={inList ? `${result.symbol} already in list` : `Add ${result.symbol}`}
                   className={`w-5 h-5 rounded flex items-center justify-center ${

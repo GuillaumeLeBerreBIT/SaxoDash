@@ -22,7 +22,9 @@ export default function SymbolBar({
   const exchange = details?.exchange ?? ''
   const name = details?.description ?? position?.name ?? ''
 
-  const memberships = watchlists.filter((list) => list.items.some((item) => item.symbol === symbol))
+  const memberships = watchlists.filter((list) =>
+    list.items.some((item) => item.uic === instrument?.uic),
+  )
 
   return (
     <Card padding={false}>
@@ -72,7 +74,7 @@ export default function SymbolBar({
               watchlists.map((list) => (
                 <MenuRow
                   key={list.id}
-                  checked={list.items.some((item) => item.symbol === symbol)}
+                  checked={list.items.some((item) => item.uic === instrument?.uic)}
                   onClick={() => onToggleList(list)}
                   right={`${list.items.length}`}
                 >
@@ -100,9 +102,11 @@ export default function SymbolBar({
         </div>
       </div>
 
-      {instrument ? null : (
+      {instrument && instrument.exact ? null : (
         <div className="px-4 pb-3 -mt-1 text-[11.5px] text-amber-400/90">
-          Could not resolve {symbol} to a Saxo instrument.
+          {instrument
+            ? `No exact match for ${symbol}; showing ${name || 'the closest search result'} instead.`
+            : `Could not resolve ${symbol} to a Saxo instrument.`}
         </div>
       )}
     </Card>

@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { instrumentKey } from '../lib/research'
 
 import {
   addWatchlistItem,
@@ -34,10 +36,15 @@ export const queryKeys = {
   netWorthHistory: (range = 'ALL') => ['net-worth-history', range],
   cashFlow: ['cash-flow'],
   saxoStatus: ['saxo-status'],
-  chart: (uic, horizon, count) => ['chart', uic, horizon, count],
-  quotes: (uics) => ['quotes', [...uics].sort((a, b) => a - b).join(',')],
-  instrumentSearch: (query) => ['instrument-search', query],
-  instrumentDetails: (uic, assetType) => ['instrument-details', uic, assetType],
+  // Every market-data key carries the whole instrument identity: a Uic alone
+  // is ambiguous, and the backend keys on both halves.
+  chart: (uic, assetType, horizon, count) =>
+    ['chart', instrumentKey(uic, assetType), horizon, count],
+  quotes: (uics, assetType) =>
+    ['quotes', assetType, [...uics].sort((a, b) => a - b).join(',')],
+  // Lowercased to match the backend's own search cache key.
+  instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
+  instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
 }
 
@@ -93,7 +100,7 @@ export function useSaxoStatus() {
 
 export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
   return useQuery({
-    queryKey: queryKeys.chart(uic, horizon, count),
+    queryKey: queryKeys.chart(uic, assetType, horizon, count),
     queryFn: () => getChart({ uic, assetType, horizon, count }),
     // A daily candle cannot change until tomorrow, and Saxo rate-limits per
     // app, so this deliberately has no refetch interval.
@@ -102,12 +109,29 @@ export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
   })
 }
 
+const quoteQuery = (uics, assetType) => ({
+  queryKey: queryKeys.quotes(uics, assetType),
+  queryFn: () => getQuotes({ uics, assetType }),
+  enabled: uics.length > 0 && Boolean(assetType),
+  refetchInterval: 30_000,
+})
+
 export function useQuotes(uics, assetType) {
-  return useQuery({
-    queryKey: queryKeys.quotes(uics),
-    queryFn: () => getQuotes({ uics, assetType }),
-    enabled: uics.length > 0 && Boolean(assetType),
-    refetchInterval: 30_000,
+  return useQuery(quoteQuery(uics, assetType))
+}
+
+/** One batched call per asset type, flattened into a single quote list.
+ *
+ *  Saxo prices one asset type per request, and a group whose call fails takes
+ *  only its own rows down with it.
+ */
+export function useQuotesByAssetType(groups) {
+  return useQueries({
+    queries: groups.map(({ uics, assetType }) => quoteQuery(uics, assetType)),
+    combine: (results) => ({
+      data: results.flatMap((result) => result.data ?? []),
+      isLoading: results.some((result) => result.isLoading),
+    }),
   })
 }
 
