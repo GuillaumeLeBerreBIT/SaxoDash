@@ -8,5 +8,5 @@ class BankAccountSerializer(ModelSerializer):
         model = BankAccount
         fields = [
             'id', 'bank', 'type', 'iban_masked', 'balance',
-            'available', 'gradient', 'accent'
+            'available', 'currency', 'gradient', 'accent'
             ]

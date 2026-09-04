@@ -16,7 +16,8 @@ class PositionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'ticker', 'name', 'qty', 'avg_cost', 'current_price',
             'sector', 'type', 'color', 'value', 'cost', 'pnl', 'pnl_pct',
-            'weight', 'uic', 'asset_type',
+            'weight', 'uic', 'asset_type', 'currency', 'fx_rate',
+            'price_source', 'priced_at',
         ]
 
     def get_weight(self, obj):
