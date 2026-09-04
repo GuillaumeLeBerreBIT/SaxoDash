@@ -13,15 +13,15 @@ from django.core.cache import cache
 
 from saxo import client
 from saxo.credentials import active_credential
+from saxo.mapping import bare_symbol
 
+# The rail refetches every 30s, so that, not this, is the effective quote age.
 QUOTES_TTL = 20
 CHART_TTL = 900
 SEARCH_TTL = 3600
 DETAILS_TTL = 86400
 
-
-def _cached(key, ttl, produce):
-    return cache.get_or_set(key, produce, ttl)
+CANDLE_PRICES = ('open', 'high', 'low', 'close')
 
 
 def _cache_key(name, **params):
@@ -33,34 +33,38 @@ def _access_token():
     return active_credential().access_token
 
 
-def _bare_symbol(symbol):
-    """'NVDA:xnas' -> 'NVDA', matching how positions store their ticker."""
-    return (symbol or '').split(':')[0]
-
-
 def to_candle(sample):
-    """One Saxo chart sample -> the shape the frontend chart consumes.
+    """One Saxo chart sample -> the shape the frontend chart consumes, or None.
 
     Saxo sends Open/High/Low/Close for tradable-price instruments and the
     OpenBid/…/CloseBid family for quoted ones; take whichever is present.
+
+    A sample missing any of the four prices is rejected here rather than passed
+    on as nulls: the indicator maths downstream sums with `+=`, so one null
+    close silently reads as a zero and drags an average onto the chart as fact.
     """
     def price(field):
         value = sample.get(field, sample.get(f'{field}Bid', sample.get(f'{field}Ask')))
         return None if value is None else float(value)
 
+    time = sample.get('Time')
+    if not time:
+        return None
+
+    prices = {name: price(name.capitalize()) for name in CANDLE_PRICES}
+    if any(value is None for value in prices.values()):
+        return None
+
     return {
-        'date': sample['Time'][:10],
-        'open': price('Open'),
-        'high': price('High'),
-        'low': price('Low'),
-        'close': price('Close'),
+        'date': time[:10],
+        **prices,
         'volume': float(sample.get('Volume', 0) or 0),
     }
 
 
 def to_instrument(row):
     return {
-        'symbol': _bare_symbol(row.get('Symbol')),
+        'symbol': bare_symbol(row.get('Symbol')),
         'uic': row.get('Identifier', row.get('Uic')),
         'asset_type': row.get('AssetType', 'Stock'),
         'description': row.get('Description', ''),
@@ -101,12 +105,12 @@ def to_quote(row):
 def chart(uic, asset_type, horizon, count):
     def produce():
         samples = client.get_chart(_access_token(), uic, asset_type, horizon, count)
-        candles = [to_candle(s) for s in samples if s.get('Time')]
+        candles = [candle for candle in map(to_candle, samples) if candle]
         # Saxo returns newest-first for some horizons; the chart draws left to right.
         return sorted(candles, key=lambda c: c['date'])
 
     key = _cache_key('chart', uic=uic, asset_type=asset_type, horizon=horizon, count=count)
-    return _cached(key, CHART_TTL, produce)
+    return cache.get_or_set(key, produce, CHART_TTL)
 
 
 def search(keywords, asset_types='Stock,Etf'):
@@ -115,14 +119,15 @@ def search(keywords, asset_types='Stock,Etf'):
         return [to_instrument(r) for r in rows]
 
     key = _cache_key('search', q=keywords.lower(), asset_types=asset_types)
-    return _cached(key, SEARCH_TTL, produce)
+    return cache.get_or_set(key, produce, SEARCH_TTL)
 
 
 def details(uic, asset_type):
     def produce():
         return to_details(client.get_instrument_details(_access_token(), uic, asset_type))
 
-    return _cached(_cache_key('details', uic=uic, asset_type=asset_type), DETAILS_TTL, produce)
+    key = _cache_key('details', uic=uic, asset_type=asset_type)
+    return cache.get_or_set(key, produce, DETAILS_TTL)
 
 
 def quotes(uics, asset_type):
@@ -139,4 +144,4 @@ def quotes(uics, asset_type):
         return [to_quote(r) for r in rows]
 
     key = _cache_key('quotes', uics=','.join(str(u) for u in sorted(uics)), asset_type=asset_type)
-    return _cached(key, QUOTES_TTL, produce)
+    return cache.get_or_set(key, produce, QUOTES_TTL)

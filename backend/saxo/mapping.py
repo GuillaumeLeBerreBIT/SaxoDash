@@ -17,6 +17,12 @@ def _decimal(value):
     return Decimal(str(value))
 
 
+def bare_symbol(symbol):
+    """'NVDA:xnas' -> 'NVDA'. The join key between positions, watchlist rows
+    and the Research URL, so it has one definition."""
+    return (symbol or '').split(':')[0]
+
+
 def _mark(base, view):
     """(price, source) for one position, best source first.
 
@@ -43,7 +49,7 @@ def to_position_fields(saxo_position):
     view = saxo_position.get('PositionView', {})
     display = saxo_position.get('DisplayAndFormat', {})
 
-    ticker = display.get('Symbol', '').split(':')[0]
+    ticker = bare_symbol(display.get('Symbol'))
     current_price, price_source = _mark(base, view)
 
     return {
@@ -87,7 +93,7 @@ def to_transaction_fields(saxo_position):
         'date': date.fromisoformat(base['ExecutionTimeOpen'][:10]),
         'type': 'BUY' if amount >= 0 else 'SELL',
         'instrument': display.get('Description', ''),
-        'ticker': display.get('Symbol', '').split(':')[0],
+        'ticker': bare_symbol(display.get('Symbol')),
         'qty': _decimal(abs(amount)),
         'price': _decimal(base['OpenPrice']),
         'account': 'Saxo',

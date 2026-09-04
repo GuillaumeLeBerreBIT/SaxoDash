@@ -24,9 +24,11 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
-# Saxo's Horizon is in minutes. v1 charts daily bars only; the intraday
-# horizons are listed so the validation does not have to change to allow them.
-ALLOWED_HORIZONS = {1, 5, 10, 15, 30, 60, 120, 240, 360, 480, 720, 1440, 10080, 43200}
+# Saxo's Horizon is in minutes. Daily and coarser only: `market.to_candle`
+# identifies a bar by its date, so an intraday horizon would collapse a whole
+# session onto one key - the sort becomes a no-op, the chart draws backwards
+# and React sees duplicate keys. Admitting one means changing that identity.
+ALLOWED_HORIZONS = {1440, 10080, 43200}
 
 
 class WatchlistListCreateView(ListCreateAPIView):

@@ -213,6 +213,15 @@ class ShapingTest(TestCase):
         self.assertEqual(candle['close'], 1.2)
         self.assertEqual(candle['volume'], 0)
 
+    def test_candle_with_a_missing_price_is_dropped_rather_than_nulled(self):
+        # `sma` adds with `+=`, so a null close would read as a zero and pull a
+        # flat average onto the chart with nothing raised.
+        self.assertIsNone(market.to_candle({**SAMPLE_CANDLE, 'Close': None}))
+        self.assertIsNone(market.to_candle({k: v for k, v in SAMPLE_CANDLE.items() if k != 'Low'}))
+
+    def test_candle_without_a_time_is_dropped(self):
+        self.assertIsNone(market.to_candle({k: v for k, v in SAMPLE_CANDLE.items() if k != 'Time'}))
+
     def test_instrument_drops_the_exchange_suffix_from_the_symbol(self):
         self.assertEqual(market.to_instrument(SAMPLE_INSTRUMENT), {
             'symbol': 'NVDA',
@@ -326,6 +335,16 @@ class MarketDataViewTest(APITestCase):
         self._connect_saxo()
         response = self.client.get('/api/research/chart/?asset_type=Stock')
         self.assertEqual(response.status_code, 400)
+
+    def test_intraday_horizons_are_refused_rather_than_silently_flattened(self):
+        # `to_candle` identifies a bar by its date; an intraday horizon would
+        # collapse a session onto one key and draw the chart backwards.
+        self._connect_saxo()
+        for horizon in (1, 5, 60, 720):
+            response = self.client.get(
+                f'/api/research/chart/?uic=211&asset_type=Stock&horizon={horizon}'
+            )
+            self.assertEqual(response.status_code, 400, horizon)
 
     def test_chart_rejects_an_unknown_horizon(self):
         self._connect_saxo()
