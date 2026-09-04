@@ -5,10 +5,33 @@
  *  without rendering a chart.
  */
 
-export const INTERVALS = ['1W', '1M', '3M', '6M', '1Y', 'ALL']
+/** A range and how many bars it spans, in one place.
+ *
+ *  Trading days, not calendar days: Saxo returns one daily candle per session.
+ */
+export const RANGES = [
+  { key: '1W', bars: 7 },
+  { key: '1M', bars: 22 },
+  { key: '3M', bars: 66 },
+  { key: '6M', bars: 130 },
+  { key: '1Y', bars: 252 },
+  { key: 'ALL', bars: 504 },
+]
 
-// Trading days, not calendar days: Saxo returns one daily candle per session.
-export const RANGE_COUNTS = { '1W': 7, '1M': 22, '3M': 66, '6M': 130, '1Y': 252, ALL: 504 }
+export const INTERVALS = RANGES.map((range) => range.key)
+export const RANGE_COUNTS = Object.fromEntries(RANGES.map((r) => [r.key, r.bars]))
+export const WIDEST_RANGE_COUNT = Math.max(...RANGES.map((range) => range.bars))
+
+/** The tail of the widest fetch that a range actually shows.
+ *
+ *  Every narrower range is a prefix of the widest one, so the page fetches
+ *  once and slices: stepping 1W→ALL used to cost six Saxo calls for data the
+ *  last one already held.
+ */
+export function barsForRange(bars = [], range) {
+  const count = RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT
+  return bars.length <= count ? bars : bars.slice(-count)
+}
 
 // Saxo's Horizon is in minutes; 1440 is one daily candle. The backend admits
 // daily and coarser only - a bar is identified by its date.
@@ -39,6 +62,17 @@ export function uicsByAssetType(items = []) {
     groups.set(item.asset_type, uics)
   }
   return [...groups].map(([assetType, uics]) => ({ assetType, uics }))
+}
+
+/** Whether resolving this symbol needs an instrument search at all.
+ *
+ *  Lives next to `resolveInstrument` rather than in the page, which used to
+ *  pass '' as a sentinel meaning "do not search" - and only worked because
+ *  the caller knew the hook disables below two characters.
+ */
+export function needsInstrumentSearch(symbol, positions = []) {
+  if (!symbol) return false
+  return !positions.find((p) => p.ticker === symbol)?.uic
 }
 
 /** Saxo's spelling of an instrument's type.

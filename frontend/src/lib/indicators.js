@@ -107,15 +107,36 @@ export function vwapSeries(bars) {
   })
 }
 
-export function computeIndicators(bars) {
+/** Indicators for the last `count` bars, warmed up on the bars before them.
+ *
+ *  The lagging series need their leading period of history to hold a value at
+ *  the first visible bar: MA-50 over a 22-bar month is otherwise entirely null
+ *  even when the fifty bars it needs were already fetched.
+ *
+ *  VWAP is deliberately not warmed up. It is cumulative, so running it from
+ *  the widest fetch would silently turn a one-week VWAP into a two-year one;
+ *  it stays anchored to the range on screen.
+ */
+export function computeIndicatorsForRange(bars, count) {
+  const visible = count == null || bars.length <= count ? bars : bars.slice(-count)
+  const from = bars.length - visible.length
   const closes = bars.map((bar) => bar.close)
+
+  const tail = (series) => series.slice(from)
+  const tailEach = (group) =>
+    Object.fromEntries(Object.entries(group).map(([key, series]) => [key, tail(series)]))
+
   return {
-    ma20: sma(closes, 20),
-    ma50: sma(closes, 50),
-    ema9: ema(closes, 9),
-    bb: bollinger(closes),
-    rsi: rsi(closes),
-    macd: macd(closes),
-    vwap: vwapSeries(bars),
+    ma20: tail(sma(closes, 20)),
+    ma50: tail(sma(closes, 50)),
+    ema9: tail(ema(closes, 9)),
+    bb: tailEach(bollinger(closes)),
+    rsi: tail(rsi(closes)),
+    macd: tailEach(macd(closes)),
+    vwap: vwapSeries(visible),
   }
+}
+
+export function computeIndicators(bars) {
+  return computeIndicatorsForRange(bars, bars.length)
 }

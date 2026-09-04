@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
+import { WIDEST_RANGE_COUNT } from '../lib/research'
 import Research from './Research'
 
 vi.mock('../api/queries')
@@ -84,14 +85,30 @@ describe('Research', () => {
     expect(screen.queryByText('Held')).not.toBeInTheDocument()
   })
 
-  it('asks Saxo for the candle count that matches the chosen range', async () => {
+  it('fetches the widest range once and slices it, rather than refetching per range', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    await userEvent.click(screen.getByRole('button', { name: '1Y' }))
+    const widest = expect.objectContaining({
+      uic: 211,
+      assetType: 'Stock',
+      count: WIDEST_RANGE_COUNT,
+      horizon: 1440,
+    })
+    expect(queries.useChart).toHaveBeenLastCalledWith(widest)
 
-    expect(queries.useChart).toHaveBeenLastCalledWith(
-      expect.objectContaining({ uic: 211, assetType: 'Stock', count: 252, horizon: 1440 }),
-    )
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    expect(queries.useChart).toHaveBeenLastCalledWith(widest)
+  })
+
+  it('shows only the bars the chosen range covers', async () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    // 1W is seven bars, so the legend lands on the last of the forty stubbed.
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    expect(screen.getByText(bars[bars.length - 1].date)).toBeInTheDocument()
+    expect(screen.queryByText(bars[0].date)).not.toBeInTheDocument()
   })
 
   it('shows the live position card on the overview tab', () => {

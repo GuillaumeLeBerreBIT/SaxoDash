@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RANGE_COUNTS,
+  WIDEST_RANGE_COUNT,
   barChange,
+  barsForRange,
   instrumentKey,
+  needsInstrumentSearch,
   periodChange,
   quotesByUic,
   rangeStats,
@@ -128,6 +132,30 @@ describe('barChange', () => {
 })
 
 
+describe('barsForRange', () => {
+  const many = Array.from({ length: WIDEST_RANGE_COUNT }, (_, i) => ({ close: i }))
+
+  it('takes the tail, so the newest bars are the ones kept', () => {
+    const week = barsForRange(many, '1W')
+
+    expect(week).toHaveLength(RANGE_COUNTS['1W'])
+    expect(week[week.length - 1]).toBe(many[many.length - 1])
+  })
+
+  it('returns everything when the range is wider than the data', () => {
+    const three = many.slice(0, 3)
+    expect(barsForRange(three, '1Y')).toBe(three)
+  })
+
+  it('falls back to the widest range for an unknown key', () => {
+    expect(barsForRange(many, 'nonsense')).toHaveLength(WIDEST_RANGE_COUNT)
+  })
+
+  it('survives no bars at all', () => {
+    expect(barsForRange(undefined, '1M')).toEqual([])
+  })
+})
+
 describe('instrumentKey', () => {
   it('carries both halves of the identity', () => {
     expect(instrumentKey(211, 'Stock')).toBe('211:Stock')
@@ -166,5 +194,23 @@ describe('uicsByAssetType', () => {
 
   it('asks for nothing when there is nothing to price', () => {
     expect(uicsByAssetType([])).toEqual([])
+  })
+})
+
+describe('needsInstrumentSearch', () => {
+  it('is false when the portfolio already knows the uic', () => {
+    expect(needsInstrumentSearch('NVDA', [{ ticker: 'NVDA', uic: 211 }])).toBe(false)
+  })
+
+  it('is true for a held position synced before uic existed', () => {
+    expect(needsInstrumentSearch('NVDA', [{ ticker: 'NVDA', uic: null }])).toBe(true)
+  })
+
+  it('is true for a symbol that is not held', () => {
+    expect(needsInstrumentSearch('TSLA', [{ ticker: 'NVDA', uic: 211 }])).toBe(true)
+  })
+
+  it('is false with no symbol to search for', () => {
+    expect(needsInstrumentSearch('', [])).toBe(false)
   })
 })

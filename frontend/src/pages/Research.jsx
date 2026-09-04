@@ -10,8 +10,14 @@ import {
   useWatchlistMutations,
   useWatchlists,
 } from '../api/queries'
-import { computeIndicators } from '../lib/indicators'
-import { DAILY_HORIZON, RANGE_COUNTS, resolveInstrument } from '../lib/research'
+import { computeIndicatorsForRange } from '../lib/indicators'
+import {
+  DAILY_HORIZON,
+  WIDEST_RANGE_COUNT,
+  barsForRange,
+  needsInstrumentSearch,
+  resolveInstrument,
+} from '../lib/research'
 import { PageHeader } from '../components/ui'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import ChartPanel from '../components/research/ChartPanel'
@@ -48,20 +54,30 @@ export default function Research() {
 
   // Only searched for when the portfolio cannot answer: a held instrument
   // already knows its own uic.
-  const { data: searchResults = [] } = useInstrumentSearch(position?.uic ? '' : symbol)
+  const { data: searchResults = [] } = useInstrumentSearch(
+    needsInstrumentSearch(symbol, positions) ? symbol : '',
+  )
   const instrument = useMemo(
     () => resolveInstrument({ symbol, positions, results: searchResults }),
     [symbol, positions, searchResults],
   )
 
+  // One fetch at the widest range; the narrower ones are its tail. Keying on
+  // the range instead meant six Saxo calls to walk 1W→ALL.
   const chart = useChart({
     uic: instrument?.uic,
     assetType: instrument?.assetType,
     horizon: DAILY_HORIZON,
-    count: RANGE_COUNTS[controls.range],
+    count: WIDEST_RANGE_COUNT,
   })
-  const bars = chart.data ?? NO_BARS
-  const ind = useMemo(() => computeIndicators(bars), [bars])
+  const allBars = chart.data ?? NO_BARS
+  const bars = useMemo(() => barsForRange(allBars, controls.range), [allBars, controls.range])
+  // Indicators run on everything fetched and are sliced to match, so MA-50 has
+  // a value on a one-month view instead of being null for want of history.
+  const ind = useMemo(
+    () => computeIndicatorsForRange(allBars, bars.length),
+    [allBars, bars.length],
+  )
 
   const details = useInstrumentDetails({
     uic: instrument?.uic,

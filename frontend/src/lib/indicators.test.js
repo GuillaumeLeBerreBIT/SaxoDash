@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bollinger, computeIndicators, ema, macd, rsi, sma, vwapSeries } from './indicators'
+import { bollinger, computeIndicators, computeIndicatorsForRange, ema, macd, rsi, sma, vwapSeries } from './indicators'
 
 const closes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -123,5 +123,45 @@ describe('computeIndicators', () => {
 
     expect(out.ma20).toEqual([])
     expect(out.macd.line).toEqual([])
+  })
+})
+
+describe('computeIndicatorsForRange', () => {
+  const bars = Array.from({ length: 120 }, (_, i) => ({
+    high: 102 + i,
+    low: 98 + i,
+    close: 100 + i,
+    volume: 1000,
+  }))
+
+  it('gives the visible bars a value the range alone could not warm up', () => {
+    const ranged = computeIndicatorsForRange(bars, 22)
+    const rangeOnly = computeIndicators(bars.slice(-22))
+
+    expect(ranged.ma50).toHaveLength(22)
+    expect(ranged.ma50.every((v) => v != null)).toBe(true)
+    expect(rangeOnly.ma50.every((v) => v == null)).toBe(true)
+  })
+
+  it('lines the sliced series up with the bars they belong to', () => {
+    const ranged = computeIndicatorsForRange(bars, 22)
+    const full = computeIndicators(bars)
+
+    expect(ranged.ma20).toEqual(full.ma20.slice(-22))
+    expect(ranged.rsi).toEqual(full.rsi.slice(-22))
+    expect(ranged.macd.line).toEqual(full.macd.line.slice(-22))
+    expect(ranged.bb.up).toEqual(full.bb.up.slice(-22))
+  })
+
+  it('keeps VWAP anchored to the visible range, since it is cumulative', () => {
+    const ranged = computeIndicatorsForRange(bars, 22)
+    const rangeOnly = computeIndicators(bars.slice(-22))
+
+    expect(ranged.vwap).toEqual(rangeOnly.vwap)
+    expect(ranged.vwap).not.toEqual(computeIndicators(bars).vwap.slice(-22))
+  })
+
+  it('returns the whole series when the range is wider than the data', () => {
+    expect(computeIndicatorsForRange(bars, 500).ma20).toHaveLength(bars.length)
   })
 })
