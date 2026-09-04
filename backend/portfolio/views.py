@@ -38,8 +38,16 @@ class PortfolioSummaryView(APIView):
 
         total_value = get_portfolio_value().rounded().amount
         total_cost = sum((p.cost for p in positions), Decimal('0'))
-        total_pnl = total_value - total_cost
-        total_pnl_pct = (total_pnl / total_cost) * 100 if total_cost else Decimal('0')
+
+        # The balance sync and the position sync are independent tasks, so the
+        # broker's value can arrive while the position table is still empty.
+        # There is nothing to cost against then, and reporting the whole book
+        # as profit would be worse than reporting no P/L at all.
+        priced = bool(positions)
+        total_pnl = total_value - total_cost if priced else None
+        total_pnl_pct = (
+            (total_pnl / total_cost) * 100 if priced and total_cost else None
+        )
 
         return Response({
             'total_value': total_value,

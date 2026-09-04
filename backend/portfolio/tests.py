@@ -1,8 +1,16 @@
+from datetime import timedelta
+
+from django.conf import settings
 from django.test import TestCase
+from django.utils import timezone
 from decimal import Decimal
-from portfolio.models import Position
+from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
-from portfolio.services import get_portfolio_value, get_positions_value
+from portfolio.services import (
+    VALUATION_MAX_AGE,
+    get_portfolio_value,
+    get_positions_value,
+)
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -72,3 +80,49 @@ class PortfolioAPITest(APITestCase):
         self.client.credentials()  # clear token
         response = self.client.get('/api/portfolio/positions/')
         self.assertEqual(response.status_code, 401)
+
+
+class PortfolioValuationTrustTest(TestCase):
+    """The broker's figure is preferred, but only while it is evidence."""
+
+    def _valuation(self, **overrides):
+        return PortfolioValuation.objects.create(**{
+            'source': SAXO_SOURCE,
+            'currency': 'EUR',
+            'cash_balance': Decimal('1000.00'),
+            'positions_value': Decimal('31567.81'),
+            'total_value': Decimal('32567.81'),
+            **overrides,
+        })
+
+    def _position(self):
+        return Position.objects.create(
+            ticker='MSFT', name='Microsoft', qty=Decimal('10'),
+            avg_cost=Decimal('100.00'), current_price=Decimal('110.00'),
+            sector='Technology', type='STOCK', color='#00a4ef',
+            currency='EUR', fx_rate=Decimal('1'),
+        )
+
+    def test_prefers_the_broker_figure_when_it_is_in_the_reporting_currency(self):
+        self._valuation()
+        self._position()
+
+        self.assertEqual(get_portfolio_value().amount, Decimal('31567.81'))
+
+    def test_falls_back_to_our_own_marks_for_a_foreign_currency_account(self):
+        # The valuation carries no fx_rate; the positions do.
+        self._valuation(currency='USD')
+        self._position()
+
+        value = get_portfolio_value()
+        self.assertEqual(value.currency, settings.REPORTING_CURRENCY)
+        self.assertEqual(value.amount, Decimal('1100.00'))
+
+    def test_declines_a_valuation_older_than_the_sync_that_should_refresh_it(self):
+        valuation = self._valuation()
+        PortfolioValuation.objects.filter(pk=valuation.pk).update(
+            as_of=timezone.now() - VALUATION_MAX_AGE - timedelta(hours=1)
+        )
+        self._position()
+
+        self.assertEqual(get_portfolio_value().amount, Decimal('1100.00'))
