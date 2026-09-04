@@ -32,6 +32,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--since', help='First date to repair (YYYY-MM-DD).')
+        parser.add_argument('--until', help='Last date to repair (YYYY-MM-DD).')
         parser.add_argument('--rate', help='Instrument-to-reporting currency rate.')
         parser.add_argument('--delete', action='store_true',
                             help='Remove the rows instead of restating them.')
@@ -39,9 +40,21 @@ class Command(BaseCommand):
                             help='Write the changes. Without it this is a dry run.')
 
     def handle(self, *args, **options):
+        # Restating has no marker and is not idempotent: a second run scales
+        # the same rows again, and rows written after the currency fix are
+        # already correct. Naming the window is how you say which rows are bad.
+        if not options['delete'] and not (options['since'] and options['until']):
+            raise CommandError(
+                'Restating needs --since and --until naming the bad window. '
+                'This command multiplies rows in place with nothing recording '
+                'that it ran, so an unbounded or repeated run corrupts good data.'
+            )
+
         snapshots = NetWorthSnapshot.objects.filter(date__lt=timezone.localdate())
         if options['since']:
             snapshots = snapshots.filter(date__gte=options['since'])
+        if options['until']:
+            snapshots = snapshots.filter(date__lte=options['until'])
         snapshots = list(snapshots)
 
         if not snapshots:
