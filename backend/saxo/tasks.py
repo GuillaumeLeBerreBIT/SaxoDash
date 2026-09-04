@@ -64,7 +64,9 @@ def _mapped_rows(raw_rows, to_fields):
     for raw_row in raw_rows:
         try:
             yield to_fields(raw_row)
-        except (KeyError, TypeError, ValueError) as exc:
+        # ArithmeticError too: a null in a numeric field raises decimal's
+        # InvalidOperation, which is not a ValueError.
+        except (KeyError, TypeError, ValueError, ArithmeticError) as exc:
             logger.warning(
                 'Skipping Saxo row that %s could not map: %r', to_fields.__name__, exc
             )

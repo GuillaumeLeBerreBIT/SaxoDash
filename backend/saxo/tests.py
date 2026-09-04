@@ -835,6 +835,13 @@ class ActiveCredentialTest(TestCase):
         self.assertFalse(state.usable)
         self.assertFalse(state.needs_reauth)
 
+    def test_a_null_numeric_field_skips_one_row_instead_of_failing_the_run(self):
+        # decimal raises InvalidOperation, an ArithmeticError - not a
+        # ValueError - so an unguarded null used to fail the whole sync.
+        from saxo import mapping
+        self.assertEqual(mapping._decimal(None), Decimal('0'))
+        self.assertEqual(mapping._decimal(None, default=1), Decimal('1'))
+
     def test_past_the_grace_window_the_user_has_to_act(self):
         self._create(expires_at=timezone.now() - credentials.REAUTH_GRACE - timedelta(minutes=1))
         state = credentials.connection_state()

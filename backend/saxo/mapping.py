@@ -13,8 +13,11 @@ def _color_for_ticker(ticker):
     return f"#{digest[:6]}"
 
 
-def _decimal(value):
-    return Decimal(str(value))
+def _decimal(value, default='0'):
+    """Saxo sends JSON null for fields it withholds, and Decimal('None') raises
+    InvalidOperation - an ArithmeticError, which the sync's row guard does not
+    catch, so one null row would fail the whole run."""
+    return Decimal(str(default if value is None else value))
 
 
 def bare_symbol(symbol):
@@ -64,7 +67,7 @@ def to_position_fields(saxo_position):
         'uic': base.get('Uic'),
         'asset_type': base.get('AssetType', 'Stock'),
         'currency': display.get('Currency', settings.REPORTING_CURRENCY),
-        'fx_rate': _decimal(view.get('ConversionRateCurrent', 1)),
+        'fx_rate': _decimal(view.get('ConversionRateCurrent'), default=1),
         'price_source': price_source,
         'priced_at': timezone.now(),
     }
