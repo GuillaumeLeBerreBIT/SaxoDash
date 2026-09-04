@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.core.management import call_command
 
 from .models import NetWorthSnapshot
+from .money import CurrencyMismatch, Money
 from .services import ensure_todays_snapshot
 from portfolio.models import Position
 from portfolio.services import get_positions_total_value
@@ -122,3 +123,20 @@ class SeedDemoDataSnapshotsTest(TestCase):
         call_command('seed_demo_data')
         call_command('seed_demo_data')
         self.assertEqual(NetWorthSnapshot.objects.count(), 365)
+
+
+class MoneyTest(TestCase):
+    def test_adds_amounts_in_the_same_currency(self):
+        total = Money(Decimal('10.00'), 'EUR') + Money(Decimal('5.50'), 'EUR')
+        self.assertEqual(total, Money(Decimal('15.50'), 'EUR'))
+
+    def test_refuses_to_add_across_currencies(self):
+        with self.assertRaises(CurrencyMismatch):
+            Money(Decimal('10.00'), 'EUR') + Money(Decimal('5.00'), 'USD')
+
+    def test_total_of_nothing_is_still_denominated(self):
+        self.assertEqual(Money.total([], 'EUR'), Money(Decimal('0'), 'EUR'))
+
+    def test_converts_at_a_rate(self):
+        converted = Money(Decimal('100'), 'USD').converted('EUR', Decimal('0.86'))
+        self.assertEqual(converted, Money(Decimal('86.00'), 'EUR'))

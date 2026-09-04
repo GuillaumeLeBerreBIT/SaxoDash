@@ -206,6 +206,10 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# The currency every total in the app is expressed in. Instrument prices stay
+# in their own currency and are converted with the position's fx_rate.
+REPORTING_CURRENCY = os.environ.get('REPORTING_CURRENCY', 'EUR')
+
 SAXO_ENVIRONMENT = os.environ.get('SAXO_ENVIRONMENT', 'sim')
 SAXO_KEY = os.environ.get('SAXO_KEY', '')
 SAXO_SECRET = os.environ.get('SAXO_SECRET', '')
