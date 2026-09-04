@@ -1,3 +1,4 @@
+import functools
 import logging
 from datetime import timedelta
 
@@ -5,13 +6,13 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.models import BankAccount
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
 
 from . import client, mapping
 from .credentials import SaxoNotConnected, active_credential
-from .models import SaxoCredential
-from accounts.models import BankAccount
+from .models import SaxoCredential, SyncRun
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +25,35 @@ SYNC_TASK = {
 }
 
 
-def _usable_credential():
-    """The credential the sync tasks may call Saxo with, or None to skip.
+def synced(fn):
+    """Give `fn` a usable credential and record what the run actually did.
 
-    Not used by `refresh_saxo_token`: an expired access token is that task's
-    trigger, not its blocker, since it authenticates with the refresh token.
+    Every sync shared the same preamble - get a credential or bail - and bailed
+    with a bare `return`, which Celery logs as a success. One wrapper instead
+    keeps each task body to the work itself and makes a skip as visible as a
+    completion. `fn` returns the number of rows it wrote.
     """
-    try:
-        return active_credential()
-    except SaxoNotConnected:
-        return None
+    @functools.wraps(fn)
+    def run(*args, **kwargs):
+        try:
+            credential = active_credential()
+        except SaxoNotConnected as exc:
+            SyncRun.objects.create(task=fn.__name__, outcome='skipped', detail=str(exc))
+            logger.info('Skipping %s: %s', fn.__name__, exc)
+            return
+
+        try:
+            rows = fn(credential, *args, **kwargs)
+        except Exception as exc:
+            SyncRun.objects.create(
+                task=fn.__name__, outcome='failed', detail=str(exc)[:200]
+            )
+            raise
+
+        SyncRun.objects.create(task=fn.__name__, outcome='ok', rows=rows)
+        return rows
+
+    return run
 
 
 def _mapped_rows(raw_rows, to_fields):
@@ -46,13 +66,10 @@ def _mapped_rows(raw_rows, to_fields):
             )
 
 
-def _stamp_synced(credential):
-    credential.last_synced_at = timezone.now()
-    credential.save(update_fields=['last_synced_at'])
-
-
 @shared_task
 def refresh_saxo_token():
+    """Not a @synced task: an expired access token is this one's trigger, not
+    its blocker, since it authenticates with the refresh token."""
     credential = SaxoCredential.objects.first()
     if not credential or credential.needs_reauth:
         return
@@ -78,11 +95,8 @@ def refresh_saxo_token():
 
 
 @shared_task(**SYNC_TASK)
-def sync_positions():
-    credential = _usable_credential()
-    if not credential:
-        return
-
+@synced
+def sync_positions(credential):
     saxo_positions = client.get_positions(credential.access_token)
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
@@ -95,33 +109,29 @@ def sync_positions():
 
         Position.objects.exclude(ticker__in=seen_tickers).delete()
 
-    _stamp_synced(credential)
+    return len(seen_tickers)
 
 
 @shared_task(**SYNC_TASK)
-def sync_transactions():
-    credential = _usable_credential()
-    if not credential:
-        return
-
+@synced
+def sync_transactions(credential):
     # SIM never populates /hist/v1/transactions, so entry trades come from open
     # positions instead; exit trades await a real closed-position payload.
     saxo_positions = client.get_positions(credential.access_token)
 
+    written = 0
     for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
         Transaction.objects.update_or_create(
             saxo_trade_id=fields['saxo_trade_id'], defaults=fields
         )
+        written += 1
 
-    _stamp_synced(credential)
+    return written
 
 
 @shared_task(**SYNC_TASK)
-def sync_account_balance():
-    credential = _usable_credential()
-    if not credential:
-        return
-
+@synced
+def sync_account_balance(credential):
     saxo_balance = client.get_account_balance(credential.access_token)
     valuation = mapping.to_valuation_fields(saxo_balance=saxo_balance)
 
@@ -141,4 +151,4 @@ def sync_account_balance():
             'own marks, which may be worse than the broker figure.'
         )
 
-    _stamp_synced(credential)
+    return 1 if valuation else 0

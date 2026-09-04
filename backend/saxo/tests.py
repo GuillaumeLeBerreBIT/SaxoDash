@@ -6,7 +6,7 @@ from django.db import connection
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from backend import settings
-from .models import SaxoCredential
+from .models import SaxoCredential, SyncRun
 from datetime import date as date_cls
 from decimal import Decimal
 from django.contrib.auth.models import User
@@ -68,7 +68,6 @@ class SaxoCredentialModelTest(TestCase):
         )
         self.assertEqual(cred.environment, 'sim')
         self.assertFalse(cred.needs_reauth)
-        self.assertIsNone(cred.last_synced_at)
       
         
 class SaxoClientTest(TestCase):
@@ -301,7 +300,7 @@ class SaxoStatusViewTest(APITestCase):
         response = self.client.get('/api/saxo/status/')
         self.assertFalse(response.data['needs_reauth'])
 
-from portfolio.models import Position
+from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
 from accounts.models import BankAccount
 from . import tasks
@@ -358,8 +357,10 @@ class SyncPositionsTaskTest(TestCase):
         tasks.sync_positions()
         self.assertEqual(Position.objects.count(), 1)
         self.assertEqual(Position.objects.first().ticker, 'NVDA')
-        self.cred.refresh_from_db()
-        self.assertIsNotNone(self.cred.last_synced_at)
+
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 1)
 
     @patch('saxo.tasks.client.get_positions')
     def test_removes_positions_no_longer_present(self, mock_get_positions):
@@ -377,6 +378,29 @@ class SyncPositionsTaskTest(TestCase):
         mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
         tasks.sync_positions()
         self.assertEqual(Position.objects.count(), 1)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_an_empty_saxo_response_still_prunes(self, mock_get_positions):
+        # Holding nothing is a real answer, and differs from failing to read.
+        Position.objects.create(
+            ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
+            color='#000000',
+        )
+        mock_get_positions.return_value = []
+        tasks.sync_positions()
+
+        self.assertEqual(Position.objects.count(), 0)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_records_the_price_provenance(self, mock_get_positions):
+        mock_get_positions.return_value = [UNENTITLED_POSITION]
+        tasks.sync_positions()
+
+        position = Position.objects.get(ticker='MSFT')
+        self.assertEqual(position.price_source, 'derived')
+        self.assertEqual(position.currency, 'USD')
+        self.assertIsNotNone(position.priced_at)
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
@@ -482,6 +506,8 @@ class SyncAccountBalanceTaskTest(TestCase):
         )
         mock_get_balance.return_value = {
             'CashBalance': 994104.45, 'CollateralAvailable': 992000.10,
+            'Currency': 'EUR', 'NonMarginPositionsValue': 31571.91,
+            'TotalValue': 1025676.36,
         }
         tasks.sync_account_balance()
 
@@ -491,9 +517,38 @@ class SyncAccountBalanceTaskTest(TestCase):
         self.assertEqual(account.available, Decimal('992000.10'))
 
     @patch('saxo.tasks.client.get_account_balance')
+    def test_records_saxos_own_valuation(self, mock_get_balance):
+        mock_get_balance.return_value = {
+            'CashBalance': 968435.55, 'CollateralAvailable': 968435.55,
+            'Currency': 'EUR', 'NonMarginPositionsValue': 31571.91,
+            'TotalValue': 1000007.46,
+        }
+        tasks.sync_account_balance()
+
+        valuation = PortfolioValuation.objects.get(source=SAXO_SOURCE)
+        self.assertEqual(valuation.currency, 'EUR')
+        self.assertEqual(valuation.positions_value, Decimal('31571.91'))
+        self.assertEqual(valuation.total_value, Decimal('1000007.46'))
+        # The identity that makes this figure trustworthy.
+        self.assertEqual(valuation.total_value - valuation.cash_balance,
+                         valuation.positions_value)
+
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_a_balance_without_a_valuation_writes_none(self, mock_get_balance):
+        mock_get_balance.return_value = {
+            'CashBalance': 100.00, 'CollateralAvailable': 100.00,
+        }
+        tasks.sync_account_balance()
+
+        self.assertEqual(BankAccount.objects.count(), 1)
+        self.assertFalse(PortfolioValuation.objects.exists())
+
+    @patch('saxo.tasks.client.get_account_balance')
     def test_creates_the_row_when_absent(self, mock_get_balance):
         mock_get_balance.return_value = {
             'CashBalance': 100.00, 'CollateralAvailable': 100.00,
+            'Currency': 'EUR', 'NonMarginPositionsValue': 0.00,
+            'TotalValue': 100.00,
         }
         tasks.sync_account_balance()
 
@@ -515,6 +570,8 @@ class SyncAccountBalanceTaskTest(TestCase):
         )
         mock_get_balance.return_value = {
             'CashBalance': 300.00, 'CollateralAvailable': 300.00,
+            'Currency': 'EUR', 'NonMarginPositionsValue': 0.00,
+            'TotalValue': 300.00,
         }
         tasks.sync_account_balance()
 
@@ -750,3 +807,93 @@ class UnentitledPositionPricingTest(TestCase):
             'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': 2.5},
         }
         self.assertEqual(mapping.to_position_fields(fractional)['qty'], Decimal('2.5'))
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncRunTest(TestCase):
+    """D4: a sync that could not run used to be logged as a success."""
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_skipped_sync_is_recorded_as_skipped(self, mock_get_positions):
+        # No credential at all.
+        tasks.sync_positions()
+
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'skipped')
+        self.assertIn('not connected', run.detail)
+        mock_get_positions.assert_not_called()
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_an_expired_token_is_recorded_with_its_reason(self, mock_get_positions):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        tasks.sync_positions()
+
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'skipped')
+        self.assertIn('expired', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_failing_sync_is_recorded_and_still_raises(self, mock_get_positions):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        mock_get_positions.side_effect = client.SaxoAPIError('gateway said no')
+
+        with self.assertRaises(client.SaxoAPIError):
+            tasks.sync_positions()
+
+        self.assertEqual(SyncRun.objects.first().outcome, 'failed')
+
+
+class SaxoStatusFreshnessTest(APITestCase):
+    """D6: freshness used to live on the credential, which re-auth deletes."""
+
+    def setUp(self):
+        user = User.objects.create_user(username='alex', password='pw')
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+    def test_reports_the_last_successful_sync_not_the_last_attempt(self):
+        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(task='sync_positions', outcome='skipped', detail='expired')
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertIsNotNone(response.data['last_synced_at'])
+        self.assertEqual(response.data['last_sync_outcome'], 'skipped')
+
+    def test_freshness_survives_reauthentication(self):
+        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+
+        # What SaxoCallbackView does on a reconnect.
+        SaxoCredential.objects.all().delete()
+        SaxoCredential.objects.create(
+            access_token='new', refresh_token='new',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+        response = self.client.get('/api/saxo/status/')
+        self.assertIsNotNone(response.data['last_synced_at'])
+
+    def test_a_token_just_past_expiry_does_not_demand_reauthentication(self):
+        # The refresh cycle catches this up within the minute.
+        self.cred.expires_at = timezone.now() - timedelta(minutes=1)
+        self.cred.save()
+
+        response = self.client.get('/api/saxo/status/')
+        self.assertFalse(response.data['needs_reauth'])
+
+    def test_a_long_expired_token_does_demand_reauthentication(self):
+        self.cred.expires_at = timezone.now() - timedelta(hours=2)
+        self.cred.save()
+
+        response = self.client.get('/api/saxo/status/')
+        self.assertTrue(response.data['needs_reauth'])

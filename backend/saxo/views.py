@@ -9,8 +9,8 @@ from django.utils import timezone
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView, Response
 
-from . import client
-from .models import SaxoCredential
+from . import client, credentials
+from .models import SaxoCredential, SyncRun
 
 logger = logging.getLogger(__name__)
 
@@ -65,21 +65,18 @@ class SaxoCallbackView(APIView):
 
 class SaxoStatusView(APIView):
 
-    # Past this much expiry the refresh cycle has clearly failed, even if
-    # needs_reauth was never set.
-    REAUTH_GRACE = timedelta(minutes=15)
-
     def get(self, request):
         credential = SaxoCredential.objects.first()
         if not credential:
             return Response({'connected': False})
-        needs_reauth = (
-            credential.needs_reauth
-            or credential.expires_at <= timezone.now() - self.REAUTH_GRACE
-        )
+
+        last_sync = credentials.last_successful_sync()
+        last_run = SyncRun.objects.first()
+
         return Response({
             'connected': True,
             'environment': credential.environment,
-            'needs_reauth': needs_reauth,
-            'last_synced_at': credential.last_synced_at,
+            'needs_reauth': credentials.needs_reauthentication(credential),
+            'last_synced_at': last_sync.ran_at if last_sync else None,
+            'last_sync_outcome': last_run.outcome if last_run else None,
         })
