@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from portfolio.models import Position
-from portfolio.services import get_positions_total_value
+from portfolio.services import get_portfolio_value
 from transactions.models import Transaction
 from accounts.models import BankAccount
 from saxo.mapping import SAXO_CASH_ACCOUNT_ID
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             [BankAccount(**b) for b in BANK_ACCOUNTS])
 
         snapshots = build_networth_snapshots(
-            get_positions_total_value(), get_total_bank_balance(),
+            get_portfolio_value().amount, get_total_bank_balance().amount,
         )
         NetWorthSnapshot.objects.bulk_create(snapshots)
 

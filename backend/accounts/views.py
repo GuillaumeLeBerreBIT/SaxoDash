@@ -2,11 +2,10 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from portfolio.services import get_positions_total_value
+from core.services import current_net_worth
 
 from .models import BankAccount
 from .serializers import BankAccountSerializer
-from .services import get_total_bank_balance
 
 
 class BankAccountListView(ListAPIView):
@@ -18,10 +17,9 @@ class BankAccountListView(ListAPIView):
 class NetWorthView(APIView):
 
     def get(self, request):
-        portfolio_value = get_positions_total_value()
-        bank_total = get_total_bank_balance()
+        net_worth = current_net_worth()
         return Response({
-            'portfolio_value': portfolio_value,
-            'bank_total': bank_total,
-            'net_worth': portfolio_value + bank_total,
+            'portfolio_value': net_worth.portfolio.rounded().amount,
+            'bank_total': net_worth.bank.rounded().amount,
+            'net_worth': net_worth.total.rounded().amount,
         })

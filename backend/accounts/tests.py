@@ -32,7 +32,7 @@ class BankAccountServiceTest(TestCase):
         )
 
     def test_total_bank_balance(self):
-        self.assertEqual(get_total_bank_balance(), Decimal('3500.00'))
+        self.assertEqual(get_total_bank_balance().amount, Decimal('3500.00'))
 
 
 class AccountsAPITest(APITestCase):

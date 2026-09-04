@@ -1,19 +1,30 @@
-from decimal import Decimal
+from django.conf import settings
 
-from django.db.models import DecimalField, F, Sum
+from core.money import Money
 
-from .models import Position
-
-MONEY_FIELD = DecimalField(max_digits=24, decimal_places=2)
+from .models import SAXO_SOURCE, PortfolioValuation, Position
 
 
-def get_positions_total_value():
-    """Total market value of all positions, summed in the database.
+def get_positions_value():
+    """Sum of the positions we hold, in REPORTING_CURRENCY.
 
-    Callers that already hold the rows should sum `Position.value` instead of
-    paying for a second query.
+    The relative view: what allocation and per-position weights divide into.
     """
-    total = Position.objects.aggregate(
-        total=Sum(F('qty') * F('current_price'), output_field=MONEY_FIELD)
-    )['total']
-    return total if total is not None else Decimal('0')
+    return Money.total(
+        (Money(p.value, settings.REPORTING_CURRENCY) for p in Position.objects.all()),
+        settings.REPORTING_CURRENCY,
+    )
+
+
+def get_portfolio_value():
+    """The investment book's market value, in REPORTING_CURRENCY.
+
+    Saxo's own figure when there is one: it arrives already converted and
+    reconciled (TotalValue - CashBalance), where rebuilding it from prices
+    depends on marks Saxo may never have given us. Falls back to our own
+    positions when the account has not been synced - demo data, or a first run.
+    """
+    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    if valuation:
+        return Money(valuation.positions_value, valuation.currency)
+    return get_positions_value()

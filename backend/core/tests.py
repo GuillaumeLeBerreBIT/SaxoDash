@@ -12,8 +12,8 @@ from django.core.management import call_command
 from .models import NetWorthSnapshot
 from .money import CurrencyMismatch, Money
 from .services import ensure_todays_snapshot
-from portfolio.models import Position
-from portfolio.services import get_positions_total_value
+from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
+from portfolio.services import get_portfolio_value
 from accounts.models import BankAccount
 from accounts.services import get_total_bank_balance
 
@@ -116,14 +116,13 @@ class SeedDemoDataSnapshotsTest(TestCase):
 
         today = timezone.localdate()
         latest = NetWorthSnapshot.objects.get(date=today)
-        self.assertEqual(latest.portfolio_value, get_positions_total_value())
-        self.assertEqual(latest.bank_total, get_total_bank_balance())
+        self.assertEqual(latest.portfolio_value, get_portfolio_value().amount)
+        self.assertEqual(latest.bank_total, get_total_bank_balance().amount)
 
     def test_seed_is_idempotent(self):
         call_command('seed_demo_data')
         call_command('seed_demo_data')
         self.assertEqual(NetWorthSnapshot.objects.count(), 365)
-
 
 class MoneyTest(TestCase):
     def test_adds_amounts_in_the_same_currency(self):
@@ -140,3 +139,78 @@ class MoneyTest(TestCase):
     def test_converts_at_a_rate(self):
         converted = Money(Decimal('100'), 'USD').converted('EUR', Decimal('0.86'))
         self.assertEqual(converted, Money(Decimal('86.00'), 'EUR'))
+
+
+class NetWorthCurrencyTest(TestCase):
+    """The bug this whole change exists for: USD added to EUR without a rate."""
+
+    def test_a_foreign_bank_account_raises_rather_than_being_added(self):
+        BankAccount.objects.create(
+            bank='Wise', type='Checking', iban_masked='-',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+            currency='USD',
+        )
+        with self.assertRaises(CurrencyMismatch):
+            ensure_todays_snapshot()
+
+    def test_position_value_is_converted_to_the_reporting_currency(self):
+        Position.objects.create(
+            ticker='MSFT', name='Microsoft', qty=Decimal('20'),
+            avg_cost=Decimal('494.36'), current_price=Decimal('510.09'),
+            sector='Technology', type='STOCK', color='#00a4ef',
+            currency='USD', fx_rate=Decimal('0.8600895'),
+        )
+        # 20 * 510.09 * 0.8600895, not 20 * 510.09
+        self.assertEqual(Position.objects.get(ticker='MSFT').value,
+                         Decimal('8774.46'))
+
+
+class PortfolioValuationPreferenceTest(TestCase):
+    def setUp(self):
+        Position.objects.create(
+            ticker='MSFT', name='Microsoft', qty=Decimal('20'),
+            avg_cost=Decimal('494.36'), current_price=Decimal('510.09'),
+            sector='Technology', type='STOCK', color='#00a4ef',
+            currency='USD', fx_rate=Decimal('0.8600895'),
+        )
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-',
+            balance=Decimal('968435.55'), available=Decimal('968435.55'),
+        )
+
+    def test_uses_saxos_own_figure_when_there_is_one(self):
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('968435.55'),
+            positions_value=Decimal('31571.91'),
+            total_value=Decimal('1000007.46'),
+        )
+        snapshot = ensure_todays_snapshot()
+
+        self.assertEqual(snapshot.portfolio_value, Decimal('31571.91'))
+        self.assertEqual(snapshot.net_worth, Decimal('1000007.46'))
+
+    def test_falls_back_to_our_own_marks_when_unsynced(self):
+        snapshot = ensure_todays_snapshot()
+        self.assertEqual(snapshot.portfolio_value, Decimal('8774.46'))
+
+
+class SnapshotRefreshesTest(TestCase):
+    """D3: the day's figure is a running total, not a fact fixed at first read."""
+
+    def setUp(self):
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='-',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+        )
+
+    def test_a_later_call_the_same_day_updates_the_row(self):
+        first = ensure_todays_snapshot()
+        self.assertEqual(first.net_worth, Decimal('1000.00'))
+
+        BankAccount.objects.update(balance=Decimal('1500.00'))
+        second = ensure_todays_snapshot()
+
+        self.assertEqual(NetWorthSnapshot.objects.count(), 1)
+        self.assertEqual(second.pk, first.pk)
+        self.assertEqual(second.net_worth, Decimal('1500.00'))

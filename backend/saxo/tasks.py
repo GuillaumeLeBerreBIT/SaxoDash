@@ -5,7 +5,7 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from portfolio.models import Position
+from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
 
 from . import client, mapping
@@ -123,9 +123,22 @@ def sync_account_balance():
         return
 
     saxo_balance = client.get_account_balance(credential.access_token)
-    fields = mapping.to_account_fields(saxo_balance=saxo_balance)
-    BankAccount.objects.update_or_create(
-        external_id=mapping.SAXO_CASH_ACCOUNT_ID, defaults=fields
-    )
+    valuation = mapping.to_valuation_fields(saxo_balance=saxo_balance)
+
+    with transaction.atomic():
+        BankAccount.objects.update_or_create(
+            external_id=mapping.SAXO_CASH_ACCOUNT_ID,
+            defaults=mapping.to_account_fields(saxo_balance=saxo_balance),
+        )
+        if valuation:
+            PortfolioValuation.objects.update_or_create(
+                source=SAXO_SOURCE, defaults=valuation
+            )
+
+    if not valuation:
+        logger.warning(
+            'Saxo sent no account valuation; portfolio value falls back to our '
+            'own marks, which may be worse than the broker figure.'
+        )
 
     _stamp_synced(credential)

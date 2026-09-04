@@ -670,3 +670,83 @@ class ActiveCredentialTest(TestCase):
         self._create(expires_at=timezone.now() - timedelta(minutes=1))
         with self.assertRaises(credentials.SaxoNotConnected):
             credentials.active_credential()
+
+
+UNENTITLED_POSITION = {
+    'PositionId': '5027270852',
+    'PositionBase': {
+        'Amount': 20.0,
+        'OpenPrice': 494.36,
+        'AssetType': 'Stock',
+        'Uic': 261,
+        'ExecutionTimeOpen': '2026-08-26T18:30:31.645781Z',
+    },
+    'PositionView': {
+        'CurrentPrice': 0.0,
+        'CurrentPriceType': 'None',
+        'MarketValue': 0.0,
+        'ProfitLossOnTrade': 314.60,
+        'ConversionRateCurrent': 0.8600895,
+    },
+    'DisplayAndFormat': {
+        'Symbol': 'MSFT:xnas',
+        'Description': 'Microsoft Corp.',
+        'Currency': 'USD',
+    },
+}
+
+
+class UnentitledPositionPricingTest(TestCase):
+    """The account has no market-data entitlement, which is the normal case here.
+
+    Falling back to OpenPrice made value == cost and P/L == 0 for every row,
+    every day - a wrong answer that looks like a plausible right one.
+    """
+
+    def test_does_not_report_the_open_price_as_the_market_price(self):
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertNotEqual(fields['current_price'], Decimal('494.36'))
+
+    def test_derives_the_mark_from_profit_loss_on_trade(self):
+        # 494.36 + 314.60/20, and the chart close that day was 510.12.
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertEqual(fields['current_price'], Decimal('510.09'))
+        self.assertEqual(fields['price_source'], 'derived')
+
+    def test_keeps_a_live_price_when_saxo_gives_one(self):
+        fields = mapping.to_position_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['current_price'], Decimal('875.40'))
+        self.assertEqual(fields['price_source'], 'live')
+
+    def test_falls_back_to_cost_only_when_nothing_else_answers(self):
+        blind = {
+            **UNENTITLED_POSITION,
+            'PositionView': {'CurrentPrice': 0.0, 'CurrentPriceType': 'None'},
+        }
+        fields = mapping.to_position_fields(blind)
+        self.assertEqual(fields['current_price'], Decimal('494.36'))
+        self.assertEqual(fields['price_source'], 'cost')
+
+    def test_records_the_instrument_currency_and_its_rate(self):
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertEqual(fields['fx_rate'], Decimal('0.8600895'))
+
+    def test_derived_mark_is_correct_for_a_short(self):
+        # Amount and ProfitLossOnTrade are both signed, so one formula covers both.
+        short = {
+            **UNENTITLED_POSITION,
+            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': -20.0},
+            'PositionView': {
+                **UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': -314.60,
+            },
+        }
+        self.assertEqual(mapping.to_position_fields(short)['current_price'],
+                         Decimal('510.09'))
+
+    def test_fractional_quantities_survive(self):
+        fractional = {
+            **UNENTITLED_POSITION,
+            'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': 2.5},
+        }
+        self.assertEqual(mapping.to_position_fields(fractional)['qty'], Decimal('2.5'))

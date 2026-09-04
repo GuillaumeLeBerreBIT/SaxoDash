@@ -2,7 +2,7 @@ from django.test import TestCase
 from decimal import Decimal
 from portfolio.models import Position
 from portfolio.serializers import PositionSerializer
-from portfolio.services import get_positions_total_value
+from portfolio.services import get_portfolio_value, get_positions_value
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -34,11 +34,11 @@ class PositionSerializerTest(TestCase):
         )
 
     def test_total_value(self):
-        total = get_positions_total_value()
+        total = get_positions_value().amount
         self.assertEqual(total, Decimal('2000.00'))  # 1500 + 500
 
     def test_computed_fields(self):
-        total = get_positions_total_value()
+        total = get_positions_value().amount
         data = PositionSerializer(self.p1, context={'total_value': total}).data
         self.assertEqual(data['value'], Decimal('1500.00'))
         self.assertEqual(data['cost'], Decimal('1000.00'))

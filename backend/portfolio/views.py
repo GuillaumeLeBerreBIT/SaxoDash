@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 
 from .models import Position
 from .serializers import PositionSerializer
+from .services import get_portfolio_value, get_positions_value
 
 
 class PositionListView(ListAPIView):
@@ -14,19 +15,28 @@ class PositionListView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         positions = list(Position.objects.all())
-        total_value = sum((p.value for p in positions), Decimal('0'))
         serializer = self.get_serializer(
-            positions, many=True, context={'total_value': total_value, 'request': request}
+            positions,
+            many=True,
+            context={
+                'total_value': get_positions_value().amount,
+                'request': request,
+            },
         )
         return Response(serializer.data)
 
 
 class PortfolioSummaryView(APIView):
+    """Headline value from the broker, breakdown from the positions we hold.
+
+    They can differ by a few euros - our marks are derived where Saxo withholds
+    a price - so weights divide into the positions' own sum and stay at 100%.
+    """
 
     def get(self, request):
         positions = list(Position.objects.all())
 
-        total_value = sum((p.value for p in positions), Decimal('0'))
+        total_value = get_portfolio_value().rounded().amount
         total_cost = sum((p.cost for p in positions), Decimal('0'))
         total_pnl = total_value - total_cost
         total_pnl_pct = (total_pnl / total_cost) * 100 if total_cost else Decimal('0')

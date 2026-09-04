@@ -108,3 +108,23 @@ def to_account_fields(saxo_balance):
         'gradient': 'from-slate-600 to-slate-800',
         'accent': '#334155',
     }
+
+
+VALUATION_KEYS = ('Currency', 'CashBalance', 'NonMarginPositionsValue', 'TotalValue')
+
+
+def to_valuation_fields(saxo_balance):
+    """Saxo's own reconciled account valuation, or None if it sent none.
+
+    TotalValue - CashBalance is NonMarginPositionsValue exactly, already
+    converted to the account currency, so it needs no fx work of ours.
+    """
+    if not all(key in saxo_balance for key in VALUATION_KEYS):
+        return None
+
+    return {
+        'currency': saxo_balance.get('Currency', settings.REPORTING_CURRENCY),
+        'cash_balance': _decimal(saxo_balance['CashBalance']),
+        'positions_value': _decimal(saxo_balance['NonMarginPositionsValue']),
+        'total_value': _decimal(saxo_balance['TotalValue']),
+    }
