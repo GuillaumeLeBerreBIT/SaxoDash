@@ -8,6 +8,7 @@ from django.utils import timezone
 from backend import settings
 from .models import SaxoCredential, SyncRun
 from datetime import date as date_cls
+import inspect
 from decimal import Decimal
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -848,6 +849,34 @@ class ActiveCredentialTest(TestCase):
 
         self.assertFalse(state.usable)
         self.assertTrue(state.needs_reauth)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class ScheduledTaskSignatureTest(TestCase):
+    """Beat sends these with no arguments; the tests used to call them directly.
+
+    Calling `tasks.sync_positions()` goes through Task.__call__ and never sees
+    Celery's argument check, so `@synced` reporting the wrapped function's
+    signature - credential and all - was invisible here while beat failed on
+    every tick with "missing 1 required positional argument: 'credential'".
+    """
+
+    @patch('saxo.tasks.client.get_positions')
+    @patch('saxo.tasks.client.get_account_balance')
+    def test_beat_can_dispatch_every_scheduled_sync(self, mock_balance, mock_positions):
+        mock_positions.return_value = []
+        mock_balance.return_value = {
+            'CashBalance': 100, 'CollateralAvailable': 100, 'Currency': 'EUR',
+            'NonMarginPositionsValue': 0, 'TotalValue': 100,
+        }
+
+        for task in (tasks.sync_positions, tasks.sync_transactions,
+                     tasks.sync_account_balance, tasks.refresh_saxo_token):
+            with self.subTest(task=task.name):
+                task.delay()
+
+    def test_a_synced_task_reports_the_arguments_its_callers_pass(self):
+        self.assertEqual(str(inspect.signature(tasks.sync_positions.run)), '()')
 
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)

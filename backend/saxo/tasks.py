@@ -1,4 +1,5 @@
 import functools
+import inspect
 import logging
 from datetime import timedelta
 
@@ -57,6 +58,12 @@ def synced(fn):
         SyncRun.objects.create(task=fn.__name__, outcome='ok', rows=rows)
         return rows
 
+    # functools.wraps sets __wrapped__ and inspect.signature follows it, so
+    # Celery validated calls against fn's own signature - credential included -
+    # and rejected beat's argument-less call. Report what callers actually pass.
+    run.__signature__ = inspect.Signature(
+        list(inspect.signature(fn).parameters.values())[1:]
+    )
     return run
 
 
