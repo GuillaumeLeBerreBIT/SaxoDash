@@ -3,7 +3,7 @@ import { CandlestickChart, Sigma } from 'lucide-react'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { INTERVALS, barChange, periodChange } from '../../lib/research'
 import { chartPlaceholderFor } from '../../lib/chartState'
-import { Card, ChartPlaceholder } from '../ui'
+import { Card } from '../ui'
 import { Menu, MenuLabel, MenuRow, MenuSeparator, TBtn } from './menu'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { OVERLAY_STROKES } from '../../lib/chartGeometry'
@@ -77,14 +77,13 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
   const period = periodChange(bars)
   const bar = bars[hover ?? bars.length - 1]
 
-  const notConnected = error?.status === 409
-  const placeholder = notConnected ? (
-    <ChartPlaceholder height={CHART_HEIGHT}>
-      Saxo is not connected, so there is no price history to chart yet.
-    </ChartPlaceholder>
-  ) : (
-    chartPlaceholderFor({ isLoading, error, data: bars, minPoints: 2, height: CHART_HEIGHT })
-  )
+  const placeholder = chartPlaceholderFor({
+    isLoading,
+    error,
+    data: bars,
+    minPoints: 2,
+    height: CHART_HEIGHT,
+  })
 
   return (
     <Card padding={false}>

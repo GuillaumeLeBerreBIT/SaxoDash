@@ -1,3 +1,4 @@
+import { isNotConnected } from '../api/client'
 import { ChartPlaceholder } from '../components/ui'
 
 /** Decides what a chart should show before it shows a plot.
@@ -11,6 +12,14 @@ import { ChartPlaceholder } from '../components/ui'
  */
 export function chartPlaceholderFor({ isLoading, error, data, minPoints = 1, height = 260 }) {
   if (isLoading) return <ChartPlaceholder height={height}>Loading…</ChartPlaceholder>
+  // A missing Saxo connection is a prompt to reconnect, not a failure. Handled
+  // here rather than by each caller, which is why only one of five used to.
+  if (isNotConnected(error))
+    return (
+      <ChartPlaceholder height={height}>
+        {error.detail ?? 'Saxo is not connected.'} There is no price history to chart yet.
+      </ChartPlaceholder>
+    )
   if (error)
     return (
       <ChartPlaceholder height={height} tone="red">

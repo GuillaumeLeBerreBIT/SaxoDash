@@ -58,11 +58,21 @@ export function isAuthenticated() {
  *  Saxo, which is a prompt to reconnect rather than an error to report.
  */
 export class ApiError extends Error {
-  constructor(status) {
-    super(`Request failed: ${status}`)
+  constructor(status, detail) {
+    super(detail || `Request failed: ${status}`)
     this.name = 'ApiError'
     this.status = status
+    this.detail = detail ?? null
   }
+}
+
+// The Research endpoints answer 409 when the app itself is not connected to
+// Saxo. Named once here so no reader has to re-derive it - four of five used
+// to get it wrong by not asking at all.
+export const NOT_CONNECTED_STATUS = 409
+
+export function isNotConnected(error) {
+  return error?.status === NOT_CONNECTED_STATUS
 }
 
 let refreshPromise = null;
@@ -113,7 +123,12 @@ async function apiFetch(path, options = {}) {
         }
     }
 
-    if (!res.ok) throw new ApiError(res.status)
+    if (!res.ok) {
+        // The backend explains itself in `detail`; carrying it means callers
+        // show the server's reason rather than inventing their own.
+        const body = await res.json().catch(() => null)
+        throw new ApiError(res.status, body?.detail)
+    }
 
     // DELETE answers 204 with an empty body; res.json() would throw on it.
     return res.status === 204 ? null : res.json()

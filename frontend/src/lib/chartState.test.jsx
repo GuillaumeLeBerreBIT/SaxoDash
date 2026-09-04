@@ -11,6 +11,19 @@ const renderPlaceholder = (args) => {
 }
 
 describe('chartPlaceholderFor', () => {
+  it('reads a 409 as a missing Saxo connection rather than a failure', () => {
+    renderPlaceholder({ error: { status: 409, detail: 'Saxo is not connected.' }, data: [] })
+
+    expect(screen.getByText(/Saxo is not connected/)).toBeInTheDocument()
+    expect(screen.queryByText(/Failed to load/)).not.toBeInTheDocument()
+  })
+
+  it('still reports a real failure as one', () => {
+    renderPlaceholder({ error: { status: 502 }, data: [] })
+
+    expect(screen.getByText(/Failed to load chart data/)).toBeInTheDocument()
+  })
+
   it('returns null when a line chart has enough points to draw', () => {
     expect(chartPlaceholderFor({ data: [{}, {}], minPoints: 2 })).toBeNull()
   })
