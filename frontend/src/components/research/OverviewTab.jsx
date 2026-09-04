@@ -1,4 +1,5 @@
-import { fmtEur, fmtNum, fmtPct } from '../../lib/format'
+import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
+import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader } from '../ui'
 import ComingSoon from './ComingSoon'
@@ -27,10 +28,10 @@ function PositionCard({ position }) {
 
   return (
     <Card>
-      <CardHeader title="Your position" subtitle="Live from your synced portfolio" />
+      <CardHeader title="Your position" subtitle={priceBasis(position.price_source).note} />
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Metric label="Quantity" value={fmtNum(position.qty)} />
-        <Metric label="Avg buy" value={fmtEur(position.avg_cost)} />
+        <Metric label="Quantity" value={fmtQty(position.qty)} />
+        <Metric label="Avg buy" value={fmtMoney(position.avg_cost, position.currency)} />
         <Metric label="Market value" value={fmtEur(position.value, { decimals: 0 })} />
         <Metric
           label="Unrealised P&L"

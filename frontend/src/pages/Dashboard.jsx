@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorth, usePortfolioSummary, usePositions, useTransactions } from '../api/queries'
-import { fmtEur, fmtPct, fmtNum } from '../lib/format'
+import { fmtEur, fmtMoney, fmtPct, fmtNum } from '../lib/format'
+import { priceBasis } from '../lib/pricing'
+import PriceBasisNote from '../components/PriceBasisNote'
 import { Card, CardHeader, PageHeader, StatCard, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
 import NetWorthChart from '../components/NetWorthChart'
@@ -55,11 +57,12 @@ export default function Dashboard() {
             <CardHeader
               title="Top positions"
               subtitle="Largest 5 by value"
-              right={
+              right={<>
+                <PriceBasisNote positions={top5} />
                 <Link to="/portfolio" className="text-[12px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
                   View all <ArrowRight size={12} />
                 </Link>
-              }
+              </>}
             />
           </div>
           <div className="overflow-x-auto">
@@ -83,7 +86,12 @@ export default function Dashboard() {
                         <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-right num font-mono text-zinc-200">{fmtEur(p.current_price)}</td>
+                    <td className="px-2 py-3 text-right num font-mono text-zinc-200"><span
+                        title={priceBasis(p.price_source).note}
+                        className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
+                      >
+                        {fmtMoney(p.current_price, p.currency)}
+                      </span></td>
                     <td className="px-2 py-3 text-right num font-mono text-zinc-100">{fmtEur(p.value)}</td>
                     <td className={`px-2 py-3 text-right num font-mono ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}

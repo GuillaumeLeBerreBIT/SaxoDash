@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
+import { fmtClock } from '../lib/pricing'
 import { Badge } from './ui'
 
 export default function SaxoConnectionStatus() {
@@ -42,5 +43,27 @@ export default function SaxoConnectionStatus() {
     )
   }
 
-  return <Badge tone="emerald">Saxo connected</Badge>
+  return (
+    <span className="flex items-center gap-2">
+      {status.last_sync_outcome && status.last_sync_outcome !== 'ok' && (
+        <Badge tone="amber">
+          <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
+            Sync {status.last_sync_outcome}
+          </span>
+        </Badge>
+      )}
+      <Badge tone="emerald">
+        <span title={status.last_synced_at ? `Last synced ${fmtClock(status.last_synced_at)}` : 'Never synced'}>
+          Saxo connected
+        </span>
+      </Badge>
+    </span>
+  )
+}
+
+// A connected account whose syncs are skipping looks healthy otherwise - that
+// gap is what let stale data sit on the dashboard for six days.
+const SYNC_OUTCOME_NOTE = {
+  skipped: 'The last sync could not run, so this data may be stale',
+  failed: 'The last sync failed, so this data may be stale',
 }

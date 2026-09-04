@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
-import { fmtEur, fmtNum } from '../lib/format'
+import { fmtEur, fmtQty } from '../lib/format'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Card, PageHeader, Badge } from '../components/ui'
 
@@ -123,7 +123,7 @@ export default function Transactions() {
                   </td>
                   <td className="px-2 py-3 text-zinc-100">{t.instrument}</td>
                   <td className="px-2 py-3 text-zinc-400 font-medium">{t.ticker}</td>
-                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtNum(t.qty, Number(t.qty) % 1 === 0 ? 0 : 4)}</td>
+                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(t.qty)}</td>
                   <td className="px-2 py-3 text-right num text-zinc-300">{fmtEur(t.price)}</td>
                   <td className="px-2 py-3 text-right num text-zinc-100 font-medium">{signedTotal(t)}</td>
                   <td className="px-5 py-3 text-zinc-400">{t.account}</td>

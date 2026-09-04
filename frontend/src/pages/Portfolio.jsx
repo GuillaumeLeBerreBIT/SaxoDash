@@ -1,6 +1,8 @@
 import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
-import { fmtEur, fmtPct, fmtNum } from '../lib/format'
+import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
+import { priceBasis } from '../lib/pricing'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
+import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
@@ -80,7 +82,7 @@ export default function Portfolio() {
       <div className="grid grid-cols-20 gap-4" style={{ gridTemplateColumns: '65fr 35fr' }}>
         <Card padding={false}>
           <div className="p-5 pb-3">
-            <CardHeader title="Holdings" subtitle="All positions" />
+            <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[12.5px]">
@@ -109,9 +111,16 @@ export default function Portfolio() {
                     <td className="px-2 py-3">
                       <Badge tone={p.type === 'ETF' ? 'amber' : 'zinc'}>{p.type}</Badge>
                     </td>
-                    <td className="px-2 py-3 text-right num text-zinc-300">{fmtNum(p.qty, 0)}</td>
-                    <td className="px-2 py-3 text-right num text-zinc-400">{fmtEur(p.avg_cost)}</td>
-                    <td className="px-2 py-3 text-right num text-zinc-200">{fmtEur(p.current_price)}</td>
+                    <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(p.qty)}</td>
+                    <td className="px-2 py-3 text-right num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</td>
+                    <td className="px-2 py-3 text-right num text-zinc-200">
+                      <span
+                        title={priceBasis(p.price_source).note}
+                        className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
+                      >
+                        {fmtMoney(p.current_price, p.currency)}
+                      </span>
+                    </td>
                     <td className="px-2 py-3 text-right num text-zinc-100">{fmtEur(p.value)}</td>
                     <td className={`px-2 py-3 text-right num ${Number(p.pnl) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
@@ -130,7 +139,7 @@ export default function Portfolio() {
                   <td className="px-5 py-3 font-medium text-zinc-300" colSpan={2}>
                     Total ({positions.length} holdings)
                   </td>
-                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtNum(totals.qty, 0)}</td>
+                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(totals.qty)}</td>
                   <td className="px-2 py-3" />
                   <td className="px-2 py-3" />
                   <td className="px-2 py-3 text-right num text-zinc-100 font-medium">{fmtEur(totals.value)}</td>
