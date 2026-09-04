@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView, Response
 
 from . import client, credentials
-from .models import SaxoCredential, SyncRun
+from .models import SaxoCredential
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,6 @@ class SaxoStatusView(APIView):
             return Response({'connected': False})
 
         last_sync = credentials.last_successful_sync()
-        last_run = SyncRun.objects.first()
 
         return Response({
             'connected': True,
@@ -82,5 +81,10 @@ class SaxoStatusView(APIView):
             'usable': state.usable,
             'unusable_reason': state.reason,
             'last_synced_at': last_sync.ran_at if last_sync else None,
-            'last_sync_outcome': last_run.outcome if last_run else None,
+            # Worst across each task's latest run, not whatever ran last -
+            # otherwise one healthy task masks another that always fails.
+            'last_sync_outcome': credentials.worst_recent_outcome(),
+            'failing_syncs': [
+                run.task for run in credentials.latest_run_per_task() if run.outcome != 'ok'
+            ],
         })

@@ -895,6 +895,25 @@ class SaxoStatusFreshnessTest(APITestCase):
             expires_at=timezone.now() + timedelta(hours=1),
         )
 
+    def test_a_task_that_always_fails_is_not_masked_by_another_that_works(self):
+        SyncRun.objects.create(task='sync_positions', outcome='failed', detail='boom')
+        SyncRun.objects.create(task='sync_account_balance', outcome='ok', rows=1)
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertEqual(response.data['last_sync_outcome'], 'failed')
+        self.assertEqual(response.data['failing_syncs'], ['sync_positions'])
+
+    def test_reports_ok_only_when_every_task_last_succeeded(self):
+        SyncRun.objects.create(task='sync_positions', outcome='failed')
+        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(task='sync_account_balance', outcome='ok', rows=1)
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertEqual(response.data['last_sync_outcome'], 'ok')
+        self.assertEqual(response.data['failing_syncs'], [])
+
     def test_reports_the_last_successful_sync_not_the_last_attempt(self):
         SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
         SyncRun.objects.create(task='sync_positions', outcome='skipped', detail='expired')

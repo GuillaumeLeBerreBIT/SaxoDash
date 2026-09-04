@@ -69,3 +69,26 @@ def active_credential():
 
 def last_successful_sync():
     return SyncRun.objects.filter(outcome='ok').first()
+
+
+# Weakest first, so the badge reflects the worst thing currently happening.
+_OUTCOME_RANK = ['failed', 'skipped', 'ok']
+
+
+def latest_run_per_task():
+    """The newest run of each sync task.
+
+    The newest run overall answers "what ran last", not "is anything broken":
+    a sync_positions failing on every tick was hidden the moment a later
+    sync_account_balance succeeded.
+    """
+    latest = {}
+    for run in SyncRun.objects.all():
+        latest.setdefault(run.task, run)
+    return list(latest.values())
+
+
+def worst_recent_outcome():
+    """The worst outcome among each task's most recent run, or None if none ran."""
+    outcomes = {run.outcome for run in latest_run_per_task()}
+    return next((outcome for outcome in _OUTCOME_RANK if outcome in outcomes), None)
