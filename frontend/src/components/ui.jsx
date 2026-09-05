@@ -1,3 +1,6 @@
+import { useId, useState } from 'react'
+import { Info } from 'lucide-react'
+
 export function Card({ children, className = '', padding = true, interactive = false, onClick }) {
   return (
     <div
@@ -91,6 +94,41 @@ export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
     >
       {children}
     </div>
+  )
+}
+
+/** A small "i" that reveals an explanation on hover or keyboard focus.
+ *
+ *  For jargon next to a chart or metric that isn't self-explanatory - what a
+ *  Monte Carlo band means, why Sharpe uses a risk-free rate. Not a click
+ *  target: nothing else on the page depends on it opening or closing.
+ */
+export function InfoTip({ children }) {
+  const [open, setOpen] = useState(false)
+  const id = useId()
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-describedby={id}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="text-zinc-500 hover:text-zinc-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-full"
+      >
+        <Info size={13} />
+      </button>
+      {open && (
+        <span
+          id={id}
+          role="tooltip"
+          className="absolute z-20 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[11px] leading-snug text-zinc-300 shadow-lg shadow-black/40"
+        >
+          {children}
+        </span>
+      )}
+    </span>
   )
 }
 

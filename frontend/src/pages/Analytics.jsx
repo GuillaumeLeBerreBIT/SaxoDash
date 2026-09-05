@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usePortfolioSummary, useRiskMetrics } from '../api/queries'
-import { Card, ChartPlaceholder, PageHeader } from '../components/ui'
+import { Card, CardHeader, ChartPlaceholder, PageHeader } from '../components/ui'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
 import MetricTile from '../components/analytics/MetricTile'
@@ -29,32 +29,32 @@ function RiskTab({ data }) {
 
   return (
     <div className="space-y-5">
-      <Card>
-        <div className="grid grid-cols-4 gap-3">
-          <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
-          <MetricTile
-            label="Sharpe ratio"
-            value={fmtNum(sharpe, 2)}
-            hint={`Risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`}
-          />
-          <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
-          <MetricTile label="Max drawdown" value={`${fmtNum(maxDrawdown, 1)}%`} />
-          <MetricTile label="Current drawdown" value={`${fmtNum(currentDrawdown, 1)}%`} hint="From all-time high" />
-          <MetricTile label="Positive months" value={`${fmtNum(positiveMonthsPct, 0)}%`} />
-          <MetricTile
-            label="Best month"
-            value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
-            hint={monthLabel(bestMonth)}
-          />
-          <MetricTile
-            label="Worst month"
-            value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
-            hint={monthLabel(worstMonth)}
-          />
-        </div>
-      </Card>
+      <div className="grid gap-4" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
+        <Card>
+          <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
+            <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
+            <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
+            <MetricTile label="Current drawdown" value={`${fmtNum(currentDrawdown, 1)}%`} hint="From all-time high" />
+            <MetricTile label="Positive months" value={`${fmtNum(positiveMonthsPct, 0)}%`} />
+            <MetricTile label="Max drawdown" value={`${fmtNum(maxDrawdown, 1)}%`} />
+            <MetricTile
+              label="Best month"
+              value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
+              hint={monthLabel(bestMonth)}
+            />
+            <MetricTile
+              label="Worst month"
+              value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
+              hint={monthLabel(worstMonth)}
+            />
+          </div>
+        </Card>
 
-      <DrawdownChart series={drawdownSeries} />
+        <DrawdownChart series={drawdownSeries} maxDrawdown={maxDrawdown} />
+      </div>
+
       <MonthlyReturnsHeatmap monthlyReturns={monthlyReturns} />
     </div>
   )

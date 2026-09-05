@@ -20,7 +20,20 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
 
   return (
     <Card>
-      <CardHeader title="Monthly returns" subtitle="Portfolio value, month over month" />
+      <CardHeader
+        title="Monthly returns"
+        subtitle="Portfolio value, month over month"
+        right={
+          <div className="flex items-center gap-1.5 text-[10.5px] text-zinc-500">
+            <span>−9%</span>
+            <span
+              className="w-16 h-2 rounded-full"
+              style={{ background: 'linear-gradient(90deg, rgba(229,72,77,0.8), rgba(255,255,255,0.06), rgba(38,161,123,0.8))' }}
+            />
+            <span>+9%</span>
+          </div>
+        }
+      />
       <div className="mt-4 overflow-x-auto">
         <table className="w-full border-separate" style={{ borderSpacing: 3 }}>
           <thead>

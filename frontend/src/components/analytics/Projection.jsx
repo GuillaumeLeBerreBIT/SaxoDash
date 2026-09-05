@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, InfoTip } from '../ui'
 import { Pill } from '../RangePills'
 import MetricTile from './MetricTile'
 import { monteCarlo } from '../../lib/monteCarlo'
@@ -33,7 +33,17 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
   return (
     <Card>
       <CardHeader
-        title="Projection"
+        title={
+          <span className="inline-flex items-center gap-1.5">
+            Projection
+            <InfoTip>
+              A Monte Carlo simulation runs your monthly contribution forward through 600 randomly
+              generated futures, each month's return drawn from a normal distribution centred on
+              your portfolio's own average return and volatility. The shaded band is where the
+              middle 80% of those futures land — nobody knows which one is real.
+            </InfoTip>
+          </span>
+        }
         subtitle={`600 simulated paths · ${fmtNum(expectedReturnPct, 1)}% expected return, ${fmtNum(volatilityPct, 1)}% volatility, drawn from your own return distribution`}
         right={
           <div className="flex items-center gap-2">

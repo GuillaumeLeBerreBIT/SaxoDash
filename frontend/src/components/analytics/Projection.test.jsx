@@ -30,4 +30,12 @@ describe('Projection', () => {
 
     expect(screen.getByText(/for 30 years/)).toBeInTheDocument()
   })
+
+  it('reveals what Monte Carlo means on keyboard focus, for accessibility', async () => {
+    renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
+
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+    await userEvent.tab()
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/Monte Carlo simulation/)
+  })
 })
