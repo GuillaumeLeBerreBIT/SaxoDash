@@ -1,6 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from cryptography.fernet import Fernet
 from django.contrib.auth.models import User
@@ -16,7 +16,7 @@ from portfolio.models import Position
 from saxo import client
 from saxo.models import SaxoCredential
 
-from . import market, tasks
+from . import finnhub, market, tasks
 from .models import Watchlist, WatchlistItem
 
 TEST_KEY = Fernet.generate_key().decode()
@@ -530,3 +530,31 @@ class MarketDataViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['isin'], 'US67066G1040')
         self.assertEqual(response.data['exchange_name'], 'Nasdaq')
+
+
+class FinnhubClientTest(TestCase):
+    @override_settings(FINNHUB_API_KEY='')
+    def test_raises_when_the_api_key_is_not_set(self):
+        with self.assertRaises(finnhub.FinnhubNotConfigured):
+            finnhub._get('/stock/profile2', symbol='AAPL')
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_raises_on_a_non_200_response(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=500, text='boom')
+
+        with self.assertRaises(finnhub.FinnhubAPIError):
+            finnhub._get('/stock/profile2', symbol='AAPL')
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_returns_parsed_json_and_sends_the_token(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'name': 'Apple Inc'})
+
+        result = finnhub._get('/stock/profile2', symbol='AAPL')
+
+        self.assertEqual(result, {'name': 'Apple Inc'})
+        called_url = mock_get.call_args.args[0]
+        called_params = mock_get.call_args.kwargs['params']
+        self.assertEqual(called_url, 'https://finnhub.io/api/v1/stock/profile2')
+        self.assertEqual(called_params, {'symbol': 'AAPL', 'token': 'test-key'})
