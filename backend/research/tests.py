@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
@@ -11,10 +12,11 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from portfolio.models import Position
 from saxo import client
 from saxo.models import SaxoCredential
 
-from . import market
+from . import market, tasks
 from .models import Watchlist, WatchlistItem
 
 TEST_KEY = Fernet.generate_key().decode()
@@ -86,6 +88,66 @@ class WatchlistModelTest(TestCase):
 
         watchlist.delete()
         self.assertEqual(WatchlistItem.objects.count(), 0)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncWatchlistsTaskTest(TestCase):
+    """Mirrors open, uic-identified positions into a default watchlist.
+
+    Reads Position directly instead of being handed rows by saxo.tasks -
+    research owns watchlist semantics end to end, so a WatchlistItem shape
+    change can no longer break the position sync.
+    """
+
+    def _position(self, ticker, uic):
+        return Position.objects.create(
+            ticker=ticker, name=ticker, qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
+            color='#000000', uic=uic,
+        )
+
+    def test_adds_a_synced_position_to_the_open_positions_watchlist(self):
+        self._position('NVDA', 211)
+        tasks.sync_watchlists()
+
+        watchlist = Watchlist.objects.get(name='Open positions')
+        item = watchlist.items.get()
+        self.assertEqual(item.uic, 211)
+        self.assertEqual(item.symbol, 'NVDA')
+
+    def test_removes_an_item_once_its_position_closes(self):
+        position = self._position('NVDA', 211)
+        tasks.sync_watchlists()
+        position.delete()
+
+        tasks.sync_watchlists()
+
+        watchlist = Watchlist.objects.get(name='Open positions')
+        self.assertEqual(watchlist.items.count(), 0)
+
+    def test_leaves_other_watchlists_untouched(self):
+        other = Watchlist.objects.create(name='My picks')
+        WatchlistItem.objects.create(watchlist=other, symbol='AAPL', uic=999, asset_type='Stock')
+        self._position('NVDA', 211)
+
+        tasks.sync_watchlists()
+
+        self.assertTrue(WatchlistItem.objects.filter(watchlist=other, uic=999).exists())
+
+    def test_positions_without_a_uic_are_not_watchlisted(self):
+        self._position('NVDA', None)
+        tasks.sync_watchlists()
+
+        self.assertEqual(WatchlistItem.objects.count(), 0)
+
+    def test_recreates_the_watchlist_if_the_user_deleted_it(self):
+        self._position('NVDA', 211)
+        tasks.sync_watchlists()
+        Watchlist.objects.get(name='Open positions').delete()
+
+        tasks.sync_watchlists()
+
+        self.assertTrue(Watchlist.objects.filter(name='Open positions').exists())
 
 
 class WatchlistAPITest(APITestCase):
