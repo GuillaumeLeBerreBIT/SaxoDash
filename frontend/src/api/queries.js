@@ -13,6 +13,7 @@ import {
   getNetWorth,
   getNetWorthHistory,
   getPortfolioSummary,
+  getRiskMetrics,
   getPositions,
   getQuotes,
   getSaxoStatus,
@@ -34,6 +35,7 @@ export const queryKeys = {
   bankAccounts: ['bank-accounts'],
   netWorth: ['net-worth'],
   netWorthHistory: (range = 'ALL') => ['net-worth-history', range],
+  riskMetrics: ['risk-metrics'],
   cashFlow: ['cash-flow'],
   saxoStatus: ['saxo-status'],
   // Every market-data key carries the whole instrument identity: a Uic alone
@@ -79,6 +81,16 @@ export function useNetWorthHistory(range = 'ALL') {
     queryKey: queryKeys.netWorthHistory(range),
     queryFn: () => getNetWorthHistory(range),
     select: unwrap,
+  })
+}
+
+// Portfolio-value history changes at most once a day, same as the net-worth
+// chart it's derived from - no refetch interval needed.
+export function useRiskMetrics() {
+  return useQuery({
+    queryKey: queryKeys.riskMetrics,
+    queryFn: getRiskMetrics,
+    staleTime: 15 * 60_000,
   })
 }
 

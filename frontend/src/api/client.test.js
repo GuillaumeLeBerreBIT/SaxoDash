@@ -6,6 +6,7 @@ import {
   getUsername,
   getPositions,
   getNetWorthHistory,
+  getRiskMetrics,
   getCashFlow,
   getChart,
   getQuotes,
@@ -173,6 +174,21 @@ describe('apiFetch (via getPositions)', () => {
     expect(localStorage.getItem('access')).toBeNull()
     expect(localStorage.getItem('refresh')).toBeNull()
     expect(window.location.href).toBe('/login')
+  })
+})
+
+describe('getRiskMetrics', () => {
+  it('requests the risk metrics endpoint', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ has_data: false }))
+
+    const result = await getRiskMetrics()
+
+    expect(result).toEqual({ has_data: false })
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/analytics/risk/'),
+      expect.anything()
+    )
   })
 })
 

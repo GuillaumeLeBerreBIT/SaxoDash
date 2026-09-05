@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, CandlestickChart, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
+import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
 
 const items = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
+  { to: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
   { to: '/research', label: 'Research', icon: CandlestickChart },
   { to: '/transactions', label: 'Transactions', icon: List },
   { to: '/accounts', label: 'Accounts', icon: Landmark },

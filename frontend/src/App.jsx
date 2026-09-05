@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import RequireAuth from './components/RequireAuth'
 import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
+import Analytics from './pages/Analytics'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
 import Research from './pages/Research'
@@ -18,6 +19,7 @@ function App() {
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path='portfolio' element={<Portfolio />} />
+          <Route path='analytics' element={<Analytics />} />
           <Route path='transactions' element={<Transactions />} />
           <Route path='accounts' element={<Accounts />} />
           <Route path='research' element={<Research />} />

@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'accounts',
     'saxo',
     'research',
+    'analytics',
 ]
 
 MIDDLEWARE = [
@@ -209,6 +210,10 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 # The currency every total in the app is expressed in. Instrument prices stay
 # in their own currency and are converted with the position's fx_rate.
 REPORTING_CURRENCY = os.environ.get('REPORTING_CURRENCY', 'EUR')
+
+# Annualised, used as the Sharpe/Sortino baseline. Not a series - a rate this
+# stable is a config constant, not something worth an external data source.
+RISK_FREE_RATE_ANNUAL = float(os.environ.get('RISK_FREE_RATE_ANNUAL', '0.02'))
 
 SAXO_ENVIRONMENT = os.environ.get('SAXO_ENVIRONMENT', 'sim')
 SAXO_KEY = os.environ.get('SAXO_KEY', '')
