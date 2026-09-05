@@ -36,6 +36,17 @@ class AnnualizedVolatilityTest(TestCase):
         self.assertIsNone(metrics.annualized_volatility([]))
 
 
+class ExpectedAnnualReturnTest(TestCase):
+    def test_matches_the_annualised_mean_return(self):
+        returns = [0.01, -0.02, 0.015, -0.005, 0.03]
+        expected = statistics.mean(returns) * TRADING_DAYS * 100
+        self.assertAlmostEqual(metrics.expected_annual_return(returns), expected)
+
+    def test_needs_at_least_two_returns(self):
+        self.assertIsNone(metrics.expected_annual_return([0.01]))
+        self.assertIsNone(metrics.expected_annual_return([]))
+
+
 class SharpeRatioTest(TestCase):
     def test_matches_the_annualised_sharpe_formula(self):
         returns = [0.01, -0.02, 0.015, -0.005, 0.03]
@@ -139,6 +150,7 @@ class RiskSummaryTest(TestCase):
 
         self.assertTrue(summary['has_data'])
         self.assertIsNotNone(summary['volatility'])
+        self.assertIsNotNone(summary['expected_return'])
         self.assertEqual(len(summary['drawdown_series']), 5)
         self.assertEqual(summary['drawdown_series'][0]['date'], '2026-01-01')
         self.assertEqual(summary['risk_free_annual'], 0.02)

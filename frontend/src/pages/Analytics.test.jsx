@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import Analytics from './Analytics'
@@ -12,6 +13,7 @@ const summary = {
   volatility: 12.345,
   sharpe: 1.2,
   sortino: 1.8,
+  expected_return: 9.5,
   max_drawdown: -8.5,
   current_drawdown: -1.2,
   positive_months_pct: 66.7,
@@ -27,9 +29,14 @@ const summary = {
   ],
 }
 
+function stubPortfolioSummary(totalValue = 10000) {
+  queries.usePortfolioSummary.mockReturnValue({ data: { total_value: totalValue }, isLoading: false, error: null })
+}
+
 describe('Analytics', () => {
   it('shows a loading state while the summary is in flight', () => {
     queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    stubPortfolioSummary()
     renderWithProviders(<Analytics />)
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
@@ -38,6 +45,7 @@ describe('Analytics', () => {
     queries.useRiskMetrics.mockReturnValue({
       data: { has_data: false }, isLoading: false, error: null,
     })
+    stubPortfolioSummary()
     renderWithProviders(<Analytics />)
     expect(screen.getByText(/not enough history/i)).toBeInTheDocument()
     expect(screen.queryByText('0.0%')).not.toBeInTheDocument()
@@ -45,10 +53,32 @@ describe('Analytics', () => {
 
   it('renders the risk metrics once history is available', () => {
     queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    stubPortfolioSummary()
     renderWithProviders(<Analytics />)
 
     expect(screen.getByText('12.3%')).toBeInTheDocument()
     expect(screen.getByText('1.20')).toBeInTheDocument()
     expect(screen.getByText('-8.5%')).toBeInTheDocument()
+  })
+
+  it('switches to the Projection tab and renders it from the portfolio value', async () => {
+    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    stubPortfolioSummary(10000)
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+
+    expect(screen.getByText('Invested by then')).toBeInTheDocument()
+    expect(screen.getByText('Median outcome')).toBeInTheDocument()
+  })
+
+  it('shows a placeholder on the Projection tab while the portfolio value is still loading', async () => {
+    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    queries.usePortfolioSummary.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+
+    expect(screen.getByText(/loading portfolio value/i)).toBeInTheDocument()
   })
 })

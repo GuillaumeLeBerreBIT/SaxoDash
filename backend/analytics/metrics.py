@@ -16,6 +16,12 @@ def daily_returns(values):
     return [values[i] / values[i - 1] - 1 for i in range(1, len(values))]
 
 
+def expected_annual_return(returns):
+    if len(returns) < MIN_DAILY_POINTS:
+        return None
+    return statistics.mean(returns) * TRADING_DAYS * 100
+
+
 def annualized_volatility(returns):
     if len(returns) < MIN_DAILY_POINTS:
         return None
@@ -92,6 +98,7 @@ def risk_summary(dated_values, risk_free_annual):
         return {
             'has_data': False,
             'risk_free_annual': risk_free_annual,
+            'expected_return': None,
             'volatility': None,
             'sharpe': None,
             'sortino': None,
@@ -114,6 +121,7 @@ def risk_summary(dated_values, risk_free_annual):
     return {
         'has_data': True,
         'risk_free_annual': risk_free_annual,
+        'expected_return': expected_annual_return(returns),
         'volatility': annualized_volatility(returns),
         'sharpe': sharpe_ratio(returns, risk_free_annual),
         'sortino': sortino_ratio(returns, risk_free_annual),
