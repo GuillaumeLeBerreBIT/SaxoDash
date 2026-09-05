@@ -194,6 +194,22 @@ anyway, because recorded history does not depend on today's total.
 multiplies rows in place and records nothing to say it ran, so an unbounded or
 repeated run silently rescales rows that were already correct.
 
+**research owns watchlist reconciliation end to end.** `research.tasks.sync_watchlists`
+reads `Position` directly and runs on its own schedule; `saxo.tasks.sync_positions`
+does not call into `research` at all. The reverse used to be true — saxo pushed into
+research's model layer inside its own sync transaction, so a `WatchlistItem` shape
+change could break the most important sync task, and a bug in the watchlist logic
+rolled back position upserts that had nothing wrong with them. The trade-off: the
+watchlist can lag a position change by up to `sync_watchlists`'s own interval, where
+a shared transaction used to guarantee they moved together.
+
+**`sync_positions` writes `Transaction` rows too, from the same Saxo fetch.**
+It used to be a second task (`sync_transactions`) fetching the identical
+`/port/v1/positions/me` response on its own schedule — twice the API calls for
+one fact, and nothing tied the two tables together, so a tick where one task
+failed and the other succeeded could leave them silently disagreeing about
+what Saxo actually reported.
+
 ## Open decision (not yet made)
 
 The fundamentals provider behind the ComingSoon panels — FMP, Finnhub,
