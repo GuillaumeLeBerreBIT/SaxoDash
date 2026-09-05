@@ -14,6 +14,7 @@ import {
   getNetWorthHistory,
   getPortfolioSummary,
   getRiskMetrics,
+  getPerformance,
   getPositions,
   getQuotes,
   getSaxoStatus,
@@ -36,6 +37,7 @@ export const queryKeys = {
   netWorth: ['net-worth'],
   netWorthHistory: (range = 'ALL') => ['net-worth-history', range],
   riskMetrics: (benchmark = 'world') => ['risk-metrics', benchmark],
+  performance: (benchmark = 'world') => ['performance', benchmark],
   cashFlow: ['cash-flow'],
   saxoStatus: ['saxo-status'],
   // Every market-data key carries the whole instrument identity: a Uic alone
@@ -90,6 +92,14 @@ export function useRiskMetrics(benchmark = 'world') {
   return useQuery({
     queryKey: queryKeys.riskMetrics(benchmark),
     queryFn: () => getRiskMetrics(benchmark),
+    staleTime: 15 * 60_000,
+  })
+}
+
+export function usePerformance(benchmark = 'world') {
+  return useQuery({
+    queryKey: queryKeys.performance(benchmark),
+    queryFn: () => getPerformance(benchmark),
     staleTime: 15 * 60_000,
   })
 }

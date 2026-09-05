@@ -7,9 +7,19 @@ AGENTS.md for why a benchmark used to be left out entirely.
 """
 import math
 import statistics
+from datetime import timedelta
 
 TRADING_DAYS = 252
 MIN_DAILY_POINTS = 2
+
+# (label, trailing days, years to annualise over - None means "show as-is")
+PERFORMANCE_PERIODS = [
+    ('1 month', 30, None),
+    ('3 months', 91, None),
+    ('1 year', 365, None),
+    ('3 years', 365 * 3, 3),
+    ('5 years', 365 * 5, 5),
+]
 
 
 def daily_returns(values):
@@ -166,6 +176,110 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
         'tracking_error': te,
         'information_ratio': information_ratio(port_expected, bench_expected, te),
         'jensen_alpha': jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+    }
+
+
+def period_return(dated_values, days):
+    """Compound % change over the trailing `days` calendar days, or None."""
+    if len(dated_values) < MIN_DAILY_POINTS:
+        return None
+    end_date, end_value = dated_values[-1]
+    cutoff = end_date - timedelta(days=days)
+    window = [(d, v) for d, v in dated_values if d >= cutoff]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    return (float(end_value) / float(window[0][1]) - 1) * 100
+
+
+def ytd_return(dated_values):
+    if not dated_values:
+        return None
+    year = dated_values[-1][0].year
+    window = [(d, v) for d, v in dated_values if d.year == year]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
+
+
+def since_inception_return(dated_values):
+    if len(dated_values) < MIN_DAILY_POINTS:
+        return None
+    return (float(dated_values[-1][1]) / float(dated_values[0][1]) - 1) * 100
+
+
+def annualize(total_pct, years):
+    if total_pct is None:
+        return None
+    return ((1 + total_pct / 100) ** (1 / years) - 1) * 100
+
+
+def calendar_year_returns(port_dated_values, bench_dated_values):
+    """One row per calendar year either series has data for.
+
+    The latest year is marked partial - it's presumptively still in
+    progress relative to the data on hand, not a claim about the calendar.
+    """
+    def by_year(dated_values):
+        buckets = {}
+        for d, v in dated_values:
+            buckets.setdefault(d.year, []).append((d, v))
+        return buckets
+
+    def year_pct(rows):
+        if len(rows) < MIN_DAILY_POINTS:
+            return None
+        return (float(rows[-1][1]) / float(rows[0][1]) - 1) * 100
+
+    port_years = by_year(port_dated_values)
+    bench_years = by_year(bench_dated_values)
+    latest_year = port_dated_values[-1][0].year if port_dated_values else None
+
+    return [
+        {
+            'year': year,
+            'portfolio_pct': year_pct(port_years.get(year, [])),
+            'benchmark_pct': year_pct(bench_years.get(year, [])),
+            'partial': year == latest_year,
+        }
+        for year in sorted(set(port_years) | set(bench_years))
+    ]
+
+
+def performance_summary(port_dated_values, bench_dated_values):
+    """Portfolio vs. benchmark returns over several trailing windows.
+
+    Each side computes its own period return independently - unlike beta or
+    tracking error, a period total doesn't need day-by-day alignment, just
+    enough points inside its own window.
+    """
+    def row(label, port_pct, bench_pct, annualised=False):
+        alpha = None if port_pct is None or bench_pct is None else port_pct - bench_pct
+        return {
+            'label': label, 'portfolio_pct': port_pct, 'benchmark_pct': bench_pct,
+            'alpha_pct': alpha, 'annualised': annualised,
+        }
+
+    rows = []
+    for label, days, years in PERFORMANCE_PERIODS:
+        port_total = period_return(port_dated_values, days)
+        bench_total = period_return(bench_dated_values, days)
+        if years:
+            rows.append(row(
+                f'{label} (ann.)', annualize(port_total, years), annualize(bench_total, years),
+                annualised=True,
+            ))
+        else:
+            rows.append(row(label, port_total, bench_total))
+
+    rows.insert(2, row('Year to date', ytd_return(port_dated_values), ytd_return(bench_dated_values)))
+    rows.append(row(
+        'Since inception',
+        since_inception_return(port_dated_values), since_inception_return(bench_dated_values),
+    ))
+
+    return {
+        'periods': rows,
+        'calendar_years': calendar_year_returns(port_dated_values, bench_dated_values),
     }
 
 

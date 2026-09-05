@@ -1,6 +1,6 @@
 import math
 import statistics
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -11,6 +11,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import NetWorthSnapshot
 
 from . import benchmarks, metrics
+
+# The real cache is Redis (see CACHES in settings), shared with whatever else
+# is running against it - a prior live call can leave a benchmark's chart data
+# cached and answer market.chart() before active_credential() is ever reached,
+# masking exactly the SaxoNotConnected path these views are meant to handle.
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 TRADING_DAYS = 252
 
@@ -138,6 +144,104 @@ class PositiveMonthsPctTest(TestCase):
         self.assertIsNone(metrics.positive_months_pct([]))
 
 
+class PeriodReturnTest(TestCase):
+    def test_compounds_from_the_start_to_the_end_of_the_trailing_window(self):
+        dated = [(date(2026, 1, 1), 100), (date(2026, 1, 15), 105), (date(2026, 1, 31), 110)]
+        result = metrics.period_return(dated, days=31)
+        self.assertAlmostEqual(result, (110 / 100 - 1) * 100)
+
+    def test_excludes_rows_outside_the_window(self):
+        dated = [(date(2025, 1, 1), 50), (date(2026, 1, 1), 100), (date(2026, 1, 31), 110)]
+        result = metrics.period_return(dated, days=31)
+        self.assertAlmostEqual(result, (110 / 100 - 1) * 100)
+
+    def test_too_few_points_in_the_window_reports_no_data(self):
+        dated = [(date(2020, 1, 1), 50), (date(2026, 1, 31), 110)]
+        self.assertIsNone(metrics.period_return(dated, days=31))
+        self.assertIsNone(metrics.period_return([], days=31))
+
+
+class YtdReturnTest(TestCase):
+    def test_compounds_within_the_latest_calendar_year_only(self):
+        dated = [(date(2025, 12, 15), 90), (date(2026, 1, 1), 100), (date(2026, 3, 1), 108)]
+        result = metrics.ytd_return(dated)
+        self.assertAlmostEqual(result, (108 / 100 - 1) * 100)
+
+    def test_one_point_this_year_reports_no_data(self):
+        self.assertIsNone(metrics.ytd_return([(date(2026, 1, 1), 100)]))
+
+
+class AnnualizeTest(TestCase):
+    def test_matches_the_compound_annual_growth_formula(self):
+        # 33.1% total over 3 years -> 10% a year
+        expected = (1.10 ** 3 - 1) * 100
+        self.assertAlmostEqual(metrics.annualize(expected, 3), 10.0)
+
+    def test_no_total_return_reports_no_data(self):
+        self.assertIsNone(metrics.annualize(None, 3))
+
+
+class SinceInceptionReturnTest(TestCase):
+    def test_compounds_the_whole_series(self):
+        dated = [(date(2024, 1, 1), 100), (date(2026, 1, 1), 150)]
+        self.assertAlmostEqual(metrics.since_inception_return(dated), 50.0)
+
+    def test_too_few_points_reports_no_data(self):
+        self.assertIsNone(metrics.since_inception_return([(date(2026, 1, 1), 100)]))
+
+
+class CalendarYearReturnsTest(TestCase):
+    def test_one_row_per_year_with_enough_points(self):
+        port = [
+            (date(2025, 1, 1), 100), (date(2025, 12, 31), 110),
+            (date(2026, 1, 2), 111), (date(2026, 3, 1), 120),
+        ]
+        bench = [
+            (date(2025, 1, 1), 50), (date(2025, 12, 31), 52),
+            (date(2026, 1, 2), 52), (date(2026, 3, 1), 54),
+        ]
+        years = metrics.calendar_year_returns(port, bench)
+
+        self.assertEqual([y['year'] for y in years], [2025, 2026])
+        self.assertAlmostEqual(years[0]['portfolio_pct'], (110 / 100 - 1) * 100)
+        self.assertAlmostEqual(years[0]['benchmark_pct'], (52 / 50 - 1) * 100)
+        self.assertFalse(years[0]['partial'])
+        self.assertTrue(years[1]['partial'])  # latest year, still in progress
+
+    def test_a_year_with_one_point_reports_no_data_for_that_year(self):
+        port = [(date(2025, 6, 1), 100)]
+        years = metrics.calendar_year_returns(port, [])
+        self.assertIsNone(years[0]['portfolio_pct'])
+        self.assertIsNone(years[0]['benchmark_pct'])
+
+
+class PerformanceSummaryTest(TestCase):
+    def test_includes_alpha_as_the_difference_between_portfolio_and_benchmark(self):
+        port = [(date(2026, 1, i), 100 + i) for i in range(1, 32)]
+        bench = [(date(2026, 1, i), 50 + i * 0.4) for i in range(1, 32)]
+
+        summary = metrics.performance_summary(port, bench)
+
+        labels = [row['label'] for row in summary['periods']]
+        self.assertIn('1 month', labels)
+        self.assertIn('Year to date', labels)
+        self.assertIn('Since inception', labels)
+
+        one_month = next(row for row in summary['periods'] if row['label'] == '1 month')
+        self.assertAlmostEqual(
+            one_month['alpha_pct'], one_month['portfolio_pct'] - one_month['benchmark_pct']
+        )
+        self.assertEqual(len(summary['calendar_years']), 1)
+
+    def test_a_missing_side_reports_no_alpha_rather_than_a_wrong_number(self):
+        port = [(date(2026, 1, i), 100 + i) for i in range(1, 32)]
+        summary = metrics.performance_summary(port, [])
+        one_month = next(row for row in summary['periods'] if row['label'] == '1 month')
+        self.assertIsNotNone(one_month['portfolio_pct'])
+        self.assertIsNone(one_month['benchmark_pct'])
+        self.assertIsNone(one_month['alpha_pct'])
+
+
 class RiskSummaryTest(TestCase):
     def test_insufficient_history_reports_no_data_rather_than_zeros(self):
         summary = metrics.risk_summary([(date(2026, 1, 1), 100)], risk_free_annual=0.02)
@@ -256,7 +360,52 @@ class BenchmarkEurClosesTest(TestCase):
         self.assertEqual(len(closes), 1)
 
 
-@override_settings(RISK_FREE_RATE_ANNUAL=0.02)
+@override_settings(CACHES=LOCMEM)
+class PerformanceViewTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def _seed_snapshots(self, n=35):
+        for day in range(1, n + 1):
+            NetWorthSnapshot.objects.create(
+                date=date(2026, 1, 1) + timedelta(days=day - 1),
+                portfolio_value=100 + day, bank_total=0, net_worth=100 + day,
+            )
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        response = self.client.get('/api/analytics/performance/')
+        self.assertEqual(response.status_code, 401)
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_returns_periods_and_calendar_years(self, mock_eur_closes):
+        self._seed_snapshots()
+        mock_eur_closes.return_value = [
+            (date(2026, 1, 1) + timedelta(days=i), 50 + i * 0.1) for i in range(35)
+        ]
+        response = self.client.get('/api/analytics/performance/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(any(row['label'] == '1 month' for row in response.data['periods']))
+        self.assertEqual(len(response.data['calendar_years']), 1)
+        self.assertEqual(response.data['benchmark']['key'], 'world')
+
+    def test_no_saxo_connection_still_returns_portfolio_only_periods(self):
+        self._seed_snapshots()
+        response = self.client.get('/api/analytics/performance/')
+        self.assertEqual(response.status_code, 200)
+        one_month = next(row for row in response.data['periods'] if row['label'] == '1 month')
+        self.assertIsNotNone(one_month['portfolio_pct'])
+        self.assertIsNone(one_month['benchmark_pct'])
+
+    def test_accepts_a_benchmark_query_param(self):
+        self._seed_snapshots()
+        response = self.client.get('/api/analytics/performance/?benchmark=sp500')
+        self.assertEqual(response.data['benchmark']['key'], 'sp500')
+
+
+@override_settings(RISK_FREE_RATE_ANNUAL=0.02, CACHES=LOCMEM)
 class RiskMetricsViewTest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')

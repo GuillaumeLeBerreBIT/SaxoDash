@@ -7,6 +7,7 @@ import {
   getPositions,
   getNetWorthHistory,
   getRiskMetrics,
+  getPerformance,
   getCashFlow,
   getChart,
   getQuotes,
@@ -211,6 +212,33 @@ describe('getRiskMetrics', () => {
 
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('?benchmark=sp500'),
+      expect.anything()
+    )
+  })
+})
+
+describe('getPerformance', () => {
+  it('requests the performance endpoint with the default world benchmark', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ periods: [] }))
+
+    const result = await getPerformance()
+
+    expect(result).toEqual({ periods: [] })
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/analytics/performance/?benchmark=world'),
+      expect.anything()
+    )
+  })
+
+  it('passes the requested benchmark through', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ periods: [] }))
+
+    await getPerformance('nasdaq100')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('?benchmark=nasdaq100'),
       expect.anything()
     )
   })

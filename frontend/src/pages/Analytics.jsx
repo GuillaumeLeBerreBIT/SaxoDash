@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { usePortfolioSummary, useRiskMetrics } from '../api/queries'
-import { Card, CardHeader, ChartPlaceholder, PageHeader } from '../components/ui'
+import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
+import { Card, CardHeader, ChartPlaceholder, PageHeader, StatCard } from '../components/ui'
 import { Pill } from '../components/RangePills'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
 import MetricTile from '../components/analytics/MetricTile'
 import Projection from '../components/analytics/Projection'
+import ReturnsTable from '../components/analytics/ReturnsTable'
+import CalendarYears from '../components/analytics/CalendarYears'
+import Attribution from '../components/analytics/Attribution'
 import { fmtNum, fmtPct } from '../lib/format'
 
-const SUBTITLE = 'Risk and projection, computed from your own portfolio-value history'
+const SUBTITLE = 'Performance, risk and projection, computed from your own portfolio-value history'
 const TABS = [
+  ['performance', 'Performance'],
   ['risk', 'Risk'],
   ['projection', 'Projection'],
 ]
@@ -20,7 +24,33 @@ function monthLabel(month) {
   return `${names[month.month - 1]} ${month.year}`
 }
 
-function RiskTab({ data, benchmark, onBenchmarkChange }) {
+function BenchmarkSelector({ options, value, onChange }) {
+  return (
+    <div className="flex items-center gap-1">
+      {options.map(({ key, name }) => (
+        <Pill key={key} active={value === key} onClick={() => onChange(key)}>
+          {name}
+        </Pill>
+      ))}
+    </div>
+  )
+}
+
+function PerformanceTab({ data, positions }) {
+  if (!data) return <ChartPlaceholder>Loading…</ChartPlaceholder>
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.25fr' }}>
+        <ReturnsTable periods={data.periods} benchmarkName={data.benchmark.name} />
+        <CalendarYears years={data.calendar_years} benchmarkName={data.benchmark.name} />
+      </div>
+      {positions?.length > 0 && <Attribution positions={positions} />}
+    </div>
+  )
+}
+
+function RiskTab({ data }) {
   const {
     volatility, sharpe, sortino,
     max_drawdown: maxDrawdown, current_drawdown: currentDrawdown,
@@ -33,19 +63,7 @@ function RiskTab({ data, benchmark, onBenchmarkChange }) {
     <div className="space-y-5">
       <div className="grid gap-4" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
         <Card>
-          <CardHeader
-            title="Risk & return"
-            subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`}
-            right={
-              <div className="flex items-center gap-1">
-                {data.available_benchmarks.map(({ key, name }) => (
-                  <Pill key={key} active={benchmark === key} onClick={() => onBenchmarkChange(key)}>
-                    {name}
-                  </Pill>
-                ))}
-              </div>
-            }
-          />
+          <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
           <div className="mt-4 grid grid-cols-3 gap-3">
             <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
             <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
@@ -93,10 +111,12 @@ function RiskTab({ data, benchmark, onBenchmarkChange }) {
 }
 
 export default function Analytics() {
-  const [tab, setTab] = useState('risk')
+  const [tab, setTab] = useState('performance')
   const [benchmark, setBenchmark] = useState('world')
   const { data, isLoading, error } = useRiskMetrics(benchmark)
+  const { data: performance } = usePerformance(benchmark) ?? {}
   const { data: summary } = usePortfolioSummary() ?? {}
+  const { data: positions } = usePositions() ?? {}
 
   if (isLoading || error || !data?.has_data) {
     return (
@@ -113,7 +133,35 @@ export default function Analytics() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Analytics" subtitle={SUBTITLE} />
+      <PageHeader
+        title="Analytics"
+        subtitle={SUBTITLE}
+        right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
+      />
+
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard
+          label="Time-weighted (ann.)"
+          value={fmtPct(data.expected_return, { decimals: 1 })}
+          note="From your own portfolio-value history"
+        />
+        <StatCard
+          label="Volatility"
+          value={`${fmtNum(data.volatility, 1)}%`}
+          badge={`Sharpe ${fmtNum(data.sharpe, 2)}`}
+          badgeTone="zinc"
+        />
+        <StatCard
+          label="Max drawdown"
+          value={`${fmtNum(data.max_drawdown, 1)}%`}
+          note={`Current ${fmtNum(data.current_drawdown, 1)}%`}
+        />
+        <StatCard
+          label="Money-weighted (XIRR)"
+          value="—"
+          note="Needs deposit history the app doesn't sync yet"
+        />
+      </div>
 
       <div className="flex items-center gap-1 border-b border-white/[0.06]">
         {TABS.map(([key, label]) => (
@@ -129,7 +177,8 @@ export default function Analytics() {
         ))}
       </div>
 
-      {tab === 'risk' && <RiskTab data={data} benchmark={benchmark} onBenchmarkChange={setBenchmark} />}
+      {tab === 'performance' && <PerformanceTab data={performance} positions={positions} />}
+      {tab === 'risk' && <RiskTab data={data} />}
       {tab === 'projection' && (
         summary?.total_value != null ? (
           <Projection start={summary.total_value} expectedReturnPct={data.expected_return} volatilityPct={data.volatility} />

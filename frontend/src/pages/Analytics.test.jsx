@@ -43,8 +43,30 @@ const disconnectedBenchmark = {
   expected_return: null, beta: null, tracking_error: null, information_ratio: null, jensen_alpha: null,
 }
 
+const performance = {
+  periods: [
+    { label: '1 month', portfolio_pct: 4.2, benchmark_pct: 2.1, alpha_pct: 2.1, annualised: false },
+  ],
+  calendar_years: [
+    { year: 2026, portfolio_pct: 9.5, benchmark_pct: 7.2, partial: true },
+  ],
+  benchmark: { key: 'world', name: 'World Index' },
+}
+
+const positions = [
+  { ticker: 'NVDA', cost: '1000', pnl: '600' },
+  { ticker: 'AAPL', cost: '1000', pnl: '-100' },
+]
+
 function stubPortfolioSummary(totalValue = 10000) {
   queries.usePortfolioSummary.mockReturnValue({ data: { total_value: totalValue }, isLoading: false, error: null })
+}
+
+function stubHappyPath() {
+  queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+  queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+  queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
+  stubPortfolioSummary()
 }
 
 describe('Analytics', () => {
@@ -65,48 +87,78 @@ describe('Analytics', () => {
     expect(screen.queryByText('0.0%')).not.toBeInTheDocument()
   })
 
-  it('renders the risk metrics once history is available', () => {
-    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
-    stubPortfolioSummary()
+  it('shows the top summary row, including an explicit dash for XIRR', () => {
+    stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    expect(screen.getByText('12.3%')).toBeInTheDocument()
-    expect(screen.getByText('1.20')).toBeInTheDocument()
-    expect(screen.getByText('-8.5%')).toBeInTheDocument()
+    expect(screen.getByText('Time-weighted (ann.)')).toBeInTheDocument()
+    expect(screen.getByText('Money-weighted (XIRR)')).toBeInTheDocument()
+    expect(screen.getByText(/Needs deposit history/)).toBeInTheDocument()
   })
 
-  it('renders benchmark-relative metrics against the default World Index', () => {
-    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
-    stubPortfolioSummary()
+  it('opens on the Performance tab, with the returns table and calendar years', () => {
+    stubHappyPath()
     renderWithProviders(<Analytics />)
+
+    expect(screen.getByText('Returns vs World Index')).toBeInTheDocument()
+    expect(screen.getByText('Calendar-year returns')).toBeInTheDocument()
+  })
+
+  it('shows attribution once positions are available', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+    expect(screen.getByText('Return attribution')).toBeInTheDocument()
+  })
+
+  it('renders the risk metrics on the Risk tab', async () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+
+    // The top summary row already shows these headline figures once; the
+    // Risk tab's own tiles repeat them in more detail, so at least 2.
+    expect(screen.getAllByText('12.3%').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('-8.5%').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Sortino ratio')).toBeInTheDocument()
+  })
+
+  it('renders benchmark-relative metrics against the default World Index', async () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
 
     expect(screen.getByText('0.95')).toBeInTheDocument() // beta
     expect(screen.getByText('vs World Index')).toBeInTheDocument()
   })
 
-  it('shows a reason instead of dashes-as-zero when the benchmark is unusable', () => {
+  it('shows a reason instead of dashes-as-zero when the benchmark is unusable', async () => {
     queries.useRiskMetrics.mockReturnValue({
       data: { ...summary, benchmark: disconnectedBenchmark }, isLoading: false, error: null,
     })
+    queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+    queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
     stubPortfolioSummary()
     renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
 
     expect(screen.getByText('Saxo is not connected.')).toBeInTheDocument()
   })
 
   it('refetches with the newly selected benchmark when a pill is clicked', async () => {
-    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
-    stubPortfolioSummary()
+    stubHappyPath()
     renderWithProviders(<Analytics />)
 
     await userEvent.click(screen.getByRole('button', { name: 'S&P 500' }))
 
     expect(queries.useRiskMetrics).toHaveBeenLastCalledWith('sp500')
+    expect(queries.usePerformance).toHaveBeenLastCalledWith('sp500')
   })
 
   it('switches to the Projection tab and renders it from the portfolio value', async () => {
-    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
-    stubPortfolioSummary(10000)
+    stubHappyPath()
     renderWithProviders(<Analytics />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
@@ -117,6 +169,8 @@ describe('Analytics', () => {
 
   it('shows a placeholder on the Projection tab while the portfolio value is still loading', async () => {
     queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+    queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
     queries.usePortfolioSummary.mockReturnValue({ data: undefined, isLoading: true, error: null })
     renderWithProviders(<Analytics />)
 
