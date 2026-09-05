@@ -36,4 +36,7 @@ def _get(path, **params):
         body = response.text[:ERROR_BODY_LIMIT]
         raise FinnhubAPIError(f'{path} failed: {response.status_code} {body}')
 
-    return response.json()
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise FinnhubAPIError(f'{path} returned a non-JSON body') from exc

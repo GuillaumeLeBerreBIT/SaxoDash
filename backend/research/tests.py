@@ -558,3 +558,11 @@ class FinnhubClientTest(TestCase):
         called_params = mock_get.call_args.kwargs['params']
         self.assertEqual(called_url, 'https://finnhub.io/api/v1/stock/profile2')
         self.assertEqual(called_params, {'symbol': 'AAPL', 'token': 'test-key'})
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_raises_on_a_non_json_response_body(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: (_ for _ in ()).throw(ValueError('bad json')))
+
+        with self.assertRaises(finnhub.FinnhubAPIError):
+            finnhub._get('/stock/profile2', symbol='AAPL')
