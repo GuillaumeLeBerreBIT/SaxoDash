@@ -295,6 +295,14 @@ class RiskMetricsViewTest(APITestCase):
                 bank_total=50, net_worth=value + 50,
             )
 
+    def test_advertises_the_available_benchmarks(self):
+        self._seed_snapshots()
+        response = self.client.get('/api/analytics/risk/')
+        self.assertEqual(
+            {b['key'] for b in response.data['available_benchmarks']},
+            {'world', 'sp500', 'nasdaq100'},
+        )
+
     @patch('analytics.benchmarks.eur_closes')
     def test_defaults_to_world_index(self, mock_eur_closes):
         self._seed_snapshots()

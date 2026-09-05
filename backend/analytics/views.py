@@ -9,15 +9,6 @@ from . import benchmarks, metrics
 
 DEFAULT_BENCHMARK = 'world'
 
-EMPTY_BENCHMARK = {
-    'has_data': False,
-    'expected_return': None,
-    'beta': None,
-    'tracking_error': None,
-    'information_ratio': None,
-    'jensen_alpha': None,
-}
-
 
 class RiskMetricsView(APIView):
 
@@ -31,6 +22,9 @@ class RiskMetricsView(APIView):
         if benchmark_key not in benchmarks.BENCHMARKS:
             benchmark_key = DEFAULT_BENCHMARK
 
+        summary['available_benchmarks'] = [
+            {'key': key, 'name': info['name']} for key, info in benchmarks.BENCHMARKS.items()
+        ]
         summary['benchmark'] = (
             self._benchmark_summary(benchmark_key, dated_values)
             if summary['has_data']
@@ -52,9 +46,8 @@ class RiskMetricsView(APIView):
         return {'key': key, 'name': benchmarks.BENCHMARKS[key]['name'], 'reason': None, **result}
 
     def _empty_benchmark(self, key, reason):
-        return {
-            'key': key,
-            'name': benchmarks.BENCHMARKS[key]['name'],
-            'reason': reason,
-            **EMPTY_BENCHMARK,
-        }
+        # benchmark_summary already produces this exact shape when it has too
+        # little overlap to compute anything - reuse it rather than a second,
+        # easy-to-forget copy of the same five keys.
+        empty = metrics.benchmark_summary([], [], settings.RISK_FREE_RATE_ANNUAL)
+        return {'key': key, 'name': benchmarks.BENCHMARKS[key]['name'], 'reason': reason, **empty}

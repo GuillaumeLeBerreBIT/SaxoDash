@@ -13,11 +13,6 @@ const TABS = [
   ['risk', 'Risk'],
   ['projection', 'Projection'],
 ]
-const BENCHMARK_OPTIONS = [
-  ['world', 'World Index'],
-  ['sp500', 'S&P 500'],
-  ['nasdaq100', 'NASDAQ 100'],
-]
 
 function monthLabel(month) {
   if (!month) return '—'
@@ -43,9 +38,9 @@ function RiskTab({ data, benchmark, onBenchmarkChange }) {
             subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`}
             right={
               <div className="flex items-center gap-1">
-                {BENCHMARK_OPTIONS.map(([key, label]) => (
+                {data.available_benchmarks.map(({ key, name }) => (
                   <Pill key={key} active={benchmark === key} onClick={() => onBenchmarkChange(key)}>
-                    {label}
+                    {name}
                   </Pill>
                 ))}
               </div>

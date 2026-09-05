@@ -31,6 +31,11 @@ const summary = {
     key: 'world', name: 'World Index', reason: null, has_data: true,
     expected_return: 7.2, beta: 0.95, tracking_error: 3.1, information_ratio: 0.4, jensen_alpha: 1.1,
   },
+  available_benchmarks: [
+    { key: 'world', name: 'World Index' },
+    { key: 'sp500', name: 'S&P 500' },
+    { key: 'nasdaq100', name: 'NASDAQ 100' },
+  ],
 }
 
 const disconnectedBenchmark = {
