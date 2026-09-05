@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { usePortfolioSummary, useRiskMetrics } from '../api/queries'
 import { Card, CardHeader, ChartPlaceholder, PageHeader } from '../components/ui'
+import { Pill } from '../components/RangePills'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
 import MetricTile from '../components/analytics/MetricTile'
@@ -12,6 +13,11 @@ const TABS = [
   ['risk', 'Risk'],
   ['projection', 'Projection'],
 ]
+const BENCHMARK_OPTIONS = [
+  ['world', 'World Index'],
+  ['sp500', 'S&P 500'],
+  ['nasdaq100', 'NASDAQ 100'],
+]
 
 function monthLabel(month) {
   if (!month) return '—'
@@ -19,20 +25,33 @@ function monthLabel(month) {
   return `${names[month.month - 1]} ${month.year}`
 }
 
-function RiskTab({ data }) {
+function RiskTab({ data, benchmark, onBenchmarkChange }) {
   const {
     volatility, sharpe, sortino,
     max_drawdown: maxDrawdown, current_drawdown: currentDrawdown,
     positive_months_pct: positiveMonthsPct, best_month: bestMonth, worst_month: worstMonth,
     risk_free_annual: riskFreeAnnual, drawdown_series: drawdownSeries, monthly_returns: monthlyReturns,
   } = data
+  const bench = data.benchmark
 
   return (
     <div className="space-y-5">
       <div className="grid gap-4" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
         <Card>
-          <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <CardHeader
+            title="Risk & return"
+            subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`}
+            right={
+              <div className="flex items-center gap-1">
+                {BENCHMARK_OPTIONS.map(([key, label]) => (
+                  <Pill key={key} active={benchmark === key} onClick={() => onBenchmarkChange(key)}>
+                    {label}
+                  </Pill>
+                ))}
+              </div>
+            }
+          />
+          <div className="mt-4 grid grid-cols-3 gap-3">
             <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
             <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
             <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
@@ -49,6 +68,24 @@ function RiskTab({ data }) {
               value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
               hint={monthLabel(worstMonth)}
             />
+            <MetricTile
+              label="Beta"
+              value={bench.has_data ? fmtNum(bench.beta, 2) : '—'}
+              hint={bench.has_data ? `vs ${bench.name}` : bench.reason}
+            />
+            <MetricTile
+              label="Tracking error"
+              value={bench.has_data ? `${fmtNum(bench.tracking_error, 1)}%` : '—'}
+            />
+            <MetricTile
+              label="Information ratio"
+              value={bench.has_data ? fmtNum(bench.information_ratio, 2) : '—'}
+            />
+            <MetricTile
+              label="Jensen alpha"
+              value={bench.has_data ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
+              hint="Risk-adjusted excess"
+            />
           </div>
         </Card>
 
@@ -62,7 +99,8 @@ function RiskTab({ data }) {
 
 export default function Analytics() {
   const [tab, setTab] = useState('risk')
-  const { data, isLoading, error } = useRiskMetrics()
+  const [benchmark, setBenchmark] = useState('world')
+  const { data, isLoading, error } = useRiskMetrics(benchmark)
   const { data: summary } = usePortfolioSummary() ?? {}
 
   if (isLoading || error || !data?.has_data) {
@@ -96,7 +134,7 @@ export default function Analytics() {
         ))}
       </div>
 
-      {tab === 'risk' && <RiskTab data={data} />}
+      {tab === 'risk' && <RiskTab data={data} benchmark={benchmark} onBenchmarkChange={setBenchmark} />}
       {tab === 'projection' && (
         summary?.total_value != null ? (
           <Projection start={summary.total_value} expectedReturnPct={data.expected_return} volatilityPct={data.volatility} />

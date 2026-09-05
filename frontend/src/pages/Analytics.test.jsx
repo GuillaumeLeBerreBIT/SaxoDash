@@ -27,6 +27,15 @@ const summary = {
     { year: 2026, month: 2, pct: 5.1 },
     { year: 2026, month: 3, pct: -4.2 },
   ],
+  benchmark: {
+    key: 'world', name: 'World Index', reason: null, has_data: true,
+    expected_return: 7.2, beta: 0.95, tracking_error: 3.1, information_ratio: 0.4, jensen_alpha: 1.1,
+  },
+}
+
+const disconnectedBenchmark = {
+  key: 'world', name: 'World Index', reason: 'Saxo is not connected.', has_data: false,
+  expected_return: null, beta: null, tracking_error: null, information_ratio: null, jensen_alpha: null,
 }
 
 function stubPortfolioSummary(totalValue = 10000) {
@@ -59,6 +68,35 @@ describe('Analytics', () => {
     expect(screen.getByText('12.3%')).toBeInTheDocument()
     expect(screen.getByText('1.20')).toBeInTheDocument()
     expect(screen.getByText('-8.5%')).toBeInTheDocument()
+  })
+
+  it('renders benchmark-relative metrics against the default World Index', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.getByText('0.95')).toBeInTheDocument() // beta
+    expect(screen.getByText('vs World Index')).toBeInTheDocument()
+  })
+
+  it('shows a reason instead of dashes-as-zero when the benchmark is unusable', () => {
+    queries.useRiskMetrics.mockReturnValue({
+      data: { ...summary, benchmark: disconnectedBenchmark }, isLoading: false, error: null,
+    })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.getByText('Saxo is not connected.')).toBeInTheDocument()
+  })
+
+  it('refetches with the newly selected benchmark when a pill is clicked', async () => {
+    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'S&P 500' }))
+
+    expect(queries.useRiskMetrics).toHaveBeenLastCalledWith('sp500')
   })
 
   it('switches to the Projection tab and renders it from the portfolio value', async () => {

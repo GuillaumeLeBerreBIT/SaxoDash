@@ -1,8 +1,9 @@
-"""Portfolio risk statistics, computed from the portfolio's own value series.
+"""Portfolio risk statistics, computed from value series the caller supplies.
 
-No benchmark input anywhere here on purpose: beta, tracking error, information
-ratio and Jensen alpha all need an index return series the app does not have
-yet, so they are left out rather than faked against nothing. See AGENTS.md.
+Benchmark-relative functions (beta, tracking_error, information_ratio,
+jensen_alpha) take plain return lists - fetching and currency-converting a
+benchmark's own series is benchmarks.py's job, not this module's. See
+AGENTS.md for why a benchmark used to be left out entirely.
 """
 import math
 import statistics
@@ -90,6 +91,82 @@ def positive_months_pct(monthly):
     if not monthly:
         return None
     return len([m for m in monthly if m['pct'] > 0]) / len(monthly) * 100
+
+
+def beta(port_returns, bench_returns):
+    if len(bench_returns) < MIN_DAILY_POINTS:
+        return None
+    bench_variance = statistics.variance(bench_returns)
+    if bench_variance == 0:
+        return None
+    port_mean = statistics.mean(port_returns)
+    bench_mean = statistics.mean(bench_returns)
+    covariance = sum(
+        (p - port_mean) * (b - bench_mean) for p, b in zip(port_returns, bench_returns)
+    ) / (len(port_returns) - 1)
+    return covariance / bench_variance
+
+
+def tracking_error(port_returns, bench_returns):
+    if len(port_returns) < MIN_DAILY_POINTS:
+        return None
+    active = [p - b for p, b in zip(port_returns, bench_returns)]
+    return statistics.stdev(active) * math.sqrt(TRADING_DAYS) * 100
+
+
+def information_ratio(port_expected_return, bench_expected_return, tracking_error_value):
+    if not tracking_error_value:
+        return None
+    return (port_expected_return - bench_expected_return) / tracking_error_value
+
+
+def jensen_alpha(port_expected_return, bench_expected_return, beta_value, risk_free_annual):
+    if beta_value is None:
+        return None
+    risk_free_pct = risk_free_annual * 100
+    return port_expected_return - (risk_free_pct + beta_value * (bench_expected_return - risk_free_pct))
+
+
+def _aligned_values(dated_values_a, dated_values_b):
+    """Two date-ascending series -> same-length value lists over their common dates."""
+    by_date_a = dict(dated_values_a)
+    by_date_b = dict(dated_values_b)
+    common_dates = sorted(set(by_date_a) & set(by_date_b))
+    return [float(by_date_a[d]) for d in common_dates], [float(by_date_b[d]) for d in common_dates]
+
+
+def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
+    """Beta/tracking-error/information-ratio/Jensen-alpha against one benchmark.
+
+    Aligned on dates present in both series - a portfolio snapshot with no
+    matching benchmark bar (or vice versa) is excluded rather than guessed at.
+    """
+    port_values, bench_values = _aligned_values(port_dated_values, bench_dated_values)
+    if len(port_values) < MIN_DAILY_POINTS:
+        return {
+            'has_data': False,
+            'expected_return': None,
+            'beta': None,
+            'tracking_error': None,
+            'information_ratio': None,
+            'jensen_alpha': None,
+        }
+
+    port_returns = daily_returns(port_values)
+    bench_returns = daily_returns(bench_values)
+    port_expected = expected_annual_return(port_returns)
+    bench_expected = expected_annual_return(bench_returns)
+    beta_value = beta(port_returns, bench_returns)
+    te = tracking_error(port_returns, bench_returns)
+
+    return {
+        'has_data': True,
+        'expected_return': bench_expected,
+        'beta': beta_value,
+        'tracking_error': te,
+        'information_ratio': information_ratio(port_expected, bench_expected, te),
+        'jensen_alpha': jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+    }
 
 
 def risk_summary(dated_values, risk_free_annual):

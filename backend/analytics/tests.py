@@ -1,6 +1,7 @@
 import math
 import statistics
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -9,7 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import NetWorthSnapshot
 
-from . import metrics
+from . import benchmarks, metrics
 
 TRADING_DAYS = 252
 
@@ -156,6 +157,105 @@ class RiskSummaryTest(TestCase):
         self.assertEqual(summary['risk_free_annual'], 0.02)
 
 
+class BetaTest(TestCase):
+    def test_matches_the_covariance_over_variance_formula(self):
+        port = [0.01, -0.02, 0.015, -0.005, 0.03]
+        bench = [0.008, -0.015, 0.012, -0.003, 0.025]
+        pm, bm = statistics.mean(port), statistics.mean(bench)
+        cov = sum((p - pm) * (b - bm) for p, b in zip(port, bench)) / (len(port) - 1)
+        expected = cov / statistics.variance(bench)
+        self.assertAlmostEqual(metrics.beta(port, bench), expected)
+
+    def test_zero_benchmark_variance_has_no_beta(self):
+        self.assertIsNone(metrics.beta([0.01, 0.02], [0.0, 0.0]))
+
+
+class TrackingErrorTest(TestCase):
+    def test_matches_the_stdev_of_active_returns(self):
+        port = [0.01, -0.02, 0.015, -0.005, 0.03]
+        bench = [0.008, -0.015, 0.012, -0.003, 0.025]
+        active = [p - b for p, b in zip(port, bench)]
+        expected = statistics.stdev(active) * math.sqrt(TRADING_DAYS) * 100
+        self.assertAlmostEqual(metrics.tracking_error(port, bench), expected)
+
+
+class InformationRatioTest(TestCase):
+    def test_matches_the_alpha_over_tracking_error_formula(self):
+        self.assertAlmostEqual(metrics.information_ratio(12.0, 8.0, 5.0), 0.8)
+
+    def test_zero_or_missing_tracking_error_has_no_information_ratio(self):
+        self.assertIsNone(metrics.information_ratio(12.0, 8.0, 0))
+        self.assertIsNone(metrics.information_ratio(12.0, 8.0, None))
+
+
+class JensenAlphaTest(TestCase):
+    def test_matches_the_capm_formula(self):
+        expected = 12.0 - (2.0 + 1.2 * (8.0 - 2.0))
+        self.assertAlmostEqual(metrics.jensen_alpha(12.0, 8.0, 1.2, 0.02), expected)
+
+    def test_no_beta_has_no_alpha(self):
+        self.assertIsNone(metrics.jensen_alpha(12.0, 8.0, None, 0.02))
+
+
+class BenchmarkSummaryTest(TestCase):
+    def test_insufficient_overlap_reports_no_data(self):
+        port = [(date(2026, 1, 1), 100)]
+        bench = [(date(2026, 1, 1), 50)]
+        summary = metrics.benchmark_summary(port, bench, 0.02)
+        self.assertFalse(summary['has_data'])
+        self.assertIsNone(summary['beta'])
+
+    def test_aligns_on_common_dates_only(self):
+        port = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
+        bench = [(date(2026, 1, i), v) for i, v in enumerate([50, 50.5, 50.2, 51, 50.8], start=1)]
+        port.append((date(2026, 1, 6), 106))  # portfolio-only date, no matching benchmark row
+
+        summary = metrics.benchmark_summary(port, bench, 0.02)
+
+        self.assertTrue(summary['has_data'])
+        self.assertIsNotNone(summary['beta'])
+        self.assertIsNotNone(summary['tracking_error'])
+        self.assertIsNotNone(summary['information_ratio'])
+        self.assertIsNotNone(summary['jensen_alpha'])
+
+
+class BenchmarkEurClosesTest(TestCase):
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_eur_benchmark_needs_no_conversion(self, mock_chart):
+        mock_chart.return_value = [
+            {'date': '2026-01-01', 'close': 50.0},
+            {'date': '2026-01-02', 'close': 51.0},
+        ]
+        closes = benchmarks.eur_closes('world')
+        self.assertEqual(closes, [(date(2026, 1, 1), 50.0), (date(2026, 1, 2), 51.0)])
+        mock_chart.assert_called_once_with(50629, 'Etf', 1440, benchmarks.CHART_COUNT)
+
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_usd_benchmark_is_converted_using_that_days_eurusd_rate(self, mock_chart):
+        def side_effect(uic, asset_type, horizon, count):
+            if uic == benchmarks.EURUSD_UIC:
+                return [{'date': '2026-01-01', 'close': 1.1}, {'date': '2026-01-02', 'close': 1.2}]
+            return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
+        mock_chart.side_effect = side_effect
+
+        closes = dict(benchmarks.eur_closes('sp500'))
+
+        self.assertAlmostEqual(closes[date(2026, 1, 1)], 100.0)  # 110 USD / 1.1
+        self.assertAlmostEqual(closes[date(2026, 1, 2)], 100.0)  # 120 USD / 1.2
+
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_date_missing_from_the_fx_series_is_skipped(self, mock_chart):
+        def side_effect(uic, asset_type, horizon, count):
+            if uic == benchmarks.EURUSD_UIC:
+                return [{'date': '2026-01-01', 'close': 1.1}]
+            return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
+        mock_chart.side_effect = side_effect
+
+        closes = benchmarks.eur_closes('sp500')
+
+        self.assertEqual(len(closes), 1)
+
+
 @override_settings(RISK_FREE_RATE_ANNUAL=0.02)
 class RiskMetricsViewTest(APITestCase):
     def setUp(self):
@@ -187,3 +287,57 @@ class RiskMetricsViewTest(APITestCase):
         self.assertTrue(response.data['has_data'])
         self.assertIsNotNone(response.data['volatility'])
         self.assertEqual(len(response.data['drawdown_series']), 5)
+
+    def _seed_snapshots(self):
+        for day, value in enumerate([100, 102, 101, 105, 103], start=1):
+            NetWorthSnapshot.objects.create(
+                date=date(2026, 1, day), portfolio_value=value,
+                bank_total=50, net_worth=value + 50,
+            )
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_defaults_to_world_index(self, mock_eur_closes):
+        self._seed_snapshots()
+        mock_eur_closes.return_value = [
+            (date(2026, 1, i), v) for i, v in enumerate([50, 50.5, 50.2, 51, 50.8], start=1)
+        ]
+        response = self.client.get('/api/analytics/risk/')
+        self.assertEqual(response.data['benchmark']['key'], 'world')
+        mock_eur_closes.assert_called_once_with('world')
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_accepts_a_benchmark_query_param(self, mock_eur_closes):
+        self._seed_snapshots()
+        mock_eur_closes.return_value = [
+            (date(2026, 1, i), v) for i, v in enumerate([50, 50.5, 50.2, 51, 50.8], start=1)
+        ]
+        response = self.client.get('/api/analytics/risk/?benchmark=sp500')
+        self.assertEqual(response.data['benchmark']['key'], 'sp500')
+        mock_eur_closes.assert_called_once_with('sp500')
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_an_unknown_benchmark_falls_back_to_world(self, mock_eur_closes):
+        self._seed_snapshots()
+        mock_eur_closes.return_value = []
+        response = self.client.get('/api/analytics/risk/?benchmark=bogus')
+        self.assertEqual(response.data['benchmark']['key'], 'world')
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_benchmark_unusable_when_saxo_not_connected(self, mock_eur_closes):
+        from saxo.credentials import SaxoNotConnected
+        self._seed_snapshots()
+        mock_eur_closes.side_effect = SaxoNotConnected('Saxo is not connected.')
+
+        response = self.client.get('/api/analytics/risk/')
+
+        self.assertTrue(response.data['has_data'])  # portfolio-only metrics still work
+        self.assertFalse(response.data['benchmark']['has_data'])
+        self.assertIsNotNone(response.data['benchmark']['reason'])
+
+    @patch('analytics.benchmarks.eur_closes')
+    def test_benchmark_is_not_fetched_without_enough_portfolio_history(self, mock_eur_closes):
+        NetWorthSnapshot.objects.create(date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100)
+        response = self.client.get('/api/analytics/risk/')
+        self.assertFalse(response.data['has_data'])
+        self.assertFalse(response.data['benchmark']['has_data'])
+        mock_eur_closes.assert_not_called()

@@ -190,6 +190,30 @@ describe('getRiskMetrics', () => {
       expect.anything()
     )
   })
+
+  it('defaults to the world benchmark', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ has_data: false }))
+
+    await getRiskMetrics()
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('?benchmark=world'),
+      expect.anything()
+    )
+  })
+
+  it('passes the requested benchmark through', async () => {
+    localStorage.setItem('access', 'valid-access')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ has_data: false }))
+
+    await getRiskMetrics('sp500')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('?benchmark=sp500'),
+      expect.anything()
+    )
+  })
 })
 
 describe('getNetWorthHistory / getCashFlow', () => {
