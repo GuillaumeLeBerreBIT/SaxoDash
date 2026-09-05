@@ -143,22 +143,19 @@ class SaxoClientTest(TestCase):
         self.assertEqual(result, [{'PositionId': '1'}])
 
     @patch('saxo.client.requests.get')
-    def test_get_positions_raises_on_api_error(self, mock_get):
-        mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
-        with self.assertRaises(client.SaxoAPIError):
-            client.get_positions('token')
-            
-    @patch('saxo.client.requests.get')
     def test_get_closed_positions_returns_bare_list(self, mock_get):
         mock_get.return_value = Mock(ok=True, json=lambda: [{'ClosedPositionUniqueId': 1}])
         result = client.get_closed_positions('token')
         self.assertEqual(result, [{'ClosedPositionUniqueId': 1}])
 
     @patch('saxo.client.requests.get')
-    def test_get_closed_positions_raises_on_api_error(self, mock_get):
+    def test_get_propagates_api_errors_from_any_endpoint(self, mock_get):
+        # Every endpoint function (get_positions, get_chart, get_infoprices...)
+        # is a thin wrapper over _get - one contract test here replaces one
+        # near-identical "raises on API error" test per wrapper.
         mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
         with self.assertRaises(client.SaxoAPIError):
-            client.get_closed_positions('token')
+            client._get('token', '/some/path')
 
 class ToPositionFieldsTest(TestCase):
     def test_maps_core_fields(self):
@@ -462,6 +459,7 @@ class SyncPositionsTaskTest(TestCase):
         mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
         tasks.sync_positions()
         self.assertEqual(Position.objects.count(), 1)
+        self.assertEqual(Transaction.objects.count(), 1)
 
     @patch('saxo.tasks.client.get_positions')
     def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):
@@ -502,19 +500,13 @@ class SyncPositionsTaskTest(TestCase):
         self.assertEqual(position.currency, 'USD')
         self.assertIsNotNone(position.priced_at)
 
-
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
-class SyncTransactionsTaskTest(TestCase):
-    def setUp(self):
-        self.cred = SaxoCredential.objects.create(
-            access_token='a', refresh_token='b',
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
-
     @patch('saxo.tasks.client.get_positions')
-    def test_creates_buy_transactions_from_open_positions(self, mock_get_positions):
+    def test_also_creates_a_transaction_from_the_same_fetch(self, mock_get_positions):
+        # One Saxo response maps into both tables, so they can no longer
+        # diverge by running on different schedules.
         mock_get_positions.return_value = [SAMPLE_POSITION]
-        tasks.sync_transactions()
+        tasks.sync_positions()
+
         self.assertEqual(Transaction.objects.count(), 1)
         txn = Transaction.objects.first()
         self.assertEqual(txn.saxo_trade_id, '5027270864')
@@ -522,16 +514,10 @@ class SyncTransactionsTaskTest(TestCase):
         self.assertEqual(txn.ticker, 'NVDA')
 
     @patch('saxo.tasks.client.get_positions')
-    def test_upserts_on_repeated_sync(self, mock_get_positions):
+    def test_transaction_upserts_on_repeated_sync(self, mock_get_positions):
         mock_get_positions.return_value = [SAMPLE_POSITION]
-        tasks.sync_transactions()
-        tasks.sync_transactions()
-        self.assertEqual(Transaction.objects.count(), 1)
-
-    @patch('saxo.tasks.client.get_positions')
-    def test_skips_malformed_rows_without_aborting(self, mock_get_positions):
-        mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
-        tasks.sync_transactions()
+        tasks.sync_positions()
+        tasks.sync_positions()
         self.assertEqual(Transaction.objects.count(), 1)
 
 
@@ -555,12 +541,6 @@ class ExpiredCredentialGuardTest(TestCase):
         tasks.sync_positions()
         mock_get_positions.assert_not_called()
         self.assertEqual(Position.objects.count(), 0)
-
-    @patch('saxo.tasks.client.get_positions')
-    def test_sync_transactions_skips_expired_token(self, mock_get_positions):
-        tasks.sync_transactions()
-        mock_get_positions.assert_not_called()
-        self.assertEqual(Transaction.objects.count(), 0)
 
     @patch('saxo.tasks.client.get_account_balance')
     def test_sync_account_balance_skips_expired_token(self, mock_get_balance):
@@ -758,13 +738,6 @@ class SaxoMarketDataClientTest(TestCase):
         self.assertEqual(mock_get.call_args.kwargs['params']['Count'], client.CHART_MAX_COUNT)
 
     @patch('saxo.client.requests.get')
-    def test_get_chart_raises_on_api_error(self, mock_get):
-        mock_get.return_value = Mock(ok=False, status_code=404, text='no such uic')
-
-        with self.assertRaises(client.SaxoAPIError):
-            client.get_chart('token', 211, 'Stock', 1440)
-
-    @patch('saxo.client.requests.get')
     def test_search_instruments_passes_keywords_and_asset_types(self, mock_get):
         mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'Symbol': 'NVDA:xnas'}]})
 
@@ -791,13 +764,6 @@ class SaxoMarketDataClientTest(TestCase):
 
         self.assertEqual(result, [{'Uic': 211}])
         self.assertEqual(mock_get.call_args.kwargs['params']['Uics'], '211,212')
-
-    @patch('saxo.client.requests.get')
-    def test_get_infoprices_raises_on_api_error(self, mock_get):
-        mock_get.return_value = Mock(ok=False, status_code=429, text='too many requests')
-
-        with self.assertRaises(client.SaxoAPIError):
-            client.get_infoprices('token', [211], 'Stock')
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
@@ -870,7 +836,7 @@ class ScheduledTaskSignatureTest(TestCase):
             'NonMarginPositionsValue': 0, 'TotalValue': 100,
         }
 
-        for task in (tasks.sync_positions, tasks.sync_transactions,
+        for task in (tasks.sync_positions,
                      tasks.sync_account_balance, tasks.refresh_saxo_token):
             with self.subTest(task=task.name):
                 task.delay()

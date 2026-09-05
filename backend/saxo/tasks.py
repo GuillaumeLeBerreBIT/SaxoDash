@@ -110,6 +110,10 @@ def refresh_saxo_token():
 @shared_task(**SYNC_TASK)
 @synced
 def sync_positions(credential):
+    """Also writes the entry-trade ledger from the same fetch (see mapping.to_transaction_fields:
+    SIM never populates /hist/v1/transactions, so entry trades are derived from open positions;
+    exit trades await a real closed-position payload). One fetch feeding both tables means they
+    can no longer silently diverge by running on separate schedules."""
     saxo_positions = client.get_positions(credential.access_token)
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
@@ -131,24 +135,12 @@ def sync_positions(credential):
 
         Position.objects.exclude(ticker__in=seen_tickers).delete()
 
+        for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
+            Transaction.objects.update_or_create(
+                saxo_trade_id=fields['saxo_trade_id'], defaults=fields
+            )
+
     return len(seen_tickers)
-
-
-@shared_task(**SYNC_TASK)
-@synced
-def sync_transactions(credential):
-    # SIM never populates /hist/v1/transactions, so entry trades come from open
-    # positions instead; exit trades await a real closed-position payload.
-    saxo_positions = client.get_positions(credential.access_token)
-
-    written = 0
-    for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
-        Transaction.objects.update_or_create(
-            saxo_trade_id=fields['saxo_trade_id'], defaults=fields
-        )
-        written += 1
-
-    return written
 
 
 @shared_task(**SYNC_TASK)
