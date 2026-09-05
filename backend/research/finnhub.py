@@ -40,3 +40,19 @@ def _get(path, **params):
         return response.json()
     except ValueError as exc:
         raise FinnhubAPIError(f'{path} returned a non-JSON body') from exc
+
+
+def get_profile(symbol):
+    return _get('/stock/profile2', symbol=symbol)
+
+
+def get_basic_financials(symbol):
+    return _get('/stock/metric', symbol=symbol, metric='all')
+
+
+def get_recommendation_trends(symbol):
+    return _get('/stock/recommendation', symbol=symbol)
+
+
+def get_earnings_history(symbol):
+    return _get('/stock/earnings', symbol=symbol)

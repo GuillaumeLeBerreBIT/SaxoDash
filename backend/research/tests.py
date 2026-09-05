@@ -566,3 +566,44 @@ class FinnhubClientTest(TestCase):
 
         with self.assertRaises(finnhub.FinnhubAPIError):
             finnhub._get('/stock/profile2', symbol='AAPL')
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_get_profile_calls_the_profile_endpoint(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'name': 'Apple Inc'})
+
+        result = finnhub.get_profile('AAPL')
+
+        self.assertEqual(result['name'], 'Apple Inc')
+        self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/profile2')
+        self.assertEqual(mock_get.call_args.kwargs['params']['symbol'], 'AAPL')
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_get_basic_financials_asks_for_every_metric(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'metric': {}})
+
+        finnhub.get_basic_financials('AAPL')
+
+        self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/metric')
+        self.assertEqual(
+            mock_get.call_args.kwargs['params'], {'symbol': 'AAPL', 'metric': 'all', 'token': 'test-key'}
+        )
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_get_recommendation_trends_calls_the_recommendation_endpoint(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [])
+
+        finnhub.get_recommendation_trends('AAPL')
+
+        self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/recommendation')
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_get_earnings_history_calls_the_earnings_endpoint(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [])
+
+        finnhub.get_earnings_history('AAPL')
+
+        self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/earnings')
