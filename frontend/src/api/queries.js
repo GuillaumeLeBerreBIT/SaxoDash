@@ -9,6 +9,7 @@ import {
   getBankAccounts,
   getCashFlow,
   getChart,
+  getFundamentals,
   getInstrumentDetails,
   getNetWorth,
   getNetWorthHistory,
@@ -49,6 +50,7 @@ export const queryKeys = {
   // Lowercased to match the backend's own search cache key.
   instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
+  fundamentals: (symbol) => ['fundamentals', symbol],
   watchlists: ['watchlists'],
 }
 
@@ -173,6 +175,17 @@ export function useInstrumentDetails({ uic, assetType }) {
     queryFn: () => getInstrumentDetails({ uic, assetType }),
     enabled: Boolean(uic && assetType),
     staleTime: 60 * 60_000,
+  })
+}
+
+// Fundamentals don't move intraday - the 24h staleTime matches the backend's
+// own cache TTL, so there is no point refetching sooner than the data can change.
+export function useFundamentals(symbol) {
+  return useQuery({
+    queryKey: queryKeys.fundamentals(symbol),
+    queryFn: () => getFundamentals(symbol),
+    enabled: !!symbol,
+    staleTime: 24 * 60 * 60_000,
   })
 }
 
