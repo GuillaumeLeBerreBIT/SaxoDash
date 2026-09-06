@@ -631,6 +631,17 @@ SAMPLE_FINANCIALS = {
         'roeTTM': 147.2,
         'netProfitMarginTTM': 26.3,
         'grossMarginTTM': 46.2,
+        'beta': 1.24,
+        'forwardPE': 28.5,
+        'evEbitdaTTM': 22.3,
+        'evRevenueTTM': 9.1,
+        'currentRatioAnnual': 0.98,
+        'roaTTM': 30.2,
+        'roiTTM': 65.4,
+        'dividendGrowthRate5Y': 5.1,
+        'monthToDatePriceReturnDaily': 2.4,
+        'yearToDatePriceReturnDaily': 18.7,
+        '52WeekPriceReturnDaily': 31.2,
     }
 }
 
@@ -676,6 +687,22 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['peg_ratio'])
         self.assertIsNone(result['recommendation'])
         self.assertEqual(result['eps_history'], [])
+        self.assertIsNone(result['beta'])
+
+    def test_shapes_the_extended_ratio_and_price_return_fields(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS)
+
+        self.assertEqual(result['beta'], 1.24)
+        self.assertEqual(result['forward_pe'], 28.5)
+        self.assertEqual(result['ev_ebitda'], 22.3)
+        self.assertEqual(result['ev_revenue'], 9.1)
+        self.assertEqual(result['current_ratio'], 0.98)
+        self.assertEqual(result['roa'], 30.2)
+        self.assertEqual(result['roi'], 65.4)
+        self.assertEqual(result['dividend_growth_5y'], 5.1)
+        self.assertEqual(result['price_return_1m'], 2.4)
+        self.assertEqual(result['price_return_ytd'], 18.7)
+        self.assertEqual(result['price_return_1y'], 31.2)
 
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

@@ -129,6 +129,17 @@ def to_fundamentals(profile, financials, recommendations, earnings):
         'roe': _metric(financials, 'roeTTM'),
         'net_margin': _metric(financials, 'netProfitMarginTTM'),
         'gross_margin': _metric(financials, 'grossMarginTTM'),
+        'beta': _metric(financials, 'beta'),
+        'forward_pe': _metric(financials, 'forwardPE'),
+        'ev_ebitda': _metric(financials, 'evEbitdaTTM'),
+        'ev_revenue': _metric(financials, 'evRevenueTTM'),
+        'current_ratio': _metric(financials, 'currentRatioAnnual'),
+        'roa': _metric(financials, 'roaTTM'),
+        'roi': _metric(financials, 'roiTTM'),
+        'dividend_growth_5y': _metric(financials, 'dividendGrowthRate5Y'),
+        'price_return_1m': _metric(financials, 'monthToDatePriceReturnDaily'),
+        'price_return_ytd': _metric(financials, 'yearToDatePriceReturnDaily'),
+        'price_return_1y': _metric(financials, '52WeekPriceReturnDaily'),
         # Finnhub sends newest-first; the most recent period is "the" trend.
         'recommendation': _to_recommendation(recommendations[0] if recommendations else None),
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
