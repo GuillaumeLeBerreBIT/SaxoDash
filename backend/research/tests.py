@@ -607,3 +607,95 @@ class FinnhubClientTest(TestCase):
         finnhub.get_earnings_history('AAPL')
 
         self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/earnings')
+
+
+SAMPLE_PROFILE = {
+    'name': 'Apple Inc',
+    'exchange': 'NASDAQ',
+    'finnhubIndustry': 'Technology',
+    'logo': 'https://example.com/aapl.png',
+    'marketCapitalization': 3_100_000.0,
+    'shareOutstanding': 15_200.0,
+}
+
+SAMPLE_FINANCIALS = {
+    'metric': {
+        'peNormalizedAnnual': 32.1,
+        'psTTM': 8.4,
+        'pbAnnual': 48.2,
+        'epsGrowth5Y': 12.5,
+        'dividendYieldIndicatedAnnual': 0.44,
+        'epsInclExtraItemsTTM': 6.13,
+        '52WeekHigh': 260.1,
+        '52WeekLow': 164.08,
+        'roeTTM': 147.2,
+        'netProfitMarginTTM': 26.3,
+        'grossMarginTTM': 46.2,
+    }
+}
+
+SAMPLE_RECOMMENDATION = [
+    {'buy': 20, 'hold': 8, 'period': '2026-09-01', 'sell': 1, 'strongBuy': 12, 'strongSell': 0},
+    {'buy': 18, 'hold': 9, 'period': '2026-08-01', 'sell': 2, 'strongBuy': 11, 'strongSell': 0},
+]
+
+SAMPLE_EARNINGS = [
+    {'period': '2026-06-30', 'actual': 1.65, 'estimate': 1.58, 'surprisePercent': 4.43},
+    {'period': '2026-03-31', 'actual': 1.52, 'estimate': 1.5, 'surprisePercent': 1.33},
+]
+
+
+class FundamentalsShapingTest(TestCase):
+    def test_shapes_the_combined_payload(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS)
+
+        self.assertEqual(result['name'], 'Apple Inc')
+        self.assertEqual(result['market_cap'], 3_100_000.0)
+        self.assertEqual(result['pe_ratio'], 32.1)
+        self.assertEqual(result['week52_high'], 260.1)
+        self.assertEqual(result['recommendation'], {
+            'strong_buy': 12, 'buy': 20, 'hold': 8, 'sell': 1, 'strong_sell': 0, 'period': '2026-09-01',
+        })
+
+    def test_eps_history_is_oldest_first(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS)
+
+        self.assertEqual([row['period'] for row in result['eps_history']], ['2026-03-31', '2026-06-30'])
+
+    def test_peg_ratio_is_computed_from_pe_and_five_year_eps_growth(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS)
+
+        self.assertAlmostEqual(result['peg_ratio'], 32.1 / 12.5, places=2)
+
+    def test_a_metric_the_free_tier_does_not_return_is_none_not_zero(self):
+        thin_financials = {'metric': {'peNormalizedAnnual': 32.1}}
+
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, thin_financials, [], [])
+
+        self.assertIsNone(result['dividend_yield'])
+        self.assertIsNone(result['peg_ratio'])
+        self.assertIsNone(result['recommendation'])
+        self.assertEqual(result['eps_history'], [])
+
+
+@override_settings(CACHES=LOCMEM)
+class FundamentalsCacheTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.finnhub.get_earnings_history')
+    @patch('research.finnhub.get_recommendation_trends')
+    @patch('research.finnhub.get_basic_financials')
+    @patch('research.finnhub.get_profile')
+    def test_a_second_call_for_the_same_symbol_does_not_refetch(
+        self, mock_profile, mock_financials, mock_recs, mock_earnings
+    ):
+        mock_profile.return_value = SAMPLE_PROFILE
+        mock_financials.return_value = SAMPLE_FINANCIALS
+        mock_recs.return_value = SAMPLE_RECOMMENDATION
+        mock_earnings.return_value = SAMPLE_EARNINGS
+
+        finnhub.fundamentals('AAPL')
+        finnhub.fundamentals('AAPL')
+
+        self.assertEqual(mock_profile.call_count, 1)
