@@ -118,12 +118,12 @@ describe('Research', () => {
     expect(screen.getByText('Your position')).toBeInTheDocument()
   })
 
-  it('marks valuation as coming soon', async () => {
+  it('shows the valuation tab, using the fundamentals already fetched for overview', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Valuation' }))
 
-    expect(screen.getByText(/Valuation — coming soon/)).toBeInTheDocument()
+    expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })
 
   it('shows a placeholder instead of a chart while the candles load', () => {

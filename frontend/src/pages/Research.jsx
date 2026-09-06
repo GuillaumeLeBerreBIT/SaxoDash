@@ -25,6 +25,7 @@ import ChartPanel from '../components/research/ChartPanel'
 import ComingSoon from '../components/research/ComingSoon'
 import OverviewTab from '../components/research/OverviewTab'
 import SymbolBar from '../components/research/SymbolBar'
+import ValuationTab from '../components/research/ValuationTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 
@@ -178,7 +179,7 @@ export default function Research() {
                 fundamentals={fundamentals}
               />
             ) : null}
-            {tab === 'valuation' ? <ComingSoon feature="Valuation" /> : null}
+            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
             {tab === 'market' ? <ComingSoon feature="Market context" /> : null}
           </div>
 
