@@ -14,6 +14,7 @@ import {
   removeWatchlistItem,
   createWatchlist,
   searchInstruments,
+  getFundamentals,
 } from './client'
 
 function jsonResponse(body, ok = true, status = ok ? 200 : 400) {
@@ -353,5 +354,17 @@ describe('research endpoints', () => {
     expect(options.method).toBe('POST')
     expect(options.headers['Content-Type']).toBe('application/json')
     expect(JSON.parse(options.body)).toEqual({ name: 'Tech' })
+  })
+
+  it('asks for fundamentals by symbol', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ available: true, name: 'Apple Inc' }))
+
+    const result = await getFundamentals('AAPL')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/fundamentals/AAPL/'),
+      expect.anything()
+    )
+    expect(result.name).toBe('Apple Inc')
   })
 })

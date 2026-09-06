@@ -168,6 +168,8 @@ export const searchInstruments = (query, assetTypes = 'Stock,Etf') =>
 export const getInstrumentDetails = ({ uic, assetType }) =>
   apiFetch(`/api/research/instruments/${uic}/${assetType}/`)
 
+export const getFundamentals = (symbol) => apiFetch(`/api/research/fundamentals/${symbol}/`)
+
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
 export const updateWatchlist = (id, patch) =>
