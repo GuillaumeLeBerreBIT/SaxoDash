@@ -51,6 +51,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
     removeItem: { mutate: vi.fn() },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
+  queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
 }
 
 describe('Research', () => {

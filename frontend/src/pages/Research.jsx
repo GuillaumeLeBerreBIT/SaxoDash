@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import {
   useChart,
+  useFundamentals,
   useInstrumentDetails,
   useInstrumentSearch,
   usePositions,
@@ -83,6 +84,7 @@ export default function Research() {
     uic: instrument?.uic,
     assetType: instrument?.assetType,
   })
+  const fundamentals = useFundamentals(symbol)
   const liveQuotes = useQuotes(instrument?.uic ? [instrument.uic] : [], instrument?.assetType)
 
   const { data: watchlists = [] } = useWatchlists()
@@ -173,6 +175,7 @@ export default function Research() {
                 detailsLoading={details.isLoading}
                 bars={bars}
                 range={controls.range}
+                fundamentals={fundamentals}
               />
             ) : null}
             {tab === 'valuation' ? <ComingSoon feature="Valuation" /> : null}
