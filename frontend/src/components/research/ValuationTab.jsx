@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { fmtNum, fmtPct } from '../../lib/format'
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { Card, CardHeader } from '../ui'
+import FundamentalsGate from './FundamentalsGate'
 
 function Ratio({ label, value }) {
   return (
@@ -73,43 +74,31 @@ function EpsHistoryChart({ epsHistory }) {
 }
 
 export default function ValuationTab({ fundamentals }) {
-  const { data, isLoading } = fundamentals
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader title="Valuation" subtitle="From Finnhub" />
-        <div className="mt-3 text-[12px] text-zinc-500">Loading…</div>
-      </Card>
-    )
-  }
-
-  if (!data?.available) {
-    return (
-      <Card>
-        <CardHeader title="Valuation" subtitle="From Finnhub" />
-        <p className="mt-3 text-[12px] text-zinc-500">{data?.reason || 'Valuation data is unavailable for this symbol.'}</p>
-      </Card>
-    )
-  }
-
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader title="Ratios" subtitle="Computed in-app from Finnhub's raw fundamentals" />
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
-          <Ratio label="P/S" value={fmtNum(data.ps_ratio, 2)} />
-          <Ratio label="P/B" value={fmtNum(data.pb_ratio, 2)} />
-          <Ratio label="PEG" value={fmtNum(data.peg_ratio, 2)} />
-          <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
-          <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
-          <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
-        </div>
-      </Card>
+    <FundamentalsGate
+      fundamentals={fundamentals}
+      title="Valuation"
+      fallback="Valuation data is unavailable for this symbol."
+    >
+      {(data) => (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader title="Ratios" subtitle="Computed in-app from Finnhub's raw fundamentals" />
+            <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
+              <Ratio label="P/S" value={fmtNum(data.ps_ratio, 2)} />
+              <Ratio label="P/B" value={fmtNum(data.pb_ratio, 2)} />
+              <Ratio label="PEG" value={fmtNum(data.peg_ratio, 2)} />
+              <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
+              <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
+              <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
+            </div>
+          </Card>
 
-      <RecommendationBar recommendation={data.recommendation} />
-      <EpsHistoryChart epsHistory={data.eps_history} />
-    </div>
+          <RecommendationBar recommendation={data.recommendation} />
+          <EpsHistoryChart epsHistory={data.eps_history} />
+        </div>
+      )}
+    </FundamentalsGate>
   )
 }

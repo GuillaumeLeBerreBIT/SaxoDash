@@ -2,6 +2,7 @@ import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/
 import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader } from '../ui'
+import FundamentalsGate from './FundamentalsGate'
 
 function Metric({ label, value, tone = 'text-zinc-100', hint }) {
   return (
@@ -101,36 +102,24 @@ function RangeStatsCard({ bars, range }) {
 }
 
 function FundamentalsCard({ fundamentals }) {
-  const { data, isLoading } = fundamentals
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader title="Company fundamentals" subtitle="From Finnhub" />
-        <div className="mt-3 text-[12px] text-zinc-500">Loading…</div>
-      </Card>
-    )
-  }
-
-  if (!data?.available) {
-    return (
-      <Card>
-        <CardHeader title="Company fundamentals" subtitle="From Finnhub" />
-        <p className="mt-3 text-[12px] text-zinc-500">{data?.reason || 'Fundamentals are unavailable for this symbol.'}</p>
-      </Card>
-    )
-  }
-
   return (
-    <Card>
-      <CardHeader title="Company fundamentals" subtitle={data.industry || 'From Finnhub'} />
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Metric label="P/E ratio" value={fmtNum(data.pe_ratio, 2)} />
-        <Metric label="Market cap" value={fmtCompact(data.market_cap)} />
-        <Metric label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
-        <Metric label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
-      </div>
-    </Card>
+    <FundamentalsGate
+      fundamentals={fundamentals}
+      title="Company fundamentals"
+      fallback="Fundamentals are unavailable for this symbol."
+    >
+      {(data) => (
+        <Card>
+          <CardHeader title="Company fundamentals" subtitle={data.industry || 'From Finnhub'} />
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Metric label="P/E ratio" value={fmtNum(data.pe_ratio, 2)} />
+            <Metric label="Market cap" value={fmtCompact(data.market_cap)} />
+            <Metric label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
+            <Metric label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
+          </div>
+        </Card>
+      )}
+    </FundamentalsGate>
   )
 }
 
