@@ -51,6 +51,22 @@ function RecommendationBar({ recommendation }) {
   )
 }
 
+function PricePerformance({ data }) {
+  const hasAny = [data.price_return_1m, data.price_return_ytd, data.price_return_1y].some((v) => v != null)
+  if (!hasAny) return null
+
+  return (
+    <Card>
+      <CardHeader title="Price performance" subtitle="Total return, from Finnhub" />
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        <Ratio label="1 month" value={fmtPct(data.price_return_1m)} />
+        <Ratio label="Year to date" value={fmtPct(data.price_return_ytd)} />
+        <Ratio label="1 year" value={fmtPct(data.price_return_1y)} />
+      </div>
+    </Card>
+  )
+}
+
 function EpsHistoryChart({ epsHistory }) {
   if (!epsHistory?.length) return null
 
@@ -92,9 +108,18 @@ export default function ValuationTab({ fundamentals }) {
               <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
               <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
               <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
+              <Ratio label="Beta" value={fmtNum(data.beta, 2)} />
+              <Ratio label="Forward P/E" value={fmtNum(data.forward_pe, 2)} />
+              <Ratio label="EV/EBITDA" value={fmtNum(data.ev_ebitda, 2)} />
+              <Ratio label="EV/Revenue" value={fmtNum(data.ev_revenue, 2)} />
+              <Ratio label="Current ratio" value={fmtNum(data.current_ratio, 2)} />
+              <Ratio label="ROA" value={fmtPct(data.roa, { sign: false })} />
+              <Ratio label="ROI" value={fmtPct(data.roi, { sign: false })} />
+              <Ratio label="Dividend growth (5Y)" value={fmtPct(data.dividend_growth_5y, { sign: false })} />
             </div>
           </Card>
 
+          <PricePerformance data={data} />
           <RecommendationBar recommendation={data.recommendation} />
           <EpsHistoryChart epsHistory={data.eps_history} />
         </div>
