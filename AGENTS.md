@@ -210,6 +210,19 @@ one fact, and nothing tied the two tables together, so a tick where one task
 failed and the other succeeded could leave them silently disagreeing about
 what Saxo actually reported.
 
+**Company fundamentals come from Finnhub, fetched on demand.** `research/finnhub.py`
+mirrors `market.py`'s shape (call → shape → cache) but reads a static
+`FINNHUB_API_KEY` instead of a per-user OAuth credential — one combined
+endpoint, `GET /api/research/fundamentals/<symbol>/`, one 24h cache entry per
+symbol, no background sync. It always answers 200 with an `available`
+boolean rather than a status code: 409 already means "not connected to
+Saxo" and reusing it here would blur that. A metric the free tier doesn't
+return is omitted, never guessed or defaulted to zero. Symbol resolution
+reuses `bare_symbol()` and only works for US-listed tickers - an
+international listing needing an exchange suffix is a known gap. Market
+context (Buffett indicator, macro series) is still deferred: it needs an
+unrelated data source (FRED) and was deliberately kept out of this pass.
+
 ## Open decision (not yet made)
 
 The fundamentals provider behind the ComingSoon panels — FMP, Finnhub,
