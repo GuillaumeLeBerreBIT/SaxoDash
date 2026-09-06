@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from saxo import client
 from saxo.credentials import SaxoNotConnected
 
-from . import market
+from . import finnhub, market
 from .models import Watchlist, WatchlistItem
 from .serializers import (
     WatchlistItemCreateSerializer,
@@ -136,3 +136,11 @@ class QuotesView(APIView):
 
         asset_type = _asset_type(request.query_params)
         return _market_response(lambda: market.quotes(uics, asset_type))
+
+
+class FundamentalsView(APIView):
+    def get(self, request, symbol):
+        try:
+            return Response({'available': True, **finnhub.fundamentals(symbol.upper())})
+        except (finnhub.FinnhubNotConfigured, finnhub.FinnhubAPIError) as exc:
+            return Response({'available': False, 'reason': str(exc)})

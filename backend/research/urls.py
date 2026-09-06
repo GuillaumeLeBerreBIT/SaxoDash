@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     ChartView,
+    FundamentalsView,
     InstrumentDetailsView,
     InstrumentSearchView,
     QuotesView,
@@ -14,6 +15,7 @@ from .views import (
 urlpatterns = [
     path('chart/', ChartView.as_view(), name='research-chart'),
     path('quotes/', QuotesView.as_view(), name='research-quotes'),
+    path('fundamentals/<str:symbol>/', FundamentalsView.as_view(), name='research-fundamentals'),
     path('instruments/', InstrumentSearchView.as_view(), name='research-instruments'),
     path(
         'instruments/<int:uic>/<str:asset_type>/',

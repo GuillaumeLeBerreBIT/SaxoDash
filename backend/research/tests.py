@@ -699,3 +699,52 @@ class FundamentalsCacheTest(TestCase):
         finnhub.fundamentals('AAPL')
 
         self.assertEqual(mock_profile.call_count, 1)
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class FundamentalsViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        response = self.client.get('/api/research/fundamentals/AAPL/')
+        self.assertEqual(response.status_code, 401)
+
+    @patch('research.finnhub.get_earnings_history')
+    @patch('research.finnhub.get_recommendation_trends')
+    @patch('research.finnhub.get_basic_financials')
+    @patch('research.finnhub.get_profile')
+    def test_returns_available_true_with_shaped_data(
+        self, mock_profile, mock_financials, mock_recs, mock_earnings
+    ):
+        mock_profile.return_value = SAMPLE_PROFILE
+        mock_financials.return_value = SAMPLE_FINANCIALS
+        mock_recs.return_value = SAMPLE_RECOMMENDATION
+        mock_earnings.return_value = SAMPLE_EARNINGS
+
+        response = self.client.get('/api/research/fundamentals/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['name'], 'Apple Inc')
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/fundamentals/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertIn('reason', response.data)
+
+    @patch('research.finnhub.get_profile')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_profile):
+        mock_profile.side_effect = finnhub.FinnhubAPIError('boom')
+
+        response = self.client.get('/api/research/fundamentals/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
