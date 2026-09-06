@@ -217,9 +217,10 @@ endpoint, `GET /api/research/fundamentals/<symbol>/`, one 24h cache entry per
 symbol, no background sync. It always answers 200 with an `available`
 boolean rather than a status code: 409 already means "not connected to
 Saxo" and reusing it here would blur that. A metric the free tier doesn't
-return is omitted, never guessed or defaulted to zero. Symbol resolution
-reuses `bare_symbol()` and only works for US-listed tickers - an
-international listing needing an exchange suffix is a known gap. Market
+return is omitted, never guessed or defaulted to zero. `FundamentalsView`
+just uppercases whatever ticker the URL hands it - that only works because
+callers already pass a bare, US-listed symbol; an international listing
+needing an exchange suffix is a known gap. Market
 context (Buffett indicator, macro series) is still deferred: it needs an
 unrelated data source (FRED) and was deliberately kept out of this pass.
 

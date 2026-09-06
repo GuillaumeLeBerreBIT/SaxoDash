@@ -678,6 +678,37 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['eps_history'], [])
 
 
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class FundamentalsNoDataTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.finnhub.get_earnings_history')
+    @patch('research.finnhub.get_recommendation_trends')
+    @patch('research.finnhub.get_basic_financials')
+    @patch('research.finnhub.get_profile')
+    def test_a_profile_with_no_name_raises_finnhub_no_data(
+        self, mock_profile, mock_financials, mock_recs, mock_earnings
+    ):
+        mock_profile.return_value = {}
+
+        with self.assertRaises(finnhub.FinnhubNoData):
+            finnhub.fundamentals('ZZZZZZ')
+
+        mock_financials.assert_not_called()
+        mock_recs.assert_not_called()
+        mock_earnings.assert_not_called()
+
+    @patch('research.finnhub.get_profile')
+    def test_a_no_data_result_is_not_cached(self, mock_profile):
+        mock_profile.return_value = {}
+
+        with self.assertRaises(finnhub.FinnhubNoData):
+            finnhub.fundamentals('ZZZZZZ')
+
+        self.assertIsNone(cache.get(finnhub._cache_key('ZZZZZZ')))
+
+
 @override_settings(CACHES=LOCMEM)
 class FundamentalsCacheTest(TestCase):
     def setUp(self):
@@ -764,8 +795,23 @@ class FundamentalsViewTest(APITestCase):
         mock_recs.return_value = {'error': 'unexpected'}
         mock_earnings.return_value = SAMPLE_EARNINGS
 
-        response = self.client.get('/api/research/fundamentals/AAPL/')
+        with self.assertLogs('research.views', level='ERROR'):
+            response = self.client.get('/api/research/fundamentals/AAPL/')
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])
         self.assertEqual(response.data['reason'], 'Fundamentals data is unavailable.')
+
+    @patch('research.finnhub.get_profile')
+    def test_returns_available_false_for_a_symbol_finnhub_does_not_recognize(self, mock_profile):
+        mock_profile.return_value = {}
+
+        response = self.client.get('/api/research/fundamentals/ZZZZZZ/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertIn('reason', response.data)
+
+    def test_rejects_a_malformed_symbol(self):
+        response = self.client.get('/api/research/fundamentals/AAPL%20US/')
+        self.assertEqual(response.status_code, 400)

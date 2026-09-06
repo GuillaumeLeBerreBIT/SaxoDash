@@ -20,6 +20,13 @@ class FinnhubAPIError(Exception):
     """Raised when a Finnhub request fails."""
 
 
+class FinnhubNoData(Exception):
+    """Raised when Finnhub returns 200 but has no profile for the symbol."""
+
+    def __init__(self, symbol):
+        super().__init__(f'Finnhub has no data for symbol {symbol!r}.')
+
+
 def _get(path, **params):
     if not settings.FINNHUB_API_KEY:
         raise FinnhubNotConfigured('FINNHUB_API_KEY is not set.')
@@ -63,7 +70,9 @@ FUNDAMENTALS_TTL = 86400
 
 
 def _cache_key(symbol):
-    return f'research:fundamentals:{symbol.upper()}'
+    # Normalization (uppercasing) is the caller's job - FundamentalsView does
+    # it once, on the way in.
+    return f'research:fundamentals:{symbol}'
 
 
 def _metric(financials, key):
@@ -129,8 +138,15 @@ def to_fundamentals(profile, financials, recommendations, earnings):
 
 def fundamentals(symbol):
     def produce():
+        profile = get_profile(symbol)
+        if not profile.get('name'):
+            # Finnhub answers 200 with an empty/near-empty profile for a
+            # ticker it doesn't recognize - raising here (before the other
+            # three calls, and before get_or_set stores anything) keeps a
+            # wrong "unknown symbol" answer from being pinned for 24h.
+            raise FinnhubNoData(symbol)
         return to_fundamentals(
-            get_profile(symbol),
+            profile,
             get_basic_financials(symbol),
             get_recommendation_trends(symbol),
             get_earnings_history(symbol),

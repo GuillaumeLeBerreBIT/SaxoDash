@@ -1,4 +1,5 @@
 import logging
+import re
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -95,6 +96,15 @@ def _asset_type(params):
     return asset_type
 
 
+SYMBOL_PATTERN = re.compile(r'^[A-Za-z0-9.\-]{1,12}$')
+
+
+def _symbol(raw):
+    if not SYMBOL_PATTERN.match(raw):
+        raise ValidationError({'symbol': 'Not a valid ticker symbol.'})
+    return raw.upper()
+
+
 class ChartView(APIView):
     def get(self, request):
         horizon = _int_param(request.query_params, 'horizon', 1440)
@@ -140,10 +150,13 @@ class QuotesView(APIView):
 
 class FundamentalsView(APIView):
     def get(self, request, symbol):
+        symbol = _symbol(symbol)
         try:
-            return Response({'available': True, **finnhub.fundamentals(symbol.upper())})
-        except (finnhub.FinnhubNotConfigured, finnhub.FinnhubAPIError) as exc:
+            return Response({'available': True, **finnhub.fundamentals(symbol)})
+        except (finnhub.FinnhubNotConfigured, finnhub.FinnhubAPIError, finnhub.FinnhubNoData) as exc:
             return Response({'available': False, 'reason': str(exc)})
-        except Exception as exc:
-            logger.warning('Fundamentals request failed unexpectedly', exc_info=True)
+        except Exception:
+            # Only a genuine bug reaches here now - "not configured" and "no
+            # data for this symbol" are both handled above.
+            logger.error('Fundamentals request failed unexpectedly', exc_info=True)
             return Response({'available': False, 'reason': 'Fundamentals data is unavailable.'})
