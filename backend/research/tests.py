@@ -748,3 +748,24 @@ class FundamentalsViewTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])
+
+    @patch('research.finnhub.get_earnings_history')
+    @patch('research.finnhub.get_recommendation_trends')
+    @patch('research.finnhub.get_basic_financials')
+    @patch('research.finnhub.get_profile')
+    def test_returns_available_false_on_malformed_finnhub_response(
+        self, mock_profile, mock_financials, mock_recs, mock_earnings
+    ):
+        """Test that a malformed Finnhub payload (unexpected shape) still returns 200."""
+        mock_profile.return_value = SAMPLE_PROFILE
+        mock_financials.return_value = SAMPLE_FINANCIALS
+        # Return a dict instead of a list - this will cause TypeError when
+        # to_fundamentals tries to do recommendations[0]
+        mock_recs.return_value = {'error': 'unexpected'}
+        mock_earnings.return_value = SAMPLE_EARNINGS
+
+        response = self.client.get('/api/research/fundamentals/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertEqual(response.data['reason'], 'Fundamentals data is unavailable.')

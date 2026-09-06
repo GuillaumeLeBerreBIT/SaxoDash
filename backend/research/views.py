@@ -144,3 +144,6 @@ class FundamentalsView(APIView):
             return Response({'available': True, **finnhub.fundamentals(symbol.upper())})
         except (finnhub.FinnhubNotConfigured, finnhub.FinnhubAPIError) as exc:
             return Response({'available': False, 'reason': str(exc)})
+        except Exception as exc:
+            logger.warning('Fundamentals request failed unexpectedly', exc_info=True)
+            return Response({'available': False, 'reason': 'Fundamentals data is unavailable.'})
