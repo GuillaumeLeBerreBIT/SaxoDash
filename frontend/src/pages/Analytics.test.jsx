@@ -147,6 +147,19 @@ describe('Analytics', () => {
     expect(screen.getByText('Saxo is not connected.')).toBeInTheDocument()
   })
 
+  it('explains blank benchmark columns on the Performance tab', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: summary, isLoading: false, error: null })
+    queries.usePerformance.mockReturnValue({
+      data: { ...performance, benchmark: { key: 'world', name: 'World Index', reason: 'Saxo is not connected.' } },
+      isLoading: false, error: null,
+    })
+    queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.getByText(/World Index columns are blank — Saxo is not connected\./)).toBeInTheDocument()
+  })
+
   it('refetches with the newly selected benchmark when a pill is clicked', async () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)

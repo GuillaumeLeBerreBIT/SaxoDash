@@ -41,6 +41,11 @@ function PerformanceTab({ data, positions }) {
 
   return (
     <div className="space-y-5">
+      {data.benchmark.reason && (
+        <p className="text-[11.5px] text-zinc-500">
+          {data.benchmark.name} columns are blank — {data.benchmark.reason}
+        </p>
+      )}
       <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.25fr' }}>
         <ReturnsTable periods={data.periods} benchmarkName={data.benchmark.name} />
         <CalendarYears years={data.calendar_years} benchmarkName={data.benchmark.name} />
