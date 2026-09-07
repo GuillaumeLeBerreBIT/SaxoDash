@@ -12,8 +12,11 @@ rate limiting, which Saxo applies per app and not per user.
 from django.core.cache import cache
 
 from saxo import client
-from saxo.credentials import active_credential
+from saxo.client import SaxoAPIError
+from saxo.credentials import SaxoNotConnected, active_credential
 from saxo.mapping import bare_symbol
+
+from .providers import ProviderError, ProviderNotConnected
 
 # The rail refetches every 30s, so that, not this, is the effective quote age.
 QUOTES_TTL = 20
@@ -31,6 +34,17 @@ def _cache_key(name, **params):
 
 def _access_token():
     return active_credential().access_token
+
+
+def _cached(key, produce, ttl):
+    """Run a cached Saxo call, translating Saxo failures to ProviderError so the
+    view layer only ever catches one exception family."""
+    try:
+        return cache.get_or_set(key, produce, ttl)
+    except SaxoNotConnected as exc:
+        raise ProviderNotConnected(str(exc)) from exc
+    except SaxoAPIError as exc:
+        raise ProviderError('Saxo could not serve this request.') from exc
 
 
 def to_candle(sample):
@@ -110,7 +124,7 @@ def chart(uic, asset_type, horizon, count):
         return sorted(candles, key=lambda c: c['date'])
 
     key = _cache_key('chart', uic=uic, asset_type=asset_type, horizon=horizon, count=count)
-    return cache.get_or_set(key, produce, CHART_TTL)
+    return _cached(key, produce, CHART_TTL)
 
 
 def search(keywords, asset_types='Stock,Etf'):
@@ -119,7 +133,7 @@ def search(keywords, asset_types='Stock,Etf'):
         return [to_instrument(r) for r in rows]
 
     key = _cache_key('search', q=keywords.lower(), asset_types=asset_types)
-    return cache.get_or_set(key, produce, SEARCH_TTL)
+    return _cached(key, produce, SEARCH_TTL)
 
 
 def details(uic, asset_type):
@@ -127,7 +141,7 @@ def details(uic, asset_type):
         return to_details(client.get_instrument_details(_access_token(), uic, asset_type))
 
     key = _cache_key('details', uic=uic, asset_type=asset_type)
-    return cache.get_or_set(key, produce, DETAILS_TTL)
+    return _cached(key, produce, DETAILS_TTL)
 
 
 def quotes(uics, asset_type):
@@ -144,4 +158,4 @@ def quotes(uics, asset_type):
         return [to_quote(r) for r in rows]
 
     key = _cache_key('quotes', uics=','.join(str(u) for u in sorted(uics)), asset_type=asset_type)
-    return cache.get_or_set(key, produce, QUOTES_TTL)
+    return _cached(key, produce, QUOTES_TTL)

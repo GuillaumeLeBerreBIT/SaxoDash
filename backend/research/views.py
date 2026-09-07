@@ -1,8 +1,6 @@
-import logging
 import re
 
 from django.shortcuts import get_object_or_404
-from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (
     CreateAPIView,
@@ -14,16 +12,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from saxo import client
-from saxo.credentials import SaxoNotConnected
 
 from . import finnhub, market
 from .models import Watchlist, WatchlistItem
+from .providers import provider_response
 from .serializers import (
     WatchlistItemCreateSerializer,
     WatchlistSerializer,
 )
-
-logger = logging.getLogger(__name__)
 
 # Saxo's Horizon is in minutes. Daily and coarser only: `market.to_candle`
 # identifies a bar by its date, so an intraday horizon would collapse a whole
@@ -60,25 +56,6 @@ class WatchlistItemDeleteView(DestroyAPIView):
         )
 
 
-def _market_response(produce):
-    """Run one market.py call and map its failures onto HTTP.
-
-    409 rather than 401 for a missing credential: the user is authenticated,
-    it is the app's Saxo connection that is absent, and the frontend needs to
-    tell those apart to show the reconnect prompt.
-    """
-    try:
-        return Response(produce())
-    except SaxoNotConnected as exc:
-        return Response({'detail': str(exc)}, status=status.HTTP_409_CONFLICT)
-    except client.SaxoAPIError:
-        logger.warning('Saxo market-data request failed', exc_info=True)
-        return Response(
-            {'detail': 'Saxo could not serve this request.'},
-            status=status.HTTP_502_BAD_GATEWAY,
-        )
-
-
 def _int_param(params, name, default=None):
     raw = params.get(name, default)
     if raw is None or raw == '':
@@ -106,6 +83,8 @@ def _symbol(raw):
 
 
 class ChartView(APIView):
+    throttle_scope = 'research.market'
+
     def get(self, request):
         horizon = _int_param(request.query_params, 'horizon', 1440)
         if horizon not in ALLOWED_HORIZONS:
@@ -115,25 +94,31 @@ class ChartView(APIView):
         asset_type = _asset_type(request.query_params)
         count = _int_param(request.query_params, 'count', client.CHART_MAX_COUNT)
 
-        return _market_response(lambda: market.chart(uic, asset_type, horizon, count))
+        return provider_response(lambda: market.chart(uic, asset_type, horizon, count))
 
 
 class InstrumentSearchView(APIView):
+    throttle_scope = 'research.search'
+
     def get(self, request):
         keywords = request.query_params.get('q', '').strip()
         if len(keywords) < 2:
             return Response([])
 
         asset_types = request.query_params.get('asset_types', 'Stock,Etf')
-        return _market_response(lambda: market.search(keywords, asset_types))
+        return provider_response(lambda: market.search(keywords, asset_types))
 
 
 class InstrumentDetailsView(APIView):
+    throttle_scope = 'research.market'
+
     def get(self, request, uic, asset_type):
-        return _market_response(lambda: market.details(int(uic), asset_type))
+        return provider_response(lambda: market.details(int(uic), asset_type))
 
 
 class QuotesView(APIView):
+    throttle_scope = 'research.market'
+
     def get(self, request):
         raw = request.query_params.get('uics', '')
         try:
@@ -145,18 +130,12 @@ class QuotesView(APIView):
             return Response([])
 
         asset_type = _asset_type(request.query_params)
-        return _market_response(lambda: market.quotes(uics, asset_type))
+        return provider_response(lambda: market.quotes(uics, asset_type))
 
 
 class FundamentalsView(APIView):
+    throttle_scope = 'research.fundamentals'
+
     def get(self, request, symbol):
         symbol = _symbol(symbol)
-        try:
-            return Response({'available': True, **finnhub.fundamentals(symbol)})
-        except (finnhub.FinnhubNotConfigured, finnhub.FinnhubAPIError, finnhub.FinnhubNoData) as exc:
-            return Response({'available': False, 'reason': str(exc)})
-        except Exception:
-            # Only a genuine bug reaches here now - "not configured" and "no
-            # data for this symbol" are both handled above.
-            logger.error('Fundamentals request failed unexpectedly', exc_info=True)
-            return Response({'available': False, 'reason': 'Fundamentals data is unavailable.'})
+        return provider_response(lambda: finnhub.fundamentals(symbol))

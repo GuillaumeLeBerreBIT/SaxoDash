@@ -91,6 +91,15 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'PAGE_SIZE_QUERY_PARAM': 'page_size',
+    # The market-data proxies fan out to Saxo (per-app rate limit, shared with
+    # sync) and Finnhub (60/min free tier, 4 calls per fundamentals miss). The
+    # cache TTLs only cover repeated identical params; these cover the rest.
+    'DEFAULT_THROTTLE_CLASSES': ['rest_framework.throttling.ScopedRateThrottle'],
+    'DEFAULT_THROTTLE_RATES': {
+        'research.search': '20/min',
+        'research.market': '60/min',
+        'research.fundamentals': '30/min',
+    },
 }
 
 SIMPLE_JWT = {

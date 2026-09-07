@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from cryptography.fernet import Fernet
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.db import transaction
@@ -10,6 +11,7 @@ from django.db.utils import IntegrityError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from portfolio.models import Position
@@ -452,7 +454,7 @@ class MarketDataViewTest(APITestCase):
         self._connect_saxo()
         mock_get_chart.side_effect = client.SaxoAPIError('boom')
 
-        with self.assertLogs('research.views', level='WARNING'):
+        with self.assertLogs('research.providers', level='WARNING'):
             response = self.client.get('/api/research/chart/?uic=211&asset_type=Stock')
 
         self.assertEqual(response.status_code, 502)
@@ -463,7 +465,7 @@ class MarketDataViewTest(APITestCase):
         mock_get_chart.side_effect = client.SaxoAPIError('boom')
 
         url = '/api/research/chart/?uic=211&asset_type=Stock'
-        with self.assertLogs('research.views', level='WARNING'):
+        with self.assertLogs('research.providers', level='WARNING'):
             self.client.get(url)
             self.client.get(url)
 
@@ -822,7 +824,7 @@ class FundamentalsViewTest(APITestCase):
         mock_recs.return_value = {'error': 'unexpected'}
         mock_earnings.return_value = SAMPLE_EARNINGS
 
-        with self.assertLogs('research.views', level='ERROR'):
+        with self.assertLogs('research.providers', level='ERROR'):
             response = self.client.get('/api/research/fundamentals/AAPL/')
 
         self.assertEqual(response.status_code, 200)
@@ -842,3 +844,53 @@ class FundamentalsViewTest(APITestCase):
     def test_rejects_a_malformed_symbol(self):
         response = self.client.get('/api/research/fundamentals/AAPL%20US/')
         self.assertEqual(response.status_code, 400)
+
+
+# ScopedRateThrottle caches THROTTLE_RATES on the class at import, so
+# override_settings can't reach it - patch the dict directly.
+@patch.dict(
+    ScopedRateThrottle.THROTTLE_RATES,
+    {'research.search': '3/min', 'research.market': '3/min'},
+)
+@override_settings(CACHES=LOCMEM)
+class ThrottleTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_search_is_throttled_past_its_scope_rate(self):
+        # q=n stays under the 2-char floor, so it answers 200 without touching
+        # Saxo - but the throttle still counts every request.
+        codes = [
+            self.client.get('/api/research/instruments/?q=n').status_code
+            for _ in range(4)
+        ]
+        self.assertEqual(codes[:3], [200, 200, 200])
+        self.assertEqual(codes[3], 429)
+
+    def test_a_different_scope_keeps_its_own_budget(self):
+        for _ in range(3):
+            self.client.get('/api/research/instruments/?q=n')
+        # search is now exhausted; a market-scope call has its own budget.
+        response = self.client.get('/api/research/chart/?uic=211&asset_type=Stock')
+        self.assertNotEqual(response.status_code, 429)
+
+
+class ThrottleScopeConfigTest(TestCase):
+    """A typo'd throttle_scope silently disables the limit - ScopedRateThrottle
+    treats an unknown scope as unlimited and every other test still passes."""
+
+    def test_every_proxy_view_scope_has_a_configured_rate(self):
+        from research import views as research_views
+
+        rates = settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']
+        for view in (
+            research_views.ChartView,
+            research_views.InstrumentSearchView,
+            research_views.InstrumentDetailsView,
+            research_views.QuotesView,
+            research_views.FundamentalsView,
+        ):
+            self.assertIn(view.throttle_scope, rates, view.__name__)
