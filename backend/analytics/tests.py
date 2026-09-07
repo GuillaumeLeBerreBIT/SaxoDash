@@ -9,8 +9,9 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import NetWorthSnapshot
+from research.providers import ProviderNotConnected
 
-from . import benchmarks, metrics
+from . import benchmarks, metrics, report
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -359,6 +360,30 @@ class BenchmarkEurClosesTest(TestCase):
 
         self.assertEqual(len(closes), 1)
 
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_provider_failure_becomes_benchmark_unavailable(self, mock_chart):
+        mock_chart.side_effect = ProviderNotConnected('Saxo is not connected.')
+        with self.assertRaises(benchmarks.BenchmarkUnavailable):
+            benchmarks.eur_closes('world')
+
+    @patch('analytics.benchmarks.market.chart')
+    def test_an_empty_chart_becomes_benchmark_unavailable(self, mock_chart):
+        mock_chart.return_value = []
+        with self.assertRaises(benchmarks.BenchmarkUnavailable):
+            benchmarks.eur_closes('world')
+
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_zero_fx_rate_is_skipped_not_divided_by(self, mock_chart):
+        def side_effect(uic, asset_type, horizon, count):
+            if uic == benchmarks.EURUSD_UIC:
+                return [{'date': '2026-01-01', 'close': 0.0}]  # bad rate
+            return [{'date': '2026-01-01', 'close': 110.0}]
+        mock_chart.side_effect = side_effect
+
+        # No ZeroDivisionError; the one bad day drops out, leaving nothing.
+        with self.assertRaises(benchmarks.BenchmarkUnavailable):
+            benchmarks.eur_closes('sp500')
+
 
 @override_settings(CACHES=LOCMEM)
 class PerformanceViewTest(APITestCase):
@@ -481,9 +506,8 @@ class RiskMetricsViewTest(APITestCase):
 
     @patch('analytics.benchmarks.eur_closes')
     def test_benchmark_unusable_when_saxo_not_connected(self, mock_eur_closes):
-        from saxo.credentials import SaxoNotConnected
         self._seed_snapshots()
-        mock_eur_closes.side_effect = SaxoNotConnected('Saxo is not connected.')
+        mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('Saxo is not connected.')
 
         response = self.client.get('/api/analytics/risk/')
 
@@ -498,3 +522,59 @@ class RiskMetricsViewTest(APITestCase):
         self.assertFalse(response.data['has_data'])
         self.assertFalse(response.data['benchmark']['has_data'])
         mock_eur_closes.assert_not_called()
+
+    @patch('analytics.benchmarks.market.chart')
+    def test_a_zero_fx_rate_is_a_reason_not_a_500(self, mock_chart):
+        # The old code did close / fx_rate with no guard - a zero rate 500'd
+        # the whole risk page instead of just dropping the benchmark.
+        self._seed_snapshots()
+
+        def side_effect(uic, asset_type, horizon, count):
+            if uic == benchmarks.EURUSD_UIC:
+                return [{'date': f'2026-01-0{d}', 'close': 0.0} for d in range(1, 6)]
+            return [{'date': f'2026-01-0{d}', 'close': 100.0 + d} for d in range(1, 6)]
+        mock_chart.side_effect = side_effect
+
+        response = self.client.get('/api/analytics/risk/?benchmark=sp500')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['benchmark']['beta'])
+        self.assertIsNotNone(response.data['benchmark']['reason'])
+
+
+class RiskReportTest(TestCase):
+    def _dv(self):
+        return [(date(2026, 1, d), 100 + d) for d in range(1, 12)]
+
+    @patch('analytics.report.benchmarks.eur_closes')
+    def test_an_unavailable_benchmark_is_a_reason_not_an_exception(self, mock_eur_closes):
+        mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('not connected')
+        out = report.risk_report(self._dv(), 'sp500')
+        self.assertTrue(out['has_data'])
+        self.assertEqual(out['benchmark']['reason'], 'not connected')
+        self.assertIsNone(out['benchmark']['beta'])
+
+    @patch('analytics.report.benchmarks.eur_closes')
+    def test_no_portfolio_history_does_not_fetch_a_benchmark(self, mock_eur_closes):
+        out = report.risk_report([], 'world')
+        self.assertFalse(out['has_data'])
+        self.assertIsNone(out['benchmark']['reason'])
+        mock_eur_closes.assert_not_called()
+
+    def test_an_unknown_key_resolves_to_world(self):
+        self.assertEqual(report.resolve_benchmark_key('bogus'), 'world')
+        self.assertEqual(report.resolve_benchmark_key('sp500'), 'sp500')
+
+
+class PerformanceReportTest(TestCase):
+    def _dv(self):
+        return [(date(2026, 1, 1) + timedelta(days=i), 100 + i) for i in range(35)]
+
+    @patch('analytics.report.benchmarks.eur_closes')
+    def test_benchmark_is_best_effort(self, mock_eur_closes):
+        mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('x')
+        out = report.performance_report(self._dv(), 'world')
+        self.assertIn('periods', out)
+        self.assertEqual(out['benchmark']['key'], 'world')
+        one_month = next(r for r in out['periods'] if r['label'] == '1 month')
+        self.assertIsNone(one_month['benchmark_pct'])
