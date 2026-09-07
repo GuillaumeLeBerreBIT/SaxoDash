@@ -269,11 +269,48 @@ class ToTransactionFieldsTest(TestCase):
         self.assertEqual(fields['qty'], Decimal('4'))
         
 class SaxoConnectViewTest(APITestCase):
-    def test_redirects_to_saxo_authorize_url_and_sets_session_state(self):
-        response = self.client.get('/api/saxo/connect/')
+    def setUp(self):
+        self.user = User.objects.create_user(username='alex', password='pw')
+        self.token = str(RefreshToken.for_user(self.user).access_token)
+
+    def _ticket(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+        ticket = self.client.post('/api/saxo/connect-ticket/').data['ticket']
+        self.client.credentials()  # the ticket, not the JWT, authorises connect
+        return ticket
+
+    def test_ticket_endpoint_requires_authentication(self):
+        self.assertEqual(self.client.post('/api/saxo/connect-ticket/').status_code, 401)
+
+    def test_connect_without_a_ticket_is_forbidden(self):
+        self.assertEqual(self.client.get('/api/saxo/connect/').status_code, 403)
+
+    def test_connect_with_a_tampered_ticket_is_forbidden(self):
+        response = self.client.get('/api/saxo/connect/?ticket=not.a.real.ticket')
+        self.assertEqual(response.status_code, 403)
+
+    def test_stale_ticket_is_forbidden(self):
+        ticket = self._ticket()
+        with patch('saxo.views.CONNECT_TICKET_MAX_AGE', -1):
+            response = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+        self.assertEqual(response.status_code, 403)
+
+    def test_valid_ticket_redirects_to_saxo_authorize_url_and_sets_session_state(self):
+        response = self.client.get(f'/api/saxo/connect/?ticket={self._ticket()}')
         self.assertEqual(response.status_code, 302)
         self.assertIn('sim.logonvalidation.net/authorize', response.url)
         self.assertIn('saxo_oauth_state', self.client.session)
+        # The ticket rides in the URL; don't leak it to Saxo via Referer.
+        self.assertEqual(response['Referrer-Policy'], 'no-referrer')
+
+    def test_a_ticket_is_replayable_within_its_short_window(self):
+        # Documented, bounded: a replayed ticket can only *start* a flow the user
+        # must still complete at Saxo, and the callback is guarded by `state`.
+        ticket = self._ticket()
+        first = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+        second = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 302)
 
 
 class SaxoCallbackViewTest(APITestCase):

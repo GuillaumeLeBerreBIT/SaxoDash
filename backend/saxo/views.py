@@ -3,10 +3,12 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from django.utils import timezone
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
 from . import client, credentials
@@ -19,14 +21,38 @@ def _back_to_frontend(outcome):
     return redirect(f'{settings.FRONTEND_URL}/portfolio?saxo={outcome}')
 
 
+# The connect redirect is a full-page navigation, so it cannot carry the JWT
+# header. This signed, short-lived ticket - minted by an authenticated request -
+# stands in for it, so an anonymous caller cannot start the OAuth flow.
+_connect_ticket_signer = TimestampSigner(salt='saxo-connect')
+CONNECT_TICKET_MAX_AGE = 120
+
+
+class SaxoConnectTicketView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        return Response({'ticket': _connect_ticket_signer.sign(str(request.user.pk))})
+
+
 class SaxoConnectView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # the ticket is the credential
 
     def get(self, request):
+        try:
+            _connect_ticket_signer.unsign(
+                request.query_params.get('ticket', ''), max_age=CONNECT_TICKET_MAX_AGE
+            )
+        except (BadSignature, SignatureExpired):
+            return HttpResponseForbidden('A fresh connect ticket is required.')
+
         state = secrets.token_urlsafe(24)
         request.session['saxo_oauth_state'] = state
 
-        return redirect(client.build_authorize_url(state))
+        response = redirect(client.build_authorize_url(state))
+        # Keep the signed ticket in the URL out of the Referer sent to Saxo.
+        response['Referrer-Policy'] = 'no-referrer'
+        return response
 
 
 class SaxoCallbackView(APIView):

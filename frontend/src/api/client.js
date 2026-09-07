@@ -151,7 +151,13 @@ export const getRiskMetrics = (benchmark = 'world') => apiFetch(`/api/analytics/
 export const getPerformance = (benchmark = 'world') => apiFetch(`/api/analytics/performance/?benchmark=${benchmark}`)
 export const getCashFlow = () => apiFetch('/api/transactions/cash-flow/')
 export const getSaxoStatus = () => apiFetch('/api/saxo/status/')
-export const connectSaxo = () => { window.location.href = `${BASE_URL}/api/saxo/connect/` }
+
+// A full-page redirect can't carry the JWT, so fetch a short-lived signed
+// ticket (authenticated) and hand that to the connect endpoint instead.
+export async function connectSaxo() {
+  const { ticket } = await jsonRequest('/api/saxo/connect-ticket/', 'POST')
+  window.location.href = `${BASE_URL}/api/saxo/connect/?ticket=${encodeURIComponent(ticket)}`
+}
 
 // Research: market data proxied through the backend, and watchlist CRUD.
 export const getChart = ({ uic, assetType, horizon = 1440, count = 252 }) =>
