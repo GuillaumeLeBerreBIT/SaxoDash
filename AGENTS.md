@@ -36,17 +36,9 @@ Full reference — flags, troubleshooting, adding a service:
 
 ## Working agreement (read this before writing any code)
 
-**Backend (`backend/`, Django/DRF): coach mode.**
-Explain the pattern, show a short snippet or pseudocode if useful, flag
-gotchas — do not edit backend files directly. The user writes the actual
-models/serializers/views/tests themselves. This is a deliberate learning
-constraint, not a capability gap — don't "helpfully" write the file anyway.
-
-**Frontend (`frontend/`, Vite/React): propose-then-choose.**
-For each component or page, show a snippet or worked example with an
-explanation of what it does and why, then ask whether the user wants to
-write it themselves from the example or have you apply it directly.
-Don't default silently to one or the other.
+**Direct implementation, backend and frontend.** Coach mode is retired — write
+the models/serializers/views/tests and the React components directly, test-first.
+Keep changes scoped to what was asked and explain what changed in the chat / PR.
 
 **Testing**: backend is the primary coverage (DRF `APITestCase` per app).
 The frontend has a small vitest suite too — `lib/` helpers, the API client,
@@ -223,6 +215,41 @@ callers already pass a bare, US-listed symbol; an international listing
 needing an exchange suffix is a known gap. Market
 context (Buffett indicator, macro series) is still deferred: it needs an
 unrelated data source (FRED) and was deliberately kept out of this pass.
+
+**SQLite runs in WAL with `transaction_mode=IMMEDIATE`** (`DATABASES` `OPTIONS`,
+20s `timeout`). The default rollback-journal + DEFERRED combo made concurrent
+Celery sync tasks hit `SQLITE_BUSY` on a mid-transaction lock upgrade — which
+SQLite refuses to retry (deadlock avoidance), so the busy timeout never
+applied and the write failed in under a second. `BEGIN IMMEDIATE` takes the
+write lock up front, so a second writer queues on the timeout instead; WAL is
+the orthogonal half (readers stop blocking the writer). The dev worker also
+runs `--concurrency=2` to keep write pressure low.
+
+**The Saxo/Finnhub proxy endpoints are rate-limited per scope**, not only by
+cache TTL — `research.search` 20/min, `research.market` 60/min,
+`research.fundamentals` 30/min (`ScopedRateThrottle`). Distinct query params
+bypass the cache, and one fundamentals miss is four Finnhub calls against a
+60/min free tier.
+
+**Starting the Saxo OAuth flow needs a signed ticket.** `/api/saxo/connect/`
+was `AllowAny`; it now requires a 120s `TimestampSigner` ticket minted by the
+authenticated `POST /api/saxo/connect-ticket/` (the redirect is a full-page
+navigation and can't carry the JWT). The callback stays `AllowAny`, still
+guarded by the session `state` nonce.
+
+**One seam maps a provider call to HTTP.** `research/providers.py` defines
+`ProviderError` (→502, logged), `ProviderNotConnected` (→409) and
+`ProviderUnavailable` (→200 `{available:false}`, the Finnhub contract), and
+`provider_response` renders any of them in one branch — it imports neither
+`saxo` nor `requests`. `market.py` translates `SaxoNotConnected` / `SaxoAPIError`
+into `ProviderError` at its own boundary (`_cached`); `finnhub`'s exceptions
+subclass `ProviderUnavailable`. A malformed Finnhub payload becomes
+`FinnhubUnexpected` (logged at ERROR), still a 200 — never a 500; a real bug
+(`AttributeError`, …) still 500s. Analytics no longer imports `saxo.*`:
+`benchmarks.eur_closes` catches `ProviderError` and raises one
+`BenchmarkUnavailable` (also covering empty charts and zero/missing FX rates —
+previously an uncaught `ZeroDivisionError`), and `analytics/report.py` owns the
+metrics + best-effort-benchmark composition the two views shared.
 
 ## Open decision (not yet made)
 
