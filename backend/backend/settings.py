@@ -137,6 +137,18 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # WAL + IMMEDIATE so concurrent Celery sync tasks queue on the busy
+        # timeout instead of failing instantly on a mid-transaction lock
+        # upgrade (which skips SQLite's busy handler).
+        'OPTIONS': {
+            'timeout': 20,
+            'transaction_mode': 'IMMEDIATE',
+            'init_command': (
+                'PRAGMA journal_mode=WAL;'
+                'PRAGMA synchronous=NORMAL;'
+                'PRAGMA foreign_keys=ON;'
+            ),
+        },
     }
 }
 

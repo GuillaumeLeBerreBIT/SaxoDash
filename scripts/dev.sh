@@ -101,7 +101,7 @@ service redis  "$C_REDIS"  "$REDIS_DIR" "$REDIS_PORT" yes 'redis-cli -p $REDIS_P
   'redis-server --dir "$REDIS_DIR" --save "" --appendonly no --port $REDIS_PORT'
 
 service worker "$C_WORKER" "$BACKEND"   -             no  'log_has worker "ready\."' \
-  '"$VENV/bin/celery" -A backend worker -l info'
+  '"$VENV/bin/celery" -A backend worker -l info --concurrency=2'
 
 service beat   "$C_BEAT"   "$BACKEND"   -             no  'log_has beat "beat: Starting"' \
   '"$VENV/bin/celery" -A backend beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler'
