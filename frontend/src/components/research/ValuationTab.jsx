@@ -1,7 +1,4 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-
 import { fmtNum, fmtPct } from '../../lib/format'
-import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { Card, CardHeader } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 
@@ -67,28 +64,6 @@ function PricePerformance({ data }) {
   )
 }
 
-function EpsHistoryChart({ epsHistory }) {
-  if (!epsHistory?.length) return null
-
-  return (
-    <Card>
-      <CardHeader title="EPS: actual vs. estimate" subtitle="Most recent quarters" />
-      <div className="mt-4 h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={epsHistory} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="period" />
-            <YAxis {...axisProps} width={44} />
-            <Tooltip {...chartTooltipProps} formatter={(v) => fmtNum(v, 2)} />
-            <Bar dataKey="estimate" name="Estimate" fill="#52525b" radius={[3, 3, 0, 0]} barSize={18} />
-            <Bar dataKey="actual" name="Actual" fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={18} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </Card>
-  )
-}
-
 export default function ValuationTab({ fundamentals }) {
   return (
     <FundamentalsGate
@@ -121,7 +96,6 @@ export default function ValuationTab({ fundamentals }) {
 
           <PricePerformance data={data} />
           <RecommendationBar recommendation={data.recommendation} />
-          <EpsHistoryChart epsHistory={data.eps_history} />
         </div>
       )}
     </FundamentalsGate>

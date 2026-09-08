@@ -65,4 +65,9 @@ describe('ValuationTab', () => {
     expect(screen.getByText(/no coverage/)).toBeInTheDocument()
     expect(screen.queryByText('32.10')).not.toBeInTheDocument()
   })
+
+  it('no longer renders the EPS history chart (moved to the Earnings tab)', () => {
+    render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
+    expect(screen.queryByText('EPS: actual vs. estimate')).not.toBeInTheDocument()
+  })
 })
