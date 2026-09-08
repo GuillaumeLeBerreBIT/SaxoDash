@@ -15,6 +15,8 @@ import {
   createWatchlist,
   searchInstruments,
   getFundamentals,
+  getEarningsCalendar,
+  getSymbolEarnings,
   connectSaxo,
 } from './client'
 
@@ -383,5 +385,27 @@ describe('research endpoints', () => {
       expect.anything()
     )
     expect(result.name).toBe('Apple Inc')
+  })
+
+  it('getEarningsCalendar hits the calendar route', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ events: [] }))
+
+    await getEarningsCalendar()
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/earnings/calendar/'),
+      expect.anything()
+    )
+  })
+
+  it('getSymbolEarnings puts the symbol in the path', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ available: true }))
+
+    await getSymbolEarnings('AAPL')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/earnings/AAPL/'),
+      expect.anything()
+    )
   })
 })

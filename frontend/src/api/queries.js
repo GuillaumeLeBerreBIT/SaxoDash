@@ -6,6 +6,7 @@ import {
   addWatchlistItem,
   createWatchlist,
   deleteWatchlist,
+  getEarningsCalendar,
   getBankAccounts,
   getCashFlow,
   getChart,
@@ -19,6 +20,7 @@ import {
   getPositions,
   getQuotes,
   getSaxoStatus,
+  getSymbolEarnings,
   getTransactions,
   getWatchlists,
   removeWatchlistItem,
@@ -51,6 +53,8 @@ export const queryKeys = {
   instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
+  earningsCalendar: ['earnings-calendar'],
+  symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   watchlists: ['watchlists'],
 }
 
@@ -184,6 +188,25 @@ export function useFundamentals(symbol) {
   return useQuery({
     queryKey: queryKeys.fundamentals(symbol),
     queryFn: () => getFundamentals(symbol),
+    enabled: !!symbol,
+    staleTime: 24 * 60 * 60_000,
+  })
+}
+
+// The calendar is a slow-moving aggregate; 12h matches the backend's
+// per-symbol cache TTL.
+export function useEarningsCalendar() {
+  return useQuery({
+    queryKey: queryKeys.earningsCalendar,
+    queryFn: getEarningsCalendar,
+    staleTime: 12 * 60 * 60_000,
+  })
+}
+
+export function useSymbolEarnings(symbol) {
+  return useQuery({
+    queryKey: queryKeys.symbolEarnings(symbol),
+    queryFn: () => getSymbolEarnings(symbol),
     enabled: !!symbol,
     staleTime: 24 * 60 * 60_000,
   })

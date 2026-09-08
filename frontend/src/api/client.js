@@ -175,6 +175,8 @@ export const getInstrumentDetails = ({ uic, assetType }) =>
   apiFetch(`/api/research/instruments/${uic}/${assetType}/`)
 
 export const getFundamentals = (symbol) => apiFetch(`/api/research/fundamentals/${symbol}/`)
+export const getEarningsCalendar = () => apiFetch('/api/research/earnings/calendar/')
+export const getSymbolEarnings = (symbol) => apiFetch(`/api/research/earnings/${symbol}/`)
 
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
