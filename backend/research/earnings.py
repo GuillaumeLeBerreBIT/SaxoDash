@@ -115,9 +115,14 @@ def window_earnings(scope='all', week_offset=0):
         tagged.append({**event, 'held': is_held, 'watched': is_watched, 'mine': is_held or is_watched})
 
     if scope == 'mine':
-        tagged = [event for event in tagged if event['mine']]
+        events = [event for event in tagged if event['mine']]
+    else:
+        # The whole-market feed is mostly OTC/ADR shells with a date and
+        # nothing else; a consensus estimate is the "covered company" signal.
+        # Held/watched rows stay in regardless.
+        events = [event for event in tagged if event['eps_estimate'] is not None or event['mine']]
 
-    return {'events': tagged, 'window': window, 'ok': True}
+    return {'events': events, 'window': window, 'ok': True}
 
 
 def _eps_history(symbol):

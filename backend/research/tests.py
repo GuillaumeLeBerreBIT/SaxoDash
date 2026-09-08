@@ -1033,6 +1033,25 @@ class WindowEarningsTest(TestCase):
         self.assertEqual([e['symbol'] for e in result['events']], ['AAPL'])
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_all_scope_drops_rows_with_no_consensus_estimate_unless_held(self, mock_cal):
+        Position.objects.create(
+            ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            self._row('COVR', mon),
+            {**self._row('OTCX', mon), 'epsEstimate': None},
+            {**self._row('AAPL', mon), 'epsEstimate': None},
+        ]}
+
+        symbols = [e['symbol'] for e in earnings.window_earnings('all', 0)['events']]
+
+        self.assertIn('COVR', symbols)
+        self.assertIn('AAPL', symbols)  # no estimate, but held
+        self.assertNotIn('OTCX', symbols)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_the_week_is_fetched_once_then_served_from_cache(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', self._monday().isoformat())]}
 

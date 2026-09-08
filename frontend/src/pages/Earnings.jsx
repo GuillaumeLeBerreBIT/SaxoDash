@@ -72,7 +72,9 @@ function EpsCell({ event }) {
           {up ? '▲' : '▼'} {fmtPct(Math.abs(surprise), { sign: false, decimals: 1 })}
         </span>
       )}
-      <span className="text-[9.5px] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
+      {event.eps_estimate != null && (
+        <span className="text-[9.5px] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
+      )}
     </span>
   )
 }
