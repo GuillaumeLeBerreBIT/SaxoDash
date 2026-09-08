@@ -53,7 +53,7 @@ export const queryKeys = {
   instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
-  earningsCalendar: ['earnings-calendar'],
+  earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   watchlists: ['watchlists'],
 }
@@ -193,12 +193,13 @@ export function useFundamentals(symbol) {
   })
 }
 
-// The calendar is a slow-moving aggregate; 12h matches the backend's
-// per-symbol cache TTL.
-export function useEarningsCalendar() {
+// The market calendar is a slow-moving aggregate; 12h matches the backend's
+// per-week cache TTL. `scope` ('all' | 'mine') and `week` offset are part of
+// the key so each view caches separately.
+export function useEarningsCalendar(scope = 'all', week = 0) {
   return useQuery({
-    queryKey: queryKeys.earningsCalendar,
-    queryFn: getEarningsCalendar,
+    queryKey: queryKeys.earningsCalendar(scope, week),
+    queryFn: () => getEarningsCalendar(scope, week),
     staleTime: 12 * 60 * 60_000,
   })
 }

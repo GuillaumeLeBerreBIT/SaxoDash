@@ -10,7 +10,15 @@ import { ChartPlaceholder } from '../components/ui'
  *  Lives here rather than in ui.jsx because that file exports only components,
  *  and mixing a plain function in breaks React Fast Refresh.
  */
-export function chartPlaceholderFor({ isLoading, error, data, minPoints = 1, height = 260 }) {
+export function chartPlaceholderFor({
+  isLoading,
+  error,
+  data,
+  minPoints = 1,
+  height = 260,
+  symbol,
+  unresolved,
+}) {
   if (isLoading) return <ChartPlaceholder height={height}>Loading…</ChartPlaceholder>
   // A missing Saxo connection is a prompt to reconnect, not a failure. Handled
   // here rather than by each caller, which is why only one of five used to.
@@ -28,7 +36,17 @@ export function chartPlaceholderFor({ isLoading, error, data, minPoints = 1, hei
     )
 
   const count = data?.length ?? 0
-  if (count === 0) return <ChartPlaceholder height={height}>No data yet</ChartPlaceholder>
+  if (count === 0) {
+    // Arrived from the earnings calendar on a symbol Saxo can't chart: say so
+    // and point at the Earnings tab, which runs off Finnhub and still works.
+    if (unresolved && symbol)
+      return (
+        <ChartPlaceholder height={height}>
+          No price history for {symbol} in Saxo’s feed. The Earnings tab below is unaffected.
+        </ChartPlaceholder>
+      )
+    return <ChartPlaceholder height={height}>No data yet</ChartPlaceholder>
+  }
   if (count < minPoints)
     return (
       <ChartPlaceholder height={height}>

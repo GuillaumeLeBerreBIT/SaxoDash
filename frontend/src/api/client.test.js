@@ -387,13 +387,13 @@ describe('research endpoints', () => {
     expect(result.name).toBe('Apple Inc')
   })
 
-  it('getEarningsCalendar hits the calendar route', async () => {
-    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ events: [] }))
+  it('getEarningsCalendar carries the scope and week in the query string', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ events: [], ok: true }))
 
-    await getEarningsCalendar()
+    await getEarningsCalendar('mine', 2)
 
     expect(window.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/research/earnings/calendar/'),
+      expect.stringContaining('/api/research/earnings/calendar/?scope=mine&week=2'),
       expect.anything()
     )
   })

@@ -71,7 +71,7 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
   )
 }
 
-export default function ChartPanel({ bars, ind, isLoading, error, controls, hover, setHover }) {
+export default function ChartPanel({ bars, ind, isLoading, error, controls, hover, setHover, symbol, unresolved }) {
   const { range, type, overlays, panes, setRange, setType, toggleOverlay, togglePane } = controls
   const activeCount = Object.values({ ...overlays, ...panes }).filter(Boolean).length
   const period = periodChange(bars)
@@ -83,6 +83,8 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
     data: bars,
     minPoints: 2,
     height: CHART_HEIGHT,
+    symbol,
+    unresolved,
   })
 
   return (

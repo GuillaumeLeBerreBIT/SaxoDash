@@ -47,6 +47,12 @@ describe('chartPlaceholderFor', () => {
     expect(screen.getByText('No data yet')).toBeInTheDocument()
   })
 
+  it('names the symbol when Saxo cannot chart it and points at the Earnings tab', () => {
+    renderPlaceholder({ data: [], symbol: 'ETSY', unresolved: true })
+    expect(screen.getByText(/No price history for ETSY/)).toBeInTheDocument()
+    expect(screen.getByText(/Earnings tab below is unaffected/)).toBeInTheDocument()
+  })
+
   // The case that motivated all of this: after purging the demo snapshots the
   // net-worth series had exactly one point, and Recharts with dot={false} drew
   // nothing at all - a chart that looked broken but had loaded fine.

@@ -175,7 +175,8 @@ export const getInstrumentDetails = ({ uic, assetType }) =>
   apiFetch(`/api/research/instruments/${uic}/${assetType}/`)
 
 export const getFundamentals = (symbol) => apiFetch(`/api/research/fundamentals/${symbol}/`)
-export const getEarningsCalendar = () => apiFetch('/api/research/earnings/calendar/')
+export const getEarningsCalendar = (scope = 'all', week = 0) =>
+  apiFetch(`/api/research/earnings/calendar/?scope=${scope}&week=${week}`)
 export const getSymbolEarnings = (symbol) => apiFetch(`/api/research/earnings/${symbol}/`)
 
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')

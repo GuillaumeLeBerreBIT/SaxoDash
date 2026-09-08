@@ -155,6 +155,8 @@ export default function Research() {
               controls={controls}
               hover={safeHover}
               setHover={setHover}
+              symbol={symbol}
+              unresolved={!instrument && !chart.isLoading}
             />
 
             <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">
