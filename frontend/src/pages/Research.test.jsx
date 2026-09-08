@@ -52,6 +52,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
+  queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
 }
 
 describe('Research', () => {
@@ -124,6 +125,11 @@ describe('Research', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Valuation' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
+  })
+
+  it('opens on the Earnings tab when ?tab=earnings is in the URL', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=AAPL&tab=earnings' })
+    expect(screen.getByRole('button', { name: 'Earnings' })).toHaveAttribute('aria-current', 'true')
   })
 
   it('shows a placeholder instead of a chart while the candles load', () => {

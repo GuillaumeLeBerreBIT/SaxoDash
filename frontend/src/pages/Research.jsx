@@ -8,6 +8,7 @@ import {
   useInstrumentSearch,
   usePositions,
   useQuotes,
+  useSymbolEarnings,
   useWatchlistMutations,
   useWatchlists,
 } from '../api/queries'
@@ -23,6 +24,7 @@ import { PageHeader } from '../components/ui'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import ChartPanel from '../components/research/ChartPanel'
 import ComingSoon from '../components/research/ComingSoon'
+import EarningsTab from '../components/research/EarningsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
@@ -32,8 +34,11 @@ import { useChartControls } from '../components/research/useChartControls'
 const TABS = [
   ['overview', 'Overview'],
   ['valuation', 'Valuation'],
+  ['earnings', 'Earnings'],
   ['market', 'Market context'],
 ]
+
+const TAB_KEYS = new Set(TABS.map(([key]) => key))
 
 const FALLBACK_SYMBOL = 'NVDA'
 
@@ -46,7 +51,8 @@ export default function Research() {
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
-  const [tab, setTab] = useState('overview')
+  const requestedTab = params.get('tab')
+  const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
   const { data: positions = [] } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
@@ -86,6 +92,7 @@ export default function Research() {
     assetType: instrument?.assetType,
   })
   const fundamentals = useFundamentals(symbol)
+  const earnings = useSymbolEarnings(symbol)
   const liveQuotes = useQuotes(instrument?.uic ? [instrument.uic] : [], instrument?.assetType)
 
   const { data: watchlists = [] } = useWatchlists()
@@ -180,6 +187,7 @@ export default function Research() {
               />
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
+            {tab === 'earnings' ? <EarningsTab symbol={symbol} earnings={earnings} /> : null}
             {tab === 'market' ? <ComingSoon feature="Market context" /> : null}
           </div>
 
