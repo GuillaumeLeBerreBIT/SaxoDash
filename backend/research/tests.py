@@ -18,7 +18,7 @@ from portfolio.models import Position
 from saxo import client
 from saxo.models import SaxoCredential
 
-from . import finnhub, market, tasks
+from . import earnings, finnhub, market, tasks
 from .models import Watchlist, WatchlistItem
 
 TEST_KEY = Fernet.generate_key().decode()
@@ -51,6 +51,13 @@ SAMPLE_INFOPRICE = {
     'Quote': {'Bid': 417.5, 'Ask': 417.9, 'Mid': 417.7},
     'PriceInfo': {'PercentChange': 1.42},
     'PriceInfoDetails': {'LastTraded': 417.8},
+}
+
+RAW_EARNINGS_ROW = {
+    'symbol': 'AAPL', 'date': '2026-10-28', 'hour': 'amc',
+    'quarter': 4, 'year': 2026,
+    'epsEstimate': 2.0, 'epsActual': 2.2,
+    'revenueEstimate': 115_000_000_000, 'revenueActual': 119_600_000_000,
 }
 
 
@@ -705,6 +712,32 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['price_return_1m'], 2.4)
         self.assertEqual(result['price_return_ytd'], 18.7)
         self.assertEqual(result['price_return_1y'], 31.2)
+
+
+class EarningsShapingTest(TestCase):
+    def test_renames_finnhub_fields_to_snake_case(self):
+        event = earnings._shape(RAW_EARNINGS_ROW)
+        self.assertEqual(event, {
+            'symbol': 'AAPL', 'date': '2026-10-28', 'session': 'amc',
+            'quarter': 4, 'year': 2026,
+            'eps_estimate': 2.0, 'eps_actual': 2.2,
+            'revenue_estimate': 115_000_000_000, 'revenue_actual': 119_600_000_000,
+            'eps_surprise_pct': 10.0,
+        })
+
+    def test_empty_hour_becomes_none(self):
+        self.assertIsNone(earnings._shape({**RAW_EARNINGS_ROW, 'hour': ''})['session'])
+        self.assertIsNone(earnings._shape({k: v for k, v in RAW_EARNINGS_ROW.items() if k != 'hour'})['session'])
+
+    def test_surprise_is_none_without_both_values(self):
+        self.assertIsNone(earnings._shape({**RAW_EARNINGS_ROW, 'epsActual': None})['eps_surprise_pct'])
+
+    def test_surprise_is_none_when_estimate_is_zero(self):
+        self.assertIsNone(earnings._surprise(0, 1.2))
+
+    def test_surprise_handles_a_negative_estimate(self):
+        # A miss against a -0.10 estimate that came in at -0.20 is -100%, not +100%.
+        self.assertEqual(earnings._surprise(-0.10, -0.20), -100.0)
 
 
 class EarningsCalendarClientTest(TestCase):
