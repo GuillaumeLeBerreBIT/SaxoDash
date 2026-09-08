@@ -7,6 +7,7 @@ import Analytics from './pages/Analytics'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
 import Research from './pages/Research'
+import Earnings from './pages/Earnings'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
@@ -23,6 +24,7 @@ function App() {
           <Route path='transactions' element={<Transactions />} />
           <Route path='accounts' element={<Accounts />} />
           <Route path='research' element={<Research />} />
+          <Route path='earnings' element={<Earnings />} />
         </Route>
       </Route>
       <Route path='*' element={<NotFound />} />
