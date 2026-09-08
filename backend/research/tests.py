@@ -756,6 +756,17 @@ class EarningsCalendarClientTest(TestCase):
         self.assertEqual(kwargs['params']['from'], '2026-06-01')
         self.assertEqual(kwargs['params']['to'], '2026-12-31')
 
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_a_falsy_symbol_omits_the_symbol_param_for_the_whole_market(self, mock_get):
+        mock_get.return_value = Mock(ok=True, status_code=200)
+        mock_get.return_value.json.return_value = {'earningsCalendar': []}
+
+        finnhub.get_earnings_calendar(None, '2026-06-01', '2026-06-07')
+
+        _, kwargs = mock_get.call_args
+        self.assertNotIn('symbol', kwargs['params'])
+
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class FundamentalsNoDataTest(TestCase):
@@ -949,21 +960,8 @@ class ThrottleScopeConfigTest(TestCase):
 
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
-class TrackedSymbolsTest(TestCase):
-    def test_unions_positions_and_watchlist_items_uppercased_and_deduped(self):
-        Position.objects.create(
-            ticker='aapl', name='Apple', qty=1, avg_cost=1, current_price=1,
-            sector='Tech', type='STOCK', color='#fff',
-        )
-        wl = Watchlist.objects.create(name='Tech')
-        WatchlistItem.objects.create(watchlist=wl, symbol='AAPL', uic=1)
-        WatchlistItem.objects.create(watchlist=wl, symbol='MSFT', uic=2)
-
-        self.assertEqual(earnings.tracked_symbols(), ['AAPL', 'MSFT'])
-
-
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
-class UpcomingEarningsTest(TestCase):
+class WindowEarningsTest(TestCase):
     def setUp(self):
         cache.clear()
 
@@ -974,60 +972,93 @@ class UpcomingEarningsTest(TestCase):
             'revenueEstimate': 1_000, 'revenueActual': None,
         }
 
-    @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_merges_and_sorts_events_across_symbols(self, mock_cal):
-        mock_cal.side_effect = lambda s, f, t: {
-            'earningsCalendar': [self._row(s, '2026-09-20' if s == 'MSFT' else '2026-09-10')]
-        }
-
-        result = earnings.upcoming_earnings(['AAPL', 'MSFT'])
-
-        self.assertEqual([e['symbol'] for e in result['events']], ['AAPL', 'MSFT'])
-        self.assertEqual(result['unavailable'], [])
-        self.assertIn('from', result['window'])
+    def _monday(self, week_offset=0):
+        today = date.today()
+        return today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_a_failing_symbol_lands_in_unavailable_and_the_rest_return(self, mock_cal):
-        def fake(symbol, date_from, date_to):
-            if symbol == 'BAD':
-                raise finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
-            return {'earningsCalendar': [self._row(symbol, '2026-09-10')]}
+    def test_one_whole_market_call_for_the_week_no_symbol(self, mock_cal):
+        mon = self._monday()
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon.isoformat())]}
 
-        mock_cal.side_effect = fake
-        result = earnings.upcoming_earnings(['AAPL', 'BAD'])
+        result = earnings.window_earnings('all', 0)
+
+        self.assertEqual(mock_cal.call_count, 1)
+        (symbol, date_from, date_to), _ = mock_cal.call_args
+        self.assertIsNone(symbol)
+        self.assertEqual(date_from, mon.isoformat())
+        self.assertEqual(date_to, (mon + timedelta(days=6)).isoformat())
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['window'], {
+            'from': mon.isoformat(), 'to': (mon + timedelta(days=6)).isoformat(), 'week': 0,
+        })
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_week_offset_shifts_the_window_by_seven_days(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        earnings.window_earnings('all', 2)
+        (_, date_from, _), _ = mock_cal.call_args
+        self.assertEqual(date_from, self._monday(2).isoformat())
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_rows_are_tagged_held_and_watched(self, mock_cal):
+        Position.objects.create(
+            ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+        wl = Watchlist.objects.create(name='Tech')
+        WatchlistItem.objects.create(watchlist=wl, symbol='MSFT', uic=2)
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            self._row('AAPL', mon), self._row('MSFT', mon), self._row('TSLA', mon),
+        ]}
+
+        by_symbol = {e['symbol']: e for e in earnings.window_earnings('all', 0)['events']}
+
+        self.assertEqual((by_symbol['AAPL']['held'], by_symbol['AAPL']['watched'], by_symbol['AAPL']['mine']), (True, False, True))
+        self.assertEqual((by_symbol['MSFT']['held'], by_symbol['MSFT']['watched'], by_symbol['MSFT']['mine']), (False, True, True))
+        self.assertEqual((by_symbol['TSLA']['held'], by_symbol['TSLA']['watched'], by_symbol['TSLA']['mine']), (False, False, False))
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_mine_scope_keeps_only_tagged_rows(self, mock_cal):
+        Position.objects.create(
+            ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon), self._row('TSLA', mon)]}
+
+        result = earnings.window_earnings('mine', 0)
 
         self.assertEqual([e['symbol'] for e in result['events']], ['AAPL'])
-        self.assertEqual(result['unavailable'], ['BAD'])
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_the_second_call_for_a_symbol_is_served_from_cache(self, mock_cal):
-        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', '2026-09-10')]}
+    def test_the_week_is_fetched_once_then_served_from_cache(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', self._monday().isoformat())]}
 
-        earnings.upcoming_earnings(['AAPL'])
-        earnings.upcoming_earnings(['AAPL'])
+        earnings.window_earnings('all', 0)
+        earnings.window_earnings('mine', 0)
 
         self.assertEqual(mock_cal.call_count, 1)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_the_fan_out_is_capped_and_the_overflow_is_unavailable(self, mock_cal):
-        mock_cal.return_value = {'earningsCalendar': []}
-        symbols = [f'SYM{i:02d}' for i in range(42)]
+    def test_dateless_rows_are_dropped(self, mock_cal):
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon), self._row('AAPL', None)]}
 
-        result = earnings.upcoming_earnings(symbols)
+        result = earnings.window_earnings('all', 0)
 
-        self.assertLessEqual(mock_cal.call_count, earnings.MAX_FANOUT_SYMBOLS)
-        self.assertEqual(result['unavailable'], symbols[earnings.MAX_FANOUT_SYMBOLS:])
+        self.assertEqual([e['date'] for e in result['events']], [mon])
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_dateless_rows_are_dropped(self, mock_cal):
-        mock_cal.return_value = {'earningsCalendar': [
-            self._row('AAPL', '2026-09-10'),
-            self._row('AAPL', None),
-        ]}
+    def test_a_provider_failure_degrades_to_ok_false_and_no_events(self, mock_cal):
+        mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
 
-        result = earnings.upcoming_earnings(['AAPL'])
+        result = earnings.window_earnings('all', 0)
 
-        self.assertEqual([e['date'] for e in result['events']], ['2026-09-10'])
+        self.assertFalse(result['ok'])
+        self.assertEqual(result['events'], [])
+        self.assertIn('from', result['window'])
 
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
@@ -1082,26 +1113,45 @@ class EarningsCalendarViewTest(APITestCase):
         self.assertEqual(self.client.get('/api/research/earnings/calendar/').status_code, 401)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_returns_merged_events_for_tracked_symbols(self, mock_cal):
+    def test_returns_the_week_with_tagged_rows(self, mock_cal):
         Position.objects.create(
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )
+        today = date.today()
+        monday = (today - timedelta(days=today.weekday())).isoformat()
         mock_cal.return_value = {'earningsCalendar': [{
-            'symbol': 'AAPL', 'date': '2026-09-15', 'hour': 'amc', 'quarter': 1, 'year': 2026,
+            'symbol': 'AAPL', 'date': monday, 'hour': 'amc', 'quarter': 1, 'year': 2026,
             'epsEstimate': 1.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None,
         }]}
 
         response = self.client.get('/api/research/earnings/calendar/')
 
         self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['ok'])
         self.assertEqual(response.data['events'][0]['symbol'], 'AAPL')
-        self.assertEqual(response.data['unavailable'], [])
+        self.assertTrue(response.data['events'][0]['held'])
+        self.assertEqual(response.data['window']['week'], 0)
 
-    def test_no_tracked_symbols_is_an_empty_calendar(self):
-        response = self.client.get('/api/research/earnings/calendar/')
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_scope_mine_filters_and_week_shifts_the_window(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+
+        response = self.client.get('/api/research/earnings/calendar/?scope=mine&week=2')
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['events'], [])
+        self.assertEqual(response.data['window']['week'], 2)
+
+    def test_rejects_an_unknown_scope(self):
+        self.assertEqual(
+            self.client.get('/api/research/earnings/calendar/?scope=nope').status_code, 400,
+        )
+
+    def test_rejects_a_non_integer_week(self):
+        self.assertEqual(
+            self.client.get('/api/research/earnings/calendar/?week=soon').status_code, 400,
+        )
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

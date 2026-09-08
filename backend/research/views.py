@@ -141,11 +141,22 @@ class FundamentalsView(APIView):
         return provider_response(lambda: finnhub.fundamentals(symbol))
 
 
+EARNINGS_SCOPES = {'all', 'mine'}
+
+
 class EarningsCalendarView(APIView):
     throttle_scope = 'research.earnings'
 
     def get(self, request):
-        return Response(earnings.upcoming_earnings(earnings.tracked_symbols()))
+        scope = request.query_params.get('scope', 'all')
+        if scope not in EARNINGS_SCOPES:
+            raise ValidationError({'scope': 'Must be "all" or "mine".'})
+        try:
+            week = int(request.query_params.get('week', 0))
+        except (TypeError, ValueError):
+            raise ValidationError({'week': 'Must be an integer.'})
+        week = max(earnings.MIN_WEEK, min(earnings.MAX_WEEK, week))
+        return Response(earnings.window_earnings(scope, week))
 
 
 class SymbolEarningsView(APIView):

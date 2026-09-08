@@ -95,8 +95,11 @@ def get_earnings_history(symbol):
 
 def get_earnings_calendar(symbol, date_from, date_to):
     # Finnhub names the window params `from` / `to` (reserved words in Python,
-    # so they go through **kwargs).
-    return _get('/calendar/earnings', symbol=symbol, **{'from': date_from, 'to': date_to})
+    # so they go through **kwargs). A falsy `symbol` fetches the whole market.
+    params = {'from': date_from, 'to': date_to}
+    if symbol:
+        params['symbol'] = symbol
+    return _get('/calendar/earnings', **params)
 
 
 FUNDAMENTALS_TTL = 86400

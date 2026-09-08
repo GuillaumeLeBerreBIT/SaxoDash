@@ -1,9 +1,9 @@
 """Compose the earnings responses from Finnhub's calendar endpoint.
 
-`finnhub.py` is the thin client; this module owns symbol collection, the
-per-symbol day-stamped cache fan-out, shaping, and the history/next split.
-It reads `portfolio.models.Position` for the tracked-symbol list - one
-read-only leaf import, the same way several views read across apps.
+`finnhub.py` is the thin client; this module owns the week-window fetch of
+the whole US market, shaping, the held/watchlist tagging, and the
+per-symbol history split. It reads `portfolio.models.Position` and
+`WatchlistItem` for the held/watched tagging - read-only leaf reads.
 """
 import logging
 from datetime import date, timedelta
@@ -18,14 +18,11 @@ from .providers import ProviderUnavailable
 
 logger = logging.getLogger(__name__)
 
-UPCOMING_BACK = timedelta(days=7)
-UPCOMING_AHEAD = timedelta(days=31)
 HISTORY_BACK = timedelta(days=365 * 3)
 HISTORY_AHEAD = timedelta(days=120)
 
-# Approach A fans out one upstream call per symbol; cap it so holdings +
-# watchlists growing can't turn one request into an unbounded burst.
-MAX_FANOUT_SYMBOLS = 40
+# The week-nav arrows page one calendar week at a time; clamp how far.
+MIN_WEEK, MAX_WEEK = -8, 12
 
 
 def _surprise(estimate, actual):
@@ -52,12 +49,6 @@ def _shape(row):
     }
 
 
-def tracked_symbols():
-    tickers = Position.objects.values_list('ticker', flat=True)
-    watched = WatchlistItem.objects.values_list('symbol', flat=True)
-    return sorted({s.upper() for s in (*tickers, *watched) if s})
-
-
 def _fetch_calendar(symbol, date_from, date_to):
     rows = finnhub.get_earnings_calendar(
         symbol, date_from.isoformat(), date_to.isoformat(),
@@ -67,33 +58,57 @@ def _fetch_calendar(symbol, date_from, date_to):
     return sorted((event for event in shaped if event['date']), key=lambda event: event['date'])
 
 
-def upcoming_earnings(symbols):
-    today = date.today()
-    date_from, date_to = today - UPCOMING_BACK, today + UPCOMING_AHEAD
-    events, unavailable = [], []
+def _monday_of(day):
+    return day - timedelta(days=day.weekday())
 
-    # Cap the fan-out; symbols past the cap report as unavailable, not fetched.
-    symbols = list(symbols)
-    unavailable.extend(symbols[MAX_FANOUT_SYMBOLS:])
 
-    for symbol in symbols[:MAX_FANOUT_SYMBOLS]:
-        key = f'research:earnings-cal:{symbol}:{today.isoformat()}'
-        try:
-            events.extend(cache.get_or_set(
-                key,
-                lambda s=symbol: _fetch_calendar(s, date_from, date_to),
-                finnhub.EARNINGS_CAL_TTL,
-            ))
-        except ProviderUnavailable as exc:
-            logger.warning('earnings calendar unavailable for %s: %s', symbol, exc)
-            unavailable.append(symbol)
+def _tracked():
+    held = {s.upper() for s in Position.objects.values_list('ticker', flat=True) if s}
+    watched = {s.upper() for s in WatchlistItem.objects.values_list('symbol', flat=True) if s} - held
+    return held, watched
 
-    events.sort(key=lambda event: (event['date'] or '', event['symbol'] or ''))
-    return {
-        'events': events,
-        'unavailable': unavailable,
-        'window': {'from': date_from.isoformat(), 'to': date_to.isoformat()},
-    }
+
+def _market_week(start, end):
+    rows = finnhub.get_earnings_calendar(
+        None, start.isoformat(), end.isoformat(),
+    ).get('earningsCalendar', [])
+    shaped = (_shape(row) for row in rows)
+    return sorted(
+        (event for event in shaped if event['date']),
+        key=lambda event: (event['date'], event['symbol'] or ''),
+    )
+
+
+def window_earnings(scope='all', week_offset=0):
+    """One week of the whole US-market calendar, tagged with the user's
+    holdings/watchlists. `scope='mine'` keeps only tagged rows.
+
+    The market week is cached un-tagged (one entry per calendar week), so
+    'all' and 'mine' share it; tagging is per request.
+    """
+    start = _monday_of(date.today()) + timedelta(weeks=week_offset)
+    end = start + timedelta(days=6)
+    window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
+    key = f'research:earnings-week:{start.isoformat()}'
+
+    try:
+        events = cache.get_or_set(key, lambda: _market_week(start, end), finnhub.EARNINGS_CAL_TTL)
+    except ProviderUnavailable as exc:
+        logger.warning('market earnings calendar unavailable for week of %s: %s', start, exc)
+        return {'events': [], 'window': window, 'ok': False}
+
+    held, watched = _tracked()
+    tagged = []
+    for event in events:
+        symbol = (event['symbol'] or '').upper()
+        is_held = symbol in held
+        is_watched = symbol in watched
+        tagged.append({**event, 'held': is_held, 'watched': is_watched, 'mine': is_held or is_watched})
+
+    if scope == 'mine':
+        tagged = [event for event in tagged if event['mine']]
+
+    return {'events': tagged, 'window': window, 'ok': True}
 
 
 def symbol_earnings(symbol):
