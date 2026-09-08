@@ -1060,6 +1060,14 @@ class WindowEarningsTest(TestCase):
         self.assertEqual(result['events'], [])
         self.assertIn('from', result['window'])
 
+    @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+    def test_the_current_week_caches_briefly_and_settled_weeks_do_not(self, _mock_cal):
+        with patch('research.earnings.cache.get_or_set', wraps=cache.get_or_set) as spy:
+            earnings.window_earnings('all', 0)
+            self.assertEqual(spy.call_args.args[2], earnings.CURRENT_WEEK_TTL)
+            earnings.window_earnings('all', 3)
+            self.assertEqual(spy.call_args.args[2], finnhub.EARNINGS_CAL_TTL)
+
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class SymbolEarningsTest(TestCase):
@@ -1067,35 +1075,34 @@ class SymbolEarningsTest(TestCase):
         cache.clear()
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_splits_history_oldest_first_from_the_next_estimate(self, mock_cal):
-        today = date.today().isoformat()
-        past = (date.today() - timedelta(days=120)).isoformat()
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_history_comes_from_stock_earnings_and_next_from_the_calendar(self, mock_hist, mock_cal):
+        mock_hist.return_value = [
+            {'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7},
+            {'period': '2026-03-31', 'actual': 1.4, 'estimate': 1.45, 'surprisePercent': -3.4},
+        ]
         future = (date.today() + timedelta(days=30)).isoformat()
         mock_cal.return_value = {'earningsCalendar': [
             {'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
              'epsEstimate': 2.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None},
-            {'symbol': 'AAPL', 'date': past, 'hour': 'amc', 'quarter': 3, 'year': 2026,
-             'epsEstimate': 1.5, 'epsActual': 1.6, 'revenueEstimate': 8, 'revenueActual': 8},
         ]}
 
         result = earnings.symbol_earnings('AAPL')
 
         self.assertTrue(result['available'])
-        self.assertEqual([e['date'] for e in result['history']], [past])
+        self.assertEqual([e['date'] for e in result['history']], ['2026-03-31', '2026-06-30'])
+        self.assertEqual(result['history'][0]['eps_surprise_pct'], -3.4)
+        self.assertEqual(result['history'][1]['eps_actual'], 1.6)
         self.assertEqual(result['next']['date'], future)
 
-    @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_next_is_none_when_nothing_upcoming_lacks_an_actual(self, mock_cal):
-        past = (date.today() - timedelta(days=10)).isoformat()
-        mock_cal.return_value = {'earningsCalendar': [
-            {'symbol': 'AAPL', 'date': past, 'hour': 'amc', 'quarter': 3, 'year': 2026,
-             'epsEstimate': 1.5, 'epsActual': 1.6, 'revenueEstimate': 8, 'revenueActual': 8},
-        ]}
+    @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+    @patch('research.earnings.finnhub.get_earnings_history', return_value=[])
+    def test_next_is_none_when_nothing_is_scheduled(self, mock_hist, mock_cal):
         self.assertIsNone(earnings.symbol_earnings('AAPL')['next'])
 
-    @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_a_provider_failure_propagates(self, mock_cal):
-        mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_a_provider_failure_propagates(self, mock_hist):
+        mock_hist.side_effect = finnhub.FinnhubAPIError('/stock/earnings failed: 500')
         with self.assertRaises(ProviderUnavailable):
             earnings.symbol_earnings('AAPL')
 
@@ -1163,7 +1170,9 @@ class SymbolEarningsViewTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_returns_available_true_with_history_and_next(self, mock_cal):
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_returns_available_true_with_history_and_next(self, mock_hist, mock_cal):
+        mock_hist.return_value = [{'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7}]
         future = (date.today() + timedelta(days=20)).isoformat()
         mock_cal.return_value = {'earningsCalendar': [{
             'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
@@ -1174,6 +1183,7 @@ class SymbolEarningsViewTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['history'][0]['eps_actual'], 1.6)
         self.assertEqual(response.data['next']['date'], future)
 
     @override_settings(FINNHUB_API_KEY='')
@@ -1184,9 +1194,9 @@ class SymbolEarningsViewTest(APITestCase):
         self.assertIn('reason', response.data)
         self.assertEqual(response.data['reason'], 'Market data is not configured.')
 
-    @patch('research.earnings.finnhub.get_earnings_calendar')
-    def test_returns_available_false_on_a_finnhub_error(self, mock_cal):
-        mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_hist):
+        mock_hist.side_effect = finnhub.FinnhubAPIError('/stock/earnings failed: 500')
         response = self.client.get('/api/research/earnings/AAPL/')
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])

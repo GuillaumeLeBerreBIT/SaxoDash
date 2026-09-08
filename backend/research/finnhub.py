@@ -103,8 +103,8 @@ def get_earnings_calendar(symbol, date_from, date_to):
 
 
 FUNDAMENTALS_TTL = 86400
-EARNINGS_CAL_TTL = 43200  # 12h — the portfolio-wide agenda's per-symbol window
-EARNINGS_TTL = 86400      # 24h — the per-symbol history window
+EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
+EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
 
 
 def _cache_key(symbol):

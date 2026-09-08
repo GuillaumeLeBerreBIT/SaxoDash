@@ -18,11 +18,14 @@ from .providers import ProviderUnavailable
 
 logger = logging.getLogger(__name__)
 
-HISTORY_BACK = timedelta(days=365 * 3)
 HISTORY_AHEAD = timedelta(days=120)
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
+
+# The current week must pick up today's just-posted actuals; settled weeks
+# (past, or far enough out to be all estimates) can cache far longer.
+CURRENT_WEEK_TTL = 3600
 
 
 def _surprise(estimate, actual):
@@ -90,9 +93,10 @@ def window_earnings(scope='all', week_offset=0):
     end = start + timedelta(days=6)
     window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
     key = f'research:earnings-week:{start.isoformat()}'
+    ttl = CURRENT_WEEK_TTL if week_offset == 0 else finnhub.EARNINGS_CAL_TTL
 
     try:
-        events = cache.get_or_set(key, lambda: _market_week(start, end), finnhub.EARNINGS_CAL_TTL)
+        events = cache.get_or_set(key, lambda: _market_week(start, end), ttl)
     except ProviderUnavailable as exc:
         logger.warning('market earnings calendar unavailable for week of %s: %s', start, exc)
         return {'events': [], 'window': window, 'ok': False}
@@ -111,16 +115,38 @@ def window_earnings(scope='all', week_offset=0):
     return {'events': tagged, 'window': window, 'ok': True}
 
 
+def _eps_history(symbol):
+    """Recent reported quarters from /stock/earnings (EPS only, oldest-first).
+
+    /calendar/earnings only reliably carries the *next* date, not deep
+    history - so the history charts read from here instead.
+    """
+    rows = finnhub.get_earnings_history(symbol) or []
+    shaped = [
+        {
+            'date': row.get('period'),
+            'eps_actual': row.get('actual'),
+            'eps_estimate': row.get('estimate'),
+            'eps_surprise_pct': row.get('surprisePercent'),
+        }
+        for row in rows
+        if row.get('period')
+    ]
+    return sorted(shaped, key=lambda event: event['date'])
+
+
+def _next_scheduled(symbol, today):
+    """The soonest still-unreported earnings date from the forward calendar."""
+    rows = _fetch_calendar(symbol, today, today + HISTORY_AHEAD)
+    upcoming = [e for e in rows if (e['date'] or '') >= today.isoformat() and e['eps_actual'] is None]
+    return upcoming[0] if upcoming else None
+
+
 def symbol_earnings(symbol):
     today = date.today()
     key = f'research:earnings-sym:{symbol}:{today.isoformat()}'
-    calendar = cache.get_or_set(
-        key,
-        lambda: _fetch_calendar(symbol, today - HISTORY_BACK, today + HISTORY_AHEAD),
-        finnhub.EARNINGS_TTL,
-    )
 
-    today_iso = today.isoformat()
-    history = [e for e in calendar if (e['date'] or '') < today_iso or e['eps_actual'] is not None]
-    upcoming = [e for e in calendar if (e['date'] or '') >= today_iso and e['eps_actual'] is None]
-    return {'available': True, 'history': history, 'next': upcoming[0] if upcoming else None}
+    def produce():
+        return {'history': _eps_history(symbol), 'next': _next_scheduled(symbol, today)}
+
+    return {'available': True, **cache.get_or_set(key, produce, finnhub.EARNINGS_TTL)}
