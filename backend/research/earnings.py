@@ -23,6 +23,10 @@ UPCOMING_AHEAD = timedelta(days=31)
 HISTORY_BACK = timedelta(days=365 * 3)
 HISTORY_AHEAD = timedelta(days=120)
 
+# Approach A fans out one upstream call per symbol; cap it so holdings +
+# watchlists growing can't turn one request into an unbounded burst.
+MAX_FANOUT_SYMBOLS = 40
+
 
 def _surprise(estimate, actual):
     if estimate in (None, 0) or actual is None:
@@ -58,7 +62,9 @@ def _fetch_calendar(symbol, date_from, date_to):
     rows = finnhub.get_earnings_calendar(
         symbol, date_from.isoformat(), date_to.isoformat(),
     ).get('earningsCalendar', [])
-    return sorted((_shape(row) for row in rows), key=lambda event: event['date'] or '')
+    shaped = (_shape(row) for row in rows)
+    # Drop dateless rows so neither layer has to bucket a null date.
+    return sorted((event for event in shaped if event['date']), key=lambda event: event['date'])
 
 
 def upcoming_earnings(symbols):
@@ -66,7 +72,11 @@ def upcoming_earnings(symbols):
     date_from, date_to = today - UPCOMING_BACK, today + UPCOMING_AHEAD
     events, unavailable = [], []
 
-    for symbol in symbols:
+    # Cap the fan-out; symbols past the cap report as unavailable, not fetched.
+    symbols = list(symbols)
+    unavailable.extend(symbols[MAX_FANOUT_SYMBOLS:])
+
+    for symbol in symbols[:MAX_FANOUT_SYMBOLS]:
         key = f'research:earnings-cal:{symbol}:{today.isoformat()}'
         try:
             events.extend(cache.get_or_set(
@@ -74,8 +84,8 @@ def upcoming_earnings(symbols):
                 lambda s=symbol: _fetch_calendar(s, date_from, date_to),
                 finnhub.EARNINGS_CAL_TTL,
             ))
-        except ProviderUnavailable:
-            logger.warning('earnings calendar unavailable for %s', symbol, exc_info=True)
+        except ProviderUnavailable as exc:
+            logger.warning('earnings calendar unavailable for %s: %s', symbol, exc)
             unavailable.append(symbol)
 
     events.sort(key=lambda event: (event['date'] or '', event['symbol'] or ''))

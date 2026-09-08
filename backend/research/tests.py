@@ -1008,6 +1008,27 @@ class UpcomingEarningsTest(TestCase):
 
         self.assertEqual(mock_cal.call_count, 1)
 
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_the_fan_out_is_capped_and_the_overflow_is_unavailable(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        symbols = [f'SYM{i:02d}' for i in range(42)]
+
+        result = earnings.upcoming_earnings(symbols)
+
+        self.assertLessEqual(mock_cal.call_count, earnings.MAX_FANOUT_SYMBOLS)
+        self.assertEqual(result['unavailable'], symbols[earnings.MAX_FANOUT_SYMBOLS:])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_dateless_rows_are_dropped(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': [
+            self._row('AAPL', '2026-09-10'),
+            self._row('AAPL', None),
+        ]}
+
+        result = earnings.upcoming_earnings(['AAPL'])
+
+        self.assertEqual([e['date'] for e in result['events']], ['2026-09-10'])
+
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class SymbolEarningsTest(TestCase):
@@ -1111,6 +1132,7 @@ class SymbolEarningsViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])
         self.assertIn('reason', response.data)
+        self.assertEqual(response.data['reason'], 'Market data is not configured.')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_returns_available_false_on_a_finnhub_error(self, mock_cal):

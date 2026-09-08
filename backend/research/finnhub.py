@@ -23,7 +23,7 @@ class FinnhubNotConfigured(ProviderUnavailable):
     """FINNHUB_API_KEY is not set."""
 
     def __init__(self):
-        super().__init__('Fundamentals are not configured.')
+        super().__init__('Market data is not configured.')
 
 
 class FinnhubAPIError(ProviderUnavailable):
@@ -33,7 +33,7 @@ class FinnhubAPIError(ProviderUnavailable):
     log = True
 
     def body(self):
-        return {'available': False, 'reason': 'Fundamentals are unavailable right now.'}
+        return {'available': False, 'reason': 'Market data is unavailable right now.'}
 
 
 class FinnhubNoData(ProviderUnavailable):
