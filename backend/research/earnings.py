@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 HISTORY_AHEAD = timedelta(days=120)
 
+# Bump when a cached payload's SHAPE changes, so a deploy never hands new code
+# an entry an old build wrote (a shape mismatch here was a 500, not just
+# staleness). Old entries expire on their own TTL.
+CACHE_V = 'v2'
+
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
 
@@ -92,7 +97,7 @@ def window_earnings(scope='all', week_offset=0):
     start = _monday_of(date.today()) + timedelta(weeks=week_offset)
     end = start + timedelta(days=6)
     window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
-    key = f'research:earnings-week:{start.isoformat()}'
+    key = f'research:earnings-week:{CACHE_V}:{start.isoformat()}'
     ttl = CURRENT_WEEK_TTL if week_offset == 0 else finnhub.EARNINGS_CAL_TTL
 
     try:
@@ -144,7 +149,7 @@ def _next_scheduled(symbol, today):
 
 def symbol_earnings(symbol):
     today = date.today()
-    key = f'research:earnings-sym:{symbol}:{today.isoformat()}'
+    key = f'research:earnings-sym:{CACHE_V}:{symbol}:{today.isoformat()}'
 
     def produce():
         return {'history': _eps_history(symbol), 'next': _next_scheduled(symbol, today)}

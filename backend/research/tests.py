@@ -1106,6 +1106,17 @@ class SymbolEarningsTest(TestCase):
         with self.assertRaises(ProviderUnavailable):
             earnings.symbol_earnings('AAPL')
 
+    @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+    @patch('research.earnings.finnhub.get_earnings_history', return_value=[])
+    def test_a_legacy_list_cache_entry_cannot_500_the_response(self, mock_hist, mock_cal):
+        # An earlier build cached a bare list under the unversioned key; the
+        # versioned key sidesteps it rather than `{**a_list}` blowing up.
+        cache.set(f'research:earnings-sym:AAPL:{date.today().isoformat()}', [{'date': 'x'}], 60)
+
+        result = earnings.symbol_earnings('AAPL')
+
+        self.assertEqual(result, {'available': True, 'history': [], 'next': None})
+
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class EarningsCalendarViewTest(APITestCase):
