@@ -46,3 +46,56 @@ def _shape(row):
         'revenue_actual': row.get('revenueActual'),
         'eps_surprise_pct': _surprise(estimate, actual),
     }
+
+
+def tracked_symbols():
+    tickers = Position.objects.values_list('ticker', flat=True)
+    watched = WatchlistItem.objects.values_list('symbol', flat=True)
+    return sorted({s.upper() for s in (*tickers, *watched) if s})
+
+
+def _fetch_calendar(symbol, date_from, date_to):
+    rows = finnhub.get_earnings_calendar(
+        symbol, date_from.isoformat(), date_to.isoformat(),
+    ).get('earningsCalendar', [])
+    return sorted((_shape(row) for row in rows), key=lambda event: event['date'] or '')
+
+
+def upcoming_earnings(symbols):
+    today = date.today()
+    date_from, date_to = today - UPCOMING_BACK, today + UPCOMING_AHEAD
+    events, unavailable = [], []
+
+    for symbol in symbols:
+        key = f'research:earnings-cal:{symbol}:{today.isoformat()}'
+        try:
+            events.extend(cache.get_or_set(
+                key,
+                lambda s=symbol: _fetch_calendar(s, date_from, date_to),
+                finnhub.EARNINGS_CAL_TTL,
+            ))
+        except ProviderUnavailable:
+            logger.warning('earnings calendar unavailable for %s', symbol, exc_info=True)
+            unavailable.append(symbol)
+
+    events.sort(key=lambda event: (event['date'] or '', event['symbol'] or ''))
+    return {
+        'events': events,
+        'unavailable': unavailable,
+        'window': {'from': date_from.isoformat(), 'to': date_to.isoformat()},
+    }
+
+
+def symbol_earnings(symbol):
+    today = date.today()
+    key = f'research:earnings-sym:{symbol}:{today.isoformat()}'
+    calendar = cache.get_or_set(
+        key,
+        lambda: _fetch_calendar(symbol, today - HISTORY_BACK, today + HISTORY_AHEAD),
+        finnhub.EARNINGS_TTL,
+    )
+
+    today_iso = today.isoformat()
+    history = [e for e in calendar if (e['date'] or '') < today_iso or e['eps_actual'] is not None]
+    upcoming = [e for e in calendar if (e['date'] or '') >= today_iso and e['eps_actual'] is None]
+    return {'available': True, 'history': history, 'next': upcoming[0] if upcoming else None}

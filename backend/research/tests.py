@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
@@ -20,6 +20,7 @@ from saxo.models import SaxoCredential
 
 from . import earnings, finnhub, market, tasks
 from .models import Watchlist, WatchlistItem
+from .providers import ProviderUnavailable
 
 TEST_KEY = Fernet.generate_key().decode()
 
@@ -943,3 +944,103 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.FundamentalsView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class TrackedSymbolsTest(TestCase):
+    def test_unions_positions_and_watchlist_items_uppercased_and_deduped(self):
+        Position.objects.create(
+            ticker='aapl', name='Apple', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+        wl = Watchlist.objects.create(name='Tech')
+        WatchlistItem.objects.create(watchlist=wl, symbol='AAPL', uic=1)
+        WatchlistItem.objects.create(watchlist=wl, symbol='MSFT', uic=2)
+
+        self.assertEqual(earnings.tracked_symbols(), ['AAPL', 'MSFT'])
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class UpcomingEarningsTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def _row(self, symbol, date_, actual=None):
+        return {
+            'symbol': symbol, 'date': date_, 'hour': 'amc', 'quarter': 1, 'year': 2026,
+            'epsEstimate': 1.0, 'epsActual': actual,
+            'revenueEstimate': 1_000, 'revenueActual': None,
+        }
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_merges_and_sorts_events_across_symbols(self, mock_cal):
+        mock_cal.side_effect = lambda s, f, t: {
+            'earningsCalendar': [self._row(s, '2026-09-20' if s == 'MSFT' else '2026-09-10')]
+        }
+
+        result = earnings.upcoming_earnings(['AAPL', 'MSFT'])
+
+        self.assertEqual([e['symbol'] for e in result['events']], ['AAPL', 'MSFT'])
+        self.assertEqual(result['unavailable'], [])
+        self.assertIn('from', result['window'])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_failing_symbol_lands_in_unavailable_and_the_rest_return(self, mock_cal):
+        def fake(symbol, date_from, date_to):
+            if symbol == 'BAD':
+                raise finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
+            return {'earningsCalendar': [self._row(symbol, '2026-09-10')]}
+
+        mock_cal.side_effect = fake
+        result = earnings.upcoming_earnings(['AAPL', 'BAD'])
+
+        self.assertEqual([e['symbol'] for e in result['events']], ['AAPL'])
+        self.assertEqual(result['unavailable'], ['BAD'])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_the_second_call_for_a_symbol_is_served_from_cache(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', '2026-09-10')]}
+
+        earnings.upcoming_earnings(['AAPL'])
+        earnings.upcoming_earnings(['AAPL'])
+
+        self.assertEqual(mock_cal.call_count, 1)
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class SymbolEarningsTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_splits_history_oldest_first_from_the_next_estimate(self, mock_cal):
+        today = date.today().isoformat()
+        past = (date.today() - timedelta(days=120)).isoformat()
+        future = (date.today() + timedelta(days=30)).isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            {'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
+             'epsEstimate': 2.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None},
+            {'symbol': 'AAPL', 'date': past, 'hour': 'amc', 'quarter': 3, 'year': 2026,
+             'epsEstimate': 1.5, 'epsActual': 1.6, 'revenueEstimate': 8, 'revenueActual': 8},
+        ]}
+
+        result = earnings.symbol_earnings('AAPL')
+
+        self.assertTrue(result['available'])
+        self.assertEqual([e['date'] for e in result['history']], [past])
+        self.assertEqual(result['next']['date'], future)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_next_is_none_when_nothing_upcoming_lacks_an_actual(self, mock_cal):
+        past = (date.today() - timedelta(days=10)).isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            {'symbol': 'AAPL', 'date': past, 'hour': 'amc', 'quarter': 3, 'year': 2026,
+             'epsEstimate': 1.5, 'epsActual': 1.6, 'revenueEstimate': 8, 'revenueActual': 8},
+        ]}
+        self.assertIsNone(earnings.symbol_earnings('AAPL')['next'])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_provider_failure_propagates(self, mock_cal):
+        mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
+        with self.assertRaises(ProviderUnavailable):
+            earnings.symbol_earnings('AAPL')
