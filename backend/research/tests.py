@@ -942,6 +942,8 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.InstrumentDetailsView,
             research_views.QuotesView,
             research_views.FundamentalsView,
+            research_views.EarningsCalendarView,
+            research_views.SymbolEarningsView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
 
@@ -1044,3 +1046,75 @@ class SymbolEarningsTest(TestCase):
         mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
         with self.assertRaises(ProviderUnavailable):
             earnings.symbol_earnings('AAPL')
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class EarningsCalendarViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='u', password='p')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get('/api/research/earnings/calendar/').status_code, 401)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_returns_merged_events_for_tracked_symbols(self, mock_cal):
+        Position.objects.create(
+            ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+        mock_cal.return_value = {'earningsCalendar': [{
+            'symbol': 'AAPL', 'date': '2026-09-15', 'hour': 'amc', 'quarter': 1, 'year': 2026,
+            'epsEstimate': 1.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None,
+        }]}
+
+        response = self.client.get('/api/research/earnings/calendar/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['events'][0]['symbol'], 'AAPL')
+        self.assertEqual(response.data['unavailable'], [])
+
+    def test_no_tracked_symbols_is_an_empty_calendar(self):
+        response = self.client.get('/api/research/earnings/calendar/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['events'], [])
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class SymbolEarningsViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='u', password='p')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_returns_available_true_with_history_and_next(self, mock_cal):
+        future = (date.today() + timedelta(days=20)).isoformat()
+        mock_cal.return_value = {'earningsCalendar': [{
+            'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
+            'epsEstimate': 2.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None,
+        }]}
+
+        response = self.client.get('/api/research/earnings/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['next']['date'], future)
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/earnings/AAPL/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertIn('reason', response.data)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_cal):
+        mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
+        response = self.client.get('/api/research/earnings/AAPL/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])

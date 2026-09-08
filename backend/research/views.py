@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from saxo import client
 
-from . import finnhub, market
+from . import earnings, finnhub, market
 from .models import Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -139,3 +139,18 @@ class FundamentalsView(APIView):
     def get(self, request, symbol):
         symbol = _symbol(symbol)
         return provider_response(lambda: finnhub.fundamentals(symbol))
+
+
+class EarningsCalendarView(APIView):
+    throttle_scope = 'research.earnings'
+
+    def get(self, request):
+        return Response(earnings.upcoming_earnings(earnings.tracked_symbols()))
+
+
+class SymbolEarningsView(APIView):
+    throttle_scope = 'research.earnings'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: earnings.symbol_earnings(symbol))

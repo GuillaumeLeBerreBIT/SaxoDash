@@ -99,6 +99,7 @@ REST_FRAMEWORK = {
         'research.search': '20/min',
         'research.market': '60/min',
         'research.fundamentals': '30/min',
+        'research.earnings': '30/min',
     },
 }
 
