@@ -707,6 +707,22 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['price_return_1y'], 31.2)
 
 
+class EarningsCalendarClientTest(TestCase):
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_calls_the_calendar_endpoint_with_the_symbol_and_window(self, mock_get):
+        mock_get.return_value = Mock(ok=True, status_code=200)
+        mock_get.return_value.json.return_value = {'earningsCalendar': []}
+
+        finnhub.get_earnings_calendar('AAPL', '2026-06-01', '2026-12-31')
+
+        (url,), kwargs = mock_get.call_args
+        self.assertEqual(url, 'https://finnhub.io/api/v1/calendar/earnings')
+        self.assertEqual(kwargs['params']['symbol'], 'AAPL')
+        self.assertEqual(kwargs['params']['from'], '2026-06-01')
+        self.assertEqual(kwargs['params']['to'], '2026-12-31')
+
+
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class FundamentalsNoDataTest(TestCase):
     def setUp(self):

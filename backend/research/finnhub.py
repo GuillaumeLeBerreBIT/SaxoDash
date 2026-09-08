@@ -93,7 +93,15 @@ def get_earnings_history(symbol):
     return _get('/stock/earnings', symbol=symbol)
 
 
+def get_earnings_calendar(symbol, date_from, date_to):
+    # Finnhub names the window params `from` / `to` (reserved words in Python,
+    # so they go through **kwargs).
+    return _get('/calendar/earnings', symbol=symbol, **{'from': date_from, 'to': date_to})
+
+
 FUNDAMENTALS_TTL = 86400
+EARNINGS_CAL_TTL = 43200  # 12h — the portfolio-wide agenda's per-symbol window
+EARNINGS_TTL = 86400      # 24h — the per-symbol history window
 
 
 def _cache_key(symbol):
