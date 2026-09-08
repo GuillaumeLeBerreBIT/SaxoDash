@@ -39,6 +39,15 @@ describe('Earnings page', () => {
     expect(screen.getByText('Next 7 days')).toBeInTheDocument()  // AAPL bucket
   })
 
+  it('renders a failure line when the calendar request errors', () => {
+    queries.useEarningsCalendar.mockReturnValue({ isLoading: false, error: new Error('boom'), data: undefined })
+
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    expect(screen.getByText(/Couldn’t load the earnings calendar\./)).toBeInTheDocument()
+    expect(screen.queryByText(/No earnings in the next 30 days/)).not.toBeInTheDocument()
+  })
+
   it('shows an empty state and the unavailable count', () => {
     queries.useEarningsCalendar.mockReturnValue({
       isLoading: false,

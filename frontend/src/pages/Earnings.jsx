@@ -40,7 +40,7 @@ function Row({ event, held, onOpen }) {
 
 export default function Earnings() {
   const navigate = useNavigate()
-  const { data, isLoading } = useEarningsCalendar()
+  const { data, isLoading, error } = useEarningsCalendar()
   const { data: positions = [] } = usePositions()
   const held = new Set(positions.map((p) => p.ticker))
   const openSymbol = (symbol) => navigate(`/research?symbol=${symbol}&tab=earnings`)
@@ -59,7 +59,11 @@ export default function Earnings() {
         <Card><p className="text-[12px] text-zinc-500">Loading…</p></Card>
       )}
 
-      {data && data.events.length === 0 && (
+      {!isLoading && error && (
+        <Card><p className="text-[12.5px] text-red-400">Couldn’t load the earnings calendar.</p></Card>
+      )}
+
+      {!isLoading && !error && data && data.events.length === 0 && (
         <Card>
           <p className="text-[12.5px] text-zinc-400">
             No earnings in the next 30 days across your holdings or watchlists.
@@ -70,7 +74,7 @@ export default function Earnings() {
         </Card>
       )}
 
-      {buckets && data.events.length > 0 && (
+      {!isLoading && !error && buckets && data.events.length > 0 && (
         <div className="space-y-5">
           {BUCKET_ORDER.map(([key, label]) =>
             buckets[key].length ? (
