@@ -1,5 +1,7 @@
+import { daysUntil } from '../../lib/earnings'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
+import EpsBarChart from './EpsBarChart'
 import FundamentalsGate from './FundamentalsGate'
 
 function Ratio({ label, value }) {
@@ -48,6 +50,42 @@ function RecommendationBar({ recommendation }) {
   )
 }
 
+/** Earnings delivery as a valuation input: the next scheduled date (from the
+ *  earnings feed, when we have it) and actual-vs-estimate EPS from the
+ *  fundamentals payload already in hand. */
+function EarningsDelivery({ data, earnings }) {
+  const next = earnings?.data?.available ? earnings.data.next : null
+  const rows = (data.eps_history || []).map((e) => ({
+    period: (e.period || '').slice(0, 7),
+    actual: e.actual,
+    estimate: e.estimate,
+    surprise: e.surprise_percent,
+  }))
+  if (!next && rows.length === 0) return null
+
+  return (
+    <>
+      {next && (
+        <Card>
+          <CardHeader title="Next earnings" subtitle={daysUntil(next.date)} />
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <Ratio label="Date" value={next.date} />
+            <Ratio label="EPS estimate" value={fmtNum(next.eps_estimate, 2)} />
+          </div>
+        </Card>
+      )}
+      {rows.length > 0 && (
+        <EpsBarChart
+          title="EPS: actual vs. estimate"
+          subtitle="Delivery vs. consensus, labelled with the surprise"
+          data={rows}
+          format={(v) => fmtNum(v, 2)}
+        />
+      )}
+    </>
+  )
+}
+
 function PricePerformance({ data }) {
   const hasAny = [data.price_return_1m, data.price_return_ytd, data.price_return_1y].some((v) => v != null)
   if (!hasAny) return null
@@ -64,7 +102,7 @@ function PricePerformance({ data }) {
   )
 }
 
-export default function ValuationTab({ fundamentals }) {
+export default function ValuationTab({ fundamentals, earnings }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
@@ -94,6 +132,7 @@ export default function ValuationTab({ fundamentals }) {
             </div>
           </Card>
 
+          <EarningsDelivery data={data} earnings={earnings} />
           <PricePerformance data={data} />
           <RecommendationBar recommendation={data.recommendation} />
         </div>

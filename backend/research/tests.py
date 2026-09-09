@@ -723,8 +723,12 @@ class EarningsShapingTest(TestCase):
             'quarter': 4, 'year': 2026,
             'eps_estimate': 2.0, 'eps_actual': 2.2,
             'revenue_estimate': 115_000_000_000, 'revenue_actual': 119_600_000_000,
-            'eps_surprise_pct': 10.0,
+            'eps_surprise_pct': 10.0, 'revenue_surprise_pct': 4.0,
         })
+
+    def test_revenue_surprise_is_none_without_an_actual(self):
+        row = {k: v for k, v in RAW_EARNINGS_ROW.items() if k != 'revenueActual'}
+        self.assertIsNone(earnings._shape(row)['revenue_surprise_pct'])
 
     def test_empty_hour_becomes_none(self):
         self.assertIsNone(earnings._shape({**RAW_EARNINGS_ROW, 'hour': ''})['session'])
@@ -739,6 +743,79 @@ class EarningsShapingTest(TestCase):
     def test_surprise_handles_a_negative_estimate(self):
         # A miss against a -0.10 estimate that came in at -0.20 is -100%, not +100%.
         self.assertEqual(earnings._surprise(-0.10, -0.20), -100.0)
+
+
+class WeekStatsTest(TestCase):
+    def _ev(self, date_, surprise, mine=False):
+        return {'date': date_, 'eps_surprise_pct': surprise, 'mine': mine}
+
+    def test_counts_beats_misses_and_in_line_reports(self):
+        stats = earnings._week_stats([
+            self._ev('2026-10-26', 4.0),
+            self._ev('2026-10-26', -2.0),
+            self._ev('2026-10-27', 0.0),
+            self._ev('2026-10-28', None),  # not yet reported
+        ])
+        self.assertEqual(stats['total'], 4)
+        self.assertEqual(stats['reported'], 3)
+        self.assertEqual((stats['beat'], stats['missed'], stats['inline']), (1, 1, 1))
+        self.assertEqual(stats['avg_surprise'], round((4.0 - 2.0 + 0.0) / 3, 2))
+
+    def test_by_day_carries_the_split_per_date_oldest_first(self):
+        stats = earnings._week_stats([
+            self._ev('2026-10-27', 5.0),
+            self._ev('2026-10-26', 5.0),
+            self._ev('2026-10-26', 5.0),
+            self._ev('2026-10-26', -5.0),
+            self._ev('2026-10-26', 0.0),
+        ])
+        self.assertEqual(stats['by_day'], [
+            {'date': '2026-10-26', 'beat': 2, 'missed': 1, 'inline': 1},
+            {'date': '2026-10-27', 'beat': 1, 'missed': 0, 'inline': 0},
+        ])
+
+    def test_empty_week_has_no_average_and_no_days(self):
+        stats = earnings._week_stats([])
+        self.assertIsNone(stats['avg_surprise'])
+        self.assertEqual(stats['by_day'], [])
+        self.assertEqual((stats['reported'], stats['mine']), (0, 0))
+
+    def test_counts_tagged_rows(self):
+        stats = earnings._week_stats([
+            self._ev('2026-10-26', None, mine=True),
+            self._ev('2026-10-26', None),
+        ])
+        self.assertEqual(stats['mine'], 1)
+
+
+class ScoreTest(TestCase):
+    def _h(self, *surprises):
+        return [{'eps_surprise_pct': s} for s in surprises]
+
+    def test_beat_rate_and_average_over_reported_quarters(self):
+        score = earnings._score(self._h(3.0, -1.0, 5.0, 2.0))
+        self.assertEqual((score['beats'], score['quarters']), (3, 4))
+        self.assertEqual(score['beat_rate'], 0.75)
+        self.assertEqual(score['avg_surprise'], round((3.0 - 1.0 + 5.0 + 2.0) / 4, 2))
+
+    def test_streak_counts_consecutive_beats_from_the_latest_quarter(self):
+        # oldest-first: a miss then three beats -> streak of 3.
+        self.assertEqual(earnings._score(self._h(-2.0, 1.0, 1.0, 1.0))['streak'], 3)
+        self.assertEqual(earnings._score(self._h(1.0, 1.0, -0.5))['streak'], 0)
+
+    def test_ignores_quarters_with_no_surprise_figure(self):
+        score = earnings._score(self._h(None, 4.0, None))
+        self.assertEqual((score['beats'], score['quarters']), (1, 1))
+
+    def test_streak_skips_gaps_rather_than_breaking_on_them(self):
+        # a missing figure between beats is not a miss - the streak continues.
+        self.assertEqual(earnings._score(self._h(2.0, None, 1.0))['streak'], 2)
+
+    def test_empty_history_scores_zero(self):
+        self.assertEqual(
+            earnings._score([]),
+            {'beats': 0, 'quarters': 0, 'beat_rate': None, 'avg_surprise': None, 'streak': 0},
+        )
 
 
 class EarningsCalendarClientTest(TestCase):
@@ -1061,6 +1138,21 @@ class WindowEarningsTest(TestCase):
         self.assertEqual(mock_cal.call_count, 1)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_the_response_carries_week_stats_for_the_shown_rows(self, mock_cal):
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            {**self._row('BEAT', mon, actual=1.2)},   # est 1.0 -> +20%
+            {**self._row('MISS', mon, actual=0.8)},   # est 1.0 -> -20%
+            self._row('SOON', mon),                   # not reported
+        ]}
+
+        stats = earnings.window_earnings('all', 0)['stats']
+
+        self.assertEqual((stats['total'], stats['reported']), (3, 2))
+        self.assertEqual((stats['beat'], stats['missed']), (1, 1))
+        self.assertEqual(stats['by_day'], [{'date': mon, 'beat': 1, 'missed': 1, 'inline': 0}])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_dateless_rows_are_dropped(self, mock_cal):
         mon = self._monday().isoformat()
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon), self._row('AAPL', None)]}
@@ -1113,6 +1205,10 @@ class SymbolEarningsTest(TestCase):
         self.assertEqual(result['history'][0]['eps_surprise_pct'], -3.4)
         self.assertEqual(result['history'][1]['eps_actual'], 1.6)
         self.assertEqual(result['next']['date'], future)
+        # scoring travels with the payload so the tab renders a verdict directly
+        self.assertEqual(result['score']['quarters'], 2)
+        self.assertEqual(result['score']['beats'], 1)
+        self.assertEqual(result['score']['streak'], 1)  # latest quarter beat
 
     @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
     @patch('research.earnings.finnhub.get_earnings_history', return_value=[])
@@ -1134,7 +1230,10 @@ class SymbolEarningsTest(TestCase):
 
         result = earnings.symbol_earnings('AAPL')
 
-        self.assertEqual(result, {'available': True, 'history': [], 'next': None})
+        self.assertTrue(result['available'])
+        self.assertEqual(result['history'], [])
+        self.assertIsNone(result['next'])
+        self.assertEqual(result['score']['quarters'], 0)
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

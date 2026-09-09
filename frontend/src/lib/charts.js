@@ -1,5 +1,26 @@
 import { fmtEur } from './format'
 
+// One palette for beat/miss/estimate wherever earnings surprise is drawn -
+// the EPS history bars, the calendar bullet bars, the row edges and the
+// week-summary chart all read from here rather than inlining hexes.
+export const BEAT = '#34d399'
+export const MISS = '#f87171'
+export const ESTIMATE = '#52525b' // consensus / not-yet-judged
+export const REPORTED = '#3b82f6' // reported, but no surprise figure to judge it by
+export const TARGET_TICK = '#e4e4e7' // the estimate marker on a bullet bar, once actuals are in
+export const TRACK = 'rgba(255,255,255,0.06)' // empty bar track
+
+/** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
+export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
+export const surpriseColor = (value) => [MISS, ESTIMATE, BEAT][surpriseSign(value) + 1]
+
+/** '#rrggbb' + 0..1 alpha -> 'rgba(...)', so tinted variants stay derived
+ *  from BEAT/MISS instead of being hand-mixed. */
+export function withAlpha(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+}
+
 export const chartTooltipProps = {
   contentStyle: {
     background: '#18181b',

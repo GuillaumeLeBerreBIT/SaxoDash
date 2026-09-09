@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -28,15 +28,24 @@ const ev = (o = {}) => ({
   ...o,
 })
 
+const STATS = {
+  total: 1, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0,
+  avg_surprise: null, by_day: [],
+}
+
 const stub = (over = {}) =>
   queries.useEarningsCalendar.mockReturnValue({
     isLoading: false,
     error: null,
-    data: { events: [ev()], window: WINDOW, ok: true, ...over },
+    data: { events: [ev()], window: WINDOW, ok: true, stats: STATS, ...over },
   })
 
 beforeEach(() => {
   queries.useEarningsCalendar.mockReset()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('Earnings page', () => {
@@ -62,6 +71,53 @@ describe('Earnings page', () => {
     expect(screen.getByText('2.20')).toBeInTheDocument()
     expect(screen.getByText(/▲ 10\.0%/)).toBeInTheDocument()
     expect(screen.getByText('1.50')).toBeInTheDocument()
+  })
+
+  it('shows the week-summary headline from the backend stats', () => {
+    stub({
+      stats: {
+        total: 40, reported: 12, beat: 8, missed: 3, inline: 1, mine: 2,
+        avg_surprise: 4.2,
+        by_day: [
+          { date: '2026-10-26', beat: 5, missed: 0, inline: 0 },
+          { date: '2026-10-27', beat: 1, missed: 2, inline: 0 },
+        ],
+      },
+    })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    expect(screen.getByText('Reporting')).toBeInTheDocument()
+    expect(screen.getByText('40')).toBeInTheDocument()
+    expect(screen.getByText('8/12')).toBeInTheDocument()
+    expect(screen.getByText('+4.2%')).toBeInTheDocument()
+    expect(screen.getByText(/2 on your lists/)).toBeInTheDocument()
+  })
+
+  it('opens on today’s weekday column by default, not a fixed Monday', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-28T12:00:00')) // a Wednesday in the stub window
+    stub({
+      events: [
+        ev({ symbol: 'MONCO', date: '2026-10-26' }),
+        ev({ symbol: 'WEDCO', date: '2026-10-28' }),
+      ],
+    })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    // Wednesday's name shows in both the rail and the open docket; Monday's
+    // only in the rail.
+    expect(screen.getAllByText('WEDCO')).toHaveLength(2)
+    expect(screen.getAllByText('MONCO')).toHaveLength(1)
+  })
+
+  it('labels every docket column and carries a reading-guide tooltip', () => {
+    stub({ events: [ev({ symbol: 'MON', date: MON })] })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    expect(screen.getByText('Symbol')).toBeInTheDocument()
+    expect(screen.getByText('EPS · est')).toBeInTheDocument()
+    expect(screen.getByText('Revenue')).toBeInTheDocument()
+    expect(screen.getByText('vs est', { exact: false })).toBeInTheDocument()
   })
 
   it('the Mine toggle refetches with scope=mine', async () => {

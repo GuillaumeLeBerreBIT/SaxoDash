@@ -66,8 +66,24 @@ describe('ValuationTab', () => {
     expect(screen.queryByText('32.10')).not.toBeInTheDocument()
   })
 
-  it('no longer renders the EPS history chart (moved to the Earnings tab)', () => {
+  it('shows EPS actual-vs-estimate as a valuation input', () => {
     render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
-    expect(screen.queryByText('EPS: actual vs. estimate')).not.toBeInTheDocument()
+    expect(screen.getByText('EPS: actual vs. estimate')).toBeInTheDocument()
+  })
+
+  it('shows the next earnings date when the earnings feed has one', () => {
+    render(
+      <ValuationTab
+        fundamentals={{ data: AVAILABLE, isLoading: false }}
+        earnings={{ data: { available: true, next: { date: '2099-02-01', eps_estimate: 2.4 } } }}
+      />,
+    )
+    expect(screen.getByText('Next earnings')).toBeInTheDocument()
+    expect(screen.getByText('2099-02-01')).toBeInTheDocument()
+  })
+
+  it('omits the next earnings card when the earnings feed is absent', () => {
+    render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
+    expect(screen.queryByText('Next earnings')).not.toBeInTheDocument()
   })
 })

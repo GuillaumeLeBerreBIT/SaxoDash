@@ -188,7 +188,7 @@ export default function Research() {
                 fundamentals={fundamentals}
               />
             ) : null}
-            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
+            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
             {tab === 'earnings' ? <EarningsTab symbol={symbol} earnings={earnings} /> : null}
             {tab === 'market' ? <ComingSoon feature="Market context" /> : null}
           </div>

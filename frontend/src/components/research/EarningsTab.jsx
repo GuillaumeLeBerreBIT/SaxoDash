@@ -1,18 +1,9 @@
+import { daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
 import EpsBarChart from './EpsBarChart'
 
 const SESSION_LABEL = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
-
-function daysUntil(iso) {
-  const target = new Date(iso + 'T00:00:00').getTime()
-  const midnight = new Date().setHours(0, 0, 0, 0)
-  const days = Math.round((target - midnight) / 86_400_000)
-  if (days < 0) return 'past'
-  if (days === 0) return 'today'
-  if (days === 1) return 'tomorrow'
-  return `in ${days} days`
-}
 
 function Metric({ label, value }) {
   return (
@@ -44,43 +35,25 @@ function NextEarningsCard({ next }) {
   )
 }
 
-function surpriseScore(history) {
-  const scored = history.filter((e) => e.eps_surprise_pct != null)
-  if (!scored.length) return null
-  const beats = scored.filter((e) => e.eps_surprise_pct > 0).length
-  const avg = scored.reduce((sum, e) => sum + e.eps_surprise_pct, 0) / scored.length
-  return { beats, of: scored.length, avg }
-}
-
-function SurpriseTrend({ history }) {
-  const rows = history.filter((e) => e.eps_surprise_pct != null).slice(-8)
-  if (!rows.length) return null
-
-  const score = surpriseScore(history)
-  const verdict = score.beats > score.of / 2 ? 'text-emerald-400' : 'text-red-400'
+/** The backend's beat record as three figures and a one-line verdict - no
+ *  chart, so it doesn't echo the EPS history bars above it. */
+function BeatRecord({ score }) {
+  if (!score?.quarters) return null
+  const consistent = score.beats > score.quarters / 2
 
   return (
     <Card>
-      <CardHeader
-        title="EPS surprise"
-        subtitle={`Beat estimates ${score.beats} of the last ${score.of} · avg surprise ${fmtPct(score.avg, { decimals: 1 })}`}
-      />
-      <div className="mt-4 flex flex-wrap gap-4">
-        {rows.map((e) => (
-          <div key={e.date} className="text-center">
-            <div
-              className={`text-[13px] num font-mono ${e.eps_surprise_pct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}
-            >
-              {fmtPct(e.eps_surprise_pct, { decimals: 1 })}
-            </div>
-            <div className="text-[10px] text-zinc-500">{e.date.slice(0, 7)}</div>
-          </div>
-        ))}
+      <CardHeader title="Beat record" subtitle={`Last ${score.quarters} reported quarters`} />
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        <Metric label="Beat estimate" value={`${score.beats}/${score.quarters}`} />
+        <Metric label="Avg surprise" value={fmtPct(score.avg_surprise, { decimals: 1 })} />
+        <Metric
+          label="Current streak"
+          value={score.streak ? `${score.streak} qtr${score.streak > 1 ? 's' : ''}` : '—'}
+        />
       </div>
-      <div className={`mt-3 pt-3 border-t border-white/[0.06] text-[11px] ${verdict}`}>
-        {score.beats > score.of / 2
-          ? 'A consistent beat history.'
-          : 'A patchy record against consensus.'}
+      <div className={`mt-3 pt-3 border-t border-white/[0.06] text-[11px] ${consistent ? 'text-emerald-400' : 'text-red-400'}`}>
+        {consistent ? 'A consistent beat history.' : 'A patchy record against consensus.'}
       </div>
     </Card>
   )
@@ -111,6 +84,7 @@ export default function EarningsTab({ symbol, earnings }) {
     period: e.date.slice(0, 7),
     actual: e.eps_actual,
     estimate: e.eps_estimate,
+    surprise: e.eps_surprise_pct,
   }))
 
   return (
@@ -118,11 +92,11 @@ export default function EarningsTab({ symbol, earnings }) {
       <NextEarningsCard next={data.next} />
       <EpsBarChart
         title="EPS: actual vs. estimate"
-        subtitle="Reported quarters"
+        subtitle="Reported quarters, labelled with the surprise vs. consensus"
         data={epsRows}
         format={(v) => fmtNum(v, 2)}
       />
-      <SurpriseTrend history={data.history} />
+      <BeatRecord score={data.score} />
     </div>
   )
 }
