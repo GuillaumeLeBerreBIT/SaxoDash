@@ -1,9 +1,12 @@
-from datetime import timedelta
+from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
+from core.models import NetWorthSnapshot
+from portfolio import insights
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
 from portfolio.services import (
@@ -14,6 +17,22 @@ from portfolio.services import (
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+
+
+def _snap(d, portfolio, bank=Decimal('1000.00')):
+    return NetWorthSnapshot.objects.create(
+        date=d, portfolio_value=Decimal(portfolio), bank_total=bank,
+        net_worth=Decimal(portfolio) + bank,
+    )
+
+
+def _pos(ticker, qty, avg, price, sector='Technology', currency='USD', color='#111111',
+         price_source='live'):
+    return Position.objects.create(
+        ticker=ticker, name=f'{ticker} Inc', qty=Decimal(qty), avg_cost=Decimal(avg),
+        current_price=Decimal(price), sector=sector, type='STOCK', color=color,
+        currency=currency, price_source=price_source,
+    )
 
 
 # Create your tests here.
@@ -126,3 +145,40 @@ class PortfolioValuationTrustTest(TestCase):
         self._position()
 
         self.assertEqual(get_portfolio_value().amount, Decimal('1100.00'))
+
+
+class InsightsHelpersTest(TestCase):
+    def test_day_delta_is_the_last_two_points(self):
+        pairs = [(date(2026, 9, 8), Decimal('100')), (date(2026, 9, 9), Decimal('110'))]
+        self.assertEqual(insights._day(pairs), {'abs': Decimal('10'), 'pct': 10.0})
+
+    def test_day_delta_needs_two_points(self):
+        self.assertIsNone(insights._day([(date(2026, 9, 9), Decimal('100'))]))
+
+    def test_trailing_window_anchors_to_the_first_in_window_point(self):
+        pairs = [
+            (date(2026, 8, 1), Decimal('100')),
+            (date(2026, 9, 5), Decimal('120')),
+            (date(2026, 9, 12), Decimal('132')),
+        ]
+        self.assertEqual(insights._trailing(pairs, 10), {'abs': Decimal('12'), 'pct': 10.0})
+
+    def test_trailing_returns_none_when_the_window_has_under_two_points(self):
+        pairs = [(date(2026, 8, 1), Decimal('100')), (date(2026, 9, 12), Decimal('132'))]
+        self.assertIsNone(insights._trailing(pairs, 3))
+
+    def test_ytd_uses_the_latest_years_points(self):
+        pairs = [
+            (date(2025, 12, 31), Decimal('90')),
+            (date(2026, 1, 2), Decimal('100')),
+            (date(2026, 9, 12), Decimal('125')),
+        ]
+        self.assertEqual(insights._ytd(pairs), {'abs': Decimal('25'), 'pct': 25.0})
+
+    def test_all_time_is_first_versus_last(self):
+        pairs = [(date(2026, 1, 1), Decimal('80')), (date(2026, 9, 1), Decimal('100'))]
+        self.assertEqual(insights._all_time(pairs), {'abs': Decimal('20'), 'pct': 25.0})
+
+    def test_pct_is_none_when_the_anchor_is_zero(self):
+        pairs = [(date(2026, 9, 1), Decimal('0')), (date(2026, 9, 2), Decimal('5'))]
+        self.assertEqual(insights._day(pairs), {'abs': Decimal('5'), 'pct': None})
