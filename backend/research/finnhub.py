@@ -5,6 +5,7 @@ key, not a per-user OAuth token, so there is no credential lookup here.
 
 import logging
 import statistics
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from django.conf import settings
@@ -103,9 +104,17 @@ def get_earnings_calendar(symbol, date_from, date_to):
     return _get('/calendar/earnings', **params)
 
 
+def get_company_news(symbol, date_from, date_to):
+    # Same `from` / `to` reserved-word dance as the earnings calendar.
+    return _get('/company-news', symbol=symbol, **{'from': date_from, 'to': date_to})
+
+
 FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
+NEWS_TTL = 7200           # 2h — headlines move through the day, not by the second
+NEWS_WINDOW_DAYS = 14
+NEWS_MAX_ITEMS = 40
 
 CACHE_V = 'v2'  # bump when the shaped fundamentals payload changes shape
 
@@ -264,3 +273,33 @@ def fundamentals(symbol):
         raise FinnhubUnexpected() from exc
 
     return {'available': True, **data}
+
+
+def _to_news_item(row):
+    ts = row.get('datetime')
+    return {
+        'id': row.get('id'),
+        'datetime': datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else None,
+        'headline': row.get('headline', ''),
+        'source': row.get('source', ''),
+        'summary': row.get('summary', ''),
+        'url': row.get('url', ''),
+    }
+
+
+def news(symbol):
+    """Company headlines for the last NEWS_WINDOW_DAYS, newest first, capped.
+    Drops the image (kept deliberately spare) and any row missing a headline,
+    url or timestamp."""
+    today = date.today()
+    start = today - timedelta(days=NEWS_WINDOW_DAYS)
+    key = f'research:news:v1:{symbol}:{today.isoformat()}'
+
+    def produce():
+        rows = get_company_news(symbol, start.isoformat(), today.isoformat()) or []
+        items = [_to_news_item(r) for r in rows if r.get('headline') and r.get('url')]
+        items = [item for item in items if item['datetime']]
+        items.sort(key=lambda item: item['datetime'], reverse=True)
+        return items[:NEWS_MAX_ITEMS]
+
+    return {'available': True, 'items': cache.get_or_set(key, produce, NEWS_TTL)}

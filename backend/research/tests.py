@@ -798,6 +798,44 @@ class ValuationHistoryTest(TestCase):
         self.assertNotIn('valuation_history', result)
 
 
+RAW_NEWS_ROW = {
+    'category': 'company', 'datetime': 1_760_000_000, 'headline': 'Apple ships a thing',
+    'id': 7, 'image': 'https://example.com/x.png', 'related': 'AAPL',
+    'source': 'Reuters', 'summary': 'A short summary.', 'url': 'https://example.com/story',
+}
+
+
+class CompanyNewsClientTest(TestCase):
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_calls_the_company_news_endpoint_with_the_window(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [])
+
+        finnhub.get_company_news('AAPL', '2026-01-01', '2026-01-15')
+
+        (url,), kwargs = mock_get.call_args
+        self.assertEqual(url, 'https://finnhub.io/api/v1/company-news')
+        self.assertEqual(kwargs['params']['symbol'], 'AAPL')
+        self.assertEqual(kwargs['params']['from'], '2026-01-01')
+        self.assertEqual(kwargs['params']['to'], '2026-01-15')
+
+
+class CompanyNewsShapingTest(TestCase):
+    def test_shapes_a_row_and_drops_the_image(self):
+        item = finnhub._to_news_item(RAW_NEWS_ROW)
+        self.assertEqual(item['id'], 7)
+        self.assertEqual(item['headline'], 'Apple ships a thing')
+        self.assertEqual(item['source'], 'Reuters')
+        self.assertEqual(item['summary'], 'A short summary.')
+        self.assertEqual(item['url'], 'https://example.com/story')
+        self.assertNotIn('image', item)
+        self.assertEqual(item['datetime'], '2025-10-09T08:53:20+00:00')  # epoch -> ISO (UTC)
+
+    def test_a_row_without_a_timestamp_has_a_none_datetime(self):
+        item = finnhub._to_news_item({k: v for k, v in RAW_NEWS_ROW.items() if k != 'datetime'})
+        self.assertIsNone(item['datetime'])
+
+
 class EarningsShapingTest(TestCase):
     def test_renames_finnhub_fields_to_snake_case(self):
         event = earnings._shape(RAW_EARNINGS_ROW)
@@ -1067,6 +1105,59 @@ class FundamentalsViewTest(APITestCase):
         self.assertEqual(response.status_code, 400)
 
 
+@override_settings(CACHES=LOCMEM)
+class CompanyNewsViewTest(APITestCase):
+    URL = '/api/research/news/AAPL/'
+
+    def setUp(self):
+        cache.clear()
+        user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get(self.URL).status_code, 401)
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_returns_available_true_with_items_newest_first(self, mock_news):
+        mock_news.return_value = [
+            {**RAW_NEWS_ROW, 'id': 1, 'datetime': 1_759_000_000, 'headline': 'older'},
+            {**RAW_NEWS_ROW, 'id': 2, 'datetime': 1_760_000_000, 'headline': 'newer'},
+        ]
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual([i['headline'] for i in response.data['items']], ['newer', 'older'])
+        self.assertNotIn('image', response.data['items'][0])
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_an_empty_feed_is_still_available_true(self, mock_news):
+        mock_news.return_value = []
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'available': True, 'items': []})
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_news):
+        mock_news.side_effect = finnhub.FinnhubAPIError('boom')
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    def test_rejects_a_malformed_symbol(self):
+        self.assertEqual(self.client.get('/api/research/news/not%20a%20symbol/').status_code, 400)
+
+
 # ScopedRateThrottle caches THROTTLE_RATES on the class at import, so
 # override_settings can't reach it - patch the dict directly.
 @patch.dict(
@@ -1115,6 +1206,7 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.FundamentalsView,
             research_views.EarningsCalendarView,
             research_views.SymbolEarningsView,
+            research_views.CompanyNewsView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
 
