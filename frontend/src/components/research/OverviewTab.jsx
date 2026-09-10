@@ -3,6 +3,7 @@ import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
+import SnapshotSection from './SnapshotSection'
 
 function Metric({ label, value, tone = 'text-zinc-100', hint }) {
   return (
@@ -127,6 +128,8 @@ export default function OverviewTab({ symbol, position, details, detailsLoading,
   return (
     <div className="space-y-4">
       {position ? <PositionCard position={position} /> : null}
+
+      <SnapshotSection fundamentals={fundamentals} />
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
         <InstrumentCard symbol={symbol} details={details} isLoading={detailsLoading} />

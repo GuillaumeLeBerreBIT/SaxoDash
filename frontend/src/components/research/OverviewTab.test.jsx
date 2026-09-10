@@ -22,8 +22,31 @@ describe('OverviewTab fundamentals', () => {
       />
     )
 
-    expect(screen.getByText('32.10')).toBeInTheDocument()
+    expect(screen.getAllByText('32.10').length).toBeGreaterThan(0)
     expect(screen.getByText('3.10T')).toBeInTheDocument()
+  })
+
+  it('renders the investment snapshot from the same fundamentals', () => {
+    render(
+      <OverviewTab
+        symbol="AAPL"
+        position={null}
+        details={null}
+        detailsLoading={false}
+        bars={bars}
+        range="1M"
+        fundamentals={{
+          data: {
+            available: true, name: 'Apple Inc', pe_ratio: 32.1, market_cap: 3_100_000,
+            dividend_yield: 0.44, revenue_growth_ttm_yoy: 12, net_margin: 25, roe: 30,
+          },
+          isLoading: false,
+        }}
+      />
+    )
+
+    expect(screen.getByText('Investment snapshot')).toBeInTheDocument()
+    expect(screen.getByText('Growth')).toBeInTheDocument()
   })
 
   it('shows an unavailable message when Finnhub has no data for this symbol', () => {
@@ -39,6 +62,6 @@ describe('OverviewTab fundamentals', () => {
       />
     )
 
-    expect(screen.getByText(/FINNHUB_API_KEY is not set/)).toBeInTheDocument()
+    expect(screen.getAllByText(/FINNHUB_API_KEY is not set/).length).toBeGreaterThan(0)
   })
 })
