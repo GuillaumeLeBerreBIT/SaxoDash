@@ -10,6 +10,20 @@
   }
 }
 
+/* Documented type scale for new components. Plain custom properties, not
+   Tailwind @theme tokens, so nothing existing is overridden - reference these
+   as text-[var(--fig-lg)] where a component wants to stay on the scale.
+   2xs 11 · xs 12 · sm 13 · md 15 · lg 19 · xl 22 · 2xl 24 (px) */
+:root {
+  --fig-2xs: 0.6875rem;
+  --fig-xs: 0.75rem;
+  --fig-sm: 0.8125rem;
+  --fig-md: 0.9375rem;
+  --fig-lg: 1.1875rem;
+  --fig-xl: 1.375rem;
+  --fig-2xl: 1.5rem;
+}
+
 html, body {
   background: #09090b;
   color: #fafafa;
