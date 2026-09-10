@@ -52,16 +52,8 @@ export default function Dashboard() {
       <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
 
       <HeroValue value={insights.value} change={insights.change} spark={insights.spark} />
-      <AttentionBand items={insights.attention} />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <MoversCard movers={insights.movers} />
-        <ContributorsCard contributors={insights.contributors} />
-      </div>
-
-      <UpcomingEarnings items={insights.upcoming_earnings} />
-
       <NetWorthChart />
+      <AttentionBand items={insights.attention} />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-3" padding={false}>
@@ -156,11 +148,17 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <MoversCard movers={insights.movers} />
+        <ContributorsCard contributors={insights.contributors} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <ExposureCard
           sector={insights.sector_exposure}
           currency={insights.currency_exposure}
           concentration={insights.concentration}
         />
+        <UpcomingEarnings items={insights.upcoming_earnings} />
       </div>
 
       <Card padding={false}>
