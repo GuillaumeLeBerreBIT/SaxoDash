@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import {
@@ -22,9 +22,10 @@ import {
 } from '../lib/research'
 import { PageHeader } from '../components/ui'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
+import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
-import ComingSoon from '../components/research/ComingSoon'
 import EarningsTab from '../components/research/EarningsTab'
+import NewsTab from '../components/research/NewsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
@@ -35,7 +36,7 @@ const TABS = [
   ['overview', 'Overview'],
   ['valuation', 'Valuation'],
   ['earnings', 'Earnings'],
-  ['market', 'Market context'],
+  ['news', 'News'],
 ]
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
@@ -59,6 +60,12 @@ export default function Research() {
   const selectSymbol = (next) => setParams({ symbol: next }, { replace: true })
 
   const position = positions.find((p) => p.ticker === symbol) ?? null
+
+  useEffect(() => {
+    pushRecentSymbol(symbol)
+  }, [symbol])
+
+  const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
   // Only searched for when the portfolio cannot answer: a held instrument
   // already knows its own uic.
@@ -131,6 +138,22 @@ export default function Research() {
         right={<SaxoConnectionStatus />}
       />
 
+      {recentSymbols.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          <span className="text-[10px] uppercase tracking-wide text-zinc-600">Recent</span>
+          {recentSymbols.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => selectSymbol(s)}
+              className="h-6 px-2 rounded border border-white/[0.06] text-[11.5px] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-4">
         <SymbolBar
           symbol={symbol}
@@ -190,7 +213,7 @@ export default function Research() {
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
             {tab === 'earnings' ? <EarningsTab symbol={symbol} earnings={earnings} /> : null}
-            {tab === 'market' ? <ComingSoon feature="Market context" /> : null}
+            {tab === 'news' ? <NewsTab symbol={symbol} /> : null}
           </div>
 
           <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />

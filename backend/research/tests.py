@@ -652,6 +652,19 @@ SAMPLE_FINANCIALS = {
         'monthToDatePriceReturnDaily': 2.4,
         'yearToDatePriceReturnDaily': 18.7,
         '52WeekPriceReturnDaily': 31.2,
+        'revenueGrowthTTMYoy': 14.2,
+        'epsGrowthTTMYoy': 32.6,
+        'revenueGrowth3Y': 1.8,
+        'revenueGrowth5Y': 8.7,
+        'epsGrowth3Y': 6.9,
+        'operatingMarginTTM': 33.2,
+        'operatingMargin5Y': 30.7,
+        'grossMargin5Y': 44.5,
+        'netProfitMargin5Y': 25.5,
+        'totalDebt/totalEquityQuarterly': 0.78,
+        'longTermDebt/equityQuarterly': 0.66,
+        'netInterestCoverageTTM': 622.5,
+        'quickRatioQuarterly': 0.93,
     }
 }
 
@@ -713,6 +726,114 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['price_return_1m'], 2.4)
         self.assertEqual(result['price_return_ytd'], 18.7)
         self.assertEqual(result['price_return_1y'], 31.2)
+
+    def test_shapes_the_growth_and_leverage_fields(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS
+        )
+        self.assertEqual(result['revenue_growth_ttm_yoy'], 14.2)
+        self.assertEqual(result['eps_growth_ttm_yoy'], 32.6)
+        self.assertEqual(result['revenue_growth_3y'], 1.8)
+        self.assertEqual(result['revenue_growth_5y'], 8.7)
+        self.assertEqual(result['eps_growth_3y'], 6.9)
+        self.assertEqual(result['operating_margin_ttm'], 33.2)
+        self.assertEqual(result['operating_margin_5y'], 30.7)
+        self.assertEqual(result['gross_margin_5y'], 44.5)
+        self.assertEqual(result['net_margin_5y'], 25.5)
+        self.assertEqual(result['debt_to_equity'], 0.78)
+        self.assertEqual(result['long_term_debt_to_equity'], 0.66)
+        self.assertEqual(result['interest_coverage'], 622.5)
+        self.assertEqual(result['quick_ratio'], 0.93)
+
+    def test_growth_and_leverage_fields_absent_from_the_free_tier_are_none(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, {'metric': {'peNormalizedAnnual': 32.1}},
+            SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS,
+        )
+        self.assertIsNone(result['revenue_growth_ttm_yoy'])
+        self.assertIsNone(result['debt_to_equity'])
+        self.assertIsNone(result['interest_coverage'])
+
+    def test_cache_key_carries_the_shape_version(self):
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v2:AAPL')
+
+
+SAMPLE_SERIES = {
+    'annual': {
+        'pe': [
+            {'period': '2026-09-30', 'v': 34.0},
+            {'period': '2025-09-30', 'v': 28.0},
+            {'period': '2024-09-30', 'v': 24.0},
+        ],
+        'ps': [
+            {'period': '2026-09-30', 'v': 10.0},
+            {'period': '2025-09-30', 'v': 8.0},
+        ],
+        'pb': [],
+    }
+}
+
+
+class ValuationHistoryTest(TestCase):
+    def test_series_stats_reduces_a_named_annual_series(self):
+        stats = finnhub._series_stats(SAMPLE_SERIES['annual'], 'pe')
+        self.assertEqual(
+            stats, {'latest': 34.0, 'min': 24.0, 'median': 28.0, 'max': 34.0, 'n': 3}
+        )
+
+    def test_series_stats_is_none_for_an_empty_or_missing_series(self):
+        self.assertIsNone(finnhub._series_stats(SAMPLE_SERIES['annual'], 'pb'))
+        self.assertIsNone(finnhub._series_stats(SAMPLE_SERIES['annual'], 'evEbitda'))
+
+    def test_valuation_history_is_built_from_series_annual(self):
+        financials = {**SAMPLE_FINANCIALS, 'series': SAMPLE_SERIES}
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, financials, [], [])
+        self.assertEqual(result['valuation_history']['pe']['median'], 28.0)
+        self.assertIn('ps', result['valuation_history'])
+        self.assertNotIn('pb', result['valuation_history'])
+        self.assertNotIn('ev_ebitda', result['valuation_history'])
+
+    def test_valuation_history_is_absent_without_a_series_block(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
+        self.assertNotIn('valuation_history', result)
+
+
+RAW_NEWS_ROW = {
+    'category': 'company', 'datetime': 1_760_000_000, 'headline': 'Apple ships a thing',
+    'id': 7, 'image': 'https://example.com/x.png', 'related': 'AAPL',
+    'source': 'Reuters', 'summary': 'A short summary.', 'url': 'https://example.com/story',
+}
+
+
+class CompanyNewsClientTest(TestCase):
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_calls_the_company_news_endpoint_with_the_window(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [])
+
+        finnhub.get_company_news('AAPL', '2026-01-01', '2026-01-15')
+
+        (url,), kwargs = mock_get.call_args
+        self.assertEqual(url, 'https://finnhub.io/api/v1/company-news')
+        self.assertEqual(kwargs['params']['symbol'], 'AAPL')
+        self.assertEqual(kwargs['params']['from'], '2026-01-01')
+        self.assertEqual(kwargs['params']['to'], '2026-01-15')
+
+
+class CompanyNewsShapingTest(TestCase):
+    def test_shapes_a_row_and_drops_the_image(self):
+        item = finnhub._to_news_item(RAW_NEWS_ROW)
+        self.assertEqual(item['id'], 7)
+        self.assertEqual(item['headline'], 'Apple ships a thing')
+        self.assertEqual(item['source'], 'Reuters')
+        self.assertEqual(item['summary'], 'A short summary.')
+        self.assertEqual(item['url'], 'https://example.com/story')
+        self.assertNotIn('image', item)
+        self.assertEqual(item['datetime'], '2025-10-09T08:53:20+00:00')  # epoch -> ISO (UTC)
+
+    def test_a_row_without_a_timestamp_has_a_none_datetime(self):
+        item = finnhub._to_news_item({k: v for k, v in RAW_NEWS_ROW.items() if k != 'datetime'})
+        self.assertIsNone(item['datetime'])
 
 
 class EarningsShapingTest(TestCase):
@@ -984,6 +1105,59 @@ class FundamentalsViewTest(APITestCase):
         self.assertEqual(response.status_code, 400)
 
 
+@override_settings(CACHES=LOCMEM)
+class CompanyNewsViewTest(APITestCase):
+    URL = '/api/research/news/AAPL/'
+
+    def setUp(self):
+        cache.clear()
+        user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get(self.URL).status_code, 401)
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_returns_available_true_with_items_newest_first(self, mock_news):
+        mock_news.return_value = [
+            {**RAW_NEWS_ROW, 'id': 1, 'datetime': 1_759_000_000, 'headline': 'older'},
+            {**RAW_NEWS_ROW, 'id': 2, 'datetime': 1_760_000_000, 'headline': 'newer'},
+        ]
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual([i['headline'] for i in response.data['items']], ['newer', 'older'])
+        self.assertNotIn('image', response.data['items'][0])
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_an_empty_feed_is_still_available_true(self, mock_news):
+        mock_news.return_value = []
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'available': True, 'items': []})
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.get_company_news')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_news):
+        mock_news.side_effect = finnhub.FinnhubAPIError('boom')
+        response = self.client.get(self.URL)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    def test_rejects_a_malformed_symbol(self):
+        self.assertEqual(self.client.get('/api/research/news/not%20a%20symbol/').status_code, 400)
+
+
 # ScopedRateThrottle caches THROTTLE_RATES on the class at import, so
 # override_settings can't reach it - patch the dict directly.
 @patch.dict(
@@ -1032,6 +1206,7 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.FundamentalsView,
             research_views.EarningsCalendarView,
             research_views.SymbolEarningsView,
+            research_views.CompanyNewsView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
 

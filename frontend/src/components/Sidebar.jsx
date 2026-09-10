@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, CalendarClock, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut } from 'lucide-react'
+import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, CalendarClock, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
 
 const items = [
@@ -12,7 +12,7 @@ const items = [
   { to: '/accounts', label: 'Accounts', icon: Landmark },
 ]
 
-export default function Sidebar({ collapsed, setCollapsed }) {
+export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
   const navigate = useNavigate()
   const username = getUsername() || 'Account'
   const initials = username.slice(0, 2).toUpperCase()
@@ -58,6 +58,19 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           <PanelLeftOpen size={14} />
         </button>
       )}
+
+      <button
+        type="button"
+        onClick={onOpenPalette}
+        title="Search (⌘K)"
+        className={`mx-2 mt-2 h-8 rounded-md border border-white/[0.06] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 flex items-center ${
+          collapsed ? 'justify-center' : 'px-2.5 gap-2'
+        }`}
+      >
+        <Search size={14} />
+        {!collapsed && <span className="text-[12px]">Search</span>}
+        {!collapsed && <span className="ml-auto text-[10px] text-zinc-600">⌘K</span>}
+      </button>
 
       <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} py-3 space-y-0.5`}>
         {items.map(({ to, label, icon: ItemIcon, end }) => (

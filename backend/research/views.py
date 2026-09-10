@@ -165,3 +165,11 @@ class SymbolEarningsView(APIView):
     def get(self, request, symbol):
         symbol = _symbol(symbol)
         return provider_response(lambda: earnings.symbol_earnings(symbol))
+
+
+class CompanyNewsView(APIView):
+    throttle_scope = 'research.news'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: finnhub.news(symbol))

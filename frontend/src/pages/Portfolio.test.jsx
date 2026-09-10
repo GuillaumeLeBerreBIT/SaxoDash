@@ -92,4 +92,10 @@ describe('Portfolio holdings table', () => {
 
     expect(within(row).getByText('2.5')).toBeInTheDocument()
   })
+
+  it('links each holding name to its research page', () => {
+    renderWithProviders(<Portfolio />)
+    const link = screen.getByRole('link', { name: /MSFT/ })
+    expect(link).toHaveAttribute('href', '/research?symbol=MSFT')
+  })
 })

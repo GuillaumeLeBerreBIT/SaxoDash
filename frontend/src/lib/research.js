@@ -157,3 +157,11 @@ export function barChange(bars = [], index) {
   if (!bar || !previous || !previous.close) return null
   return ((bar.close - previous.close) / previous.close) * 100
 }
+
+/** Canonical link to the Research page for a symbol, optionally on a tab.
+ *  One builder so every "open this company" affordance agrees on the URL. */
+export function researchHref(symbol, tab) {
+  const params = new URLSearchParams({ symbol })
+  if (tab) params.set('tab', tab)
+  return `/research?${params.toString()}`
+}

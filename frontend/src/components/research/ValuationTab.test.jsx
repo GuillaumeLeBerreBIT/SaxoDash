@@ -86,4 +86,22 @@ describe('ValuationTab', () => {
     render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
     expect(screen.queryByText('Next earnings')).not.toBeInTheDocument()
   })
+
+  it('shows P/E against its own multi-year range when history is available', () => {
+    render(
+      <ValuationTab
+        fundamentals={{
+          data: { ...AVAILABLE, valuation_history: { pe: { latest: 32.1, min: 12, median: 22, max: 35, n: 7 } } },
+          isLoading: false,
+        }}
+      />,
+    )
+    expect(screen.getByText(/median 22/)).toBeInTheDocument()
+    expect(screen.getByText(/over 7 yrs/)).toBeInTheDocument()
+  })
+
+  it('omits the history context when valuation_history is absent', () => {
+    render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
+    expect(screen.queryByText(/over \d+ yrs/)).not.toBeInTheDocument()
+  })
 })

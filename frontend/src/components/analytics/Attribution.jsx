@@ -1,5 +1,8 @@
+import { Link } from 'react-router-dom'
+
 import { Card, CardHeader } from '../ui'
 import { fmtNum, fmtPct } from '../../lib/format'
+import { researchHref } from '../../lib/research'
 
 /** Each holding's share of the total gain - computed here from positions
  *  the app already fetches, not a separate backend round trip. */
@@ -33,7 +36,12 @@ export default function Attribution({ positions }) {
       <div className="mt-4 space-y-3">
         {rows.map((r) => (
           <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: '58px 1fr 74px 62px' }}>
-            <span className="text-[12.5px] font-medium text-zinc-100">{r.ticker}</span>
+            <Link
+              to={researchHref(r.ticker)}
+              className="text-[12.5px] font-medium text-zinc-100 hover:text-blue-300"
+            >
+              {r.ticker}
+            </Link>
             <div className="h-5 relative bg-white/[0.03] rounded">
               <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
               <div

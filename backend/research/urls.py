@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     ChartView,
+    CompanyNewsView,
     EarningsCalendarView,
     FundamentalsView,
     InstrumentDetailsView,
@@ -28,6 +29,7 @@ urlpatterns = [
         SymbolEarningsView.as_view(),
         name='research-earnings-symbol',
     ),
+    path('news/<str:symbol>/', CompanyNewsView.as_view(), name='research-company-news'),
     path('instruments/', InstrumentSearchView.as_view(), name='research-instruments'),
     path(
         'instruments/<int:uic>/<str:asset_type>/',

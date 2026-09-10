@@ -1,6 +1,9 @@
+import { Link } from 'react-router-dom'
+
 import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
+import { researchHref } from '../lib/research'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -50,8 +53,8 @@ export default function Portfolio() {
       <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
 
       <Card>
-        <div className="grid grid-cols-3 gap-0">
-          <div className="pr-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0">
+          <div className="sm:pr-5">
             <div className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Investment portfolio</div>
             <div className="mt-1.5 text-[18px] font-medium text-zinc-50 num">{fmtEur(summary.total_value)}</div>
             <div className={`text-[12px] num mt-0.5 ${
@@ -62,12 +65,12 @@ export default function Portfolio() {
               {fmtPct(summary.total_pnl_pct)}
             </div>
           </div>
-          <div className="pl-5 border-l border-zinc-800">
+          <div className="sm:pl-5 sm:border-l border-zinc-800">
             <div className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Bank balance</div>
             <div className="mt-1.5 text-[18px] font-medium text-zinc-50 num">{fmtEur(netWorth.bank_total)}</div>
             <div className="text-[12px] text-zinc-500 mt-0.5">All connected accounts</div>
           </div>
-          <div className="pl-5 border-l-2 border-blue-500/60">
+          <div className="sm:pl-5 sm:border-l-2 border-blue-500/60">
             <div className="text-[11px] text-blue-400 uppercase tracking-wide font-medium">Total net worth</div>
             <div className="mt-1.5 text-[22px] font-medium text-zinc-50 num">{fmtEur(netWorth.net_worth)}</div>
             <div className="text-[12px] text-zinc-500 mt-0.5">Portfolio + bank accounts</div>
@@ -83,7 +86,7 @@ export default function Portfolio() {
         color="#34d399"
       />
 
-      <div className="grid grid-cols-20 gap-4" style={{ gridTemplateColumns: '65fr 35fr' }}>
+      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:65fr_35fr]">
         <Card padding={false}>
           <div className="p-5 pb-3">
             <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
@@ -106,11 +109,11 @@ export default function Portfolio() {
                 {positions.map((p) => (
                   <tr key={p.ticker} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                        <span className="font-medium text-zinc-100">{p.ticker}</span>
+                        <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[140px]">{p.name}</span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-2 py-3">
                       <Badge tone={p.type === 'ETF' ? 'amber' : 'zinc'}>{p.type}</Badge>

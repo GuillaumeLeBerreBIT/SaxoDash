@@ -9,6 +9,7 @@ import {
   periodChange,
   quotesByUic,
   rangeStats,
+  researchHref,
   resolveInstrument,
   saxoAssetType,
   uicsByAssetType,
@@ -212,5 +213,19 @@ describe('needsInstrumentSearch', () => {
 
   it('is false with no symbol to search for', () => {
     expect(needsInstrumentSearch('', [])).toBe(false)
+  })
+})
+
+describe('researchHref', () => {
+  it('builds a symbol-only research link', () => {
+    expect(researchHref('NVDA')).toBe('/research?symbol=NVDA')
+  })
+
+  it('adds the tab when given one', () => {
+    expect(researchHref('AAPL', 'earnings')).toBe('/research?symbol=AAPL&tab=earnings')
+  })
+
+  it('encodes an ampersand in the symbol', () => {
+    expect(researchHref('A&B')).toBe('/research?symbol=A%26B')
   })
 })

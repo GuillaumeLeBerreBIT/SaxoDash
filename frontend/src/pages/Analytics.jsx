@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
-import { Card, CardHeader, ChartPlaceholder, PageHeader, StatCard } from '../components/ui'
+import { Card, CardHeader, ChartPlaceholder, PageHeader, StatStrip, StatRow } from '../components/ui'
 import { Pill } from '../components/RangePills'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
@@ -144,29 +144,29 @@ export default function Analytics() {
         right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
       />
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard
+      <StatStrip>
+        <StatRow
           label="Time-weighted (ann.)"
           value={fmtPct(data.expected_return, { decimals: 1 })}
           note="From your own portfolio-value history"
         />
-        <StatCard
+        <StatRow
           label="Volatility"
           value={`${fmtNum(data.volatility, 1)}%`}
           badge={`Sharpe ${fmtNum(data.sharpe, 2)}`}
           badgeTone="zinc"
         />
-        <StatCard
+        <StatRow
           label="Max drawdown"
           value={`${fmtNum(data.max_drawdown, 1)}%`}
           note={`Current ${fmtNum(data.current_drawdown, 1)}%`}
         />
-        <StatCard
+        <StatRow
           label="Money-weighted (XIRR)"
           value="—"
           note="Needs deposit history the app doesn't sync yet"
         />
-      </div>
+      </StatStrip>
 
       <div className="flex items-center gap-1 border-b border-white/[0.06]">
         {TABS.map(([key, label]) => (

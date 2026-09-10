@@ -4,6 +4,8 @@ key, not a per-user OAuth token, so there is no credential lookup here.
 """
 
 import logging
+import statistics
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from django.conf import settings
@@ -102,15 +104,25 @@ def get_earnings_calendar(symbol, date_from, date_to):
     return _get('/calendar/earnings', **params)
 
 
+def get_company_news(symbol, date_from, date_to):
+    # Same `from` / `to` reserved-word dance as the earnings calendar.
+    return _get('/company-news', symbol=symbol, **{'from': date_from, 'to': date_to})
+
+
 FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
+NEWS_TTL = 7200           # 2h — headlines move through the day, not by the second
+NEWS_WINDOW_DAYS = 14
+NEWS_MAX_ITEMS = 40
+
+CACHE_V = 'v2'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
     # Normalization (uppercasing) is the caller's job - FundamentalsView does
     # it once, on the way in.
-    return f'research:fundamentals:{symbol}'
+    return f'research:fundamentals:{CACHE_V}:{symbol}'
 
 
 def _metric(financials, key):
@@ -145,11 +157,43 @@ def _to_eps_row(row):
     }
 
 
+_VALUATION_SERIES = {'pe': 'pe', 'ps': 'ps', 'pb': 'pb', 'ev_ebitda': 'evEbitda'}
+
+
+def _series_stats(series_annual, key):
+    """min / median / max / latest over one named annual series from Finnhub's
+    `series` block. `None` when the series is missing or empty - never guessed."""
+    points = [p['v'] for p in (series_annual.get(key) or []) if p.get('v') is not None]
+    if not points:
+        return None
+    return {
+        'latest': points[0],  # Finnhub sends newest first
+        'min': min(points),
+        'median': round(statistics.median(points), 2),
+        'max': max(points),
+        'n': len(points),
+    }
+
+
+def _valuation_history(financials):
+    """Each valuation ratio against its own multi-year annual history, or None
+    when `/stock/metric` came back without a `series` block."""
+    annual = (financials.get('series') or {}).get('annual') or {}
+    if not annual:
+        return None
+    out = {}
+    for out_key, series_key in _VALUATION_SERIES.items():
+        stats = _series_stats(annual, series_key)
+        if stats:
+            out[out_key] = stats
+    return out or None
+
+
 def to_fundamentals(profile, financials, recommendations, earnings):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
 
-    return {
+    shaped = {
         'name': profile.get('name', ''),
         'exchange': profile.get('exchange', ''),
         'industry': profile.get('finnhubIndustry', ''),
@@ -178,11 +222,29 @@ def to_fundamentals(profile, financials, recommendations, earnings):
         'price_return_1m': _metric(financials, 'monthToDatePriceReturnDaily'),
         'price_return_ytd': _metric(financials, 'yearToDatePriceReturnDaily'),
         'price_return_1y': _metric(financials, '52WeekPriceReturnDaily'),
+        'revenue_growth_ttm_yoy': _metric(financials, 'revenueGrowthTTMYoy'),
+        'eps_growth_ttm_yoy': _metric(financials, 'epsGrowthTTMYoy'),
+        'revenue_growth_3y': _metric(financials, 'revenueGrowth3Y'),
+        'revenue_growth_5y': _metric(financials, 'revenueGrowth5Y'),
+        'eps_growth_3y': _metric(financials, 'epsGrowth3Y'),
+        'operating_margin_ttm': _metric(financials, 'operatingMarginTTM'),
+        'operating_margin_5y': _metric(financials, 'operatingMargin5Y'),
+        'gross_margin_5y': _metric(financials, 'grossMargin5Y'),
+        'net_margin_5y': _metric(financials, 'netProfitMargin5Y'),
+        'debt_to_equity': _metric(financials, 'totalDebt/totalEquityQuarterly'),
+        'long_term_debt_to_equity': _metric(financials, 'longTermDebt/equityQuarterly'),
+        'interest_coverage': _metric(financials, 'netInterestCoverageTTM'),
+        'quick_ratio': _metric(financials, 'quickRatioQuarterly'),
         # Finnhub sends newest-first; the most recent period is "the" trend.
         'recommendation': _to_recommendation(recommendations[0] if recommendations else None),
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
         'eps_history': [_to_eps_row(row) for row in reversed(earnings)],
     }
+
+    history = _valuation_history(financials)
+    if history:
+        shaped['valuation_history'] = history
+    return shaped
 
 
 def fundamentals(symbol):
@@ -211,3 +273,33 @@ def fundamentals(symbol):
         raise FinnhubUnexpected() from exc
 
     return {'available': True, **data}
+
+
+def _to_news_item(row):
+    ts = row.get('datetime')
+    return {
+        'id': row.get('id'),
+        'datetime': datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else None,
+        'headline': row.get('headline', ''),
+        'source': row.get('source', ''),
+        'summary': row.get('summary', ''),
+        'url': row.get('url', ''),
+    }
+
+
+def news(symbol):
+    """Company headlines for the last NEWS_WINDOW_DAYS, newest first, capped.
+    Drops the image (kept deliberately spare) and any row missing a headline,
+    url or timestamp."""
+    today = date.today()
+    start = today - timedelta(days=NEWS_WINDOW_DAYS)
+    key = f'research:news:v1:{symbol}:{today.isoformat()}'
+
+    def produce():
+        rows = get_company_news(symbol, start.isoformat(), today.isoformat()) or []
+        items = [_to_news_item(r) for r in rows if r.get('headline') and r.get('url')]
+        items = [item for item in items if item['datetime']]
+        items.sort(key=lambda item: item['datetime'], reverse=True)
+        return items[:NEWS_MAX_ITEMS]
+
+    return {'available': True, 'items': cache.get_or_set(key, produce, NEWS_TTL)}

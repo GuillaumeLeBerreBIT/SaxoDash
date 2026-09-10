@@ -144,3 +144,56 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
   )
 }
 
+
+/** A row of headline stats as one bordered strip with dividers - the calm
+ *  alternative to N separate StatCards. */
+export function StatStrip({ children, className = '' }) {
+  return (
+    <div
+      className={`flex flex-col sm:flex-row rounded-xl border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function StatRow({ label, value, badge, badgeTone = 'zinc', note }) {
+  return (
+    <div className="flex-1 p-4">
+      <div className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">{label}</div>
+      <div className="mt-2 text-[clamp(18px,1.7vw,24px)] font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap">
+        {value}
+      </div>
+      {(badge || note) && (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          {badge && (
+            <span
+              className={`inline-flex items-center whitespace-nowrap text-[11.5px] px-2 py-0.5 rounded-md font-medium num font-mono ${
+                statTones[badgeTone] || statTones.zinc
+              }`}
+            >
+              {badge}
+            </span>
+          )}
+          {note && <span className="text-[12px] text-zinc-500">{note}</span>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
+}
+
+/** A labelled figure with an optional sub-hint. Shared by OverviewTab,
+ *  EarningsTab and SnapshotSection so they render metrics identically. */
+export function Metric({ label, value, tone = 'text-zinc-100', hint }) {
+  return (
+    <div>
+      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
+      <div className={`text-[15px] num font-mono mt-1 ${tone}`}>{value}</div>
+      {hint ? <div className="text-[11px] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
+    </div>
+  )
+}
