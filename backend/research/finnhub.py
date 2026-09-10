@@ -4,6 +4,7 @@ key, not a per-user OAuth token, so there is no credential lookup here.
 """
 
 import logging
+import statistics
 
 import requests
 from django.conf import settings
@@ -147,11 +148,43 @@ def _to_eps_row(row):
     }
 
 
+_VALUATION_SERIES = {'pe': 'pe', 'ps': 'ps', 'pb': 'pb', 'ev_ebitda': 'evEbitda'}
+
+
+def _series_stats(series_annual, key):
+    """min / median / max / latest over one named annual series from Finnhub's
+    `series` block. `None` when the series is missing or empty - never guessed."""
+    points = [p['v'] for p in (series_annual.get(key) or []) if p.get('v') is not None]
+    if not points:
+        return None
+    return {
+        'latest': points[0],  # Finnhub sends newest first
+        'min': min(points),
+        'median': round(statistics.median(points), 2),
+        'max': max(points),
+        'n': len(points),
+    }
+
+
+def _valuation_history(financials):
+    """Each valuation ratio against its own multi-year annual history, or None
+    when `/stock/metric` came back without a `series` block."""
+    annual = (financials.get('series') or {}).get('annual') or {}
+    if not annual:
+        return None
+    out = {}
+    for out_key, series_key in _VALUATION_SERIES.items():
+        stats = _series_stats(annual, series_key)
+        if stats:
+            out[out_key] = stats
+    return out or None
+
+
 def to_fundamentals(profile, financials, recommendations, earnings):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
 
-    return {
+    shaped = {
         'name': profile.get('name', ''),
         'exchange': profile.get('exchange', ''),
         'industry': profile.get('finnhubIndustry', ''),
@@ -198,6 +231,11 @@ def to_fundamentals(profile, financials, recommendations, earnings):
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
         'eps_history': [_to_eps_row(row) for row in reversed(earnings)],
     }
+
+    history = _valuation_history(financials)
+    if history:
+        shaped['valuation_history'] = history
+    return shaped
 
 
 def fundamentals(symbol):

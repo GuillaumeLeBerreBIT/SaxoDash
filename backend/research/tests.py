@@ -758,6 +758,46 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v2:AAPL')
 
 
+SAMPLE_SERIES = {
+    'annual': {
+        'pe': [
+            {'period': '2026-09-30', 'v': 34.0},
+            {'period': '2025-09-30', 'v': 28.0},
+            {'period': '2024-09-30', 'v': 24.0},
+        ],
+        'ps': [
+            {'period': '2026-09-30', 'v': 10.0},
+            {'period': '2025-09-30', 'v': 8.0},
+        ],
+        'pb': [],
+    }
+}
+
+
+class ValuationHistoryTest(TestCase):
+    def test_series_stats_reduces_a_named_annual_series(self):
+        stats = finnhub._series_stats(SAMPLE_SERIES['annual'], 'pe')
+        self.assertEqual(
+            stats, {'latest': 34.0, 'min': 24.0, 'median': 28.0, 'max': 34.0, 'n': 3}
+        )
+
+    def test_series_stats_is_none_for_an_empty_or_missing_series(self):
+        self.assertIsNone(finnhub._series_stats(SAMPLE_SERIES['annual'], 'pb'))
+        self.assertIsNone(finnhub._series_stats(SAMPLE_SERIES['annual'], 'evEbitda'))
+
+    def test_valuation_history_is_built_from_series_annual(self):
+        financials = {**SAMPLE_FINANCIALS, 'series': SAMPLE_SERIES}
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, financials, [], [])
+        self.assertEqual(result['valuation_history']['pe']['median'], 28.0)
+        self.assertIn('ps', result['valuation_history'])
+        self.assertNotIn('pb', result['valuation_history'])
+        self.assertNotIn('ev_ebitda', result['valuation_history'])
+
+    def test_valuation_history_is_absent_without_a_series_block(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
+        self.assertNotIn('valuation_history', result)
+
+
 class EarningsShapingTest(TestCase):
     def test_renames_finnhub_fields_to_snake_case(self):
         event = earnings._shape(RAW_EARNINGS_ROW)
