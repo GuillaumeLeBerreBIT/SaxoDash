@@ -13,6 +13,26 @@ function Ratio({ label, value }) {
   )
 }
 
+/** One ratio against its own annual history: a min–median–max track with a
+ *  marker at the latest reading. Silent without a usable range. */
+function HistoryContext({ stats }) {
+  if (!stats || stats.min === stats.max) return null
+  const pos = Math.min(100, Math.max(0, ((stats.latest - stats.min) / (stats.max - stats.min)) * 100))
+  return (
+    <div className="mt-1.5">
+      <div className="relative h-1 bg-white/[0.07] rounded-full">
+        <span
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-400"
+          style={{ left: `${pos}%` }}
+        />
+      </div>
+      <div className="mt-1 text-[9.5px] num font-mono text-zinc-600">
+        {fmtNum(stats.min, 1)} · median {fmtNum(stats.median, 1)} · {fmtNum(stats.max, 1)} over {stats.n} yrs
+      </div>
+    </div>
+  )
+}
+
 const RECOMMENDATION_SEGMENTS = [
   ['strong_buy', 'Strong buy', 'bg-emerald-500'],
   ['buy', 'Buy', 'bg-emerald-700'],
@@ -114,16 +134,28 @@ export default function ValuationTab({ fundamentals, earnings }) {
           <Card>
             <CardHeader title="Ratios" subtitle="Computed in-app from Finnhub's raw fundamentals" />
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
-              <Ratio label="P/S" value={fmtNum(data.ps_ratio, 2)} />
-              <Ratio label="P/B" value={fmtNum(data.pb_ratio, 2)} />
+              <div>
+                <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
+                <HistoryContext stats={data.valuation_history?.pe} />
+              </div>
+              <div>
+                <Ratio label="P/S" value={fmtNum(data.ps_ratio, 2)} />
+                <HistoryContext stats={data.valuation_history?.ps} />
+              </div>
+              <div>
+                <Ratio label="P/B" value={fmtNum(data.pb_ratio, 2)} />
+                <HistoryContext stats={data.valuation_history?.pb} />
+              </div>
               <Ratio label="PEG" value={fmtNum(data.peg_ratio, 2)} />
               <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
               <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
               <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
               <Ratio label="Beta" value={fmtNum(data.beta, 2)} />
               <Ratio label="Forward P/E" value={fmtNum(data.forward_pe, 2)} />
-              <Ratio label="EV/EBITDA" value={fmtNum(data.ev_ebitda, 2)} />
+              <div>
+                <Ratio label="EV/EBITDA" value={fmtNum(data.ev_ebitda, 2)} />
+                <HistoryContext stats={data.valuation_history?.ev_ebitda} />
+              </div>
               <Ratio label="EV/Revenue" value={fmtNum(data.ev_revenue, 2)} />
               <Ratio label="Current ratio" value={fmtNum(data.current_ratio, 2)} />
               <Ratio label="ROA" value={fmtPct(data.roa, { sign: false })} />
