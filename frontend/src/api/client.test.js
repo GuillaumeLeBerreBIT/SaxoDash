@@ -18,6 +18,7 @@ import {
   getEarningsCalendar,
   getSymbolEarnings,
   getCompanyNews,
+  getPortfolioInsights,
   connectSaxo,
 } from './client'
 
@@ -417,6 +418,17 @@ describe('research endpoints', () => {
 
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/research/news/AAPL/'),
+      expect.anything()
+    )
+  })
+
+  it('getPortfolioInsights hits the insights route', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ value: {}, change: {} }))
+
+    await getPortfolioInsights()
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/portfolio/insights/'),
       expect.anything()
     )
   })
