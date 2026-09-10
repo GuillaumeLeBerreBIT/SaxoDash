@@ -49,6 +49,24 @@ describe('OverviewTab fundamentals', () => {
     expect(screen.getByText('Growth')).toBeInTheDocument()
   })
 
+  it('shows instrument reference data as a compact strip, omitting missing fields', () => {
+    render(
+      <OverviewTab
+        symbol="AAPL"
+        position={null}
+        details={{ symbol: 'AAPL', exchange_name: 'Nasdaq', currency: 'USD', isin: 'US0378331005', uic: 211 }}
+        detailsLoading={false}
+        bars={bars}
+        range="1M"
+        fundamentals={{ data: { available: false, reason: 'x' }, isLoading: false }}
+      />
+    )
+
+    expect(screen.getByText('US0378331005')).toBeInTheDocument()
+    expect(screen.getByText('Nasdaq')).toBeInTheDocument()
+    expect(screen.queryByText(/reference data from Saxo/)).not.toBeInTheDocument()
+  })
+
   it('shows an unavailable message when Finnhub has no data for this symbol', () => {
     render(
       <OverviewTab

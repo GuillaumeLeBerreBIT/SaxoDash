@@ -45,29 +45,26 @@ function PositionCard({ position }) {
   )
 }
 
-function InstrumentCard({ symbol, details, isLoading }) {
+function ReferenceStrip({ symbol, details, isLoading }) {
+  if (isLoading) return <div className="h-4 w-64 rounded bg-white/[0.05]" />
+  const pairs = [
+    ['Exchange', details?.exchange_name || details?.exchange],
+    ['Currency', details?.currency],
+    ['ISIN', details?.isin],
+    ['Uic', details?.uic],
+    ['Lot size', details?.lot_size],
+    ['Asset type', details?.asset_type],
+  ].filter(([, value]) => value != null && value !== '')
+
   return (
-    <Card>
-      <CardHeader
-        title={details?.description || symbol}
-        subtitle="Instrument reference data from Saxo"
-        right={details?.isin ? <span className="text-[10.5px] num font-mono text-zinc-500">{details.isin}</span> : null}
-      />
-      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5">
-        {isLoading ? (
-          <span className="text-[12px] text-zinc-500">Loading…</span>
-        ) : (
-          <>
-            <Fact label="Symbol" value={details?.symbol || symbol} />
-            <Fact label="Exchange" value={details?.exchange_name || details?.exchange} />
-            <Fact label="Currency" value={details?.currency} />
-            <Fact label="Asset type" value={details?.asset_type} />
-            <Fact label="Uic" value={details?.uic} />
-            <Fact label="Lot size" value={details?.lot_size} />
-          </>
-        )}
-      </div>
-    </Card>
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-zinc-500">
+      <span className="text-zinc-400 font-medium">{details?.description || symbol}</span>
+      {pairs.map(([label, value]) => (
+        <span key={label}>
+          {label} <span className="text-zinc-300 num font-mono">{value}</span>
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -130,13 +127,12 @@ export default function OverviewTab({ symbol, position, details, detailsLoading,
       {position ? <PositionCard position={position} /> : null}
 
       <SnapshotSection fundamentals={fundamentals} />
+      <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
       <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <InstrumentCard symbol={symbol} details={details} isLoading={detailsLoading} />
         <RangeStatsCard bars={bars} range={range} />
+        <FundamentalsCard fundamentals={fundamentals} />
       </div>
-
-      <FundamentalsCard fundamentals={fundamentals} />
     </div>
   )
 }
