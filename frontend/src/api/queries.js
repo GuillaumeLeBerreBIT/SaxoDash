@@ -9,6 +9,7 @@ import {
   getBankAccounts,
   getCashFlow,
   getChart,
+  getCompanyNews,
   getEarningsCalendar,
   getFundamentals,
   getInstrumentDetails,
@@ -53,6 +54,7 @@ export const queryKeys = {
   instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
+  companyNews: (symbol) => ['company-news', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   watchlists: ['watchlists'],
@@ -190,6 +192,16 @@ export function useFundamentals(symbol) {
     queryFn: () => getFundamentals(symbol),
     enabled: !!symbol,
     staleTime: 24 * 60 * 60_000,
+  })
+}
+
+// News is a slow feed; 1h client staleness sits under the backend's 2h cache.
+export function useCompanyNews(symbol) {
+  return useQuery({
+    queryKey: queryKeys.companyNews(symbol),
+    queryFn: () => getCompanyNews(symbol),
+    enabled: !!symbol,
+    staleTime: 60 * 60_000,
   })
 }
 
