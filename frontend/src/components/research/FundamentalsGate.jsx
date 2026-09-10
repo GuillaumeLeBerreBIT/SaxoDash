@@ -1,4 +1,4 @@
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, Skeleton } from '../ui'
 
 // Shared loading/unavailable/available branching for a `useFundamentals`
 // result, used by both OverviewTab's fundamentals card and ValuationTab.
@@ -9,7 +9,10 @@ export default function FundamentalsGate({ fundamentals, title, subtitle = 'From
     return (
       <Card>
         <CardHeader title={title} subtitle={subtitle} />
-        <div className="mt-3 text-[12px] text-zinc-500">Loading…</div>
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
       </Card>
     )
   }

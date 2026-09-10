@@ -6,7 +6,7 @@ import { fmtEur, fmtMoney, fmtPct, fmtNum } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import PriceBasisNote from '../components/PriceBasisNote'
-import { Card, CardHeader, PageHeader, StatCard, Badge } from '../components/ui'
+import { Card, CardHeader, PageHeader, StatStrip, StatRow, Skeleton, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
 import NetWorthChart from '../components/NetWorthChart'
 
@@ -23,7 +23,13 @@ export default function Dashboard() {
 
   if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
   if (!summaryQuery.data || !netWorthQuery.data)
-    return <div className="text-zinc-500 text-sm">Loading…</div>
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-[300px] w-full" />
+      </div>
+    )
 
   const summary = summaryQuery.data
   const netWorth = netWorthQuery.data
@@ -38,9 +44,9 @@ export default function Dashboard() {
     <div className="space-y-5">
       <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
 
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard label="Net worth" value={fmtEur(netWorth.net_worth)} note="Portfolio + bank accounts" />
-        <StatCard
+      <StatStrip>
+        <StatRow label="Net worth" value={fmtEur(netWorth.net_worth)} note="Portfolio + bank accounts" />
+        <StatRow
           label="Portfolio value"
           value={fmtEur(summary.total_value)}
           badge={fmtPct(summary.total_pnl_pct)}
@@ -51,13 +57,13 @@ export default function Dashboard() {
               : 'P/L unavailable until positions sync'
           }
         />
-        <StatCard label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
-      </div>
+        <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
+      </StatStrip>
 
       <NetWorthChart />
 
-      <div className="grid grid-cols-5 gap-4">
-        <Card className="col-span-3" padding={false}>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <Card className="lg:col-span-3" padding={false}>
           <div className="p-5 pb-3">
             <CardHeader
               title="Top positions"
@@ -119,7 +125,7 @@ export default function Dashboard() {
           </div>
         </Card>
 
-        <Card className="col-span-2">
+        <Card className="lg:col-span-2">
           <CardHeader title="Allocation" subtitle="By position" />
           <div className="mt-3 h-[200px]">
             <ResponsiveContainer width="100%" height="100%">

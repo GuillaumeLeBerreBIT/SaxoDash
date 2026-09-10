@@ -1,19 +1,9 @@
 import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
 import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, Metric } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 import SnapshotSection from './SnapshotSection'
-
-function Metric({ label, value, tone = 'text-zinc-100', hint }) {
-  return (
-    <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className={`text-[15px] num font-mono mt-1 ${tone}`}>{value}</div>
-      {hint ? <div className="text-[11px] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
-    </div>
-  )
-}
 
 function Fact({ label, value }) {
   return (

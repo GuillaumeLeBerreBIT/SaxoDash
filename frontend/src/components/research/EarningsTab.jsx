@@ -1,18 +1,9 @@
 import { daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, Metric, Skeleton } from '../ui'
 import EpsBarChart from './EpsBarChart'
 
 const SESSION_LABEL = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
-
-function Metric({ label, value }) {
-  return (
-    <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className="text-[15px] num font-mono mt-1 text-zinc-100">{value}</div>
-    </div>
-  )
-}
 
 function NextEarningsCard({ next }) {
   return (
@@ -66,7 +57,10 @@ export default function EarningsTab({ symbol, earnings }) {
     return (
       <Card>
         <CardHeader title="Earnings" subtitle="From Finnhub" />
-        <div className="mt-3 text-[12px] text-zinc-500">Loading…</div>
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
       </Card>
     )
   }

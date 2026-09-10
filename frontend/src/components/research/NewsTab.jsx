@@ -1,5 +1,5 @@
 import { useCompanyNews } from '../../api/queries'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, Skeleton } from '../ui'
 
 const dayLabel = (iso) =>
   new Date(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
@@ -26,7 +26,11 @@ export default function NewsTab({ symbol }) {
     return (
       <Card>
         <CardHeader title="News" subtitle="From Finnhub" />
-        <div className="mt-3 text-[12px] text-zinc-500">Loading…</div>
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
       </Card>
     )
   }
