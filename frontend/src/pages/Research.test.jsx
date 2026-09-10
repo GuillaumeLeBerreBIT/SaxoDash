@@ -58,6 +58,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
 describe('Research', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     stubQueries()
   })
 
@@ -153,5 +154,19 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=WHAT' })
 
     expect(screen.getByText(/Could not resolve WHAT/)).toBeInTheDocument()
+  })
+
+  it('records the viewed symbol as recent', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
+    expect(JSON.parse(localStorage.getItem('saxodash:recent-symbols'))).toContain('AAPL')
+  })
+
+  it('offers recent symbols as quick chips, excluding the current one', async () => {
+    localStorage.setItem('saxodash:recent-symbols', JSON.stringify(['TSLA', 'AAPL']))
+    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
+    const chip = screen.getByRole('button', { name: 'TSLA' })
+    expect(chip).toBeInTheDocument()
+    await userEvent.click(chip)
+    expect(screen.getAllByText('TSLA').length).toBeGreaterThan(0)
   })
 })
