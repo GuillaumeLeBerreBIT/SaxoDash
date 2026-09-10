@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorth, usePortfolioSummary, usePositions, useTransactions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtNum } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
+import { researchHref } from '../lib/research'
 import PriceBasisNote from '../components/PriceBasisNote'
 import { Card, CardHeader, PageHeader, StatCard, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
@@ -84,11 +85,11 @@ export default function Dashboard() {
                 {top5.map((p) => (
                   <tr key={p.ticker} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30 transition-colors">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                        <span className="font-medium text-zinc-100">{p.ticker}</span>
+                        <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-2 py-3 text-right num font-mono text-zinc-200"><span
                         title={priceBasis(p.price_source).note}

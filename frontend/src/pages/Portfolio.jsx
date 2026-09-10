@@ -1,6 +1,9 @@
+import { Link } from 'react-router-dom'
+
 import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
+import { researchHref } from '../lib/research'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -106,11 +109,11 @@ export default function Portfolio() {
                 {positions.map((p) => (
                   <tr key={p.ticker} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2.5">
+                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                        <span className="font-medium text-zinc-100">{p.ticker}</span>
+                        <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[140px]">{p.name}</span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-2 py-3">
                       <Badge tone={p.type === 'ETF' ? 'amber' : 'zinc'}>{p.type}</Badge>
