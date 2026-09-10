@@ -24,8 +24,8 @@ import { PageHeader } from '../components/ui'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
-import ComingSoon from '../components/research/ComingSoon'
 import EarningsTab from '../components/research/EarningsTab'
+import NewsTab from '../components/research/NewsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
@@ -36,7 +36,7 @@ const TABS = [
   ['overview', 'Overview'],
   ['valuation', 'Valuation'],
   ['earnings', 'Earnings'],
-  ['market', 'Market context'],
+  ['news', 'News'],
 ]
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
@@ -213,7 +213,7 @@ export default function Research() {
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
             {tab === 'earnings' ? <EarningsTab symbol={symbol} earnings={earnings} /> : null}
-            {tab === 'market' ? <ComingSoon feature="Market context" /> : null}
+            {tab === 'news' ? <NewsTab symbol={symbol} /> : null}
           </div>
 
           <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />

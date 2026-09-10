@@ -53,6 +53,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
 }
 
 describe('Research', () => {
@@ -154,6 +155,23 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=WHAT' })
 
     expect(screen.getByText(/Could not resolve WHAT/)).toBeInTheDocument()
+  })
+
+  it('offers a News tab, not a Market context tab', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(screen.getByRole('button', { name: 'News' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Market context' })).not.toBeInTheDocument()
+  })
+
+  it('shows the news feed on the News tab', async () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('button', { name: 'News' }))
+    expect(screen.getByText(/No recent news for NVDA/)).toBeInTheDocument()
+  })
+
+  it('falls back to Overview for the retired ?tab=market link', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=market' })
+    expect(screen.getByText('Your position')).toBeInTheDocument()
   })
 
   it('records the viewed symbol as recent', () => {
