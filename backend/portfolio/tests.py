@@ -251,3 +251,99 @@ class InsightsPositionsTest(TestCase):
     def test_contributors_survive_zero_denominators(self):
         rows = insights._contributors(self.positions, Decimal('0'), Decimal('0'))
         self.assertTrue(all(r['contribution_pp'] == 0.0 for r in rows))
+
+
+class UpcomingEarningsTest(TestCase):
+    def _win(self, events):
+        return {'events': events, 'window': {}, 'ok': True}
+
+    @patch('portfolio.insights._window_earnings')
+    def test_keeps_held_unreported_rows_inside_the_horizon(self, mock_win):
+        today = date(2026, 9, 10)
+        mock_win.side_effect = [
+            self._win([
+                {'symbol': 'MSFT', 'date': '2026-09-13', 'session': 'amc',
+                 'eps_estimate': 3.1, 'eps_actual': None, 'held': True},
+                {'symbol': 'AAPL', 'date': '2026-09-11', 'session': 'bmo',
+                 'eps_estimate': 1.5, 'eps_actual': 1.6, 'held': True},   # already reported
+                {'symbol': 'TSLA', 'date': '2026-09-12', 'session': 'amc',
+                 'eps_estimate': 0.7, 'eps_actual': None, 'held': False},  # not held
+            ]),
+            self._win([
+                {'symbol': 'MSFT', 'date': '2026-09-30', 'session': 'amc',
+                 'eps_estimate': 3.2, 'eps_actual': None, 'held': True},   # past horizon
+            ]),
+        ]
+        rows = insights._upcoming_earnings({'MSFT', 'AAPL', 'TSLA'}, today)
+        self.assertEqual([r['ticker'] for r in rows], ['MSFT'])
+        self.assertEqual(rows[0]['days_until'], 3)
+
+    @patch('portfolio.insights._window_earnings', side_effect=RuntimeError('feed down'))
+    def test_a_feed_failure_yields_none(self, _mock):
+        self.assertIsNone(insights._upcoming_earnings({'MSFT'}, date(2026, 9, 10)))
+
+
+class InsightsAttentionTest(TestCase):
+    def test_single_name_and_concentration_fire_at_their_thresholds(self):
+        c = {'top1': {'ticker': 'NVDA', 'pct': 34.0}, 'top3_pct': 61.0, 'hhi': 0.2, 'positions': 5}
+        kinds = [i['kind'] for i in insights._attention([], [], date(2026, 9, 10), c, None)]
+        self.assertEqual(kinds[:2], ['single_name', 'concentration'])
+
+    def test_nothing_fires_below_threshold(self):
+        c = {'top1': {'ticker': 'NVDA', 'pct': 20.0}, 'top3_pct': 45.0, 'hhi': 0.1, 'positions': 8}
+        pairs = [(date(2026, 9, 9), Decimal('1')), (date(2026, 9, 10), Decimal('1'))]
+        self.assertEqual(insights._attention([], pairs, date(2026, 9, 10), c, None), [])
+
+    def test_stale_value_names_the_age(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        pairs = [(date(2026, 9, 1), Decimal('1')), (date(2026, 9, 5), Decimal('1'))]
+        items = insights._attention([], pairs, date(2026, 9, 10), c, None)
+        self.assertEqual(items[0]['kind'], 'stale_value')
+        self.assertIn('5 days old', items[0]['text'])
+
+    def test_price_basis_counts_unpriced_holdings(self):
+        _pos('A', '1', '1', '1', price_source='derived')
+        _pos('B', '1', '1', '1', price_source='live')
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 2}
+        items = insights._attention(list(Position.objects.all()), [], date(2026, 9, 10), c, None)
+        pb = next(i for i in items if i['kind'] == 'price_basis')
+        self.assertIn('1 holding', pb['text'])
+
+    def test_earnings_soon_carries_the_ticker(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        upcoming = [{'ticker': 'MSFT', 'date': '2026-09-13', 'days_until': 3,
+                     'session': 'amc', 'eps_estimate': 3.1}]
+        items = insights._attention([], [], date(2026, 9, 10), c, upcoming)
+        es = next(i for i in items if i['kind'] == 'earnings_soon')
+        self.assertEqual(es['ticker'], 'MSFT')
+        self.assertIn('in 3 days', es['text'])
+
+    def test_no_history_when_under_two_snapshots(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention([], [(date(2026, 9, 10), Decimal('1'))], date(2026, 9, 10), c, None)
+        self.assertEqual(items[-1]['kind'], 'no_history')
+
+
+class BuildInsightsTest(TestCase):
+    @patch('portfolio.insights._upcoming_earnings', return_value=None)
+    def test_empty_portfolio_and_no_snapshots_is_well_formed(self, _mock):
+        payload = insights.build_insights()
+        self.assertIsNone(payload['as_of'])
+        self.assertFalse(payload['stale'])
+        self.assertEqual(payload['spark'], [])
+        self.assertIsNone(payload['change']['day'])
+        self.assertEqual(payload['sector_exposure'], [])
+        self.assertIsNone(payload['upcoming_earnings'])
+        self.assertEqual(payload['attention'][-1]['kind'], 'no_history')
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_a_seeded_book_produces_the_expected_shape(self, _mock):
+        _pos('NVDA', '10', '100', '600')
+        _snap(date(2026, 9, 8), '5000')
+        _snap(date(2026, 9, 9), '5500')
+        payload = insights.build_insights()
+        self.assertEqual(payload['as_of'], '2026-09-09')
+        self.assertEqual(payload['change']['day']['pct'], 10.0)
+        self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
+        self.assertEqual(len(payload['spark']), 2)
+        self.assertEqual(payload['upcoming_earnings'], [])
