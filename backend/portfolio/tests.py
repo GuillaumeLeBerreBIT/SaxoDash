@@ -347,3 +347,40 @@ class BuildInsightsTest(TestCase):
         self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
         self.assertEqual(len(payload['spark']), 2)
         self.assertEqual(payload['upcoming_earnings'], [])
+
+
+class PortfolioInsightsViewTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get('/api/portfolio/insights/').status_code, 401)
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_returns_the_insights_payload(self, _mock):
+        _pos('NVDA', '10', '100', '600')
+        _snap(date(2026, 9, 8), '5000')
+        _snap(date(2026, 9, 9), '5500')
+        response = self.client.get('/api/portfolio/insights/')
+        self.assertEqual(response.status_code, 200)
+        for key in ('value', 'change', 'spark', 'concentration', 'sector_exposure',
+                    'currency_exposure', 'movers', 'contributors', 'attention',
+                    'upcoming_earnings'):
+            self.assertIn(key, response.data)
+        self.assertEqual(response.data['concentration']['top1']['ticker'], 'NVDA')
+
+    @patch('portfolio.insights._window_earnings', side_effect=RuntimeError('boom'))
+    def test_an_earnings_feed_failure_is_still_a_200_with_null_earnings(self, _mock):
+        _pos('NVDA', '10', '100', '600')
+        response = self.client.get('/api/portfolio/insights/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['upcoming_earnings'])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=None)
+    def test_no_positions_is_a_clean_200(self, _mock):
+        response = self.client.get('/api/portfolio/insights/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['concentration']['top1'])

@@ -4,6 +4,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import insights
 from .models import Position
 from .serializers import PositionSerializer
 from .services import get_portfolio_value, get_positions_value
@@ -59,3 +60,8 @@ class PortfolioSummaryView(APIView):
                 for p in positions
             ],
         })
+
+
+class PortfolioInsightsView(APIView):
+    def get(self, request):
+        return Response(insights.build_insights())
