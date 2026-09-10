@@ -182,3 +182,72 @@ class InsightsHelpersTest(TestCase):
     def test_pct_is_none_when_the_anchor_is_zero(self):
         pairs = [(date(2026, 9, 1), Decimal('0')), (date(2026, 9, 2), Decimal('5'))]
         self.assertEqual(insights._day(pairs), {'abs': Decimal('5'), 'pct': None})
+
+
+class InsightsPositionsTest(TestCase):
+    def setUp(self):
+        # values: NVDA 6000, AAPL 3000, KO 1000  -> total 10000
+        self.nvda = _pos('NVDA', '10', '100', '600', sector='Technology', currency='USD')
+        self.aapl = _pos('AAPL', '10', '400', '300', sector='Technology', currency='USD')
+        self.ko = _pos('KO', '10', '50', '100', sector='Staples', currency='EUR')
+        self.positions = list(Position.objects.all())
+        self.total = sum((p.value for p in self.positions), Decimal('0'))
+
+    def test_concentration_maths(self):
+        c = insights._concentration(self.positions, self.total)
+        self.assertEqual(c['top1'], {'ticker': 'NVDA', 'pct': 60.0})
+        self.assertEqual(c['top3_pct'], 100.0)
+        self.assertAlmostEqual(c['hhi'], 0.36 + 0.09 + 0.01, places=4)
+        self.assertEqual(c['positions'], 3)
+
+    def test_concentration_of_an_empty_book_is_nulls(self):
+        c = insights._concentration([], Decimal('0'))
+        self.assertIsNone(c['top1'])
+        self.assertIsNone(c['top3_pct'])
+        self.assertIsNone(c['hhi'])
+        self.assertEqual(c['positions'], 0)
+
+    def test_sector_exposure_groups_and_orders_by_value(self):
+        rows = insights._exposure(self.positions, self.total, 'sector', 'name')
+        self.assertEqual(rows[0], {'name': 'Technology', 'pct': 90.0, 'value': Decimal('9000.00')})
+        self.assertEqual(rows[1]['name'], 'Staples')
+
+    def test_currency_exposure_uses_the_instrument_currency(self):
+        rows = insights._exposure(self.positions, self.total, 'currency', 'currency')
+        self.assertEqual(rows[0], {'currency': 'USD', 'pct': 90.0, 'value': Decimal('9000.00')})
+
+    def test_blank_key_becomes_unknown(self):
+        _pos('X', '1', '1', '1', sector='')
+        rows = insights._exposure(list(Position.objects.all()), self.total + Decimal('1'),
+                                  'sector', 'name')
+        self.assertIn('Unknown', [r['name'] for r in rows])
+
+    def test_movers_of_a_small_book_are_all_best_and_no_worst(self):
+        # 3 holdings, MOVERS=3 -> best takes all, worst dedups to empty.
+        m = insights._movers(self.positions)
+        self.assertEqual([r['ticker'] for r in m['best']], ['NVDA', 'KO', 'AAPL'])
+        self.assertEqual(m['worst'], [])
+
+    def test_movers_split_best_and_worst_without_overlap(self):
+        _pos('AMD', '10', '100', '250')   # +150%
+        _pos('INTC', '10', '100', '40')   # -60%
+        _pos('F', '10', '100', '90')      # -10%
+        m = insights._movers(list(Position.objects.all()))
+        best = [r['ticker'] for r in m['best']]
+        worst = [r['ticker'] for r in m['worst']]
+        self.assertEqual(best, ['NVDA', 'AMD', 'KO'])
+        self.assertEqual(worst, ['INTC', 'AAPL', 'F'])
+        self.assertFalse(set(best) & set(worst))
+
+    def test_contributors_ordered_by_absolute_contribution(self):
+        total_cost = sum((p.cost for p in self.positions), Decimal('0'))
+        total_pnl = self.total - total_cost
+        rows = insights._contributors(self.positions, total_cost, total_pnl)
+        self.assertEqual(rows[0]['ticker'], 'NVDA')       # +5000 pnl, biggest magnitude
+        self.assertEqual(rows[-1]['ticker'], 'KO')        # +500 pnl, smallest
+        # contribution = pnl / total_cost; total_cost = 1000 + 4000 + 500 = 5500
+        self.assertAlmostEqual(rows[0]['contribution_pp'], 5000 / 5500 * 100, places=2)
+
+    def test_contributors_survive_zero_denominators(self):
+        rows = insights._contributors(self.positions, Decimal('0'), Decimal('0'))
+        self.assertTrue(all(r['contribution_pp'] == 0.0 for r in rows))

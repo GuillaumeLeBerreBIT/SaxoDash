@@ -61,3 +61,60 @@ def _all_time(pairs):
     if len(pairs) < 2:
         return None
     return _delta(pairs[0][1], pairs[-1][1])
+
+
+def _concentration(positions, total):
+    if not positions or not total:
+        return {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': len(positions)}
+    ranked = sorted(positions, key=lambda p: p.value, reverse=True)
+    weights = [float(p.value / total) for p in ranked]
+    return {
+        'top1': {'ticker': ranked[0].ticker, 'pct': round(weights[0] * 100, 1)},
+        'top3_pct': round(sum(weights[:3]) * 100, 1),
+        'hhi': round(sum(w * w for w in weights), 4),
+        'positions': len(positions),
+    }
+
+
+def _exposure(positions, total, key, label):
+    if not total:
+        return []
+    buckets = {}
+    for p in positions:
+        name = (getattr(p, key) or '').strip() or 'Unknown'
+        buckets[name] = buckets.get(name, Decimal('0')) + p.value
+    rows = [
+        {label: name, 'pct': round(float(value / total * 100), 1), 'value': value}
+        for name, value in buckets.items()
+    ]
+    rows.sort(key=lambda r: r['value'], reverse=True)
+    return rows
+
+
+def _mover_row(p):
+    return {'ticker': p.ticker, 'name': p.name, 'pnl_pct': float(p.pnl_pct),
+            'pnl': p.pnl, 'value': p.value}
+
+
+def _movers(positions):
+    if not positions:
+        return {'best': [], 'worst': []}
+    ranked = sorted(positions, key=lambda p: p.pnl_pct, reverse=True)
+    best = ranked[:MOVERS]
+    best_tickers = {p.ticker for p in best}
+    worst = [p for p in reversed(ranked) if p.ticker not in best_tickers][:MOVERS]
+    return {'best': [_mover_row(p) for p in best], 'worst': [_mover_row(p) for p in worst]}
+
+
+def _contributors(positions, total_cost, total_pnl):
+    rows = []
+    for p in positions:
+        contribution_pp = float(p.pnl / total_cost * 100) if total_cost else 0.0
+        share = float(p.pnl / total_pnl * 100) if total_pnl else 0.0
+        rows.append({
+            'ticker': p.ticker, 'pnl': p.pnl,
+            'contribution_pp': round(contribution_pp, 2),
+            'share_of_gain_pct': round(share, 1),
+        })
+    rows.sort(key=lambda r: abs(r['contribution_pp']), reverse=True)
+    return rows[:CONTRIBUTORS]
