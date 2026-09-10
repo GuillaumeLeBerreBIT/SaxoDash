@@ -652,6 +652,19 @@ SAMPLE_FINANCIALS = {
         'monthToDatePriceReturnDaily': 2.4,
         'yearToDatePriceReturnDaily': 18.7,
         '52WeekPriceReturnDaily': 31.2,
+        'revenueGrowthTTMYoy': 14.2,
+        'epsGrowthTTMYoy': 32.6,
+        'revenueGrowth3Y': 1.8,
+        'revenueGrowth5Y': 8.7,
+        'epsGrowth3Y': 6.9,
+        'operatingMarginTTM': 33.2,
+        'operatingMargin5Y': 30.7,
+        'grossMargin5Y': 44.5,
+        'netProfitMargin5Y': 25.5,
+        'totalDebt/totalEquityQuarterly': 0.78,
+        'longTermDebt/equityQuarterly': 0.66,
+        'netInterestCoverageTTM': 622.5,
+        'quickRatioQuarterly': 0.93,
     }
 }
 
@@ -713,6 +726,36 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['price_return_1m'], 2.4)
         self.assertEqual(result['price_return_ytd'], 18.7)
         self.assertEqual(result['price_return_1y'], 31.2)
+
+    def test_shapes_the_growth_and_leverage_fields(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, SAMPLE_FINANCIALS, SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS
+        )
+        self.assertEqual(result['revenue_growth_ttm_yoy'], 14.2)
+        self.assertEqual(result['eps_growth_ttm_yoy'], 32.6)
+        self.assertEqual(result['revenue_growth_3y'], 1.8)
+        self.assertEqual(result['revenue_growth_5y'], 8.7)
+        self.assertEqual(result['eps_growth_3y'], 6.9)
+        self.assertEqual(result['operating_margin_ttm'], 33.2)
+        self.assertEqual(result['operating_margin_5y'], 30.7)
+        self.assertEqual(result['gross_margin_5y'], 44.5)
+        self.assertEqual(result['net_margin_5y'], 25.5)
+        self.assertEqual(result['debt_to_equity'], 0.78)
+        self.assertEqual(result['long_term_debt_to_equity'], 0.66)
+        self.assertEqual(result['interest_coverage'], 622.5)
+        self.assertEqual(result['quick_ratio'], 0.93)
+
+    def test_growth_and_leverage_fields_absent_from_the_free_tier_are_none(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, {'metric': {'peNormalizedAnnual': 32.1}},
+            SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS,
+        )
+        self.assertIsNone(result['revenue_growth_ttm_yoy'])
+        self.assertIsNone(result['debt_to_equity'])
+        self.assertIsNone(result['interest_coverage'])
+
+    def test_cache_key_carries_the_shape_version(self):
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v2:AAPL')
 
 
 class EarningsShapingTest(TestCase):

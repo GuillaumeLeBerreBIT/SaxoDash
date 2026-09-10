@@ -106,11 +106,13 @@ FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
 
+CACHE_V = 'v2'  # bump when the shaped fundamentals payload changes shape
+
 
 def _cache_key(symbol):
     # Normalization (uppercasing) is the caller's job - FundamentalsView does
     # it once, on the way in.
-    return f'research:fundamentals:{symbol}'
+    return f'research:fundamentals:{CACHE_V}:{symbol}'
 
 
 def _metric(financials, key):
@@ -178,6 +180,19 @@ def to_fundamentals(profile, financials, recommendations, earnings):
         'price_return_1m': _metric(financials, 'monthToDatePriceReturnDaily'),
         'price_return_ytd': _metric(financials, 'yearToDatePriceReturnDaily'),
         'price_return_1y': _metric(financials, '52WeekPriceReturnDaily'),
+        'revenue_growth_ttm_yoy': _metric(financials, 'revenueGrowthTTMYoy'),
+        'eps_growth_ttm_yoy': _metric(financials, 'epsGrowthTTMYoy'),
+        'revenue_growth_3y': _metric(financials, 'revenueGrowth3Y'),
+        'revenue_growth_5y': _metric(financials, 'revenueGrowth5Y'),
+        'eps_growth_3y': _metric(financials, 'epsGrowth3Y'),
+        'operating_margin_ttm': _metric(financials, 'operatingMarginTTM'),
+        'operating_margin_5y': _metric(financials, 'operatingMargin5Y'),
+        'gross_margin_5y': _metric(financials, 'grossMargin5Y'),
+        'net_margin_5y': _metric(financials, 'netProfitMargin5Y'),
+        'debt_to_equity': _metric(financials, 'totalDebt/totalEquityQuarterly'),
+        'long_term_debt_to_equity': _metric(financials, 'longTermDebt/equityQuarterly'),
+        'interest_coverage': _metric(financials, 'netInterestCoverageTTM'),
+        'quick_ratio': _metric(financials, 'quickRatioQuarterly'),
         # Finnhub sends newest-first; the most recent period is "the" trend.
         'recommendation': _to_recommendation(recommendations[0] if recommendations else None),
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
