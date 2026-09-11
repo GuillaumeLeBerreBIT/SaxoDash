@@ -212,7 +212,9 @@ export default function Research() {
               />
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
-            {tab === 'earnings' ? <EarningsTab symbol={symbol} earnings={earnings} /> : null}
+            {tab === 'earnings' ? (
+              <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+            ) : null}
             {tab === 'news' ? <NewsTab symbol={symbol} /> : null}
           </div>
 

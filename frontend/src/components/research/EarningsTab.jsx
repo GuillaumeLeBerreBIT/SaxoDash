@@ -1,6 +1,7 @@
 import { daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader, Metric, Skeleton } from '../ui'
+import EarningsInsights from './EarningsInsights'
 import EpsBarChart from './EpsBarChart'
 
 const SESSION_LABEL = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
@@ -50,7 +51,7 @@ function BeatRecord({ score }) {
   )
 }
 
-export default function EarningsTab({ symbol, earnings }) {
+export default function EarningsTab({ symbol, earnings, fundamentals }) {
   const { data, isLoading } = earnings
 
   if (isLoading) {
@@ -84,6 +85,7 @@ export default function EarningsTab({ symbol, earnings }) {
   return (
     <div className="space-y-4">
       <NextEarningsCard next={data.next} />
+      <EarningsInsights fundamentals={fundamentals} />
       <EpsBarChart
         title="EPS: actual vs. estimate"
         subtitle="Reported quarters, labelled with the surprise vs. consensus"
