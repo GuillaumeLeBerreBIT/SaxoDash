@@ -755,7 +755,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v2:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v3:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -770,7 +770,34 @@ SAMPLE_SERIES = {
             {'period': '2025-09-30', 'v': 8.0},
         ],
         'pb': [],
-    }
+    },
+    'quarterly': {
+        'eps': [
+            {'period': '2026-06-30', 'v': 1.65}, {'period': '2026-03-31', 'v': 1.52},
+            {'period': '2025-12-31', 'v': 1.48}, {'period': '2025-09-30', 'v': 1.40},
+            {'period': '2025-06-30', 'v': 1.30}, {'period': '2025-03-31', 'v': 1.20},
+            {'period': '2024-12-31', 'v': 1.15}, {'period': '2024-09-30', 'v': 1.10},
+            {'period': '2024-06-30', 'v': 1.00}, {'period': '2024-03-31', 'v': 0.95},
+        ],
+        'salesPerShare': [
+            {'period': '2026-06-30', 'v': 12.0}, {'period': '2026-03-31', 'v': 11.4},
+            {'period': '2025-12-31', 'v': 11.0}, {'period': '2025-09-30', 'v': 10.6},
+            {'period': '2025-06-30', 'v': 10.0}, {'period': '2025-03-31', 'v': 9.6},
+            {'period': '2024-12-31', 'v': 9.3}, {'period': '2024-09-30', 'v': 9.0},
+            {'period': '2024-06-30', 'v': 8.5}, {'period': '2024-03-31', 'v': 8.2},
+        ],
+        'grossMargin': [
+            {'period': '2026-06-30', 'v': 46.0}, {'period': '2026-03-31', 'v': 45.5},
+            {'period': '2025-06-30', 'v': 44.0},
+        ],
+        'netMargin': [
+            {'period': '2026-06-30', 'v': 26.0}, {'period': '2026-03-31', 'v': 25.0},
+        ],
+        'operatingMargin': [
+            {'period': '2026-06-30', 'v': 31.0}, {'period': '2026-03-31', 'v': 30.0},
+            {'period': '2025-06-30', 'v': 28.5},
+        ],
+    },
 }
 
 
@@ -834,6 +861,64 @@ class CompanyNewsShapingTest(TestCase):
     def test_a_row_without_a_timestamp_has_a_none_datetime(self):
         item = finnhub._to_news_item({k: v for k, v in RAW_NEWS_ROW.items() if k != 'datetime'})
         self.assertIsNone(item['datetime'])
+
+
+class QuarterlyTrendsTest(TestCase):
+    def test_builds_oldest_first_rows_aligned_on_eps_and_revenue_proxy(self):
+        financials = {**SAMPLE_FINANCIALS, 'series': SAMPLE_SERIES}
+        rows = finnhub._quarterly_trends(financials)
+        self.assertEqual(rows[0]['period'], '2024-03-31')
+        self.assertEqual(rows[-1]['period'], '2026-06-30')
+        self.assertEqual(rows[-1]['eps'], 1.65)
+        self.assertEqual(rows[-1]['revenue_per_share'], 12.0)
+
+    def test_keeps_the_row_when_a_margin_is_missing_at_that_period(self):
+        financials = {**SAMPLE_FINANCIALS, 'series': SAMPLE_SERIES}
+        rows = finnhub._quarterly_trends(financials)
+        by_period = {r['period']: r for r in rows}
+        self.assertIsNone(by_period['2024-03-31']['gross_margin'])
+        self.assertEqual(by_period['2026-06-30']['gross_margin'], 46.0)
+
+    def test_drops_a_period_missing_either_eps_or_revenue_proxy(self):
+        series = {
+            'quarterly': {
+                'eps': SAMPLE_SERIES['quarterly']['eps'] + [{'period': '2023-12-31', 'v': 0.9}],
+                'salesPerShare': SAMPLE_SERIES['quarterly']['salesPerShare'],  # no 2023-12-31 entry
+            }
+        }
+        financials = {**SAMPLE_FINANCIALS, 'series': series}
+        rows = finnhub._quarterly_trends(financials)
+        self.assertNotIn('2023-12-31', [r['period'] for r in rows])
+
+    def test_caps_at_the_trend_point_limit(self):
+        eps = [{'period': f'{2020 + i // 4}-{["03", "06", "09", "12"][i % 4]}-28', 'v': 1.0 + i * 0.01}
+               for i in range(20)]
+        sales = [{'period': row['period'], 'v': 8.0 + i * 0.1} for i, row in enumerate(eps)]
+        financials = {**SAMPLE_FINANCIALS, 'series': {'quarterly': {'eps': eps, 'salesPerShare': sales}}}
+        rows = finnhub._quarterly_trends(financials)
+        self.assertEqual(len(rows), finnhub.QUARTERLY_TREND_POINTS)
+
+    def test_none_below_the_minimum_point_count(self):
+        financials = {
+            **SAMPLE_FINANCIALS,
+            'series': {'quarterly': {
+                'eps': SAMPLE_SERIES['quarterly']['eps'][:5],
+                'salesPerShare': SAMPLE_SERIES['quarterly']['salesPerShare'][:5],
+            }},
+        }
+        self.assertIsNone(finnhub._quarterly_trends(financials))
+
+    def test_none_without_a_quarterly_series_block(self):
+        self.assertIsNone(finnhub._quarterly_trends(SAMPLE_FINANCIALS))
+
+    def test_to_fundamentals_includes_quarterly_trends_when_available(self):
+        financials = {**SAMPLE_FINANCIALS, 'series': SAMPLE_SERIES}
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, financials, [], [])
+        self.assertEqual(len(result['quarterly_trends']), 10)
+
+    def test_to_fundamentals_omits_quarterly_trends_when_absent(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
+        self.assertNotIn('quarterly_trends', result)
 
 
 class EarningsShapingTest(TestCase):
