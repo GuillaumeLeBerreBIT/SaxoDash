@@ -11,6 +11,7 @@ import {
   priceGeometry,
   useWidth,
 } from '../../lib/chartGeometry'
+import { BEAT, MISS, REPORTED } from '../../lib/charts'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
  *
@@ -89,7 +90,29 @@ function Bars({ data, geometry }) {
   ))
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width }) {
+const MARKER_COLOR = [MISS, REPORTED, BEAT]
+
+function EarningsMarkers({ markers, geometry }) {
+  const { xAt, chartH } = geometry
+  const y = PAD_T + chartH - 6
+  return markers.map((marker) => {
+    const x = xAt(marker.index)
+    const title = marker.actual != null
+      ? `${marker.date}: ${marker.actual} vs est ${marker.estimate}`
+      : marker.date
+    return (
+      <polygon
+        key={marker.date}
+        points={`${x - 4},${y + 4} ${x + 4},${y + 4} ${x},${y - 4}`}
+        fill={MARKER_COLOR[marker.sign + 1]}
+      >
+        <title>{title}</title>
+      </polygon>
+    )
+  })
+}
+
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers }) {
   const { xAt, scaleY, chartH } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -165,6 +188,10 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         />
       ) : null}
 
+      {earningsMarkers.length > 0 ? (
+        <EarningsMarkers markers={earningsMarkers} geometry={geometry} />
+      ) : null}
+
       <g>
         <line
           x1={0}
@@ -225,7 +252,7 @@ function Crosshair({ bar, index, geometry, width }) {
   )
 }
 
-export function TVChart({ data, ind, type, overlays, hover, setHover, height = 360 }) {
+export function TVChart({ data, ind, type, overlays, hover, setHover, height = 360, earningsMarkers = [] }) {
   const [ref, width] = useWidth()
 
   const geometry = useMemo(
@@ -251,6 +278,7 @@ export function TVChart({ data, ind, type, overlays, hover, setHover, height = 3
           overlays={overlays}
           geometry={geometry}
           width={width}
+          earningsMarkers={earningsMarkers}
         />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />

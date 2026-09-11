@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 
 import EarningsTab from './EarningsTab'
 
+const NO_FUNDAMENTALS = { data: { available: false, reason: 'x' }, isLoading: false }
+
 const AVAILABLE = {
   available: true,
   next: {
@@ -21,21 +23,21 @@ const AVAILABLE = {
 
 describe('EarningsTab', () => {
   it('shows the next earnings date and estimates', () => {
-    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} />)
+    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Next earnings')).toBeInTheDocument()
     expect(screen.getByText('2999-01-15')).toBeInTheDocument()
     expect(screen.getByText('After close')).toBeInTheDocument()
   })
 
   it('renders the EPS history chart once, with no second chart echoing it', () => {
-    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} />)
+    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('EPS: actual vs. estimate')).toBeInTheDocument()
     expect(screen.queryByText('Revenue: actual vs. estimate')).not.toBeInTheDocument()
     expect(screen.queryByText('EPS surprise')).not.toBeInTheDocument()
   })
 
   it('summarises the beat record from the backend score', () => {
-    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} />)
+    render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Beat record')).toBeInTheDocument()
     expect(screen.getByText('2/3')).toBeInTheDocument()
     expect(screen.getByText('A consistent beat history.')).toBeInTheDocument()
@@ -43,14 +45,35 @@ describe('EarningsTab', () => {
 
   it('falls back to the reason when earnings are unavailable', () => {
     render(
-      <EarningsTab symbol="AAPL" earnings={{ data: { available: false, reason: 'no coverage' }, isLoading: false }} />,
+      <EarningsTab
+        symbol="AAPL"
+        earnings={{ data: { available: false, reason: 'no coverage' }, isLoading: false }}
+        fundamentals={NO_FUNDAMENTALS}
+      />,
     )
     expect(screen.getByText(/no coverage/)).toBeInTheDocument()
     expect(screen.queryByText('Next earnings')).not.toBeInTheDocument()
   })
 
   it('says when no earnings date is scheduled', () => {
-    render(<EarningsTab symbol="AAPL" earnings={{ data: { ...AVAILABLE, next: null }, isLoading: false }} />)
+    render(
+      <EarningsTab
+        symbol="AAPL"
+        earnings={{ data: { ...AVAILABLE, next: null }, isLoading: false }}
+        fundamentals={NO_FUNDAMENTALS}
+      />,
+    )
     expect(screen.getByText(/No scheduled earnings date/)).toBeInTheDocument()
+  })
+
+  it('shows the What changed card once fundamentals carry quarterly trends', () => {
+    render(
+      <EarningsTab
+        symbol="AAPL"
+        earnings={{ data: AVAILABLE, isLoading: false }}
+        fundamentals={{ data: { available: true, quarterly_trends: null }, isLoading: false }}
+      />,
+    )
+    expect(screen.getByText('What changed')).toBeInTheDocument()
   })
 })

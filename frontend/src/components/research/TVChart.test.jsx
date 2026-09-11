@@ -61,3 +61,24 @@ describe('TVChart', () => {
     expect(dashed(hovered.container)).toBe(2)
   })
 })
+
+describe('earnings markers', () => {
+  it('draws a beat marker in the beat colour', () => {
+    const { container } = renderChart({
+      earningsMarkers: [{ index: 10, date: bars[10].date, sign: 1, actual: 1.1, estimate: 1.0 }],
+    })
+    expect(container.querySelector('polygon[fill="#34d399"]')).not.toBeNull()
+  })
+
+  it('draws a miss marker in the miss colour', () => {
+    const { container } = renderChart({
+      earningsMarkers: [{ index: 10, date: bars[10].date, sign: -1, actual: 0.9, estimate: 1.0 }],
+    })
+    expect(container.querySelector('polygon[fill="#f87171"]')).not.toBeNull()
+  })
+
+  it('renders none when no markers are given', () => {
+    const { container } = renderChart()
+    expect(container.querySelector('polygon[fill="#34d399"], polygon[fill="#f87171"], polygon[fill="#3b82f6"]')).toBeNull()
+  })
+})

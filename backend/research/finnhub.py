@@ -116,7 +116,7 @@ NEWS_TTL = 7200           # 2h — headlines move through the day, not by the se
 NEWS_WINDOW_DAYS = 14
 NEWS_MAX_ITEMS = 40
 
-CACHE_V = 'v2'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v3'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -189,6 +189,54 @@ def _valuation_history(financials):
     return out or None
 
 
+QUARTERLY_TREND_KEYS = {
+    'eps': 'eps',
+    'revenue_per_share': 'salesPerShare',
+    'gross_margin': 'grossMargin',
+    'net_margin': 'netMargin',
+    'operating_margin': 'operatingMargin',
+}
+QUARTERLY_MIN_POINTS = 8     # two YoY comparisons need index-5..index-1 to exist
+QUARTERLY_TREND_POINTS = 12  # ~3 years, oldest-first
+
+
+def _quarterly_points(quarterly, key):
+    return {p['period']: p['v'] for p in (quarterly.get(key) or []) if p.get('v') is not None}
+
+
+def _quarterly_trends(financials):
+    """Per-quarter eps / revenue-per-share proxy / margins, oldest-first,
+    aligned on periods where both eps and salesPerShare exist. `None` when
+    the series is missing or too shallow for the two-YoY-comparison the
+    frontend's insight math needs."""
+    quarterly = (financials.get('series') or {}).get('quarterly') or {}
+    if not quarterly:
+        return None
+
+    eps_by_period = _quarterly_points(quarterly, QUARTERLY_TREND_KEYS['eps'])
+    rev_by_period = _quarterly_points(quarterly, QUARTERLY_TREND_KEYS['revenue_per_share'])
+    margin_maps = {
+        field: _quarterly_points(quarterly, key)
+        for field, key in QUARTERLY_TREND_KEYS.items()
+        if field not in ('eps', 'revenue_per_share')
+    }
+
+    periods = sorted(set(eps_by_period) & set(rev_by_period))
+    if len(periods) < QUARTERLY_MIN_POINTS:
+        return None
+
+    periods = periods[-QUARTERLY_TREND_POINTS:]
+    return [
+        {
+            'period': period,
+            'eps': eps_by_period[period],
+            'revenue_per_share': rev_by_period[period],
+            **{field: margin_maps[field].get(period) for field in margin_maps},
+        }
+        for period in periods
+    ]
+
+
 def to_fundamentals(profile, financials, recommendations, earnings):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
@@ -244,6 +292,9 @@ def to_fundamentals(profile, financials, recommendations, earnings):
     history = _valuation_history(financials)
     if history:
         shaped['valuation_history'] = history
+    trends = _quarterly_trends(financials)
+    if trends:
+        shaped['quarterly_trends'] = trends
     return shaped
 
 
