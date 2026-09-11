@@ -5,6 +5,8 @@
  *  without rendering a chart.
  */
 
+import { surpriseSign } from './charts'
+
 /** A range and how many bars it spans, in one place.
  *
  *  Trading days, not calendar days: Saxo returns one daily candle per session.
@@ -164,4 +166,21 @@ export function researchHref(symbol, tab) {
   const params = new URLSearchParams({ symbol })
   if (tab) params.set('tab', tab)
   return `/research?${params.toString()}`
+}
+
+/** Past earnings dates mapped onto the currently-loaded bars, for the
+ *  price-chart markers. A history date absent from `bars` (a provider date
+ *  landing on a non-trading day) is skipped, not fuzzy-matched. */
+export function earningsMarkersForBars(bars = [], history = []) {
+  const indexByDate = new Map(bars.map((b, i) => [b.date, i]))
+  const markers = []
+  for (const e of history) {
+    const index = indexByDate.get(e.date)
+    if (index == null) continue
+    markers.push({
+      index, date: e.date, sign: surpriseSign(e.eps_surprise_pct),
+      actual: e.eps_actual, estimate: e.eps_estimate,
+    })
+  }
+  return markers
 }

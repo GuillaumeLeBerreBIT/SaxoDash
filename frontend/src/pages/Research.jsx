@@ -17,6 +17,7 @@ import {
   DAILY_HORIZON,
   WIDEST_RANGE_COUNT,
   barsForRange,
+  earningsMarkersForBars,
   needsInstrumentSearch,
   resolveInstrument,
 } from '../lib/research'
@@ -100,6 +101,10 @@ export default function Research() {
   })
   const fundamentals = useFundamentals(symbol)
   const earnings = useSymbolEarnings(symbol)
+  const earningsMarkers = useMemo(
+    () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
+    [bars, earnings.data],
+  )
   const liveQuotes = useQuotes(instrument?.uic ? [instrument.uic] : [], instrument?.assetType)
 
   const { data: watchlists = [] } = useWatchlists()
@@ -180,6 +185,7 @@ export default function Research() {
               setHover={setHover}
               symbol={symbol}
               unresolved={!instrument && !chart.isLoading}
+              earningsMarkers={earningsMarkers}
             />
 
             <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">

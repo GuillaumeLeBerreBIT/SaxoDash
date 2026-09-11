@@ -4,6 +4,7 @@ import {
   WIDEST_RANGE_COUNT,
   barChange,
   barsForRange,
+  earningsMarkersForBars,
   instrumentKey,
   needsInstrumentSearch,
   periodChange,
@@ -227,5 +228,29 @@ describe('researchHref', () => {
 
   it('encodes an ampersand in the symbol', () => {
     expect(researchHref('A&B')).toBe('/research?symbol=A%26B')
+  })
+})
+
+describe('earningsMarkersForBars', () => {
+  const testBars = [
+    { date: '2026-08-01', close: 10 }, { date: '2026-08-02', close: 11 }, { date: '2026-08-03', close: 12 },
+  ]
+
+  it('maps a history row onto its matching bar index and beat/miss sign', () => {
+    const markers = earningsMarkersForBars(testBars, [
+      { date: '2026-08-02', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
+    ])
+    expect(markers).toEqual([{ index: 1, date: '2026-08-02', sign: 1, actual: 1.1, estimate: 1.0 }])
+  })
+
+  it('skips a history date absent from the bars', () => {
+    const markers = earningsMarkersForBars(testBars, [
+      { date: '2026-09-01', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
+    ])
+    expect(markers).toEqual([])
+  })
+
+  it('is empty with no history', () => {
+    expect(earningsMarkersForBars(testBars, [])).toEqual([])
   })
 })
