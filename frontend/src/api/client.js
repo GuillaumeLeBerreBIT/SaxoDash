@@ -143,6 +143,7 @@ const jsonRequest = (path, method, body) =>
 
 export const getPositions = () => apiFetch('/api/portfolio/positions/')
 export const getPortfolioSummary = () => apiFetch('/api/portfolio/summary/')
+export const getPortfolioInsights = () => apiFetch('/api/portfolio/insights/')
 export const getTransactions = (query = '') => apiFetch(`/api/transactions/${query}`)
 export const getBankAccounts = () => apiFetch('/api/accounts/')
 export const getNetWorth = () => apiFetch('/api/accounts/net-worth/')

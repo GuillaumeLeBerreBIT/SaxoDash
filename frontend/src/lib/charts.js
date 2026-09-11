@@ -35,6 +35,10 @@ export const chartTooltipProps = {
   cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
 }
 
+// Blue-family ramp for sector / category breakdowns. Lifted here so the
+// Portfolio sector bars and the Dashboard exposure donut share one.
+export const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
+
 export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
 
 export const axisProps = {

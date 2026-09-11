@@ -9,8 +9,7 @@ import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
-
-const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
+import { SECTOR_PALETTE } from '../lib/charts'
 
 export default function Portfolio() {
   const summaryQuery = usePortfolioSummary()

@@ -1,66 +1,59 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { useNetWorth, usePortfolioSummary, usePositions, useTransactions } from '../api/queries'
-import { fmtEur, fmtMoney, fmtPct, fmtNum } from '../lib/format'
+import { usePortfolioInsights, usePortfolioSummary, usePositions, useTransactions } from '../api/queries'
+import { fmtEur, fmtMoney, fmtNum } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import PriceBasisNote from '../components/PriceBasisNote'
-import { Card, CardHeader, PageHeader, StatStrip, StatRow, Skeleton, Badge } from '../components/ui'
+import { Card, CardHeader, PageHeader, Skeleton, Badge } from '../components/ui'
 import { chartTooltipProps } from '../lib/charts'
 import NetWorthChart from '../components/NetWorthChart'
+import HeroValue from '../components/dashboard/HeroValue'
+import AttentionBand from '../components/dashboard/AttentionBand'
+import MoversCard from '../components/dashboard/MoversCard'
+import ContributorsCard from '../components/dashboard/ContributorsCard'
+import UpcomingEarnings from '../components/dashboard/UpcomingEarnings'
+import ExposureCard from '../components/dashboard/ExposureCard'
 
 const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
 
 export default function Dashboard() {
+  const insightsQuery = usePortfolioInsights()
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
-  const netWorthQuery = useNetWorth()
   const recentTxQuery = useTransactions('?page_size=5')
 
   const failed =
-    summaryQuery.error || positionsQuery.error || netWorthQuery.error || recentTxQuery.error
+    insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error
 
   if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
-  if (!summaryQuery.data || !netWorthQuery.data)
+  if (!insightsQuery.data || !summaryQuery.data)
     return (
       <div className="space-y-5">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-[300px] w-full" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-10 w-2/3" />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
       </div>
     )
 
+  const insights = insightsQuery.data
   const summary = summaryQuery.data
-  const netWorth = netWorthQuery.data
   const positions = positionsQuery.data ?? []
   const recentTx = recentTxQuery.data ?? []
-
-  const pnlKnown = summary.total_pnl != null
-  const totalPnl = Number(summary.total_pnl)
   const top5 = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
 
   return (
     <div className="space-y-5">
       <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
 
-      <StatStrip>
-        <StatRow label="Net worth" value={fmtEur(netWorth.net_worth)} note="Portfolio + bank accounts" />
-        <StatRow
-          label="Portfolio value"
-          value={fmtEur(summary.total_value)}
-          badge={fmtPct(summary.total_pnl_pct)}
-          badgeTone={!pnlKnown ? 'zinc' : totalPnl >= 0 ? 'emerald' : 'red'}
-          note={
-            pnlKnown
-              ? `${fmtEur(totalPnl, { sign: true })} all-time`
-              : 'P/L unavailable until positions sync'
-          }
-        />
-        <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
-      </StatStrip>
-
+      <HeroValue value={insights.value} change={insights.change} spark={insights.spark} />
       <NetWorthChart />
+      <AttentionBand items={insights.attention} />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-3" padding={false}>
@@ -152,6 +145,20 @@ export default function Dashboard() {
             })}
           </div>
         </Card>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MoversCard movers={insights.movers} />
+        <ContributorsCard contributors={insights.contributors} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ExposureCard
+          sector={insights.sector_exposure}
+          currency={insights.currency_exposure}
+          concentration={insights.concentration}
+        />
+        <UpcomingEarnings items={insights.upcoming_earnings} />
       </div>
 
       <Card padding={false}>

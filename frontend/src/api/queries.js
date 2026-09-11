@@ -15,6 +15,7 @@ import {
   getInstrumentDetails,
   getNetWorth,
   getNetWorthHistory,
+  getPortfolioInsights,
   getPortfolioSummary,
   getRiskMetrics,
   getPerformance,
@@ -36,6 +37,7 @@ const unwrap = (res) => res?.results ?? res
 export const queryKeys = {
   positions: ['positions'],
   portfolioSummary: ['portfolio-summary'],
+  portfolioInsights: ['portfolio-insights'],
   transactions: (query = '') => ['transactions', query],
   bankAccounts: ['bank-accounts'],
   netWorth: ['net-worth'],
@@ -66,6 +68,15 @@ export function usePositions() {
 
 export function usePortfolioSummary() {
   return useQuery({ queryKey: queryKeys.portfolioSummary, queryFn: getPortfolioSummary })
+}
+
+// EOD data (one daily snapshot); 5-minute client staleness is plenty.
+export function usePortfolioInsights() {
+  return useQuery({
+    queryKey: queryKeys.portfolioInsights,
+    queryFn: getPortfolioInsights,
+    staleTime: 5 * 60_000,
+  })
 }
 
 export function useTransactions(query = '') {
