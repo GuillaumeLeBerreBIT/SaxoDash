@@ -203,3 +203,13 @@ export function resolvePeerSlots(currentSymbol, autoSymbols = [], overrides = []
   }
   return slots
 }
+
+/** Index of the first peer slot `resolvePeerSlots` left unfilled, or -1 if
+ *  all MAX_PEER_SLOTS are taken. */
+export function nextEmptySlot(slots) {
+  const filled = new Set(slots.map((s) => s.slot))
+  for (let slot = 0; slot < MAX_PEER_SLOTS; slot += 1) {
+    if (!filled.has(slot)) return slot
+  }
+  return -1
+}

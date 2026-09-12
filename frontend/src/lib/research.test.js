@@ -8,6 +8,7 @@ import {
   earningsMarkersForBars,
   instrumentKey,
   needsInstrumentSearch,
+  nextEmptySlot,
   periodChange,
   quotesByUic,
   rangeStats,
@@ -294,5 +295,21 @@ describe('resolvePeerSlots', () => {
     const result = resolvePeerSlots('AAPL', auto, [])
     expect(result).toHaveLength(MAX_PEER_SLOTS)
     expect(result.map((r) => r.symbol)).toEqual(['A', 'B', 'C', 'D', 'E'])
+  })
+})
+
+describe('nextEmptySlot', () => {
+  it('returns the first slot index when none are filled', () => {
+    expect(nextEmptySlot([])).toBe(0)
+  })
+
+  it('returns the first gap after filled slots', () => {
+    const slots = [{ slot: 0, symbol: 'MSFT' }, { slot: 2, symbol: 'GOOGL' }]
+    expect(nextEmptySlot(slots)).toBe(1)
+  })
+
+  it('returns -1 once every slot up to MAX_PEER_SLOTS is filled', () => {
+    const slots = Array.from({ length: MAX_PEER_SLOTS }, (_, i) => ({ slot: i, symbol: `S${i}` }))
+    expect(nextEmptySlot(slots)).toBe(-1)
   })
 })

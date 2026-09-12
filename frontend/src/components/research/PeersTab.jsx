@@ -1,9 +1,10 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 import { useInstrumentSearch, usePeerFundamentals, usePeers } from '../../api/queries'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
-import { MAX_PEER_SLOTS, resolvePeerSlots } from '../../lib/research'
+import { nextEmptySlot, resolvePeerSlots } from '../../lib/research'
 import { Card, CardHeader, Skeleton } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 
@@ -37,14 +38,35 @@ const METRIC_ROWS = [
   { key: 'recommendation', label: 'Analyst view', format: (v) => dominantRecommendation(v) ?? '—' },
 ]
 
-/** One empty slot's inline search: pick a symbol to add as a manual peer. */
+/** One empty slot's inline search: pick a symbol to add as a manual peer.
+ *  The results menu portals to <body>, positioned from a measured rect,
+ *  so it isn't clipped by the table's overflow-x-auto wrapper (which the
+ *  CSS spec also turns into a vertical clipping container). */
 function AddPeerSearch({ onPick }) {
   const [query, setQuery] = useState('')
+  const [menuRect, setMenuRect] = useState(null)
+  const wrapperRef = useRef(null)
   const deferredQuery = useDeferredValue(query)
   const { data: results = [], isError } = useInstrumentSearch(deferredQuery)
+  const showMenu = isError || results.length > 0
+
+  useLayoutEffect(() => {
+    if (!showMenu) return undefined
+    const updateRect = () => {
+      const rect = wrapperRef.current?.getBoundingClientRect()
+      if (rect) setMenuRect({ top: rect.bottom, left: rect.left, width: rect.width })
+    }
+    updateRect()
+    window.addEventListener('scroll', updateRect, true)
+    window.addEventListener('resize', updateRect)
+    return () => {
+      window.removeEventListener('scroll', updateRect, true)
+      window.removeEventListener('resize', updateRect)
+    }
+  }, [showMenu])
 
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -52,13 +74,20 @@ function AddPeerSearch({ onPick }) {
         aria-label="Add peer"
         className="w-full h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[11.5px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
       />
-      {isError && (
-        <div className="absolute z-10 mt-1 w-full bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[11px] text-amber-400">
+      {menuRect && isError && createPortal(
+        <div
+          style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
+          className="z-50 bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[11px] text-amber-400"
+        >
           Search unavailable — reconnect Saxo
-        </div>
+        </div>,
+        document.body,
       )}
-      {!isError && results.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg">
+      {menuRect && !isError && results.length > 0 && createPortal(
+        <div
+          style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
+          className="z-50 max-h-40 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg"
+        >
           {results.map((result) => (
             <button
               key={`${result.uic}-${result.asset_type}`}
@@ -73,7 +102,8 @@ function AddPeerSearch({ onPick }) {
               <span className="text-zinc-500 ml-1.5 truncate">{result.description}</span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -84,14 +114,7 @@ export default function PeersTab({ symbol, fundamentals }) {
   const [overrides, setOverrides] = useState([])
 
   const autoSymbols = peers.data?.available ? peers.data.symbols : []
-  const overridesKey = JSON.stringify(overrides)
-  const autoSymbolsKey = JSON.stringify(autoSymbols)
-  const slots = useMemo(
-    () => resolvePeerSlots(symbol, autoSymbols, overrides),
-    // autoSymbols/overrides are recreated every render; their JSON is the stable dep.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [symbol, autoSymbolsKey, overridesKey],
-  )
+  const slots = resolvePeerSlots(symbol, autoSymbols, overrides)
   const peerResults = usePeerFundamentals(slots.map((s) => s.symbol))
 
   const setOverride = (slot, value) => {
@@ -102,8 +125,7 @@ export default function PeersTab({ symbol, fundamentals }) {
     })
   }
 
-  const filledSlots = new Set(slots.map((s) => s.slot))
-  const nextEmptySlot = Array.from({ length: MAX_PEER_SLOTS }).findIndex((_, i) => !filledSlots.has(i))
+  const emptySlot = nextEmptySlot(slots)
 
   return (
     <FundamentalsGate fundamentals={fundamentals} title="Peers" fallback="Peer data is unavailable for this symbol.">
@@ -137,9 +159,9 @@ export default function PeersTab({ symbol, fundamentals }) {
                       {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
                     </th>
                   ))}
-                  {nextEmptySlot !== -1 ? (
+                  {emptySlot !== -1 ? (
                     <th className="text-right px-3 py-2 w-40">
-                      <AddPeerSearch onPick={(sym) => setOverride(nextEmptySlot, sym)} />
+                      <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
                     </th>
                   ) : null}
                 </tr>
@@ -160,7 +182,7 @@ export default function PeersTab({ symbol, fundamentals }) {
                         </td>
                       )
                     })}
-                    {nextEmptySlot !== -1 ? <td /> : null}
+                    {emptySlot !== -1 ? <td /> : null}
                   </tr>
                 ))}
               </tbody>
