@@ -116,7 +116,9 @@ export default function PeersTab({ symbol, fundamentals }) {
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  <th className="text-left px-4 py-2 text-[10px] uppercase tracking-wide text-zinc-600 font-medium">
+                  {/* Empty - aligns with the row-label column each body row leads with. */}
+                  <th className="px-4 py-2" />
+                  <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wide text-zinc-600 font-medium">
                     {symbol}
                   </th>
                   {slots.map((s, i) => (

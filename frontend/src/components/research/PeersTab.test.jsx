@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import PeersTab from './PeersTab'
@@ -64,6 +64,24 @@ describe('PeersTab', () => {
     render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
     await userEvent.click(screen.getByRole('button', { name: 'Remove MSFT' }))
     expect(screen.queryByText('MSFT')).not.toBeInTheDocument()
+  })
+
+  it('keeps every column header directly above its own data column', () => {
+    stub()
+    render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
+
+    const rows = screen.getAllByRole('row')
+    const headerCells = within(rows[0]).getAllByRole('columnheader')
+    const peRow = rows.find((r) => within(r).queryByText('P/E'))
+    const peCells = within(peRow).getAllByRole('cell')
+
+    expect(headerCells).toHaveLength(peCells.length)
+    expect(peCells[0]).toHaveTextContent('P/E')
+    expect(headerCells[0]).toHaveTextContent('') // aligns with the row-label column, carries no symbol
+    expect(headerCells[1]).toHaveTextContent('AAPL')
+    expect(peCells[1]).toHaveTextContent('32.10') // AAPL's own P/E, under the AAPL header
+    expect(headerCells[2]).toHaveTextContent('MSFT')
+    expect(peCells[2]).toHaveTextContent('28.00') // MSFT's P/E, under the MSFT header
   })
 
   it('shows a reconnect hint instead of silently doing nothing when the search fails', async () => {
