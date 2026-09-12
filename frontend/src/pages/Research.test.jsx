@@ -54,6 +54,8 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
+  queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
+  queries.usePeerFundamentals.mockReturnValue([])
 }
 
 describe('Research', () => {
@@ -125,6 +127,14 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Valuation' }))
+
+    expect(screen.getByText(/not configured/)).toBeInTheDocument()
+  })
+
+  it('shows the peers tab, gated the same way as valuation on unconfigured fundamentals', async () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Peers' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })

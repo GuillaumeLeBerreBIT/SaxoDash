@@ -28,6 +28,7 @@ import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import NewsTab from '../components/research/NewsTab'
 import OverviewTab from '../components/research/OverviewTab'
+import PeersTab from '../components/research/PeersTab'
 import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
 import WatchlistRail from '../components/research/WatchlistRail'
@@ -36,6 +37,7 @@ import { useChartControls } from '../components/research/useChartControls'
 const TABS = [
   ['overview', 'Overview'],
   ['valuation', 'Valuation'],
+  ['peers', 'Peers'],
   ['earnings', 'Earnings'],
   ['news', 'News'],
 ]
@@ -218,6 +220,7 @@ export default function Research() {
               />
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
+            {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
             {tab === 'earnings' ? (
               <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
             ) : null}
