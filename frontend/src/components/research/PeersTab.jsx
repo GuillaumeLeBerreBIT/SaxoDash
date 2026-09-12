@@ -41,7 +41,7 @@ const METRIC_ROWS = [
 function AddPeerSearch({ onPick }) {
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
-  const { data: results = [] } = useInstrumentSearch(deferredQuery)
+  const { data: results = [], isError } = useInstrumentSearch(deferredQuery)
 
   return (
     <div className="relative">
@@ -52,7 +52,12 @@ function AddPeerSearch({ onPick }) {
         aria-label="Add peer"
         className="w-full h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[11.5px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
       />
-      {results.length > 0 && (
+      {isError && (
+        <div className="absolute z-10 mt-1 w-full bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[11px] text-amber-400">
+          Search unavailable — reconnect Saxo
+        </div>
+      )}
+      {!isError && results.length > 0 && (
         <div className="absolute z-10 mt-1 w-full max-h-40 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg">
           {results.map((result) => (
             <button

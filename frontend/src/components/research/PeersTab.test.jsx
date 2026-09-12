@@ -66,6 +66,14 @@ describe('PeersTab', () => {
     expect(screen.queryByText('MSFT')).not.toBeInTheDocument()
   })
 
+  it('shows a reconnect hint instead of silently doing nothing when the search fails', async () => {
+    stub()
+    queries.useInstrumentSearch.mockReturnValue({ data: undefined, isError: true })
+    render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
+    await userEvent.type(screen.getByLabelText('Add peer'), 'MS')
+    expect(screen.getByText(/reconnect saxo/i)).toBeInTheDocument()
+  })
+
   it('falls back to the fundamentals gate when the current symbol has no data', () => {
     stub()
     render(<PeersTab symbol="AAPL" fundamentals={{ data: { available: false, reason: 'nope' }, isLoading: false }} />)
