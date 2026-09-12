@@ -619,6 +619,19 @@ class FinnhubClientTest(TestCase):
         self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/earnings')
 
 
+class PeersClientTest(TestCase):
+    @override_settings(FINNHUB_API_KEY='test-key')
+    @patch('research.finnhub.requests.get')
+    def test_get_peers_calls_the_peers_endpoint(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: ['AAPL', 'MSFT'])
+
+        result = finnhub.get_peers('AAPL')
+
+        self.assertEqual(result, ['AAPL', 'MSFT'])
+        self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/peers')
+        self.assertEqual(mock_get.call_args.kwargs['params']['symbol'], 'AAPL')
+
+
 SAMPLE_PROFILE = {
     'name': 'Apple Inc',
     'exchange': 'NASDAQ',
@@ -1103,6 +1116,46 @@ class FundamentalsCacheTest(TestCase):
         finnhub.fundamentals('AAPL')
 
         self.assertEqual(mock_profile.call_count, 1)
+
+
+@override_settings(CACHES=LOCMEM)
+class PeersShapingTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.finnhub.get_peers')
+    def test_drops_the_query_symbol_and_caps_at_five(self, mock_get_peers):
+        mock_get_peers.return_value = ['AAPL', 'MSFT', 'GOOGL', 'META', 'AMZN', 'NFLX']
+
+        result = finnhub.peers('AAPL')
+
+        self.assertTrue(result['available'])
+        self.assertEqual(result['symbols'], ['MSFT', 'GOOGL', 'META', 'AMZN', 'NFLX'])
+
+    @patch('research.finnhub.get_peers')
+    def test_a_second_call_for_the_same_symbol_does_not_refetch(self, mock_get_peers):
+        mock_get_peers.return_value = ['AAPL', 'MSFT']
+
+        finnhub.peers('AAPL')
+        finnhub.peers('AAPL')
+
+        self.assertEqual(mock_get_peers.call_count, 1)
+
+    @patch('research.finnhub.get_peers')
+    def test_an_empty_peer_list_is_available_with_no_symbols(self, mock_get_peers):
+        mock_get_peers.return_value = []
+
+        result = finnhub.peers('ZZZZZZ')
+
+        self.assertTrue(result['available'])
+        self.assertEqual(result['symbols'], [])
+
+    @patch('research.finnhub.get_peers')
+    def test_a_provider_error_propagates(self, mock_get_peers):
+        mock_get_peers.side_effect = finnhub.FinnhubAPIError('boom')
+
+        with self.assertRaises(finnhub.FinnhubAPIError):
+            finnhub.peers('AAPL')
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

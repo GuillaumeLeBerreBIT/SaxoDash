@@ -109,12 +109,18 @@ def get_company_news(symbol, date_from, date_to):
     return _get('/company-news', symbol=symbol, **{'from': date_from, 'to': date_to})
 
 
+def get_peers(symbol):
+    return _get('/stock/peers', symbol=symbol)
+
+
 FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
 NEWS_TTL = 7200           # 2h — headlines move through the day, not by the second
 NEWS_WINDOW_DAYS = 14
 NEWS_MAX_ITEMS = 40
+PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
+MAX_PEERS = 5
 
 CACHE_V = 'v3'  # bump when the shaped fundamentals payload changes shape
 
@@ -323,6 +329,20 @@ def fundamentals(symbol):
         # A real bug (AttributeError, NameError, ...) still surfaces as a 500.
         raise FinnhubUnexpected() from exc
 
+    return {'available': True, **data}
+
+
+def _peers_cache_key(symbol):
+    return f'research:peers:v1:{symbol}'
+
+
+def peers(symbol):
+    def produce():
+        raw = get_peers(symbol) or []
+        symbols = [s for s in raw if s and s.upper() != symbol][:MAX_PEERS]
+        return {'symbols': symbols}
+
+    data = cache.get_or_set(_peers_cache_key(symbol), produce, PEERS_TTL)
     return {'available': True, **data}
 
 
