@@ -20,17 +20,20 @@ company's peers, doubling as an ad-hoc compare tool via manual swap.
 
 ## Backend
 
-- `finnhub.py`: add `get_peers(symbol)` calling Finnhub's `/stock/peer`.
-  Cached per symbol under the existing `CACHE_V` scheme with a long TTL
-  (peer sets rarely change).
-- `GET /api/research/<symbol>/peers/`: resolves peers (capped at 5), calls
-  the existing `fundamentals()` for each (already cached per-symbol — no new
-  heavy computation), returns:
-  ```json
-  {"symbol": "AAPL", "peers": [{"symbol": "MSFT", ...metrics}, ...]}
-  ```
-- A peer that fails to resolve (delisted, no data) is dropped silently —
-  same best-effort convention as earnings/news.
+- `finnhub.py`: add `get_peers(symbol)` calling Finnhub's `/stock/peers`.
+- `peers(symbol)`: resolves the raw peer list, drops the query symbol itself
+  (Finnhub includes it), caps at 5, caches the result with a long TTL (peer
+  sets rarely change). Returns `{"available": true, "symbols": [...]}` —
+  symbols only, no embedded metrics.
+- `GET /api/research/<symbol>/peers/`: thin wrapper, same `provider_response`
+  pattern as `FundamentalsView`.
+- Per-peer metrics are **not** fetched server-side. The frontend already has
+  a cached, per-symbol `fundamentals` fetch (`useFundamentals` /
+  `getFundamentals`) — reusing it for each peer symbol means auto peers and
+  a manually swapped-in symbol go through the exact same code path, and a
+  peer whose fundamentals come back `available: false` degrades the same way
+  a directly-researched symbol does. This keeps the peers endpoint itself
+  small and avoids doing N Finnhub round-trips inside one request.
 
 ## Comparison metrics
 
@@ -46,19 +49,29 @@ All already computed by `to_fundamentals()` — no new metric derivation.
 
 - New "Peers" tab alongside Overview/Valuation/Earnings/News on the Research
   page.
-- Table auto-populates from `/api/research/<symbol>/peers/`.
-- Each peer column has a "×" to remove and an "add" slot that reuses the
-  existing symbol-search component (the one Watchlist's add-item flow uses)
-  to swap in any manual symbol.
+- Up to 5 peer slots, seeded from `/api/research/<symbol>/peers/`. A pure
+  `resolvePeerSymbols(currentSymbol, autoSymbols, overrides)` helper
+  (`lib/research.js`) merges the auto list with any manual overrides,
+  dropping duplicates and the current symbol.
+- Metrics for every slot (auto or manually swapped) come from the existing
+  per-symbol `fundamentals` fetch, run for all resolved slot symbols at once
+  via React Query's `useQueries` — the same cached data `useFundamentals`
+  would return for that symbol on its own Research page.
+- Each column has a "×" to clear the slot and an "add" affordance that
+  reuses the existing symbol-search input pattern (the one in
+  `WatchlistRail`) to swap in a manual symbol.
 - Manual swaps are session-local only (component state) — not persisted, no
   new model/migration.
 
 ## Testing
 
-- Backend: `get_peers` unit test (happy path, empty, Finnhub error); endpoint
-  test (happy path, empty peers, one peer failing to resolve).
-- Frontend: comparison-table render test; swap-interaction test — following
-  the pattern in `EarningsTab.test.jsx`.
+- Backend: `get_peers` unit test (params/URL); `peers()` unit test (drops
+  the query symbol, caps at 5, caches); endpoint test (happy path, not
+  configured, Finnhub error, malformed symbol rejected) — mirroring
+  `FundamentalsClientTest`/`FundamentalsViewTest`.
+- Frontend: `resolvePeerSymbols` unit tests (dedup, override, cap at 5);
+  `PeersTab` render test (loading, unavailable, swap-interaction) —
+  following the pattern in `EarningsTab.test.jsx`.
 
 ## Out of scope
 
