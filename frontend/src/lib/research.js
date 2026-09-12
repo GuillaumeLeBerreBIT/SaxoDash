@@ -184,3 +184,22 @@ export function earningsMarkersForBars(bars = [], history = []) {
   }
   return markers
 }
+
+export const MAX_PEER_SLOTS = 5
+
+/** Which symbol (if any) shows in each of the fixed peer slots, after
+ *  applying manual overrides on top of the auto peer list. Slot order is
+ *  preserved; the current symbol and any repeat are dropped. */
+export function resolvePeerSlots(currentSymbol, autoSymbols = [], overrides = []) {
+  const current = (currentSymbol || '').toUpperCase()
+  const seen = new Set([current])
+  const slots = []
+  for (let slot = 0; slot < MAX_PEER_SLOTS; slot += 1) {
+    const override = overrides[slot]
+    const candidate = override === null ? null : (override ? override.toUpperCase() : autoSymbols[slot])
+    if (!candidate || seen.has(candidate)) continue
+    seen.add(candidate)
+    slots.push({ slot, symbol: candidate })
+  }
+  return slots
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MAX_PEER_SLOTS,
   RANGE_COUNTS,
   WIDEST_RANGE_COUNT,
   barChange,
@@ -12,6 +13,7 @@ import {
   rangeStats,
   researchHref,
   resolveInstrument,
+  resolvePeerSlots,
   saxoAssetType,
   uicsByAssetType,
 } from './research'
@@ -252,5 +254,45 @@ describe('earningsMarkersForBars', () => {
 
   it('is empty with no history', () => {
     expect(earningsMarkersForBars(testBars, [])).toEqual([])
+  })
+})
+
+describe('resolvePeerSlots', () => {
+  it('returns the auto peers in slot order when there are no overrides', () => {
+    const result = resolvePeerSlots('AAPL', ['MSFT', 'GOOGL'], [])
+    expect(result).toEqual([
+      { slot: 0, symbol: 'MSFT' },
+      { slot: 1, symbol: 'GOOGL' },
+    ])
+  })
+
+  it('replaces a slot with a manual override', () => {
+    const result = resolvePeerSlots('AAPL', ['MSFT', 'GOOGL'], [undefined, 'AMZN'])
+    expect(result).toEqual([
+      { slot: 0, symbol: 'MSFT' },
+      { slot: 1, symbol: 'AMZN' },
+    ])
+  })
+
+  it('removes a slot explicitly overridden to null', () => {
+    const result = resolvePeerSlots('AAPL', ['MSFT', 'GOOGL'], [null])
+    expect(result).toEqual([{ slot: 1, symbol: 'GOOGL' }])
+  })
+
+  it('drops the current symbol if it appears among the auto peers', () => {
+    const result = resolvePeerSlots('AAPL', ['AAPL', 'MSFT'], [])
+    expect(result).toEqual([{ slot: 1, symbol: 'MSFT' }])
+  })
+
+  it('drops a duplicate symbol across slots, keeping the first', () => {
+    const result = resolvePeerSlots('AAPL', ['MSFT', 'MSFT'], [])
+    expect(result).toEqual([{ slot: 0, symbol: 'MSFT' }])
+  })
+
+  it('caps at MAX_PEER_SLOTS even with a longer auto list', () => {
+    const auto = ['A', 'B', 'C', 'D', 'E', 'F']
+    const result = resolvePeerSlots('AAPL', auto, [])
+    expect(result).toHaveLength(MAX_PEER_SLOTS)
+    expect(result.map((r) => r.symbol)).toEqual(['A', 'B', 'C', 'D', 'E'])
   })
 })
