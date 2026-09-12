@@ -54,7 +54,9 @@ function AddPeerSearch({ onPick }) {
     if (!showMenu) return undefined
     const updateRect = () => {
       const rect = wrapperRef.current?.getBoundingClientRect()
-      if (rect) setMenuRect({ top: rect.bottom, left: rect.left, width: rect.width })
+      // Floating now, so the menu isn't stuck at the narrow input column's
+      // width - widen it enough to show a symbol and its full description.
+      if (rect) setMenuRect({ top: rect.bottom, left: rect.left, width: Math.max(rect.width, 280) })
     }
     updateRect()
     window.addEventListener('scroll', updateRect, true)
@@ -86,7 +88,7 @@ function AddPeerSearch({ onPick }) {
       {menuRect && !isError && results.length > 0 && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 max-h-40 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg"
+          className="z-50 max-h-56 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg"
         >
           {results.map((result) => (
             <button
@@ -96,10 +98,10 @@ function AddPeerSearch({ onPick }) {
                 onPick(result.symbol)
                 setQuery('')
               }}
-              className="w-full text-left px-2 h-7 text-[11.5px] text-zinc-100 hover:bg-white/[0.06]"
+              className="flex items-baseline gap-1.5 w-full text-left px-2.5 py-1.5 text-[12.5px] text-zinc-100 hover:bg-white/[0.06]"
             >
-              {result.symbol}
-              <span className="text-zinc-500 ml-1.5 truncate">{result.description}</span>
+              <span className="shrink-0 font-medium">{result.symbol}</span>
+              <span className="text-zinc-500 truncate">{result.description}</span>
             </button>
           ))}
         </div>,
