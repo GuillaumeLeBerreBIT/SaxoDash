@@ -1243,6 +1243,51 @@ class FundamentalsViewTest(APITestCase):
         self.assertEqual(response.status_code, 400)
 
 
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class PeersViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        response = self.client.get('/api/research/peers/AAPL/')
+        self.assertEqual(response.status_code, 401)
+
+    @patch('research.finnhub.get_peers')
+    def test_returns_available_true_with_symbols(self, mock_get_peers):
+        mock_get_peers.return_value = ['AAPL', 'MSFT', 'GOOGL']
+
+        response = self.client.get('/api/research/peers/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['symbols'], ['MSFT', 'GOOGL'])
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/peers/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertIn('reason', response.data)
+
+    @patch('research.finnhub.get_peers')
+    def test_returns_available_false_on_a_finnhub_error(self, mock_get_peers):
+        mock_get_peers.side_effect = finnhub.FinnhubAPIError('boom')
+
+        response = self.client.get('/api/research/peers/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    def test_rejects_a_malformed_symbol(self):
+        response = self.client.get('/api/research/peers/AAPL%20US/')
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(CACHES=LOCMEM)
 class CompanyNewsViewTest(APITestCase):
     URL = '/api/research/news/AAPL/'
@@ -1345,6 +1390,7 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.EarningsCalendarView,
             research_views.SymbolEarningsView,
             research_views.CompanyNewsView,
+            research_views.PeersView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
 

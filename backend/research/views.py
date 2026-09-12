@@ -141,6 +141,14 @@ class FundamentalsView(APIView):
         return provider_response(lambda: finnhub.fundamentals(symbol))
 
 
+class PeersView(APIView):
+    throttle_scope = 'research.peers'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: finnhub.peers(symbol))
+
+
 EARNINGS_SCOPES = {'all', 'mine'}
 
 

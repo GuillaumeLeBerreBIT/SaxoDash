@@ -7,6 +7,7 @@ from .views import (
     FundamentalsView,
     InstrumentDetailsView,
     InstrumentSearchView,
+    PeersView,
     QuotesView,
     SymbolEarningsView,
     WatchlistDetailView,
@@ -19,6 +20,7 @@ urlpatterns = [
     path('chart/', ChartView.as_view(), name='research-chart'),
     path('quotes/', QuotesView.as_view(), name='research-quotes'),
     path('fundamentals/<str:symbol>/', FundamentalsView.as_view(), name='research-fundamentals'),
+    path('peers/<str:symbol>/', PeersView.as_view(), name='research-peers'),
     path(
         'earnings/calendar/',
         EarningsCalendarView.as_view(),
