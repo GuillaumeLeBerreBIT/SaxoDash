@@ -18,6 +18,7 @@ import {
   getEarningsCalendar,
   getSymbolEarnings,
   getCompanyNews,
+  getPeers,
   getPortfolioInsights,
   connectSaxo,
 } from './client'
@@ -418,6 +419,17 @@ describe('research endpoints', () => {
 
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/research/news/AAPL/'),
+      expect.anything()
+    )
+  })
+
+  it('getPeers hits the per-symbol peers route', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ available: true, symbols: ['MSFT'] }))
+
+    await getPeers('AAPL')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/peers/AAPL/'),
       expect.anything()
     )
   })

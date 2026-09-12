@@ -15,6 +15,7 @@ import {
   getInstrumentDetails,
   getNetWorth,
   getNetWorthHistory,
+  getPeers,
   getPortfolioInsights,
   getPortfolioSummary,
   getRiskMetrics,
@@ -57,6 +58,7 @@ export const queryKeys = {
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
   companyNews: (symbol) => ['company-news', symbol],
+  peers: (symbol) => ['peers', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   watchlists: ['watchlists'],
@@ -213,6 +215,29 @@ export function useCompanyNews(symbol) {
     queryFn: () => getCompanyNews(symbol),
     enabled: !!symbol,
     staleTime: 60 * 60_000,
+  })
+}
+
+// Peer sets rarely change; 24h matches the backend's own cache TTL.
+export function usePeers(symbol) {
+  return useQuery({
+    queryKey: queryKeys.peers(symbol),
+    queryFn: () => getPeers(symbol),
+    enabled: !!symbol,
+    staleTime: 24 * 60 * 60_000,
+  })
+}
+
+// Same per-symbol fundamentals fetch useFundamentals uses, once per resolved
+// peer slot - a manually swapped-in symbol goes through the identical path,
+// and the cache is shared with any tab already showing that symbol.
+export function usePeerFundamentals(symbols) {
+  return useQueries({
+    queries: symbols.map((symbol) => ({
+      queryKey: queryKeys.fundamentals(symbol),
+      queryFn: () => getFundamentals(symbol),
+      staleTime: 24 * 60 * 60_000,
+    })),
   })
 }
 
