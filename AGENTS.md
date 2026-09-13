@@ -7,14 +7,17 @@ Read it before starting implementation work if you haven't already.
 
 A personal finance dashboard (Django REST Framework backend, Vite + React
 frontend) rebuilding the SaxoDash Claude Design mockup into a real app.
-Current milestone: Dashboard, Portfolio, Transactions, Accounts and
-Research, against the live Saxo OpenAPI. Earnings, Analytics and
-bank-aggregation are future milestones — do not pull them forward mid-task.
+Current milestone: Dashboard, Portfolio, Transactions, Accounts, Research,
+Earnings and Analytics, against the live Saxo OpenAPI plus Finnhub for
+company fundamentals. Bank-aggregation (auto-syncing real external banks,
+vs. the hand-entered/Saxo-cash accounts `accounts` already supports) is the
+one still-future milestone — do not pull it forward mid-task.
 
-Research shipped as v1 = everything Saxo can power. Company fundamentals
-and macro series (P/E, market cap, dividend yield, analyst ratings, Buffett
-indicator) wait on a second data provider and render as ComingSoon panels
-until one is chosen.
+Research fundamentals (P/E, market cap, dividend yield, growth/valuation
+ratios) come from Finnhub's free tier — see "Company fundamentals come from
+Finnhub" below. Macro series (Buffett indicator and similar) are still
+deferred; they need an unrelated data source (FRED) and were deliberately
+kept out of scope.
 
 ## Running the stack
 
@@ -250,8 +253,3 @@ subclass `ProviderUnavailable`. A malformed Finnhub payload becomes
 `BenchmarkUnavailable` (also covering empty charts and zero/missing FX rates —
 previously an uncaught `ZeroDivisionError`), and `analytics/report.py` owns the
 metrics + best-effort-benchmark composition the two views shared.
-
-## Open decision (not yet made)
-
-The fundamentals provider behind the ComingSoon panels — FMP, Finnhub,
-EODHD or similar. Criteria and the v2 outline are in the Research plan.
