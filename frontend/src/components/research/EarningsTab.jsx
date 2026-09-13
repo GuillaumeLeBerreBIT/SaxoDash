@@ -3,6 +3,8 @@ import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader, Metric, Skeleton } from '../ui'
 import EarningsInsights from './EarningsInsights'
 import EpsBarChart from './EpsBarChart'
+import FundamentalsGate from './FundamentalsGate'
+import QuarterlyTrendsChart from './QuarterlyTrendsChart'
 
 const SESSION_LABEL = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
 
@@ -86,6 +88,13 @@ export default function EarningsTab({ symbol, earnings, fundamentals }) {
     <div className="space-y-4">
       <NextEarningsCard next={data.next} />
       <EarningsInsights fundamentals={fundamentals} />
+      <FundamentalsGate
+        fundamentals={fundamentals}
+        title="Margin trend"
+        fallback="Margin history is unavailable for this symbol."
+      >
+        {(fData) => <QuarterlyTrendsChart trends={fData.quarterly_trends} />}
+      </FundamentalsGate>
       <EpsBarChart
         title="EPS: actual vs. estimate"
         subtitle="Reported quarters, labelled with the surprise vs. consensus"
