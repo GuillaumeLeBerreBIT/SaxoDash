@@ -92,6 +92,15 @@ describe('PeersTab', () => {
     expect(screen.getByText(/reconnect saxo/i)).toBeInTheDocument()
   })
 
+  it('shows a valuation verdict per column, using the fundamentals already fetched', () => {
+    stub()
+    render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
+
+    const verdictRow = screen.getAllByRole('row').find((r) => within(r).queryByText('Verdict'))
+    expect(within(verdictRow).getByText(/expensive vs. growth/)).toBeInTheDocument() // AAPL: peg 2.1
+    expect(within(verdictRow).getByText(/fairly priced vs. growth/)).toBeInTheDocument() // MSFT: peg 1.8
+  })
+
   it('falls back to the fundamentals gate when the current symbol has no data', () => {
     stub()
     render(<PeersTab symbol="AAPL" fundamentals={{ data: { available: false, reason: 'nope' }, isLoading: false }} />)

@@ -6,7 +6,10 @@
 // verdict from this file is rendered.
 export const TONE_DOT = { pos: 'bg-emerald-400', neutral: 'bg-zinc-500', caution: 'bg-amber-400' }
 
-const T = {
+// Exported so lib/quadrant.js's numeric scores read the same thresholds as
+// the verdict text above - two parallel systems judging the same input
+// against different cutoffs is worse than one file both files trust.
+export const T = {
   revFast: 15, revSteady: 5,
   epsGap: 3,
   roeStrong: 15, marginStrong: 10, roeOk: 8, marginOk: 5,

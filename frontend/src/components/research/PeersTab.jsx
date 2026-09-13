@@ -4,9 +4,13 @@ import { X } from 'lucide-react'
 
 import { useInstrumentSearch, usePeerFundamentals, usePeers } from '../../api/queries'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
+import { quadrantPoint } from '../../lib/quadrant'
 import { nextEmptySlot, resolvePeerSlots } from '../../lib/research'
+import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader, Skeleton } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
+import QualityValuationQuadrant from './QualityValuationQuadrant'
+import VerdictBadge from './VerdictBadge'
 
 const RECOMMENDATION_LABELS = [
   ['strong_buy', 'Strong buy'],
@@ -131,67 +135,97 @@ export default function PeersTab({ symbol, fundamentals }) {
 
   return (
     <FundamentalsGate fundamentals={fundamentals} title="Peers" fallback="Peer data is unavailable for this symbol.">
-      {(currentData) => (
-        <Card padding={false}>
-          <div className="px-4 py-3 border-b border-white/[0.06]">
-            <CardHeader title="Peer comparison" subtitle="Valuation, growth and quality, side by side" />
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="border-b border-white/[0.06]">
-                  {/* Empty - aligns with the row-label column each body row leads with. */}
-                  <th className="px-4 py-2" />
-                  <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wide text-zinc-600 font-medium">
-                    {symbol}
-                  </th>
-                  {slots.map((s, i) => (
-                    <th key={s.symbol} className="text-right px-3 py-2 font-medium">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <span className="text-zinc-100">{s.symbol}</span>
-                        <button
-                          type="button"
-                          onClick={() => setOverride(s.slot, null)}
-                          aria-label={`Remove ${s.symbol}`}
-                          className="text-zinc-600 hover:text-red-400"
-                        >
-                          <X size={11} />
-                        </button>
-                      </div>
-                      {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
-                    </th>
-                  ))}
-                  {emptySlot !== -1 ? (
-                    <th className="text-right px-3 py-2 w-40">
-                      <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
-                    </th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {METRIC_ROWS.map((row) => (
-                  <tr key={row.key} className="border-b border-white/[0.04] last:border-0">
-                    <td className="px-4 py-2 text-zinc-500">{row.label}</td>
-                    <td className="px-3 py-2 num font-mono text-right text-zinc-100">
-                      {row.format(currentData[row.key])}
-                    </td>
-                    {slots.map((s, i) => {
-                      const peerData = peerResults[i]?.data
-                      const unavailable = peerData && peerData.available === false
-                      return (
-                        <td key={s.symbol} className="px-3 py-2 num font-mono text-right text-zinc-300">
-                          {unavailable ? '—' : row.format(peerData?.[row.key])}
+      {(currentData) => {
+        const quadrantPoints = [
+          quadrantPoint(symbol, currentData, true),
+          ...slots.map((s, i) => {
+            const peerData = peerResults[i]?.data
+            return peerData?.available ? quadrantPoint(s.symbol, peerData) : null
+          }),
+        ].filter(Boolean)
+
+        return (
+          <div className="space-y-4">
+            <Card padding={false}>
+              <div className="px-4 py-3 border-b border-white/[0.06]">
+                <CardHeader title="Peer comparison" subtitle="Valuation, growth and quality, side by side" />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      {/* Empty - aligns with the row-label column each body row leads with. */}
+                      <th className="px-4 py-2" />
+                      <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wide text-zinc-600 font-medium">
+                        {symbol}
+                      </th>
+                      {slots.map((s, i) => (
+                        <th key={s.symbol} className="text-right px-3 py-2 font-medium">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span className="text-zinc-100">{s.symbol}</span>
+                            <button
+                              type="button"
+                              onClick={() => setOverride(s.slot, null)}
+                              aria-label={`Remove ${s.symbol}`}
+                              className="text-zinc-600 hover:text-red-400"
+                            >
+                              <X size={11} />
+                            </button>
+                          </div>
+                          {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
+                        </th>
+                      ))}
+                      {emptySlot !== -1 ? (
+                        <th className="text-right px-3 py-2 w-40">
+                          <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
+                        </th>
+                      ) : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-white/[0.04]">
+                      <td className="px-4 py-2 text-zinc-500">Verdict</td>
+                      <td className="px-3 py-2 text-right">
+                        <VerdictBadge {...valuationVerdict(currentData)} className="justify-end" />
+                      </td>
+                      {slots.map((s, i) => {
+                        const peerData = peerResults[i]?.data
+                        const unavailable = !peerData || peerData.available === false
+                        return (
+                          <td key={s.symbol} className="px-3 py-2 text-right">
+                            {unavailable ? '—' : <VerdictBadge {...valuationVerdict(peerData)} className="justify-end" />}
+                          </td>
+                        )
+                      })}
+                      {emptySlot !== -1 ? <td /> : null}
+                    </tr>
+                    {METRIC_ROWS.map((row) => (
+                      <tr key={row.key} className="border-b border-white/[0.04] last:border-0">
+                        <td className="px-4 py-2 text-zinc-500">{row.label}</td>
+                        <td className="px-3 py-2 num font-mono text-right text-zinc-100">
+                          {row.format(currentData[row.key])}
                         </td>
-                      )
-                    })}
-                    {emptySlot !== -1 ? <td /> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {slots.map((s, i) => {
+                          const peerData = peerResults[i]?.data
+                          const unavailable = peerData && peerData.available === false
+                          return (
+                            <td key={s.symbol} className="px-3 py-2 num font-mono text-right text-zinc-300">
+                              {unavailable ? '—' : row.format(peerData?.[row.key])}
+                            </td>
+                          )
+                        })}
+                        {emptySlot !== -1 ? <td /> : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            <QualityValuationQuadrant points={quadrantPoints} />
           </div>
-        </Card>
-      )}
+        )
+      }}
     </FundamentalsGate>
   )
 }
