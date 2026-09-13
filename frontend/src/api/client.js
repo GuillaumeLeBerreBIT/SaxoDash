@@ -182,6 +182,10 @@ export const getEarningsCalendar = (scope = 'all', week = 0) =>
   apiFetch(`/api/research/earnings/calendar/?scope=${scope}&week=${week}`)
 export const getSymbolEarnings = (symbol) => apiFetch(`/api/research/earnings/${symbol}/`)
 
+export const getSymbolNote = (symbol) => apiFetch(`/api/research/notes/${symbol}/`)
+export const updateSymbolNote = (symbol, patch) =>
+  jsonRequest(`/api/research/notes/${symbol}/`, 'PATCH', patch)
+
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
 export const updateWatchlist = (id, patch) =>

@@ -24,10 +24,12 @@ import {
   getQuotes,
   getSaxoStatus,
   getSymbolEarnings,
+  getSymbolNote,
   getTransactions,
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  updateSymbolNote,
   updateWatchlist,
 } from './client'
 
@@ -61,6 +63,7 @@ export const queryKeys = {
   peers: (symbol) => ['peers', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
+  symbolNote: (symbol) => ['symbol-note', symbol],
   watchlists: ['watchlists'],
 }
 
@@ -258,6 +261,22 @@ export function useSymbolEarnings(symbol) {
     queryFn: () => getSymbolEarnings(symbol),
     enabled: !!symbol,
     staleTime: 24 * 60 * 60_000,
+  })
+}
+
+export function useSymbolNote(symbol) {
+  return useQuery({
+    queryKey: queryKeys.symbolNote(symbol),
+    queryFn: () => getSymbolNote(symbol),
+    enabled: !!symbol,
+  })
+}
+
+export function useSymbolNoteMutation(symbol) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (patch) => updateSymbolNote(symbol, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.symbolNote(symbol) }),
   })
 }
 

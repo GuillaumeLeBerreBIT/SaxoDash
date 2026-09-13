@@ -9,6 +9,8 @@ import {
   usePositions,
   useQuotes,
   useSymbolEarnings,
+  useSymbolNote,
+  useSymbolNoteMutation,
   useWatchlistMutations,
   useWatchlists,
 } from '../api/queries'
@@ -103,6 +105,8 @@ export default function Research() {
   })
   const fundamentals = useFundamentals(symbol)
   const earnings = useSymbolEarnings(symbol)
+  const note = useSymbolNote(symbol)
+  const noteMutation = useSymbolNoteMutation(symbol)
   const earningsMarkers = useMemo(
     () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
     [bars, earnings.data],
@@ -217,6 +221,8 @@ export default function Research() {
                 bars={bars}
                 range={controls.range}
                 fundamentals={fundamentals}
+                note={note}
+                onSaveNote={(patch) => noteMutation.mutate(patch)}
               />
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}

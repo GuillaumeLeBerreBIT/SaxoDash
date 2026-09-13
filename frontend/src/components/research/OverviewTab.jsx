@@ -3,6 +3,7 @@ import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader, Metric } from '../ui'
 import SnapshotSection from './SnapshotSection'
+import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
 function Fact({ label, value }) {
   return (
@@ -88,7 +89,17 @@ function RangeStatsCard({ bars, range }) {
   )
 }
 
-export default function OverviewTab({ symbol, position, details, detailsLoading, bars, range, fundamentals }) {
+export default function OverviewTab({
+  symbol,
+  position,
+  details,
+  detailsLoading,
+  bars,
+  range,
+  fundamentals,
+  note,
+  onSaveNote,
+}) {
   return (
     <div className="space-y-4">
       {position ? <PositionCard position={position} /> : null}
@@ -96,7 +107,16 @@ export default function OverviewTab({ symbol, position, details, detailsLoading,
       <SnapshotSection fundamentals={fundamentals} />
       <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
+      <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />
+
       <RangeStatsCard bars={bars} range={range} />
+
+      <ThesisAndRisksCard
+        note={note?.data}
+        onSave={onSaveNote}
+        fundamentals={fundamentals}
+        currency={details?.currency}
+      />
     </div>
   )
 }
