@@ -17,7 +17,9 @@ export const RANGES = [
   { key: '3M', bars: 66 },
   { key: '6M', bars: 130 },
   { key: '1Y', bars: 252 },
-  { key: 'ALL', bars: 504 },
+  // Saxo's own per-call ceiling (CHART_MAX_COUNT in backend/saxo/client.py),
+  // not literal IPO-to-date history.
+  { key: 'ALL', bars: 1200 },
 ]
 
 export const INTERVALS = RANGES.map((range) => range.key)
