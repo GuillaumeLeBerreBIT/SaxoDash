@@ -47,6 +47,15 @@ Keep changes scoped to what was asked and explain what changed in the chat / PR.
 The frontend has a small vitest suite too — `lib/` helpers, the API client,
 and a few components — so add/adjust specs alongside frontend changes.
 
+**A new migration isn't done until `manage.py migrate` has run against the
+dev database, not just the test suite.** `manage.py test` builds its own
+fresh, fully-migrated database every run, so it stays green even when the
+persistent `db.sqlite3` the live dev server reads is missing the column —
+which then 500s on every request touching that model. `scripts/dev.sh`
+guards this on stack restart (`migrate --check`, then `migrate`), but mid-session
+against an already-running server it's a manual step, easy to forget in the
+run-tests-then-move-on rhythm.
+
 **Frontend design/polish**: use the `ui-ux-pro-max`, `frontend-design`,
 and `dataviz` skills when doing visual/UX work rather than improvising —
 they already cover this project's needs.
