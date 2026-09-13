@@ -4,7 +4,7 @@ import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
-import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
+import { Card, CardHeader, PageHeader, Badge, InstrumentLogo } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -112,7 +112,12 @@ export default function Portfolio() {
                   <tr key={p.ticker} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
                     <td className="px-5 py-3">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
-                        <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                        <InstrumentLogo
+                          isin={p.isin}
+                          size={16}
+                          className="rounded-sm"
+                          fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />}
+                        />
                         <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[140px]">{p.name}</span>
                       </Link>

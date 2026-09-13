@@ -39,6 +39,12 @@ class Position(models.Model):
     uic = models.PositiveIntegerField(null=True, blank=True)
     asset_type = models.CharField(max_length=20, null=True, blank=True)
 
+    # Fetched via instrument details while still null - never overwritten
+    # once known, since it doesn't change. A lookup that fails is retried on
+    # every sync rather than tracked as a separate "gave up" state; see
+    # saxo.tasks._fetch_isin. Powers the logo lookup.
+    isin = models.CharField(max_length=12, null=True, blank=True, default=None)
+
     # Prices are quoted in the instrument's currency, which is often not the
     # one the app reports in; fx_rate converts to REPORTING_CURRENCY.
     currency = models.CharField(max_length=3, default=settings.REPORTING_CURRENCY)

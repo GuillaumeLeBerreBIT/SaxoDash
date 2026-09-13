@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
-import { StatStrip, StatRow, Skeleton, Metric } from './ui'
+import { InstrumentLogo, StatStrip, StatRow, Skeleton, Metric } from './ui'
 
 describe('ui primitives', () => {
   it('StatStrip renders its StatRow children with label, value, badge and note', () => {
@@ -26,5 +26,28 @@ describe('ui primitives', () => {
     expect(screen.getByText('P/E')).toBeInTheDocument()
     expect(screen.getByText('32.10')).toBeInTheDocument()
     expect(screen.getByText('hint text')).toBeInTheDocument()
+  })
+
+  it('InstrumentLogo renders the elbstream image for an ISIN', () => {
+    const { container } = render(
+      <InstrumentLogo isin="US0378331005" size={40} fallback={<span>AA</span>} />,
+    )
+    const img = container.querySelector('img')
+    expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/isin/US0378331005')
+    expect(screen.queryByText('AA')).not.toBeInTheDocument()
+  })
+
+  it('InstrumentLogo renders the fallback without an ISIN', () => {
+    render(<InstrumentLogo isin={null} size={40} fallback={<span>AA</span>} />)
+    expect(screen.getByText('AA')).toBeInTheDocument()
+  })
+
+  it('InstrumentLogo falls back once the image fails to load', () => {
+    const { container } = render(
+      <InstrumentLogo isin="US0378331005" size={40} fallback={<span>AA</span>} />,
+    )
+    fireEvent.error(container.querySelector('img'))
+    expect(screen.getByText('AA')).toBeInTheDocument()
+    expect(container.querySelector('img')).not.toBeInTheDocument()
   })
 })

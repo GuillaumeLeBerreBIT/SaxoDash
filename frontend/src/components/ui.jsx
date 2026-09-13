@@ -1,6 +1,8 @@
 import { useId, useState } from 'react'
 import { Info } from 'lucide-react'
 
+import { instrumentLogoUrl } from '../lib/logos'
+
 export function Card({ children, className = '', padding = true, interactive = false, onClick }) {
   return (
     <div
@@ -184,6 +186,27 @@ export function StatRow({ label, value, badge, badgeTone = 'zinc', note }) {
 
 export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
+}
+
+/** A logo for `isin` (elbstream.com - see lib/logos.js), rendering
+ *  `fallback` instead when there's no ISIN or the image fails to load.
+ *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both
+ *  use this rather than each tracking their own load failure. */
+export function InstrumentLogo({ isin, size, className = '', fallback }) {
+  const [failed, setFailed] = useState(false)
+  const src = !failed ? instrumentLogoUrl(isin) : null
+
+  if (!src) return fallback
+
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setFailed(true)}
+      style={{ width: size, height: size }}
+      className={`object-contain bg-white shrink-0 ${className}`}
+    />
+  )
 }
 
 /** A single button in a segmented toggle - Research's chart-range picker

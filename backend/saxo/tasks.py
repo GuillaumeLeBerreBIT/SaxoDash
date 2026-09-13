@@ -107,6 +107,37 @@ def refresh_saxo_token():
     credential.save(update_fields=['access_token', 'refresh_token', 'expires_at'])
 
 
+def _fetch_isin(access_token, uic, asset_type):
+    """Best-effort - a failed lookup leaves isin unset rather than failing
+    the whole sync over a field that only feeds a logo. Retried on every
+    sync until it succeeds, same as "not tried yet" - a permanently
+    unresolvable row costs one extra Saxo call per sync, never a database
+    write, so that's cheap to leave unbounded rather than tracking a
+    separate "gave up" state for it."""
+    if not uic or not asset_type:
+        return None
+    try:
+        details = client.get_instrument_details(access_token, uic, asset_type)
+    except (client.SaxoAuthError, client.SaxoAPIError):
+        logger.warning('Could not fetch instrument details for uic=%s (isin lookup)', uic, exc_info=True)
+        return None
+    return details.get('Isin') or None
+
+
+def _with_isins(mapped_positions, known_isins, access_token):
+    """One Saxo call per row missing an isin - done here, before any
+    database transaction opens, so a slow instrument-details round-trip
+    never holds SQLite's single write lock (this project has already been
+    bitten once by a write held open too long: see the WAL/BEGIN IMMEDIATE
+    note in AGENTS.md)."""
+    for fields in mapped_positions:
+        if not known_isins.get(fields['ticker']):
+            isin = _fetch_isin(access_token, fields.get('uic'), fields.get('asset_type'))
+            if isin:
+                fields['isin'] = isin
+        yield fields
+
+
 @shared_task(**SYNC_TASK)
 @synced
 def sync_positions(credential):
@@ -115,12 +146,16 @@ def sync_positions(credential):
     exit trades await a real closed-position payload). One fetch feeding both tables means they
     can no longer silently diverge by running on separate schedules."""
     saxo_positions = client.get_positions(credential.access_token)
+    known_isins = dict(Position.objects.values_list('ticker', 'isin'))
+    mapped_positions = _mapped_rows(saxo_positions, mapping.to_position_fields)
+    enriched_positions = list(_with_isins(mapped_positions, known_isins, credential.access_token))
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
-    # half-built list of seen tickers.
+    # half-built list of seen tickers. Nothing left in this block does I/O -
+    # the isin lookups above already ran to completion before it opened.
     with transaction.atomic():
         seen_tickers = []
-        for fields in _mapped_rows(saxo_positions, mapping.to_position_fields):
+        for fields in enriched_positions:
             Position.objects.update_or_create(ticker=fields['ticker'], defaults=fields)
             seen_tickers.append(fields['ticker'])
 

@@ -104,4 +104,19 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
+
+  it('shows the holding logo when Saxo gives an ISIN', () => {
+    stub([{ ...msft, isin: 'US5949181045' }])
+    const { container } = renderWithProviders(<Portfolio />)
+
+    expect(container.querySelector('img')).toHaveAttribute(
+      'src', 'https://api.elbstream.com/logos/isin/US5949181045',
+    )
+  })
+
+  it('falls back to the color swatch without an ISIN', () => {
+    const { container } = renderWithProviders(<Portfolio />)
+
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+  })
 })

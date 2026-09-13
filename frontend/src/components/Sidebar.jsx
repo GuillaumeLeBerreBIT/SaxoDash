@@ -126,6 +126,19 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
             </>
           )}
         </div>
+        {!collapsed && (
+          <div className="mt-2 text-[10px] text-zinc-600">
+            Logos by{' '}
+            <a
+              href="https://elbstream.com/logos"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-zinc-400"
+            >
+              elbstream.com
+            </a>
+          </div>
+        )}
       </div>
     </aside>
   )

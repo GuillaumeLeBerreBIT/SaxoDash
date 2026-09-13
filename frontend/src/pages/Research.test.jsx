@@ -89,6 +89,24 @@ describe('Research', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
+  it('shows the instrument logo in the symbol bar when Saxo gives an ISIN', () => {
+    queries.useInstrumentDetails.mockReturnValue({
+      ...idle,
+      data: { symbol: 'NVDA', description: 'NVIDIA Corporation', exchange: 'NASDAQ', currency: 'USD', uic: 211, isin: 'US67066G1040' },
+    })
+    const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const logo = container.querySelector('img')
+    expect(logo).toHaveAttribute('src', 'https://api.elbstream.com/logos/isin/US67066G1040')
+  })
+
+  it('falls back to a letter avatar in the symbol bar without an ISIN', () => {
+    const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(container.querySelector('img')).not.toBeInTheDocument()
+    expect(screen.getAllByText('NV').length).toBeGreaterThan(0)
+  })
+
   it('falls back to the first held position when no symbol is given', () => {
     renderWithProviders(<Research />, { route: '/research' })
 

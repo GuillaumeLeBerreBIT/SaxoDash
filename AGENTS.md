@@ -253,3 +253,14 @@ subclass `ProviderUnavailable`. A malformed Finnhub payload becomes
 `BenchmarkUnavailable` (also covering empty charts and zero/missing FX rates —
 previously an uncaught `ZeroDivisionError`), and `analytics/report.py` owns the
 metrics + best-effort-benchmark composition the two views shared.
+
+**Instrument logos are the one thing the frontend fetches from a third party
+directly.** `lib/logos.js::instrumentLogoUrl` builds an `<img src>` straight
+at `api.elbstream.com`, unlike Saxo/Finnhub, which are always proxied through
+`/api/research/...` because they're keyed, rate-limited APIs a backend has to
+guard. Elbstream is a free, keyless, no-secret image CDN meant to be embedded
+directly in a browser — proxying it would only add a caching layer Django
+isn't well-suited to serve binary images from anyway, for a purely decorative
+feature. `Position.isin` (fetched once via `saxo.tasks._fetch_isin`, retried
+every sync until it succeeds, never overwritten once known) is what makes the
+Portfolio table's logos possible without a Saxo call per row.
