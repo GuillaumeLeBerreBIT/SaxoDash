@@ -2,8 +2,7 @@ import { fmtNum, fmtPct } from '../../lib/format'
 import { SNAPSHOT_GROUPS } from '../../lib/snapshot'
 import { Card, CardHeader, InfoTip } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
-
-const TONE_DOT = { pos: 'bg-emerald-400', neutral: 'bg-zinc-500', caution: 'bg-amber-400' }
+import VerdictBadge from './VerdictBadge'
 
 function fmtField(value, fmt) {
   if (value == null) return '—'
@@ -17,10 +16,7 @@ function Group({ group, data }) {
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[11px] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</span>
-        <span className="flex items-center gap-1.5 text-[11.5px] text-zinc-400 text-right">
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${TONE_DOT[verdict.tone]}`} />
-          {verdict.text}
-        </span>
+        <VerdictBadge {...verdict} />
       </div>
       <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
         {group.metrics.map((m) => (

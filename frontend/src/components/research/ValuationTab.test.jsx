@@ -52,11 +52,24 @@ describe('ValuationTab', () => {
     expect(screen.getByText('22.30')).toBeInTheDocument()
   })
 
-  it('shows a price-performance card', () => {
+  it('shows market cap, dividend yield and 52W range in the ratios grid', () => {
+    render(
+      <ValuationTab
+        fundamentals={{
+          data: { ...AVAILABLE, market_cap: 3_100_000, dividend_yield: 0.44, week52_low: 150, week52_high: 260 },
+          isLoading: false,
+        }}
+      />,
+    )
+
+    expect(screen.getByText('3.10T')).toBeInTheDocument()
+    expect(screen.getByText('150.00 – 260.00')).toBeInTheDocument()
+  })
+
+  it('shows a valuation verdict next to the ratios', () => {
     render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
 
-    expect(screen.getByText('Price performance')).toBeInTheDocument()
-    expect(screen.getByText('+18.70%')).toBeInTheDocument()
+    expect(screen.getByText(/expensive vs. growth/)).toBeInTheDocument()
   })
 
   it('shows an unavailable message instead of ratios when data is missing', () => {
@@ -66,9 +79,9 @@ describe('ValuationTab', () => {
     expect(screen.queryByText('32.10')).not.toBeInTheDocument()
   })
 
-  it('shows EPS actual-vs-estimate as a valuation input', () => {
+  it('does not repeat the EPS actual-vs-estimate chart already on the Earnings tab', () => {
     render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
-    expect(screen.getByText('EPS: actual vs. estimate')).toBeInTheDocument()
+    expect(screen.queryByText('EPS: actual vs. estimate')).not.toBeInTheDocument()
   })
 
   it('shows the next earnings date when the earnings feed has one', () => {

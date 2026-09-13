@@ -2,6 +2,10 @@
  *  tested in isolation; the component only renders what these return. Thresholds
  *  are named here so the InfoTip copy and the code cannot drift apart. */
 
+// The color for each verdict's tone, shared by every place a {tone, text}
+// verdict from this file is rendered.
+export const TONE_DOT = { pos: 'bg-emerald-400', neutral: 'bg-zinc-500', caution: 'bg-amber-400' }
+
 const T = {
   revFast: 15, revSteady: 5,
   epsGap: 3,

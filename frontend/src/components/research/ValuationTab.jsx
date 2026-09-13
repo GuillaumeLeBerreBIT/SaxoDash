@@ -1,8 +1,9 @@
 import { daysUntil } from '../../lib/earnings'
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
+import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader } from '../ui'
-import EpsBarChart from './EpsBarChart'
 import FundamentalsGate from './FundamentalsGate'
+import VerdictBadge from './VerdictBadge'
 
 function Ratio({ label, value }) {
   return (
@@ -70,53 +71,19 @@ function RecommendationBar({ recommendation }) {
   )
 }
 
-/** Earnings delivery as a valuation input: the next scheduled date (from the
- *  earnings feed, when we have it) and actual-vs-estimate EPS from the
- *  fundamentals payload already in hand. */
-function EarningsDelivery({ data, earnings }) {
+/** Earnings delivery as a valuation input: the next scheduled date, from the
+ *  earnings feed when we have it. The actual-vs-estimate EPS chart lives on
+ *  the Earnings tab only, so it isn't shown twice. */
+function EarningsDelivery({ earnings }) {
   const next = earnings?.data?.available ? earnings.data.next : null
-  const rows = (data.eps_history || []).map((e) => ({
-    period: (e.period || '').slice(0, 7),
-    actual: e.actual,
-    estimate: e.estimate,
-    surprise: e.surprise_percent,
-  }))
-  if (!next && rows.length === 0) return null
-
-  return (
-    <>
-      {next && (
-        <Card>
-          <CardHeader title="Next earnings" subtitle={daysUntil(next.date)} />
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <Ratio label="Date" value={next.date} />
-            <Ratio label="EPS estimate" value={fmtNum(next.eps_estimate, 2)} />
-          </div>
-        </Card>
-      )}
-      {rows.length > 0 && (
-        <EpsBarChart
-          title="EPS: actual vs. estimate"
-          subtitle="Delivery vs. consensus, labelled with the surprise"
-          data={rows}
-          format={(v) => fmtNum(v, 2)}
-        />
-      )}
-    </>
-  )
-}
-
-function PricePerformance({ data }) {
-  const hasAny = [data.price_return_1m, data.price_return_ytd, data.price_return_1y].some((v) => v != null)
-  if (!hasAny) return null
+  if (!next) return null
 
   return (
     <Card>
-      <CardHeader title="Price performance" subtitle="Total return, from Finnhub" />
-      <div className="mt-4 grid grid-cols-3 gap-4">
-        <Ratio label="1 month" value={fmtPct(data.price_return_1m)} />
-        <Ratio label="Year to date" value={fmtPct(data.price_return_ytd)} />
-        <Ratio label="1 year" value={fmtPct(data.price_return_1y)} />
+      <CardHeader title="Next earnings" subtitle={daysUntil(next.date)} />
+      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <Ratio label="Date" value={next.date} />
+        <Ratio label="EPS estimate" value={fmtNum(next.eps_estimate, 2)} />
       </div>
     </Card>
   )
@@ -132,8 +99,15 @@ export default function ValuationTab({ fundamentals, earnings }) {
       {(data) => (
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Ratios" subtitle="Computed in-app from Finnhub's raw fundamentals" />
+            <CardHeader
+              title="Ratios"
+              subtitle="Computed in-app from Finnhub's raw fundamentals"
+              right={<VerdictBadge {...valuationVerdict(data)} />}
+            />
             <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Ratio label="Market cap" value={fmtCompact(data.market_cap)} />
+              <Ratio label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
+              <Ratio label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
               <div>
                 <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
                 <HistoryContext stats={data.valuation_history?.pe} />
@@ -164,8 +138,7 @@ export default function ValuationTab({ fundamentals, earnings }) {
             </div>
           </Card>
 
-          <EarningsDelivery data={data} earnings={earnings} />
-          <PricePerformance data={data} />
+          <EarningsDelivery earnings={earnings} />
           <RecommendationBar recommendation={data.recommendation} />
         </div>
       )}

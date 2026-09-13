@@ -1,8 +1,7 @@
 import { buildEarningsInsights } from '../../lib/earningsInsights'
+import { TONE_DOT } from '../../lib/snapshot'
 import { Card, CardHeader } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
-
-const TONE_DOT = { pos: 'bg-emerald-400', neutral: 'bg-zinc-500', caution: 'bg-amber-400' }
 
 export default function EarningsInsights({ fundamentals }) {
   return (
