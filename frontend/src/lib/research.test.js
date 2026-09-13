@@ -7,6 +7,7 @@ import {
   barsForRange,
   earningsMarkersForBars,
   instrumentKey,
+  isEtf,
   needsInstrumentSearch,
   nextEmptySlot,
   periodChange,
@@ -45,6 +46,17 @@ describe('saxoAssetType', () => {
 
   it('is null without a position', () => {
     expect(saxoAssetType(null)).toBeNull()
+  })
+})
+
+describe('isEtf', () => {
+  it('is true for a resolved ETF instrument', () => {
+    expect(isEtf({ uic: 999, assetType: 'Etf' })).toBe(true)
+  })
+
+  it('is false for a stock or an unresolved instrument', () => {
+    expect(isEtf({ uic: 211, assetType: 'Stock' })).toBe(false)
+    expect(isEtf(null)).toBe(false)
   })
 })
 

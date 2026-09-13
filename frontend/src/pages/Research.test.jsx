@@ -30,6 +30,18 @@ const position = {
   pnl_pct: '112.35',
 }
 
+const etfPosition = {
+  ticker: 'SPY',
+  name: 'SPDR S&P 500 ETF Trust',
+  uic: 999,
+  asset_type: 'Etf',
+  qty: 10,
+  avg_cost: '450.00',
+  value: '5000.00',
+  pnl: '500.00',
+  pnl_pct: '11.11',
+}
+
 const idle = { data: undefined, isLoading: false, error: null }
 
 function stubQueries({ chart = { data: bars, isLoading: false, error: null }, positions = [position] } = {}) {
@@ -142,6 +154,38 @@ describe('Research', () => {
   it('opens on the Earnings tab when ?tab=earnings is in the URL', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=AAPL&tab=earnings' })
     expect(screen.getByRole('button', { name: 'Earnings' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('hides the Valuation, Peers and Earnings tabs for an ETF', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
+
+    expect(screen.queryByRole('button', { name: 'Valuation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Peers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Earnings' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'News' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument()
+  })
+
+  it('falls back to Overview when a stale ?tab does not apply to an ETF', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=valuation' })
+
+    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('badges an ETF instrument in the symbol bar', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
+
+    expect(screen.getByText('ETF')).toBeInTheDocument()
+  })
+
+  it('does not badge a stock as an ETF', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.queryByText('ETF')).not.toBeInTheDocument()
   })
 
   it('shows a placeholder instead of a chart while the candles load', () => {

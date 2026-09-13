@@ -99,12 +99,15 @@ export default function OverviewTab({
   fundamentals,
   note,
   onSaveNote,
+  isEtf = false,
 }) {
   return (
     <div className="space-y-4">
       {position ? <PositionCard position={position} /> : null}
 
-      <SnapshotSection fundamentals={fundamentals} />
+      {/* An ETF never gets Finnhub fundamentals - the gate's "unavailable
+          for this symbol" fallback would wrongly imply that's temporary. */}
+      {isEtf ? null : <SnapshotSection fundamentals={fundamentals} />}
       <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
       <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />

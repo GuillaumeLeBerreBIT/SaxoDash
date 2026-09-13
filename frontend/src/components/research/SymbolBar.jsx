@@ -1,7 +1,7 @@
 import { Star } from 'lucide-react'
 
 import { fmtNum, fmtPct } from '../../lib/format'
-import { barChange } from '../../lib/research'
+import { barChange, isEtf } from '../../lib/research'
 import { Badge, Card } from '../ui'
 import { Menu, MenuRow } from './menu'
 
@@ -37,6 +37,7 @@ export default function SymbolBar({
             <div className="flex items-center gap-2">
               <span className="text-[17px] font-medium text-zinc-50">{symbol}</span>
               {exchange ? <span className="text-[11px] text-zinc-500 num font-mono">{exchange}</span> : null}
+              {isEtf(instrument) ? <Badge tone="amber">ETF</Badge> : null}
               {position ? <Badge tone="blue">Held</Badge> : null}
             </div>
             <div className="text-[12px] text-zinc-400 mt-0.5">{name}</div>

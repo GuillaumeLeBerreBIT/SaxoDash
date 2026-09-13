@@ -85,4 +85,26 @@ describe('OverviewTab fundamentals', () => {
 
     expect(screen.getAllByText(/FINNHUB_API_KEY is not set/).length).toBeGreaterThan(0)
   })
+
+  it('hides the Investment Snapshot for an ETF, but keeps the Thesis & risks notes', () => {
+    render(
+      <OverviewTab
+        symbol="SPY"
+        position={null}
+        details={null}
+        detailsLoading={false}
+        bars={bars}
+        range="1M"
+        fundamentals={{ data: { available: false, reason: 'Not a company' }, isLoading: false }}
+        isEtf
+      />
+    )
+
+    // An ETF will never get fundamentals - showing "unavailable" implies a
+    // gap that might fill in later, which is misleading here.
+    expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
+    // Freeform notes aren't fundamentals-derived, so they still make sense.
+    expect(screen.getByText('Thesis & risks')).toBeInTheDocument()
+    expect(screen.getByText('Business')).toBeInTheDocument()
+  })
 })

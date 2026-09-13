@@ -136,6 +136,13 @@ export function resolveInstrument({ symbol, positions = [], results = [], pinned
   return null
 }
 
+/** Whether a resolved instrument is a fund, not a company - Saxo's own
+ *  spelling (`Etf`), never the app's STOCK/ETF label. The one place this
+ *  check lives, so a symbol bar and a tab list can't drift on the string. */
+export function isEtf(instrument) {
+  return instrument?.assetType === 'Etf'
+}
+
 /** Quotes keyed by uic, so a list of rows is O(1) per lookup rather than O(n). */
 export function quotesByUic(quotes = []) {
   return new Map(quotes.map((quote) => [quote.uic, quote]))

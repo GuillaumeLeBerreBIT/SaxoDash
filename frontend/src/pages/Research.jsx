@@ -20,6 +20,7 @@ import {
   WIDEST_RANGE_COUNT,
   barsForRange,
   earningsMarkersForBars,
+  isEtf,
   needsInstrumentSearch,
   resolveInstrument,
 } from '../lib/research'
@@ -37,16 +38,21 @@ import ValuationTab from '../components/research/ValuationTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 
+// `equityOnly` tabs are all Finnhub company-fundamentals underneath, which
+// Finnhub's free tier never returns for an ETF - so unlike a stock with
+// temporarily missing data, there's nothing to wait on. Marked here, once,
+// so the visible tab list and the hidden-tab reset below can't drift apart.
 const TABS = [
   ['overview', 'Overview'],
-  ['valuation', 'Valuation'],
-  ['peers', 'Peers'],
-  ['earnings', 'Earnings'],
+  ['valuation', 'Valuation', { equityOnly: true }],
+  ['peers', 'Peers', { equityOnly: true }],
+  ['earnings', 'Earnings', { equityOnly: true }],
   ['news', 'News'],
   ['guide', 'Guide'],
 ]
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
+const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
 
 const FALLBACK_SYMBOL = 'NVDA'
 
@@ -98,6 +104,15 @@ export default function Research() {
     const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
     return resolveInstrument({ symbol, positions, results: searchResults, pinned })
   }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
+  const instrumentIsEtf = isEtf(instrument)
+  const visibleTabs = instrumentIsEtf ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
+
+  // Adjusted during render, React's own pattern for "reset state when a prop
+  // makes it invalid" - covers both a stale `?tab=` link and switching to an
+  // ETF mid-session (the watchlist rail, ⌘K) while an equity-only tab is open.
+  if (instrumentIsEtf && EQUITY_ONLY_TAB_KEYS.has(tab)) {
+    setTab('overview')
+  }
 
   // One fetch at the widest range; the narrower ones are its tail. Keying on
   // the range instead meant six Saxo calls to walk 1W→ALL.
@@ -212,7 +227,7 @@ export default function Research() {
             />
 
             <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">
-              {TABS.map(([key, label]) => (
+              {visibleTabs.map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
@@ -240,6 +255,7 @@ export default function Research() {
                 fundamentals={fundamentals}
                 note={note}
                 onSaveNote={(patch) => noteMutation.mutate(patch)}
+                isEtf={instrumentIsEtf}
               />
             ) : null}
             {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
