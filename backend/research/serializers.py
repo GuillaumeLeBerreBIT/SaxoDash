@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Watchlist, WatchlistItem
+from .models import SymbolNote, Watchlist, WatchlistItem
 
 
 class WatchlistItemSerializer(serializers.ModelSerializer):
@@ -40,3 +40,13 @@ class WatchlistItemCreateSerializer(serializers.ModelSerializer):
         return WatchlistItem.objects.create(
             watchlist=self.context['watchlist'], **validated_data
         )
+
+
+class SymbolNoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SymbolNote
+        fields = [
+            'symbol', 'business_summary', 'risks_to_watch',
+            'bull_case', 'bear_case', 'target_price', 'sell_trigger', 'updated_at',
+        ]
+        read_only_fields = ['symbol', 'updated_at']

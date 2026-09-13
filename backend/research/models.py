@@ -37,3 +37,29 @@ class WatchlistItem(models.Model):
 
     def __str__(self):
         return f'{self.symbol} in {self.watchlist.name}'
+
+
+class SymbolNote(models.Model):
+    """The Research page's own-judgment fields, one record per symbol: what
+    the company does, the case for and against it, and what would end the
+    thesis. Single-tenant, like Watchlist - no user FK. A row is created on
+    first GET (see SymbolNoteView), so an unannotated symbol is an empty
+    record rather than a 404."""
+
+    symbol = models.CharField(max_length=20, unique=True)
+
+    business_summary = models.TextField(blank=True, default='')
+    risks_to_watch = models.TextField(blank=True, default='')
+
+    bull_case = models.TextField(blank=True, default='')
+    bear_case = models.TextField(blank=True, default='')
+    target_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sell_trigger = models.TextField(blank=True, default='')
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['symbol']
+
+    def __str__(self):
+        return f'Note for {self.symbol}'

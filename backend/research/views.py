@@ -6,6 +6,7 @@ from rest_framework.generics import (
     CreateAPIView,
     DestroyAPIView,
     ListCreateAPIView,
+    RetrieveUpdateAPIView,
     RetrieveUpdateDestroyAPIView,
 )
 from rest_framework.response import Response
@@ -14,9 +15,10 @@ from rest_framework.views import APIView
 from saxo import client
 
 from . import earnings, finnhub, market
-from .models import Watchlist, WatchlistItem
+from .models import SymbolNote, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
+    SymbolNoteSerializer,
     WatchlistItemCreateSerializer,
     WatchlistSerializer,
 )
@@ -181,3 +183,17 @@ class CompanyNewsView(APIView):
     def get(self, request, symbol):
         symbol = _symbol(symbol)
         return provider_response(lambda: finnhub.news(symbol))
+
+
+class SymbolNoteView(RetrieveUpdateAPIView):
+    """The user's own notes for a symbol: business summary, thesis, risks.
+    Keyed on the symbol itself rather than a list+create dance, since there
+    is exactly one record per symbol - get_or_create means a GET on a symbol
+    that has never been annotated is a valid empty record, not a 404."""
+
+    serializer_class = SymbolNoteSerializer
+
+    def get_object(self):
+        symbol = _symbol(self.kwargs['symbol'])
+        note, _ = SymbolNote.objects.get_or_create(symbol=symbol)
+        return note

@@ -10,6 +10,7 @@ from .views import (
     PeersView,
     QuotesView,
     SymbolEarningsView,
+    SymbolNoteView,
     WatchlistDetailView,
     WatchlistItemCreateView,
     WatchlistItemDeleteView,
@@ -32,6 +33,7 @@ urlpatterns = [
         name='research-earnings-symbol',
     ),
     path('news/<str:symbol>/', CompanyNewsView.as_view(), name='research-company-news'),
+    path('notes/<str:symbol>/', SymbolNoteView.as_view(), name='research-symbol-note'),
     path('instruments/', InstrumentSearchView.as_view(), name='research-instruments'),
     path(
         'instruments/<int:uic>/<str:asset_type>/',
