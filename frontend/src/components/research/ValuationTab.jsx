@@ -2,6 +2,7 @@ import { daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader } from '../ui'
+import CashFlowTrendChart from './CashFlowTrendChart'
 import FundamentalsGate from './FundamentalsGate'
 import VerdictBadge from './VerdictBadge'
 
@@ -138,6 +139,7 @@ export default function ValuationTab({ fundamentals, earnings }) {
             </div>
           </Card>
 
+          <CashFlowTrendChart trend={data.cash_flow_trend} />
           <EarningsDelivery earnings={earnings} />
           <RecommendationBar recommendation={data.recommendation} />
         </div>
