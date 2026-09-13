@@ -1,8 +1,7 @@
-import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
+import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
 import { priceBasis } from '../../lib/pricing'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader, Metric } from '../ui'
-import FundamentalsGate from './FundamentalsGate'
 import SnapshotSection from './SnapshotSection'
 
 function Fact({ label, value }) {
@@ -89,28 +88,6 @@ function RangeStatsCard({ bars, range }) {
   )
 }
 
-function FundamentalsCard({ fundamentals }) {
-  return (
-    <FundamentalsGate
-      fundamentals={fundamentals}
-      title="Company fundamentals"
-      fallback="Fundamentals are unavailable for this symbol."
-    >
-      {(data) => (
-        <Card>
-          <CardHeader title="Company fundamentals" subtitle={data.industry || 'From Finnhub'} />
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Metric label="P/E ratio" value={fmtNum(data.pe_ratio, 2)} />
-            <Metric label="Market cap" value={fmtCompact(data.market_cap)} />
-            <Metric label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
-            <Metric label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
-          </div>
-        </Card>
-      )}
-    </FundamentalsGate>
-  )
-}
-
 export default function OverviewTab({ symbol, position, details, detailsLoading, bars, range, fundamentals }) {
   return (
     <div className="space-y-4">
@@ -119,10 +96,7 @@ export default function OverviewTab({ symbol, position, details, detailsLoading,
       <SnapshotSection fundamentals={fundamentals} />
       <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
-      <div className="grid gap-4 lg:grid-cols-2 items-start">
-        <RangeStatsCard bars={bars} range={range} />
-        <FundamentalsCard fundamentals={fundamentals} />
-      </div>
+      <RangeStatsCard bars={bars} range={range} />
     </div>
   )
 }

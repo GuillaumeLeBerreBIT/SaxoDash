@@ -7,6 +7,10 @@ const bars = []
 
 describe('OverviewTab fundamentals', () => {
   it('shows real metrics when fundamentals are available', () => {
+    // Market cap / dividend yield / 52W range moved to the Valuation tab's
+    // Ratios grid (they were the only place those fields showed, so folding
+    // them there kept the data rather than dropping it) - Overview's own
+    // read of the fundamentals is the Investment Snapshot, tested below.
     render(
       <OverviewTab
         symbol="AAPL"
@@ -23,7 +27,6 @@ describe('OverviewTab fundamentals', () => {
     )
 
     expect(screen.getAllByText('32.10').length).toBeGreaterThan(0)
-    expect(screen.getByText('3.10T')).toBeInTheDocument()
   })
 
   it('renders the investment snapshot from the same fundamentals', () => {
