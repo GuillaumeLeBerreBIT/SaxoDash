@@ -83,6 +83,12 @@ describe('Research', () => {
     expect(screen.getByText('AAPL')).toBeInTheDocument()
   })
 
+  it('offers a general instrument search, not just the watchlist add box', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
+
+    expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
+  })
+
   it('falls back to the first held position when no symbol is given', () => {
     renderWithProviders(<Research />, { route: '/research' })
 

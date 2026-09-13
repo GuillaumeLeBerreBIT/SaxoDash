@@ -45,6 +45,7 @@ function stub(positions = [msft]) {
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
+  queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
 }
 
 describe('Portfolio holdings table', () => {
@@ -97,5 +98,10 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
     const link = screen.getByRole('link', { name: /MSFT/ })
     expect(link).toHaveAttribute('href', '/research?symbol=MSFT')
+  })
+
+  it('offers a general instrument search to find any stock or ETF, not just holdings', () => {
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 })

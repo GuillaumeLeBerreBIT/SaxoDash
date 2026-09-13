@@ -1,28 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 
-/** The toolbar controls the Research page is built from.
+/** The dropdown menu the Research page's toolbar is built from.
  *
  *  Bespoke rather than a shared UI component because nothing else in the app
- *  has a dropdown yet; if a second page needs one, this is what gets promoted
- *  into components/ui.jsx.
+ *  had a dropdown yet; if a second page needs one, this is what gets
+ *  promoted into components/ui.jsx. (TBtn already made that move.)
  */
-
-export function TBtn({ active, onClick, children, title }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      aria-pressed={active}
-      className={`h-7 px-2.5 rounded text-[11.5px] font-medium transition-colors ${
-        active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
 
 export function Menu({ label, icon: Icon, children, width = 220, align = 'left' }) {
   const [open, setOpen] = useState(false)

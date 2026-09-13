@@ -186,6 +186,24 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
 }
 
+/** A single button in a segmented toggle - Research's chart-range picker
+ *  and the instrument search bar's asset-type filter share this. */
+export function TBtn({ active, onClick, children, title }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      aria-pressed={active}
+      className={`h-7 px-2.5 rounded text-[11.5px] font-medium transition-colors ${
+        active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
 /** A labelled figure with an optional sub-hint. Shared by OverviewTab,
  *  EarningsTab and SnapshotSection so they render metrics identically. */
 export function Metric({ label, value, tone = 'text-zinc-100', hint }) {

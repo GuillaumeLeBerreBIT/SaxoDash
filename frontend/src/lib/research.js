@@ -79,6 +79,10 @@ export function needsInstrumentSearch(symbol, positions = []) {
   return !positions.find((p) => p.ticker === symbol)?.uic
 }
 
+// The default `asset_types` search scope - every instrument search this app
+// runs wants both unless a caller deliberately narrows it.
+export const ALL_ASSET_TYPES = 'Stock,Etf'
+
 /** Saxo's spelling of an instrument's type.
  *
  *  Position.type is the app's own STOCK/ETF label and Saxo says Stock/Etf, so

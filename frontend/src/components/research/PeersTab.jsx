@@ -1,4 +1,4 @@
-import { useDeferredValue, useLayoutEffect, useRef, useState } from 'react'
+import { useDeferredValue, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
@@ -8,6 +8,7 @@ import { quadrantPoint } from '../../lib/quadrant'
 import { nextEmptySlot, resolvePeerSlots } from '../../lib/research'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader, Skeleton } from '../ui'
+import { usePortalMenuRect } from '../usePortalMenuRect'
 import FundamentalsGate from './FundamentalsGate'
 import QualityValuationQuadrant from './QualityValuationQuadrant'
 import VerdictBadge from './VerdictBadge'
@@ -48,28 +49,13 @@ const METRIC_ROWS = [
  *  CSS spec also turns into a vertical clipping container). */
 function AddPeerSearch({ onPick }) {
   const [query, setQuery] = useState('')
-  const [menuRect, setMenuRect] = useState(null)
   const wrapperRef = useRef(null)
   const deferredQuery = useDeferredValue(query)
   const { data: results = [], isError } = useInstrumentSearch(deferredQuery)
   const showMenu = isError || results.length > 0
-
-  useLayoutEffect(() => {
-    if (!showMenu) return undefined
-    const updateRect = () => {
-      const rect = wrapperRef.current?.getBoundingClientRect()
-      // Floating now, so the menu isn't stuck at the narrow input column's
-      // width - widen it enough to show a symbol and its full description.
-      if (rect) setMenuRect({ top: rect.bottom, left: rect.left, width: Math.max(rect.width, 280) })
-    }
-    updateRect()
-    window.addEventListener('scroll', updateRect, true)
-    window.addEventListener('resize', updateRect)
-    return () => {
-      window.removeEventListener('scroll', updateRect, true)
-      window.removeEventListener('resize', updateRect)
-    }
-  }, [showMenu])
+  // Widened past the narrow input column so a floated menu still shows a
+  // symbol and its full description.
+  const menuRect = usePortalMenuRect(wrapperRef, showMenu, { minWidth: 280 })
 
   return (
     <div ref={wrapperRef} className="relative">

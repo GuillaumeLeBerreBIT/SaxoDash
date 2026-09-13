@@ -1,6 +1,6 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { instrumentKey } from '../lib/research'
+import { ALL_ASSET_TYPES, instrumentKey } from '../lib/research'
 
 import {
   addWatchlistItem,
@@ -56,7 +56,7 @@ export const queryKeys = {
   quotes: (uics, assetType) =>
     ['quotes', assetType, [...uics].sort((a, b) => a - b).join(',')],
   // Lowercased to match the backend's own search cache key.
-  instrumentSearch: (query) => ['instrument-search', query.toLowerCase()],
+  instrumentSearch: (query, assetTypes) => ['instrument-search', query.toLowerCase(), assetTypes],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
   companyNews: (symbol) => ['company-news', symbol],
@@ -181,11 +181,11 @@ export function useQuotesByAssetType(groups) {
   })
 }
 
-export function useInstrumentSearch(query) {
+export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
   const trimmed = query.trim()
   return useQuery({
-    queryKey: queryKeys.instrumentSearch(trimmed),
-    queryFn: () => searchInstruments(trimmed),
+    queryKey: queryKeys.instrumentSearch(trimmed, assetTypes),
+    queryFn: () => searchInstruments(trimmed, assetTypes),
     enabled: trimmed.length >= 2,
     staleTime: 60_000,
   })

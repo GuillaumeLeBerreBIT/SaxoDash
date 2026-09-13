@@ -25,6 +25,7 @@ import {
   resolveInstrument,
 } from '../lib/research'
 import { PageHeader } from '../components/ui'
+import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
@@ -180,6 +181,10 @@ export default function Research() {
         subtitle="Prices, indicators and watchlists, straight from Saxo"
         right={<SaxoConnectionStatus />}
       />
+
+      <div className="mb-3">
+        <InstrumentSearchBar />
+      </div>
 
       {recentSymbols.length > 0 && (
         <div className="flex items-center gap-1.5 mb-3 flex-wrap">

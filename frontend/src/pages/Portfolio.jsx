@@ -5,6 +5,7 @@ import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import { Card, CardHeader, PageHeader, Badge } from '../components/ui'
+import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
@@ -50,6 +51,8 @@ export default function Portfolio() {
   return (
     <div className="space-y-5">
       <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
+
+      <InstrumentSearchBar />
 
       <Card>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0">
