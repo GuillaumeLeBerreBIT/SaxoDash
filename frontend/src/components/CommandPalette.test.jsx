@@ -52,7 +52,9 @@ describe('CommandPalette', () => {
     renderWithProviders(<CommandPalette open onClose={onClose} />)
     await userEvent.type(screen.getByRole('combobox'), 'tsla')
     await userEvent.click(screen.getByRole('option', { name: /TSLA/ }))
-    expect(navigate).toHaveBeenCalledWith('/research?symbol=TSLA')
+    // Pins the uic the search already resolved, so an ambiguous ticker
+    // (e.g. "NOW" - ServiceNow vs. NowVertical) can't re-resolve wrong.
+    expect(navigate).toHaveBeenCalledWith('/research?symbol=TSLA&uic=9&assetType=Stock')
     expect(onClose).toHaveBeenCalled()
   })
 

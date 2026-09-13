@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 
 import { useInstrumentSearch } from '../api/queries'
 import { PAGE_COMMANDS } from '../lib/commands'
-import { researchHref } from '../lib/research'
+import { rankInstrumentResults, researchHref } from '../lib/research'
 import { readRecentSymbols } from '../lib/recentSymbols'
 
 /** ⌘K overlay: jump to any instrument's Research page or any app page.
@@ -35,11 +35,13 @@ function Panel({ onClose }) {
       return [...recent, ...pages]
     }
 
-    const instruments = results.map((r) => ({
+    // Same order resolveInstrument would pick from, so the top suggestion
+    // for an ambiguous ticker (e.g. "NOW") is the one Enter actually opens.
+    const instruments = rankInstrumentResults(results, trimmed).map((r) => ({
       key: `sym:${r.uic}:${r.asset_type}`,
       label: `${r.symbol}  ·  ${r.description}`,
       hint: r.exchange || 'Instrument',
-      to: researchHref(r.symbol),
+      to: researchHref(r.symbol, undefined, { uic: r.uic, assetType: r.asset_type }),
     }))
     return [...instruments, ...pages]
   }, [trimmed, results])

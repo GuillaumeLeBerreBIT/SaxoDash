@@ -64,7 +64,17 @@ export default function Research() {
 
   const { data: positions = [] } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
-  const selectSymbol = (next) => setParams({ symbol: next }, { replace: true })
+  // `instrument`, when the caller already has it (a watchlist row, a search
+  // pick), pins the exact uic so an ambiguous ticker like "NOW" can't
+  // resolve to the wrong company once symbol search runs again on arrival.
+  const selectSymbol = (next, instrument) => {
+    const nextParams = { symbol: next }
+    if (instrument?.uic) {
+      nextParams.uic = instrument.uic
+      if (instrument.assetType) nextParams.assetType = instrument.assetType
+    }
+    setParams(nextParams, { replace: true })
+  }
 
   const position = positions.find((p) => p.ticker === symbol) ?? null
 
@@ -79,10 +89,15 @@ export default function Research() {
   const { data: searchResults = [] } = useInstrumentSearch(
     needsInstrumentSearch(symbol, positions) ? symbol : '',
   )
-  const instrument = useMemo(
-    () => resolveInstrument({ symbol, positions, results: searchResults }),
-    [symbol, positions, searchResults],
-  )
+  // A search dropdown (⌘K, add-peer) may have already picked the exact row
+  // for an ambiguous ticker - e.g. ServiceNow vs. NowVertical under "NOW".
+  // Carried in the URL so that choice survives the symbol search re-running.
+  const pinnedUic = Number(params.get('uic')) || null
+  const pinnedAssetType = params.get('assetType')
+  const instrument = useMemo(() => {
+    const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
+    return resolveInstrument({ symbol, positions, results: searchResults, pinned })
+  }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
 
   // One fetch at the widest range; the narrower ones are its tail. Keying on
   // the range instead meant six Saxo calls to walk 1W→ALL.

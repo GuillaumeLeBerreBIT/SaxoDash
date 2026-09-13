@@ -91,21 +91,46 @@ export function saxoAssetType(position) {
   return position.type === 'ETF' ? 'Etf' : 'Stock'
 }
 
+// A bare ticker isn't unique across exchanges - Saxo's own "NOW" search
+// returns both ServiceNow (NYSE) and NowVertical (TSX), unordered by
+// relevance. Ambiguous ties default to the primary US listing, since that's
+// what this app's portfolio and searches are almost always about.
+const PRIMARY_EXCHANGES = new Set(['NYSE', 'NASDAQ', 'XNYS', 'XNAS', 'ARCX', 'BATS'])
+
+/** Search results for `symbol`, an exact ticker match first and, among
+ *  those, a primary US exchange first - stable otherwise, so ties keep
+ *  Saxo's own order. Exported so a results dropdown can show items in the
+ *  same order `resolveInstrument` would pick from. */
+export function rankInstrumentResults(results = [], symbol) {
+  const query = (symbol || '').toUpperCase()
+  return [...results].sort((a, b) => {
+    const exactDiff = (b.symbol === query) - (a.symbol === query)
+    if (exactDiff) return exactDiff
+    const aPrimary = PRIMARY_EXCHANGES.has((a.exchange || '').toUpperCase())
+    const bPrimary = PRIMARY_EXCHANGES.has((b.exchange || '').toUpperCase())
+    return (bPrimary ? 1 : 0) - (aPrimary ? 1 : 0)
+  })
+}
+
 /** The {uic, assetType, exact} triple every market-data call needs, or null.
  *
- *  A held instrument answers this from the portfolio without a Saxo call. For
- *  anything else - or a position synced before uic existed - the first search
- *  result stands in. `exact` says whether the symbol actually matched, so an
- *  inexact fallback can be shown rather than charted silently.
+ *  A held instrument answers this from the portfolio without a Saxo call.
+ *  `pinned` is a specific instrument the caller already disambiguated (e.g.
+ *  the exact row a user clicked in a search dropdown) and always wins - it's
+ *  the one case where the ambiguity below has already been resolved by a
+ *  human. Otherwise the best-ranked search result stands in. `exact` says
+ *  whether the symbol actually matched, so an inexact fallback can be shown
+ *  rather than charted silently.
  */
-export function resolveInstrument({ symbol, positions = [], results = [] }) {
+export function resolveInstrument({ symbol, positions = [], results = [], pinned = null }) {
   const held = positions.find((p) => p.ticker === symbol)
   if (held?.uic) return { uic: held.uic, assetType: saxoAssetType(held), exact: true }
 
-  const exactMatch = results.find((r) => r.symbol === symbol)
-  const match = exactMatch ?? results[0]
-  if (match?.uic) {
-    return { uic: match.uic, assetType: match.asset_type, exact: Boolean(exactMatch) }
+  if (pinned?.uic) return { uic: pinned.uic, assetType: pinned.assetType, exact: true }
+
+  const [best] = rankInstrumentResults(results, symbol)
+  if (best?.uic) {
+    return { uic: best.uic, assetType: best.asset_type, exact: best.symbol === symbol }
   }
 
   return null
@@ -163,10 +188,18 @@ export function barChange(bars = [], index) {
 }
 
 /** Canonical link to the Research page for a symbol, optionally on a tab.
- *  One builder so every "open this company" affordance agrees on the URL. */
-export function researchHref(symbol, tab) {
+ *  One builder so every "open this company" affordance agrees on the URL.
+ *  `instrument` ({uic, assetType}) pins the exact row a caller already
+ *  disambiguated - e.g. a search dropdown showing both ServiceNow and
+ *  NowVertical under ticker "NOW" - so the ticker's own ambiguity can't
+ *  swap in the wrong one once symbol search runs again on arrival. */
+export function researchHref(symbol, tab, instrument) {
   const params = new URLSearchParams({ symbol })
   if (tab) params.set('tab', tab)
+  if (instrument?.uic) {
+    params.set('uic', instrument.uic)
+    if (instrument.assetType) params.set('assetType', instrument.assetType)
+  }
   return `/research?${params.toString()}`
 }
 

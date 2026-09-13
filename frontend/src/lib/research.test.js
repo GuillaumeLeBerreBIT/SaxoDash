@@ -12,12 +12,20 @@ import {
   periodChange,
   quotesByUic,
   rangeStats,
+  rankInstrumentResults,
   researchHref,
   resolveInstrument,
   resolvePeerSlots,
   saxoAssetType,
   uicsByAssetType,
 } from './research'
+
+// Saxo's real /ref/v1/instruments response for "NOW": two unrelated
+// companies share the ticker, NowVertical listed first.
+const NOW_COLLISION = [
+  { symbol: 'NOW', uic: 31129821, asset_type: 'Stock', description: 'NowVertical Group Inc.', exchange: 'TSX' },
+  { symbol: 'NOW', uic: 204300, asset_type: 'Stock', description: 'ServiceNow Inc.', exchange: 'NYSE' },
+]
 
 const bars = [
   { date: '2026-08-01', open: 10, high: 12, low: 9, close: 11, volume: 1_000_000 },
@@ -77,6 +85,40 @@ describe('resolveInstrument', () => {
 
   it('is null when neither source can resolve the symbol', () => {
     expect(resolveInstrument({ symbol: 'NOPE', positions: [], results: [] })).toBeNull()
+  })
+
+  // Regression: "NOW" matches both ServiceNow (NYSE) and NowVertical (TSX)
+  // exactly, and Saxo's search lists NowVertical first. Picking results[0]
+  // silently resolved every ServiceNow lookup to NowVertical.
+  it('breaks an exact-ticker tie toward the primary US exchange', () => {
+    expect(resolveInstrument({ symbol: 'NOW', results: NOW_COLLISION })).toEqual({
+      uic: 204300,
+      assetType: 'Stock',
+      exact: true,
+    })
+  })
+
+  it('trusts a pinned instrument over search entirely, even a same-ticker collision', () => {
+    const pinned = { uic: 31129821, assetType: 'Stock' } // the user explicitly picked NowVertical
+    expect(resolveInstrument({ symbol: 'NOW', results: NOW_COLLISION, pinned })).toEqual({
+      uic: 31129821,
+      assetType: 'Stock',
+      exact: true,
+    })
+  })
+})
+
+describe('rankInstrumentResults', () => {
+  it('puts the primary-exchange exact match first regardless of input order', () => {
+    expect(rankInstrumentResults(NOW_COLLISION, 'NOW').map((r) => r.description)).toEqual([
+      'ServiceNow Inc.',
+      'NowVertical Group Inc.',
+    ])
+  })
+
+  it('keeps a non-matching, non-primary result last', () => {
+    const results = [...NOW_COLLISION, { symbol: 'NOWL', uic: 1, asset_type: 'Etf', exchange: 'NASDAQ' }]
+    expect(rankInstrumentResults(results, 'NOW').map((r) => r.symbol)).toEqual(['NOW', 'NOW', 'NOWL'])
   })
 })
 
@@ -231,6 +273,16 @@ describe('researchHref', () => {
 
   it('encodes an ampersand in the symbol', () => {
     expect(researchHref('A&B')).toBe('/research?symbol=A%26B')
+  })
+
+  it('pins the exact instrument when the caller already disambiguated it', () => {
+    expect(researchHref('NOW', undefined, { uic: 204300, assetType: 'Stock' })).toBe(
+      '/research?symbol=NOW&uic=204300&assetType=Stock',
+    )
+  })
+
+  it('skips the pin without a uic', () => {
+    expect(researchHref('NOW', undefined, {})).toBe('/research?symbol=NOW')
   })
 })
 

@@ -8,7 +8,7 @@ import {
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum, fmtPct } from '../../lib/format'
-import { quotesByUic, uicsByAssetType } from '../../lib/research'
+import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { Card } from '../ui'
 import { Menu, MenuRow, MenuSeparator } from './menu'
 
@@ -131,7 +131,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
 
       {results.length > 0 ? (
         <div className="max-h-[230px] overflow-y-auto border-b border-white/[0.06]">
-          {results.map((result) => {
+          {rankInstrumentResults(results, deferredQuery).map((result) => {
             const inList = items.some((item) => item.uic === result.uic)
             return (
               <div
@@ -141,7 +141,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                 <button
                   type="button"
                   onClick={() => {
-                    onSelectSymbol(result.symbol)
+                    onSelectSymbol(result.symbol, { uic: result.uic, assetType: result.asset_type })
                     setQuery('')
                   }}
                   className="flex-1 min-w-0 text-left"
@@ -198,9 +198,9 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
               key={item.id}
               role="button"
               tabIndex={0}
-              onClick={() => onSelectSymbol(item.symbol)}
+              onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') onSelectSymbol(item.symbol)
+                if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
               }}
               className={`grid grid-cols-[1fr_auto_auto] items-center px-3 h-[38px] cursor-pointer group border-l-2 ${
                 symbol === item.symbol

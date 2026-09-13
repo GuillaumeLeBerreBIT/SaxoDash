@@ -147,7 +147,9 @@ describe('WatchlistRail', () => {
 
     await userEvent.click(screen.getByText('IWDA'))
 
-    expect(onSelectSymbol).toHaveBeenCalledWith('IWDA')
+    // Carries the row's own uic, so re-opening it can't drift to a
+    // different instrument that happens to share the ticker.
+    expect(onSelectSymbol).toHaveBeenCalledWith('IWDA', { uic: 500, assetType: 'Etf' })
   })
 
   it('invites the user to create a list when there are none', () => {
