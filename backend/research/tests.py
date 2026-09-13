@@ -768,7 +768,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v3:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v4:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -932,6 +932,66 @@ class QuarterlyTrendsTest(TestCase):
     def test_to_fundamentals_omits_quarterly_trends_when_absent(self):
         result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
         self.assertNotIn('quarterly_trends', result)
+
+
+def _reported_entry(year, end_date, op_cf=None, capex=None, cash=None, debt_rows=None, form='10-K'):
+    cf = []
+    if op_cf is not None:
+        cf.append({'concept': 'us-gaap_NetCashProvidedByUsedInOperatingActivities', 'value': op_cf})
+    if capex is not None:
+        cf.append({'concept': 'us-gaap_PaymentsToAcquirePropertyPlantAndEquipment', 'value': capex})
+    bs = []
+    if cash is not None:
+        bs.append({'concept': 'us-gaap_CashAndCashEquivalentsAtCarryingValue', 'value': cash})
+    for concept, value in (debt_rows or {}).items():
+        bs.append({'concept': concept, 'value': value})
+    return {'year': year, 'form': form, 'endDate': end_date, 'report': {'bs': bs, 'cf': cf}}
+
+
+SAMPLE_REPORTED = {
+    'data': [
+        _reported_entry(2025, '2025-09-27', op_cf=110, capex=10, cash=30,
+                         debt_rows={'us-gaap_LongTermDebtNoncurrent': 80}),
+        _reported_entry(2024, '2024-09-28', op_cf=100, capex=9, cash=25,
+                         debt_rows={'us-gaap_LongTermDebtNoncurrent': 90}),
+        # A 10-Q in between the annual filings - excluded from the trend.
+        _reported_entry(2025, '2025-03-28', op_cf=50, capex=5, cash=28, form='10-Q'),
+    ],
+}
+
+
+class CashFlowTrendShapingTest(TestCase):
+    def test_computes_fcf_from_operating_cash_flow_minus_capex(self):
+        rows = finnhub._cash_flow_trend(SAMPLE_REPORTED)
+        self.assertEqual(rows[-1]['fcf'], 100)  # 110 - 10, the newest 10-K
+
+    def test_sums_whichever_debt_concepts_are_present(self):
+        entry = _reported_entry(2025, '2025-09-27', debt_rows={
+            'us-gaap_CommercialPaper': 2, 'us-gaap_LongTermDebtCurrent': 8, 'us-gaap_LongTermDebtNoncurrent': 74,
+        })
+        row = finnhub._cash_flow_row(entry)
+        self.assertEqual(row['debt'], 84)
+
+    def test_is_oldest_first_and_excludes_10qs(self):
+        rows = finnhub._cash_flow_trend(SAMPLE_REPORTED)
+        self.assertEqual([r['period'] for r in rows], ['2024-09-28', '2025-09-27'])
+
+    def test_none_when_no_10k_filings_have_usable_rows(self):
+        # A foreign filer's non-US-GAAP concepts leave nothing to read - this
+        # is how a Form 20-F filer degrades, not a crash.
+        reported = {'data': [_reported_entry(2025, '2025-09-27')]}
+        self.assertIsNone(finnhub._cash_flow_trend(reported))
+
+    def test_none_without_any_reported_data(self):
+        self.assertIsNone(finnhub._cash_flow_trend({'data': []}))
+
+    def test_to_fundamentals_includes_cash_flow_trend_when_available(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], SAMPLE_REPORTED)
+        self.assertEqual(len(result['cash_flow_trend']), 2)
+
+    def test_to_fundamentals_omits_cash_flow_trend_when_absent(self):
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
+        self.assertNotIn('cash_flow_trend', result)
 
 
 class EarningsShapingTest(TestCase):
@@ -1100,17 +1160,19 @@ class FundamentalsCacheTest(TestCase):
     def setUp(self):
         cache.clear()
 
+    @patch('research.finnhub.get_financials_reported')
     @patch('research.finnhub.get_earnings_history')
     @patch('research.finnhub.get_recommendation_trends')
     @patch('research.finnhub.get_basic_financials')
     @patch('research.finnhub.get_profile')
     def test_a_second_call_for_the_same_symbol_does_not_refetch(
-        self, mock_profile, mock_financials, mock_recs, mock_earnings
+        self, mock_profile, mock_financials, mock_recs, mock_earnings, mock_reported
     ):
         mock_profile.return_value = SAMPLE_PROFILE
         mock_financials.return_value = SAMPLE_FINANCIALS
         mock_recs.return_value = SAMPLE_RECOMMENDATION
         mock_earnings.return_value = SAMPLE_EARNINGS
+        mock_reported.return_value = {'data': []}
 
         finnhub.fundamentals('AAPL')
         finnhub.fundamentals('AAPL')
@@ -1171,17 +1233,19 @@ class FundamentalsViewTest(APITestCase):
         response = self.client.get('/api/research/fundamentals/AAPL/')
         self.assertEqual(response.status_code, 401)
 
+    @patch('research.finnhub.get_financials_reported')
     @patch('research.finnhub.get_earnings_history')
     @patch('research.finnhub.get_recommendation_trends')
     @patch('research.finnhub.get_basic_financials')
     @patch('research.finnhub.get_profile')
     def test_returns_available_true_with_shaped_data(
-        self, mock_profile, mock_financials, mock_recs, mock_earnings
+        self, mock_profile, mock_financials, mock_recs, mock_earnings, mock_reported
     ):
         mock_profile.return_value = SAMPLE_PROFILE
         mock_financials.return_value = SAMPLE_FINANCIALS
         mock_recs.return_value = SAMPLE_RECOMMENDATION
         mock_earnings.return_value = SAMPLE_EARNINGS
+        mock_reported.return_value = {'data': []}
 
         response = self.client.get('/api/research/fundamentals/AAPL/')
 
@@ -1206,12 +1270,13 @@ class FundamentalsViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])
 
+    @patch('research.finnhub.get_financials_reported')
     @patch('research.finnhub.get_earnings_history')
     @patch('research.finnhub.get_recommendation_trends')
     @patch('research.finnhub.get_basic_financials')
     @patch('research.finnhub.get_profile')
     def test_returns_available_false_on_malformed_finnhub_response(
-        self, mock_profile, mock_financials, mock_recs, mock_earnings
+        self, mock_profile, mock_financials, mock_recs, mock_earnings, mock_reported
     ):
         """Test that a malformed Finnhub payload (unexpected shape) still returns 200."""
         mock_profile.return_value = SAMPLE_PROFILE
@@ -1220,6 +1285,7 @@ class FundamentalsViewTest(APITestCase):
         # to_fundamentals tries to do recommendations[0]
         mock_recs.return_value = {'error': 'unexpected'}
         mock_earnings.return_value = SAMPLE_EARNINGS
+        mock_reported.return_value = {'data': []}
 
         with self.assertLogs('research.providers', level='ERROR'):
             response = self.client.get('/api/research/fundamentals/AAPL/')

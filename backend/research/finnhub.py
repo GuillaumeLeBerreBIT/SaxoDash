@@ -113,6 +113,10 @@ def get_peers(symbol):
     return _get('/stock/peers', symbol=symbol)
 
 
+def get_financials_reported(symbol, freq='annual'):
+    return _get('/stock/financials-reported', symbol=symbol, freq=freq)
+
+
 FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
@@ -122,7 +126,7 @@ NEWS_MAX_ITEMS = 40
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
-CACHE_V = 'v3'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v4'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -243,7 +247,55 @@ def _quarterly_trends(financials):
     ]
 
 
-def to_fundamentals(profile, financials, recommendations, earnings):
+CASH_TREND_POINTS = 10  # ~10 fiscal years, oldest-first
+
+# US-GAAP XBRL concept tags read from /stock/financials-reported (SEC-EDGAR
+# sourced). A foreign private issuer filing on Form 20-F simply yields no
+# rows below - the field is omitted, not guessed at.
+_DEBT_CONCEPTS = (
+    'us-gaap_CommercialPaper',
+    'us-gaap_LongTermDebtCurrent',
+    'us-gaap_LongTermDebtNoncurrent',
+)
+
+
+def _concept_values(rows):
+    return {row.get('concept'): row.get('value') for row in (rows or []) if row.get('concept')}
+
+
+def _cash_flow_row(entry):
+    cf = _concept_values(entry.get('report', {}).get('cf'))
+    bs = _concept_values(entry.get('report', {}).get('bs'))
+
+    op_cf = cf.get('us-gaap_NetCashProvidedByUsedInOperatingActivities')
+    capex = cf.get('us-gaap_PaymentsToAcquirePropertyPlantAndEquipment')
+    fcf = op_cf - capex if op_cf is not None and capex is not None else None
+
+    debt_parts = [bs[c] for c in _DEBT_CONCEPTS if bs.get(c) is not None]
+    debt = sum(debt_parts) if debt_parts else None
+
+    cash = bs.get('us-gaap_CashAndCashEquivalentsAtCarryingValue')
+
+    if fcf is None and debt is None and cash is None:
+        return None
+    return {'period': (entry.get('endDate') or '')[:10], 'fcf': fcf, 'debt': debt, 'cash': cash}
+
+
+def _cash_flow_trend(reported):
+    """Annual free cash flow / total debt / cash, oldest-first, from 10-K
+    filings only - each already a clean full fiscal year, so no quarter-over-
+    quarter de-cumulation is needed the way a 10-Q's YTD cash-flow section
+    would require. `None` when the filer isn't US-GAAP (no rows survive) or
+    reporting history is too shallow to call a trend."""
+    entries = [e for e in (reported.get('data') or []) if e.get('form') == '10-K']
+    entries.sort(key=lambda e: e.get('endDate') or '')
+    entries = entries[-CASH_TREND_POINTS:]
+
+    rows = [row for row in (_cash_flow_row(e) for e in entries) if row]
+    return rows or None
+
+
+def to_fundamentals(profile, financials, recommendations, earnings, reported=None):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
 
@@ -301,6 +353,10 @@ def to_fundamentals(profile, financials, recommendations, earnings):
     trends = _quarterly_trends(financials)
     if trends:
         shaped['quarterly_trends'] = trends
+    if reported:
+        cash_flow_trend = _cash_flow_trend(reported)
+        if cash_flow_trend:
+            shaped['cash_flow_trend'] = cash_flow_trend
     return shaped
 
 
@@ -313,11 +369,19 @@ def fundamentals(symbol):
             # three calls, and before get_or_set stores anything) keeps a
             # wrong "unknown symbol" answer from being pinned for 24h.
             raise FinnhubNoData(symbol)
+        try:
+            # An optional enrichment, not core to fundamentals: a symbol this
+            # endpoint doesn't cover (rate limit, no US-GAAP filings) degrades
+            # to no cash-flow trend rather than failing the whole payload.
+            reported = get_financials_reported(symbol)
+        except ProviderUnavailable:
+            reported = None
         return to_fundamentals(
             profile,
             get_basic_financials(symbol),
             get_recommendation_trends(symbol),
             get_earnings_history(symbol),
+            reported,
         )
 
     try:
