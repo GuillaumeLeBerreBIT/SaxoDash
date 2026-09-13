@@ -4,9 +4,11 @@
  *  salesPerShare); every sentence says so, never bare "revenue". */
 
 const YOY_LOOKBACK = 4
-const ACCEL_THRESHOLD_PP = 3
-const EPS_GAP_THRESHOLD_PP = 5
-const MARGIN_MOVE_THRESHOLD_PP = 1
+// Exported so the Guide tab can quote these same cutoffs instead of
+// duplicating them - see the note in lib/snapshot.js on why that matters.
+export const ACCEL_THRESHOLD_PP = 3
+export const EPS_GAP_THRESHOLD_PP = 5
+export const MARGIN_MOVE_THRESHOLD_PP = 1
 export const QUARTERLY_MIN_POINTS = 8
 
 export function yoyGrowthSeries(values) {

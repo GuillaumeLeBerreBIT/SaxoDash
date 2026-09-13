@@ -28,6 +28,7 @@ import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
+import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PeersTab from '../components/research/PeersTab'
@@ -42,6 +43,7 @@ const TABS = [
   ['peers', 'Peers'],
   ['earnings', 'Earnings'],
   ['news', 'News'],
+  ['guide', 'Guide'],
 ]
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
@@ -231,6 +233,7 @@ export default function Research() {
               <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
             ) : null}
             {tab === 'news' ? <NewsTab symbol={symbol} /> : null}
+            {tab === 'guide' ? <GuideTab /> : null}
           </div>
 
           <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
