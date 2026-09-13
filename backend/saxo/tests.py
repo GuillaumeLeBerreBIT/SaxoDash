@@ -468,15 +468,6 @@ class SyncPositionsTaskTest(TestCase):
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
-        # None of these tests are about the isin lookup - defaulted here so a
-        # fixture later gaining a Uic (to test something unrelated) can't
-        # silently turn into a real, unmocked call to Saxo's API. That
-        # exact thing already happened once; see test_isin_lookup.py for the
-        # isin behaviour itself.
-        isin_patcher = patch('saxo.tasks.client.get_instrument_details')
-        self.mock_get_details = isin_patcher.start()
-        self.mock_get_details.return_value = {}
-        self.addCleanup(isin_patcher.stop)
 
     @patch('saxo.tasks.client.get_positions')
     def test_creates_positions_from_saxo_data(self, mock_get_positions):

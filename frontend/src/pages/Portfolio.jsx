@@ -113,7 +113,7 @@ export default function Portfolio() {
                     <td className="px-5 py-3">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <InstrumentLogo
-                          isin={p.isin}
+                          symbol={p.ticker}
                           size={16}
                           className="rounded-sm"
                           fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />}

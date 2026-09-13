@@ -31,7 +31,7 @@ export default function SymbolBar({
       <div className="flex items-center gap-4 px-4 py-3 flex-wrap">
         <div className="flex items-center gap-3">
           <InstrumentLogo
-            isin={details?.isin}
+            symbol={symbol}
             size={40}
             className="rounded-lg border border-white/10"
             fallback={

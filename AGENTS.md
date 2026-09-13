@@ -264,12 +264,19 @@ previously an uncaught `ZeroDivisionError`), and `analytics/report.py` owns the
 metrics + best-effort-benchmark composition the two views shared.
 
 **Instrument logos are the one thing the frontend fetches from a third party
-directly.** `lib/logos.js::instrumentLogoUrl` builds an `<img src>` straight
-at `api.elbstream.com`, unlike Saxo/Finnhub, which are always proxied through
-`/api/research/...` because they're keyed, rate-limited APIs a backend has to
-guard. Elbstream is a free, keyless, no-secret image CDN meant to be embedded
-directly in a browser — proxying it would only add a caching layer Django
-isn't well-suited to serve binary images from anyway, for a purely decorative
-feature. `Position.isin` (fetched once via `saxo.tasks._fetch_isin`, retried
-every sync until it succeeds, never overwritten once known) is what makes the
-Portfolio table's logos possible without a Saxo call per row.
+directly, and are keyed on ticker symbol, not ISIN.** `lib/logos.js::instrumentLogoUrl`
+builds an `<img src>` straight at `api.elbstream.com/logos/symbol/{TICKER}`,
+unlike Saxo/Finnhub, which are always proxied through `/api/research/...`
+because they're keyed, rate-limited APIs a backend has to guard. Elbstream is
+a free, keyless, no-secret image CDN meant to be embedded directly in a
+browser — proxying it would only add a caching layer Django isn't
+well-suited to serve binary images from anyway, for a purely decorative
+feature. It is *not* ISIN-keyed, despite Elbstream supporting that too:
+**Saxo's OpenAPI does not distribute ISINs at all** — confirmed via Saxo's
+own support docs, a licensing restriction with no workaround, not a missing
+FieldGroups parameter. An earlier pass added `Position.isin` and a
+per-position Saxo instrument-details call to feed it, which could only ever
+resolve to an empty string; that machinery was reverted (migrations
+`0005_position_isin` / `0006_remove_position_isin`) once discovered. The
+ticker every instrument already carries is the identifier that actually
+works, for both a stock and an ETF, with no Saxo call at all.

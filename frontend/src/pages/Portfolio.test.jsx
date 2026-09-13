@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import Portfolio from './Portfolio'
@@ -105,17 +105,18 @@ describe('Portfolio holdings table', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
-  it('shows the holding logo when Saxo gives an ISIN', () => {
-    stub([{ ...msft, isin: 'US5949181045' }])
+  it('shows the holding logo, keyed on the ticker symbol', () => {
     const { container } = renderWithProviders(<Portfolio />)
 
     expect(container.querySelector('img')).toHaveAttribute(
-      'src', 'https://api.elbstream.com/logos/isin/US5949181045',
+      'src', 'https://api.elbstream.com/logos/symbol/MSFT',
     )
   })
 
-  it('falls back to the color swatch without an ISIN', () => {
+  it('falls back to the color swatch when the logo fails to load', () => {
     const { container } = renderWithProviders(<Portfolio />)
+
+    fireEvent.error(container.querySelector('img'))
 
     expect(container.querySelector('img')).not.toBeInTheDocument()
   })

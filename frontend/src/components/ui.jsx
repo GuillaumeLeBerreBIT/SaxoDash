@@ -188,13 +188,13 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
 }
 
-/** A logo for `isin` (elbstream.com - see lib/logos.js), rendering
- *  `fallback` instead when there's no ISIN or the image fails to load.
+/** A logo for `symbol` (elbstream.com - see lib/logos.js), rendering
+ *  `fallback` instead when there's no symbol or the image fails to load.
  *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both
  *  use this rather than each tracking their own load failure. */
-export function InstrumentLogo({ isin, size, className = '', fallback }) {
+export function InstrumentLogo({ symbol, size, className = '', fallback }) {
   const [failed, setFailed] = useState(false)
-  const src = !failed ? instrumentLogoUrl(isin) : null
+  const src = !failed ? instrumentLogoUrl(symbol) : null
 
   if (!src) return fallback
 

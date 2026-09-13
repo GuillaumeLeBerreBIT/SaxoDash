@@ -28,23 +28,23 @@ describe('ui primitives', () => {
     expect(screen.getByText('hint text')).toBeInTheDocument()
   })
 
-  it('InstrumentLogo renders the elbstream image for an ISIN', () => {
+  it('InstrumentLogo renders the elbstream image for a ticker symbol', () => {
     const { container } = render(
-      <InstrumentLogo isin="US0378331005" size={40} fallback={<span>AA</span>} />,
+      <InstrumentLogo symbol="AAPL" size={40} fallback={<span>AA</span>} />,
     )
     const img = container.querySelector('img')
-    expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/isin/US0378331005')
+    expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/AAPL')
     expect(screen.queryByText('AA')).not.toBeInTheDocument()
   })
 
-  it('InstrumentLogo renders the fallback without an ISIN', () => {
-    render(<InstrumentLogo isin={null} size={40} fallback={<span>AA</span>} />)
+  it('InstrumentLogo renders the fallback without a symbol', () => {
+    render(<InstrumentLogo symbol={null} size={40} fallback={<span>AA</span>} />)
     expect(screen.getByText('AA')).toBeInTheDocument()
   })
 
   it('InstrumentLogo falls back once the image fails to load', () => {
     const { container } = render(
-      <InstrumentLogo isin="US0378331005" size={40} fallback={<span>AA</span>} />,
+      <InstrumentLogo symbol="AAPL" size={40} fallback={<span>AA</span>} />,
     )
     fireEvent.error(container.querySelector('img'))
     expect(screen.getByText('AA')).toBeInTheDocument()

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -89,19 +89,17 @@ describe('Research', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
-  it('shows the instrument logo in the symbol bar when Saxo gives an ISIN', () => {
-    queries.useInstrumentDetails.mockReturnValue({
-      ...idle,
-      data: { symbol: 'NVDA', description: 'NVIDIA Corporation', exchange: 'NASDAQ', currency: 'USD', uic: 211, isin: 'US67066G1040' },
-    })
+  it('shows the instrument logo in the symbol bar, keyed on the ticker symbol', () => {
     const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const logo = container.querySelector('img')
-    expect(logo).toHaveAttribute('src', 'https://api.elbstream.com/logos/isin/US67066G1040')
+    expect(logo).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/NVDA')
   })
 
-  it('falls back to a letter avatar in the symbol bar without an ISIN', () => {
+  it('falls back to a letter avatar in the symbol bar when the logo fails to load', () => {
     const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    fireEvent.error(container.querySelector('img'))
 
     expect(container.querySelector('img')).not.toBeInTheDocument()
     expect(screen.getAllByText('NV').length).toBeGreaterThan(0)
