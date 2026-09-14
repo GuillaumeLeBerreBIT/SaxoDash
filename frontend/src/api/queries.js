@@ -1,6 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ALL_ASSET_TYPES, instrumentKey } from '../lib/research'
+import { useDebouncedValue } from '../lib/useDebouncedValue'
 
 import {
   addWatchlistItem,
@@ -182,7 +183,11 @@ export function useQuotesByAssetType(groups) {
 }
 
 export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
-  const trimmed = query.trim()
+  // Without this, every keystroke fires its own request - typing a symbol
+  // out blows through the backend's research.search throttle (20/min,
+  // shared with Saxo's own per-app rate limit) well before the user is done
+  // typing.
+  const trimmed = useDebouncedValue(query.trim(), 300)
   return useQuery({
     queryKey: queryKeys.instrumentSearch(trimmed, assetTypes),
     queryFn: () => searchInstruments(trimmed, assetTypes),
