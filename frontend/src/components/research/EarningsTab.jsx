@@ -23,7 +23,7 @@ function NextEarningsCard({ next }) {
           />
         </div>
       ) : (
-        <p className="mt-3 text-[12px] text-zinc-500">No scheduled earnings date for this symbol.</p>
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">No scheduled earnings date for this symbol.</p>
       )}
     </Card>
   )
@@ -46,7 +46,7 @@ function BeatRecord({ score }) {
           value={score.streak ? `${score.streak} qtr${score.streak > 1 ? 's' : ''}` : '—'}
         />
       </div>
-      <div className={`mt-3 pt-3 border-t border-white/[0.06] text-[11px] ${consistent ? 'text-emerald-400' : 'text-red-400'}`}>
+      <div className={`mt-3 pt-3 border-t border-white/[0.06] text-[var(--fig-2xs)] ${consistent ? 'text-emerald-400' : 'text-red-400'}`}>
         {consistent ? 'A consistent beat history.' : 'A patchy record against consensus.'}
       </div>
     </Card>
@@ -72,7 +72,7 @@ export default function EarningsTab({ symbol, earnings, fundamentals }) {
     return (
       <Card>
         <CardHeader title="Earnings" subtitle="From Finnhub" />
-        <p className="mt-3 text-[12px] text-zinc-500">{data?.reason || `No earnings data for ${symbol}.`}</p>
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">{data?.reason || `No earnings data for ${symbol}.`}</p>
       </Card>
     )
   }

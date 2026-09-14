@@ -58,7 +58,7 @@ function SummaryTile({ label, value, tone = 'text-zinc-50', right, children }) {
         {right}
       </div>
       {value != null && (
-        <div className={`mt-1.5 text-[19px] font-semibold num font-mono tracking-tight ${tone}`}>{value}</div>
+        <div className={`mt-1.5 text-[var(--fig-lg)] font-semibold num font-mono tracking-tight ${tone}`}>{value}</div>
       )}
       {children && <div className="mt-2">{children}</div>}
     </Card>
@@ -77,7 +77,7 @@ function WeekSummary({ stats, scope }) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
       <SummaryTile label={mineScope ? 'On your lists' : 'Reporting'} value={total}>
-        <div className="text-[11px] text-zinc-500">
+        <div className="text-[var(--fig-2xs)] text-zinc-500">
           <span className="num font-mono text-zinc-300">{reported}</span> reported ·{' '}
           <span className="num font-mono text-zinc-300">{total - reported}</span> ahead
         </div>
@@ -85,13 +85,13 @@ function WeekSummary({ stats, scope }) {
 
       <SummaryTile label="Beat rate" value={reported ? `${beat}/${reported}` : '—'}>
         <SplitBar beat={beat} missed={missed} />
-        <div className="mt-1.5 text-[11px] text-zinc-500">
+        <div className="mt-1.5 text-[var(--fig-2xs)] text-zinc-500">
           {missed} missed · {inline} in line
         </div>
       </SummaryTile>
 
       <SummaryTile label="Avg surprise" value={avg == null ? '—' : fmtPct(avg, { decimals: 1 })} tone={avgTone}>
-        <div className="text-[11px] text-zinc-500">EPS vs. consensus</div>
+        <div className="text-[var(--fig-2xs)] text-zinc-500">EPS vs. consensus</div>
       </SummaryTile>
 
       <SummaryTile
@@ -105,7 +105,7 @@ function WeekSummary({ stats, scope }) {
         {bars.some((b) => b.value !== 0) ? (
           <SurpriseBars data={bars} height={92} label="Net beats" format={(v) => (v > 0 ? `+${v}` : `${v}`)} />
         ) : (
-          <div className="h-[92px] flex items-center text-[11px] text-zinc-600">Nothing reported yet</div>
+          <div className="h-[92px] flex items-center text-[var(--fig-2xs)] text-zinc-600">Nothing reported yet</div>
         )}
       </SummaryTile>
     </div>
@@ -129,7 +129,7 @@ function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSele
       <div className="flex items-baseline justify-between">
         <span className="text-[12.5px] font-medium text-zinc-200">{label}</span>
         <span
-          className="text-[11px] num font-mono font-semibold text-indigo-200 rounded-full px-1.5 min-w-[20px] text-center"
+          className="text-[var(--fig-2xs)] num font-mono font-semibold text-indigo-200 rounded-full px-1.5 min-w-[20px] text-center"
           style={{ background: countTint(events.length) }}
         >
           {events.length}
@@ -166,7 +166,7 @@ function Chip({ sign, children }) {
 function EpsCell({ event }) {
   if (event.eps_actual == null) {
     return (
-      <span className="text-[12px] num font-mono text-zinc-400">
+      <span className="text-[var(--fig-xs)] num font-mono text-zinc-400">
         {fmtNum(event.eps_estimate, 2)}
         <span className="text-zinc-600">e</span>
       </span>
@@ -175,7 +175,7 @@ function EpsCell({ event }) {
   const surprise = event.eps_surprise_pct
   return (
     <span className="flex items-baseline gap-1.5 justify-end">
-      <span className="text-[12px] num font-mono text-zinc-100">{fmtNum(event.eps_actual, 2)}</span>
+      <span className="text-[var(--fig-xs)] num font-mono text-zinc-100">{fmtNum(event.eps_actual, 2)}</span>
       {surprise != null && <Chip sign={surpriseSign(surprise)}>{absPct(surprise)}</Chip>}
       {event.eps_estimate != null && (
         <span className="text-[9.5px] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
@@ -186,10 +186,10 @@ function EpsCell({ event }) {
 
 function RevenueCell({ event }) {
   const { revenue_estimate: est, revenue_actual: act, revenue_surprise_pct: surprise } = event
-  if (est == null && act == null) return <span className="text-[11px] text-zinc-600">—</span>
+  if (est == null && act == null) return <span className="text-[var(--fig-2xs)] text-zinc-600">—</span>
   if (act == null) {
     return (
-      <span className="text-[11px] num font-mono text-zinc-500">
+      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-500">
         {fmtCompact(est / 1e6)}
         <span className="text-zinc-600">e</span>
       </span>
@@ -197,7 +197,7 @@ function RevenueCell({ event }) {
   }
   return (
     <span className="flex items-baseline gap-1.5 justify-end">
-      <span className="text-[11px] num font-mono text-zinc-300">{fmtCompact(act / 1e6)}</span>
+      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-300">{fmtCompact(act / 1e6)}</span>
       {surprise != null && <Chip sign={surpriseSign(surprise)}>{absPct(surprise)}</Chip>}
     </span>
   )
@@ -381,7 +381,7 @@ export default function Earnings() {
 
       {isLoading && (
         <Card>
-          <p className="text-[12px] text-zinc-500">Loading…</p>
+          <p className="text-[var(--fig-xs)] text-zinc-500">Loading…</p>
         </Card>
       )}
 
@@ -418,7 +418,7 @@ export default function Earnings() {
 
           <Card padding={false}>
             <div className="flex items-center justify-between px-3.5 py-3 border-b border-white/[0.06]">
-              <span className="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-100">
+              <span className="flex items-center gap-1.5 text-[var(--fig-sm)] font-semibold text-zinc-100">
                 {weekdayLabel(day)}
                 <span className="text-zinc-600 font-normal"> · {rows.length} reporting</span>
                 <InfoTip>

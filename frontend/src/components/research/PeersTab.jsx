@@ -69,7 +69,7 @@ function AddPeerSearch({ onPick }) {
       {menuRect && isError && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[11px] text-amber-400"
+          className="z-50 bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[var(--fig-2xs)] text-amber-400"
         >
           Search unavailable — reconnect Saxo
         </div>,
@@ -137,7 +137,7 @@ export default function PeersTab({ symbol, fundamentals }) {
                 <CardHeader title="Peer comparison" subtitle="Valuation, growth and quality, side by side" />
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-[12px]">
+                <table className="w-full text-[var(--fig-xs)]">
                   <thead>
                     <tr className="border-b border-white/[0.06]">
                       {/* Empty - aligns with the row-label column each body row leads with. */}

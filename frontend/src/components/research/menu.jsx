@@ -65,7 +65,7 @@ export function MenuRow({ checked, onClick, dot, children, right }) {
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-2 h-8 rounded text-[12px] text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100"
+      className="w-full flex items-center gap-2 px-2 h-8 rounded text-[var(--fig-xs)] text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100"
     >
       {checked !== undefined ? (
         <span

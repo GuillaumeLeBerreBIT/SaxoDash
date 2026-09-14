@@ -15,7 +15,7 @@ export default function PriceBasisNote({ positions = [] }) {
   return (
     <span className="flex items-center gap-2" title={basis.note}>
       <Badge tone={basis.tone}>{basis.label}</Badge>
-      {at && <span className="text-[11px] text-zinc-500 num font-mono">{at}</span>}
+      {at && <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono">{at}</span>}
     </span>
   )
 }

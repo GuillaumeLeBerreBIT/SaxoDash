@@ -1,6 +1,6 @@
 import { useBankAccounts } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { Card, PageHeader, StatCard } from '../components/ui'
+import { Card, PageHeader, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import AccountBreakdownChart from '../components/AccountBreakdownChart'
 import CashFlowChart from '../components/CashFlowChart'
@@ -17,9 +17,9 @@ export default function Accounts() {
     <div className="space-y-5">
       <PageHeader title="Accounts" subtitle="Your connected bank accounts" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total Balance" value={fmtEur(total)} note={`${accounts.length} accounts`} />
-      </div>
+      <StatStrip>
+        <StatRow label="Total Balance" value={fmtEur(total)} note={`${accounts.length} accounts`} lead />
+      </StatStrip>
 
       <HistoryAreaChart
         title="Bank balance"
@@ -38,14 +38,14 @@ export default function Accounts() {
                 style={{ background: a.accent || '#3f3f46' }}
               />
               <div className="pl-2">
-                <div className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">{a.type}</div>
+                <div className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{a.type}</div>
                 <div className="mt-1 text-[14px] font-medium text-zinc-100">{a.bank}</div>
-                <div className="mt-0.5 text-[12px] text-zinc-500 num font-mono">{a.iban_masked}</div>
-                <div className="mt-4 text-[22px] font-semibold text-zinc-50 tracking-tight num font-mono">
+                <div className="mt-0.5 text-[var(--fig-xs)] text-zinc-500 num font-mono">{a.iban_masked}</div>
+                <div className="mt-4 text-[var(--fig-xl)] font-semibold text-zinc-50 tracking-tight num font-mono">
                   {fmtEur(a.balance)}
                 </div>
                 {Number(a.available) !== Number(a.balance) && (
-                  <div className="mt-1 text-[12px] text-zinc-500">{fmtEur(a.available)} available</div>
+                  <div className="mt-1 text-[var(--fig-xs)] text-zinc-500">{fmtEur(a.available)} available</div>
                 )}
               </div>
             </Card>

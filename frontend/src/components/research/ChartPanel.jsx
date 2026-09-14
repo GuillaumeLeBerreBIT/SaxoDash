@@ -41,7 +41,7 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
   const up = bar.close >= bar.open
 
   return (
-    <div className="flex items-center gap-3 px-3 pt-2 text-[11px] num font-mono flex-wrap">
+    <div className="flex items-center gap-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap">
       <span className="text-zinc-400">{bar.date}</span>
       {[
         ['O', bar.open],
@@ -134,7 +134,7 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
         </Menu>
 
         {period == null ? null : (
-          <span className="ml-auto text-[11px] text-zinc-500">
+          <span className="ml-auto text-[var(--fig-2xs)] text-zinc-500">
             Period{' '}
             <span className={`num font-mono ${period >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmtPct(period)}

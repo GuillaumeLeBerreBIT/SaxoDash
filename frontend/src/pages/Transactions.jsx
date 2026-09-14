@@ -79,7 +79,7 @@ export default function Transactions() {
                 setPage(1)
               }}
               placeholder="Search instrument or ticker"
-              className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-zinc-800 rounded-md text-[13px] text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 outline-none"
+              className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 outline-none"
             />
           </div>
           <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
@@ -103,7 +103,7 @@ export default function Transactions() {
         <div className="overflow-x-auto">
           <table className="w-full text-[12.5px]">
             <thead>
-              <tr className="text-left text-[11px] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+              <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                 <th className="px-5 py-2 font-medium">Date</th>
                 <th className="px-2 py-2 font-medium">Type</th>
                 <th className="px-2 py-2 font-medium">Instrument</th>
@@ -141,7 +141,7 @@ export default function Transactions() {
         </div>
 
         <div className="px-5 py-3 flex items-center justify-between border-t border-zinc-800">
-          <div className="text-[12px] text-zinc-500">
+          <div className="text-[var(--fig-xs)] text-zinc-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
           </div>
           <div className="flex items-center gap-1">
@@ -156,7 +156,7 @@ export default function Transactions() {
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                className={`w-8 h-8 text-[12px] rounded font-medium ${
+                className={`w-8 h-8 text-[var(--fig-xs)] rounded font-medium ${
                   n === page ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'
                 }`}
               >

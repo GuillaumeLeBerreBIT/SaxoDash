@@ -38,7 +38,7 @@ export default function Login() {
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
           autoComplete="username"
-          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 py-2 text-[13px] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 py-2 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
         />
         <input
           type="password"
@@ -46,12 +46,12 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
           autoComplete="current-password"
-          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 py-2 text-[13px] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 py-2 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
         />
-        {error && <p className="text-[12px] text-red-400">{error}</p>}
+        {error && <p className="text-[var(--fig-xs)] text-red-400">{error}</p>}
         <button
           type="submit"
-          className="rounded-md bg-blue-500 hover:bg-blue-400 transition-colors duration-200 py-2 text-[13px] font-medium text-white"
+          className="rounded-md bg-blue-500 hover:bg-blue-400 transition-colors duration-200 py-2 text-[var(--fig-sm)] font-medium text-white"
         >
           Sign in
         </button>

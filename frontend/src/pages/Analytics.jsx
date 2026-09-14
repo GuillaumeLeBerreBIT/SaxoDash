@@ -173,7 +173,7 @@ export default function Analytics() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`h-9 px-3.5 text-[13px] font-medium border-b-2 -mb-px transition-colors ${
+            className={`h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
               tab === key ? 'text-zinc-100 border-blue-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
             }`}
           >

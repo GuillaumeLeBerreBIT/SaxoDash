@@ -20,8 +20,8 @@ export function CardHeader({ title, subtitle, right, className = '' }) {
   return (
     <div className={`flex items-start justify-between gap-3 ${className}`}>
       <div>
-        <h3 className="text-[13px] font-medium text-zinc-200">{title}</h3>
-        {subtitle && <p className="text-[12px] text-zinc-500 mt-0.5">{subtitle}</p>}
+        <h3 className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</h3>
+        {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5">{subtitle}</p>}
       </div>
       {right}
     </div>
@@ -32,8 +32,8 @@ export function PageHeader({ title, subtitle, right }) {
   return (
     <div className="flex items-end justify-between mb-6">
       <div>
-        <h1 className="text-[22px] font-medium tracking-tight text-zinc-50">{title}</h1>
-        {subtitle && <p className="text-[13px] text-zinc-500 mt-1">{subtitle}</p>}
+        <h1 className="text-[var(--fig-xl)] font-medium tracking-tight text-zinc-50">{title}</h1>
+        {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1">{subtitle}</p>}
       </div>
       {right}
     </div>
@@ -45,31 +45,6 @@ const statTones = {
   emerald: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15',
   red: 'bg-red-500/10 text-red-400 border border-red-500/15',
   zinc: 'bg-zinc-800/80 text-zinc-300 border border-zinc-700/70',
-}
-
-export function StatCard({ label, value, badge, badgeTone = 'zinc', note }) {
-  return (
-    <Card>
-      <div className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">{label}</div>
-      <div className="mt-2.5 text-[clamp(20px,1.9vw,28px)] font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap">
-        {value}
-      </div>
-      {(badge || note) && (
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
-          {badge && (
-            <span
-              className={`inline-flex items-center whitespace-nowrap max-w-full overflow-hidden text-ellipsis text-[11.5px] px-2 py-0.5 rounded-md font-medium num font-mono ${
-                statTones[badgeTone] || statTones.zinc
-              }`}
-            >
-              {badge}
-            </span>
-          )}
-          {note && <span className="text-[12px] text-zinc-500">{note}</span>}
-        </div>
-      )}
-    </Card>
-  )
 }
 
 const badgeTones = {
@@ -89,7 +64,7 @@ const badgeTones = {
 export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
   return (
     <div
-      className={`flex items-center justify-center text-center px-6 text-[12px] ${
+      className={`flex items-center justify-center text-center px-6 text-[var(--fig-xs)] ${
         tone === 'red' ? 'text-red-400' : 'text-zinc-500'
       }`}
       style={{ height }}
@@ -125,7 +100,7 @@ export function InfoTip({ children }) {
         <span
           id={id}
           role="tooltip"
-          className="absolute z-20 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[11px] leading-snug text-zinc-300 shadow-lg shadow-black/40"
+          className="absolute z-20 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[var(--fig-2xs)] leading-snug text-zinc-300 shadow-lg shadow-black/40"
         >
           {children}
         </span>
@@ -148,7 +123,7 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
 
 
 /** A row of headline stats as one bordered strip with dividers - the calm
- *  alternative to N separate StatCards. */
+ *  alternative to N separate single-stat cards. */
 export function StatStrip({ children, className = '' }) {
   return (
     <div
@@ -159,11 +134,19 @@ export function StatStrip({ children, className = '' }) {
   )
 }
 
-export function StatRow({ label, value, badge, badgeTone = 'zinc', note }) {
+/** `tone` (a text-color class, e.g. `text-blue-400`) tints the label to mark
+ *  this row as the strip's standout figure among siblings. `lead` steps the
+ *  value up to the old single-stat card's size - for a strip's one figure
+ *  that deserves top billing regardless of whether it needs a tint. */
+export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, lead = false }) {
   return (
     <div className="flex-1 p-4">
-      <div className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider">{label}</div>
-      <div className="mt-2 text-[clamp(18px,1.7vw,24px)] font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap">
+      <div className={`text-[var(--fig-2xs)] font-medium uppercase tracking-wider ${tone || 'text-zinc-500'}`}>{label}</div>
+      <div
+        className={`mt-2 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
+          lead ? 'text-[clamp(20px,1.9vw,28px)]' : 'text-[clamp(18px,1.7vw,24px)]'
+        }`}
+      >
         {value}
       </div>
       {(badge || note) && (
@@ -177,7 +160,7 @@ export function StatRow({ label, value, badge, badgeTone = 'zinc', note }) {
               {badge}
             </span>
           )}
-          {note && <span className="text-[12px] text-zinc-500">{note}</span>}
+          {note && <span className="text-[var(--fig-xs)] text-zinc-500">{note}</span>}
         </div>
       )}
     </div>
@@ -236,9 +219,9 @@ export function TBtn({ active, onClick, children, title }) {
 export function Metric({ label, value, tone = 'text-zinc-100', hint }) {
   return (
     <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className={`text-[15px] num font-mono mt-1 ${tone}`}>{value}</div>
-      {hint ? <div className="text-[11px] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
+      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
+      <div className={`text-[var(--fig-md)] num font-mono mt-1 ${tone}`}>{value}</div>
+      {hint ? <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
     </div>
   )
 }

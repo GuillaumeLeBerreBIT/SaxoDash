@@ -100,12 +100,12 @@ function Panel({ onClose }) {
               setActive(0)
             }}
             placeholder="Search a symbol or a page…"
-            className="flex-1 bg-transparent text-[13px] text-zinc-100 placeholder-zinc-600 outline-none"
+            className="flex-1 bg-transparent text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none"
           />
         </div>
         <ul id="command-palette-list" role="listbox" className="max-h-[320px] overflow-y-auto py-1">
           {items.length === 0 ? (
-            <li className="px-3 py-3 text-[12px] text-zinc-500">No matches.</li>
+            <li className="px-3 py-3 text-[var(--fig-xs)] text-zinc-500">No matches.</li>
           ) : (
             items.map((item, i) => (
               <li

@@ -34,7 +34,7 @@ function Chip({ item }) {
 
 export default function AttentionBand({ items }) {
   if (!items || items.length === 0) {
-    return <p className="text-[12px] text-zinc-600">Nothing needs attention right now.</p>
+    return <p className="text-[var(--fig-xs)] text-zinc-600">Nothing needs attention right now.</p>
   }
   return (
     <div className="flex flex-wrap gap-2">

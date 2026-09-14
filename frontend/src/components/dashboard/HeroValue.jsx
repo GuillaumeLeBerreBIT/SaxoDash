@@ -17,7 +17,7 @@ function DeltaPill({ label, delta }) {
     <div className="flex flex-col">
       <span className="text-[10px] uppercase tracking-wide text-zinc-600">{label}</span>
       <span
-        className={`text-[13px] num font-mono ${
+        className={`text-[var(--fig-sm)] num font-mono ${
           !known ? 'text-zinc-500' : up ? 'text-emerald-400' : 'text-red-400'
         }`}
       >
@@ -37,11 +37,11 @@ export default function HeroValue({ value, change, spark }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <div className="text-[11px] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
+          <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
           <div className="mt-1 text-[clamp(24px,3vw,34px)] font-semibold tracking-tight num font-mono text-zinc-50">
             {fmtEur(value.net_worth)}
           </div>
-          <div className="mt-1 text-[12px] text-zinc-500 num font-mono">
+          <div className="mt-1 text-[var(--fig-xs)] text-zinc-500 num font-mono">
             {fmtEur(value.portfolio)} invested · {fmtEur(value.bank)} bank
           </div>
         </div>

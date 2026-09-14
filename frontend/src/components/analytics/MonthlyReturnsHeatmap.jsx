@@ -49,7 +49,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
               const rows = monthlyReturns.filter((m) => m.year === year)
               return (
                 <tr key={year}>
-                  <td className="text-[11px] num text-zinc-400 pr-1">{year}</td>
+                  <td className="text-[var(--fig-2xs)] num text-zinc-400 pr-1">{year}</td>
                   {MONTH_NAMES.map((_, i) => {
                     const month = rows.find((r) => r.month === i + 1)
                     return (

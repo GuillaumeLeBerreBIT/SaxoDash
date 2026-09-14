@@ -37,7 +37,7 @@ export default function ContributorsCard({ contributors }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-[11px] text-zinc-500">
+      <p className="mt-2 text-[var(--fig-2xs)] text-zinc-500">
         {top.ticker} drove {Math.round(top.share_of_gain_pct)}% of total return.
       </p>
     </Card>

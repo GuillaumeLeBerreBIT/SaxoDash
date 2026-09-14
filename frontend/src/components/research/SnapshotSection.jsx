@@ -15,14 +15,14 @@ function Group({ group, data }) {
   return (
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</span>
+        <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</span>
         <VerdictBadge {...verdict} />
       </div>
       <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
         {group.metrics.map((m) => (
           <div key={m.field}>
             <div className="text-[10px] text-zinc-600 uppercase tracking-wide">{m.label}</div>
-            <div className="text-[13px] num font-mono text-zinc-100 mt-0.5">{fmtField(data[m.field], m.fmt)}</div>
+            <div className="text-[var(--fig-sm)] num font-mono text-zinc-100 mt-0.5">{fmtField(data[m.field], m.fmt)}</div>
           </div>
         ))}
       </div>

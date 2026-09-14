@@ -35,7 +35,7 @@ export default function SymbolBar({
             size={40}
             className="rounded-lg border border-white/10"
             fallback={
-              <div className="w-10 h-10 rounded-lg bg-white/[0.05] border border-white/10 text-zinc-200 text-[13px] font-medium flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-white/[0.05] border border-white/10 text-zinc-200 text-[var(--fig-sm)] font-medium flex items-center justify-center shrink-0">
                 {symbol.slice(0, 2)}
               </div>
             }
@@ -43,22 +43,22 @@ export default function SymbolBar({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[17px] font-medium text-zinc-50">{symbol}</span>
-              {exchange ? <span className="text-[11px] text-zinc-500 num font-mono">{exchange}</span> : null}
+              {exchange ? <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono">{exchange}</span> : null}
               {isEtf(instrument) ? <Badge tone="amber">ETF</Badge> : null}
               {position ? <Badge tone="blue">Held</Badge> : null}
             </div>
-            <div className="text-[12px] text-zinc-400 mt-0.5">{name}</div>
+            <div className="text-[var(--fig-xs)] text-zinc-400 mt-0.5">{name}</div>
           </div>
         </div>
 
         <div className="flex items-baseline gap-2.5">
-          <span className="text-[24px] font-medium num font-mono text-zinc-50">
+          <span className="text-[var(--fig-2xl)] font-medium num font-mono text-zinc-50">
             {price == null ? '—' : fmtNum(price, 2)}
           </span>
-          {currency ? <span className="text-[11px] text-zinc-500">{currency}</span> : null}
+          {currency ? <span className="text-[var(--fig-2xs)] text-zinc-500">{currency}</span> : null}
           {change == null ? null : (
             <span
-              className={`num font-mono text-[13px] font-medium ${
+              className={`num font-mono text-[var(--fig-sm)] font-medium ${
                 change >= 0 ? 'text-emerald-400' : 'text-red-400'
               }`}
             >

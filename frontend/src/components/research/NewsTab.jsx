@@ -39,7 +39,7 @@ export default function NewsTab({ symbol }) {
     return (
       <Card>
         <CardHeader title="News" subtitle="From Finnhub" />
-        <p className="mt-3 text-[12px] text-zinc-500">
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
           {data?.reason || `News is unavailable for ${symbol}.`}
         </p>
       </Card>
@@ -50,7 +50,7 @@ export default function NewsTab({ symbol }) {
     return (
       <Card>
         <CardHeader title="News" subtitle="From Finnhub" />
-        <p className="mt-3 text-[12px] text-zinc-500">No recent news for {symbol}.</p>
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">No recent news for {symbol}.</p>
       </Card>
     )
   }
@@ -75,7 +75,7 @@ export default function NewsTab({ symbol }) {
                   >
                     {item.headline}
                   </a>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">
+                  <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5">
                     <span className="num font-mono">{timeLabel(item.datetime)}</span>
                     {' · '}
                     {item.source}

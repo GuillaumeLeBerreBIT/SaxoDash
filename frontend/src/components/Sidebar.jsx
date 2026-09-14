@@ -35,7 +35,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
         <div className="w-7 h-7 rounded-md bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
           <LineChart size={15} strokeWidth={2} />
         </div>
-        <span className={`ml-2.5 text-[15px] font-medium tracking-tight text-zinc-50 ${labelCls} ${collapsed ? 'ml-0' : ''}`}>
+        <span className={`ml-2.5 text-[var(--fig-md)] font-medium tracking-tight text-zinc-50 ${labelCls} ${collapsed ? 'ml-0' : ''}`}>
           SaxoDash
         </span>
         {!collapsed && (
@@ -68,7 +68,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
         }`}
       >
         <Search size={14} />
-        {!collapsed && <span className="text-[12px]">Search</span>}
+        {!collapsed && <span className="text-[var(--fig-xs)]">Search</span>}
         {!collapsed && <span className="ml-auto text-[10px] text-zinc-600">⌘K</span>}
       </button>
 
@@ -80,7 +80,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
             end={end}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `relative w-full h-9 flex items-center rounded-md text-[13px] ${
+              `relative w-full h-9 flex items-center rounded-md text-[var(--fig-sm)] ${
                 collapsed ? 'justify-center' : 'px-3 gap-3'
               } ${
                 isActive
@@ -106,15 +106,15 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
           <div
             title={collapsed ? username : undefined}
-            className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-medium flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-[var(--fig-2xs)] font-medium flex items-center justify-center shrink-0"
           >
             {initials}
           </div>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] text-zinc-100 font-medium leading-tight truncate">{username}</div>
-                <div className="text-[11px] text-zinc-500 leading-tight">Personal</div>
+                <div className="text-[var(--fig-sm)] text-zinc-100 font-medium leading-tight truncate">{username}</div>
+                <div className="text-[var(--fig-2xs)] text-zinc-500 leading-tight">Personal</div>
               </div>
               <button
                 onClick={handleLogout}

@@ -21,7 +21,7 @@ export default function FundamentalsGate({ fundamentals, title, subtitle = 'From
     return (
       <Card>
         <CardHeader title={title} subtitle={subtitle} />
-        <p className="mt-3 text-[12px] text-zinc-500">{data?.reason || fallback}</p>
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">{data?.reason || fallback}</p>
       </Card>
     )
   }

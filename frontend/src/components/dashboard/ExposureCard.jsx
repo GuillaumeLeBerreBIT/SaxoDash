@@ -61,7 +61,7 @@ export default function ExposureCard({ sector, currency, concentration }) {
             <Legend rows={sector} nameKey="name" />
           </>
         ) : (
-          <p className="text-[12px] text-zinc-500">No holdings yet.</p>
+          <p className="text-[var(--fig-xs)] text-zinc-500">No holdings yet.</p>
         )}
       </div>
       {currency.length > 1 ? (
@@ -73,7 +73,7 @@ export default function ExposureCard({ sector, currency, concentration }) {
           100% {currency[0].currency}
         </div>
       ) : null}
-      {caption && <p className="mt-3 text-[11px] text-zinc-500">{caption}</p>}
+      {caption && <p className="mt-3 text-[var(--fig-2xs)] text-zinc-500">{caption}</p>}
     </Card>
   )
 }

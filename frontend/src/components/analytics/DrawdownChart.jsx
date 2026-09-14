@@ -10,7 +10,7 @@ export default function DrawdownChart({ series, maxDrawdown }) {
       <CardHeader
         title="Drawdown"
         subtitle="Decline from the running peak"
-        right={maxDrawdown != null && <span className="text-[11px] num text-red-400">Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}</span>}
+        right={maxDrawdown != null && <span className="text-[var(--fig-2xs)] num text-red-400">Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}</span>}
       />
       <div className="mt-4 h-[260px]">
         <ResponsiveContainer width="100%" height="100%">

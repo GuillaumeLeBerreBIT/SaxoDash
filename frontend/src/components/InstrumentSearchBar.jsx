@@ -74,7 +74,7 @@ export default function InstrumentSearchBar() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search any stock or ETF…"
           aria-label="Search instruments"
-          className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-white/10 rounded-lg text-[13px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+          className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-white/10 rounded-lg text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
         />
       </div>
 
@@ -90,7 +90,7 @@ export default function InstrumentSearchBar() {
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-lg px-3 py-2 text-[12px] text-amber-400"
+          className="z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-lg px-3 py-2 text-[var(--fig-xs)] text-amber-400"
         >
           Search unavailable — reconnect Saxo
         </div>,
@@ -107,12 +107,12 @@ export default function InstrumentSearchBar() {
               key={`${result.uic}-${result.asset_type}`}
               type="button"
               onClick={() => go(result)}
-              className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-[13px] text-zinc-100 hover:bg-white/[0.06]"
+              className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-[var(--fig-sm)] text-zinc-100 hover:bg-white/[0.06]"
             >
               <span className="shrink-0 font-medium">{result.symbol}</span>
               <span className="text-zinc-500 truncate flex-1">{result.description}</span>
               {result.exchange ? (
-                <span className="text-[11px] text-zinc-600 num font-mono shrink-0">{result.exchange}</span>
+                <span className="text-[var(--fig-2xs)] text-zinc-600 num font-mono shrink-0">{result.exchange}</span>
               ) : null}
               <Badge tone={result.asset_type === 'Etf' ? 'amber' : 'zinc'} className="shrink-0">
                 {result.asset_type === 'Etf' ? 'ETF' : 'Stock'}

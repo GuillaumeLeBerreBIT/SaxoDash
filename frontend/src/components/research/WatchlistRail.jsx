@@ -89,7 +89,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
             </MenuRow>
           ) : null}
         </Menu>
-        <span className="text-[11px] text-zinc-500 num font-mono ml-auto">{items.length}</span>
+        <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono ml-auto">{items.length}</span>
       </div>
 
       {naming ? (
@@ -104,7 +104,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
             }}
             placeholder="List name"
             aria-label="New list name"
-            className="flex-1 h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[12px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+            className="flex-1 h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
           />
           <button
             type="button"
@@ -125,7 +125,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search symbol to add"
           aria-label="Search symbol to add"
-          className="w-full h-7 pl-7 pr-2 bg-zinc-950 border border-white/10 rounded text-[12px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+          className="w-full h-7 pl-7 pr-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
         />
       </div>
 
@@ -146,8 +146,8 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                   }}
                   className="flex-1 min-w-0 text-left"
                 >
-                  <span className="text-[12px] font-medium text-zinc-100">{result.symbol}</span>
-                  <span className="text-[11px] text-zinc-500 ml-2 truncate">{result.description}</span>
+                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{result.symbol}</span>
+                  <span className="text-[var(--fig-2xs)] text-zinc-500 ml-2 truncate">{result.description}</span>
                 </button>
                 <button
                   type="button"
@@ -209,13 +209,13 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
               }`}
             >
               <div className="min-w-0 flex items-center gap-1.5">
-                <span className="text-[12px] font-medium text-zinc-100">{item.symbol}</span>
+                <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{item.symbol}</span>
                 {heldSymbols.has(item.symbol) ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                 ) : null}
                 <span className="text-[10.5px] text-zinc-600 truncate">{item.exchange}</span>
               </div>
-              <span className="text-[12px] num font-mono text-zinc-200 text-right pr-3">
+              <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right pr-3">
                 {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
               </span>
               <span className="w-14 text-right flex items-center justify-end gap-1">

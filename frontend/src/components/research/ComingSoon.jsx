@@ -18,8 +18,8 @@ export default function ComingSoon({ feature, height = 200 }) {
         <span className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center text-zinc-400">
           <Clock size={15} />
         </span>
-        <div className="text-[13px] font-medium text-zinc-200">{feature} — coming soon</div>
-        <p className="text-[12px] text-zinc-500 max-w-[42ch]">
+        <div className="text-[var(--fig-sm)] font-medium text-zinc-200">{feature} — coming soon</div>
+        <p className="text-[var(--fig-xs)] text-zinc-500 max-w-[42ch]">
           Saxo serves prices, not company fundamentals. This panel fills in once a fundamentals
           provider is chosen.
         </p>

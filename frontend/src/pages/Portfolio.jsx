@@ -4,7 +4,7 @@ import { useNetWorth, usePortfolioSummary, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
-import { Card, CardHeader, PageHeader, Badge, InstrumentLogo } from '../components/ui'
+import { Card, CardHeader, PageHeader, Badge, InstrumentLogo, StatStrip, StatRow } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -54,31 +54,31 @@ export default function Portfolio() {
 
       <InstrumentSearchBar />
 
-      <Card>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0">
-          <div className="sm:pr-5">
-            <div className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Investment portfolio</div>
-            <div className="mt-1.5 text-[18px] font-medium text-zinc-50 num">{fmtEur(summary.total_value)}</div>
-            <div className={`text-[12px] num mt-0.5 ${
-              summary.total_pnl_pct == null
-                ? 'text-zinc-500'
-                : Number(summary.total_pnl_pct) >= 0 ? 'text-blue-400' : 'text-red-400'
-            }`}>
+      <StatStrip>
+        <StatRow
+          label="Investment portfolio"
+          value={fmtEur(summary.total_value)}
+          note={
+            <span
+              className={
+                summary.total_pnl_pct == null
+                  ? 'text-zinc-500'
+                  : Number(summary.total_pnl_pct) >= 0 ? 'text-blue-400' : 'text-red-400'
+              }
+            >
               {fmtPct(summary.total_pnl_pct)}
-            </div>
-          </div>
-          <div className="sm:pl-5 sm:border-l border-zinc-800">
-            <div className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Bank balance</div>
-            <div className="mt-1.5 text-[18px] font-medium text-zinc-50 num">{fmtEur(netWorth.bank_total)}</div>
-            <div className="text-[12px] text-zinc-500 mt-0.5">All connected accounts</div>
-          </div>
-          <div className="sm:pl-5 sm:border-l-2 border-blue-500/60">
-            <div className="text-[11px] text-blue-400 uppercase tracking-wide font-medium">Total net worth</div>
-            <div className="mt-1.5 text-[22px] font-medium text-zinc-50 num">{fmtEur(netWorth.net_worth)}</div>
-            <div className="text-[12px] text-zinc-500 mt-0.5">Portfolio + bank accounts</div>
-          </div>
-        </div>
-      </Card>
+            </span>
+          }
+        />
+        <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
+        <StatRow
+          label="Total net worth"
+          value={fmtEur(netWorth.net_worth)}
+          note="Portfolio + bank accounts"
+          tone="text-blue-400"
+          lead
+        />
+      </StatStrip>
 
       <HistoryAreaChart
         title="Portfolio value"
@@ -96,7 +96,7 @@ export default function Portfolio() {
           <div className="overflow-x-auto">
             <table className="w-full text-[12.5px]">
               <thead>
-                <tr className="text-left text-[11px] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+                <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                   <th className="px-5 py-2 font-medium">Name</th>
                   <th className="px-2 py-2 font-medium">Type</th>
                   <th className="px-2 py-2 font-medium text-right">Qty</th>
@@ -177,7 +177,7 @@ export default function Portfolio() {
               ].map((r) => (
                 <div key={r.label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                   <span className="text-[12.5px] text-zinc-500">{r.label}</span>
-                  <span className="text-[13px] text-zinc-100 num font-medium">{r.val}</span>
+                  <span className="text-[var(--fig-sm)] text-zinc-100 num font-medium">{r.val}</span>
                 </div>
               ))}
             </div>
@@ -188,7 +188,7 @@ export default function Portfolio() {
             <div className="mt-4 space-y-3">
               {sectors.map((s) => (
                 <div key={s.name}>
-                  <div className="flex items-center justify-between text-[12px] mb-1">
+                  <div className="flex items-center justify-between text-[var(--fig-xs)] mb-1">
                     <span className="text-zinc-300">{s.name}</span>
                     <span className="text-zinc-400 num">{s.pct.toFixed(1)}%</span>
                   </div>

@@ -10,7 +10,7 @@ function Ratio({ label, value }) {
   return (
     <div>
       <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className="text-[15px] num font-mono mt-1 text-zinc-100">{value}</div>
+      <div className="text-[var(--fig-md)] num font-mono mt-1 text-zinc-100">{value}</div>
     </div>
   )
 }
@@ -42,7 +42,7 @@ function HistoryContext({ stats }) {
 function RatioGroup({ label, children }) {
   return (
     <div className="py-3 first:pt-0 last:pb-0">
-      <div className="text-[11px] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
+      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
       <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4">{children}</div>
     </div>
   )
@@ -76,7 +76,7 @@ function RecommendationBar({ recommendation }) {
       <div className="mt-3 grid grid-cols-5 gap-2 text-center">
         {RECOMMENDATION_SEGMENTS.map(([key, label]) => (
           <div key={key}>
-            <div className="text-[15px] num font-mono text-zinc-100">{recommendation[key] || 0}</div>
+            <div className="text-[var(--fig-md)] num font-mono text-zinc-100">{recommendation[key] || 0}</div>
             <div className="text-[10px] text-zinc-500">{label}</div>
           </div>
         ))}

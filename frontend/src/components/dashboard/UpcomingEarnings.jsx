@@ -15,7 +15,7 @@ export default function UpcomingEarnings({ items }) {
         <CardHeader title="Upcoming earnings" subtitle="Your holdings, next 2 weeks" />
       </div>
       {items.length === 0 ? (
-        <p className="px-5 py-4 text-[12px] text-zinc-500">
+        <p className="px-5 py-4 text-[var(--fig-xs)] text-zinc-500">
           No holdings report in the next 2 weeks.
         </p>
       ) : (
@@ -31,7 +31,7 @@ export default function UpcomingEarnings({ items }) {
               >
                 {e.ticker}
               </Link>
-              <div className="flex items-center gap-3 text-[11px] text-zinc-500">
+              <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
                 <span className="num font-mono">{e.date}</span>
                 <span>{whenText(e.days_until)}</span>
                 <span>{SESSION[e.session] || '—'}</span>

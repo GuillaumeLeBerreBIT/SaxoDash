@@ -52,7 +52,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
                 <button
                   key={m}
                   onClick={() => setMonthly(m)}
-                  className={`px-2 h-6 text-[11px] font-medium rounded num ${
+                  className={`px-2 h-6 text-[var(--fig-2xs)] font-medium rounded num ${
                     monthly === m ? 'bg-zinc-800 text-zinc-50 ring-1 ring-white/10' : 'text-zinc-400 hover:text-zinc-100'
                   }`}
                 >

@@ -15,10 +15,10 @@ function Row({ r }) {
         {r.ticker}
       </Link>
       <div className="flex items-center gap-2">
-        <span className={`text-[12px] num font-mono ${up ? 'text-emerald-400' : 'text-red-400'}`}>
+        <span className={`text-[var(--fig-xs)] num font-mono ${up ? 'text-emerald-400' : 'text-red-400'}`}>
           {fmtPct(r.pnl_pct, { decimals: 1 })}
         </span>
-        <span className="text-[11px] num font-mono text-zinc-600">
+        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
           {fmtEur(r.pnl, { sign: true, decimals: 0 })}
         </span>
       </div>
@@ -32,7 +32,7 @@ export default function MoversCard({ movers }) {
     <Card>
       <CardHeader title="Movers" subtitle="By all-time return" />
       {empty ? (
-        <p className="mt-3 text-[12px] text-zinc-500">No holdings to compare yet.</p>
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">No holdings to compare yet.</p>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-x-6">
           <div>

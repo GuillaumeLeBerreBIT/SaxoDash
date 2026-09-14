@@ -4,7 +4,7 @@ import { Card, CardHeader } from '../ui'
 function GuideGroup({ label, meaning, read }) {
   return (
     <div className="py-3 first:pt-0 last:pb-0">
-      <div className="text-[11px] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
+      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
       <p className="mt-1.5 text-[12.5px] text-zinc-500 leading-relaxed">{meaning}</p>
       <p className="mt-1.5 text-[12.5px] text-zinc-300 leading-relaxed">{read}</p>
     </div>
@@ -15,7 +15,7 @@ function GuideMetric({ name, text }) {
   return (
     <div>
       <div className="text-[12.5px] font-medium text-zinc-200">{name}</div>
-      <p className="mt-1 text-[12px] text-zinc-400 leading-relaxed">{text}</p>
+      <p className="mt-1 text-[var(--fig-xs)] text-zinc-400 leading-relaxed">{text}</p>
     </div>
   )
 }
@@ -37,7 +37,7 @@ export default function GuideTab() {
         <div className="mt-2 divide-y divide-white/[0.06]">
           {RATIO_GUIDE.map((group) => (
             <div key={group.label} className="py-3 first:pt-0 last:pb-0">
-              <div className="text-[11px] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</div>
+              <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</div>
               <div className="mt-2 space-y-3">
                 {group.metrics.map((m) => (
                   <GuideMetric key={m.name} name={m.name} text={m.text} />
@@ -54,8 +54,8 @@ export default function GuideTab() {
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {QUADRANT_GUIDE.corners.map((c) => (
             <div key={c.label} className="rounded-lg border border-white/[0.06] p-3">
-              <div className="text-[12px] font-medium text-zinc-200">{c.label}</div>
-              <p className="mt-1 text-[12px] text-zinc-400 leading-relaxed">{c.text}</p>
+              <div className="text-[var(--fig-xs)] font-medium text-zinc-200">{c.label}</div>
+              <p className="mt-1 text-[var(--fig-xs)] text-zinc-400 leading-relaxed">{c.text}</p>
             </div>
           ))}
         </div>

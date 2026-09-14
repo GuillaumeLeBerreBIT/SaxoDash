@@ -16,7 +16,7 @@ export default function EarningsInsights({ fundamentals }) {
           <Card>
             <CardHeader title="What changed" subtitle="Quarterly trend, from Finnhub" />
             {insights.length === 0 ? (
-              <p className="mt-3 text-[12px] text-zinc-500">
+              <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
                 Not enough quarterly history yet for trend commentary.
               </p>
             ) : (

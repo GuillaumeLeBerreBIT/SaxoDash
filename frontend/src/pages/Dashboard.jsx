@@ -63,7 +63,7 @@ export default function Dashboard() {
               subtitle="Largest 5 by value"
               right={<>
                 <PriceBasisNote positions={top5} />
-                <Link to="/portfolio" className="text-[12px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+                <Link to="/portfolio" className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
                   View all <ArrowRight size={12} />
                 </Link>
               </>}
@@ -72,7 +72,7 @@ export default function Dashboard() {
           <div className="overflow-x-auto">
             <table className="w-full text-[12.5px]">
               <thead>
-                <tr className="text-left text-[11px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+                <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
                   <th className="px-5 py-2 font-medium">Name</th>
                   <th className="px-2 py-2 font-medium text-right">Price</th>
                   <th className="px-2 py-2 font-medium text-right">Value</th>
@@ -136,7 +136,7 @@ export default function Dashboard() {
             {summary.allocation.map((a) => {
               const pct = (Number(a.value) / Number(summary.total_value)) * 100
               return (
-                <div key={a.ticker} className="flex items-center gap-2 text-[12px]">
+                <div key={a.ticker} className="flex items-center gap-2 text-[var(--fig-xs)]">
                   <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
                   <span className="text-zinc-300 font-medium">{a.ticker}</span>
                   <span className="ml-auto text-zinc-500 num font-mono">{pct.toFixed(1)}%</span>
@@ -167,7 +167,7 @@ export default function Dashboard() {
             title="Recent transactions"
             subtitle="Last 5 across all accounts"
             right={
-              <Link to="/transactions" className="text-[12px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
+              <Link to="/transactions" className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
                 View all <ArrowRight size={12} />
               </Link>
             }
@@ -175,7 +175,7 @@ export default function Dashboard() {
         </div>
         <table className="w-full text-[12.5px]">
           <thead>
-            <tr className="text-left text-[11px] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+            <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
               <th className="px-5 py-2 font-medium">Date</th>
               <th className="px-2 py-2 font-medium">Type</th>
               <th className="px-2 py-2 font-medium">Name</th>

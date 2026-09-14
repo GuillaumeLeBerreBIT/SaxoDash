@@ -46,7 +46,7 @@ export default function AccountBreakdownChart({ accounts }) {
         {data.map((d, i) => {
           const pct = total > 0 ? (d.value / total) * 100 : 0
           return (
-            <div key={i} className="flex items-center gap-2 text-[12px]">
+            <div key={i} className="flex items-center gap-2 text-[var(--fig-xs)]">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
               <span className="text-zinc-300 font-medium">{d.name}</span>
               <span className="ml-auto text-zinc-500 num font-mono">{fmtEur(d.value)}</span>

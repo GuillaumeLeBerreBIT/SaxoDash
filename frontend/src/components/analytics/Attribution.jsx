@@ -28,7 +28,7 @@ export default function Attribution({ positions }) {
         title="Return attribution"
         subtitle="Contribution of each holding to total portfolio return"
         right={
-          <span className="text-[11px] num text-zinc-400">
+          <span className="text-[var(--fig-2xs)] num text-zinc-400">
             Total {fmtPct(totalCost ? (totalPnl / totalCost) * 100 : null, { decimals: 1 })}
           </span>
         }
@@ -53,7 +53,7 @@ export default function Attribution({ positions }) {
                 }
               />
             </div>
-            <span className={`text-[12px] num text-right ${r.contribution >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className={`text-[var(--fig-xs)] num text-right ${r.contribution >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmtPct(r.contribution, { decimals: 1 })} pp
             </span>
             <span className="text-[11.5px] num text-zinc-500 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
@@ -61,7 +61,7 @@ export default function Attribution({ positions }) {
         ))}
       </div>
       {top && (
-        <div className="mt-3 pt-3 border-t border-white/[0.06] text-[11px] text-zinc-500">
+        <div className="mt-3 pt-3 border-t border-white/[0.06] text-[var(--fig-2xs)] text-zinc-500">
           {top.ticker} alone produced {fmtNum(top.shareOfGain, 0)}% of the total gain — concentration risk sits in one name.
         </div>
       )}
