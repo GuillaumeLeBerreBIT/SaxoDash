@@ -50,4 +50,19 @@ describe('ui primitives', () => {
     expect(screen.getByText('AA')).toBeInTheDocument()
     expect(container.querySelector('img')).not.toBeInTheDocument()
   })
+
+  it('InstrumentLogo recovers when the symbol changes after a prior failure, without remounting', () => {
+    const { container, rerender } = render(
+      <InstrumentLogo symbol="MRVL" size={40} fallback={<span>MR</span>} />,
+    )
+    fireEvent.error(container.querySelector('img'))
+    expect(screen.getByText('MR')).toBeInTheDocument()
+
+    // Same component instance (e.g. Research's SymbolBar navigating between
+    // symbols) now shows a ticker whose logo does exist.
+    rerender(<InstrumentLogo symbol="COST" size={40} fallback={<span>CO</span>} />)
+    const img = container.querySelector('img')
+    expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/COST')
+    expect(screen.queryByText('CO')).not.toBeInTheDocument()
+  })
 })

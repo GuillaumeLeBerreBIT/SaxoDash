@@ -193,8 +193,12 @@ export function Skeleton({ className = '' }) {
  *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both
  *  use this rather than each tracking their own load failure. */
 export function InstrumentLogo({ symbol, size, className = '', fallback }) {
-  const [failed, setFailed] = useState(false)
-  const src = !failed ? instrumentLogoUrl(symbol) : null
+  // Tracks which symbol failed, not just whether one did - Research's
+  // SymbolBar keeps one InstrumentLogo instance across symbol changes, so a
+  // plain boolean would keep hiding the logo for every symbol after the
+  // first 404.
+  const [failedSymbol, setFailedSymbol] = useState(null)
+  const src = symbol !== failedSymbol ? instrumentLogoUrl(symbol) : null
 
   if (!src) return fallback
 
@@ -202,7 +206,7 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
     <img
       src={src}
       alt=""
-      onError={() => setFailed(true)}
+      onError={() => setFailedSymbol(symbol)}
       style={{ width: size, height: size }}
       className={`object-contain bg-white shrink-0 ${className}`}
     />
