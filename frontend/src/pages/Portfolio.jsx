@@ -88,7 +88,7 @@ export default function Portfolio() {
         color="#34d399"
       />
 
-      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:65fr_35fr]">
+      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:72fr_28fr]">
         <Card padding={false}>
           <div className="p-5 pb-3">
             <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
@@ -98,7 +98,6 @@ export default function Portfolio() {
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                   <th className="px-5 py-2 font-medium">Name</th>
-                  <th className="px-2 py-2 font-medium">Type</th>
                   <th className="px-2 py-2 font-medium text-right">Qty</th>
                   <th className="px-2 py-2 font-medium text-right">Avg</th>
                   <th className="px-2 py-2 font-medium text-right">Price</th>
@@ -119,11 +118,9 @@ export default function Portfolio() {
                           fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />}
                         />
                         <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
-                        <span className="text-zinc-500 truncate max-w-[140px]">{p.name}</span>
+                        {p.type === 'ETF' && <Badge tone="amber">ETF</Badge>}
+                        <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                       </Link>
-                    </td>
-                    <td className="px-2 py-3">
-                      <Badge tone={p.type === 'ETF' ? 'amber' : 'zinc'}>{p.type}</Badge>
                     </td>
                     <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(p.qty)}</td>
                     <td className="px-2 py-3 text-right num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</td>
@@ -150,7 +147,7 @@ export default function Portfolio() {
                   </tr>
                 ))}
                 <tr className="bg-zinc-800/20">
-                  <td className="px-5 py-3 font-medium text-zinc-300" colSpan={2}>
+                  <td className="px-5 py-3 font-medium text-zinc-300">
                     Total ({positions.length} holdings)
                   </td>
                   <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(totals.qty)}</td>
