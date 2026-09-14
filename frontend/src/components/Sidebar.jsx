@@ -31,7 +31,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
       className="fixed left-0 top-0 h-screen border-r border-white/[0.06] bg-gradient-to-b from-zinc-950 to-[#0b0b0e] flex flex-col z-30 transition-[width] duration-300 ease-out"
       style={{ width }}
     >
-      <div className={`h-14 flex items-center border-b border-white/[0.06] ${collapsed ? 'justify-center' : 'px-4'}`}>
+      <div className={`h-12 flex items-center border-b border-white/[0.06] ${collapsed ? 'justify-center' : 'px-4'}`}>
         <div className="w-7 h-7 rounded-md bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
           <LineChart size={15} strokeWidth={2} />
         </div>
@@ -80,7 +80,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
             end={end}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
-              `relative w-full h-9 flex items-center rounded-md text-[var(--fig-sm)] ${
+              `relative w-full h-8 flex items-center rounded-md text-[var(--fig-sm)] ${
                 collapsed ? 'justify-center' : 'px-3 gap-3'
               } ${
                 isActive

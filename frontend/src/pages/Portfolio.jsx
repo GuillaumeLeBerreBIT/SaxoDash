@@ -49,7 +49,7 @@ export default function Portfolio() {
     }))
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
 
       <InstrumentSearchBar />
@@ -90,26 +90,26 @@ export default function Portfolio() {
 
       <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:72fr_28fr]">
         <Card padding={false}>
-          <div className="p-5 pb-3">
+          <div className="p-4 pb-2">
             <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[var(--fig-sm)]">
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
-                  <th className="px-5 py-2 font-medium">Name</th>
-                  <th className="px-2 py-2 font-medium text-right">Qty</th>
-                  <th className="px-2 py-2 font-medium text-right">Avg</th>
-                  <th className="px-2 py-2 font-medium text-right">Price</th>
-                  <th className="px-2 py-2 font-medium text-right">Value</th>
-                  <th className="px-2 py-2 font-medium text-right">P&L</th>
-                  <th className="px-5 py-2 font-medium text-right">Weight</th>
+                  <th className="px-4 py-1.5 font-medium">Name</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Qty</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Avg</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Price</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Value</th>
+                  <th className="px-2 py-1.5 font-medium text-right">P&L</th>
+                  <th className="px-4 py-1.5 font-medium text-right">Weight</th>
                 </tr>
               </thead>
               <tbody>
                 {positions.map((p) => (
                   <tr key={p.ticker} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <InstrumentLogo
                           symbol={p.ticker}
@@ -122,9 +122,9 @@ export default function Portfolio() {
                         <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                       </Link>
                     </td>
-                    <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(p.qty)}</td>
-                    <td className="px-2 py-3 text-right num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</td>
-                    <td className="px-2 py-3 text-right num text-zinc-200">
+                    <td className="px-2 py-2 text-right num text-zinc-300">{fmtQty(p.qty)}</td>
+                    <td className="px-2 py-2 text-right num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</td>
+                    <td className="px-2 py-2 text-right num text-zinc-200">
                       <span
                         title={priceBasis(p.price_source).note}
                         className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
@@ -132,11 +132,11 @@ export default function Portfolio() {
                         {fmtMoney(p.current_price, p.currency)}
                       </span>
                     </td>
-                    <td className="px-2 py-3 text-right num text-zinc-100">{fmtEur(p.value)}</td>
-                    <td className={`px-2 py-3 text-right num ${Number(p.pnl) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                    <td className="px-2 py-2 text-right num text-zinc-100">{fmtEur(p.value)}</td>
+                    <td className={`px-2 py-2 text-right num ${Number(p.pnl) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-4 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <span className="num text-zinc-300 w-10 text-right">{Number(p.weight).toFixed(1)}%</span>
                         <div className="w-14 h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -147,15 +147,15 @@ export default function Portfolio() {
                   </tr>
                 ))}
                 <tr className="bg-zinc-800/20">
-                  <td className="px-5 py-3 font-medium text-zinc-300">
+                  <td className="px-4 py-2 font-medium text-zinc-300">
                     Total ({positions.length} holdings)
                   </td>
-                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(totals.qty)}</td>
-                  <td className="px-2 py-3" />
-                  <td className="px-2 py-3" />
-                  <td className="px-2 py-3 text-right num text-zinc-100 font-medium">{fmtEur(totals.value)}</td>
-                  <td className="px-2 py-3 text-right num text-blue-400 font-medium">{fmtEur(totals.pnl, { sign: true })}</td>
-                  <td className="px-5 py-3 text-right num text-zinc-300">100.0%</td>
+                  <td className="px-2 py-2 text-right num text-zinc-300">{fmtQty(totals.qty)}</td>
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2" />
+                  <td className="px-2 py-2 text-right num text-zinc-100 font-medium">{fmtEur(totals.value)}</td>
+                  <td className="px-2 py-2 text-right num text-blue-400 font-medium">{fmtEur(totals.pnl, { sign: true })}</td>
+                  <td className="px-4 py-2 text-right num text-zinc-300">100.0%</td>
                 </tr>
               </tbody>
             </table>

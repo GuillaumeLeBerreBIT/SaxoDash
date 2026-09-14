@@ -52,7 +52,7 @@ export default function Transactions() {
   if (isLoading) return <div className="text-zinc-500 text-sm">Loading…</div>
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Transactions"
         subtitle="All account activity"
@@ -104,29 +104,29 @@ export default function Transactions() {
           <table className="w-full text-[var(--fig-sm)]">
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
-                <th className="px-5 py-2 font-medium">Date</th>
-                <th className="px-2 py-2 font-medium">Type</th>
-                <th className="px-2 py-2 font-medium">Instrument</th>
-                <th className="px-2 py-2 font-medium">Ticker</th>
-                <th className="px-2 py-2 font-medium text-right">Qty</th>
-                <th className="px-2 py-2 font-medium text-right">Price</th>
-                <th className="px-2 py-2 font-medium text-right">Total</th>
-                <th className="px-5 py-2 font-medium">Account</th>
+                <th className="px-4 py-1.5 font-medium">Date</th>
+                <th className="px-2 py-1.5 font-medium">Type</th>
+                <th className="px-2 py-1.5 font-medium">Instrument</th>
+                <th className="px-2 py-1.5 font-medium">Ticker</th>
+                <th className="px-2 py-1.5 font-medium text-right">Qty</th>
+                <th className="px-2 py-1.5 font-medium text-right">Price</th>
+                <th className="px-2 py-1.5 font-medium text-right">Total</th>
+                <th className="px-4 py-1.5 font-medium">Account</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <td className="px-5 py-3 num text-zinc-300">{t.date}</td>
-                  <td className="px-2 py-3">
+                  <td className="px-4 py-2 num text-zinc-300">{t.date}</td>
+                  <td className="px-2 py-2">
                     <Badge tone={toneFor(t.type)}>{t.type}</Badge>
                   </td>
-                  <td className="px-2 py-3 text-zinc-100">{t.instrument}</td>
-                  <td className="px-2 py-3 text-zinc-400 font-medium">{t.ticker}</td>
-                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtQty(t.qty)}</td>
-                  <td className="px-2 py-3 text-right num text-zinc-300">{fmtEur(t.price)}</td>
-                  <td className="px-2 py-3 text-right num text-zinc-100 font-medium">{signedTotal(t)}</td>
-                  <td className="px-5 py-3 text-zinc-400">{t.account}</td>
+                  <td className="px-2 py-2 text-zinc-100">{t.instrument}</td>
+                  <td className="px-2 py-2 text-zinc-400 font-medium">{t.ticker}</td>
+                  <td className="px-2 py-2 text-right num text-zinc-300">{fmtQty(t.qty)}</td>
+                  <td className="px-2 py-2 text-right num text-zinc-300">{fmtEur(t.price)}</td>
+                  <td className="px-2 py-2 text-right num text-zinc-100 font-medium">{signedTotal(t)}</td>
+                  <td className="px-4 py-2 text-zinc-400">{t.account}</td>
                 </tr>
               ))}
               {visible.length === 0 && (
@@ -140,7 +140,7 @@ export default function Transactions() {
           </table>
         </div>
 
-        <div className="px-5 py-3 flex items-center justify-between border-t border-zinc-800">
+        <div className="px-4 py-2 flex items-center justify-between border-t border-zinc-800">
           <div className="text-[var(--fig-xs)] text-zinc-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
           </div>

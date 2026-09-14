@@ -30,7 +30,7 @@ export default function Dashboard() {
   if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
   if (!insightsQuery.data || !summaryQuery.data)
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-10 w-2/3" />
@@ -48,7 +48,7 @@ export default function Dashboard() {
   const top5 = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
 
       <HeroValue value={insights.value} change={insights.change} spark={insights.spark} />
@@ -57,7 +57,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-3" padding={false}>
-          <div className="p-5 pb-3">
+          <div className="p-4 pb-2">
             <CardHeader
               title="Top positions"
               subtitle="Largest 5 by value"
@@ -73,34 +73,34 @@ export default function Dashboard() {
             <table className="w-full text-[var(--fig-sm)]">
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
-                  <th className="px-5 py-2 font-medium">Name</th>
-                  <th className="px-2 py-2 font-medium text-right">Price</th>
-                  <th className="px-2 py-2 font-medium text-right">Value</th>
-                  <th className="px-2 py-2 font-medium text-right">P&L</th>
-                  <th className="px-5 py-2 font-medium text-right">Weight</th>
+                  <th className="px-4 py-1.5 font-medium">Name</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Price</th>
+                  <th className="px-2 py-1.5 font-medium text-right">Value</th>
+                  <th className="px-2 py-1.5 font-medium text-right">P&L</th>
+                  <th className="px-4 py-1.5 font-medium text-right">Weight</th>
                 </tr>
               </thead>
               <tbody>
                 {top5.map((p) => (
                   <tr key={p.ticker} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                         <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
                         <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                       </Link>
                     </td>
-                    <td className="px-2 py-3 text-right num font-mono text-zinc-200"><span
+                    <td className="px-2 py-2 text-right num font-mono text-zinc-200"><span
                         title={priceBasis(p.price_source).note}
                         className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
                       >
                         {fmtMoney(p.current_price, p.currency)}
                       </span></td>
-                    <td className="px-2 py-3 text-right num font-mono text-zinc-100">{fmtEur(p.value)}</td>
-                    <td className={`px-2 py-3 text-right num font-mono ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <td className="px-2 py-2 text-right num font-mono text-zinc-100">{fmtEur(p.value)}</td>
+                    <td className={`px-2 py-2 text-right num font-mono ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-4 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <span className="num font-mono text-zinc-300 w-10 text-right">{Number(p.weight).toFixed(1)}%</span>
                         <div className="w-14 h-1 bg-zinc-800 rounded-full overflow-hidden">
@@ -162,7 +162,7 @@ export default function Dashboard() {
       </div>
 
       <Card padding={false}>
-        <div className="p-5 pb-3">
+        <div className="p-4 pb-2">
           <CardHeader
             title="Recent transactions"
             subtitle="Last 5 across all accounts"
@@ -176,28 +176,28 @@ export default function Dashboard() {
         <table className="w-full text-[var(--fig-sm)]">
           <thead>
             <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
-              <th className="px-5 py-2 font-medium">Date</th>
-              <th className="px-2 py-2 font-medium">Type</th>
-              <th className="px-2 py-2 font-medium">Name</th>
-              <th className="px-2 py-2 font-medium text-right">Qty</th>
-              <th className="px-2 py-2 font-medium text-right">Price</th>
-              <th className="px-5 py-2 font-medium text-right">Total</th>
+              <th className="px-4 py-1.5 font-medium">Date</th>
+              <th className="px-2 py-1.5 font-medium">Type</th>
+              <th className="px-2 py-1.5 font-medium">Name</th>
+              <th className="px-2 py-1.5 font-medium text-right">Qty</th>
+              <th className="px-2 py-1.5 font-medium text-right">Price</th>
+              <th className="px-4 py-1.5 font-medium text-right">Total</th>
             </tr>
           </thead>
           <tbody>
             {recentTx.map((t) => (
               <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                <td className="px-5 py-3 text-zinc-300 num font-mono">{t.date}</td>
-                <td className="px-2 py-3">
+                <td className="px-4 py-2 text-zinc-300 num font-mono">{t.date}</td>
+                <td className="px-2 py-2">
                   <Badge tone={txTone[t.type] || 'zinc'}>{t.type}</Badge>
                 </td>
-                <td className="px-2 py-3">
+                <td className="px-2 py-2">
                   <span className="font-medium text-zinc-100">{t.ticker}</span>
                   <span className="text-zinc-500 ml-2">{t.instrument}</span>
                 </td>
-                <td className="px-2 py-3 text-right num font-mono text-zinc-300">{fmtNum(t.qty, 0)}</td>
-                <td className="px-2 py-3 text-right num font-mono text-zinc-300">{fmtEur(t.price)}</td>
-                <td className="px-5 py-3 text-right num font-mono text-zinc-100 font-medium">{fmtEur(t.total)}</td>
+                <td className="px-2 py-2 text-right num font-mono text-zinc-300">{fmtNum(t.qty, 0)}</td>
+                <td className="px-2 py-2 text-right num font-mono text-zinc-300">{fmtEur(t.price)}</td>
+                <td className="px-4 py-2 text-right num font-mono text-zinc-100 font-medium">{fmtEur(t.total)}</td>
               </tr>
             ))}
           </tbody>

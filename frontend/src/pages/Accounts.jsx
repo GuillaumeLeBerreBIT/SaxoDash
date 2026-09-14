@@ -14,7 +14,7 @@ export default function Accounts() {
   const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader title="Accounts" subtitle="Your connected bank accounts" />
 
       <StatStrip>

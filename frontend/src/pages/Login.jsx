@@ -25,7 +25,7 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-950">
       <form
         onSubmit={handleSubmit}
-        className="flex w-80 flex-col gap-4 bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-xl shadow-sm shadow-black/40 p-6"
+        className="flex w-80 flex-col gap-4 bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-lg shadow-sm shadow-black/40 p-6"
       >
         <div className="flex flex-col items-center gap-2 mb-1">
           <div className="w-9 h-9 rounded-md bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">

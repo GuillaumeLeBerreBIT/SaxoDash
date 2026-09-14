@@ -40,7 +40,7 @@ function PerformanceTab({ data, positions }) {
   if (!data) return <ChartPlaceholder>Loading…</ChartPlaceholder>
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {data.benchmark.reason && (
         <p className="text-[var(--fig-xs)] text-zinc-500">
           {data.benchmark.name} columns are blank — {data.benchmark.reason}
@@ -65,7 +65,7 @@ function RiskTab({ data }) {
   const bench = data.benchmark
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="grid gap-4" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
         <Card>
           <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
@@ -125,7 +125,7 @@ export default function Analytics() {
 
   if (isLoading || error || !data?.has_data) {
     return (
-      <div className="space-y-5">
+      <div className="space-y-4">
         <PageHeader title="Analytics" subtitle={SUBTITLE} />
         <ChartPlaceholder tone={error ? 'red' : 'zinc'}>
           {isLoading && 'Loading…'}
@@ -137,7 +137,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Analytics"
         subtitle={SUBTITLE}

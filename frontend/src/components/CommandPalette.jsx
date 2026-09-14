@@ -82,11 +82,11 @@ function Panel({ onClose }) {
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
-        className="w-[min(560px,92vw)] rounded-xl border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50 overflow-hidden"
+        className="w-[min(560px,92vw)] rounded-lg border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50 overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
       >
-        <div className="flex items-center gap-2 px-3 h-11 border-b border-white/[0.06]">
+        <div className="flex items-center gap-2 px-3 h-10 border-b border-white/[0.06]">
           <Search size={14} className="text-zinc-500" />
           <input
             ref={inputRef}

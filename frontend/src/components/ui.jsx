@@ -7,9 +7,9 @@ export function Card({ children, className = '', padding = true, interactive = f
   return (
     <div
       onClick={onClick}
-      className={`bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-xl shadow-sm shadow-black/40 ${
+      className={`bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-lg shadow-sm shadow-black/40 ${
         interactive ? 'hover:border-white/[0.12] cursor-pointer transition-colors duration-200' : ''
-      } ${padding ? 'p-5' : ''} ${className}`}
+      } ${padding ? 'p-4' : ''} ${className}`}
     >
       {children}
     </div>
@@ -30,7 +30,7 @@ export function CardHeader({ title, subtitle, right, className = '' }) {
 
 export function PageHeader({ title, subtitle, right }) {
   return (
-    <div className="flex items-end justify-between mb-6">
+    <div className="flex items-end justify-between mb-5">
       <div>
         <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
         {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1">{subtitle}</p>}
@@ -127,7 +127,7 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
 export function StatStrip({ children, className = '' }) {
   return (
     <div
-      className={`flex flex-col sm:flex-row rounded-xl border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] ${className}`}
+      className={`flex flex-col sm:flex-row rounded-lg border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] ${className}`}
     >
       {children}
     </div>
@@ -140,10 +140,10 @@ export function StatStrip({ children, className = '' }) {
  *  that deserves top billing regardless of whether it needs a tint. */
 export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, lead = false }) {
   return (
-    <div className="flex-1 p-4">
+    <div className="flex-1 p-3.5">
       <div className={`text-[var(--fig-2xs)] font-medium uppercase tracking-wider ${tone || 'text-zinc-500'}`}>{label}</div>
       <div
-        className={`mt-2 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
+        className={`mt-1.5 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
           lead ? 'text-[clamp(20px,1.9vw,28px)]' : 'text-[clamp(18px,1.7vw,24px)]'
         }`}
       >

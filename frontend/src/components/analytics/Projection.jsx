@@ -82,7 +82,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
         <MetricTile label="Optimistic (P90)" value={fmtEur(end.p90, { decimals: 0 })} hint="1 in 10 paths above" />
       </div>
 
-      <div className="mt-4 h-[300px]">
+      <div className="mt-4 h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={bands} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
