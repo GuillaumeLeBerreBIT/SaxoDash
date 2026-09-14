@@ -44,7 +44,7 @@ export default function QuarterlyTrendsChart({ trends }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex items-center gap-3 text-[10.5px] text-zinc-500">
+      <div className="mt-2 flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
         {SERIES.map((s) => (
           <span key={s.key} className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-sm" style={{ background: s.color }} /> {s.name}

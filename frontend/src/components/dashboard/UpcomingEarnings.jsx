@@ -27,7 +27,7 @@ export default function UpcomingEarnings({ items }) {
             >
               <Link
                 to={researchHref(e.ticker, 'earnings')}
-                className="text-[12.5px] font-medium text-zinc-100 hover:text-blue-300"
+                className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
               >
                 {e.ticker}
               </Link>

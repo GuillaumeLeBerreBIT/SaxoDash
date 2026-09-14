@@ -188,13 +188,13 @@ export default function Research() {
 
       {recentSymbols.length > 0 && (
         <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-          <span className="text-[10px] uppercase tracking-wide text-zinc-600">Recent</span>
+          <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">Recent</span>
           {recentSymbols.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => selectSymbol(s)}
-              className="h-6 px-2 rounded border border-white/[0.06] text-[11.5px] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
+              className="h-6 px-2 rounded border border-white/[0.06] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
             >
               {s}
             </button>
@@ -238,7 +238,7 @@ export default function Research() {
                   type="button"
                   onClick={() => setTab(key)}
                   aria-current={tab === key}
-                  className={`h-8 px-3 text-[12.5px] font-medium border-b-2 -mb-px transition-colors ${
+                  className={`h-8 px-3 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
                     tab === key
                       ? 'text-zinc-100 border-blue-500'
                       : 'text-zinc-500 border-transparent hover:text-zinc-300'

@@ -42,7 +42,7 @@ export default function SymbolBar({
           />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[17px] font-medium text-zinc-50">{symbol}</span>
+              <span className="text-[var(--fig-lg)] font-medium text-zinc-50">{symbol}</span>
               {exchange ? <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono">{exchange}</span> : null}
               {isEtf(instrument) ? <Badge tone="amber">ETF</Badge> : null}
               {position ? <Badge tone="blue">Held</Badge> : null}
@@ -75,7 +75,7 @@ export default function SymbolBar({
             align="right"
           >
             {watchlists.length === 0 ? (
-              <div className="px-2 py-2 text-[11.5px] text-zinc-500">
+              <div className="px-2 py-2 text-[var(--fig-xs)] text-zinc-500">
                 No lists yet — create one in the rail.
               </div>
             ) : (
@@ -95,7 +95,7 @@ export default function SymbolBar({
             type="button"
             disabled
             title="Trading is not part of SaxoDash"
-            className="h-7 px-3 rounded-md bg-blue-500/60 text-white/80 text-[11.5px] font-medium cursor-not-allowed"
+            className="h-7 px-3 rounded-md bg-blue-500/60 text-white/80 text-[var(--fig-xs)] font-medium cursor-not-allowed"
           >
             Buy
           </button>
@@ -103,7 +103,7 @@ export default function SymbolBar({
             type="button"
             disabled
             title="Trading is not part of SaxoDash"
-            className="h-7 px-3 rounded-md border border-white/10 text-zinc-400 text-[11.5px] font-medium cursor-not-allowed"
+            className="h-7 px-3 rounded-md border border-white/10 text-zinc-400 text-[var(--fig-xs)] font-medium cursor-not-allowed"
           >
             Sell
           </button>
@@ -111,7 +111,7 @@ export default function SymbolBar({
       </div>
 
       {instrument && instrument.exact ? null : (
-        <div className="px-4 pb-3 -mt-1 text-[11.5px] text-amber-400/90">
+        <div className="px-4 pb-3 -mt-1 text-[var(--fig-xs)] text-amber-400/90">
           {instrument
             ? `No exact match for ${symbol}; showing ${name || 'the closest search result'} instead.`
             : `Could not resolve ${symbol} to a Saxo instrument.`}

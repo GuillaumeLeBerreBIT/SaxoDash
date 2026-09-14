@@ -106,7 +106,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex items-center gap-4 text-[10.5px] text-zinc-500">
+      <div className="mt-2 flex items-center gap-4 text-[var(--fig-2xs)] text-zinc-500">
         <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-blue-500/25" /> P10–P90 range</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-400" /> Median path</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-zinc-400" /> Money contributed</span>

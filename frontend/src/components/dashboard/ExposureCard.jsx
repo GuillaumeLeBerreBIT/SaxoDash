@@ -28,7 +28,7 @@ function Legend({ rows, nameKey }) {
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
       {rows.map((r, i) => (
-        <div key={r[nameKey]} className="flex items-center gap-1.5 text-[11.5px]">
+        <div key={r[nameKey]} className="flex items-center gap-1.5 text-[var(--fig-xs)]">
           <span
             className="w-2 h-2 rounded-full shrink-0"
             style={{ background: SECTOR_PALETTE[i % SECTOR_PALETTE.length] }}
@@ -69,7 +69,7 @@ export default function ExposureCard({ sector, currency, concentration }) {
           <Legend rows={currency} nameKey="currency" />
         </div>
       ) : currency.length === 1 ? (
-        <div className="mt-3 pt-3 border-t border-white/[0.06] text-[11.5px] text-zinc-500">
+        <div className="mt-3 pt-3 border-t border-white/[0.06] text-[var(--fig-xs)] text-zinc-500">
           100% {currency[0].currency}
         </div>
       ) : null}

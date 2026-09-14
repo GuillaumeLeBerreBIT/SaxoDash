@@ -70,7 +70,7 @@ export default function Dashboard() {
             />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12.5px]">
+            <table className="w-full text-[var(--fig-sm)]">
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
                   <th className="px-5 py-2 font-medium">Name</th>
@@ -173,7 +173,7 @@ export default function Dashboard() {
             }
           />
         </div>
-        <table className="w-full text-[12.5px]">
+        <table className="w-full text-[var(--fig-sm)]">
           <thead>
             <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
               <th className="px-5 py-2 font-medium">Date</th>

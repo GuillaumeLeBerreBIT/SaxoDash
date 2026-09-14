@@ -31,7 +31,7 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
         title={title}
         subtitle={subtitle}
         right={
-          <div className="flex items-center gap-3 text-[10.5px] text-zinc-500">
+          <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: ESTIMATE }} /> Estimate</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: BEAT }} /> Beat</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: MISS }} /> Miss</span>

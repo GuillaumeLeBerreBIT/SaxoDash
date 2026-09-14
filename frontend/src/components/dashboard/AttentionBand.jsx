@@ -15,7 +15,7 @@ function Chip({ item }) {
   const Icon = item.severity === 'warn' ? AlertTriangle : Info
   const body = (
     <span
-      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[11.5px] ${chipClass(
+      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[var(--fig-xs)] ${chipClass(
         item.severity,
       )}`}
     >

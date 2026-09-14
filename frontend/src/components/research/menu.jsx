@@ -37,7 +37,7 @@ export function Menu({ label, icon: Icon, children, width = 220, align = 'left' 
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`h-7 px-2.5 rounded text-[11.5px] font-medium flex items-center gap-1.5 transition-colors ${
+        className={`h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium flex items-center gap-1.5 transition-colors ${
           open ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
         }`}
       >
@@ -78,7 +78,7 @@ export function MenuRow({ checked, onClick, dot, children, right }) {
       ) : null}
       {dot ? <span className="w-2 h-0.5 rounded-full shrink-0" style={{ background: dot }} /> : null}
       <span className="flex-1 text-left truncate">{children}</span>
-      {right ? <span className="text-[10.5px] text-zinc-500">{right}</span> : null}
+      {right ? <span className="text-[var(--fig-2xs)] text-zinc-500">{right}</span> : null}
     </button>
   )
 }
@@ -88,5 +88,5 @@ export function MenuSeparator() {
 }
 
 export function MenuLabel({ children }) {
-  return <div className="px-2 pt-1 pb-1.5 text-[10px] uppercase tracking-wide text-zinc-600">{children}</div>
+  return <div className="px-2 pt-1 pb-1.5 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{children}</div>
 }

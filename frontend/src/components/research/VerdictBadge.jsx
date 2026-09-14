@@ -5,7 +5,7 @@ import { TONE_DOT } from '../../lib/snapshot'
 export default function VerdictBadge({ tone, text, className = '' }) {
   if (!text) return null
   return (
-    <span className={`flex items-center gap-1.5 text-[11.5px] text-zinc-400 text-right ${className}`}>
+    <span className={`flex items-center gap-1.5 text-[var(--fig-xs)] text-zinc-400 text-right ${className}`}>
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${TONE_DOT[tone]}`} />
       {text}
     </span>

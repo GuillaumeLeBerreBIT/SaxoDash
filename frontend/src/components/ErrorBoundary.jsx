@@ -15,7 +15,7 @@ export default class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-zinc-950 text-center">
-          <h1 className="text-[20px] font-medium tracking-tight text-zinc-50">Something went wrong</h1>
+          <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">Something went wrong</h1>
           <p className="text-[var(--fig-sm)] text-zinc-500">Try reloading the page.</p>
           <button
             onClick={() => window.location.reload()}

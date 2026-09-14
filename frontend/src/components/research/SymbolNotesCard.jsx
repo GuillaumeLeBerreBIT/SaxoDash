@@ -6,7 +6,7 @@ import { Card, CardHeader } from '../ui'
 import VerdictBadge from './VerdictBadge'
 
 const FIELD_CLASS =
-  'w-full bg-zinc-950 border border-white/10 rounded px-2.5 py-2 text-[12.5px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60 resize-none'
+  'w-full bg-zinc-950 border border-white/10 rounded px-2.5 py-2 text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60 resize-none'
 
 /** One free-text field, saved on blur so every keystroke doesn't fire a
  *  write. Local state mirrors the value until it diverges from the saved
@@ -24,7 +24,7 @@ function NoteField({ label, value, placeholder, rows = 2, onSave }) {
 
   return (
     <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium mb-1">{label}</div>
+      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium mb-1">{label}</div>
       <textarea
         rows={rows}
         value={draft}
@@ -47,7 +47,7 @@ function TargetPriceField({ value, currency, onSave }) {
 
   return (
     <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium mb-1">
+      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium mb-1">
         Target price {currency ? `(${currency})` : ''}
       </div>
       <input
@@ -135,7 +135,7 @@ export default function ThesisAndRisksCard({ note, onSave, fundamentals, currenc
         />
       </div>
       {note?.target_price != null && currency ? (
-        <div className="mt-2 text-[10.5px] text-zinc-600">
+        <div className="mt-2 text-[var(--fig-2xs)] text-zinc-600">
           Target: {fmtMoney(note.target_price, currency)}
         </div>
       ) : null}

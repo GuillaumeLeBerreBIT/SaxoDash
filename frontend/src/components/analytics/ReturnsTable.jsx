@@ -9,9 +9,9 @@ export default function ReturnsTable({ periods, benchmarkName }) {
       <div className="px-5 pt-5 pb-3">
         <CardHeader title={`Returns vs ${benchmarkName}`} subtitle="Time-weighted, from portfolio-value history" />
       </div>
-      <table className="w-full text-[12.5px]">
+      <table className="w-full text-[var(--fig-sm)]">
         <thead>
-          <tr className="text-[10.5px] uppercase tracking-wide text-zinc-500 border-b border-white/[0.06]">
+          <tr className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 border-b border-white/[0.06]">
             <th className="px-5 py-2 text-left font-medium">Period</th>
             <th className="px-3 py-2 text-right font-medium">Portfolio</th>
             <th className="px-3 py-2 text-right font-medium">{benchmarkName}</th>

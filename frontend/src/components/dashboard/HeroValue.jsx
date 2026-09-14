@@ -15,7 +15,7 @@ function DeltaPill({ label, delta }) {
   const up = known && Number(delta.pct) >= 0
   return (
     <div className="flex flex-col">
-      <span className="text-[10px] uppercase tracking-wide text-zinc-600">{label}</span>
+      <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{label}</span>
       <span
         className={`text-[var(--fig-sm)] num font-mono ${
           !known ? 'text-zinc-500' : up ? 'text-emerald-400' : 'text-red-400'
@@ -24,7 +24,7 @@ function DeltaPill({ label, delta }) {
         {!known ? '—' : fmtPct(delta.pct, { decimals: 2 })}
       </span>
       {known && (
-        <span className="text-[10px] num font-mono text-zinc-600">
+        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
           {fmtEur(delta.abs, { sign: true, decimals: 0 })}
         </span>
       )}
@@ -69,7 +69,7 @@ export default function HeroValue({ value, change, spark }) {
           <DeltaPill key={key} label={label} delta={change?.[key]} />
         ))}
       </div>
-      <p className="mt-3 text-[10px] text-zinc-600">
+      <p className="mt-3 text-[var(--fig-2xs)] text-zinc-600">
         Change is end-of-day, from the daily net-worth snapshot.
       </p>
     </Card>

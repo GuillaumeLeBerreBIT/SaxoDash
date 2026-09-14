@@ -42,7 +42,7 @@ function PerformanceTab({ data, positions }) {
   return (
     <div className="space-y-5">
       {data.benchmark.reason && (
-        <p className="text-[11.5px] text-zinc-500">
+        <p className="text-[var(--fig-xs)] text-zinc-500">
           {data.benchmark.name} columns are blank — {data.benchmark.reason}
         </p>
       )}

@@ -94,7 +94,7 @@ export default function Portfolio() {
             <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[12.5px]">
+            <table className="w-full text-[var(--fig-sm)]">
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                   <th className="px-5 py-2 font-medium">Name</th>
@@ -176,7 +176,7 @@ export default function Portfolio() {
                 { label: 'Total P&L %', val: fmtPct(summary.total_pnl_pct) },
               ].map((r) => (
                 <div key={r.label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                  <span className="text-[12.5px] text-zinc-500">{r.label}</span>
+                  <span className="text-[var(--fig-sm)] text-zinc-500">{r.label}</span>
                   <span className="text-[var(--fig-sm)] text-zinc-100 num font-medium">{r.val}</span>
                 </div>
               ))}

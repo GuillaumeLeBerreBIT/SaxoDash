@@ -6,7 +6,7 @@ export function Pill({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`text-[11.5px] px-2.5 py-1 rounded-md font-medium transition-colors ${
+      className={`text-[var(--fig-xs)] px-2.5 py-1 rounded-md font-medium transition-colors ${
         active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
       }`}
     >

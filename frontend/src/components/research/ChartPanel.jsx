@@ -62,7 +62,7 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
       {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
         const value = valueAt(ind[o.key], hover)
         return (
-          <span key={o.key} style={{ color: OVERLAY_STROKES[o.key] }} className="text-[10.5px]">
+          <span key={o.key} style={{ color: OVERLAY_STROKES[o.key] }} className="text-[var(--fig-2xs)]">
             {o.label} {value == null ? '—' : fmtNum(value, 2)}
           </span>
         )

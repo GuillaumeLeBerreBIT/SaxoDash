@@ -10,7 +10,7 @@ function Row({ r }) {
     <div className="flex items-center justify-between gap-3 py-1.5">
       <Link
         to={researchHref(r.ticker)}
-        className="text-[12.5px] font-medium text-zinc-100 hover:text-blue-300"
+        className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
       >
         {r.ticker}
       </Link>
@@ -36,11 +36,11 @@ export default function MoversCard({ movers }) {
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-x-6">
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-zinc-600 mb-1">Gainers</div>
+            <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1">Gainers</div>
             {movers.best.map((r) => <Row key={r.ticker} r={r} />)}
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-zinc-600 mb-1">Losers</div>
+            <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1">Losers</div>
             {movers.worst.map((r) => <Row key={r.ticker} r={r} />)}
           </div>
         </div>

@@ -63,7 +63,7 @@ export default function NewsTab({ symbol }) {
       <div className="divide-y divide-white/[0.04]">
         {groupByDay(data.items).map((group) => (
           <div key={group.key} className="px-4 py-2.5">
-            <div className="text-[10px] uppercase tracking-wide text-zinc-600 mb-1.5">{group.label}</div>
+            <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1.5">{group.label}</div>
             <ul className="space-y-2">
               {group.items.map((item) => (
                 <li key={item.id ?? item.url}>
@@ -71,7 +71,7 @@ export default function NewsTab({ symbol }) {
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[12.5px] text-zinc-100 hover:text-blue-300"
+                    className="text-[var(--fig-sm)] text-zinc-100 hover:text-blue-300"
                   >
                     {item.headline}
                   </a>

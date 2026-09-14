@@ -31,7 +31,7 @@ export default function Login() {
           <div className="w-9 h-9 rounded-md bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
             <LineChart size={18} strokeWidth={2} />
           </div>
-          <h1 className="text-[16px] font-medium tracking-tight text-zinc-50">Sign in to SaxoDash</h1>
+          <h1 className="text-[var(--fig-md)] font-medium tracking-tight text-zinc-50">Sign in to SaxoDash</h1>
         </div>
         <input
           value={username}

@@ -59,7 +59,7 @@ export default function Transactions() {
         right={
           <button
             onClick={handleExport}
-            className="h-9 px-3 rounded-md text-[12.5px] font-medium border border-zinc-700 text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+            className="h-9 px-3 rounded-md text-[var(--fig-sm)] font-medium border border-zinc-700 text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
           >
             <Download size={13} /> Export CSV
           </button>
@@ -90,7 +90,7 @@ export default function Transactions() {
                   setTypeFilter(t)
                   setPage(1)
                 }}
-                className={`px-2.5 h-8 text-[11.5px] font-medium rounded ${
+                className={`px-2.5 h-8 text-[var(--fig-xs)] font-medium rounded ${
                   typeFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
                 }`}
               >
@@ -101,7 +101,7 @@ export default function Transactions() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-[12.5px]">
+          <table className="w-full text-[var(--fig-sm)]">
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                 <th className="px-5 py-2 font-medium">Date</th>

@@ -21,7 +21,7 @@ function Group({ group, data }) {
       <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
         {group.metrics.map((m) => (
           <div key={m.field}>
-            <div className="text-[10px] text-zinc-600 uppercase tracking-wide">{m.label}</div>
+            <div className="text-[var(--fig-2xs)] text-zinc-600 uppercase tracking-wide">{m.label}</div>
             <div className="text-[var(--fig-sm)] num font-mono text-zinc-100 mt-0.5">{fmtField(data[m.field], m.fmt)}</div>
           </div>
         ))}

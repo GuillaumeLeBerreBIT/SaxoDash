@@ -12,7 +12,7 @@ export default function CalendarYears({ years, benchmarkName }) {
         title="Calendar-year returns"
         subtitle="A year appears once it has at least two data points"
         right={
-          <div className="flex items-center gap-3 text-[10.5px] text-zinc-500">
+          <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" /> You</span>
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-zinc-600" /> {benchmarkName}</span>
           </div>

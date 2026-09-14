@@ -8,8 +8,8 @@ import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 function Fact({ label, value }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[11.5px] text-zinc-500">{label}</span>
-      <span className="text-[12.5px] num font-mono text-zinc-100">{value ?? '—'}</span>
+      <span className="text-[var(--fig-xs)] text-zinc-500">{label}</span>
+      <span className="text-[var(--fig-sm)] num font-mono text-zinc-100">{value ?? '—'}</span>
     </div>
   )
 }
@@ -47,7 +47,7 @@ function ReferenceStrip({ symbol, details, isLoading }) {
   ].filter(([, value]) => value != null && value !== '')
 
   return (
-    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11.5px] text-zinc-500">
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--fig-xs)] text-zinc-500">
       <span className="text-zinc-400 font-medium">{details?.description || symbol}</span>
       {pairs.map(([label, value]) => (
         <span key={label}>
@@ -73,7 +73,7 @@ function RangeStatsCard({ bars, range }) {
       </div>
 
       <div className="mt-4 pt-3 border-t border-white/[0.06]">
-        <div className="flex items-center justify-between text-[10.5px] text-zinc-500 mb-2 num font-mono">
+        <div className="flex items-center justify-between text-[var(--fig-2xs)] text-zinc-500 mb-2 num font-mono">
           <span>{fmtNum(stats.low, 2)}</span>
           <span className="uppercase tracking-wide">{range} range</span>
           <span>{fmtNum(stats.high, 2)}</span>

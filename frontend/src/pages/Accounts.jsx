@@ -39,7 +39,7 @@ export default function Accounts() {
               />
               <div className="pl-2">
                 <div className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{a.type}</div>
-                <div className="mt-1 text-[14px] font-medium text-zinc-100">{a.bank}</div>
+                <div className="mt-1 text-[var(--fig-sm)] font-medium text-zinc-100">{a.bank}</div>
                 <div className="mt-0.5 text-[var(--fig-xs)] text-zinc-500 num font-mono">{a.iban_masked}</div>
                 <div className="mt-4 text-[var(--fig-xl)] font-semibold text-zinc-50 tracking-tight num font-mono">
                   {fmtEur(a.balance)}

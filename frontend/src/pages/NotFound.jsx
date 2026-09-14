@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 export default function NotFound() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-zinc-950 text-center">
-      <h1 className="text-[28px] font-semibold tracking-tight text-zinc-50">404</h1>
+      <h1 className="text-[var(--fig-2xl)] font-semibold tracking-tight text-zinc-50">404</h1>
       <p className="text-[var(--fig-sm)] text-zinc-500">This page doesn't exist.</p>
       <Link
         to="/"

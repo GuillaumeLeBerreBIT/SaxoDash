@@ -69,7 +69,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
       >
         <Search size={14} />
         {!collapsed && <span className="text-[var(--fig-xs)]">Search</span>}
-        {!collapsed && <span className="ml-auto text-[10px] text-zinc-600">⌘K</span>}
+        {!collapsed && <span className="ml-auto text-[var(--fig-2xs)] text-zinc-600">⌘K</span>}
       </button>
 
       <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} py-3 space-y-0.5`}>
@@ -127,7 +127,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
           )}
         </div>
         {!collapsed && (
-          <div className="mt-2 text-[10px] text-zinc-600">
+          <div className="mt-2 text-[var(--fig-2xs)] text-zinc-600">
             Logos by{' '}
             <a
               href="https://elbstream.com/logos"

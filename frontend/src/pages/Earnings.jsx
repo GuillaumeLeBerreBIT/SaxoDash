@@ -54,7 +54,7 @@ function SummaryTile({ label, value, tone = 'text-zinc-50', right, children }) {
   return (
     <Card className="!p-3">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">{label}</span>
+        <span className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{label}</span>
         {right}
       </div>
       {value != null && (
@@ -98,7 +98,7 @@ function WeekSummary({ stats, scope }) {
         label="Net by day"
         right={
           !mineScope && (
-            <span className="text-[10px] num font-mono text-blue-400">{mine} on your lists</span>
+            <span className="text-[var(--fig-2xs)] num font-mono text-blue-400">{mine} on your lists</span>
           )
         }
       >
@@ -127,7 +127,7 @@ function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSele
       } ${events.length ? '' : 'opacity-40'}`}
     >
       <div className="flex items-baseline justify-between">
-        <span className="text-[12.5px] font-medium text-zinc-200">{label}</span>
+        <span className="text-[var(--fig-sm)] font-medium text-zinc-200">{label}</span>
         <span
           className="text-[var(--fig-2xs)] num font-mono font-semibold text-indigo-200 rounded-full px-1.5 min-w-[20px] text-center"
           style={{ background: countTint(events.length) }}
@@ -138,11 +138,11 @@ function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSele
       <SplitBar beat={beat} missed={missed} className="mt-2" />
       <div className="mt-1.5 flex flex-wrap gap-1 min-h-[16px]">
         {events.slice(0, 3).map((e) => (
-          <span key={e.symbol} className="text-[10px] num font-mono text-zinc-400 bg-white/[0.04] rounded-[3px] px-1.5">
+          <span key={e.symbol} className="text-[var(--fig-2xs)] num font-mono text-zinc-400 bg-white/[0.04] rounded-[3px] px-1.5">
             {e.symbol}
           </span>
         ))}
-        {events.length > 3 && <span className="text-[10px] text-zinc-600 px-0.5">+{events.length - 3}</span>}
+        {events.length > 3 && <span className="text-[var(--fig-2xs)] text-zinc-600 px-0.5">+{events.length - 3}</span>}
       </div>
     </button>
   )
@@ -157,7 +157,7 @@ function Chip({ sign, children }) {
         ? 'text-red-400 bg-red-500/10'
         : 'text-zinc-400 bg-white/[0.06]'
   return (
-    <span className={`text-[9.5px] num font-mono rounded-[3px] px-1 ${tone}`}>
+    <span className={`text-[var(--fig-2xs)] num font-mono rounded-[3px] px-1 ${tone}`}>
       {sign > 0 ? '▲' : sign < 0 ? '▼' : '▬'} {children}
     </span>
   )
@@ -178,7 +178,7 @@ function EpsCell({ event }) {
       <span className="text-[var(--fig-xs)] num font-mono text-zinc-100">{fmtNum(event.eps_actual, 2)}</span>
       {surprise != null && <Chip sign={surpriseSign(surprise)}>{absPct(surprise)}</Chip>}
       {event.eps_estimate != null && (
-        <span className="text-[9.5px] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
+        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
       )}
     </span>
   )
@@ -222,22 +222,22 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
     >
       <span className="flex flex-col leading-tight min-w-0">
         <span
-          className={`text-[12.5px] num font-mono font-semibold truncate ${
+          className={`text-[var(--fig-sm)] num font-mono font-semibold truncate ${
             event.held ? 'text-blue-400' : 'text-zinc-100'
           }`}
         >
           {event.symbol}
         </span>
         {(event.held || event.watched) && (
-          <span className={`text-[9px] ${event.held ? 'text-blue-500' : 'text-zinc-600'}`}>
+          <span className={`text-[var(--fig-2xs)] ${event.held ? 'text-blue-500' : 'text-zinc-600'}`}>
             {event.held ? 'Held' : 'Watchlist'}
           </span>
         )}
       </span>
-      <span className="text-[9.5px] text-zinc-500 bg-white/[0.04] rounded-[3px] py-0.5 text-center">
+      <span className="text-[var(--fig-2xs)] text-zinc-500 bg-white/[0.04] rounded-[3px] py-0.5 text-center">
         {SESSION[event.session] || '—'}
       </span>
-      <span className="text-[10px] num font-mono text-zinc-600">
+      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
         {event.quarter ? `Q${event.quarter} ${event.year ?? ''}`.trim() : ''}
       </span>
       <span className="flex justify-center">
@@ -259,7 +259,7 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
 function ColumnHeader() {
   return (
     <div
-      className="grid items-center gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[9px] uppercase tracking-[0.08em] text-zinc-600"
+      className="grid items-center gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600"
       style={{ gridTemplateColumns: ROW_GRID, borderLeft: '2px solid transparent' }}
     >
       <span>Symbol</span>
@@ -283,7 +283,7 @@ function Section({ label, rows, onOpen, divided }) {
   return (
     <>
       <div
-        className={`px-3.5 pt-2.5 pb-1 text-[9px] uppercase tracking-[0.09em] text-zinc-600 ${
+        className={`px-3.5 pt-2.5 pb-1 text-[var(--fig-2xs)] uppercase tracking-[0.09em] text-zinc-600 ${
           divided ? 'border-t border-white/[0.04]' : ''
         }`}
       >
@@ -365,7 +365,7 @@ export default function Earnings() {
         >
           <Chevron dir="left" size={13} />
         </button>
-        <span className="text-[12.5px] num font-mono font-semibold text-zinc-200 min-w-[200px]">
+        <span className="text-[var(--fig-sm)] num font-mono font-semibold text-zinc-200 min-w-[200px]">
           {weekLabel(data?.window)}
         </span>
         <button
@@ -387,7 +387,7 @@ export default function Earnings() {
 
       {!isLoading && failed && (
         <Card>
-          <p className="text-[12.5px] text-red-400">Couldn’t load the earnings calendar.</p>
+          <p className="text-[var(--fig-sm)] text-red-400">Couldn’t load the earnings calendar.</p>
         </Card>
       )}
 
@@ -428,14 +428,14 @@ export default function Earnings() {
                   holding or watchlist name.
                 </InfoTip>
               </span>
-              <span className="text-[10.5px] text-zinc-500">
+              <span className="text-[var(--fig-2xs)] text-zinc-500">
                 Before open <span className="num font-mono text-zinc-400">{bmo.length}</span> · After close{' '}
                 <span className="num font-mono text-zinc-400">{afterClose.length}</span>
               </span>
             </div>
 
             {rows.length === 0 ? (
-              <p className="px-4 py-9 text-center text-[12.5px] text-zinc-500">
+              <p className="px-4 py-9 text-center text-[var(--fig-sm)] text-zinc-500">
                 {scope === 'mine' ? (
                   <>
                     Nothing on your lists reports this day.{' '}

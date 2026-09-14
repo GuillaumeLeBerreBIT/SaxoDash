@@ -38,7 +38,7 @@ export default function Attribution({ positions }) {
           <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: '58px 1fr 74px 62px' }}>
             <Link
               to={researchHref(r.ticker)}
-              className="text-[12.5px] font-medium text-zinc-100 hover:text-blue-300"
+              className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
             >
               {r.ticker}
             </Link>
@@ -56,7 +56,7 @@ export default function Attribution({ positions }) {
             <span className={`text-[var(--fig-xs)] num text-right ${r.contribution >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmtPct(r.contribution, { decimals: 1 })} pp
             </span>
-            <span className="text-[11.5px] num text-zinc-500 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
+            <span className="text-[var(--fig-xs)] num text-zinc-500 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
           </div>
         ))}
       </div>

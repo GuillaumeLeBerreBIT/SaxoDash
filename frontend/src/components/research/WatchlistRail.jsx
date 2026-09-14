@@ -109,7 +109,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
           <button
             type="button"
             onClick={createList}
-            className="h-7 px-2.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[11.5px] font-medium"
+            className="h-7 px-2.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[var(--fig-xs)] font-medium"
           >
             Add
           </button>
@@ -169,23 +169,23 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-[1fr_auto_auto] items-center px-3 h-7 text-[10px] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
+      <div className="grid grid-cols-[1fr_auto_auto] items-center px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
         <span>Symbol</span>
         <span className="text-right pr-3">Last</span>
         <span className="text-right w-14">Chg%</span>
       </div>
 
       <div className="max-h-[420px] overflow-y-auto">
-        {isLoading ? <div className="px-3 py-6 text-center text-[11.5px] text-zinc-500">Loading…</div> : null}
+        {isLoading ? <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">Loading…</div> : null}
 
         {!isLoading && watchlists.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[11.5px] text-zinc-500">
+          <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">
             No lists yet. Create one to start tracking symbols.
           </div>
         ) : null}
 
         {!isLoading && watchlists.length > 0 && items.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[11.5px] text-zinc-500">
+          <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">
             Empty list. Search above to add symbols.
           </div>
         ) : null}
@@ -213,14 +213,14 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                 {heldSymbols.has(item.symbol) ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                 ) : null}
-                <span className="text-[10.5px] text-zinc-600 truncate">{item.exchange}</span>
+                <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
               </div>
               <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right pr-3">
                 {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
               </span>
               <span className="w-14 text-right flex items-center justify-end gap-1">
                 <span
-                  className={`text-[11.5px] num font-mono ${
+                  className={`text-[var(--fig-xs)] num font-mono ${
                     change == null ? 'text-zinc-600' : change >= 0 ? 'text-emerald-400' : 'text-red-400'
                   }`}
                 >

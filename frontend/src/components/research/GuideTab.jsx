@@ -5,8 +5,8 @@ function GuideGroup({ label, meaning, read }) {
   return (
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
-      <p className="mt-1.5 text-[12.5px] text-zinc-500 leading-relaxed">{meaning}</p>
-      <p className="mt-1.5 text-[12.5px] text-zinc-300 leading-relaxed">{read}</p>
+      <p className="mt-1.5 text-[var(--fig-sm)] text-zinc-500 leading-relaxed">{meaning}</p>
+      <p className="mt-1.5 text-[var(--fig-sm)] text-zinc-300 leading-relaxed">{read}</p>
     </div>
   )
 }
@@ -14,7 +14,7 @@ function GuideGroup({ label, meaning, read }) {
 function GuideMetric({ name, text }) {
   return (
     <div>
-      <div className="text-[12.5px] font-medium text-zinc-200">{name}</div>
+      <div className="text-[var(--fig-sm)] font-medium text-zinc-200">{name}</div>
       <p className="mt-1 text-[var(--fig-xs)] text-zinc-400 leading-relaxed">{text}</p>
     </div>
   )
@@ -50,7 +50,7 @@ export default function GuideTab() {
 
       <Card>
         <CardHeader title="Quality vs. valuation quadrant" subtitle="How the two axes are built, and what each corner means" />
-        <p className="mt-2 text-[12.5px] text-zinc-500 leading-relaxed">{QUADRANT_GUIDE.meaning}</p>
+        <p className="mt-2 text-[var(--fig-sm)] text-zinc-500 leading-relaxed">{QUADRANT_GUIDE.meaning}</p>
         <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {QUADRANT_GUIDE.corners.map((c) => (
             <div key={c.label} className="rounded-lg border border-white/[0.06] p-3">
@@ -72,7 +72,7 @@ export default function GuideTab() {
 
       <Card>
         <CardHeader title="Putting it together" subtitle="Worked combinations, not single metrics in isolation" />
-        <ul className="mt-2 space-y-2.5 list-disc list-inside text-[12.5px] text-zinc-300 leading-relaxed">
+        <ul className="mt-2 space-y-2.5 list-disc list-inside text-[var(--fig-sm)] text-zinc-300 leading-relaxed">
           {PLAYBOOKS.map((p) => (
             <li key={p}>{p}</li>
           ))}

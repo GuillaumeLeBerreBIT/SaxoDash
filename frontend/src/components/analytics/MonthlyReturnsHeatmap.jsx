@@ -24,7 +24,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
         title="Monthly returns"
         subtitle="Portfolio value, month over month"
         right={
-          <div className="flex items-center gap-1.5 text-[10.5px] text-zinc-500">
+          <div className="flex items-center gap-1.5 text-[var(--fig-2xs)] text-zinc-500">
             <span>−9%</span>
             <span
               className="w-16 h-2 rounded-full"
@@ -40,7 +40,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
             <tr>
               <th className="w-10" />
               {MONTH_NAMES.map((m) => (
-                <th key={m} className="text-[10px] text-zinc-500 font-medium pb-0.5">{m}</th>
+                <th key={m} className="text-[var(--fig-2xs)] text-zinc-500 font-medium pb-0.5">{m}</th>
               ))}
             </tr>
           </thead>
@@ -55,7 +55,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
                     return (
                       <td
                         key={i}
-                        className="h-7 rounded text-center text-[10.5px] num text-zinc-100"
+                        className="h-7 rounded text-center text-[var(--fig-2xs)] num text-zinc-100"
                         style={cellStyle(month?.pct)}
                         title={month ? `${MONTH_NAMES[i]} ${year}: ${fmtPct(month.pct, { decimals: 1 })}` : ''}
                       >

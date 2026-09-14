@@ -30,7 +30,7 @@ function QuadrantTooltip({ active, payload }) {
   return (
     <div
       style={chartTooltipProps.contentStyle}
-      className="text-[11.5px]"
+      className="text-[var(--fig-xs)]"
     >
       <div className="font-medium text-zinc-100 mb-1">{p.symbol}</div>
       <div style={chartTooltipProps.itemStyle}>Quality: {p.quality}</div>
@@ -62,12 +62,12 @@ export default function QualityValuationQuadrant({ points }) {
           </InfoTip>
         }
       />
-      <div className="flex items-center justify-between mt-3 px-1 text-[10px] text-zinc-600">
+      <div className="flex items-center justify-between mt-3 px-1 text-[var(--fig-2xs)] text-zinc-600">
         <span>Cheaper</span>
         <span>Pricier →</span>
       </div>
       <div className="flex gap-2 mt-1">
-        <span className="text-[10px] text-zinc-600 [writing-mode:vertical-rl] rotate-180 shrink-0">
+        <span className="text-[var(--fig-2xs)] text-zinc-600 [writing-mode:vertical-rl] rotate-180 shrink-0">
           Quality →
         </span>
         <div className="h-[220px] flex-1 min-w-0">

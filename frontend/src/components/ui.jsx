@@ -32,7 +32,7 @@ export function PageHeader({ title, subtitle, right }) {
   return (
     <div className="flex items-end justify-between mb-6">
       <div>
-        <h1 className="text-[var(--fig-xl)] font-medium tracking-tight text-zinc-50">{title}</h1>
+        <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
         {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1">{subtitle}</p>}
       </div>
       {right}
@@ -112,7 +112,7 @@ export function InfoTip({ children }) {
 export function Badge({ tone = 'zinc', children, className = '' }) {
   return (
     <span
-      className={`inline-flex items-center text-[10.5px] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded border ${
+      className={`inline-flex items-center text-[var(--fig-2xs)] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded border ${
         badgeTones[tone] || badgeTones.zinc
       } ${className}`}
     >
@@ -153,7 +153,7 @@ export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, l
         <div className="mt-2 flex items-center gap-2 flex-wrap">
           {badge && (
             <span
-              className={`inline-flex items-center whitespace-nowrap text-[11.5px] px-2 py-0.5 rounded-md font-medium num font-mono ${
+              className={`inline-flex items-center whitespace-nowrap text-[var(--fig-xs)] px-2 py-0.5 rounded-md font-medium num font-mono ${
                 statTones[badgeTone] || statTones.zinc
               }`}
             >
@@ -205,7 +205,7 @@ export function TBtn({ active, onClick, children, title }) {
       title={title}
       onClick={onClick}
       aria-pressed={active}
-      className={`h-7 px-2.5 rounded text-[11.5px] font-medium transition-colors ${
+      className={`h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors ${
         active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
       }`}
     >

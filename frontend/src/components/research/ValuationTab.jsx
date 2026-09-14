@@ -9,7 +9,7 @@ import VerdictBadge from './VerdictBadge'
 function Ratio({ label, value }) {
   return (
     <div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
+      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
       <div className="text-[var(--fig-md)] num font-mono mt-1 text-zinc-100">{value}</div>
     </div>
   )
@@ -29,7 +29,7 @@ function HistoryContext({ stats }) {
           style={{ left: `${pos}%` }}
         />
       </div>
-      <div className="mt-1 text-[9.5px] num font-mono text-zinc-600">
+      <div className="mt-1 text-[var(--fig-2xs)] num font-mono text-zinc-600">
         {valid ? `${fmtNum(stats.min, 1)} · median ${fmtNum(stats.median, 1)} · ${fmtNum(stats.max, 1)} over ${stats.n} yrs` : ' '}
       </div>
     </div>
@@ -77,7 +77,7 @@ function RecommendationBar({ recommendation }) {
         {RECOMMENDATION_SEGMENTS.map(([key, label]) => (
           <div key={key}>
             <div className="text-[var(--fig-md)] num font-mono text-zinc-100">{recommendation[key] || 0}</div>
-            <div className="text-[10px] text-zinc-500">{label}</div>
+            <div className="text-[var(--fig-2xs)] text-zinc-500">{label}</div>
           </div>
         ))}
       </div>

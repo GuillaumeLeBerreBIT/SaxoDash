@@ -114,12 +114,12 @@ function Panel({ onClose }) {
                 aria-selected={i === activeIdx}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => go(item)}
-                className={`flex items-center justify-between gap-3 px-3 h-9 cursor-pointer text-[12.5px] ${
+                className={`flex items-center justify-between gap-3 px-3 h-9 cursor-pointer text-[var(--fig-sm)] ${
                   i === activeIdx ? 'bg-blue-500/10 text-blue-300' : 'text-zinc-200'
                 }`}
               >
                 <span className="truncate">{item.label}</span>
-                <span className="text-[10px] uppercase tracking-wide text-zinc-600 shrink-0">{item.hint}</span>
+                <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 shrink-0">{item.hint}</span>
               </li>
             ))
           )}

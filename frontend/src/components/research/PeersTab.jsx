@@ -64,7 +64,7 @@ function AddPeerSearch({ onPick }) {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Add peer"
         aria-label="Add peer"
-        className="w-full h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[11.5px] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+        className="w-full h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
       />
       {menuRect && isError && createPortal(
         <div
@@ -88,7 +88,7 @@ function AddPeerSearch({ onPick }) {
                 onPick(result.symbol)
                 setQuery('')
               }}
-              className="flex items-baseline gap-1.5 w-full text-left px-2.5 py-1.5 text-[12.5px] text-zinc-100 hover:bg-white/[0.06]"
+              className="flex items-baseline gap-1.5 w-full text-left px-2.5 py-1.5 text-[var(--fig-sm)] text-zinc-100 hover:bg-white/[0.06]"
             >
               <span className="shrink-0 font-medium">{result.symbol}</span>
               <span className="text-zinc-500 truncate">{result.description}</span>
@@ -142,7 +142,7 @@ export default function PeersTab({ symbol, fundamentals }) {
                     <tr className="border-b border-white/[0.06]">
                       {/* Empty - aligns with the row-label column each body row leads with. */}
                       <th className="px-4 py-2" />
-                      <th className="text-right px-3 py-2 text-[10px] uppercase tracking-wide text-zinc-600 font-medium">
+                      <th className="text-right px-3 py-2 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 font-medium">
                         {symbol}
                       </th>
                       {slots.map((s, i) => (
