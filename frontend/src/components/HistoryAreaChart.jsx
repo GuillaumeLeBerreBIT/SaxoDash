@@ -21,7 +21,7 @@ export default function HistoryAreaChart({ title, subtitle, dataKey, name, color
         subtitle={subtitle}
         right={<RangePills value={range} onChange={setRange} />}
       />
-      <div className="mt-4 h-[260px]">
+      <div className="mt-4 h-[var(--chart-h-lg)]">
         {placeholder ?? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>

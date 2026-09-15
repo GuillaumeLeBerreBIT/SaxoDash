@@ -19,7 +19,7 @@ export default function GainersLosersChart({ positions }) {
   return (
     <Card>
       <CardHeader title="Gainers & losers" subtitle="Unrealised P&L % per holding" />
-      <div className="mt-4 h-[260px]">
+      <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
             <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />

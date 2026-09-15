@@ -20,7 +20,7 @@ export default function AccountBreakdownChart({ accounts }) {
   return (
     <Card>
       <CardHeader title="Balance by account" subtitle="Share of total balance" />
-      <div className="mt-3 h-[200px]">
+      <div className="mt-3 h-[var(--chart-h-sm)]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

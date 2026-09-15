@@ -43,6 +43,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
             onClick={() => setCollapsed(true)}
             className="ml-auto w-6 h-6 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 flex items-center justify-center"
             title="Collapse sidebar"
+            aria-label="Collapse sidebar"
           >
             <PanelLeftClose size={14} />
           </button>
@@ -54,6 +55,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
           onClick={() => setCollapsed(false)}
           className="mx-2 mt-2 h-7 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 flex items-center justify-center"
           title="Expand sidebar"
+          aria-label="Expand sidebar"
         >
           <PanelLeftOpen size={14} />
         </button>
@@ -63,6 +65,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
         type="button"
         onClick={onOpenPalette}
         title="Search (⌘K)"
+        aria-label="Search"
         className={`mx-2 mt-2 h-8 rounded-md border border-white/[0.06] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 flex items-center ${
           collapsed ? 'justify-center' : 'px-2.5 gap-2'
         }`}
@@ -119,6 +122,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
               <button
                 onClick={handleLogout}
                 title="Log out"
+                aria-label="Log out"
                 className="w-7 h-7 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800/60 flex items-center justify-center shrink-0"
               >
                 <LogOut size={14} />

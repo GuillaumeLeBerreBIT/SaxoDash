@@ -38,7 +38,7 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
           </div>
         }
       />
-      <div className="mt-4 h-[220px]">
+      <div className="mt-4 h-[var(--chart-h-md)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />

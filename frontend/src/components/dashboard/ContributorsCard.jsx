@@ -18,7 +18,7 @@ export default function ContributorsCard({ contributors }) {
   return (
     <Card>
       <CardHeader title="Contributors" subtitle="Each holding's contribution to total return (pp)" />
-      <div className="mt-4 h-[220px]">
+      <div className="mt-4 h-[var(--chart-h-md)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
             <XAxis

@@ -12,7 +12,7 @@ export default function DrawdownChart({ series, maxDrawdown }) {
         subtitle="Decline from the running peak"
         right={maxDrawdown != null && <span className="text-[var(--fig-2xs)] num text-red-400">Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}</span>}
       />
-      <div className="mt-4 h-[260px]">
+      <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>

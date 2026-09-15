@@ -12,4 +12,12 @@ describe('instrumentLogoUrl', () => {
     expect(instrumentLogoUrl(undefined)).toBeNull()
     expect(instrumentLogoUrl('')).toBeNull()
   })
+
+  it('routes a known ISIN-only fund to the isin endpoint instead of symbol', () => {
+    expect(instrumentLogoUrl('IWDA')).toBe('https://api.elbstream.com/logos/isin/IE00B4L5Y983')
+  })
+
+  it('matches the override case-insensitively', () => {
+    expect(instrumentLogoUrl('iwda')).toBe('https://api.elbstream.com/logos/isin/IE00B4L5Y983')
+  })
 })

@@ -52,7 +52,7 @@ function SplitBar({ beat, missed, className = '' }) {
 
 function SummaryTile({ label, value, tone = 'text-zinc-50', right, children }) {
   return (
-    <Card className="!p-3">
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-md p-3">
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{label}</span>
         {right}
@@ -61,7 +61,7 @@ function SummaryTile({ label, value, tone = 'text-zinc-50', right, children }) {
         <div className={`mt-1.5 text-[var(--fig-lg)] font-semibold num font-mono tracking-tight ${tone}`}>{value}</div>
       )}
       {children && <div className="mt-2">{children}</div>}
-    </Card>
+    </div>
   )
 }
 
@@ -395,25 +395,27 @@ export default function Earnings() {
         <>
           <WeekSummary stats={data.stats} scope={scope} />
 
-          <div
-            className="grid gap-2.5 mb-4"
-            style={{ gridTemplateColumns: `repeat(${visibleDays.length}, minmax(0,1fr))` }}
-          >
-            {visibleDays.map(([k, label]) => {
-              const split = splitByDate.get(groups[k]?.[0]?.date)
-              return (
-                <DayCard
-                  key={k}
-                  dayKey={k}
-                  label={label}
-                  events={groups[k] || []}
-                  beat={split?.beat ?? 0}
-                  missed={split?.missed ?? 0}
-                  selected={day === k}
-                  onSelect={setPickedDay}
-                />
-              )
-            })}
+          <div className="overflow-x-auto mb-4">
+            <div
+              className="grid gap-2.5 min-w-[600px]"
+              style={{ gridTemplateColumns: `repeat(${visibleDays.length}, minmax(0,1fr))` }}
+            >
+              {visibleDays.map(([k, label]) => {
+                const split = splitByDate.get(groups[k]?.[0]?.date)
+                return (
+                  <DayCard
+                    key={k}
+                    dayKey={k}
+                    label={label}
+                    events={groups[k] || []}
+                    beat={split?.beat ?? 0}
+                    missed={split?.missed ?? 0}
+                    selected={day === k}
+                    onSelect={setPickedDay}
+                  />
+                )
+              })}
+            </div>
           </div>
 
           <Card padding={false}>

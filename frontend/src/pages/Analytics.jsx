@@ -46,7 +46,7 @@ function PerformanceTab({ data, positions }) {
           {data.benchmark.name} columns are blank — {data.benchmark.reason}
         </p>
       )}
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.25fr' }}>
+      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1fr_1.25fr]">
         <ReturnsTable periods={data.periods} benchmarkName={data.benchmark.name} />
         <CalendarYears years={data.calendar_years} benchmarkName={data.benchmark.name} />
       </div>
@@ -66,10 +66,10 @@ function RiskTab({ data }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4" style={{ gridTemplateColumns: '1.15fr 1fr' }}>
+      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1.15fr_1fr]">
         <Card>
           <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
             <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
             <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
             <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />

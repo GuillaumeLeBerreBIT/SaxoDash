@@ -19,7 +19,7 @@ export default function QuarterlyTrendsChart({ trends }) {
   return (
     <Card>
       <CardHeader title="Margin trend" subtitle="Gross, operating and net margin by quarter" />
-      <div className="mt-4 h-[200px]">
+      <div className="mt-4 h-[var(--chart-h-sm)]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={trends} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />

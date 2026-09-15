@@ -70,7 +70,7 @@ export default function QualityValuationQuadrant({ points }) {
         <span className="text-[var(--fig-2xs)] text-zinc-600 [writing-mode:vertical-rl] rotate-180 shrink-0">
           Quality →
         </span>
-        <div className="h-[220px] flex-1 min-w-0">
+        <div className="h-[var(--chart-h-md)] flex-1 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 14, right: 20, left: 4, bottom: 4 }}>
               <CartesianGrid {...gridProps} />
