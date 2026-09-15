@@ -6,7 +6,8 @@ import { fmtEur, fmtMoney, fmtNum } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import PriceBasisNote from '../components/PriceBasisNote'
-import { Card, CardHeader, PageHeader, Skeleton, Badge } from '../components/ui'
+import { Card, CardHeader, PageHeader, Skeleton, Badge, InstrumentLogo } from '../components/ui'
+import { instrumentLogoUrl } from '../lib/logos'
 import { chartTooltipProps } from '../lib/charts'
 import NetWorthChart from '../components/NetWorthChart'
 import HeroValue from '../components/dashboard/HeroValue'
@@ -17,6 +18,34 @@ import UpcomingEarnings from '../components/dashboard/UpcomingEarnings'
 import ExposureCard from '../components/dashboard/ExposureCard'
 
 const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
+
+/** Recharts' Pie `label` slot: an instrument logo chip plus its share, placed
+ *  at each slice's mid-angle, replacing a separate dot-legend below the chart. */
+function AllocationLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, percent }) {
+  const RADIAN = Math.PI / 180
+  const radius = innerRadius + (outerRadius - innerRadius) / 2
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  const size = 18
+
+  return (
+    <g>
+      <circle cx={x} cy={y - 5} r={size / 2 + 2} fill="#fff" stroke="#3f3f46" strokeWidth={1} />
+      <image
+        href={instrumentLogoUrl(payload.ticker)}
+        x={x - size / 2}
+        y={y - 5 - size / 2}
+        width={size}
+        height={size}
+        style={{ clipPath: 'circle(50%)' }}
+        preserveAspectRatio="xMidYMid slice"
+      />
+      <text x={x} y={y + 15} textAnchor="middle" className="text-[9px] fill-zinc-400 num font-mono">
+        {(percent * 100).toFixed(0)}%
+      </text>
+    </g>
+  )
+}
 
 export default function Dashboard() {
   const insightsQuery = usePortfolioInsights()
@@ -34,7 +63,7 @@ export default function Dashboard() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-10 w-2/3" />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-48 w-full" />
         </div>
@@ -51,8 +80,10 @@ export default function Dashboard() {
     <div className="space-y-4">
       <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
 
-      <HeroValue value={insights.value} change={insights.change} spark={insights.spark} />
-      <NetWorthChart />
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,28%)_1fr] gap-4">
+        <HeroValue value={insights.value} change={insights.change} />
+        <NetWorthChart />
+      </div>
       <AttentionBand items={insights.attention} />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -85,7 +116,12 @@ export default function Dashboard() {
                   <tr key={p.ticker} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30 transition-colors">
                     <td className="px-4 py-2">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
-                        <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                        <InstrumentLogo
+                          symbol={p.ticker}
+                          size={16}
+                          className="rounded-sm"
+                          fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />}
+                        />
                         <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                         <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                       </Link>
@@ -120,10 +156,22 @@ export default function Dashboard() {
 
         <Card className="lg:col-span-2">
           <CardHeader title="Allocation" subtitle="By position" />
-          <div className="mt-3 h-[200px]">
+          <div className="mt-3 h-[var(--chart-h-sm)]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={summary.allocation} dataKey="value" nameKey="ticker" innerRadius={55} outerRadius={85} paddingAngle={2} stroke="#18181b" strokeWidth={2} isAnimationActive={false}>
+                <Pie
+                  data={summary.allocation}
+                  dataKey="value"
+                  nameKey="ticker"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={2}
+                  stroke="#18181b"
+                  strokeWidth={2}
+                  isAnimationActive={false}
+                  label={AllocationLabel}
+                  labelLine={false}
+                >
                   {summary.allocation.map((e, i) => (
                     <Cell key={i} fill={e.color} />
                   ))}
@@ -132,27 +180,15 @@ export default function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 pt-4 border-t border-zinc-800">
-            {summary.allocation.map((a) => {
-              const pct = (Number(a.value) / Number(summary.total_value)) * 100
-              return (
-                <div key={a.ticker} className="flex items-center gap-2 text-[var(--fig-xs)]">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: a.color }} />
-                  <span className="text-zinc-300 font-medium">{a.ticker}</span>
-                  <span className="ml-auto text-zinc-500 num font-mono">{pct.toFixed(1)}%</span>
-                </div>
-              )
-            })}
-          </div>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <MoversCard movers={insights.movers} />
         <ContributorsCard contributors={insights.contributors} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <ExposureCard
           sector={insights.sector_exposure}
           currency={insights.currency_exposure}

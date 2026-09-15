@@ -54,39 +54,41 @@ export default function Portfolio() {
 
       <InstrumentSearchBar />
 
-      <StatStrip>
-        <StatRow
-          label="Investment portfolio"
-          value={fmtEur(summary.total_value)}
-          note={
-            <span
-              className={
-                summary.total_pnl_pct == null
-                  ? 'text-zinc-500'
-                  : Number(summary.total_pnl_pct) >= 0 ? 'text-blue-400' : 'text-red-400'
-              }
-            >
-              {fmtPct(summary.total_pnl_pct)}
-            </span>
-          }
-        />
-        <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
-        <StatRow
-          label="Total net worth"
-          value={fmtEur(netWorth.net_worth)}
-          note="Portfolio + bank accounts"
-          tone="text-blue-400"
-          lead
-        />
-      </StatStrip>
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,28%)_1fr] gap-4">
+        <StatStrip vertical>
+          <StatRow
+            label="Total net worth"
+            value={fmtEur(netWorth.net_worth)}
+            note="Portfolio + bank accounts"
+            tone="text-blue-400"
+            lead
+          />
+          <StatRow
+            label="Investment portfolio"
+            value={fmtEur(summary.total_value)}
+            note={
+              <span
+                className={
+                  summary.total_pnl_pct == null
+                    ? 'text-zinc-500'
+                    : Number(summary.total_pnl_pct) >= 0 ? 'text-emerald-400' : 'text-red-400'
+                }
+              >
+                {fmtPct(summary.total_pnl_pct)}
+              </span>
+            }
+          />
+          <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
+        </StatStrip>
 
-      <HistoryAreaChart
-        title="Portfolio value"
-        subtitle="Investment value over time"
-        dataKey="portfolio_value"
-        name="Portfolio"
-        color="#34d399"
-      />
+        <HistoryAreaChart
+          title="Portfolio value"
+          subtitle="Investment value over time"
+          dataKey="portfolio_value"
+          name="Portfolio"
+          color="#34d399"
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:72fr_28fr]">
         <Card padding={false}>
@@ -133,7 +135,7 @@ export default function Portfolio() {
                       </span>
                     </td>
                     <td className="px-2 py-2 text-right num text-zinc-100">{fmtEur(p.value)}</td>
-                    <td className={`px-2 py-2 text-right num ${Number(p.pnl) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                    <td className={`px-2 py-2 text-right num ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
                     </td>
                     <td className="px-4 py-2 text-right">
@@ -154,7 +156,7 @@ export default function Portfolio() {
                   <td className="px-2 py-2" />
                   <td className="px-2 py-2" />
                   <td className="px-2 py-2 text-right num text-zinc-100 font-medium">{fmtEur(totals.value)}</td>
-                  <td className="px-2 py-2 text-right num text-blue-400 font-medium">{fmtEur(totals.pnl, { sign: true })}</td>
+                  <td className={`px-2 py-2 text-right num font-medium ${totals.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtEur(totals.pnl, { sign: true })}</td>
                   <td className="px-4 py-2 text-right num text-zinc-300">100.0%</td>
                 </tr>
               </tbody>
@@ -168,7 +170,6 @@ export default function Portfolio() {
             <div className="mt-4 divide-y divide-zinc-800">
               {[
                 { label: 'Invested cost', val: fmtEur(summary.total_cost) },
-                { label: 'Current value', val: fmtEur(summary.total_value) },
                 { label: 'Total P&L', val: fmtEur(summary.total_pnl, { sign: true }) },
                 { label: 'Total P&L %', val: fmtPct(summary.total_pnl_pct) },
               ].map((r) => (

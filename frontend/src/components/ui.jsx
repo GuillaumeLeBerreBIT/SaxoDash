@@ -123,11 +123,14 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
 
 
 /** A row of headline stats as one bordered strip with dividers - the calm
- *  alternative to N separate single-stat cards. */
-export function StatStrip({ children, className = '' }) {
+ *  alternative to N separate single-stat cards. `vertical` stacks the rows
+ *  regardless of viewport width, for use as a compact side card next to a chart. */
+export function StatStrip({ children, className = '', vertical = false }) {
   return (
     <div
-      className={`flex flex-col sm:flex-row rounded-lg border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] ${className}`}
+      className={`flex flex-col h-full rounded-lg border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y divide-white/[0.06] ${
+        vertical ? '' : 'sm:flex-row sm:divide-y-0 sm:divide-x'
+      } ${className}`}
     >
       {children}
     </div>

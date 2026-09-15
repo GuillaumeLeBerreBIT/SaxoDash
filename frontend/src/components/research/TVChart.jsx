@@ -40,7 +40,7 @@ function PriceAxis({ ticks, scaleY, width }) {
         y={scaleY(value) + 3.5}
         fill="#71717a"
         fontSize="10"
-        fontFamily="JetBrains Mono"
+        fontFamily="Geist Mono"
       >
         {value.toFixed(value > 100 ? 0 : 2)}
       </text>
@@ -208,7 +208,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           y={scaleY(last) + 3.5}
           fill="#fff"
           fontSize="10"
-          fontFamily="JetBrains Mono"
+          fontFamily="Geist Mono"
         >
           {last.toFixed(2)}
         </text>
@@ -244,7 +244,7 @@ function Crosshair({ bar, index, geometry, width }) {
         y={scaleY(bar.close) + 3.5}
         fill="#e4e4e7"
         fontSize="10"
-        fontFamily="JetBrains Mono"
+        fontFamily="Geist Mono"
       >
         {bar.close.toFixed(2)}
       </text>

@@ -6,7 +6,7 @@ import { useState } from 'react'
  *  keeps the page from declaring six useStates it does not otherwise care
  *  about, and lets ChartPanel take one `controls` prop instead of twelve.
  */
-export function useChartControls({ range = '3M', type = 'candles' } = {}) {
+export function useChartControls({ range = '6M', type = 'candles' } = {}) {
   const [state, setState] = useState({
     range,
     type,
