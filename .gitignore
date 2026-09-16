@@ -32,3 +32,10 @@ frontend/.vite/
 
 # Teaching workspace (/teach) - local learning material, not part of the app
 learning/
+
+# Local AI tooling state (Claude Code, agent skill registries) - personal/session
+# config, not part of the app
+.agents/
+.claude/
+.qwen/
+skills-lock.json
