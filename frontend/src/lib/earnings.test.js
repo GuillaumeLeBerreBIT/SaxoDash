@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { groupByWeekday, weekLabel, WEEKDAYS } from './earnings'
+import { groupByWeekday, reportStatus, weekLabel, WEEKDAYS } from './earnings'
 
 describe('groupByWeekday', () => {
   it('buckets events by weekday and keeps input order', () => {
@@ -22,6 +22,23 @@ describe('groupByWeekday', () => {
 
   it('WEEKDAYS lists Monday first', () => {
     expect(WEEKDAYS[0]).toEqual(['mon', 'Mon'])
+  })
+})
+
+describe('reportStatus', () => {
+  const TODAY = new Date('2026-09-16T00:00:00')
+
+  it('is reported once an actual is in, regardless of date', () => {
+    expect(reportStatus({ date: '2026-09-20', eps_actual: 1.2 }, TODAY)).toBe('reported')
+  })
+
+  it('is pending when the report date has passed with no actual yet', () => {
+    expect(reportStatus({ date: '2026-09-10', eps_actual: null }, TODAY)).toBe('pending')
+  })
+
+  it('is upcoming when the report date has not happened yet', () => {
+    expect(reportStatus({ date: '2026-09-16', eps_actual: null }, TODAY)).toBe('upcoming')
+    expect(reportStatus({ date: '2026-09-20', eps_actual: null }, TODAY)).toBe('upcoming')
   })
 })
 

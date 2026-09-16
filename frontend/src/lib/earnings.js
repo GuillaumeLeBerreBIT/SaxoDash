@@ -29,6 +29,19 @@ export function daysUntil(iso) {
   return `in ${days} days`
 }
 
+/** 'reported' (an actual is in) / 'pending' (the report date has passed but
+ *  Finnhub's calendar hasn't posted an actual yet - it lags, sometimes by
+ *  days) / 'upcoming' (the report hasn't happened yet). Without this split,
+ *  "pending" and "upcoming" render identically (estimate only), which reads
+ *  as "no data" for a company that already reported. `today` is injectable
+ *  for tests; defaults to the real clock. */
+export function reportStatus(event, today = new Date()) {
+  if (event.eps_actual != null) return 'reported'
+  const target = new Date(event.date + 'T00:00:00').getTime()
+  const midnight = new Date(today).setHours(0, 0, 0, 0)
+  return target < midnight ? 'pending' : 'upcoming'
+}
+
 /** Group date-sorted events by weekday key. Weekend keys appear only when
  *  they carry events; each list keeps its input order. */
 export function groupByWeekday(events) {

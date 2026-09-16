@@ -73,6 +73,17 @@ describe('Earnings page', () => {
     expect(screen.getByText('1.50')).toBeInTheDocument()
   })
 
+  it('flags a past-dated unreported row as pending, distinct from a genuinely upcoming one', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-28T12:00:00')) // Wednesday; Monday has already passed
+    stub({
+      events: [ev({ symbol: 'STUCK', date: '2026-10-26', eps_estimate: 0.5 })], // Monday, no actual yet
+    })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    expect(screen.getByText('pending')).toBeInTheDocument()
+  })
+
   it('shows the week-summary headline from the backend stats', () => {
     stub({
       stats: {

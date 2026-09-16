@@ -7,6 +7,7 @@ export const BEAT = '#34d399'
 export const MISS = '#f87171'
 export const ESTIMATE = '#52525b' // consensus / not-yet-judged
 export const REPORTED = '#3b82f6' // reported, but no surprise figure to judge it by
+export const PENDING = '#f59e0b' // report date has passed, provider hasn't posted the actual yet
 export const TARGET_TICK = '#e4e4e7' // the estimate marker on a bullet bar, once actuals are in
 export const TRACK = 'rgba(255,255,255,0.06)' // empty bar track
 

@@ -6,8 +6,8 @@ import BulletBar from '../components/BulletBar'
 import { Pill } from '../components/RangePills'
 import SurpriseBars from '../components/research/SurpriseBars'
 import { Card, InfoTip, PageHeader } from '../components/ui'
-import { BEAT, MISS, REPORTED, surpriseSign, withAlpha } from '../lib/charts'
-import { WEEKDAYS, groupByWeekday, weekLabel, weekdayKey } from '../lib/earnings'
+import { BEAT, MISS, PENDING, REPORTED, surpriseSign, withAlpha } from '../lib/charts'
+import { WEEKDAYS, groupByWeekday, reportStatus, weekLabel, weekdayKey } from '../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../lib/format'
 
 const SESSION = { bmo: 'BMO', amc: 'AMC', dmh: 'DMH' }
@@ -165,10 +165,11 @@ function Chip({ sign, children }) {
 
 function EpsCell({ event }) {
   if (event.eps_actual == null) {
+    const pending = reportStatus(event) === 'pending'
     return (
-      <span className="text-[var(--fig-xs)] num font-mono text-zinc-400">
+      <span className={`text-[var(--fig-xs)] num font-mono ${pending ? 'text-amber-500' : 'text-zinc-400'}`}>
         {fmtNum(event.eps_estimate, 2)}
-        <span className="text-zinc-600">e</span>
+        <span className={pending ? 'text-amber-600' : 'text-zinc-600'}>{pending ? ' pending' : 'e'}</span>
       </span>
     )
   }
@@ -206,7 +207,7 @@ function RevenueCell({ event }) {
 const ROW_GRID = '92px 40px 64px 64px minmax(0,1fr) 120px 14px'
 
 const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
-  const reported = event.eps_actual != null
+  const status = reportStatus(event)
   return (
     <button
       type="button"
@@ -217,7 +218,12 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
         borderLeft: `2px solid ${
           event.held ? REPORTED : event.watched ? withAlpha(REPORTED, 0.4) : 'transparent'
         }`,
-        boxShadow: reported ? `inset 3px 0 0 ${EDGE[surpriseSign(event.eps_surprise_pct) + 1]}` : 'none',
+        boxShadow:
+          status === 'reported'
+            ? `inset 3px 0 0 ${EDGE[surpriseSign(event.eps_surprise_pct) + 1]}`
+            : status === 'pending'
+              ? `inset 3px 0 0 ${withAlpha(PENDING, 0.45)}`
+              : 'none',
       }}
     >
       <span className="flex flex-col leading-tight min-w-0">
@@ -425,9 +431,10 @@ export default function Earnings() {
                 <span className="text-zinc-600 font-normal"> · {rows.length} reporting</span>
                 <InfoTip>
                   One row per company. A shaded row with a coloured left edge has reported — green beat
-                  consensus, red missed, blue landed in line. Plain rows are upcoming and show the
-                  estimate only (·e). ▲/▼ chips are the surprise vs. the estimate. A blue edge marks a
-                  holding or watchlist name.
+                  consensus, red missed, blue landed in line. An amber edge means the report date has
+                  passed but the provider hasn't posted a number yet (shows "pending" — check back
+                  later). Plain rows are upcoming and show the estimate only (·e). ▲/▼ chips are the
+                  surprise vs. the estimate. A blue edge marks a holding or watchlist name.
                 </InfoTip>
               </span>
               <span className="text-[var(--fig-2xs)] text-zinc-500">
