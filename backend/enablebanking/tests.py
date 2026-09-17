@@ -7,6 +7,10 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from decimal import Decimal
 
+from django.contrib.auth.models import User
+from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from accounts.models import BankAccount
 
 from .models import EnableBankingCredential, BankSyncRun
@@ -257,3 +261,84 @@ class SyncEnableBankingBalancesTaskTest(TestCase):
         self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'ok')
         self.assertEqual(BankSyncRun.objects.get(bank='kbc').rows, 0)
         self.assertEqual(BankSyncRun.objects.get(bank='argenta').outcome, 'ok')
+
+
+class EnableBankingConnectTicketViewTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='u', password='p')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        response = self.client.post('/api/enablebanking/connect-ticket/')
+        self.assertEqual(response.status_code, 401)
+
+    def test_issues_a_ticket(self):
+        response = self.client.post('/api/enablebanking/connect-ticket/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('ticket', response.data)
+
+
+class EnableBankingConnectViewTest(APITestCase):
+    def _ticket(self):
+        user = User.objects.create_user(username='u2', password='p')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+        return self.client.post('/api/enablebanking/connect-ticket/').data['ticket']
+
+    def test_rejects_a_missing_ticket(self):
+        response = self.client.get('/api/enablebanking/connect/kbc/')
+        self.assertEqual(response.status_code, 403)
+
+    def test_rejects_an_unknown_bank(self):
+        ticket = self._ticket()
+        response = self.client.get(f'/api/enablebanking/connect/notabank/?ticket={ticket}')
+        self.assertEqual(response.status_code, 404)
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_redirects_to_the_authorize_url(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        response = self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, 'https://auth.enablebanking.com/ais/start?x=1')
+
+
+class EnableBankingCallbackViewTest(APITestCase):
+    def test_missing_code_or_state_redirects_with_error(self):
+        response = self.client.get('/api/enablebanking/callback/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('enablebanking=error', response.url)
+
+    @patch('enablebanking.views.client.exchange_code_for_session')
+    def test_valid_callback_creates_the_credential(self, mock_exchange):
+        mock_exchange.return_value = {
+            'session_id': 'sess-1',
+            'accounts': [{'uid': 'acc-1', 'account_id': {'iban': 'BE00'}}],
+        }
+        session = self.client.session
+        session['enablebanking_oauth_state'] = 'state123:kbc'
+        session.save()
+
+        response = self.client.get('/api/enablebanking/callback/?code=abc&state=state123:kbc')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('enablebanking=connected', response.url)
+        cred = EnableBankingCredential.objects.get(bank='kbc')
+        self.assertEqual(cred.linked_accounts, [{'uid': 'acc-1', 'account_id': {'iban': 'BE00'}}])
+
+
+class EnableBankingStatusViewTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='u3', password='p')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_reports_both_banks_independently(self):
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+        )
+        response = self.client.get('/api/enablebanking/status/')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['kbc']['connected'])
+        self.assertFalse(response.data['argenta']['connected'])
