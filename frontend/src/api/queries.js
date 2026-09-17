@@ -13,6 +13,7 @@ import {
   getChart,
   getCompanyNews,
   getEarningsCalendar,
+  getEnableBankingStatus,
   getFundamentals,
   getInstrumentDetails,
   getNetWorth,
@@ -51,6 +52,7 @@ export const queryKeys = {
   performance: (benchmark = 'world') => ['performance', benchmark],
   cashFlow: ['cash-flow'],
   saxoStatus: ['saxo-status'],
+  enableBankingStatus: ['enablebanking-status'],
   // Every market-data key carries the whole instrument identity: a Uic alone
   // is ambiguous, and the backend keys on both halves.
   chart: (uic, assetType, horizon, count) =>
@@ -139,6 +141,15 @@ export function useSaxoStatus() {
     queryKey: queryKeys.saxoStatus,
     queryFn: getSaxoStatus,
     // Connection can break server-side with no user action; recheck often.
+    refetchOnMount: 'always',
+    refetchInterval: 60_000,
+  })
+}
+
+export function useEnableBankingStatus() {
+  return useQuery({
+    queryKey: queryKeys.enableBankingStatus,
+    queryFn: getEnableBankingStatus,
     refetchOnMount: 'always',
     refetchInterval: 60_000,
   })

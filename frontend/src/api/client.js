@@ -160,6 +160,13 @@ export async function connectSaxo() {
   window.location.href = `${BASE_URL}/api/saxo/connect/?ticket=${encodeURIComponent(ticket)}`
 }
 
+export const getEnableBankingStatus = () => apiFetch('/api/enablebanking/status/')
+
+export async function connectEnableBanking(bank) {
+  const { ticket } = await jsonRequest('/api/enablebanking/connect-ticket/', 'POST')
+  window.location.href = `${BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}`
+}
+
 // Research: market data proxied through the backend, and watchlist CRUD.
 export const getChart = ({ uic, assetType, horizon = 1440, count = 252 }) =>
   apiFetch(

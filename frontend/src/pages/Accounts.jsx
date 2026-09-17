@@ -4,6 +4,7 @@ import { Card, PageHeader, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import AccountBreakdownChart from '../components/AccountBreakdownChart'
 import CashFlowChart from '../components/CashFlowChart'
+import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
 
 export default function Accounts() {
   const { data: accounts, isLoading, error } = useBankAccounts()
@@ -15,7 +16,11 @@ export default function Accounts() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Accounts" subtitle="Your connected bank accounts" />
+      <PageHeader
+        title="Accounts"
+        subtitle="Your connected bank accounts"
+        right={<EnableBankingConnectionStatus />}
+      />
 
       <StatStrip>
         <StatRow label="Total Balance" value={fmtEur(total)} note={`${accounts.length} accounts`} lead />
