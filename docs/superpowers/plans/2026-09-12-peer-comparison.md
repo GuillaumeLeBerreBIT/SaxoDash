@@ -1,5 +1,7 @@
 # Peer Comparison (Slice 5) Implementation Plan
 
+**Status: DONE.** All 6 tasks implemented and merged to local `main` (commits `cd1c351`..`8ed87a5`, plus follow-on polish fixes not in the original plan: a valuation-verdict/quality-vs-valuation quadrant, business-summary/thesis cards on Overview, dropdown positioning/width fixes, and a reconnect hint on peer-search failure). Live on the Research page's Peers tab today. Checkboxes below marked `[x]` retroactively (2026-09-17) to match reality — they were never checked off step-by-step during execution. This closes the peer-comparison half of Slice 5; the "since last look" half is a separate, not-yet-started piece (see `docs/superpowers/plans/2026-09-17-watchlist-since-last-look.md` once it exists).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a "Peers" tab to the Research page showing a comparison table of the current symbol against up to 5 peers, with any peer swappable for a manually chosen symbol.
@@ -29,7 +31,7 @@
 **Interfaces:**
 - Produces: `finnhub.get_peers(symbol: str) -> list[str]`, `finnhub.peers(symbol: str) -> {"available": True, "symbols": list[str]}`, `finnhub.MAX_PEERS = 5`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `backend/research/tests.py`, near `FinnhubClientTest` (the client test) and near `FundamentalsCacheTest` (the shaping test):
 
@@ -87,12 +89,12 @@ class PeersShapingTest(TestCase):
             finnhub.peers('AAPL')
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd backend && python manage.py test research.tests.PeersClientTest research.tests.PeersShapingTest -v 2`
 Expected: FAIL — `AttributeError: module 'research.finnhub' has no attribute 'get_peers'`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `backend/research/finnhub.py`, add the client call after `get_company_news` (around line 109):
 
@@ -125,12 +127,12 @@ def peers(symbol):
     return {'available': True, **data}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python manage.py test research.tests.PeersClientTest research.tests.PeersShapingTest -v 2`
 Expected: PASS (7 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add backend/research/finnhub.py backend/research/tests.py
@@ -151,7 +153,7 @@ git commit -m "feat: add Finnhub peers lookup (Slice 5, Task 1)"
 - Consumes: `finnhub.peers(symbol)` from Task 1.
 - Produces: `GET /api/research/peers/<symbol>/` → `{"available": true, "symbols": [...]}`, `research.views.PeersView`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `backend/research/tests.py`, near `FundamentalsViewTest`:
 
@@ -203,12 +205,12 @@ class PeersViewTest(APITestCase):
 
 Also extend `ThrottleScopeConfigTest.test_every_proxy_view_scope_has_a_configured_rate`'s view tuple to include `research_views.PeersView`.
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd backend && python manage.py test research.tests.PeersViewTest -v 2`
 Expected: FAIL — 404 (no route yet) / `ImportError` once the view is referenced in the test's import.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `backend/research/views.py`, add right after `FundamentalsView`:
 
@@ -233,17 +235,17 @@ In `backend/backend/settings.py`, add to `DEFAULT_THROTTLE_RATES` next to `'rese
         'research.peers': '30/min',
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd backend && python manage.py test research.tests.PeersViewTest research.tests.ThrottleScopeConfigTest -v 2`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full backend suite**
+- [x] **Step 5: Run the full backend suite**
 
 Run: `cd backend && python manage.py test`
 Expected: All tests pass (no regressions).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add backend/research/views.py backend/research/urls.py backend/backend/settings.py backend/research/tests.py
@@ -265,7 +267,7 @@ git commit -m "feat: expose GET /api/research/peers/<symbol>/ (Slice 5, Task 2)"
   - `overrides[i]` is a non-empty string → replaces slot `i`'s symbol.
   - The current symbol and any duplicate symbol across slots is dropped (first occurrence wins, in slot order 0→4).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `frontend/src/lib/research.test.js`:
 
@@ -313,12 +315,12 @@ describe('resolvePeerSlots', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd frontend && npx vitest run src/lib/research.test.js`
 Expected: FAIL — `resolvePeerSlots is not a function`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `frontend/src/lib/research.js` (near the other exported constants/helpers):
 
@@ -343,12 +345,12 @@ export function resolvePeerSlots(currentSymbol, autoSymbols = [], overrides = []
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd frontend && npx vitest run src/lib/research.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/lib/research.js frontend/src/lib/research.test.js
@@ -368,7 +370,7 @@ git commit -m "feat: derive peer comparison slots from auto peers + overrides (S
 - Consumes: `GET /api/research/peers/<symbol>/` from Task 2.
 - Produces: `getPeers(symbol) -> Promise`, `queryKeys.peers(symbol)`, `usePeers(symbol)`, `usePeerFundamentals(symbols: string[])` (returns the array `useQueries` gives back — one `{data, isLoading, ...}` per symbol, same order).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `frontend/src/api/client.test.js`, near the `getCompanyNews` test:
 
@@ -387,12 +389,12 @@ it('getPeers hits the per-symbol peers route', async () => {
 
 Add `getPeers` to that file's import list from `./client`.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/api/client.test.js`
 Expected: FAIL — `getPeers is not defined`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `frontend/src/api/client.js`, add next to `getCompanyNews`:
 
@@ -435,12 +437,12 @@ export function usePeerFundamentals(symbols) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `cd frontend && npx vitest run src/api/client.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/api/client.js frontend/src/api/queries.js frontend/src/api/client.test.js
@@ -459,7 +461,7 @@ git commit -m "feat: add peers API client + query hooks (Slice 5, Task 4)"
 - Consumes: `usePeers`, `usePeerFundamentals`, `useInstrumentSearch` (Task 4 + existing), `resolvePeerSlots`, `MAX_PEER_SLOTS` (Task 3), `FundamentalsGate` (existing), `fmtNum`/`fmtPct`/`fmtCompact` (existing).
 - Produces: `export default function PeersTab({ symbol, fundamentals })`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `frontend/src/components/research/PeersTab.test.jsx`:
 
@@ -538,12 +540,12 @@ describe('PeersTab', () => {
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `cd frontend && npx vitest run src/components/research/PeersTab.test.jsx`
 Expected: FAIL — cannot find module `./PeersTab`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `frontend/src/components/research/PeersTab.jsx`:
 
@@ -716,12 +718,12 @@ export default function PeersTab({ symbol, fundamentals }) {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd frontend && npx vitest run src/components/research/PeersTab.test.jsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add frontend/src/components/research/PeersTab.jsx frontend/src/components/research/PeersTab.test.jsx
@@ -739,7 +741,7 @@ git commit -m "feat: add the PeersTab comparison table (Slice 5, Task 5)"
 **Interfaces:**
 - Consumes: `PeersTab` from Task 5.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `frontend/src/pages/Research.test.jsx`, near the "shows the valuation tab" test:
 
@@ -753,12 +755,12 @@ it('shows the peers tab', async () => {
 
 Add `queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })` and `queries.usePeerFundamentals.mockReturnValue([])` to `stubQueries`.
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `cd frontend && npx vitest run src/pages/Research.test.jsx`
 Expected: FAIL — no "Peers" button.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `frontend/src/pages/Research.jsx`:
 - Import `PeersTab` next to the `OverviewTab` import.
@@ -769,17 +771,17 @@ In `frontend/src/pages/Research.jsx`:
 {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `cd frontend && npx vitest run src/pages/Research.test.jsx`
 Expected: PASS.
 
-- [ ] **Step 5: Run the full frontend suite and lint**
+- [x] **Step 5: Run the full frontend suite and lint**
 
 Run: `cd frontend && npx vitest run && npx eslint src`
 Expected: All tests pass, lint clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add frontend/src/pages/Research.jsx frontend/src/pages/Research.test.jsx
