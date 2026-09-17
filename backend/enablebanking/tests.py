@@ -5,8 +5,18 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from decimal import Decimal
+
 from .models import EnableBankingCredential, BankSyncRun
-from . import client, credentials
+from . import client, credentials, mapping
+
+SAMPLE_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE68539007547034'}, 'product': 'Current account'}
+SAMPLE_BALANCES = {
+    'balances': [
+        {'balance_amount': {'currency': 'EUR', 'amount': '1234.56'}, 'balance_type': 'CLBD'},
+        {'balance_amount': {'currency': 'EUR', 'amount': '1200.00'}, 'balance_type': 'ITAV'},
+    ]
+}
 
 # A throwaway 2048-bit keypair generated once for tests - never a real
 # Enable Banking private key. Real RS256 signing needs a real RSA key, not
@@ -149,3 +159,31 @@ class EnableBankingClientTest(TestCase):
         mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
         with self.assertRaises(client.EnableBankingAPIError):
             client.get_balances('sess-1', 'acc-1')
+
+
+class ToAccountFieldsTest(TestCase):
+    def test_maps_core_fields(self):
+        fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, SAMPLE_BALANCES)
+        self.assertEqual(fields['bank'], 'KBC')
+        self.assertEqual(fields['type'], 'Current account')
+        self.assertEqual(fields['currency'], 'EUR')
+
+    def test_masks_the_iban(self):
+        fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, SAMPLE_BALANCES)
+        self.assertEqual(fields['iban_masked'], 'BE68 •••• •••• 7034')
+
+    def test_prefers_booked_balance_over_available(self):
+        fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, SAMPLE_BALANCES)
+        self.assertEqual(fields['balance'], Decimal('1234.56'))
+        self.assertEqual(fields['available'], Decimal('1200.00'))
+
+    def test_falls_back_to_whatever_balance_type_exists(self):
+        balances = {'balances': [{'balance_amount': {'currency': 'EUR', 'amount': '50.00'}, 'balance_type': 'XPCD'}]}
+        fields = mapping.to_account_fields('argenta', SAMPLE_ACCOUNT, balances)
+        self.assertEqual(fields['balance'], Decimal('50.00'))
+        self.assertEqual(fields['available'], Decimal('50.00'))
+        self.assertEqual(fields['bank'], 'Argenta')
+
+    def test_zero_when_no_balances_sent(self):
+        fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, {'balances': []})
+        self.assertEqual(fields['balance'], Decimal('0'))
