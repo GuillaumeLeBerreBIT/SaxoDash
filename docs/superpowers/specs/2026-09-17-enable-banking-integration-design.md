@@ -74,12 +74,17 @@ Before any code can be exercised end-to-end:
 1. Sign up at Enable Banking's Control Panel (`enablebanking.com/sign-in`).
 2. Register a **production** application (not sandbox) — this generates an
    **Application ID** and downloads a **private key** (`.pem` file) to sign API
-   requests with. Whitelist a redirect URL (e.g.
-   `http://localhost:8000/api/enablebanking/callback/`).
+   requests with. Whitelist a redirect URL. **This must be HTTPS** — Enable
+   Banking rejects a plain `http://` redirect URL outright ("unsupported
+   scheme"), even for `localhost`, even in local dev. Verified live 2026-09-17:
+   worked around with an ngrok static domain tunneling to the local Django
+   port, e.g. `https://<your-domain>.ngrok-free.dev/api/enablebanking/callback/`.
 3. Call `GET /aspsps?country=BE` (once the app exists) to get the **exact**
    `aspsp.name` strings Enable Banking uses for KBC and Argenta — do not guess
    these; Task 1 of the implementation plan captures the real values, the same way
    Saxo's field names were verified against a real response before being trusted.
+   Verified live 2026-09-17: the real names are plain `KBC` and `Argenta` (there
+   is also a distinct `KBC Brussels` entity).
 4. Activate the application in **restricted mode** by linking your own KBC and
    Argenta accounts through the Control Panel's "Activate by linking accounts"
    flow (one bank at a time — each requires its own SCA/consent at that bank).
