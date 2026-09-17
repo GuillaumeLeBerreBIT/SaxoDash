@@ -65,12 +65,6 @@ TRANSACTIONS = [
 ]
 
 BANK_ACCOUNTS = [
-    dict(bank='BNP Paribas Fortis', type='Checking', iban_masked='BE68 •••• •••• 1234',
-         balance=Decimal('4230.50'), available=Decimal('4230.50'),
-         gradient='from-emerald-500 to-emerald-700', accent='#059669'),
-    dict(bank='KBC', type='Savings', iban_masked='BE71 •••• •••• 5678',
-         balance=Decimal('12500.00'), available=Decimal('12500.00'),
-         gradient='from-blue-500 to-blue-700', accent='#1d4ed8'),
     dict(bank='ING', type='Checking', iban_masked='BE45 •••• •••• 9012',
          balance=Decimal('2180.75'), available=Decimal('2180.75'),
          gradient='from-orange-500 to-orange-700', accent='#ea580c'),
