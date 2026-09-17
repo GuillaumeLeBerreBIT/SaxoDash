@@ -6,12 +6,18 @@ import AccountBreakdownChart from '../components/AccountBreakdownChart'
 import CashFlowChart from '../components/CashFlowChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
 
+// Saxo's cash balance lives here too (it's a BankAccount row), but this page
+// is for real bank connections - Saxo's total is already visible on the
+// Dashboard hero, blended into "bank" there.
+const SAXO_CASH_EXTERNAL_ID = 'saxo:cash'
+
 export default function Accounts() {
-  const { data: accounts, isLoading, error } = useBankAccounts()
+  const { data: allAccounts, isLoading, error } = useBankAccounts()
 
   if (error) return <div className="text-red-400 text-sm">Failed to load accounts</div>
-  if (isLoading || !accounts) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (isLoading || !allAccounts) return <div className="text-zinc-500 text-sm">Loading…</div>
 
+  const accounts = allAccounts.filter((a) => a.external_id !== SAXO_CASH_EXTERNAL_ID)
   const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
 
   return (
