@@ -28,6 +28,7 @@ import { PageHeader } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
+import { recordLook } from '../lib/lastLook'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import GuideTab from '../components/research/GuideTab'
@@ -145,6 +146,10 @@ export default function Research() {
     [bars, earnings.data],
   )
   const liveQuotes = useQuotes(instrument?.uic ? [instrument.uic] : [], instrument?.assetType)
+
+  useEffect(() => {
+    recordLook(symbol, liveQuotes.data?.[0]?.price)
+  }, [symbol, liveQuotes.data])
 
   const { data: watchlists = [] } = useWatchlists()
   const { addItem, removeItem } = useWatchlistMutations()

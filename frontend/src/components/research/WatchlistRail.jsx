@@ -8,6 +8,7 @@ import {
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum } from '../../lib/format'
+import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { Card, DayChange, InstrumentLogo } from '../ui'
 import { Menu, MenuRow, MenuSeparator } from './menu'
@@ -199,6 +200,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
         {items.map((item) => {
           const quote = quotes.get(item.uic)
           const change = quote?.change_pct
+          const sinceLastLook = changeSinceLastLook(item.symbol, quote?.price)
           return (
             <div
               key={item.id}
@@ -226,6 +228,11 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                 ) : null}
                 <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
+                {sinceLastLook != null ? (
+                  <span title="Since you last looked" className="shrink-0">
+                    <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
+                  </span>
+                ) : null}
               </div>
               <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
                 {quote?.price == null ? '—' : fmtNum(quote.price, 2)}

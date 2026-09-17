@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
+import { recordLook } from '../../lib/lastLook'
 import WatchlistRail from './WatchlistRail'
 
 vi.mock('../../api/queries')
@@ -46,7 +47,21 @@ const render = (props = {}) =>
 describe('WatchlistRail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     stub()
+  })
+
+  it('shows no since-last-look badge when the symbol has never been looked at', () => {
+    render()
+
+    expect(screen.queryByTitle('Since you last looked')).not.toBeInTheDocument()
+  })
+
+  it('shows the change since the last recorded look', () => {
+    recordLook('NVDA', 750)
+    render()
+
+    expect(screen.getByTitle('Since you last looked')).toHaveTextContent('+16.72%')
   })
 
   it('lists the active watchlist rows with their quotes', () => {
