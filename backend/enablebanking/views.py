@@ -15,8 +15,12 @@ from .models import EnableBankingCredential
 logger = logging.getLogger(__name__)
 
 
-def _back_to_frontend(outcome):
-    return redirect(f'{settings.FRONTEND_URL}/accounts?enablebanking={outcome}')
+def _back_to_frontend(outcome, bank=None):
+    # bank is included when known so the frontend can show which bank's
+    # connect attempt failed - there are two independent banks here, unlike
+    # Saxo's single connection, so a bare "error" is ambiguous.
+    query = f'enablebanking={outcome}' + (f'&bank={bank}' if bank else '')
+    return redirect(f'{settings.FRONTEND_URL}/accounts?{query}')
 
 
 # Same reasoning as saxo.views: the connect redirect is a full-page
@@ -80,7 +84,7 @@ class EnableBankingCallbackView(APIView):
             session_data = client.exchange_code_for_session(code)
         except client.EnableBankingAPIError:
             logger.exception('Enable Banking session exchange failed for %s', bank)
-            return _back_to_frontend('error')
+            return _back_to_frontend('error', bank)
 
         EnableBankingCredential.objects.update_or_create(
             bank=bank,
@@ -92,7 +96,7 @@ class EnableBankingCallbackView(APIView):
             },
         )
 
-        return _back_to_frontend('connected')
+        return _back_to_frontend('connected', bank)
 
 
 class EnableBankingStatusView(APIView):

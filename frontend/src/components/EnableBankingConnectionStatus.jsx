@@ -1,20 +1,24 @@
+import { useEffect, useState } from 'react'
 import { connectEnableBanking } from '../api/client'
 import { useEnableBankingStatus } from '../api/queries'
 import { Badge } from './ui'
 
 const BANK_LABELS = { kbc: 'KBC', argenta: 'Argenta' }
 
-function OneBank({ bank, state }) {
+function OneBank({ bank, state, failed }) {
   const label = BANK_LABELS[bank]
 
   if (!state.connected) {
     return (
-      <button
-        onClick={() => connectEnableBanking(bank)}
-        className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
-      >
-        Connect {label}
-      </button>
+      <div className="flex items-center gap-2">
+        {failed && <Badge tone="red">{label} connection failed</Badge>}
+        <button
+          onClick={() => connectEnableBanking(bank)}
+          className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
+        >
+          Connect {label}
+        </button>
+      </div>
     )
   }
 
@@ -48,12 +52,23 @@ function OneBank({ bank, state }) {
 
 export default function EnableBankingConnectionStatus() {
   const { data: status } = useEnableBankingStatus()
+  const [failedBank] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('enablebanking') === 'error' ? params.get('bank') : null
+  })
+
+  useEffect(() => {
+    if (failedBank) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [failedBank])
+
   if (!status) return null
 
   return (
     <span className="flex items-center gap-2">
       {Object.entries(status).map(([bank, state]) => (
-        <OneBank key={bank} bank={bank} state={state} />
+        <OneBank key={bank} bank={bank} state={state} failed={bank === failedBank} />
       ))}
     </span>
   )

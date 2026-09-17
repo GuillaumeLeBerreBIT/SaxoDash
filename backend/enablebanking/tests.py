@@ -325,8 +325,22 @@ class EnableBankingCallbackViewTest(APITestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn('enablebanking=connected', response.url)
+        self.assertIn('bank=kbc', response.url)
         cred = EnableBankingCredential.objects.get(bank='kbc')
         self.assertEqual(cred.linked_accounts, [{'uid': 'acc-1', 'account_id': {'iban': 'BE00'}}])
+
+    @patch('enablebanking.views.client.exchange_code_for_session')
+    def test_failed_exchange_names_which_bank_failed(self, mock_exchange):
+        mock_exchange.side_effect = client.EnableBankingAPIError('boom')
+        session = self.client.session
+        session['enablebanking_oauth_state'] = 'state123:argenta'
+        session.save()
+
+        response = self.client.get('/api/enablebanking/callback/?code=abc&state=state123:argenta')
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('enablebanking=error', response.url)
+        self.assertIn('bank=argenta', response.url)
 
 
 class EnableBankingStatusViewTest(APITestCase):

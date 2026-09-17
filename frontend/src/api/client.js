@@ -1,5 +1,12 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+// Enable Banking requires an HTTPS redirect URL, which plain local dev
+// (http://localhost) can't offer - so the *connect* redirect alone may need
+// to go through a public tunnel (e.g. ngrok) while every other API call
+// stays on BASE_URL. In production these are the same value, since BASE_URL
+// is already the real public origin.
+const ENABLE_BANKING_CONNECT_BASE_URL = import.meta.env.VITE_ENABLE_BANKING_CONNECT_BASE_URL ?? BASE_URL;
+
 const getTokens = () => ({
   access: localStorage.getItem("access"),
   refresh: localStorage.getItem("refresh"),
@@ -164,7 +171,7 @@ export const getEnableBankingStatus = () => apiFetch('/api/enablebanking/status/
 
 export async function connectEnableBanking(bank) {
   const { ticket } = await jsonRequest('/api/enablebanking/connect-ticket/', 'POST')
-  window.location.href = `${BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}`
+  window.location.href = `${ENABLE_BANKING_CONNECT_BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}`
 }
 
 // Research: market data proxied through the backend, and watchlist CRUD.

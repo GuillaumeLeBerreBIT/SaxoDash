@@ -21,6 +21,7 @@ import {
   getPeers,
   getPortfolioInsights,
   connectSaxo,
+  connectEnableBanking,
 } from './client'
 
 function jsonResponse(body, ok = true, status = ok ? 200 : 400) {
@@ -304,6 +305,22 @@ describe('connectSaxo', () => {
     expect(url).toContain('/api/saxo/connect-ticket/')
     expect(options.method).toBe('POST')
     expect(window.location.href).toContain('/api/saxo/connect/?ticket=signed-xyz')
+  })
+})
+
+describe('connectEnableBanking', () => {
+  it('fetches a signed ticket, then redirects to the given bank with it', async () => {
+    localStorage.setItem('access', 'valid-access')
+    delete window.location
+    window.location = { href: '' }
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ ticket: 'signed-xyz' }))
+
+    await connectEnableBanking('kbc')
+
+    const [url, options] = window.fetch.mock.calls[0]
+    expect(url).toContain('/api/enablebanking/connect-ticket/')
+    expect(options.method).toBe('POST')
+    expect(window.location.href).toContain('/api/enablebanking/connect/kbc/?ticket=signed-xyz')
   })
 })
 

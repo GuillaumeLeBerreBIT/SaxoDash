@@ -7,7 +7,10 @@ vi.mock('../api/queries')
 import * as queries from '../api/queries'
 
 describe('EnableBankingConnectionStatus', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.history.replaceState({}, '', '/accounts')
+  })
 
   it('renders nothing before status has loaded', () => {
     queries.useEnableBankingStatus.mockReturnValue({ data: undefined })
@@ -45,5 +48,24 @@ describe('EnableBankingConnectionStatus', () => {
     })
     renderWithProviders(<EnableBankingConnectionStatus />)
     expect(screen.getByText('Reconnect KBC')).toBeInTheDocument()
+  })
+
+  it('shows a failure badge for the bank named in a ?enablebanking=error redirect', () => {
+    window.history.replaceState({}, '', '/accounts?enablebanking=error&bank=kbc')
+    queries.useEnableBankingStatus.mockReturnValue({
+      data: { kbc: { connected: false }, argenta: { connected: false } },
+    })
+    renderWithProviders(<EnableBankingConnectionStatus />)
+    expect(screen.getByText('KBC connection failed')).toBeInTheDocument()
+    expect(screen.queryByText('Argenta connection failed')).not.toBeInTheDocument()
+  })
+
+  it('clears the error params from the URL after reading them', () => {
+    window.history.replaceState({}, '', '/accounts?enablebanking=error&bank=kbc')
+    queries.useEnableBankingStatus.mockReturnValue({
+      data: { kbc: { connected: false }, argenta: { connected: false } },
+    })
+    renderWithProviders(<EnableBankingConnectionStatus />)
+    expect(window.location.search).toBe('')
   })
 })
