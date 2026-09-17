@@ -9,13 +9,13 @@ API_BASE_URL = 'https://api.enablebanking.com'
 REQUEST_TIMEOUT = 10
 ERROR_BODY_LIMIT = 200
 
-# Best-effort from Enable Banking's public ASPSP listings - NOT yet verified
-# against a live GET /aspsps?country=BE call. Task 10 of the implementation
-# plan captures the real values once the user has a registered application
-# to call it with; correct here if they differ.
+# Verified live against GET /aspsps?country=BE (2026-09-17, Task 10 Step 2).
+# The listing also has a separate "KBC Brussels" entity, distinct from plain
+# "KBC" - if the connect flow can't find the account under "KBC", that's the
+# other candidate to try.
 ASPSPS = {
-    'kbc': {'name': 'KBC Bank', 'country': 'BE'},
-    'argenta': {'name': 'Argenta Spaarbank', 'country': 'BE'},
+    'kbc': {'name': 'KBC', 'country': 'BE'},
+    'argenta': {'name': 'Argenta', 'country': 'BE'},
 }
 
 
