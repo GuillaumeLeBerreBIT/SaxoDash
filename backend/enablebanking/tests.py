@@ -7,8 +7,10 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from decimal import Decimal
 
+from accounts.models import BankAccount
+
 from .models import EnableBankingCredential, BankSyncRun
-from . import client, credentials, mapping
+from . import client, credentials, mapping, tasks
 
 SAMPLE_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE68539007547034'}, 'product': 'Current account'}
 SAMPLE_BALANCES = {
@@ -187,3 +189,71 @@ class ToAccountFieldsTest(TestCase):
     def test_zero_when_no_balances_sent(self):
         fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, {'balances': []})
         self.assertEqual(fields['balance'], Decimal('0'))
+
+
+LINKED_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE68539007547034'}, 'product': 'Current account'}
+BALANCES = {'balances': [{'balance_amount': {'currency': 'EUR', 'amount': '100.00'}, 'balance_type': 'CLBD'}]}
+
+
+class SyncEnableBankingBalancesTaskTest(TestCase):
+    def test_skips_a_bank_with_no_credential(self):
+        tasks.sync_enablebanking_balances()
+        run = BankSyncRun.objects.get(bank='kbc')
+        self.assertEqual(run.outcome, 'skipped')
+        self.assertEqual(BankAccount.objects.count(), 0)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_syncs_a_connected_banks_linked_accounts(self, mock_get_balances):
+        mock_get_balances.return_value = BALANCES
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        account = BankAccount.objects.get(external_id='enablebanking:kbc:acc-1')
+        self.assertEqual(account.bank, 'KBC')
+        self.assertEqual(account.balance, Decimal('100.00'))
+        run = BankSyncRun.objects.get(bank='kbc')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 1)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_upserts_on_repeated_sync(self, mock_get_balances):
+        mock_get_balances.return_value = BALANCES
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+        tasks.sync_enablebanking_balances()
+        self.assertEqual(BankAccount.objects.filter(external_id='enablebanking:kbc:acc-1').count(), 1)
+
+    def test_flags_needs_reauth_when_consent_has_expired(self):
+        EnableBankingCredential.objects.create(
+            bank='argenta', session_id='s', valid_until=timezone.now() - timedelta(days=1),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        cred = EnableBankingCredential.objects.get(bank='argenta')
+        self.assertTrue(cred.needs_reauth)
+        run = BankSyncRun.objects.get(bank='argenta')
+        self.assertEqual(run.outcome, 'skipped')
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_one_banks_api_error_does_not_abort_the_other(self, mock_get_balances):
+        mock_get_balances.side_effect = tasks.client.EnableBankingAPIError('boom')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        EnableBankingCredential.objects.create(
+            bank='argenta', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[],
+        )
+        tasks.sync_enablebanking_balances()
+
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'ok')
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').rows, 0)
+        self.assertEqual(BankSyncRun.objects.get(bank='argenta').outcome, 'ok')
