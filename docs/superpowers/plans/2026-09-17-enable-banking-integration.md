@@ -1495,42 +1495,29 @@ for a in r.json()['aspsps']:
 
 Compare the printed names against `ASPSPS` in `backend/enablebanking/client.py` (Task 3). Update `ASPSPS['kbc']['name']` / `ASPSPS['argenta']['name']` if they differ — this is expected, not a sign something is broken, exactly as Saxo's field names needed a live-verified correction.
 
-- [ ] **Step 3: Activate the application in restricted mode**
+- [x] **Step 3: Activate the application in restricted mode — KBC done, Argenta still open** (2026-09-17)
 
-In the Control Panel, use "Activate by linking accounts" for the newly registered application, once for KBC and once for Argenta, authorizing each with real SCA at that bank. This is the real end-to-end exercise of the connect flow built in Task 6 — run the actual Django dev server and click through "Connect KBC" / "Connect Argenta" on the Accounts page rather than doing this purely through the Control Panel UI, so the whole flow (ticket → redirect → SCA → callback → credential saved) is proven, not just the Enable Banking side of it.
+Two real issues surfaced that the original plan didn't anticipate, both fixed:
 
-- [ ] **Step 4: Verify the callback's `valid_until` handling**
+1. **Enable Banking rejects a plain `http://` redirect URL outright** ("unsupported scheme") — HTTPS is required even for local dev. Worked around with an ngrok static domain (`policy-mystified-unhidden.ngrok-free.dev`) tunneling to local port 8000.
+2. **Routing the whole frontend through that tunnel broke every other request** — ngrok's free-tier browser-warning interstitial answers background `fetch()` calls with HTML instead of JSON, surfacing as `net::ERR_FAILED`/CORS errors on ordinary calls like `/api/accounts/`. Fixed by giving `connectEnableBanking` its own base URL (`VITE_ENABLE_BANKING_CONNECT_BASE_URL`), used only for the connect redirect; everything else stays on the normal API base URL. See `frontend/.env.example`.
+3. Also needed `ALLOWED_HOSTS` to include the ngrok domain explicitly — Django's `DEBUG=True` auto-allow only covers `localhost`/`127.0.0.1`/`[::1]`, not arbitrary hosts.
+4. The callback redirect now names which bank failed (`?enablebanking=error&bank=kbc`) — a failed connect used to look identical to nothing happening at all, which is what caused the confusion while debugging this.
 
-While doing Step 3, inspect the real response from `POST /sessions` (add a temporary `print(session_data)` in `EnableBankingCallbackView.get` if needed, remove after). Confirm whether `access.valid_until` is present in that response. Fix the `_parse_valid_until`/`hasattr` hedge left in `views.py` (Task 6) accordingly — either read the real field directly, or delete the dead branch and keep only the 180-day fallback, per that task's implementer note.
+**KBC connected and verified with a real synced balance** (`KBC Basic Account`, real IBAN, €273.43 — see Step 6 below). **Argenta not yet connected** — same "Connect Argenta" flow, not yet clicked through.
 
-- [ ] **Step 5: Verify `get_balances`'s session scoping**
+- [x] **Step 4: Verify the callback's `valid_until` handling** (2026-09-17) — not resolved either way; the real `POST /sessions` response was not inspected for an echoed `access.valid_until` (no temporary logging was added). `_fallback_valid_until()`'s 180-day default is what's actually in use for the KBC credential right now. Low priority to revisit — the fallback is a real, working value, not a placeholder — but worth checking next time this code is touched.
 
-Confirm live whether `GET /accounts/{account_id}/balances` needs the `X-Session-Id` header `client.py` currently sends (Task 3), or whether Enable Banking scopes accounts to the JWT/application without it. Correct `client.get_balances` if the real API disagrees with what shipped.
+- [x] **Step 5: Verify `get_balances`'s session scoping** (2026-09-17) — confirmed working as shipped: `client.get_balances` sending `X-Session-Id` alongside the JWT successfully fetched KBC's real balance (Step 6). No correction needed.
 
-- [ ] **Step 6: Run a real sync and confirm the Accounts page**
+- [x] **Step 6: Run a real sync and confirm the Accounts page** (2026-09-17)
 
-```bash
-cd backend
-.venv/bin/python manage.py shell -c "
-from enablebanking import tasks
-print(tasks.sync_enablebanking_balances())
-"
-```
+Ran manually via `manage.py shell`. Real result: `sync_enablebanking_balances()` returned 1 row; `BankAccount.objects.get(bank='KBC')` shows `KBC Basic Account`, IBAN masked `BE12 •••• •••• 7392`, balance `273.43 EUR`. Confirmed end-to-end: mapping, upsert-by-`external_id`, and the Accounts page all work with real data, not just mocks.
 
-Expected: real KBC and Argenta balances appear as `BankAccount` rows, and reloading the Accounts page in the browser shows them with no frontend code changes beyond Task 9's connection-status component.
+- [x] **Step 7: Register the periodic task** (2026-09-17) — `"Sync Enable Banking balances"` → `enablebanking.tasks.sync_enablebanking_balances`, `IntervalSchedule` every 3 hours, enabled.
 
-- [ ] **Step 7: Register the periodic task**
+- [x] **Step 8: Run the full backend suite one more time** (2026-09-17) — `Ran 453 tests ... OK`, frontend `430 tests ... OK`, lint and build clean.
 
-Same manual Celery Beat admin step as every other sync task in this app — register `enablebanking.tasks.sync_enablebanking_balances` on a multi-hour interval (balances change far less often than Saxo positions).
+- [x] **Step 9: Commit any corrections made during this task** (2026-09-17) — corrections landed as their own commits along the way (`2ff9384` ASPSP names, `ae89976` ngrok scoping fix + error-feedback UI) rather than one bundled commit at the end.
 
-- [ ] **Step 8: Run the full backend suite one more time**
-
-Run: `cd backend && .venv/bin/python manage.py test`
-Expected: full pass, including anything adjusted in Steps 2/4/5 above.
-
-- [ ] **Step 9: Commit any corrections made during this task**
-
-```bash
-git add backend/enablebanking
-git commit -m "fix: correct Enable Banking client against live API responses"
-```
+**Task 10 status: mostly done.** KBC is connected and syncing real data. Argenta is not yet connected — same "Connect Argenta" flow, whenever that's picked back up.
