@@ -1,0 +1,87 @@
+import datetime
+import time
+
+import jwt as pyjwt
+import requests
+from django.conf import settings
+
+API_BASE_URL = 'https://api.enablebanking.com'
+REQUEST_TIMEOUT = 10
+ERROR_BODY_LIMIT = 200
+
+# Best-effort from Enable Banking's public ASPSP listings - NOT yet verified
+# against a live GET /aspsps?country=BE call. Task 10 of the implementation
+# plan captures the real values once the user has a registered application
+# to call it with; correct here if they differ.
+ASPSPS = {
+    'kbc': {'name': 'KBC Bank', 'country': 'BE'},
+    'argenta': {'name': 'Argenta Spaarbank', 'country': 'BE'},
+}
+
+
+class EnableBankingAuthError(Exception):
+    """Raised when JWT signing or authentication fails."""
+
+
+class EnableBankingAPIError(Exception):
+    """Raised when an Enable Banking API request fails."""
+
+
+def _jwt():
+    """A fresh RS256 JWT, signed per-request - Enable Banking has no OAuth2
+    client-secret exchange; this JWT *is* the app-level authentication, valid
+    for a short window rather than issued once and refreshed."""
+    now = int(time.time())
+    return pyjwt.encode(
+        {'iss': 'enablebanking.com', 'aud': 'api.enablebanking.com', 'iat': now, 'exp': now + 300},
+        settings.ENABLE_BANKING_PRIVATE_KEY,
+        algorithm='RS256',
+        headers={'kid': settings.ENABLE_BANKING_APPLICATION_ID},
+    )
+
+
+def _headers(extra=None):
+    return {'Authorization': f'Bearer {_jwt()}', **(extra or {})}
+
+
+def _raise_for_status(response, label):
+    if not response.ok:
+        body = response.text[:ERROR_BODY_LIMIT]
+        raise EnableBankingAPIError(f'{label} failed: {response.status_code} {body}')
+
+
+def _valid_until_180_days():
+    return (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=180)).isoformat()
+
+
+def build_authorize_url(bank, state, redirect_url):
+    body = {
+        'access': {'valid_until': _valid_until_180_days()},
+        'aspsp': ASPSPS[bank],
+        'state': state,
+        'redirect_url': redirect_url,
+        'psu_type': 'personal',
+    }
+    response = requests.post(
+        f'{API_BASE_URL}/auth', json=body, headers=_headers(), timeout=REQUEST_TIMEOUT,
+    )
+    _raise_for_status(response, 'Start authorization')
+    return response.json()['url']
+
+
+def exchange_code_for_session(code):
+    response = requests.post(
+        f'{API_BASE_URL}/sessions', json={'code': code}, headers=_headers(), timeout=REQUEST_TIMEOUT,
+    )
+    _raise_for_status(response, 'Session authorization')
+    return response.json()
+
+
+def get_balances(session_id, account_uid):
+    response = requests.get(
+        f'{API_BASE_URL}/accounts/{account_uid}/balances',
+        headers=_headers({'X-Session-Id': session_id}),
+        timeout=REQUEST_TIMEOUT,
+    )
+    _raise_for_status(response, 'Get balances')
+    return response.json()
