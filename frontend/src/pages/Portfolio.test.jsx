@@ -32,6 +32,7 @@ const msft = {
 
 function stub(positions = [msft]) {
   queries.usePositions.mockReturnValue({ ...idle, data: positions })
+  queries.usePositionQuotes.mockReturnValue(new Map())
   queries.usePortfolioSummary.mockReturnValue({
     ...idle,
     data: {
@@ -56,7 +57,7 @@ describe('Portfolio holdings table', () => {
 
   it('prices the instrument in its own currency, not the reporting one', () => {
     renderWithProviders(<Portfolio />)
-    const row = screen.getByText('MSFT').closest('tr')
+    const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
 
     expect(within(row).getByText('US$510.09')).toBeInTheDocument()
     expect(within(row).getByText('US$494.36')).toBeInTheDocument()
@@ -65,7 +66,7 @@ describe('Portfolio holdings table', () => {
 
   it('reports value and P&L in the reporting currency', () => {
     renderWithProviders(<Portfolio />)
-    const row = screen.getByText('MSFT').closest('tr')
+    const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
 
     expect(within(row).getByText('€8,773.32')).toBeInTheDocument()
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
@@ -89,7 +90,7 @@ describe('Portfolio holdings table', () => {
   it('keeps a fractional holding from rounding away', () => {
     stub([{ ...msft, qty: '2.5000' }])
     renderWithProviders(<Portfolio />)
-    const row = screen.getByText('MSFT').closest('tr')
+    const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
 
     expect(within(row).getByText('2.5')).toBeInTheDocument()
   })

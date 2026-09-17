@@ -7,9 +7,9 @@ import {
   useWatchlistMutations,
   useWatchlists,
 } from '../../api/queries'
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtNum } from '../../lib/format'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
-import { Card } from '../ui'
+import { Card, DayChange, InstrumentLogo } from '../ui'
 import { Menu, MenuRow, MenuSeparator } from './menu'
 
 // Hoisted so a list with no items keeps a stable identity across renders.
@@ -144,10 +144,16 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
                     onSelectSymbol(result.symbol, { uic: result.uic, assetType: result.asset_type })
                     setQuery('')
                   }}
-                  className="flex-1 min-w-0 text-left"
+                  className="flex-1 min-w-0 flex items-center gap-1.5 text-left"
                 >
+                  <InstrumentLogo
+                    symbol={result.symbol}
+                    size={14}
+                    className="rounded-sm"
+                    fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
+                  />
                   <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{result.symbol}</span>
-                  <span className="text-[var(--fig-2xs)] text-zinc-500 ml-2 truncate">{result.description}</span>
+                  <span className="text-[var(--fig-2xs)] text-zinc-500 truncate">{result.description}</span>
                 </button>
                 <button
                   type="button"
@@ -169,9 +175,9 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-[1fr_auto_auto] items-center px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
+      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
         <span>Symbol</span>
-        <span className="text-right pr-3">Last</span>
+        <span className="text-right">Last</span>
         <span className="text-right w-14">Chg%</span>
       </div>
 
@@ -202,30 +208,30 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
               }}
-              className={`grid grid-cols-[1fr_auto_auto] items-center px-3 h-[38px] cursor-pointer group border-l-2 ${
+              className={`grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
                 symbol === item.symbol
                   ? 'bg-blue-500/[0.07] border-l-blue-500'
                   : 'border-l-transparent hover:bg-white/[0.04]'
               }`}
             >
               <div className="min-w-0 flex items-center gap-1.5">
+                <InstrumentLogo
+                  symbol={item.symbol}
+                  size={16}
+                  className="rounded-sm"
+                  fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
+                />
                 <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{item.symbol}</span>
                 {heldSymbols.has(item.symbol) ? (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                 ) : null}
                 <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
               </div>
-              <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right pr-3">
+              <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
                 {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
               </span>
-              <span className="w-14 text-right flex items-center justify-end gap-1">
-                <span
-                  className={`text-[var(--fig-xs)] num font-mono ${
-                    change == null ? 'text-zinc-600' : change >= 0 ? 'text-emerald-400' : 'text-red-400'
-                  }`}
-                >
-                  {change == null ? '—' : fmtPct(change)}
-                </span>
+              <span className="flex items-center justify-end gap-1">
+                <DayChange value={change} className="text-[var(--fig-xs)]" />
                 <button
                   type="button"
                   onClick={(e) => {

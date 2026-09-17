@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Info } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
+import { fmtPct } from '../lib/format'
 
 export function Card({ children, className = '', padding = true, interactive = false, onClick }) {
   return (
@@ -9,7 +10,7 @@ export function Card({ children, className = '', padding = true, interactive = f
       onClick={onClick}
       className={`bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-lg shadow-sm shadow-black/40 ${
         interactive ? 'hover:border-white/[0.12] cursor-pointer transition-colors duration-200' : ''
-      } ${padding ? 'p-4' : ''} ${className}`}
+      } ${padding ? 'p-4 2xl:p-5' : ''} ${className}`}
     >
       {children}
     </div>
@@ -18,10 +19,10 @@ export function Card({ children, className = '', padding = true, interactive = f
 
 export function CardHeader({ title, subtitle, right, className = '' }) {
   return (
-    <div className={`flex items-start justify-between gap-3 ${className}`}>
+    <div className={`flex items-start justify-between gap-3 2xl:gap-4 ${className}`}>
       <div>
         <h3 className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</h3>
-        {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5">{subtitle}</p>}
+        {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5 2xl:mt-1">{subtitle}</p>}
       </div>
       {right}
     </div>
@@ -30,10 +31,10 @@ export function CardHeader({ title, subtitle, right, className = '' }) {
 
 export function PageHeader({ title, subtitle, right }) {
   return (
-    <div className="flex items-end justify-between mb-5">
+    <div className="flex items-end justify-between mb-5 2xl:mb-6">
       <div>
         <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
-        {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1 2xl:mt-1.5">{subtitle}</p>}
       </div>
       {right}
     </div>
@@ -143,17 +144,17 @@ export function StatStrip({ children, className = '', vertical = false }) {
  *  that deserves top billing regardless of whether it needs a tint. */
 export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, lead = false }) {
   return (
-    <div className="flex-1 p-3.5">
+    <div className="flex-1 p-3.5 2xl:p-4">
       <div className={`text-[var(--fig-2xs)] font-medium uppercase tracking-wider ${tone || 'text-zinc-500'}`}>{label}</div>
       <div
-        className={`mt-1.5 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
+        className={`mt-1.5 2xl:mt-2 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
           lead ? 'text-[clamp(20px,1.9vw,28px)]' : 'text-[clamp(18px,1.7vw,24px)]'
         }`}
       >
         {value}
       </div>
       {(badge || note) && (
-        <div className="mt-2 flex items-center gap-2 flex-wrap">
+        <div className="mt-2 2xl:mt-2.5 flex items-center gap-2 flex-wrap">
           {badge && (
             <span
               className={`inline-flex items-center whitespace-nowrap text-[var(--fig-xs)] px-2 py-0.5 rounded-md font-medium num font-mono ${
@@ -199,6 +200,15 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
   )
 }
 
+/** Today's % move, colored - the "how did today go" figure the watchlist
+ *  rail, Dashboard's top positions and Portfolio's holdings table all show
+ *  next to a ticker, TradingView-style. `null` (no live quote) reads as a
+ *  dash rather than a false flat 0%. */
+export function DayChange({ value, className = '' }) {
+  const tone = value == null ? 'text-zinc-600' : Number(value) >= 0 ? 'text-emerald-400' : 'text-red-400'
+  return <span className={`num font-mono ${tone} ${className}`}>{fmtPct(value)}</span>
+}
+
 /** A single button in a segmented toggle - Research's chart-range picker
  *  and the instrument search bar's asset-type filter share this. */
 export function TBtn({ active, onClick, children, title }) {
@@ -223,8 +233,36 @@ export function Metric({ label, value, tone = 'text-zinc-100', hint }) {
   return (
     <div>
       <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className={`text-[var(--fig-md)] num font-mono mt-1 ${tone}`}>{value}</div>
+      <div className={`text-[var(--fig-md)] num font-mono mt-1 2xl:mt-1.5 ${tone}`}>{value}</div>
       {hint ? <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
     </div>
+  )
+}
+
+/** Table header/body cell with the app's shared density scale - edge columns
+ *  get more horizontal room than interior ones. Used by every data table
+ *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
+ *  governed from one place instead of copied per table. */
+export function Th({ children, align = 'left', edge = false, className = '' }) {
+  return (
+    <th
+      className={`font-medium ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-1.5 2xl:py-2 ${
+        align === 'right' ? 'text-right' : 'text-left'
+      } ${className}`}
+    >
+      {children}
+    </th>
+  )
+}
+
+export function Td({ children, align = 'left', edge = false, className = '' }) {
+  return (
+    <td
+      className={`${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
+        align === 'right' ? 'text-right' : 'text-left'
+      } ${className}`}
+    >
+      {children}
+    </td>
   )
 }

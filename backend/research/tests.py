@@ -584,6 +584,42 @@ class MarketDataViewTest(APITestCase):
         response = self.client.get('/api/research/quotes/?uics=abc&asset_type=Stock')
         self.assertEqual(response.status_code, 400)
 
+    @patch('research.market.client.get_chart')
+    @patch('research.market.client.get_infoprices')
+    def test_quotes_falls_back_to_the_last_close_to_close_move_without_live_entitlement(
+        self, mock_infoprices, mock_get_chart
+    ):
+        # An account with no market-data entitlement gets no PriceInfo at all
+        # from Saxo (confirmed against SIM), open market or closed - the
+        # daily chart needs no such entitlement, so that's where the move
+        # comes from instead of a permanent dash.
+        self._connect_saxo()
+        mock_infoprices.return_value = [{'Uic': 211, 'AssetType': 'Stock', 'Quote': {}}]
+        mock_get_chart.return_value = [
+            {**SAMPLE_CANDLE, 'Time': '2026-08-28T00:00:00Z', 'Close': 400.0},
+            {**SAMPLE_CANDLE, 'Time': '2026-08-31T00:00:00Z', 'Close': 410.0},
+        ]
+
+        response = self.client.get('/api/research/quotes/?uics=211&asset_type=Stock')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertAlmostEqual(response.data[0]['change_pct'], 2.5)
+        mock_get_chart.assert_called_once()
+
+    @patch('research.market.client.get_chart')
+    @patch('research.market.client.get_infoprices')
+    def test_quotes_does_not_fall_back_when_saxo_already_sent_a_live_change(
+        self, mock_infoprices, mock_get_chart
+    ):
+        self._connect_saxo()
+        mock_infoprices.return_value = [SAMPLE_INFOPRICE]
+
+        response = self.client.get('/api/research/quotes/?uics=211&asset_type=Stock')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['change_pct'], 1.42)
+        mock_get_chart.assert_not_called()
+
     @patch('research.market.client.get_instrument_details')
     def test_details_returns_the_shaped_instrument(self, mock_details):
         self._connect_saxo()

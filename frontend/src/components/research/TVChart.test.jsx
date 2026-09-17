@@ -13,7 +13,7 @@ const bars = Array.from({ length: 30 }, (_, i) => ({
   volume: 1_000_000 + i,
 }))
 
-const overlays = { ma20: false, ma50: false, ema9: false, bb: false, vwap: false }
+const overlays = { ma20: false, ma50: false, ma200: false, ema9: false, bb: false, vwap: false }
 
 const renderChart = (props = {}) =>
   render(

@@ -19,6 +19,7 @@ const CHART_TYPES = [
 const OVERLAY_DEFS = [
   { key: 'ma20', label: 'MA 20' },
   { key: 'ma50', label: 'MA 50' },
+  { key: 'ma200', label: 'MA 200' },
   { key: 'ema9', label: 'EMA 9' },
   { key: 'bb', label: 'Bollinger (20, 2)' },
   { key: 'vwap', label: 'VWAP' },
@@ -30,7 +31,7 @@ const PANE_DEFS = [
   { key: 'macd', label: 'MACD (12, 26, 9)' },
 ]
 
-const CHART_HEIGHT = 368
+const CHART_HEIGHT = 390
 
 function valueAt(series, hover) {
   if (!series?.length) return null

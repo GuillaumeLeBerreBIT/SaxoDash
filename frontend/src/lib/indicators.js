@@ -129,6 +129,7 @@ export function computeIndicatorsForRange(bars, count) {
   return {
     ma20: tail(sma(closes, 20)),
     ma50: tail(sma(closes, 50)),
+    ma200: tail(sma(closes, 200)),
     ema9: tail(ema(closes, 9)),
     bb: tailEach(bollinger(closes)),
     rsi: tail(rsi(closes)),

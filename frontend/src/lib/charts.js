@@ -40,6 +40,24 @@ export const chartTooltipProps = {
 // Portfolio sector bars and the Dashboard exposure donut share one.
 export const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
 
+// Multi-hue, dark-background-legible palette for per-holding identity (pie
+// slices, logo-fallback dots). Deliberately excludes green/red - those are
+// reserved for P&L sign everywhere else in the app, so reusing them here
+// would read as a gain/loss signal instead of "this is ticker X".
+const HOLDINGS_PALETTE = [
+  '#60a5fa', '#fbbf24', '#a78bfa', '#22d3ee', '#fb923c',
+  '#f472b6', '#2dd4bf', '#818cf8', '#facc15', '#c084fc',
+]
+
+/** Deterministic color per ticker from HOLDINGS_PALETTE - same ticker always
+ *  gets the same color across the app, without the backend's per-position
+ *  hash-to-raw-hex color (which produces arbitrary, sometimes muddy hues). */
+export function colorForTicker(ticker) {
+  let hash = 0
+  for (let i = 0; i < (ticker || '').length; i++) hash = (hash * 31 + ticker.charCodeAt(i)) >>> 0
+  return HOLDINGS_PALETTE[hash % HOLDINGS_PALETTE.length]
+}
+
 export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
 
 export const axisProps = {

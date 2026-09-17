@@ -114,7 +114,7 @@ describe('computeIndicators', () => {
     const out = computeIndicators(bars(closes))
 
     expect(Object.keys(out).sort()).toEqual(
-      ['bb', 'ema9', 'ma20', 'ma50', 'macd', 'rsi', 'vwap'].sort(),
+      ['bb', 'ema9', 'ma20', 'ma50', 'ma200', 'macd', 'rsi', 'vwap'].sort(),
     )
   })
 

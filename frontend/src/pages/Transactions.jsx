@@ -3,7 +3,7 @@ import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtEur, fmtQty } from '../lib/format'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Card, PageHeader, Badge } from '../components/ui'
+import { Card, PageHeader, Badge, Th, Td } from '../components/ui'
 
 const TYPES = ['All', 'BUY', 'SELL', 'DIVIDEND', 'DEPOSIT', 'FEE']
 const toneFor = (t) => ({ BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }[t] || 'zinc')
@@ -104,29 +104,29 @@ export default function Transactions() {
           <table className="w-full text-[var(--fig-sm)]">
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
-                <th className="px-4 py-1.5 font-medium">Date</th>
-                <th className="px-2 py-1.5 font-medium">Type</th>
-                <th className="px-2 py-1.5 font-medium">Instrument</th>
-                <th className="px-2 py-1.5 font-medium">Ticker</th>
-                <th className="px-2 py-1.5 font-medium text-right">Qty</th>
-                <th className="px-2 py-1.5 font-medium text-right">Price</th>
-                <th className="px-2 py-1.5 font-medium text-right">Total</th>
-                <th className="px-4 py-1.5 font-medium">Account</th>
+                <Th edge>Date</Th>
+                <Th>Type</Th>
+                <Th>Instrument</Th>
+                <Th>Ticker</Th>
+                <Th align="right">Qty</Th>
+                <Th align="right">Price</Th>
+                <Th align="right">Total</Th>
+                <Th edge>Account</Th>
               </tr>
             </thead>
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <td className="px-4 py-2 num text-zinc-300">{t.date}</td>
-                  <td className="px-2 py-2">
+                  <Td edge className="num text-zinc-300">{t.date}</Td>
+                  <Td>
                     <Badge tone={toneFor(t.type)}>{t.type}</Badge>
-                  </td>
-                  <td className="px-2 py-2 text-zinc-100">{t.instrument}</td>
-                  <td className="px-2 py-2 text-zinc-400 font-medium">{t.ticker}</td>
-                  <td className="px-2 py-2 text-right num text-zinc-300">{fmtQty(t.qty)}</td>
-                  <td className="px-2 py-2 text-right num text-zinc-300">{fmtEur(t.price)}</td>
-                  <td className="px-2 py-2 text-right num text-zinc-100 font-medium">{signedTotal(t)}</td>
-                  <td className="px-4 py-2 text-zinc-400">{t.account}</td>
+                  </Td>
+                  <Td className="text-zinc-100">{t.instrument}</Td>
+                  <Td className="text-zinc-400 font-medium">{t.ticker}</Td>
+                  <Td align="right" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
+                  <Td align="right" className="num text-zinc-300">{fmtEur(t.price)}</Td>
+                  <Td align="right" className="num text-zinc-100 font-medium">{signedTotal(t)}</Td>
+                  <Td edge className="text-zinc-400">{t.account}</Td>
                 </tr>
               ))}
               {visible.length === 0 && (

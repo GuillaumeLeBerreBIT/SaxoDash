@@ -37,6 +37,7 @@ const positions = [{
 function stub(over = {}) {
   queries.usePortfolioInsights.mockReturnValue({ ...idle, data: over.insights ?? insights })
   queries.usePositions.mockReturnValue({ ...idle, data: positions })
+  queries.usePositionQuotes.mockReturnValue(new Map())
   queries.usePortfolioSummary.mockReturnValue({
     ...idle,
     data: { total_value: '13131.00', allocation: [{ ticker: 'NVDA', value: '13131.00', color: '#76b900' }] },

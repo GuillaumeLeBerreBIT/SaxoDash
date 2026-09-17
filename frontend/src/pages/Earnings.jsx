@@ -212,7 +212,7 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(event.symbol)}
-      className="w-full grid items-center gap-2.5 h-11 pl-3 pr-3.5 text-left hover:bg-white/[0.045] transition-colors"
+      className="w-full grid items-center gap-2.5 2xl:gap-3 h-11 2xl:h-12 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 text-left hover:bg-white/[0.045] transition-colors"
       style={{
         gridTemplateColumns: ROW_GRID,
         borderLeft: `2px solid ${
@@ -265,7 +265,7 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
 function ColumnHeader() {
   return (
     <div
-      className="grid items-center gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600"
+      className="grid items-center gap-2.5 2xl:gap-3 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 py-1.5 2xl:py-2 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600"
       style={{ gridTemplateColumns: ROW_GRID, borderLeft: '2px solid transparent' }}
     >
       <span>Symbol</span>

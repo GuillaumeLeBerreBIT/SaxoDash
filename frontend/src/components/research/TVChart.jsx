@@ -167,7 +167,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           />
         </g>
       ) : null}
-      {['ma20', 'ma50', 'ema9'].map((key) =>
+      {['ma20', 'ma50', 'ma200', 'ema9'].map((key) =>
         overlays[key] ? (
           <path
             key={key}

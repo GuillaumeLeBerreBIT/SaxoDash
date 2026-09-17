@@ -1,6 +1,7 @@
+import { useMemo } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { ALL_ASSET_TYPES, instrumentKey } from '../lib/research'
+import { ALL_ASSET_TYPES, instrumentKey, quotesByUic, uicsByAssetType } from '../lib/research'
 import { useDebouncedValue } from '../lib/useDebouncedValue'
 
 import {
@@ -180,6 +181,16 @@ export function useQuotesByAssetType(groups) {
       isLoading: results.some((result) => result.isLoading),
     }),
   })
+}
+
+/** Live quotes for a list of positions, keyed by uic - a position's own
+ *  price is broker-derived (see backend/saxo/mapping.py), not live, so
+ *  today's % move has to come from here instead. Dashboard's top positions
+ *  and Portfolio's holdings table both want it next to the same rows. */
+export function usePositionQuotes(positions = []) {
+  const groups = uicsByAssetType(positions)
+  const { data } = useQuotesByAssetType(groups)
+  return useMemo(() => quotesByUic(data), [data])
 }
 
 export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {

@@ -13,6 +13,7 @@ export const DOWN = '#e5484d'
 export const OVERLAY_STROKES = {
   ma20: '#f59e0b',
   ma50: '#38bdf8',
+  ma200: '#94a3b8',
   ema9: '#e879f9',
   bb: '#a78bfa',
   vwap: '#facc15',

@@ -144,6 +144,26 @@ def details(uic, asset_type):
     return _cached(key, produce, DETAILS_TTL)
 
 
+def _last_session_change_pct(uic, asset_type):
+    """% move between the two most recent daily closes - Saxo's live quote
+    entitlement withholds PriceInfo entirely on an account without market
+    data access (confirmed against SIM: PriceTypeBid/Ask come back
+    'NoAccess', no PriceInfo at all, market open or closed), but the daily
+    chart needs no such entitlement. Lets a watchlist row or an open
+    position show yesterday's move instead of a permanent dash.
+    """
+    try:
+        candles = chart(uic, asset_type, horizon=1440, count=2)
+    except ProviderError:
+        # A fallback that itself fails should not take the whole quote batch
+        # down with it - the row just keeps its dash.
+        return None
+    if len(candles) < 2 or not candles[-2]['close']:
+        return None
+    previous, latest = candles[-2]['close'], candles[-1]['close']
+    return (latest - previous) / previous * 100
+
+
 def quotes(uics, asset_type):
     """Prices for several instruments in one Saxo call.
 
@@ -155,7 +175,11 @@ def quotes(uics, asset_type):
 
     def produce():
         rows = client.get_infoprices(_access_token(), uics, asset_type)
-        return [to_quote(r) for r in rows]
+        mapped = [to_quote(r) for r in rows]
+        for row in mapped:
+            if row['change_pct'] is None and row['uic'] is not None:
+                row['change_pct'] = _last_session_change_pct(row['uic'], asset_type)
+        return mapped
 
     key = _cache_key('quotes', uics=','.join(str(u) for u in sorted(uics)), asset_type=asset_type)
     return _cached(key, produce, QUOTES_TTL)

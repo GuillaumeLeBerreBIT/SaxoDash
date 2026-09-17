@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Geist', system-ui, sans-serif;
   --font-mono: 'Geist Mono', monospace;
+  /* Past Tailwind's largest default (2xl = 1536px, a common laptop
+     resolution) for genuinely large monitors, where cards/tables/rows
+     get more breathing room via 3xl: variants. */
+  --breakpoint-3xl: 1920px;
   --animate-pagein: pagein 200ms ease-out both;
   @keyframes pagein {
     from { opacity: 0; transform: translateY(4px); }
@@ -34,7 +38,7 @@
 html, body {
   background: #09090b;
   color: #fafafa;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Geist', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 body {

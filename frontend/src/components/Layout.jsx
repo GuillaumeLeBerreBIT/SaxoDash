@@ -32,7 +32,10 @@ export default function Layout() {
         onOpenPalette={() => setPaletteOpen(true)}
       />
       <main className="transition-[margin] duration-300 ease-out" style={{ marginLeft: collapsed ? 64 : 220 }}>
-        <div className="px-6 py-6 max-w-[1500px] mx-auto animate-pagein">
+        <div
+          className="mx-auto py-6 2xl:py-8 animate-pagein"
+          style={{ maxWidth: 2200, paddingLeft: 'clamp(24px, 4vw, 96px)', paddingRight: 'clamp(24px, 4vw, 96px)' }}
+        >
           <Outlet />
         </div>
       </main>

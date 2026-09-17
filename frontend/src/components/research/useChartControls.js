@@ -10,7 +10,7 @@ export function useChartControls({ range = '6M', type = 'candles' } = {}) {
   const [state, setState] = useState({
     range,
     type,
-    overlays: { ma20: true, ma50: true, ema9: false, bb: false, vwap: false },
+    overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
     panes: { volume: true, rsi: false, macd: false },
   })
 
