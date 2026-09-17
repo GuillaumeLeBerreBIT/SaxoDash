@@ -14,6 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import BankAccount
 
 from .models import EnableBankingCredential, BankSyncRun
+from . import checks as eb_checks
 from . import client, credentials, mapping, tasks
 
 SAMPLE_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE68539007547034'}, 'product': 'Current account'}
@@ -342,3 +343,19 @@ class EnableBankingStatusViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['kbc']['connected'])
         self.assertFalse(response.data['argenta']['connected'])
+
+
+class EnableBankingChecksTest(TestCase):
+    @override_settings(ENABLE_BANKING_APPLICATION_ID='', ENABLE_BANKING_PRIVATE_KEY='some-key')
+    def test_errors_when_application_id_missing(self):
+        errors = eb_checks.check_config(None)
+        self.assertTrue(any(e.id == 'enablebanking.E001' for e in errors))
+
+    @override_settings(ENABLE_BANKING_APPLICATION_ID='app-id', ENABLE_BANKING_PRIVATE_KEY='')
+    def test_errors_when_private_key_missing(self):
+        errors = eb_checks.check_config(None)
+        self.assertTrue(any(e.id == 'enablebanking.E002' for e in errors))
+
+    @override_settings(ENABLE_BANKING_APPLICATION_ID='app-id', ENABLE_BANKING_PRIVATE_KEY='some-key')
+    def test_no_errors_when_both_are_set(self):
+        self.assertEqual(eb_checks.check_config(None), [])
