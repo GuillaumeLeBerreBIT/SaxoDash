@@ -16,7 +16,7 @@ ENV_FILE="$BACKEND/.env"
 
 C_RESET=$'\033[0m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'; C_AMBER=$'\033[33m'
 C_REDIS=$'\033[35m'; C_WORKER=$'\033[33m'; C_BEAT=$'\033[36m'
-C_WEB=$'\033[32m'; C_UI=$'\033[34m'
+C_WEB=$'\033[32m'; C_UI=$'\033[34m'; C_NGROK=$'\033[95m'
 
 note() { printf '%s>>%s %s\n' "$C_DIM" "$C_RESET" "$1"; }
 warn() { printf '%swarn:%s %s\n' "$C_AMBER" "$C_RESET" "$1"; }
@@ -49,22 +49,34 @@ url_port() {
   printf '%s' "${port:-$fallback}"
 }
 
+# Host out of a URL (no port, no path) — empty when the URL is empty/unparseable.
+url_host() {
+  printf '%s' "$1" | sed -n 's#^[a-zA-Z][a-zA-Z0-9+.-]*://\([^/:]*\).*#\1#p'
+}
+
 # The .env keys are authoritative; these defaults mirror settings.py's own.
 WEB_PORT="${WEB_PORT:-$(url_port "$(env_get SAXO_REDIRECT_URI)" 8000)}"
 UI_PORT="${UI_PORT:-$(url_port "$(env_get FRONTEND_URL)" 5173)}"
 REDIS_PORT="${REDIS_PORT:-$(url_port "$(env_get CELERY_BROKER_URL)" 6379)}"
 
+# Enable Banking's redirect must be HTTPS even in local dev (it rejects plain
+# http:// outright), so that's the one service here that needs a real public
+# tunnel rather than a local port. Same domain already lives in .env — no
+# second place to keep it in sync.
+NGROK_DOMAIN="${NGROK_DOMAIN:-$(url_host "$(env_get ENABLE_BANKING_REDIRECT_URI)")}"
+
 usage() {
   cat <<EOF
 Start the whole SaxoDash dev stack in one terminal:
-  redis -> celery worker -> celery beat -> django -> vite
+  ngrok -> redis -> celery worker -> celery beat -> django -> vite
 
-Ctrl-C stops everything this script started. Redis is left alone if it was
-already running (e.g. under \`brew services\`).
+Ctrl-C stops everything this script started. Redis and ngrok are left alone
+if either was already running (e.g. redis under \`brew services\`, or ngrok
+started by hand in another terminal).
 
 Usage: scripts/dev.sh [--no-<service>]... [--reclaim]
 
-  --no-<service>  skip one service: $(printf '%s ' redis worker beat web ui)
+  --no-<service>  skip one service: $(printf '%s ' ngrok redis worker beat web ui)
                   (--no-frontend is accepted as an alias for --no-ui)
   --reclaim       stop leftover processes from a previous run without asking
 
@@ -72,6 +84,14 @@ Ports are read from backend/.env (SAXO_REDIRECT_URI, FRONTEND_URL,
 CELERY_BROKER_URL) so they cannot drift from the backend's own config.
 Override per-run with WEB_PORT / UI_PORT / REDIS_PORT.
   web=$WEB_PORT  ui=$UI_PORT  redis=$REDIS_PORT
+
+ngrok tunnels to the web port using the domain in ENABLE_BANKING_REDIRECT_URI
+(backend/.env) — needed only for the Enable Banking connect flow, which
+requires an HTTPS redirect URL. Skipped automatically (with a warning) if
+that .env key is unset, or override with NGROK_DOMAIN. Requires \`ngrok\`
+installed and authenticated (\`ngrok config add-authtoken ...\`) — see
+docs/superpowers/plans/2026-09-17-enable-banking-integration.md for why.
+  ngrok domain=${NGROK_DOMAIN:-<unset - ngrok will be skipped>}
 EOF
 }
 
@@ -96,6 +116,17 @@ service() {
 }
 
 log_has() { grep -q "$2" "$LOG_DIR/$1.log" 2>/dev/null; }
+
+# A listening port only means the ngrok agent started, not that the tunnel to
+# ngrok's servers is actually up - the local API it always exposes on 4040
+# reports a public_url only once the tunnel is really live.
+ngrok_ready() { curl -fsS 'http://127.0.0.1:4040/api/tunnels' 2>/dev/null | grep -q '"public_url"'; }
+
+# adopt=yes: a tunnel started by hand in another terminal (e.g. the
+# ngrok-banking alias) is reused rather than fought over - only one agent can
+# hold a given authtoken/domain at a time anyway.
+service ngrok  "$C_NGROK"  "$ROOT"      4040          yes ngrok_ready \
+  'ngrok http --url=https://$NGROK_DOMAIN $WEB_PORT --log=stdout'
 
 service redis  "$C_REDIS"  "$REDIS_DIR" "$REDIS_PORT" yes 'redis-cli -p $REDIS_PORT ping' \
   'redis-server --dir "$REDIS_DIR" --save "" --appendonly no --port $REDIS_PORT'
@@ -142,6 +173,13 @@ done
 
 enabled() { case "$SKIP" in *" $1 "*) return 1 ;; esac; return 0; }
 
+# Nothing to tunnel to without a domain - skip rather than die, since ngrok is
+# only needed for the Enable Banking connect flow, not day-to-day dev.
+if enabled ngrok && [ -z "$NGROK_DOMAIN" ]; then
+  warn "ENABLE_BANKING_REDIRECT_URI is not set in backend/.env — skipping ngrok"
+  SKIP="$SKIP ngrok "
+fi
+
 # --- preflight ---------------------------------------------------------------
 
 [ -x "$VENV/bin/python" ] || die "no virtualenv at $VENV — create it and pip install -r backend/requirements.txt"
@@ -152,6 +190,11 @@ preflight_service() {
   case "$1" in
     redis) command -v redis-server >/dev/null || die "redis-server not found — brew install redis" ;;
     ui)    [ -d "$FRONTEND/node_modules" ] || die "frontend/node_modules is missing — run 'npm install' in frontend/" ;;
+    ngrok)
+      command -v ngrok >/dev/null || die "ngrok not found — brew install ngrok"
+      ngrok config check >/dev/null 2>&1 \
+        || die "ngrok has no authtoken configured — run 'ngrok config add-authtoken <token>' (see https://dashboard.ngrok.com/get-started/your-authtoken)"
+      ;;
   esac
 }
 
