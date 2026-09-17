@@ -103,6 +103,30 @@ def to_transaction_fields(saxo_position):
     }
 
 
+def to_closed_transaction_fields(saxo_closed_position):
+    """Map one Saxo *closed position* (an exit trade) to a ledger row.
+
+    Sourced from /port/v1/closedpositions/me - see to_transaction_fields for
+    why /hist/v1/transactions is not used. BuyOrSell records the *opening*
+    side, so closing a long (Buy) is a SELL and closing a short (Sell) is a
+    BUY-to-cover. ClosedPositionUniqueId is stable across repeated syncs, so
+    it plays the same upsert-key role saxo_trade_id plays for entry trades.
+    """
+    base = saxo_closed_position['ClosedPosition']
+    display = saxo_closed_position.get('DisplayAndFormat', {})
+
+    return {
+        'saxo_trade_id': saxo_closed_position['ClosedPositionUniqueId'],
+        'date': date.fromisoformat(base['ExecutionTimeClose'][:10]),
+        'type': 'SELL' if base['BuyOrSell'] == 'Buy' else 'BUY',
+        'instrument': display.get('Description', ''),
+        'ticker': bare_symbol(display.get('Symbol')),
+        'qty': _decimal(abs(base['Amount'])),
+        'price': _decimal(base['ClosingPrice']),
+        'account': 'Saxo',
+    }
+
+
 SAXO_CASH_ACCOUNT_ID = 'saxo:cash'
 
 

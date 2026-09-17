@@ -40,6 +40,24 @@ SAMPLE_POSITION = {
     },
 }
 
+# What the SIM account actually returns, captured live 2026-09-17.
+SAMPLE_CLOSED_POSITION = {
+    'ClosedPositionUniqueId': '5027270864-5027484376',
+    'ClosedPosition': {
+        'Amount': 10.0,
+        'AssetType': 'Stock',
+        'BuyOrSell': 'Buy',
+        'ClosingPrice': 678.43,
+        'ExecutionTimeClose': '2026-09-16T19:06:38.216089Z',
+        'ExecutionTimeOpen': '2026-08-26T18:30:31.645781Z',
+    },
+    'DisplayAndFormat': {
+        'Currency': 'USD',
+        'Description': 'Meta Platforms Inc.',
+        'Symbol': 'META:xnas',
+    },
+}
+
 # What the SIM account actually returns, captured live 2026-09-03: no
 # market-data entitlement, so no price at all - but Saxo still marks the book
 # server-side, so ProfitLossOnTrade is real and recovers the price.
@@ -143,10 +161,18 @@ class SaxoClientTest(TestCase):
         self.assertEqual(result, [{'PositionId': '1'}])
 
     @patch('saxo.client.requests.get')
-    def test_get_closed_positions_returns_bare_list(self, mock_get):
-        mock_get.return_value = Mock(ok=True, json=lambda: [{'ClosedPositionUniqueId': 1}])
+    def test_get_closed_positions_returns_data_list(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'ClosedPositionUniqueId': 1}]})
         result = client.get_closed_positions('token')
         self.assertEqual(result, [{'ClosedPositionUniqueId': 1}])
+
+    @patch('saxo.client.requests.get')
+    def test_get_closed_positions_requests_display_fields(self, mock_get):
+        # Without DisplayAndFormat, Saxo sends only the Uic - no instrument
+        # name or ticker to show in the ledger.
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
+        client.get_closed_positions('token')
+        self.assertIn('DisplayAndFormat', mock_get.call_args.kwargs['params']['FieldGroups'])
 
     @patch('saxo.client.requests.get')
     def test_get_propagates_api_errors_from_any_endpoint(self, mock_get):
@@ -267,7 +293,29 @@ class ToTransactionFieldsTest(TestCase):
         fields = mapping.to_transaction_fields(short)
         self.assertEqual(fields['type'], 'SELL')
         self.assertEqual(fields['qty'], Decimal('4'))
-        
+
+
+class ToClosedTransactionFieldsTest(TestCase):
+    def test_maps_closed_long_to_sell_row(self):
+        fields = mapping.to_closed_transaction_fields(SAMPLE_CLOSED_POSITION)
+        self.assertEqual(fields['saxo_trade_id'], '5027270864-5027484376')
+        self.assertEqual(fields['date'], date_cls(2026, 9, 16))
+        self.assertEqual(fields['type'], 'SELL')
+        self.assertEqual(fields['instrument'], 'Meta Platforms Inc.')
+        self.assertEqual(fields['ticker'], 'META')
+        self.assertEqual(fields['qty'], Decimal('10'))
+        self.assertEqual(fields['price'], Decimal('678.43'))
+        self.assertEqual(fields['account'], 'Saxo')
+
+    def test_closed_short_maps_to_buy_row(self):
+        # BuyOrSell records the *opening* side - covering a short is a buy.
+        covered_short = {
+            **SAMPLE_CLOSED_POSITION,
+            'ClosedPosition': {**SAMPLE_CLOSED_POSITION['ClosedPosition'], 'BuyOrSell': 'Sell'},
+        }
+        fields = mapping.to_closed_transaction_fields(covered_short)
+        self.assertEqual(fields['type'], 'BUY')
+
 class SaxoConnectViewTest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
@@ -555,6 +603,42 @@ class SyncPositionsTaskTest(TestCase):
         mock_get_positions.return_value = [SAMPLE_POSITION]
         tasks.sync_positions()
         tasks.sync_positions()
+        self.assertEqual(Transaction.objects.count(), 1)
+
+
+class SyncClosedPositionsTaskTest(TestCase):
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_creates_a_sell_transaction_from_saxo_data(self, mock_get_closed_positions):
+        mock_get_closed_positions.return_value = [SAMPLE_CLOSED_POSITION]
+        tasks.sync_closed_positions()
+
+        self.assertEqual(Transaction.objects.count(), 1)
+        txn = Transaction.objects.first()
+        self.assertEqual(txn.saxo_trade_id, '5027270864-5027484376')
+        self.assertEqual(txn.type, 'SELL')
+        self.assertEqual(txn.ticker, 'META')
+
+        run = SyncRun.objects.get(task='sync_closed_positions')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 1)
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_skips_malformed_rows_without_aborting(self, mock_get_closed_positions):
+        mock_get_closed_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_CLOSED_POSITION]
+        tasks.sync_closed_positions()
+        self.assertEqual(Transaction.objects.count(), 1)
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_transaction_upserts_on_repeated_sync(self, mock_get_closed_positions):
+        mock_get_closed_positions.return_value = [SAMPLE_CLOSED_POSITION]
+        tasks.sync_closed_positions()
+        tasks.sync_closed_positions()
         self.assertEqual(Transaction.objects.count(), 1)
 
 
@@ -864,16 +948,18 @@ class ScheduledTaskSignatureTest(TestCase):
     every tick with "missing 1 required positional argument: 'credential'".
     """
 
+    @patch('saxo.tasks.client.get_closed_positions')
     @patch('saxo.tasks.client.get_positions')
     @patch('saxo.tasks.client.get_account_balance')
-    def test_beat_can_dispatch_every_scheduled_sync(self, mock_balance, mock_positions):
+    def test_beat_can_dispatch_every_scheduled_sync(self, mock_balance, mock_positions, mock_closed_positions):
         mock_positions.return_value = []
+        mock_closed_positions.return_value = []
         mock_balance.return_value = {
             'CashBalance': 100, 'CollateralAvailable': 100, 'Currency': 'EUR',
             'NonMarginPositionsValue': 0, 'TotalValue': 100,
         }
 
-        for task in (tasks.sync_positions,
+        for task in (tasks.sync_positions, tasks.sync_closed_positions,
                      tasks.sync_account_balance, tasks.refresh_saxo_token):
             with self.subTest(task=task.name):
                 task.delay()

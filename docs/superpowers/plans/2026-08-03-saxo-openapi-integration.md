@@ -1486,9 +1486,28 @@ Verified live 2026-08-27: manual `sync_transactions()` created 5 BUY rows (GOOGL
 
 `SyncTransactionsTaskTest.test_creates_transactions_from_saxo_data` / `.test_upserts_on_repeated_sync` now `@patch('saxo.tasks.client.get_transactions')` (whole function mocked, so the internal `get_client_key` call never fires). Return payload still uses `SAMPLE_CLOSED_POSITION` because `to_transaction_fields` is not yet rewritten (Step 4) — the sample will be swapped for a real `/hist/v1/transactions` row at the same time as the mapping. Full suite: `Ran 63 tests ... OK`.
 
-- [x] **Step 4: Rewrite `mapping.to_transaction_fields` against real data** (2026-08-27) — done as part of Step 2. Maps a real open-position payload → BUY/SELL row. **Still open, minor:** the SELL side for *closing an existing long* (`/port/v1/closedpositions/me`) — SIM had zero closed positions on 2026-08-27, so `closed_position → SELL` mapping is deferred until a SIM position is actually closed and its real payload can be inspected. Entry trades are fully covered.
+- [x] **Step 4: Rewrite `mapping.to_transaction_fields` against real data** (2026-08-27) — done as part of Step 2. Maps a real open-position payload → BUY/SELL row. ~~**Still open, minor:** the SELL side for *closing an existing long* (`/port/v1/closedpositions/me`) — SIM had zero closed positions on 2026-08-27, so `closed_position → SELL` mapping is deferred until a SIM position is actually closed and its real payload can be inspected. Entry trades are fully covered.~~ **Closed out in Task 11 (2026-09-17)** — the user actually closed SIM positions, giving a real payload to build against.
 
 - [x] **Step 5: Register `sync_account_balance` as a periodic task** (2026-08-27) — `"Update Saxo Account Balace"` → `saxo.tasks.sync_account_balance`, `IntervalSchedule` every 30 minutes, enabled. (Name has a typo — cosmetic only, task path is correct.)
+
+---
+
+### Task 11: Exit-trade (SELL) sync from `/port/v1/closedpositions/me` (added 2026-09-17, closes Task 10 Step 4's deferred item)
+
+**Files:**
+- Modify: `backend/saxo/client.py` — `get_closed_positions` now requests `FieldGroups=ClosedPosition,DisplayAndFormat` and returns `.get('Data', [])` (was returning the bare response envelope, and had no instrument name/ticker)
+- Modify: `backend/saxo/mapping.py` — add `to_closed_transaction_fields(saxo_closed_position)`
+- Modify: `backend/saxo/tasks.py` — add `sync_closed_positions` task (same `@synced`/upsert-by-`saxo_trade_id` pattern as the other sync tasks)
+- Modify: `backend/saxo/tests.py` — fixed `test_get_closed_positions_returns_bare_list` (asserted the wrong shape), added `ToClosedTransactionFieldsTest`, `SyncClosedPositionsTaskTest`, extended `ScheduledTaskSignatureTest`
+
+**Why:** the user closed real SIM positions (selling holdings) for the first time, so `/port/v1/closedpositions/me` finally had real rows to build the deferred mapping against — verified live before writing any code.
+
+- [x] **Step 1: Verify the real payload shape** — called `/port/v1/closedpositions/me` against the live SIM credential. Default response has no `DisplayAndFormat` block (only `Uic`); adding `FieldGroups=ClosedPosition,DisplayAndFormat` (mirroring `get_positions`) restores instrument name/ticker. Confirmed 3 real closed positions existed (META, AAPL, MRVL).
+- [x] **Step 2: Also re-checked whether dividends are now reachable** — probed `/hist/v1/transactions` (still `{"__count":0,"Data":[]}` even with a valid `ClientKey`+date range), `/hist/v1/cashtransactions`, `/hist/v1/activities`, `/cs/v1/reports/activities/me`, `/ca/v1/corporateactions` (all 404), and the balance endpoint (only an aggregate `CashBalance`, no line items). **No Saxo OpenAPI endpoint on this SIM account exposes itemized dividend data.** User decision: skip dividends until Saxo actually populates one of these.
+- [x] **Step 3: `to_closed_transaction_fields` (TDD)** — `type` is `SELL` when `BuyOrSell == 'Buy'` (closing a long) else `BUY` (covering a short) — `BuyOrSell` records the *opening* side, not the exit direction. `saxo_trade_id = ClosedPositionUniqueId` (stable across resyncs, distinct id-space from the entry side's `PositionId`, so no collision risk).
+- [x] **Step 4: `sync_closed_positions` task (TDD)** — mirrors `sync_positions`'s upsert loop but only touches `Transaction`, not `Position`. No frontend changes needed — `Transactions.jsx` already had full `SELL` support (filter, badge, signed total) from Task 10.
+- [x] **Step 5: Verify against live data** — ran the task against the real credential: synced the 3 real closed positions as SELL rows (META/AAPL/MRVL) correctly, leaving the 5 existing BUY rows untouched. Full backend suite: `Ran 415 tests ... OK`.
+- [x] **Step 6: Register `sync_closed_positions` as a periodic task** (2026-09-17) — `"Sync Saxo closed positions"` → `saxo.tasks.sync_closed_positions`, `IntervalSchedule` every 30 minutes (reusing the existing 30-minute schedule row shared with `sync_positions`/`sync_account_balance`), enabled.
 
 ---
 

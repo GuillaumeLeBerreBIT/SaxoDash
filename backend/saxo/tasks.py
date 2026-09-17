@@ -145,6 +145,24 @@ def sync_positions(credential):
 
 @shared_task(**SYNC_TASK)
 @synced
+def sync_closed_positions(credential):
+    """Exit trades (SELL/cover rows), from a separate Saxo endpoint than the
+    entry trades sync_positions derives - see mapping.to_closed_transaction_fields."""
+    saxo_closed_positions = client.get_closed_positions(credential.access_token)
+
+    rows = 0
+    with transaction.atomic():
+        for fields in _mapped_rows(saxo_closed_positions, mapping.to_closed_transaction_fields):
+            Transaction.objects.update_or_create(
+                saxo_trade_id=fields['saxo_trade_id'], defaults=fields
+            )
+            rows += 1
+
+    return rows
+
+
+@shared_task(**SYNC_TASK)
+@synced
 def sync_account_balance(credential):
     saxo_balance = client.get_account_balance(credential.access_token)
     valuation = mapping.to_valuation_fields(saxo_balance=saxo_balance)

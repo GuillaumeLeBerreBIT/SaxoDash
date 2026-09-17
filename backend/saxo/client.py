@@ -122,7 +122,8 @@ def get_account_balance(access_token):
 
 
 def get_closed_positions(access_token):
-    return _get(access_token, '/port/v1/closedpositions/me')
+    params = {'FieldGroups': 'ClosedPosition,DisplayAndFormat'}
+    return _get(access_token, '/port/v1/closedpositions/me', params=params).get('Data', [])
 
 
 # Market data. Uic alone is ambiguous - every one of these needs the matching
