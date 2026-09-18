@@ -132,8 +132,8 @@ export function useUpdateBankTransactionCategory() {
   return useMutation({
     mutationFn: ({ id, category }) => updateBankTransactionCategory(id, category),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
-      queryClient.invalidateQueries({ queryKey: ['spending-summary'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.bankTransactions() })
+      queryClient.invalidateQueries({ queryKey: queryKeys.spendingSummary() })
     },
   })
 }
