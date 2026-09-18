@@ -169,10 +169,23 @@ export async function connectSaxo() {
 
 export const getEnableBankingStatus = () => apiFetch('/api/enablebanking/status/')
 
-export async function connectEnableBanking(bank) {
+export async function connectEnableBanking(bank, iban) {
   const { ticket } = await jsonRequest('/api/enablebanking/connect-ticket/', 'POST')
-  window.location.href = `${ENABLE_BANKING_CONNECT_BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}`
+  const ibanParam = iban ? `&iban=${encodeURIComponent(iban)}` : ''
+  window.location.href = `${ENABLE_BANKING_CONNECT_BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}${ibanParam}`
 }
+
+export const getBankTransactions = (query = '') => apiFetch(`/api/enablebanking/transactions/${query}`)
+
+export const updateBankTransactionCategory = (id, categoryOverride) =>
+  jsonRequest(`/api/enablebanking/transactions/${id}/category/`, 'PATCH', { category_override: categoryOverride })
+
+export const getSpendingSummary = (query = '') => apiFetch(`/api/enablebanking/spending/summary/${query}`)
+
+export const getSubscriptions = () => apiFetch('/api/enablebanking/subscriptions/')
+
+export const updateSubscription = (id, patch) =>
+  jsonRequest(`/api/enablebanking/subscriptions/${id}/`, 'PATCH', patch)
 
 // Research: market data proxied through the backend, and watchlist CRUD.
 export const getChart = ({ uic, assetType, horizon = 1440, count = 252 }) =>

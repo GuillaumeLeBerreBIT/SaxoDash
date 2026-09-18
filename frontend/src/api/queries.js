@@ -9,6 +9,7 @@ import {
   createWatchlist,
   deleteWatchlist,
   getBankAccounts,
+  getBankTransactions,
   getCashFlow,
   getChart,
   getCompanyNews,
@@ -26,12 +27,16 @@ import {
   getPositions,
   getQuotes,
   getSaxoStatus,
+  getSpendingSummary,
+  getSubscriptions,
   getSymbolEarnings,
   getSymbolNote,
   getTransactions,
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  updateBankTransactionCategory,
+  updateSubscription,
   updateSymbolNote,
   updateWatchlist,
 } from './client'
@@ -46,6 +51,7 @@ export const queryKeys = {
   portfolioInsights: ['portfolio-insights'],
   transactions: (query = '') => ['transactions', query],
   bankAccounts: ['bank-accounts'],
+  bankTransactions: (query = '') => ['bank-transactions', query],
   netWorth: ['net-worth'],
   netWorthHistory: (range = 'ALL') => ['net-worth-history', range],
   riskMetrics: (benchmark = 'world') => ['risk-metrics', benchmark],
@@ -53,6 +59,8 @@ export const queryKeys = {
   cashFlow: ['cash-flow'],
   saxoStatus: ['saxo-status'],
   enableBankingStatus: ['enablebanking-status'],
+  spendingSummary: (query = '') => ['spending-summary', query],
+  subscriptions: ['subscriptions'],
   // Every market-data key carries the whole instrument identity: a Uic alone
   // is ambiguous, and the backend keys on both halves.
   chart: (uic, assetType, horizon, count) =>
@@ -98,6 +106,44 @@ export function useTransactions(query = '') {
 
 export function useBankAccounts() {
   return useQuery({ queryKey: queryKeys.bankAccounts, queryFn: getBankAccounts, select: unwrap })
+}
+
+export function useBankTransactions(query = '') {
+  return useQuery({
+    queryKey: queryKeys.bankTransactions(query),
+    queryFn: () => getBankTransactions(query),
+    select: unwrap,
+  })
+}
+
+export function useSpendingSummary(query = '') {
+  return useQuery({
+    queryKey: queryKeys.spendingSummary(query),
+    queryFn: () => getSpendingSummary(query),
+  })
+}
+
+export function useSubscriptions() {
+  return useQuery({ queryKey: queryKeys.subscriptions, queryFn: getSubscriptions })
+}
+
+export function useUpdateBankTransactionCategory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, category }) => updateBankTransactionCategory(id, category),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['spending-summary'] })
+    },
+  })
+}
+
+export function useDismissSubscription() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, dismissed }) => updateSubscription(id, { dismissed }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions }),
+  })
 }
 
 export function useNetWorth() {
