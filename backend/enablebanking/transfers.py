@@ -21,7 +21,8 @@ def mark_transfers(bank_transactions):
         if match is None:
             continue
 
-        tx.category = 'SAVINGS' if 'savings' in match.bank_account.type.lower() else 'TRANSFER'
+        is_savings = 'savings' in tx.bank_account.type.lower() or 'savings' in match.bank_account.type.lower()
+        tx.category = 'SAVINGS' if is_savings else 'TRANSFER'
 
 
 def _find_own_account_match(tx, batch):

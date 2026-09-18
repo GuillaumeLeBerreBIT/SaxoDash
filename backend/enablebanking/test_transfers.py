@@ -59,6 +59,20 @@ class MarkTransfersTest(TestCase):
         )
         mark_transfers([outflow, inflow])
         self.assertEqual(outflow.category, 'SAVINGS')
+        self.assertEqual(inflow.category, 'SAVINGS')
+
+    def test_withdrawal_from_savings_account_tags_savings_both_legs(self):
+        outflow = BankTransaction(
+            bank='argenta', bank_account=self.savings, external_id='o7', amount=-400,
+            currency='EUR', booking_date=date(2026, 1, 20), category='OTHER',
+        )
+        inflow = BankTransaction(
+            bank='kbc', bank_account=self.kbc, external_id='i7', amount=400,
+            currency='EUR', booking_date=date(2026, 1, 20), category='REFUND_CREDIT',
+        )
+        mark_transfers([outflow, inflow])
+        self.assertEqual(outflow.category, 'SAVINGS')
+        self.assertEqual(inflow.category, 'SAVINGS')
 
     def test_no_match_leaves_category_untouched(self):
         tx = BankTransaction(
