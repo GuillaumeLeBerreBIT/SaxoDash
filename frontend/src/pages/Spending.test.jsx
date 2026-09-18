@@ -47,7 +47,8 @@ describe('Spending', () => {
 
     renderWithProviders(<Spending />)
 
-    expect(screen.getByText(/Transfers/)).toBeInTheDocument()
+    expect(screen.getByText('€50.00')).toBeInTheDocument()
+    expect(screen.getByText('€500.00')).toBeInTheDocument()
   })
 
   it('lets you dismiss a subscription', async () => {
