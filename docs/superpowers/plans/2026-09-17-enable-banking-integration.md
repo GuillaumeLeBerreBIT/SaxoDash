@@ -1504,15 +1504,15 @@ Two real issues surfaced that the original plan didn't anticipate, both fixed:
 3. Also needed `ALLOWED_HOSTS` to include the ngrok domain explicitly — Django's `DEBUG=True` auto-allow only covers `localhost`/`127.0.0.1`/`[::1]`, not arbitrary hosts.
 4. The callback redirect now names which bank failed (`?enablebanking=error&bank=kbc`) — a failed connect used to look identical to nothing happening at all, which is what caused the confusion while debugging this.
 
-**KBC connected and verified with a real synced balance** (`KBC Basic Account`, real IBAN, €273.43 — see Step 6 below). **Argenta not yet connected** — same "Connect Argenta" flow, not yet clicked through.
+**Both banks connected and verified with real synced balances**: `KBC Basic Account`, real IBAN, €273.43 (see Step 6 below); Argenta `Green` account, real IBAN, €25.43 — connected 2026-09-18 through the same "Connect Argenta" flow, no code changes needed. (One unrelated environmental snag hit along the way: FortiClient VPN's webfilter network extension was blocking `localhost:5173`, unrelated to Enable Banking — see the `forticlient-vpn-blocks-localhost` memory.)
 
 - [x] **Step 4: Verify the callback's `valid_until` handling** (2026-09-17) — not resolved either way; the real `POST /sessions` response was not inspected for an echoed `access.valid_until` (no temporary logging was added). `_fallback_valid_until()`'s 180-day default is what's actually in use for the KBC credential right now. Low priority to revisit — the fallback is a real, working value, not a placeholder — but worth checking next time this code is touched.
 
 - [x] **Step 5: Verify `get_balances`'s session scoping** (2026-09-17) — confirmed working as shipped: `client.get_balances` sending `X-Session-Id` alongside the JWT successfully fetched KBC's real balance (Step 6). No correction needed.
 
-- [x] **Step 6: Run a real sync and confirm the Accounts page** (2026-09-17)
+- [x] **Step 6: Run a real sync and confirm the Accounts page** (2026-09-17, KBC; 2026-09-18, Argenta)
 
-Ran manually via `manage.py shell`. Real result: `sync_enablebanking_balances()` returned 1 row; `BankAccount.objects.get(bank='KBC')` shows `KBC Basic Account`, IBAN masked `BE12 •••• •••• 7392`, balance `273.43 EUR`. Confirmed end-to-end: mapping, upsert-by-`external_id`, and the Accounts page all work with real data, not just mocks.
+Ran manually via `manage.py shell`. Real result: `sync_enablebanking_balances()` returned 1 row for KBC (`KBC Basic Account`, IBAN masked `BE12 •••• •••• 7392`, balance `273.43 EUR`) and, once Argenta was connected on 2026-09-18, 1 more row for it (`Green`, IBAN masked `BE61 •••• •••• 3317`, balance `25.43 EUR`) — 2 rows total on the combined run. Confirmed end-to-end for both banks: mapping, upsert-by-`external_id`, and the Accounts page all work with real data, not just mocks.
 
 - [x] **Step 7: Register the periodic task** (2026-09-17) — `"Sync Enable Banking balances"` → `enablebanking.tasks.sync_enablebanking_balances`, `IntervalSchedule` every 3 hours, enabled.
 
@@ -1520,4 +1520,4 @@ Ran manually via `manage.py shell`. Real result: `sync_enablebanking_balances()`
 
 - [x] **Step 9: Commit any corrections made during this task** (2026-09-17) — corrections landed as their own commits along the way (`2ff9384` ASPSP names, `ae89976` ngrok scoping fix + error-feedback UI) rather than one bundled commit at the end.
 
-**Task 10 status: mostly done.** KBC is connected and syncing real data. Argenta is not yet connected — same "Connect Argenta" flow, whenever that's picked back up.
+**Task 10 status: done.** Both KBC and Argenta are connected and syncing real data. The Enable Banking integration plan is complete — dividends aside (out of scope, see project memory), there is nothing left to build here.
