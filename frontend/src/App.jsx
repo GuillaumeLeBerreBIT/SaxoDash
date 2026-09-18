@@ -6,6 +6,7 @@ import Portfolio from './pages/Portfolio'
 import Analytics from './pages/Analytics'
 import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
+import Spending from './pages/Spending'
 import Research from './pages/Research'
 import Earnings from './pages/Earnings'
 import Login from './pages/Login'
@@ -23,6 +24,7 @@ function App() {
           <Route path='analytics' element={<Analytics />} />
           <Route path='transactions' element={<Transactions />} />
           <Route path='accounts' element={<Accounts />} />
+          <Route path='spending' element={<Spending />} />
           <Route path='research' element={<Research />} />
           <Route path='earnings' element={<Earnings />} />
         </Route>
