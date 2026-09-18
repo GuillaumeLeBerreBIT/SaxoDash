@@ -1802,7 +1802,7 @@ In `backend/enablebanking/urls.py`, add to `urlpatterns`:
     path('subscriptions/<int:pk>/', SubscriptionDetailView.as_view(), name='enablebanking-subscription-detail'),
 ```
 
-and add the four new view classes to the `from .views import (...)` block at the top of the file.
+and add the five new view classes (`BankTransactionListView`, `BankTransactionCategoryView`, `SpendingSummaryView`, `SubscriptionListView`, `SubscriptionDetailView`) to the `from .views import (...)` block at the top of the file.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
