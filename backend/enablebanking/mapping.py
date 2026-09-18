@@ -46,3 +46,25 @@ def to_account_fields(bank, account, balance_response):
         'gradient': GRADIENTS[bank],
         'accent': ACCENTS[bank],
     }
+
+
+def to_bank_transaction_fields(bank, account_uid, raw):
+    """Map one Enable Banking transaction to BankTransaction fields.
+    remittance_information is a plain list of strings - joined here into one
+    description. The counterparty is the *other* party: creditor for an
+    outflow (DBIT), debtor for an inflow (CRDT) - never the account holder."""
+    is_credit = raw['credit_debit_indicator'] == 'CRDT'
+    amount = Decimal(raw['transaction_amount']['amount'])
+    counterparty = (raw.get('debtor') if is_credit else raw.get('creditor')) or {}
+    counterparty_account = (raw.get('debtor_account') if is_credit else raw.get('creditor_account')) or {}
+
+    return {
+        'bank': bank,
+        'external_id': f'enablebanking:{bank}:{account_uid}:{raw["entry_reference"]}',
+        'amount': amount if is_credit else -amount,
+        'currency': raw['transaction_amount']['currency'],
+        'booking_date': raw['booking_date'],
+        'counterparty_name': counterparty.get('name', ''),
+        'counterparty_iban': counterparty_account.get('iban'),
+        'description': ' '.join(raw.get('remittance_information') or []),
+    }
