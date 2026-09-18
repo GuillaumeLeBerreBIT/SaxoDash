@@ -127,3 +127,13 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
 
         self.assertEqual(BankTransaction.objects.get(external_id='enablebanking:kbc:acc-1:kbc-out').category, 'TRANSFER')
         self.assertEqual(BankTransaction.objects.get(external_id='enablebanking:argenta:acc-2:argenta-in').category, 'TRANSFER')
+
+
+class DetectEnablebankingSubscriptionsTaskTest(TestCase):
+    @patch('enablebanking.tasks.subscriptions.detect_subscriptions')
+    def test_delegates_to_the_service_function(self, mock_detect):
+        from .tasks import detect_enablebanking_subscriptions
+        mock_detect.return_value = 3
+        result = detect_enablebanking_subscriptions()
+        self.assertEqual(result, 3)
+        mock_detect.assert_called_once()

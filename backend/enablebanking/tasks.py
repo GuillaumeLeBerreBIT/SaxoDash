@@ -5,7 +5,7 @@ from celery import shared_task
 
 from accounts.models import BankAccount
 
-from . import categorization, client, credentials, mapping, transfers
+from . import categorization, client, credentials, mapping, subscriptions, transfers
 from .models import BankSyncRun, BankTransaction
 
 logger = logging.getLogger(__name__)
@@ -135,3 +135,8 @@ def sync_enablebanking_transactions():
         BankSyncRun.objects.create(bank=bank, kind='transactions', outcome=outcome, detail=detail[:200], rows=rows)
 
     return len(all_new)
+
+
+@shared_task
+def detect_enablebanking_subscriptions():
+    return subscriptions.detect_subscriptions()
