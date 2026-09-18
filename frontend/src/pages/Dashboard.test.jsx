@@ -44,6 +44,10 @@ function stub(over = {}) {
   })
   queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
+  queries.useSpendingSummary.mockReturnValue({
+    ...idle,
+    data: over.spending ?? { categories: [{ category: 'GROCERIES', amount: '50.00' }], total: '50.00', transfers: '0.00' },
+  })
 }
 
 describe('Dashboard', () => {
@@ -66,6 +70,12 @@ describe('Dashboard', () => {
   it('shows movers with a linked ticker', () => {
     renderWithProviders(<Dashboard />)
     expect(screen.getAllByRole('link', { name: /NVDA/ }).length).toBeGreaterThan(0)
+  })
+
+  it("shows this month's spending total and top category", () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText('€50.00')).toBeInTheDocument()
+    expect(screen.getByText(/Top category: GROCERIES/)).toBeInTheDocument()
   })
 
   it('renders skeletons while insights load', () => {

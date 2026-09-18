@@ -5,6 +5,7 @@ import {
   usePortfolioSummary,
   usePositionQuotes,
   usePositions,
+  useSpendingSummary,
   useTransactions,
 } from '../api/queries'
 import { fmtEur, fmtMoney, fmtNum } from '../lib/format'
@@ -29,13 +30,14 @@ export default function Dashboard() {
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const recentTxQuery = useTransactions('?page_size=5')
+  const spendingQuery = useSpendingSummary()
   // Computed before the loading guards below so the hook it wraps runs on
   // every render - a top-5 slice of an empty array is a harmless no-op.
   const top5 = (positionsQuery.data ?? []).slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
   const quotes = usePositionQuotes(top5)
 
   const failed =
-    insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error
+    insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error || spendingQuery.error
 
   if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
   if (!insightsQuery.data || !summaryQuery.data)
@@ -54,6 +56,9 @@ export default function Dashboard() {
   const insights = insightsQuery.data
   const summary = summaryQuery.data
   const recentTx = recentTxQuery.data ?? []
+  const spending = spendingQuery.data
+  const topCategory = (spending?.categories ?? [])
+    .slice().sort((a, b) => Number(b.amount) - Number(a.amount))[0]
   const top5Value = top5.reduce((sum, p) => sum + Number(p.value), 0)
   const otherValue = Math.max(Number(summary.total_value) - top5Value, 0)
   const allocationItems = [
@@ -70,6 +75,18 @@ export default function Dashboard() {
         <NetWorthChart />
       </div>
       <AttentionBand items={insights.attention} />
+
+      <Card>
+        <CardHeader title="This month's spending" subtitle="From bank transactions" />
+        <div className="mt-2 text-[var(--fig-xl)] font-semibold text-zinc-50 num font-mono">
+          {fmtEur(spending?.total ?? 0)}
+        </div>
+        {topCategory && (
+          <div className="mt-1 text-[var(--fig-xs)] text-zinc-500">
+            Top category: {topCategory.category} ({fmtEur(topCategory.amount)})
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Card className="lg:col-span-3" padding={false}>
