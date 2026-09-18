@@ -67,7 +67,10 @@ class EnableBankingConnectView(APIView):
         state = f'{secrets.token_urlsafe(24)}:{bank}'
         request.session['enablebanking_oauth_state'] = state
 
-        response = redirect(client.build_authorize_url(bank, state, settings.ENABLE_BANKING_REDIRECT_URI))
+        iban = request.query_params.get('iban') or None
+        response = redirect(
+            client.build_authorize_url(bank, state, settings.ENABLE_BANKING_REDIRECT_URI, iban=iban)
+        )
         response['Referrer-Policy'] = 'no-referrer'
         return response
 

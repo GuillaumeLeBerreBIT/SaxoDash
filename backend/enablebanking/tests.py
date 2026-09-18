@@ -304,6 +304,22 @@ class EnableBankingConnectViewTest(APITestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, 'https://auth.enablebanking.com/ais/start?x=1')
 
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_passes_an_optional_iban_through_to_the_client(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}&iban=BE0012345678')
+
+        self.assertEqual(mock_build_url.call_args.kwargs.get('iban'), 'BE0012345678')
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_iban_is_optional(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+
+        self.assertIsNone(mock_build_url.call_args.kwargs.get('iban'))
+
 
 class EnableBankingCallbackViewTest(APITestCase):
     def test_missing_code_or_state_redirects_with_error(self):
