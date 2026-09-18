@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useBankAccounts } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { Card, PageHeader, StatStrip, StatRow } from '../components/ui'
@@ -43,7 +44,8 @@ export default function Accounts() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {accounts.map((a) => (
-            <Card key={a.id} className="relative overflow-hidden">
+            <Link key={a.id} to={`/accounts/${a.id}`} className="block">
+            <Card className="relative overflow-hidden">
               <span
                 className="absolute left-0 top-0 bottom-0 w-1"
                 style={{ background: a.accent || '#3f3f46' }}
@@ -60,6 +62,7 @@ export default function Accounts() {
                 )}
               </div>
             </Card>
+            </Link>
           ))}
         </div>
 
