@@ -5,12 +5,17 @@ import secrets
 from django.conf import settings
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
 from . import client, credentials
-from .models import EnableBankingCredential
+from .filters import BankTransactionFilter
+from .models import CATEGORY_CHOICES, BankTransaction, EnableBankingCredential, Subscription
+from .serializers import BankTransactionSerializer, SubscriptionSerializer
+from .services import spending_summary
 
 logger = logging.getLogger(__name__)
 
@@ -114,3 +119,52 @@ class EnableBankingStatusView(APIView):
                 'last_synced_at': last_sync.ran_at if last_sync else None,
             }
         return Response(result)
+
+
+class BankTransactionListView(ListAPIView):
+    queryset = BankTransaction.objects.select_related('bank_account').all()
+    serializer_class = BankTransactionSerializer
+    filterset_class = BankTransactionFilter
+    filter_backends = [DjangoFilterBackend]
+
+
+class BankTransactionCategoryView(APIView):
+
+    def patch(self, request, pk):
+        tx = get_object_or_404(BankTransaction, pk=pk)
+        category = request.data.get('category_override')
+        if category is not None and category not in dict(CATEGORY_CHOICES):
+            return Response({'detail': 'Unknown category'}, status=400)
+        tx.category_override = category
+        tx.save(update_fields=['category_override'])
+        return Response(BankTransactionSerializer(tx).data)
+
+
+class SpendingSummaryView(APIView):
+
+    def get(self, request):
+        return Response(spending_summary(
+            date_from=request.query_params.get('date_from'),
+            date_to=request.query_params.get('date_to'),
+        ))
+
+
+class SubscriptionListView(ListAPIView):
+    serializer_class = SubscriptionSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = Subscription.objects.all()
+        if self.request.query_params.get('include_dismissed') != 'true':
+            qs = qs.exclude(dismissed=True)
+        return qs
+
+
+class SubscriptionDetailView(APIView):
+
+    def patch(self, request, pk):
+        sub = get_object_or_404(Subscription, pk=pk)
+        if 'dismissed' in request.data:
+            sub.dismissed = bool(request.data['dismissed'])
+            sub.save(update_fields=['dismissed'])
+        return Response(SubscriptionSerializer(sub).data)
