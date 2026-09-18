@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BankSyncRun, EnableBankingCredential
+from .models import BankSyncRun, BankTransaction, EnableBankingCredential, ManualIbanLabel, Subscription
 
 
 @admin.register(EnableBankingCredential)
@@ -29,3 +29,21 @@ class BankSyncRunAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(BankTransaction)
+class BankTransactionAdmin(admin.ModelAdmin):
+    list_display = ('booking_date', 'bank', 'counterparty_name', 'amount', 'category', 'category_override')
+    list_filter = ('bank', 'category')
+    search_fields = ('counterparty_name', 'description')
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('display_name', 'cadence', 'expected_amount', 'last_charged', 'dismissed')
+    list_filter = ('cadence', 'dismissed')
+
+
+@admin.register(ManualIbanLabel)
+class ManualIbanLabelAdmin(admin.ModelAdmin):
+    list_display = ('label', 'iban', 'category')

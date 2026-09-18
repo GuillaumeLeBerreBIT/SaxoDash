@@ -1,5 +1,6 @@
 from django.db import models
 
+from accounts.models import BankAccount
 from saxo.fields import EncryptedTextField
 
 
@@ -30,9 +31,11 @@ class BankSyncRun(models.Model):
     Saxo's status endpoint.
     """
 
+    KIND_CHOICES = [('balances', 'Balances'), ('transactions', 'Transactions')]
     OUTCOME_CHOICES = [('ok', 'Completed'), ('skipped', 'Skipped'), ('failed', 'Failed')]
 
     bank = models.CharField(max_length=20, choices=EnableBankingCredential.BANK_CHOICES)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='balances')
     outcome = models.CharField(max_length=10, choices=OUTCOME_CHOICES)
     detail = models.CharField(max_length=200, blank=True, default='')
     rows = models.PositiveIntegerField(default=0)
@@ -40,7 +43,91 @@ class BankSyncRun(models.Model):
 
     class Meta:
         ordering = ['-ran_at', '-id']
-        indexes = [models.Index(fields=['bank', '-ran_at'], name='bsr_bank_ran_at_idx')]
+        indexes = [models.Index(fields=['bank', 'kind', '-ran_at'], name='bsr_bank_kind_ran_idx')]
 
     def __str__(self):
         return f'{self.bank} {self.outcome} at {self.ran_at}'
+
+
+CATEGORY_CHOICES = [
+    ('GROCERIES', 'Groceries'),
+    ('DINING', 'Dining'),
+    ('TRANSPORT', 'Transport'),
+    ('UTILITIES', 'Utilities'),
+    ('SUBSCRIPTIONS', 'Subscriptions'),
+    ('SHOPPING', 'Shopping'),
+    ('HEALTH', 'Health'),
+    ('TRAVEL', 'Travel'),
+    ('ENTERTAINMENT', 'Entertainment'),
+    ('INCOME', 'Income'),
+    ('TRANSFER', 'Transfer'),
+    ('SAVINGS', 'Savings'),
+    ('REFUND_CREDIT', 'Refund/Credit'),
+    ('OTHER', 'Other'),
+]
+
+
+class BankTransaction(models.Model):
+    """One settled (status=BOOK) transaction on a KBC/Argenta account. `category`
+    is rule-assigned and recomputed every sync; `category_override` is
+    user-set and never touched by sync - `effective_category` prefers it."""
+
+    bank = models.CharField(max_length=20, choices=EnableBankingCredential.BANK_CHOICES)
+    bank_account = models.ForeignKey(BankAccount, on_delete=models.CASCADE, related_name='bank_transactions')
+    external_id = models.CharField(max_length=128, unique=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=3)
+    booking_date = models.DateField()
+    counterparty_name = models.CharField(max_length=200, blank=True, default='')
+    counterparty_iban = models.CharField(max_length=34, null=True, blank=True, default=None)
+    description = models.CharField(max_length=500, blank=True, default='')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OTHER')
+    category_override = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True, blank=True, default=None)
+
+    class Meta:
+        ordering = ['-booking_date', '-id']
+        indexes = [
+            models.Index(fields=['-booking_date', '-id'], name='bktx_date_id_desc_idx'),
+            models.Index(fields=['bank_account', '-booking_date'], name='bktx_account_date_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.booking_date} {self.counterparty_name} {self.amount}'
+
+    @property
+    def effective_category(self):
+        return self.category_override or self.category
+
+
+class Subscription(models.Model):
+    """A detected recurring-merchant pattern. Member transactions are found on
+    demand by filtering BankTransaction on merchant_key, not stored via FK/M2M,
+    so membership never drifts as new transactions arrive."""
+
+    CADENCE_CHOICES = [('weekly', 'Weekly'), ('monthly', 'Monthly'), ('yearly', 'Yearly')]
+
+    merchant_key = models.CharField(max_length=200, unique=True)
+    display_name = models.CharField(max_length=200)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='SUBSCRIPTIONS')
+    expected_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    cadence = models.CharField(max_length=10, choices=CADENCE_CHOICES)
+    last_charged = models.DateField()
+    dismissed = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-last_charged']
+
+    def __str__(self):
+        return f'{self.display_name} ({self.cadence}, {"dismissed" if self.dismissed else "active"})'
+
+
+class ManualIbanLabel(models.Model):
+    """Fallback for an account Enable Banking won't expose for consent (Plan B,
+    see the design spec) - a pure lookup table, no balance/transaction sync."""
+
+    iban = models.CharField(max_length=34, unique=True)
+    label = models.CharField(max_length=100)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='SAVINGS')
+
+    def __str__(self):
+        return f'{self.label} ({self.iban})'
