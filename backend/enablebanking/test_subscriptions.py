@@ -40,7 +40,7 @@ class DetectSubscriptionsTest(TestCase):
 
     def test_irregular_cadence_is_not_a_subscription(self):
         self._charge('IRREGULAR', -20, date(2026, 1, 3), 'r1')
-        self._charge('IRREGULAR', -20, date(2026, 1, 10), 'r2')
+        self._charge('IRREGULAR', -20, date(2026, 1, 18), 'r2')
         self.assertEqual(detect_subscriptions(), 0)
 
     def test_unstable_amount_is_not_a_subscription(self):

@@ -41,7 +41,7 @@ def detect_subscriptions():
 
     detected = 0
     for merchant_key, txs in groups.items():
-        if not merchant_key or len(txs) < 3:
+        if not merchant_key or len(txs) < 2:
             continue
 
         dates = [tx.booking_date for tx in txs]
