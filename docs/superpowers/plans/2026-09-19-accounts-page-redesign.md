@@ -191,7 +191,7 @@ describe('BankAccountTile', () => {
     )
     expect(screen.getByText('Colruyt')).toBeInTheDocument()
     expect(screen.getByText('NMBS')).toBeInTheDocument()
-    expect(screen.getByText('−€60.85')).toBeInTheDocument()
+    expect(screen.getByText('-€60.85')).toBeInTheDocument()
   })
 
   it('links to the account detail page', () => {
@@ -305,7 +305,7 @@ describe('RecentTransactionsPanel', () => {
     )
     expect(screen.getByText('NMBS')).toBeInTheDocument()
     expect(screen.getByText(/2026-09-19.*Transport.*KBC/)).toBeInTheDocument()
-    expect(screen.getByText('−€65.00')).toBeInTheDocument()
+    expect(screen.getByText('-€65.00')).toBeInTheDocument()
     expect(screen.getByText('+€200.00')).toBeInTheDocument()
   })
 
