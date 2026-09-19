@@ -2683,3 +2683,284 @@ If the live-verified savings-IBAN outcome (Step 2) or anything else needed a cod
 git add -A
 git commit -m "docs: record Task 16 live-verification outcome for bank transactions"
 ```
+
+---
+
+### Task 17: Spending-over-time chart (post-review addition)
+
+**Added after the final whole-branch review found this was promised by the design spec but silently dropped during Task 13's plan-authoring — no ruling exists for the drop, and the user chose to build it rather than formally cut it.**
+
+**Files:**
+- Modify: `backend/enablebanking/services.py`
+- Modify: `backend/enablebanking/views.py`
+- Modify: `backend/enablebanking/urls.py`
+- Modify: `backend/enablebanking/test_spending_service.py`
+- Modify: `backend/enablebanking/test_transaction_views.py`
+- Create: `frontend/src/components/SpendingTrendChart.jsx`
+- Modify: `frontend/src/pages/Spending.jsx`
+- Modify: `frontend/src/pages/Spending.test.jsx`
+- Modify: `frontend/src/api/client.js`
+- Modify: `frontend/src/api/queries.js`
+
+**Interfaces:**
+- Consumes: `BankTransaction`, `CATEGORY_CHOICES` (Task 1), `TRANSFER_CATEGORIES` (Task 9, `services.py`).
+- Produces: `spending_trend(months=6) -> [{"month": "YYYY-MM", "total": Decimal}, ...]` (backend, oldest to newest, outflows only, transfers/savings excluded, respecting `category_override`), `GET /api/enablebanking/spending/trend/?months=N`, `getSpendingTrend(months)` / `useSpendingTrend(months)` (frontend), `<SpendingTrendChart />` (no props, self-fetching).
+
+- [ ] **Step 1: Write the failing backend tests**
+
+```python
+# append to backend/enablebanking/test_spending_service.py
+class SpendingTrendTest(TestCase):
+    def setUp(self):
+        self.account = BankAccount.objects.create(
+            bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
+            balance=100, available=100, external_id='enablebanking:kbc:acc-1',
+        )
+
+    def _tx(self, amount, category, booking_date, external_id):
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=self.account, external_id=external_id,
+            amount=amount, currency='EUR', booking_date=booking_date, category=category,
+        )
+
+    def test_groups_by_month(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('-10'), 'DINING', date(2026, 1, 20), 't2')
+        self._tx(Decimal('-30'), 'GROCERIES', date(2026, 2, 3), 't3')
+
+        trend = spending_trend(months=6)
+
+        by_month = {row['month']: row['total'] for row in trend}
+        self.assertEqual(by_month['2026-01'], Decimal('50'))
+        self.assertEqual(by_month['2026-02'], Decimal('30'))
+
+    def test_excludes_transfers(self):
+        self._tx(Decimal('-500'), 'TRANSFER', date(2026, 1, 5), 't1')
+        trend = spending_trend(months=6)
+        self.assertEqual(trend, [])
+
+    def test_respects_category_override_for_exclusion(self):
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=self.account, external_id='t1', amount=Decimal('-40'),
+            currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
+            category_override='TRANSFER',
+        )
+        trend = spending_trend(months=6)
+        self.assertEqual(trend, [])
+
+    def test_limits_to_requested_number_of_months(self):
+        for i, m in enumerate(range(1, 9)):
+            self._tx(Decimal('-10'), 'GROCERIES', date(2026, m, 1), f't{i}')
+
+        trend = spending_trend(months=3)
+
+        self.assertEqual(len(trend), 3)
+        self.assertEqual([row['month'] for row in trend], ['2026-06', '2026-07', '2026-08'])
+```
+
+Add `from datetime import date` to the top of `test_spending_service.py` if not already present, and `from .services import spending_summary, spending_trend` (extend the existing import line).
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `cd backend && .venv/bin/python manage.py test enablebanking.test_spending_service.SpendingTrendTest -v 2`
+Expected: FAIL — `ImportError: cannot import name 'spending_trend'`.
+
+- [ ] **Step 3: Implement the service function**
+
+In `backend/enablebanking/services.py`, change the import line:
+
+```python
+from django.db.models.functions import Coalesce
+```
+
+to:
+
+```python
+from django.db.models.functions import Coalesce, TruncMonth
+```
+
+Append:
+
+```python
+def spending_trend(months=6):
+    qs = (
+        BankTransaction.objects
+        .filter(amount__lt=0)
+        .annotate(effective_category=Coalesce('category_override', 'category'))
+        .exclude(effective_category__in=TRANSFER_CATEGORIES)
+        .annotate(month=TruncMonth('booking_date'))
+        .values('month')
+        .annotate(total=Sum('amount'))
+        .order_by('month')
+    )
+    rows = [{'month': row['month'].strftime('%Y-%m'), 'total': -row['total']} for row in qs]
+    return rows[-months:]
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `cd backend && .venv/bin/python manage.py test enablebanking.test_spending_service -v 2`
+Expected: PASS, all tests (existing `SpendingSummaryTest` class plus the new `SpendingTrendTest` class).
+
+- [ ] **Step 5: Write the failing view test**
+
+```python
+# append to backend/enablebanking/test_transaction_views.py
+class SpendingTrendViewTest(APITestCase):
+    def setUp(self):
+        _auth_client(self, 'u5')
+        account = BankAccount.objects.create(
+            bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
+            balance=100, available=100, external_id='enablebanking:kbc:acc-1',
+        )
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=account, external_id='t1', amount=-40,
+            currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
+        )
+
+    def test_returns_monthly_totals(self):
+        response = self.client.get('/api/enablebanking/spending/trend/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['month'], '2026-01')
+
+    def test_respects_months_query_param(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=1')
+        self.assertEqual(len(response.data), 1)
+```
+
+- [ ] **Step 6: Run the test to verify it fails**
+
+Run: `cd backend && .venv/bin/python manage.py test enablebanking.test_transaction_views.SpendingTrendViewTest -v 2`
+Expected: FAIL — 404, route doesn't exist yet.
+
+- [ ] **Step 7: Implement the view and route**
+
+Append to `backend/enablebanking/views.py`:
+
+```python
+from .services import spending_summary, spending_trend
+```
+
+(extend the existing `from .services import spending_summary` line rather than duplicating it — check what's already there.)
+
+```python
+class SpendingTrendView(APIView):
+
+    def get(self, request):
+        months = int(request.query_params.get('months', 6))
+        return Response(spending_trend(months=months))
+```
+
+In `backend/enablebanking/urls.py`, add `SpendingTrendView` to the `from .views import (...)` block and add to `urlpatterns`:
+
+```python
+    path('spending/trend/', SpendingTrendView.as_view(), name='enablebanking-spending-trend'),
+```
+
+- [ ] **Step 8: Run the backend tests to verify they pass**
+
+Run: `cd backend && .venv/bin/python manage.py test enablebanking -v 2`
+Expected: PASS, all tests.
+
+- [ ] **Step 9: Commit the backend half**
+
+```bash
+git add backend/enablebanking/services.py backend/enablebanking/views.py backend/enablebanking/urls.py backend/enablebanking/test_spending_service.py backend/enablebanking/test_transaction_views.py
+git commit -m "feat: add spending-trend aggregation service and endpoint"
+```
+
+- [ ] **Step 10: Add the frontend API client and query hook**
+
+In `frontend/src/api/client.js`, append:
+
+```js
+export const getSpendingTrend = (months = 6) => apiFetch(`/api/enablebanking/spending/trend/?months=${months}`)
+```
+
+In `frontend/src/api/queries.js`, add `getSpendingTrend` to the existing `from './client'` import block (alphabetical slot), add to `queryKeys`:
+
+```js
+  spendingTrend: (months = 6) => ['spending-trend', months],
+```
+
+and append:
+
+```js
+export function useSpendingTrend(months = 6) {
+  return useQuery({ queryKey: queryKeys.spendingTrend(months), queryFn: () => getSpendingTrend(months) })
+}
+```
+
+- [ ] **Step 11: Implement the chart component**
+
+```jsx
+// frontend/src/components/SpendingTrendChart.jsx
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useSpendingTrend } from '../api/queries'
+import { fmtEur } from '../lib/format'
+import { axisProps, chartTooltipProps, gridProps, moneyAxisProps } from '../lib/charts'
+import { Card, CardHeader } from './ui'
+import { chartPlaceholderFor } from '../lib/chartState'
+
+export default function SpendingTrendChart() {
+  const { data, isLoading, error } = useSpendingTrend()
+
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220 })
+
+  return (
+    <Card>
+      <CardHeader title="Spending over time" subtitle="Monthly total, last 6 months" />
+      <div className="mt-4 h-[var(--chart-h-md)]">
+        {placeholder ?? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              <CartesianGrid {...gridProps} />
+              <XAxis {...axisProps} dataKey="month" />
+              <YAxis {...moneyAxisProps} />
+              <Tooltip {...chartTooltipProps} formatter={(v) => fmtEur(v)} />
+              <Bar dataKey="total" name="Spending" fill="#f87171" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </Card>
+  )
+}
+```
+
+- [ ] **Step 12: Wire it into the Spending page**
+
+In `frontend/src/pages/Spending.jsx`, add the import:
+
+```jsx
+import SpendingTrendChart from '../components/SpendingTrendChart'
+```
+
+Insert `<SpendingTrendChart />` between `<SpendingCategoryChart ... />` and `<SubscriptionsList ... />`, matching the design spec's original ordering (category breakdown, then spending-over-time, then subscriptions).
+
+- [ ] **Step 13: Run the existing Spending page test to verify it now fails**
+
+Run: `cd frontend && npx vitest run src/pages/Spending.test.jsx`
+Expected: FAIL — `Spending.jsx` now renders `<SpendingTrendChart />`, which calls `useSpendingTrend()`; since `vi.mock('../api/queries')` auto-mocks the whole module, that hook returns `undefined` in every existing test, and destructuring `{ data, isLoading, error }` off `undefined` throws. All three existing tests should break.
+
+- [ ] **Step 14: Add the missing mock to fix the tests**
+
+In `frontend/src/pages/Spending.test.jsx`, add `queries.useSpendingTrend.mockReturnValue({ data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null })` to each of the three existing test cases, alongside the other mocks each one already sets up.
+
+- [ ] **Step 15: Run the frontend suite, lint, and build**
+
+Run:
+```bash
+cd frontend
+npm test -- --run
+npm run lint
+npm run build
+```
+Expected: all pass, no new failures.
+
+- [ ] **Step 16: Commit the frontend half**
+
+```bash
+git add frontend/src/components/SpendingTrendChart.jsx frontend/src/pages/Spending.jsx frontend/src/pages/Spending.test.jsx frontend/src/api/client.js frontend/src/api/queries.js
+git commit -m "feat: add spending-over-time chart to the Spending page"
+```
