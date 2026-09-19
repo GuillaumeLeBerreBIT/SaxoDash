@@ -189,24 +189,28 @@ class BudgetListViewTest(APITestCase):
             '/api/enablebanking/budgets/', {'category': 'TRANSFER', 'monthly_limit': '100'}, format='json',
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Budget.objects.count(), 0)
 
     def test_rejects_a_zero_limit(self):
         response = self.client.put(
             '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': '0'}, format='json',
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Budget.objects.count(), 0)
 
     def test_rejects_a_negative_limit(self):
         response = self.client.put(
             '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': '-10'}, format='json',
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Budget.objects.count(), 0)
 
     def test_rejects_a_non_numeric_limit(self):
         response = self.client.put(
             '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': 'abc'}, format='json',
         )
         self.assertEqual(response.status_code, 400)
+        self.assertEqual(Budget.objects.count(), 0)
 
 
 class BudgetProgressViewTest(APITestCase):
