@@ -58,6 +58,20 @@ export function colorForTicker(ticker) {
   return HOLDINGS_PALETTE[hash % HOLDINGS_PALETTE.length]
 }
 
+// Fixed order (not hashed) so the same category always gets the same color
+// regardless of how many categories are present in a given period - unlike
+// colorForTicker, where an arbitrary/growing ticker set makes a stable hash
+// the only practical option.
+const CATEGORY_ORDER = [
+  'GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS',
+  'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER',
+]
+
+export function colorForCategory(category) {
+  const idx = CATEGORY_ORDER.indexOf(category)
+  return HOLDINGS_PALETTE[idx === -1 ? 0 : idx % HOLDINGS_PALETTE.length]
+}
+
 export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
 
 export const axisProps = {
