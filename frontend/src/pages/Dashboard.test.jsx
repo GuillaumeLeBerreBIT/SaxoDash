@@ -48,6 +48,11 @@ function stub(over = {}) {
     ...idle,
     data: over.spending ?? { categories: [{ category: 'GROCERIES', amount: '50.00' }], total: '50.00', transfers: '0.00' },
   })
+  queries.useBudgetProgress.mockReturnValue({
+    data: over.budgetProgress ?? [],
+    isLoading: false,
+    error: null,
+  })
 }
 
 describe('Dashboard', () => {
@@ -89,5 +94,14 @@ describe('Dashboard', () => {
     queries.usePortfolioInsights.mockReturnValue({ ...idle, data: undefined })
     const { container } = renderWithProviders(<Dashboard />)
     expect(container.querySelector('.animate-pulse')).not.toBeNull()
+  })
+
+  it('adds an over-budget category to the attention band alongside portfolio items', () => {
+    stub({
+      budgetProgress: [{ category: 'GROCERIES', limit: '100.00', spent: '142.00', pct: 142 }],
+    })
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
+    expect(screen.getByText(/Groceries is over budget/)).toBeInTheDocument()
   })
 })

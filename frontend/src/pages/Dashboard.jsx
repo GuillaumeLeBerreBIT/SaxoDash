@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import {
+  useBudgetProgress,
   usePortfolioInsights,
   usePortfolioSummary,
   usePositionQuotes,
@@ -11,6 +12,7 @@ import {
 import { fmtEur, fmtMoney, fmtNum } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
+import { CATEGORY_LABELS } from '../lib/categories'
 import PriceBasisNote from '../components/PriceBasisNote'
 import { Card, CardHeader, PageHeader, Skeleton, Badge, DayChange, InstrumentLogo, Th, Td } from '../components/ui'
 import { colorForTicker } from '../lib/charts'
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const now = new Date()
   const firstOfMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const spendingQuery = useSpendingSummary(`?date_from=${firstOfMonthISO}`)
+  const budgetProgressQuery = useBudgetProgress()
   // Computed before the loading guards below so the hook it wraps runs on
   // every render - a top-5 slice of an empty array is a harmless no-op.
   const top5 = (positionsQuery.data ?? []).slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
@@ -63,6 +66,13 @@ export default function Dashboard() {
   const spending = spendingQuery.data
   const topCategory = (spending?.categories ?? [])
     .slice().sort((a, b) => Number(b.amount) - Number(a.amount))[0]
+  const budgetAttentionItems = (budgetProgressQuery.data ?? [])
+    .filter((row) => row.pct >= 100)
+    .map((row) => ({
+      kind: 'budget_exceeded',
+      severity: 'warn',
+      text: `${CATEGORY_LABELS[row.category] ?? row.category} is over budget (${fmtEur(row.spent)} of ${fmtEur(row.limit)})`,
+    }))
   const top5Value = top5.reduce((sum, p) => sum + Number(p.value), 0)
   const otherValue = Math.max(Number(summary.total_value) - top5Value, 0)
   const allocationItems = [
@@ -78,7 +88,7 @@ export default function Dashboard() {
         <HeroValue value={insights.value} change={insights.change} />
         <NetWorthChart />
       </div>
-      <AttentionBand items={insights.attention} />
+      <AttentionBand items={[...insights.attention, ...budgetAttentionItems]} />
 
       <Card>
         <CardHeader title="This month's spending" subtitle="From bank transactions" />
