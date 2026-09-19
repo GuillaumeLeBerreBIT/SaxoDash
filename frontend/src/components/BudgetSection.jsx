@@ -5,9 +5,10 @@ import { Card, CardHeader } from './ui'
 import BudgetProgressBar from './BudgetProgressBar'
 
 function AddBudgetControl({ options }) {
-  const [category, setCategory] = useState(options[0] ?? '')
+  const [selected, setSelected] = useState(options[0] ?? '')
   const [amount, setAmount] = useState('')
   const setBudget = useSetBudget()
+  const category = options.includes(selected) ? selected : (options[0] ?? '')
 
   if (options.length === 0) return null
 
@@ -23,7 +24,7 @@ function AddBudgetControl({ options }) {
     <div className="flex items-center gap-2 pt-2">
       <select
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        onChange={(e) => setSelected(e.target.value)}
         className="h-8 px-2 bg-zinc-950 border border-zinc-800 rounded text-[var(--fig-xs)] text-zinc-200"
       >
         {options.map((c) => (
