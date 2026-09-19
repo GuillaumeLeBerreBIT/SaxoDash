@@ -12,7 +12,11 @@ describe('Spending', () => {
   it('shows the spending total', () => {
     queries.useSpendingSummary.mockReturnValue({
       data: {
-        categories: [{ category: 'GROCERIES', amount: '50.00' }],
+        // Category amount deliberately differs from the total so the
+        // BudgetSection fallback row (which also renders the plain spent
+        // amount for an un-budgeted category) can't collide with the
+        // StatRow total text below.
+        categories: [{ category: 'GROCERIES', amount: '20.00' }],
         total: '50.00',
         transfers: '0.00',
       },
@@ -24,6 +28,8 @@ describe('Spending', () => {
     queries.useSpendingTrend.mockReturnValue({
       data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
     })
+    queries.useBudgetProgress.mockReturnValue({ data: [], isLoading: false, error: null })
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
 
     renderWithProviders(<Spending />)
 
@@ -38,7 +44,9 @@ describe('Spending', () => {
   it('shows a visible Transfers line separate from the spending total', () => {
     queries.useSpendingSummary.mockReturnValue({
       data: {
-        categories: [{ category: 'GROCERIES', amount: '50.00' }],
+        // Category amount deliberately differs from the total/transfers
+        // values so the BudgetSection fallback row can't collide with them.
+        categories: [{ category: 'GROCERIES', amount: '20.00' }],
         total: '50.00',
         transfers: '500.00',
       },
@@ -50,6 +58,8 @@ describe('Spending', () => {
     queries.useSpendingTrend.mockReturnValue({
       data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
     })
+    queries.useBudgetProgress.mockReturnValue({ data: [], isLoading: false, error: null })
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
 
     renderWithProviders(<Spending />)
 
@@ -70,10 +80,33 @@ describe('Spending', () => {
     queries.useSpendingTrend.mockReturnValue({
       data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
     })
+    queries.useBudgetProgress.mockReturnValue({ data: [], isLoading: false, error: null })
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
 
     const { getByText } = renderWithProviders(<Spending />)
     getByText('Dismiss').click()
 
     expect(mutate).toHaveBeenCalledWith({ id: 1, dismissed: true })
+  })
+
+  it('shows a budget progress bar for a category with a limit set', () => {
+    queries.useSpendingSummary.mockReturnValue({
+      data: { categories: [{ category: 'GROCERIES', amount: '40.00' }], total: '40.00', transfers: '0.00' },
+      isLoading: false,
+      error: null,
+    })
+    queries.useSubscriptions.mockReturnValue({ data: [], isLoading: false, error: null })
+    queries.useDismissSubscription.mockReturnValue({ mutate: vi.fn() })
+    queries.useBudgetProgress.mockReturnValue({
+      data: [{ category: 'GROCERIES', limit: '100.00', spent: '40.00', pct: 40 }],
+      isLoading: false,
+      error: null,
+    })
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
+
+    renderWithProviders(<Spending />)
+
+    expect(screen.getByText('Groceries')).toBeInTheDocument()
+    expect(screen.getByText('€40.00 / €100.00')).toBeInTheDocument()
   })
 })

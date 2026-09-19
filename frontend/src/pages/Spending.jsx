@@ -2,6 +2,7 @@ import { useSpendingSummary, useSubscriptions, useDismissSubscription } from '..
 import { fmtEur } from '../lib/format'
 import { PageHeader, StatStrip, StatRow } from '../components/ui'
 import SpendingCategoryChart from '../components/SpendingCategoryChart'
+import BudgetSection from '../components/BudgetSection'
 import SpendingTrendChart from '../components/SpendingTrendChart'
 import SubscriptionsList from '../components/SubscriptionsList'
 
@@ -24,6 +25,8 @@ export default function Spending() {
       </StatStrip>
 
       <SpendingCategoryChart categories={summary?.categories} isLoading={isLoading} error={error} />
+
+      <BudgetSection categories={summary?.categories} />
 
       <SpendingTrendChart />
 
