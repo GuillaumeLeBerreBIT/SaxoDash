@@ -226,3 +226,10 @@ export const addWatchlistItem = (id, item) =>
   jsonRequest(`/api/research/watchlists/${id}/items/`, 'POST', item)
 export const removeWatchlistItem = (id, itemId) =>
   apiFetch(`/api/research/watchlists/${id}/items/${itemId}/`, { method: 'DELETE' })
+
+export const getBudgets = () => apiFetch('/api/enablebanking/budgets/')
+
+export const setBudget = (category, monthlyLimit) =>
+  jsonRequest('/api/enablebanking/budgets/', 'PUT', { category, monthly_limit: monthlyLimit })
+
+export const getBudgetProgress = () => apiFetch('/api/enablebanking/budgets/progress/')

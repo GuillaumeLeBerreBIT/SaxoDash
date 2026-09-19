@@ -10,6 +10,8 @@ import {
   deleteWatchlist,
   getBankAccounts,
   getBankTransactions,
+  getBudgetProgress,
+  getBudgets,
   getCashFlow,
   getChart,
   getCompanyNews,
@@ -36,6 +38,7 @@ import {
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  setBudget,
   updateBankTransactionCategory,
   updateSubscription,
   updateSymbolNote,
@@ -53,6 +56,8 @@ export const queryKeys = {
   transactions: (query = '') => ['transactions', query],
   bankAccounts: ['bank-accounts'],
   bankTransactions: (query = '') => ['bank-transactions', query],
+  budgets: ['budgets'],
+  budgetProgress: ['budget-progress'],
   netWorth: ['net-worth'],
   netWorthHistory: (range = 'ALL') => ['net-worth-history', range],
   riskMetrics: (benchmark = 'world') => ['risk-metrics', benchmark],
@@ -389,4 +394,23 @@ export function useWatchlistMutations() {
       onSuccess,
     }),
   }
+}
+
+export function useBudgets() {
+  return useQuery({ queryKey: queryKeys.budgets, queryFn: getBudgets })
+}
+
+export function useBudgetProgress() {
+  return useQuery({ queryKey: queryKeys.budgetProgress, queryFn: getBudgetProgress })
+}
+
+export function useSetBudget() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ category, monthlyLimit }) => setBudget(category, monthlyLimit),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgets })
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgetProgress })
+    },
+  })
 }
