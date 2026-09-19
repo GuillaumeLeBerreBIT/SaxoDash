@@ -66,6 +66,11 @@ CATEGORY_CHOICES = [
     ('OTHER', 'Other'),
 ]
 
+BUDGETABLE_CATEGORIES = [
+    (code, label) for code, label in CATEGORY_CHOICES
+    if code not in ('INCOME', 'TRANSFER', 'SAVINGS', 'REFUND_CREDIT')
+]
+
 
 class BankTransaction(models.Model):
     """One settled (status=BOOK) transaction on a KBC/Argenta account. `category`
@@ -131,3 +136,16 @@ class ManualIbanLabel(models.Model):
 
     def __str__(self):
         return f'{self.label} ({self.iban})'
+
+
+class Budget(models.Model):
+    """A monthly spending limit for one category. Flat, no rollover: each
+    calendar month is evaluated fresh against whatever `monthly_limit`
+    currently holds - editing it re-evaluates the whole current month, not
+    just going forward."""
+
+    category = models.CharField(max_length=20, choices=BUDGETABLE_CATEGORIES, unique=True)
+    monthly_limit = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f'{self.category}: €{self.monthly_limit}/mo'

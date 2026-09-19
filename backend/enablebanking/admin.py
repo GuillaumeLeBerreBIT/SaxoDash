@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BankSyncRun, BankTransaction, EnableBankingCredential, ManualIbanLabel, Subscription
+from .models import BankSyncRun, BankTransaction, Budget, EnableBankingCredential, ManualIbanLabel, Subscription
 
 
 @admin.register(EnableBankingCredential)
@@ -47,3 +47,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
 @admin.register(ManualIbanLabel)
 class ManualIbanLabelAdmin(admin.ModelAdmin):
     list_display = ('label', 'iban', 'category')
+
+
+@admin.register(Budget)
+class BudgetAdmin(admin.ModelAdmin):
+    list_display = ('category', 'monthly_limit')
