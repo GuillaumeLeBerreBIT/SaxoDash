@@ -67,9 +67,15 @@ const CATEGORY_ORDER = [
   'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER',
 ]
 
+// Movement between your own accounts, not spending - a distinct neutral so
+// it never collides with a real spending category's color in a shared list.
+const NEUTRAL_CATEGORY_COLOR = '#71717a'
+const NEUTRAL_CATEGORIES = ['TRANSFER', 'SAVINGS']
+
 export function colorForCategory(category) {
+  if (NEUTRAL_CATEGORIES.includes(category)) return NEUTRAL_CATEGORY_COLOR
   const idx = CATEGORY_ORDER.indexOf(category)
-  return HOLDINGS_PALETTE[idx === -1 ? 0 : idx % HOLDINGS_PALETTE.length]
+  return idx === -1 ? NEUTRAL_CATEGORY_COLOR : HOLDINGS_PALETTE[idx % HOLDINGS_PALETTE.length]
 }
 
 export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
