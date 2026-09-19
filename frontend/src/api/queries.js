@@ -28,6 +28,7 @@ import {
   getQuotes,
   getSaxoStatus,
   getSpendingSummary,
+  getSpendingTrend,
   getSubscriptions,
   getSymbolEarnings,
   getSymbolNote,
@@ -60,6 +61,7 @@ export const queryKeys = {
   saxoStatus: ['saxo-status'],
   enableBankingStatus: ['enablebanking-status'],
   spendingSummary: (query = '') => ['spending-summary', query],
+  spendingTrend: (months = 6) => ['spending-trend', months],
   subscriptions: ['subscriptions'],
   // Every market-data key carries the whole instrument identity: a Uic alone
   // is ambiguous, and the backend keys on both halves.
@@ -121,6 +123,10 @@ export function useSpendingSummary(query = '') {
     queryKey: queryKeys.spendingSummary(query),
     queryFn: () => getSpendingSummary(query),
   })
+}
+
+export function useSpendingTrend(months = 6) {
+  return useQuery({ queryKey: queryKeys.spendingTrend(months), queryFn: () => getSpendingTrend(months) })
 }
 
 export function useSubscriptions() {

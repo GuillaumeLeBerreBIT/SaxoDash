@@ -182,6 +182,8 @@ export const updateBankTransactionCategory = (id, categoryOverride) =>
 
 export const getSpendingSummary = (query = '') => apiFetch(`/api/enablebanking/spending/summary/${query}`)
 
+export const getSpendingTrend = (months = 6) => apiFetch(`/api/enablebanking/spending/trend/?months=${months}`)
+
 export const getSubscriptions = () => apiFetch('/api/enablebanking/subscriptions/')
 
 export const updateSubscription = (id, patch) =>

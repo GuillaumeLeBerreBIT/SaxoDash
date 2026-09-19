@@ -21,6 +21,9 @@ describe('Spending', () => {
     })
     queries.useSubscriptions.mockReturnValue({ data: [], isLoading: false, error: null })
     queries.useDismissSubscription.mockReturnValue({ mutate: vi.fn() })
+    queries.useSpendingTrend.mockReturnValue({
+      data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
+    })
 
     renderWithProviders(<Spending />)
 
@@ -44,6 +47,9 @@ describe('Spending', () => {
     })
     queries.useSubscriptions.mockReturnValue({ data: [], isLoading: false, error: null })
     queries.useDismissSubscription.mockReturnValue({ mutate: vi.fn() })
+    queries.useSpendingTrend.mockReturnValue({
+      data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
+    })
 
     renderWithProviders(<Spending />)
 
@@ -61,6 +67,9 @@ describe('Spending', () => {
       isLoading: false, error: null,
     })
     queries.useDismissSubscription.mockReturnValue({ mutate })
+    queries.useSpendingTrend.mockReturnValue({
+      data: [{ month: '2026-01', total: '50.00' }], isLoading: false, error: null,
+    })
 
     const { getByText } = renderWithProviders(<Spending />)
     getByText('Dismiss').click()
