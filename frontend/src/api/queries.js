@@ -132,7 +132,8 @@ export function useUpdateBankTransactionCategory() {
   return useMutation({
     mutationFn: ({ id, category }) => updateBankTransactionCategory(id, category),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.bankTransactions() })
+      // Prefix-match every '?account=…'-scoped list, not just the unscoped one.
+      queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.spendingSummary() })
     },
   })

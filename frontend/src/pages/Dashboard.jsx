@@ -30,7 +30,11 @@ export default function Dashboard() {
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const recentTxQuery = useTransactions('?page_size=5')
-  const spendingQuery = useSpendingSummary()
+  // Built from local date parts, not toISOString() - that converts through
+  // UTC and can land on the previous month in the small hours in UTC+ zones.
+  const now = new Date()
+  const firstOfMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+  const spendingQuery = useSpendingSummary(`?date_from=${firstOfMonthISO}`)
   // Computed before the loading guards below so the hook it wraps runs on
   // every render - a top-5 slice of an empty array is a harmless no-op.
   const top5 = (positionsQuery.data ?? []).slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)

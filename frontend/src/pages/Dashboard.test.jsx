@@ -78,6 +78,13 @@ describe('Dashboard', () => {
     expect(screen.getByText(/Top category: GROCERIES/)).toBeInTheDocument()
   })
 
+  it('scopes the spending summary query to the current month', () => {
+    renderWithProviders(<Dashboard />)
+    expect(queries.useSpendingSummary).toHaveBeenCalledWith(
+      expect.stringMatching(/^\?date_from=\d{4}-\d{2}-01$/)
+    )
+  })
+
   it('renders skeletons while insights load', () => {
     queries.usePortfolioInsights.mockReturnValue({ ...idle, data: undefined })
     const { container } = renderWithProviders(<Dashboard />)
