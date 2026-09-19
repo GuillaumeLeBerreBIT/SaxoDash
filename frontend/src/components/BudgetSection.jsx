@@ -1,4 +1,5 @@
 import { useBudgetProgress } from '../api/queries'
+import { BUDGETABLE_CATEGORIES } from '../lib/categories'
 import { Card, CardHeader } from './ui'
 import BudgetProgressBar from './BudgetProgressBar'
 
@@ -7,7 +8,7 @@ export default function BudgetSection({ categories }) {
 
   const byCategory = new Map((progress ?? []).map((row) => [row.category, row]))
   for (const c of categories ?? []) {
-    if (!byCategory.has(c.category)) {
+    if (!byCategory.has(c.category) && BUDGETABLE_CATEGORIES.includes(c.category)) {
       byCategory.set(c.category, { category: c.category, spent: c.amount, limit: null })
     }
   }

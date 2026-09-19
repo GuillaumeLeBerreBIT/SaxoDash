@@ -4,3 +4,10 @@ export const CATEGORY_LABELS = {
   ENTERTAINMENT: 'Entertainment', INCOME: 'Income', TRANSFER: 'Transfer', SAVINGS: 'Savings',
   REFUND_CREDIT: 'Refund/Credit', OTHER: 'Other',
 }
+
+// Mirrors backend/enablebanking/models.py's BUDGETABLE_CATEGORIES - categories
+// a user can actually set a monthly limit for.
+export const BUDGETABLE_CATEGORIES = [
+  'GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS',
+  'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER',
+]
