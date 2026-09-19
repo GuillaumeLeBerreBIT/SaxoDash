@@ -1,25 +1,40 @@
-import { Link } from 'react-router-dom'
-import { useBankAccounts } from '../api/queries'
-import { fmtEur } from '../lib/format'
-import { Card, PageHeader, StatStrip, StatRow } from '../components/ui'
+import { useBankAccounts, useBankTransactions, useSpendingSummary } from '../api/queries'
+import { fmtEur, fmtPct } from '../lib/format'
+import { resolvePeriod } from '../lib/periods'
+import { PageHeader, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
-import AccountBreakdownChart from '../components/AccountBreakdownChart'
-import CashFlowChart from '../components/CashFlowChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
+import BankAccountTile from '../components/BankAccountTile'
+import RecentTransactionsPanel from '../components/RecentTransactionsPanel'
 
-// Saxo's cash balance lives here too (it's a BankAccount row), but this page
-// is for real bank connections - Saxo's total is already visible on the
-// Dashboard hero, blended into "bank" there.
 const SAXO_CASH_EXTERNAL_ID = 'saxo:cash'
 
 export default function Accounts() {
+  // Computed per render, not module scope - this must not freeze at
+  // whichever date the JS bundle happened to first load.
+  const period = resolvePeriod('this_month')
   const { data: allAccounts, isLoading, error } = useBankAccounts()
+  const { data: allTransactions } = useBankTransactions()
+  const { data: summary } = useSpendingSummary(`?date_from=${period.date_from}&date_to=${period.date_to}`)
 
   if (error) return <div className="text-red-400 text-sm">Failed to load accounts</div>
   if (isLoading || !allAccounts) return <div className="text-zinc-500 text-sm">Loading…</div>
 
   const accounts = allAccounts.filter((a) => a.external_id !== SAXO_CASH_EXTERNAL_ID)
   const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
+  const bankNameById = new Map(accounts.map((a) => [a.id, a.bank]))
+  const transactions = allTransactions ?? []
+
+  const spendTotal = Number(summary?.total ?? 0)
+  const prevTotal = summary?.previous_period ? Number(summary.previous_period.total) : null
+  const deltaPct = prevTotal ? ((spendTotal - prevTotal) / prevTotal) * 100 : null
+
+  const recentByAccount = (accountId) =>
+    transactions.filter((tx) => tx.bank_account === accountId).slice(0, 2)
+
+  const recentAcrossAll = transactions
+    .slice(0, 5)
+    .map((tx) => ({ ...tx, bank_name: bankNameById.get(tx.bank_account) ?? '' }))
 
   return (
     <div className="space-y-4">
@@ -30,8 +45,25 @@ export default function Accounts() {
       />
 
       <StatStrip>
-        <StatRow label="Total Balance" value={fmtEur(total)} note={`${accounts.length} accounts`} lead />
+        <StatRow label="Total balance" value={fmtEur(total)} note={`${accounts.length} accounts`} lead />
+        <StatRow
+          label="This month's spending"
+          value={fmtEur(spendTotal)}
+          badge={deltaPct != null ? `${deltaPct >= 0 ? '▲' : '▼'} ${fmtPct(Math.abs(deltaPct), { sign: false })}` : undefined}
+          badgeTone={deltaPct == null ? 'zinc' : deltaPct >= 0 ? 'red' : 'emerald'}
+          note={prevTotal != null ? `vs ${fmtEur(prevTotal)} last month` : undefined}
+        />
+        <StatRow label="Transfers this month" value={fmtEur(summary?.transfers ?? 0)} note="Between your own accounts" />
       </StatStrip>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-3.5">
+          {accounts.map((a) => (
+            <BankAccountTile key={a.id} account={a} recentTransactions={recentByAccount(a.id)} />
+          ))}
+        </div>
+        <RecentTransactionsPanel transactions={recentAcrossAll} />
+      </div>
 
       <HistoryAreaChart
         title="Bank balance"
@@ -40,36 +72,6 @@ export default function Accounts() {
         name="Bank"
         color="#fbbf24"
       />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {accounts.map((a) => (
-            <Link key={a.id} to={`/accounts/${a.id}`} className="block">
-            <Card className="relative overflow-hidden">
-              <span
-                className="absolute left-0 top-0 bottom-0 w-1"
-                style={{ background: a.accent || '#3f3f46' }}
-              />
-              <div className="pl-2">
-                <div className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{a.type}</div>
-                <div className="mt-1 text-[var(--fig-sm)] font-medium text-zinc-100">{a.bank}</div>
-                <div className="mt-0.5 text-[var(--fig-xs)] text-zinc-500 num font-mono">{a.iban_masked}</div>
-                <div className="mt-4 text-[var(--fig-xl)] font-semibold text-zinc-50 tracking-tight num font-mono">
-                  {fmtEur(a.balance)}
-                </div>
-                {Number(a.available) !== Number(a.balance) && (
-                  <div className="mt-1 text-[var(--fig-xs)] text-zinc-500">{fmtEur(a.available)} available</div>
-                )}
-              </div>
-            </Card>
-            </Link>
-          ))}
-        </div>
-
-        <AccountBreakdownChart accounts={accounts} />
-      </div>
-
-      <CashFlowChart />
     </div>
   )
 }
