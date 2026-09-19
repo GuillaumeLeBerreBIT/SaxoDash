@@ -6,7 +6,7 @@ from django.test import TestCase
 from accounts.models import BankAccount
 
 from .models import BankTransaction
-from .services import spending_summary
+from .services import spending_summary, spending_trend
 
 
 class SpendingSummaryTest(TestCase):
@@ -64,3 +64,51 @@ class SpendingSummaryTest(TestCase):
         summary = spending_summary(date_from='2026-02-01', date_to='2026-02-28')
 
         self.assertEqual(summary['total'], Decimal('40'))
+
+
+class SpendingTrendTest(TestCase):
+    def setUp(self):
+        self.account = BankAccount.objects.create(
+            bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
+            balance=100, available=100, external_id='enablebanking:kbc:acc-1',
+        )
+
+    def _tx(self, amount, category, booking_date, external_id):
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=self.account, external_id=external_id,
+            amount=amount, currency='EUR', booking_date=booking_date, category=category,
+        )
+
+    def test_groups_by_month(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('-10'), 'DINING', date(2026, 1, 20), 't2')
+        self._tx(Decimal('-30'), 'GROCERIES', date(2026, 2, 3), 't3')
+
+        trend = spending_trend(months=6)
+
+        by_month = {row['month']: row['total'] for row in trend}
+        self.assertEqual(by_month['2026-01'], Decimal('50'))
+        self.assertEqual(by_month['2026-02'], Decimal('30'))
+
+    def test_excludes_transfers(self):
+        self._tx(Decimal('-500'), 'TRANSFER', date(2026, 1, 5), 't1')
+        trend = spending_trend(months=6)
+        self.assertEqual(trend, [])
+
+    def test_respects_category_override_for_exclusion(self):
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=self.account, external_id='t1', amount=Decimal('-40'),
+            currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
+            category_override='TRANSFER',
+        )
+        trend = spending_trend(months=6)
+        self.assertEqual(trend, [])
+
+    def test_limits_to_requested_number_of_months(self):
+        for i, m in enumerate(range(1, 9)):
+            self._tx(Decimal('-10'), 'GROCERIES', date(2026, m, 1), f't{i}')
+
+        trend = spending_trend(months=3)
+
+        self.assertEqual(len(trend), 3)
+        self.assertEqual([row['month'] for row in trend], ['2026-06', '2026-07', '2026-08'])

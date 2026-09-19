@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from django.db.models import Sum
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncMonth
 
 from .models import BankTransaction
 
@@ -32,3 +32,18 @@ def spending_summary(date_from=None, date_to=None):
         'total': sum(by_category.values(), Decimal('0')),
         'transfers': transfers_total,
     }
+
+
+def spending_trend(months=6):
+    qs = (
+        BankTransaction.objects
+        .filter(amount__lt=0)
+        .annotate(effective_category=Coalesce('category_override', 'category'))
+        .exclude(effective_category__in=TRANSFER_CATEGORIES)
+        .annotate(month=TruncMonth('booking_date'))
+        .values('month')
+        .annotate(total=Sum('amount'))
+        .order_by('month')
+    )
+    rows = [{'month': row['month'].strftime('%Y-%m'), 'total': -row['total']} for row in qs]
+    return rows[-months:]

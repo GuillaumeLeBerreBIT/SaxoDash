@@ -132,3 +132,25 @@ class SubscriptionViewsTest(APITestCase):
         self.sub.save()
         response = self.client.get('/api/enablebanking/subscriptions/?include_dismissed=true')
         self.assertEqual(len(response.data), 1)
+
+
+class SpendingTrendViewTest(APITestCase):
+    def setUp(self):
+        _auth_client(self, 'u5')
+        account = BankAccount.objects.create(
+            bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
+            balance=100, available=100, external_id='enablebanking:kbc:acc-1',
+        )
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=account, external_id='t1', amount=-40,
+            currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
+        )
+
+    def test_returns_monthly_totals(self):
+        response = self.client.get('/api/enablebanking/spending/trend/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['month'], '2026-01')
+
+    def test_respects_months_query_param(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=1')
+        self.assertEqual(len(response.data), 1)

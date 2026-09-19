@@ -15,7 +15,7 @@ from . import client, credentials
 from .filters import BankTransactionFilter
 from .models import CATEGORY_CHOICES, BankTransaction, EnableBankingCredential, Subscription
 from .serializers import BankTransactionSerializer, SubscriptionSerializer
-from .services import spending_summary
+from .services import spending_summary, spending_trend
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +150,13 @@ class SpendingSummaryView(APIView):
             date_from=request.query_params.get('date_from'),
             date_to=request.query_params.get('date_to'),
         ))
+
+
+class SpendingTrendView(APIView):
+
+    def get(self, request):
+        months = int(request.query_params.get('months', 6))
+        return Response(spending_trend(months=months))
 
 
 class SubscriptionListView(ListAPIView):

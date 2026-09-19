@@ -8,6 +8,7 @@ from .views import (
     EnableBankingConnectView,
     EnableBankingStatusView,
     SpendingSummaryView,
+    SpendingTrendView,
     SubscriptionDetailView,
     SubscriptionListView,
 )
@@ -20,6 +21,7 @@ urlpatterns = [
     path('transactions/', BankTransactionListView.as_view(), name='enablebanking-transactions'),
     path('transactions/<int:pk>/category/', BankTransactionCategoryView.as_view(), name='enablebanking-transaction-category'),
     path('spending/summary/', SpendingSummaryView.as_view(), name='enablebanking-spending-summary'),
+    path('spending/trend/', SpendingTrendView.as_view(), name='enablebanking-spending-trend'),
     path('subscriptions/', SubscriptionListView.as_view(), name='enablebanking-subscriptions'),
     path('subscriptions/<int:pk>/', SubscriptionDetailView.as_view(), name='enablebanking-subscription-detail'),
 ]
