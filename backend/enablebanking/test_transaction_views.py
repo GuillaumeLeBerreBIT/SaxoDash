@@ -35,16 +35,27 @@ class BankTransactionListViewTest(APITestCase):
     def test_lists_all_transactions(self):
         response = self.client.get('/api/enablebanking/transactions/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data['results']), 2)
+        self.assertEqual(len(response.data), 2)
 
     def test_filters_by_category(self):
         response = self.client.get('/api/enablebanking/transactions/?category=DINING')
-        self.assertEqual(len(response.data['results']), 1)
-        self.assertEqual(response.data['results'][0]['category'], 'DINING')
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['category'], 'DINING')
 
     def test_filters_by_account(self):
         response = self.client.get(f'/api/enablebanking/transactions/?account={self.account.id}')
-        self.assertEqual(len(response.data['results']), 2)
+        self.assertEqual(len(response.data), 2)
+
+    def test_returns_all_transactions_without_pagination(self):
+        # Verify that more than the default page size (20) are all returned
+        for i in range(25):
+            BankTransaction.objects.create(
+                bank='kbc', bank_account=self.account, external_id=f'extra_t{i}', amount=-10,
+                currency='EUR', booking_date=date(2026, 1, 15), category='GROCERIES',
+            )
+        response = self.client.get(f'/api/enablebanking/transactions/?account={self.account.id}')
+        # Should return all 27 transactions (25 + 2 from setUp), not just 20
+        self.assertEqual(len(response.data), 27)
 
 
 class BankTransactionCategoryViewTest(APITestCase):

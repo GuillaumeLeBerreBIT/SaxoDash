@@ -130,6 +130,7 @@ class BankTransactionListView(ListAPIView):
     serializer_class = BankTransactionSerializer
     filterset_class = BankTransactionFilter
     filter_backends = [DjangoFilterBackend]
+    pagination_class = None
 
 
 class BankTransactionCategoryView(APIView):
