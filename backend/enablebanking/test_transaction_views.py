@@ -106,6 +106,11 @@ class SpendingSummaryViewTest(APITestCase):
         # raw Decimal, so Decimal('40') != '40.00' by definition.
         self.assertEqual(response.data['total'], Decimal('40'))
 
+    def test_includes_previous_period_and_transaction_count(self):
+        response = self.client.get('/api/enablebanking/spending/summary/?date_from=2026-01-01&date_to=2026-01-31')
+        self.assertEqual(response.data['transaction_count'], 1)
+        self.assertEqual(response.data['previous_period']['total'], Decimal('0'))
+
 
 class SubscriptionViewsTest(APITestCase):
     def setUp(self):

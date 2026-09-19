@@ -65,6 +65,48 @@ class SpendingSummaryTest(TestCase):
 
         self.assertEqual(summary['total'], Decimal('40'))
 
+    def test_matched_refund_nets_against_its_category(self):
+        self._tx(Decimal('-50'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('20'), 'GROCERIES', date(2026, 1, 10), 't2')
+
+        summary = spending_summary()
+
+        by_category = {row['category']: row['amount'] for row in summary['categories']}
+        self.assertEqual(by_category['GROCERIES'], Decimal('30'))
+
+    def test_fully_refunded_category_is_dropped_not_shown_negative(self):
+        self._tx(Decimal('-50'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('60'), 'GROCERIES', date(2026, 1, 10), 't2')
+
+        summary = spending_summary()
+
+        self.assertEqual(summary['categories'], [])
+        self.assertEqual(summary['total'], Decimal('0'))
+
+    def test_transaction_count_excludes_transfers_and_credits(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('-10'), 'DINING', date(2026, 1, 6), 't2')
+        self._tx(Decimal('-500'), 'TRANSFER', date(2026, 1, 7), 't3')
+        self._tx(Decimal('20'), 'GROCERIES', date(2026, 1, 8), 't4')
+
+        summary = spending_summary()
+
+        self.assertEqual(summary['transaction_count'], 2)
+
+    def test_previous_period_is_computed_for_an_explicit_date_range(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 2, 5), 't1')
+        self._tx(Decimal('-100'), 'GROCERIES', date(2026, 1, 5), 't2')
+
+        summary = spending_summary(date_from='2026-02-01', date_to='2026-02-28')
+
+        self.assertEqual(summary['previous_period']['total'], Decimal('100'))
+        self.assertEqual(summary['previous_period']['date_from'], '2026-01-04')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-01-31')
+
+    def test_previous_period_is_none_when_unscoped(self):
+        summary = spending_summary()
+        self.assertIsNone(summary['previous_period'])
+
 
 class SpendingTrendTest(TestCase):
     def setUp(self):

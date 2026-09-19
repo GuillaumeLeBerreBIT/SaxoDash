@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
@@ -9,29 +9,67 @@ from .models import BankTransaction, Budget
 TRANSFER_CATEGORIES = ('TRANSFER', 'SAVINGS')
 
 
-def spending_summary(date_from=None, date_to=None):
-    qs = BankTransaction.objects.filter(amount__lt=0)
+def _previous_period(date_from, date_to):
+    length_days = (date_to - date_from).days + 1
+    prev_to = date_from - timedelta(days=1)
+    prev_from = prev_to - timedelta(days=length_days - 1)
+    return prev_from, prev_to
+
+
+def spending_summary(date_from=None, date_to=None, _include_previous=True):
+    qs = BankTransaction.objects.all()
     if date_from:
         qs = qs.filter(booking_date__gte=date_from)
     if date_to:
         qs = qs.filter(booking_date__lte=date_to)
+    qs = qs.annotate(effective_category=Coalesce('category_override', 'category'))
 
-    rows = (
-        qs.annotate(effective_category=Coalesce('category_override', 'category'))
+    spending_rows = (
+        qs.exclude(effective_category__in=TRANSFER_CATEGORIES)
         .values('effective_category')
         .annotate(total=Sum('amount'))
         .order_by('effective_category')
     )
+    # A category whose signed total is >= 0 (fully refunded, or nothing but
+    # an unmatched credit) is dropped, not shown as negative spending.
+    categories = [
+        {'category': row['effective_category'], 'amount': -row['total']}
+        for row in spending_rows if row['total'] < 0
+    ]
 
-    by_category = {row['effective_category']: -row['total'] for row in rows}
-    transfers_total = sum(
-        (by_category.pop(cat, Decimal('0')) for cat in TRANSFER_CATEGORIES), Decimal('0'),
+    transfers_total = -(
+        qs.filter(effective_category__in=TRANSFER_CATEGORIES, amount__lt=0)
+        .aggregate(total=Sum('amount'))['total'] or Decimal('0')
     )
 
+    # A netting credit isn't itself "a transaction of spending" - it reduces
+    # one. Count the debit side only, same categories excluded as above.
+    transaction_count = (
+        qs.filter(amount__lt=0)
+        .exclude(effective_category__in=TRANSFER_CATEGORIES)
+        .count()
+    )
+
+    previous_period = None
+    if _include_previous and date_from and date_to:
+        prev_from, prev_to = _previous_period(
+            date.fromisoformat(date_from), date.fromisoformat(date_to),
+        )
+        prev = spending_summary(
+            date_from=prev_from.isoformat(), date_to=prev_to.isoformat(), _include_previous=False,
+        )
+        previous_period = {
+            'date_from': prev_from.isoformat(),
+            'date_to': prev_to.isoformat(),
+            'total': prev['total'],
+        }
+
     return {
-        'categories': [{'category': k, 'amount': v} for k, v in by_category.items()],
-        'total': sum(by_category.values(), Decimal('0')),
+        'categories': categories,
+        'total': sum((c['amount'] for c in categories), Decimal('0')),
         'transfers': transfers_total,
+        'transaction_count': transaction_count,
+        'previous_period': previous_period,
     }
 
 
