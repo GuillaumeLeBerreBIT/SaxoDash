@@ -107,7 +107,7 @@ def budget_progress():
 
     spent_by_category = dict(
         BankTransaction.objects
-        .filter(amount__lt=0, booking_date__gte=start, booking_date__lt=end)
+        .filter(booking_date__gte=start, booking_date__lt=end)
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .values('effective_category')
         .annotate(total=Sum('amount'))
@@ -116,7 +116,8 @@ def budget_progress():
 
     rows = []
     for budget in Budget.objects.all().order_by('category'):
-        spent = -spent_by_category.get(budget.category, Decimal('0'))
+        total = spent_by_category.get(budget.category, Decimal('0'))
+        spent = -total if total < 0 else Decimal('0')
         rows.append({
             'category': budget.category,
             'limit': budget.monthly_limit,

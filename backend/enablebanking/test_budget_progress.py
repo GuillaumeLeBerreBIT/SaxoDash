@@ -70,3 +70,22 @@ class BudgetProgressTest(TestCase):
         row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
 
         self.assertEqual(row['pct'], 142.0)
+
+    def test_matched_refund_reduces_spent_this_month(self):
+        Budget.objects.create(category='SHOPPING', monthly_limit=Decimal('100'))
+        self._tx(Decimal('-71'), 'SHOPPING', date.today().replace(day=1), 't1')
+        self._tx(Decimal('21'), 'SHOPPING', date.today().replace(day=1), 't2')
+
+        row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
+
+        self.assertEqual(row['spent'], Decimal('50'))
+
+    def test_refunds_exceeding_spend_clamp_to_zero_not_negative(self):
+        Budget.objects.create(category='SHOPPING', monthly_limit=Decimal('100'))
+        self._tx(Decimal('-20'), 'SHOPPING', date.today().replace(day=1), 't1')
+        self._tx(Decimal('50'), 'SHOPPING', date.today().replace(day=1), 't2')
+
+        row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
+
+        self.assertEqual(row['spent'], Decimal('0'))
+        self.assertEqual(row['pct'], 0.0)
