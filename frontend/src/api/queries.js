@@ -145,7 +145,9 @@ export function useUpdateBankTransactionCategory() {
     onSuccess: () => {
       // Prefix-match every '?account=…'-scoped list, not just the unscoped one.
       queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
-      queryClient.invalidateQueries({ queryKey: queryKeys.spendingSummary() })
+      queryClient.invalidateQueries({ queryKey: ['spending-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['spending-trend'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.budgetProgress })
     },
   })
 }

@@ -35,8 +35,11 @@ export default function PeriodSelector({ value, onChange }) {
             aria-label="From date"
             value={customFrom}
             onChange={(e) => {
-              setCustomFrom(e.target.value)
-              onChange({ key: 'custom', date_from: e.target.value, date_to: customTo, label: 'Custom range' })
+              const nextFrom = e.target.value
+              setCustomFrom(nextFrom)
+              if (nextFrom && customTo) {
+                onChange({ key: 'custom', date_from: nextFrom, date_to: customTo, label: 'Custom range' })
+              }
             }}
             className={inputClass}
           />
@@ -46,8 +49,11 @@ export default function PeriodSelector({ value, onChange }) {
             aria-label="To date"
             value={customTo}
             onChange={(e) => {
-              setCustomTo(e.target.value)
-              onChange({ key: 'custom', date_from: customFrom, date_to: e.target.value, label: 'Custom range' })
+              const nextTo = e.target.value
+              setCustomTo(nextTo)
+              if (customFrom && nextTo) {
+                onChange({ key: 'custom', date_from: customFrom, date_to: nextTo, label: 'Custom range' })
+              }
             }}
             className={inputClass}
           />

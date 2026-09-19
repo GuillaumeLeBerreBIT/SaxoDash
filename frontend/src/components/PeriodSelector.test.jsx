@@ -41,4 +41,18 @@ describe('PeriodSelector', () => {
 
     expect(container.querySelectorAll('input[type="date"]').length).toBe(0)
   })
+
+  it('does not propagate an incomplete range when a custom date is cleared', () => {
+    const onChange = vi.fn()
+    renderWithProviders(
+      <PeriodSelector
+        value={{ key: 'custom', date_from: '2026-09-01', date_to: '2026-09-19', label: 'Custom range' }}
+        onChange={onChange}
+      />,
+    )
+
+    fireEvent.change(screen.getByLabelText('From date'), { target: { value: '' } })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })
