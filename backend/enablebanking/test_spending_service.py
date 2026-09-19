@@ -154,3 +154,20 @@ class SpendingTrendTest(TestCase):
 
         self.assertEqual(len(trend), 3)
         self.assertEqual([row['month'] for row in trend], ['2026-06', '2026-07', '2026-08'])
+
+    def test_matched_refund_reduces_the_months_total(self):
+        self._tx(Decimal('-50'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('20'), 'GROCERIES', date(2026, 1, 10), 't2')
+
+        trend = spending_trend(months=6)
+
+        by_month = {row['month']: row['total'] for row in trend}
+        self.assertEqual(by_month['2026-01'], Decimal('30'))
+
+    def test_fully_refunded_month_is_dropped(self):
+        self._tx(Decimal('-50'), 'GROCERIES', date(2026, 1, 5), 't1')
+        self._tx(Decimal('50'), 'GROCERIES', date(2026, 1, 10), 't2')
+
+        trend = spending_trend(months=6)
+
+        self.assertEqual([row['month'] for row in trend], [])

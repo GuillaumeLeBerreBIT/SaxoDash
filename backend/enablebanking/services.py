@@ -76,7 +76,6 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
 def spending_trend(months=6):
     qs = (
         BankTransaction.objects
-        .filter(amount__lt=0)
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .exclude(effective_category__in=TRANSFER_CATEGORIES)
         .annotate(month=TruncMonth('booking_date'))
@@ -84,7 +83,10 @@ def spending_trend(months=6):
         .annotate(total=Sum('amount'))
         .order_by('month')
     )
-    rows = [{'month': row['month'].strftime('%Y-%m'), 'total': -row['total']} for row in qs]
+    rows = [
+        {'month': row['month'].strftime('%Y-%m'), 'total': -row['total']}
+        for row in qs if row['total'] < 0
+    ]
     return rows[-months:]
 
 
