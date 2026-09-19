@@ -20,7 +20,7 @@ A detected group of Bank Transactions from the same merchant, at a similar amoun
 _Avoid_: Recurring payment (fine in conversation, but the stored concept is "Subscription")
 
 **Spending**:
-Aggregated outflow from Bank Transactions, grouped by Category. Distinct from the existing "Cash Flow" chart on the Accounts page, which tracks Saxo-side deposits/dividends vs fees, not bank spending.
+Net outflow from Bank Transactions for a given period, grouped by Category: debits minus any Refund/Credit that nets against the same Category, excluding Transfer and Savings entirely. Always scoped to an explicit period (e.g. "this month") - an unscoped "Spending" figure is a bug, not a feature. Distinct from the existing "Cash Flow" chart on the Accounts page, which tracks Saxo-side deposits/dividends vs fees, not bank spending.
 _Avoid_: Cash flow (reserved for the existing Saxo-based chart)
 
 **Own Account**:
