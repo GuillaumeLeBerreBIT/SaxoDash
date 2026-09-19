@@ -1,6 +1,7 @@
 import datetime
 import logging
 import secrets
+from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
@@ -13,9 +14,9 @@ from rest_framework.views import APIView, Response
 
 from . import client, credentials
 from .filters import BankTransactionFilter
-from .models import CATEGORY_CHOICES, BankTransaction, EnableBankingCredential, Subscription
-from .serializers import BankTransactionSerializer, SubscriptionSerializer
-from .services import spending_summary, spending_trend
+from .models import CATEGORY_CHOICES, BUDGETABLE_CATEGORIES, BankTransaction, Budget, EnableBankingCredential, Subscription
+from .serializers import BankTransactionSerializer, BudgetSerializer, SubscriptionSerializer
+from .services import budget_progress, spending_summary, spending_trend
 
 logger = logging.getLogger(__name__)
 
@@ -178,3 +179,32 @@ class SubscriptionDetailView(APIView):
             sub.dismissed = bool(request.data['dismissed'])
             sub.save(update_fields=['dismissed'])
         return Response(SubscriptionSerializer(sub).data)
+
+
+class BudgetListView(APIView):
+
+    def get(self, request):
+        return Response(BudgetSerializer(Budget.objects.all().order_by('category'), many=True).data)
+
+    def put(self, request):
+        category = request.data.get('category')
+        if category not in dict(BUDGETABLE_CATEGORIES):
+            return Response({'detail': 'Unknown or non-budgetable category'}, status=400)
+
+        try:
+            monthly_limit = Decimal(str(request.data.get('monthly_limit')))
+        except InvalidOperation:
+            return Response({'detail': 'monthly_limit must be a number'}, status=400)
+        if monthly_limit <= 0:
+            return Response({'detail': 'monthly_limit must be positive'}, status=400)
+
+        budget, _ = Budget.objects.update_or_create(
+            category=category, defaults={'monthly_limit': monthly_limit},
+        )
+        return Response(BudgetSerializer(budget).data)
+
+
+class BudgetProgressView(APIView):
+
+    def get(self, request):
+        return Response(budget_progress())

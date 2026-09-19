@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
 
-from .models import BankTransaction, Subscription
+from .models import BankTransaction, Budget, Subscription
 
 
 def _auth_client(test_case, username):
@@ -154,3 +154,78 @@ class SpendingTrendViewTest(APITestCase):
     def test_respects_months_query_param(self):
         response = self.client.get('/api/enablebanking/spending/trend/?months=1')
         self.assertEqual(len(response.data), 1)
+
+
+class BudgetListViewTest(APITestCase):
+    def setUp(self):
+        _auth_client(self, 'u6')
+
+    def test_lists_budgets(self):
+        Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('300'))
+
+        response = self.client.get('/api/enablebanking/budgets/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['category'], 'GROCERIES')
+
+    def test_put_creates_a_budget(self):
+        response = self.client.put(
+            '/api/enablebanking/budgets/', {'category': 'DINING', 'monthly_limit': '150'}, format='json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Budget.objects.get(category='DINING').monthly_limit, Decimal('150'))
+
+    def test_put_updates_an_existing_budget_rather_than_duplicating(self):
+        Budget.objects.create(category='DINING', monthly_limit=Decimal('100'))
+
+        self.client.put('/api/enablebanking/budgets/', {'category': 'DINING', 'monthly_limit': '200'}, format='json')
+
+        self.assertEqual(Budget.objects.filter(category='DINING').count(), 1)
+        self.assertEqual(Budget.objects.get(category='DINING').monthly_limit, Decimal('200'))
+
+    def test_rejects_a_non_budgetable_category(self):
+        response = self.client.put(
+            '/api/enablebanking/budgets/', {'category': 'TRANSFER', 'monthly_limit': '100'}, format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_a_zero_limit(self):
+        response = self.client.put(
+            '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': '0'}, format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_a_negative_limit(self):
+        response = self.client.put(
+            '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': '-10'}, format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_rejects_a_non_numeric_limit(self):
+        response = self.client.put(
+            '/api/enablebanking/budgets/', {'category': 'GROCERIES', 'monthly_limit': 'abc'}, format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class BudgetProgressViewTest(APITestCase):
+    def setUp(self):
+        _auth_client(self, 'u7')
+
+    def test_returns_progress_rows(self):
+        account = BankAccount.objects.create(
+            bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
+            balance=100, available=100, external_id='enablebanking:kbc:acc-1',
+        )
+        Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
+        BankTransaction.objects.create(
+            bank='kbc', bank_account=account, external_id='t1', amount=Decimal('-40'),
+            currency='EUR', booking_date=date.today(), category='GROCERIES',
+        )
+
+        response = self.client.get('/api/enablebanking/budgets/progress/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data[0]['category'], 'GROCERIES')
+        self.assertEqual(Decimal(str(response.data[0]['spent'])), Decimal('40'))

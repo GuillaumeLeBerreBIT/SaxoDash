@@ -3,6 +3,8 @@ from django.urls import path
 from .views import (
     BankTransactionCategoryView,
     BankTransactionListView,
+    BudgetListView,
+    BudgetProgressView,
     EnableBankingCallbackView,
     EnableBankingConnectTicketView,
     EnableBankingConnectView,
@@ -24,4 +26,6 @@ urlpatterns = [
     path('spending/trend/', SpendingTrendView.as_view(), name='enablebanking-spending-trend'),
     path('subscriptions/', SubscriptionListView.as_view(), name='enablebanking-subscriptions'),
     path('subscriptions/<int:pk>/', SubscriptionDetailView.as_view(), name='enablebanking-subscription-detail'),
+    path('budgets/', BudgetListView.as_view(), name='enablebanking-budgets'),
+    path('budgets/progress/', BudgetProgressView.as_view(), name='enablebanking-budget-progress'),
 ]

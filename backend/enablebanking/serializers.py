@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import BankTransaction, Subscription
+from .models import BankTransaction, Budget, Subscription
 
 
 class BankTransactionSerializer(serializers.ModelSerializer):
@@ -22,3 +22,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'id', 'merchant_key', 'display_name', 'category',
             'expected_amount', 'cadence', 'last_charged', 'dismissed',
         ]
+
+
+class BudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Budget
+        fields = ['category', 'monthly_limit']
