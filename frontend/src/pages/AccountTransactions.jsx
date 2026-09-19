@@ -3,13 +3,7 @@ import { ChevronLeft } from 'lucide-react'
 import { useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { Card, PageHeader, Th, Td } from '../components/ui'
-
-const CATEGORY_LABELS = {
-  GROCERIES: 'Groceries', DINING: 'Dining', TRANSPORT: 'Transport', UTILITIES: 'Utilities',
-  SUBSCRIPTIONS: 'Subscriptions', SHOPPING: 'Shopping', HEALTH: 'Health', TRAVEL: 'Travel',
-  ENTERTAINMENT: 'Entertainment', INCOME: 'Income', TRANSFER: 'Transfer', SAVINGS: 'Savings',
-  REFUND_CREDIT: 'Refund/Credit', OTHER: 'Other',
-}
+import { CATEGORY_LABELS } from '../lib/categories'
 
 function CategoryCell({ tx, onChange }) {
   return (

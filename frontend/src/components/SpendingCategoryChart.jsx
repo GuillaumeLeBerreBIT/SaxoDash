@@ -3,12 +3,7 @@ import { fmtEur } from '../lib/format'
 import { axisProps, chartTooltipProps, gridProps, moneyAxisProps } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
-
-const CATEGORY_LABELS = {
-  GROCERIES: 'Groceries', DINING: 'Dining', TRANSPORT: 'Transport', UTILITIES: 'Utilities',
-  SUBSCRIPTIONS: 'Subscriptions', SHOPPING: 'Shopping', HEALTH: 'Health', TRAVEL: 'Travel',
-  ENTERTAINMENT: 'Entertainment', INCOME: 'Income', REFUND_CREDIT: 'Refund/Credit', OTHER: 'Other',
-}
+import { CATEGORY_LABELS } from '../lib/categories'
 
 export default function SpendingCategoryChart({ categories, isLoading, error }) {
   const data = (categories ?? []).map((c) => ({
