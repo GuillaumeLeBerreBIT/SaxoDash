@@ -48,6 +48,30 @@ def to_account_fields(bank, account, balance_response):
     }
 
 
+def _is_mostly_digits(word):
+    digits = sum(ch.isdigit() for ch in word)
+    letters = sum(ch.isalpha() for ch in word)
+    return digits > 0 and digits >= letters
+
+
+def _merchant_name_from_description(description):
+    """KBC's Bancontact card payments (POS, ATM withdrawal, account fees)
+    leave both creditor and debtor either null or pointing at the account
+    holder - the merchant only exists as free text in remittance_information,
+    e.g. "Cherry Picker BE8000 BRUGGE Betaling met KBC-Debetkaart via
+    Bancontact 19-09-2026 om 15.32 uur 5127 88XX XXXX 9803 LE BERRE
+    GUILLAUME". The merchant name is the leading run of words before the
+    first postcode/date/card-number-like token - one that is *mostly* digits,
+    not merely containing one, since some real merchant names start with a
+    digit (e.g. "2TheLoo"). Verified against live KBC data on 2026-09-20."""
+    words = []
+    for word in description.split():
+        if _is_mostly_digits(word):
+            break
+        words.append(word)
+    return ' '.join(words)
+
+
 def to_bank_transaction_fields(bank, account_uid, raw):
     """Map one Enable Banking transaction to BankTransaction fields.
     remittance_information is a plain list of strings - joined here into one
@@ -57,6 +81,7 @@ def to_bank_transaction_fields(bank, account_uid, raw):
     amount = Decimal(raw['transaction_amount']['amount'])
     counterparty = (raw.get('debtor') if is_credit else raw.get('creditor')) or {}
     counterparty_account = (raw.get('debtor_account') if is_credit else raw.get('creditor_account')) or {}
+    description = ' '.join(raw.get('remittance_information') or [])
 
     return {
         'bank': bank,
@@ -64,7 +89,7 @@ def to_bank_transaction_fields(bank, account_uid, raw):
         'amount': amount if is_credit else -amount,
         'currency': raw['transaction_amount']['currency'],
         'booking_date': raw['booking_date'],
-        'counterparty_name': counterparty.get('name', ''),
+        'counterparty_name': counterparty.get('name') or _merchant_name_from_description(description),
         'counterparty_iban': counterparty_account.get('iban'),
-        'description': ' '.join(raw.get('remittance_information') or []),
+        'description': description,
     }
