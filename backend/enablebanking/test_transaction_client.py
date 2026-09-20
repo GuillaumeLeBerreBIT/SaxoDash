@@ -106,8 +106,12 @@ class IterTransactionsTest(TestCase):
 
         self.assertEqual([r['entry_reference'] for r in results], ['1', '2'])
         self.assertEqual(mock_get.call_count, 2)
+        # Real Enable Banking rejects a follow-up request that omits the
+        # original strategy/date_from with 422 WRONG_CONTINUATION_KEY - the
+        # continuation token is validated against them, not a full replacement
+        # for them. Verified live against the API on 2026-09-20.
         second_call_params = mock_get.call_args_list[1].kwargs['params']
-        self.assertEqual(second_call_params, {'continuation_key': 'ck-1'})
+        self.assertEqual(second_call_params, {'strategy': 'longest', 'continuation_key': 'ck-1'})
 
     @patch('enablebanking.client.requests.get')
     def test_single_page_stops_immediately(self, mock_get):

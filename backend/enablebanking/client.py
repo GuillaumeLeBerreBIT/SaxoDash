@@ -129,14 +129,15 @@ def get_transactions(session_id, account_uid, date_from=None, strategy=None, con
 
 def iter_transactions(session_id, account_uid, date_from=None, strategy=None):
     """Yields every transaction for one account, following continuation_key
-    until Enable Banking reports no more pages. date_from/strategy are only
-    sent on the first request - continuation_key alone carries the rest."""
+    until Enable Banking reports no more pages. The continuation token is
+    validated against the original date_from/strategy, not a replacement for
+    them - omitting them on a follow-up request gets a 422
+    WRONG_CONTINUATION_KEY, so every page resends the same values."""
     continuation_key = None
     while True:
-        if continuation_key:
-            page = get_transactions(session_id, account_uid, continuation_key=continuation_key)
-        else:
-            page = get_transactions(session_id, account_uid, date_from=date_from, strategy=strategy)
+        page = get_transactions(
+            session_id, account_uid, date_from=date_from, strategy=strategy, continuation_key=continuation_key,
+        )
         yield from page['transactions']
         continuation_key = page.get('continuation_key')
         if not continuation_key:
