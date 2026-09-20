@@ -6,13 +6,17 @@ outflows there purely through signed SUM aggregation (see services.py),
 no separate refund-matching logic needed."""
 
 _RULES = {
-    'GROCERIES': ['COLRUYT', 'DELHAIZE', 'CARREFOUR', 'ALDI', 'LIDL', 'OKAY', 'SPAR', 'INTERMARCHE', 'JUMBO'],
+    # CRF EXP/HYP/MKT is how KBC abbreviates Carrefour Express/Hyper/Market
+    # branches on statements - the full "CARREFOUR" name never appears.
+    'GROCERIES': ['COLRUYT', 'DELHAIZE', 'CARREFOUR', 'CRF EXP', 'CRF HYP', 'CRF MKT', 'ALDI', 'LIDL', 'OKAY', 'SPAR', 'INTERMARCHE', 'JUMBO'],
     'DINING': ['UBER EATS', 'DELIVEROO', 'TAKEAWAY', "MCDONALD", 'QUICK', 'STARBUCKS', 'RESTAURANT'],
-    'TRANSPORT': ['NMBS', 'SNCB', 'DE LIJN', 'STIB', 'MIVB', 'TEC', 'UBER', 'SHELL', 'TOTALENERGIES', 'Q8', 'ESSO'],
-    'UTILITIES': ['ENGIE', 'LUMINUS', 'PROXIMUS', 'TELENET', 'ORANGE BELGIUM', 'VOO', 'FLUVIUS'],
+    'TRANSPORT': ['NMBS', 'SNCB', 'DE LIJN', 'STIB', 'MIVB', 'TEC', 'UBER', 'SHELL', 'TOTALENERGIES', 'TOTAL', 'Q8', 'ESSO', 'PARKING'],
+    'UTILITIES': ['ENGIE', 'LUMINUS', 'PROXIMUS', 'TELENET', 'ORANGE BELGIUM', 'VOO', 'FLUVIUS', 'MOBILE VIKINGS'],
     'SUBSCRIPTIONS': ['NETFLIX', 'SPOTIFY', 'DISNEY', 'AMAZON PRIME', 'YOUTUBE PREMIUM', 'ICLOUD', 'APPLE.COM/BILL', 'PLAYSTATION'],
-    'SHOPPING': ['AMAZON', 'BOL.COM', 'ZALANDO', 'MEDIAMARKT', 'COOLBLUE', 'IKEA'],
-    'HEALTH': ['PHARMACIE', 'APOTHEEK', 'MUTUALITE', 'MUTUALITEIT'],
+    'SHOPPING': ['AMAZON', 'BOL.COM', 'ZALANDO', 'MEDIAMARKT', 'COOLBLUE', 'IKEA', 'GAMMA', 'ZARA', 'JACK & JONES', 'ABERCROMBIE'],
+    # PHARMACIE/APOTHEEK are the French/Dutch spellings seen on Belgian
+    # statements; PHARMACY covers the English spelling used abroad.
+    'HEALTH': ['PHARMACIE', 'PHARMACY', 'APOTHEEK', 'MUTUALITE', 'MUTUALITEIT', 'TANDARTS'],
     'TRAVEL': ['BOOKING.COM', 'AIRBNB', 'RYANAIR', 'BRUSSELS AIRLINES', 'EUROSTAR'],
     'ENTERTAINMENT': ['KINEPOLIS', 'PATHE', 'STUBHUB', 'TICKETMASTER', 'FNAC'],
     # No default employer keywords - extend this list as real income sources
