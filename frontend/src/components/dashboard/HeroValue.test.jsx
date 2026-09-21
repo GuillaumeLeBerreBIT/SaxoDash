@@ -31,4 +31,15 @@ describe('HeroValue', () => {
     const { container } = render(<HeroValue {...base} spark={[]} />)
     expect(container.querySelector('svg')).toBeNull()
   })
+
+  it('shows spent-this-month as a flat figure alongside the delta pills', () => {
+    render(<HeroValue {...base} spendingThisMonth="342.10" />)
+    expect(screen.getByText('Spent MTD')).toBeInTheDocument()
+    expect(screen.getByText('€342.10')).toBeInTheDocument()
+  })
+
+  it('omits the spent-this-month figure when not provided', () => {
+    render(<HeroValue {...base} />)
+    expect(screen.queryByText('Spent MTD')).not.toBeInTheDocument()
+  })
 })

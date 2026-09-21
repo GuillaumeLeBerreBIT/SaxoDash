@@ -37,10 +37,13 @@ const positions = [{
 function stub(over = {}) {
   queries.usePortfolioInsights.mockReturnValue({ ...idle, data: over.insights ?? insights })
   queries.usePositions.mockReturnValue({ ...idle, data: positions })
-  queries.usePositionQuotes.mockReturnValue(new Map())
   queries.usePortfolioSummary.mockReturnValue({
     ...idle,
-    data: { total_value: '13131.00', allocation: [{ ticker: 'NVDA', value: '13131.00', color: '#76b900' }] },
+    data: {
+      total_value: '13131.00',
+      total_pnl_pct: 112.3,
+      allocation: [{ ticker: 'NVDA', value: '13131.00', color: '#76b900' }],
+    },
   })
   queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
@@ -77,10 +80,27 @@ describe('Dashboard', () => {
     expect(screen.getAllByRole('link', { name: /NVDA/ }).length).toBeGreaterThan(0)
   })
 
-  it("shows this month's spending total and top category", () => {
+  it("folds this month's spending into the hero figure instead of a standalone card", () => {
     renderWithProviders(<Dashboard />)
+    expect(screen.getByText('Spent MTD')).toBeInTheDocument()
     expect(screen.getByText('€50.00')).toBeInTheDocument()
-    expect(screen.getByText(/Top category: GROCERIES/)).toBeInTheDocument()
+  })
+
+  it('shows a portfolio glance strip instead of a second holdings table', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText('Portfolio value')).toBeInTheDocument()
+    expect(screen.getByText('€13,131.00')).toBeInTheDocument()
+    expect(screen.getByText('Top holding')).toBeInTheDocument()
+    expect(screen.getByText('100.0% of portfolio')).toBeInTheDocument()
+    expect(screen.getByText('Holdings')).toBeInTheDocument()
+    // The old top-5 holdings table and allocation donut are gone - Portfolio owns that view now.
+    expect(screen.queryByText('Largest 5 by value')).not.toBeInTheDocument()
+    expect(screen.queryByText('Allocation')).not.toBeInTheDocument()
+  })
+
+  it('no longer renders a Contributors chart (superseded by Analytics\' Attribution)', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.queryByText('Contributors')).not.toBeInTheDocument()
   })
 
   it('scopes the spending summary query to the current month', () => {

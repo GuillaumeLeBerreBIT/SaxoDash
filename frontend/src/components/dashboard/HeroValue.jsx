@@ -30,7 +30,22 @@ function DeltaPill({ label, delta }) {
   )
 }
 
-export default function HeroValue({ value, change }) {
+/** A flat figure alongside the DeltaPill grid - "spent this month" isn't a
+ *  gain/loss delta to compare against a prior period the way the others are,
+ *  so it gets a plain value rather than a colored up/down pill. Folded in
+ *  here instead of a standalone "This month's spending" Card - a single
+ *  number with a label doesn't need its own bordered box, and the fuller
+ *  breakdown already lives on the Spending page. */
+function FlatStat({ label, value }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{label}</span>
+      <span className="text-[var(--fig-sm)] num font-mono text-zinc-300">{value}</span>
+    </div>
+  )
+}
+
+export default function HeroValue({ value, change, spendingThisMonth }) {
   return (
     <Card className="h-full flex flex-col">
       <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
@@ -44,6 +59,7 @@ export default function HeroValue({ value, change }) {
         {PERIODS.map(([key, label]) => (
           <DeltaPill key={key} label={label} delta={change?.[key]} />
         ))}
+        {spendingThisMonth != null && <FlatStat label="Spent MTD" value={fmtEur(spendingThisMonth)} />}
       </div>
       <p className="mt-auto pt-3 text-[var(--fig-2xs)] text-zinc-600">
         Change is end-of-day, from the daily net-worth snapshot.

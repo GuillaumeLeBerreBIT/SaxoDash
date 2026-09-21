@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate } from '../lib/charts'
+import {
+  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate,
+  SERIES_BANK, SERIES_INVESTMENTS, SERIES_TOTAL,
+} from '../lib/charts'
 import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
@@ -56,7 +59,7 @@ export default function NetWorthChart() {
                 type="monotone"
                 dataKey="portfolio_value"
                 name="Investments"
-                stroke="#34d399"
+                stroke={SERIES_INVESTMENTS}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
                 strokeDasharray={showTotal ? '4 3' : undefined}
@@ -69,7 +72,7 @@ export default function NetWorthChart() {
                 type="monotone"
                 dataKey="bank_total"
                 name="Bank"
-                stroke="#fbbf24"
+                stroke={SERIES_BANK}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
                 strokeDasharray={showTotal ? '4 3' : undefined}
@@ -82,7 +85,7 @@ export default function NetWorthChart() {
                 type="monotone"
                 dataKey="net_worth"
                 name="Total"
-                stroke="#60a5fa"
+                stroke={SERIES_TOTAL}
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}

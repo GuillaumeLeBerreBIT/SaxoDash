@@ -34,7 +34,11 @@ export default function MoversCard({ movers }) {
       {empty ? (
         <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">No holdings to compare yet.</p>
       ) : (
-        <div className="mt-3 grid grid-cols-2 gap-x-6">
+        // Stacked, not side-by-side: this card now sits in a narrower
+        // one-third column on Dashboard (previously it had half the page),
+        // and a ticker + % + € row needs more width than a two-up layout
+        // leaves it there.
+        <div className="mt-3 space-y-4">
           <div>
             <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1">Gainers</div>
             {movers.best.map((r) => <Row key={r.ticker} r={r} />)}
