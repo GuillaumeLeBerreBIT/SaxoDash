@@ -58,7 +58,11 @@ run-tests-then-move-on rhythm.
 
 **Frontend design/polish**: use the `ui-ux-pro-max`, `frontend-design`,
 and `dataviz` skills when doing visual/UX work rather than improvising —
-they already cover this project's needs.
+they already cover this project's needs. For this repo's own established
+color tokens, shared primitives, and Card philosophy, read
+`docs/design-system.md` and use the `saxodash-design-system` skill (this
+repo's own `.claude/skills/`) — it also has the screenshot-review harness
+recipe.
 
 ## Stack
 
