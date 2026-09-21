@@ -3,7 +3,7 @@ import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtEur, fmtQty } from '../lib/format'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Card, PageHeader, Badge, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Input, PageHeader, Th, Td } from '../components/ui'
 
 const TYPES = ['All', 'BUY', 'SELL', 'DIVIDEND', 'DEPOSIT', 'FEE']
 const toneFor = (t) => ({ BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }[t] || 'zinc')
@@ -57,12 +57,9 @@ export default function Transactions() {
         title="Transactions"
         subtitle="All account activity"
         right={
-          <button
-            onClick={handleExport}
-            className="h-9 px-3 rounded-md text-[var(--fig-sm)] font-medium border border-zinc-700 text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
-          >
+          <Button onClick={handleExport}>
             <Download size={13} /> Export CSV
-          </button>
+          </Button>
         }
       />
 
@@ -72,14 +69,14 @@ export default function Transactions() {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
               <Search size={14} />
             </span>
-            <input
+            <Input
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
                 setPage(1)
               }}
               placeholder="Search instrument or ticker"
-              className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 outline-none"
+              className="w-full pl-9"
             />
           </div>
           <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
