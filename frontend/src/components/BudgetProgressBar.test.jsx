@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import BudgetProgressBar from './BudgetProgressBar'
+import { NEGATIVE, PENDING, POSITIVE } from '../lib/charts'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -25,21 +26,29 @@ describe('BudgetProgressBar', () => {
     expect(mutate).toHaveBeenCalledWith({ category: 'GROCERIES', monthlyLimit: 300 })
   })
 
-  it('colors the bar red at or over 100%', () => {
+  function hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16)
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
+  }
+
+  it('colors the bar with the shared negative token at or over 100%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="120.00" limit="100" />)
-    expect(container.querySelector('.bg-red-500')).not.toBeNull()
+    const bar = container.querySelector('.rounded-full > div')
+    expect(bar.style.background).toBe(hexToRgb(NEGATIVE))
   })
 
-  it('colors the bar amber between 80 and 100%', () => {
+  it('colors the bar with the shared pending/warning token between 80 and 100%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="85.00" limit="100" />)
-    expect(container.querySelector('.bg-amber-500')).not.toBeNull()
+    const bar = container.querySelector('.rounded-full > div')
+    expect(bar.style.background).toBe(hexToRgb(PENDING))
   })
 
-  it('colors the bar green under 80%', () => {
+  it('colors the bar with the shared positive token under 80%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="40.00" limit="100" />)
-    expect(container.querySelector('.bg-emerald-500')).not.toBeNull()
+    const bar = container.querySelector('.rounded-full > div')
+    expect(bar.style.background).toBe(hexToRgb(POSITIVE))
   })
 })

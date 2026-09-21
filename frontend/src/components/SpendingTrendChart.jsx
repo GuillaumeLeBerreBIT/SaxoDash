@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSpendingTrend } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { axisProps, chartTooltipProps, gridProps, moneyAxisProps } from '../lib/charts'
+import { axisProps, chartTooltipProps, gridProps, moneyAxisProps, NEGATIVE } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
@@ -21,7 +21,7 @@ export default function SpendingTrendChart() {
               <XAxis {...axisProps} dataKey="month" />
               <YAxis {...moneyAxisProps} />
               <Tooltip {...chartTooltipProps} formatter={(v) => fmtEur(v)} />
-              <Bar dataKey="total" name="Spending" fill="#f87171" radius={[3, 3, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="total" name="Spending" fill={NEGATIVE} radius={[3, 3, 0, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         )}

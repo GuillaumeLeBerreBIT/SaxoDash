@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useBudgetProgress, useSetBudget } from '../api/queries'
 import { BUDGETABLE_CATEGORIES, CATEGORY_LABELS } from '../lib/categories'
-import { Card, CardHeader } from './ui'
+import { Button, Card, CardHeader, Input, Select } from './ui'
 import BudgetProgressBar from './BudgetProgressBar'
 
 function AddBudgetControl({ options }) {
@@ -22,27 +22,18 @@ function AddBudgetControl({ options }) {
 
   return (
     <div className="flex items-center gap-2 pt-2">
-      <select
-        value={category}
-        onChange={(e) => setSelected(e.target.value)}
-        className="h-8 px-2 bg-zinc-950 border border-zinc-800 rounded text-[var(--fig-xs)] text-zinc-200"
-      >
+      <Select value={category} onChange={(e) => setSelected(e.target.value)} className="h-8">
         {options.map((c) => (
           <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>
         ))}
-      </select>
-      <input
+      </Select>
+      <Input
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Monthly limit"
-        className="w-28 h-8 px-2 bg-zinc-950 border border-zinc-800 rounded text-[var(--fig-xs)] text-zinc-100 text-right"
+        className="w-32 h-8 text-right"
       />
-      <button
-        onClick={submit}
-        className="h-8 px-3 bg-zinc-800 hover:bg-zinc-700 rounded text-[var(--fig-xs)] text-zinc-200 font-medium"
-      >
-        Add a budget
-      </button>
+      <Button size="sm" onClick={submit}>Add a budget</Button>
     </div>
   )
 }

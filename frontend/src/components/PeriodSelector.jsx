@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { PERIOD_PRESETS, resolvePeriod } from '../lib/periods'
+import { Input, Select } from './ui'
 
 export default function PeriodSelector({ value, onChange }) {
   const [customFrom, setCustomFrom] = useState(value.date_from)
   const [customTo, setCustomTo] = useState(value.date_to)
   const isCustom = value.key === 'custom'
 
-  const inputClass = 'h-8 px-2 bg-zinc-900 border border-zinc-800 rounded text-[var(--fig-xs)] text-zinc-200'
-
   return (
     <div className="flex items-center gap-2">
-      <select
+      <Select
         aria-label="Select period"
         value={isCustom ? 'custom' : value.key}
         onChange={(e) => {
@@ -21,16 +20,16 @@ export default function PeriodSelector({ value, onChange }) {
             onChange({ key, ...resolvePeriod(key) })
           }
         }}
-        className={inputClass}
+        className="h-8"
       >
         {PERIOD_PRESETS.map((p) => (
           <option key={p.key} value={p.key}>{p.label}</option>
         ))}
         <option value="custom">Custom range</option>
-      </select>
+      </Select>
       {isCustom && (
         <>
-          <input
+          <Input
             type="date"
             aria-label="From date"
             value={customFrom}
@@ -41,10 +40,10 @@ export default function PeriodSelector({ value, onChange }) {
                 onChange({ key: 'custom', date_from: nextFrom, date_to: customTo, label: 'Custom range' })
               }
             }}
-            className={inputClass}
+            className="h-8"
           />
           <span className="text-zinc-600 text-[var(--fig-xs)]">to</span>
-          <input
+          <Input
             type="date"
             aria-label="To date"
             value={customTo}
@@ -55,7 +54,7 @@ export default function PeriodSelector({ value, onChange }) {
                 onChange({ key: 'custom', date_from: customFrom, date_to: nextTo, label: 'Custom range' })
               }
             }}
-            className={inputClass}
+            className="h-8"
           />
         </>
       )}
