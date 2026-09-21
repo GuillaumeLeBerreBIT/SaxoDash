@@ -1,10 +1,10 @@
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
-import { Card, CardHeader, ChartPlaceholder, PageHeader, StatStrip, StatRow } from '../components/ui'
+import { Card, CardHeader, ChartPlaceholder, MetricTile, PageHeader, StatStrip, StatRow, TabButton, TabList } from '../components/ui'
 import { Pill } from '../components/RangePills'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
-import MetricTile from '../components/analytics/MetricTile'
 import Projection from '../components/analytics/Projection'
 import ReturnsTable from '../components/analytics/ReturnsTable'
 import CalendarYears from '../components/analytics/CalendarYears'
@@ -55,6 +55,62 @@ function PerformanceTab({ data, positions }) {
   )
 }
 
+const RISK_TERMS = [
+  ['Volatility (ann.)', 'Annualised swing in daily value.'],
+  ['Sharpe ratio', 'Return per unit of risk.'],
+  ['Sortino ratio', 'Like Sharpe, but counts only downside swings.'],
+  ['Max / current drawdown', "Decline from the portfolio's own all-time peak."],
+  ['Beta', 'How much you move relative to the benchmark (1.0 = in step with it).'],
+  ['Tracking error', 'How far your returns stray from the benchmark, either direction.'],
+  ['Information ratio', 'Excess return over the benchmark per unit of that stray.'],
+  ['Jensen alpha', "Risk-adjusted excess return the benchmark's own beta wouldn't predict."],
+]
+
+/** An inline expand/collapse instead of a hover tooltip - 8 definitions is
+ *  more text than InfoTip's small floating box reads well at any position,
+ *  tooltip or not. Pushes the tiles below it down rather than floating an
+ *  overlay that has to fight the viewport for space. */
+function RiskDefinitions() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-1 text-[var(--fig-2xs)] text-zinc-500 hover:text-zinc-300"
+      >
+        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        {open ? 'Hide what these mean' : 'What do these mean?'}
+      </button>
+      {open && (
+        <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+          {RISK_TERMS.map(([term, definition]) => (
+            <div key={term} className="text-[var(--fig-2xs)] leading-snug">
+              <dt className="inline font-medium text-zinc-300">{term}</dt>
+              <dd className="inline text-zinc-500"> — {definition}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  )
+}
+
+/** A labelled cluster of MetricTiles - groups 12 otherwise-equal-weight
+ *  stats into "how rough was the ride" / "how consistent month to month" /
+ *  "vs a benchmark" so the tab reads as three questions, not a flat wall of
+ *  numbers. Same "uppercase tag over a row of facts" rhythm as Research's
+ *  RatioGroup, so the two pages' dense-stat sections read as one system. */
+function MetricGroup({ label, children }) {
+  return (
+    <div>
+      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium mb-2">{label}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{children}</div>
+    </div>
+  )
+}
+
 function RiskTab({ data }) {
   const {
     volatility, sharpe, sortino,
@@ -66,44 +122,57 @@ function RiskTab({ data }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1.15fr_1fr]">
+      {/* items-start: without it, CSS Grid stretches the shorter Drawdown
+          card to match Risk & return's height (now taller with the grouped
+          tiles + definitions toggle) - a card whose border wraps far past
+          its own 260px chart, empty for no reason. */}
+      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1.15fr_1fr] items-start">
         <Card>
           <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
-          <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
-            <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
-            <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
-            <MetricTile label="Current drawdown" value={`${fmtNum(currentDrawdown, 1)}%`} hint="From all-time high" />
-            <MetricTile label="Positive months" value={`${fmtNum(positiveMonthsPct, 0)}%`} />
-            <MetricTile label="Max drawdown" value={`${fmtNum(maxDrawdown, 1)}%`} />
-            <MetricTile
-              label="Best month"
-              value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
-              hint={monthLabel(bestMonth)}
-            />
-            <MetricTile
-              label="Worst month"
-              value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
-              hint={monthLabel(worstMonth)}
-            />
-            <MetricTile
-              label="Beta"
-              value={bench.has_data ? fmtNum(bench.beta, 2) : '—'}
-              hint={bench.has_data ? `vs ${bench.name}` : bench.reason}
-            />
-            <MetricTile
-              label="Tracking error"
-              value={bench.has_data ? `${fmtNum(bench.tracking_error, 1)}%` : '—'}
-            />
-            <MetricTile
-              label="Information ratio"
-              value={bench.has_data ? fmtNum(bench.information_ratio, 2) : '—'}
-            />
-            <MetricTile
-              label="Jensen alpha"
-              value={bench.has_data ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
-              hint="Risk-adjusted excess"
-            />
+          <RiskDefinitions />
+          <div className="mt-4 space-y-4">
+            <MetricGroup label="Return & risk">
+              <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
+              <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
+              <MetricTile label="Max drawdown" value={`${fmtNum(maxDrawdown, 1)}%`} />
+              <MetricTile label="Current drawdown" value={`${fmtNum(currentDrawdown, 1)}%`} hint="From all-time high" />
+            </MetricGroup>
+
+            <MetricGroup label="Consistency">
+              <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
+              <MetricTile label="Positive months" value={`${fmtNum(positiveMonthsPct, 0)}%`} />
+              <MetricTile
+                label="Best month"
+                value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
+                hint={monthLabel(bestMonth)}
+              />
+              <MetricTile
+                label="Worst month"
+                value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
+                hint={monthLabel(worstMonth)}
+              />
+            </MetricGroup>
+
+            <MetricGroup label={bench.has_data ? `Vs. benchmark (${bench.name})` : 'Vs. benchmark'}>
+              <MetricTile
+                label="Beta"
+                value={bench.has_data ? fmtNum(bench.beta, 2) : '—'}
+                hint={bench.has_data ? undefined : bench.reason}
+              />
+              <MetricTile
+                label="Tracking error"
+                value={bench.has_data ? `${fmtNum(bench.tracking_error, 1)}%` : '—'}
+              />
+              <MetricTile
+                label="Information ratio"
+                value={bench.has_data ? fmtNum(bench.information_ratio, 2) : '—'}
+              />
+              <MetricTile
+                label="Jensen alpha"
+                value={bench.has_data ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
+                hint="Risk-adjusted excess"
+              />
+            </MetricGroup>
           </div>
         </Card>
 
@@ -161,26 +230,15 @@ export default function Analytics() {
           value={`${fmtNum(data.max_drawdown, 1)}%`}
           note={`Current ${fmtNum(data.current_drawdown, 1)}%`}
         />
-        <StatRow
-          label="Money-weighted (XIRR)"
-          value="—"
-          note="Needs deposit history the app doesn't sync yet"
-        />
       </StatStrip>
 
-      <div className="flex items-center gap-1 border-b border-white/[0.06]">
+      <TabList>
         {TABS.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
-              tab === key ? 'text-zinc-100 border-blue-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
-            }`}
-          >
+          <TabButton key={key} active={tab === key} onClick={() => setTab(key)}>
             {label}
-          </button>
+          </TabButton>
         ))}
-      </div>
+      </TabList>
 
       {tab === 'performance' && <PerformanceTab data={performance} positions={positions} />}
       {tab === 'risk' && <RiskTab data={data} />}

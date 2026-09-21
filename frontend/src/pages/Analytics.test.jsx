@@ -87,13 +87,20 @@ describe('Analytics', () => {
     expect(screen.queryByText('0.0%')).not.toBeInTheDocument()
   })
 
-  it('shows the top summary row, including an explicit dash for XIRR', () => {
+  it('shows the top summary row', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
     expect(screen.getByText('Time-weighted (ann.)')).toBeInTheDocument()
-    expect(screen.getByText('Money-weighted (XIRR)')).toBeInTheDocument()
-    expect(screen.getByText(/Needs deposit history/)).toBeInTheDocument()
+  })
+
+  it('does not show a permanently-empty Money-weighted (XIRR) stat', () => {
+    // The app doesn't sync deposit history, so this could never have a real
+    // value - a stat row that can only ever show "—" doesn't earn a place.
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.queryByText('Money-weighted (XIRR)')).not.toBeInTheDocument()
   })
 
   it('opens on the Performance tab, with the returns table and calendar years', () => {
@@ -108,6 +115,25 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
     expect(screen.getByText('Return attribution')).toBeInTheDocument()
+  })
+
+  it('explains what the risk tiles mean behind an inline toggle, not a tooltip', async () => {
+    // A hover tooltip was tried first and rejected - 8 definitions is more
+    // text than InfoTip's small floating box reads well, tooltip or not
+    // (its opening lines get pushed off the top of the viewport when the
+    // trigger sits this high on the page). An inline expand/collapse avoids
+    // needing to fight the viewport for space at all.
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    expect(screen.queryByText(/counts only downside swings/)).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'What do these mean?' }))
+    expect(screen.getByText(/counts only downside swings/)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide what these mean' }))
+    expect(screen.queryByText(/counts only downside swings/)).not.toBeInTheDocument()
   })
 
   it('renders the risk metrics on the Risk tab', async () => {
@@ -130,7 +156,8 @@ describe('Analytics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
 
     expect(screen.getByText('0.95')).toBeInTheDocument() // beta
-    expect(screen.getByText('vs World Index')).toBeInTheDocument()
+    // The benchmark name now names the whole group once, not a per-tile hint.
+    expect(screen.getByText('Vs. benchmark (World Index)')).toBeInTheDocument()
   })
 
   it('shows a reason instead of dashes-as-zero when the benchmark is unusable', async () => {

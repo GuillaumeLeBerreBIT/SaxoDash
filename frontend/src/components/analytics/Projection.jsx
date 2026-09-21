@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react'
 import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader, InfoTip } from '../ui'
+import { Card, CardHeader, InfoTip, MetricTile } from '../ui'
 import { Pill } from '../RangePills'
-import MetricTile from './MetricTile'
 import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
-import { chartTooltipProps, gridProps, axisProps } from '../../lib/charts'
+import { CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, axisProps, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 
 const MONTHLY_OPTIONS = [500, 1000, 1500, 2000, 2500]
 const YEAR_OPTIONS = [5, 10, 20, 30]
@@ -98,11 +97,11 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
               }}
             />
             <Area dataKey="lowBand" stackId="band" stroke="none" fill="transparent" />
-            <Area dataKey="midBand" stackId="band" stroke="none" fill="#3b82f6" fillOpacity={0.1} />
-            <Area dataKey="hiBand" stackId="band" stroke="none" fill="#3b82f6" fillOpacity={0.22} />
-            <Area dataKey="topBand" stackId="band" stroke="none" fill="#3b82f6" fillOpacity={0.1} />
-            <Line dataKey="p50" stroke="#60a5fa" strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line dataKey="invested" stroke="#a1a1aa" strokeWidth={1.3} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
+            <Area dataKey="midBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.1} />
+            <Area dataKey="hiBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.22} />
+            <Area dataKey="topBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.1} />
+            <Line dataKey="p50" stroke={SERIES_TOTAL} strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line dataKey="invested" stroke={CATEGORY_AXIS_TEXT} strokeWidth={1.3} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

@@ -1,6 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardHeader } from '../ui'
-import { chartTooltipProps, gridProps, axisProps } from '../../lib/charts'
+import { chartTooltipProps, gridProps, axisProps, OTHER_SLICE, REPORTED } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 
 const SERIES_LABEL = { portfolio_pct: 'Portfolio', benchmark_pct: 'benchmark' }
@@ -29,8 +29,8 @@ export default function CalendarYears({ years, benchmarkName }) {
               {...chartTooltipProps}
               formatter={(v, key) => [fmtPct(v, { decimals: 1 }), key === 'portfolio_pct' ? 'Portfolio' : benchmarkName]}
             />
-            <Bar dataKey="portfolio_pct" name={SERIES_LABEL.portfolio_pct} fill="#3b82f6" radius={[3, 3, 0, 0]} barSize={22} />
-            <Bar dataKey="benchmark_pct" name={SERIES_LABEL.benchmark_pct} fill="#52525b" radius={[3, 3, 0, 0]} barSize={22} />
+            <Bar dataKey="portfolio_pct" name={SERIES_LABEL.portfolio_pct} fill={REPORTED} radius={[3, 3, 0, 0]} barSize={22} />
+            <Bar dataKey="benchmark_pct" name={SERIES_LABEL.benchmark_pct} fill={OTHER_SLICE} radius={[3, 3, 0, 0]} barSize={22} />
           </BarChart>
         </ResponsiveContainer>
       </div>

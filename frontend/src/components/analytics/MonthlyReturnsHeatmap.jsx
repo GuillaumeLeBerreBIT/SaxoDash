@@ -1,5 +1,6 @@
 import { Card, CardHeader } from '../ui'
 import { fmtPct } from '../../lib/format'
+import { NEGATIVE, POSITIVE, withAlpha } from '../../lib/charts'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -8,11 +9,7 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 function cellStyle(pct) {
   if (pct == null) return { background: 'rgba(255,255,255,0.02)' }
   const intensity = Math.min(1, Math.abs(pct) / 9)
-  return {
-    background: pct >= 0
-      ? `rgba(38,161,123,${0.12 + intensity * 0.65})`
-      : `rgba(229,72,77,${0.12 + intensity * 0.65})`,
-  }
+  return { background: withAlpha(pct >= 0 ? POSITIVE : NEGATIVE, 0.12 + intensity * 0.65) }
 }
 
 export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
@@ -28,7 +25,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
             <span>−9%</span>
             <span
               className="w-16 h-2 rounded-full"
-              style={{ background: 'linear-gradient(90deg, rgba(229,72,77,0.8), rgba(255,255,255,0.06), rgba(38,161,123,0.8))' }}
+              style={{ background: `linear-gradient(90deg, ${withAlpha(NEGATIVE, 0.8)}, rgba(255,255,255,0.06), ${withAlpha(POSITIVE, 0.8)})` }}
             />
             <span>+9%</span>
           </div>
