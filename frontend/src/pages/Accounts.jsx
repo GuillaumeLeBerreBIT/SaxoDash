@@ -6,6 +6,7 @@ import HistoryAreaChart from '../components/HistoryAreaChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
 import BankAccountTile from '../components/BankAccountTile'
 import RecentTransactionsPanel from '../components/RecentTransactionsPanel'
+import { SERIES_BANK } from '../lib/charts'
 
 const SAXO_CASH_EXTERNAL_ID = 'saxo:cash'
 
@@ -28,9 +29,6 @@ export default function Accounts() {
   const spendTotal = Number(summary?.total ?? 0)
   const prevTotal = summary?.previous_period ? Number(summary.previous_period.total) : null
   const deltaPct = prevTotal ? ((spendTotal - prevTotal) / prevTotal) * 100 : null
-
-  const recentByAccount = (accountId) =>
-    transactions.filter((tx) => tx.bank_account === accountId).slice(0, 2)
 
   const recentAcrossAll = transactions
     .slice(0, 5)
@@ -59,7 +57,7 @@ export default function Accounts() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="flex flex-col gap-3.5">
           {accounts.map((a) => (
-            <BankAccountTile key={a.id} account={a} recentTransactions={recentByAccount(a.id)} />
+            <BankAccountTile key={a.id} account={a} />
           ))}
         </div>
         <RecentTransactionsPanel transactions={recentAcrossAll} />
@@ -70,7 +68,7 @@ export default function Accounts() {
         subtitle="Total across accounts over time"
         dataKey="bank_total"
         name="Bank"
-        color="#fbbf24"
+        color={SERIES_BANK}
       />
     </div>
   )

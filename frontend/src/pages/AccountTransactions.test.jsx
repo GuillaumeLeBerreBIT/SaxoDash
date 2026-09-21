@@ -27,9 +27,15 @@ function renderAt(id) {
   )
 }
 
+const KBC = {
+  id: 5, bank: 'KBC', type: 'Current account', iban_masked: 'BE12 •••• •••• 0001',
+  balance: '1842.17', available: '1842.17', accent: '#0284c7',
+}
+
 describe('AccountTransactions', () => {
   beforeEach(() => {
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
+    queries.useBankAccounts.mockReturnValue({ data: [KBC] })
   })
 
   it('renders the transactions for the account in the URL', () => {
@@ -42,6 +48,18 @@ describe('AccountTransactions', () => {
 
     expect(queries.useBankTransactions).toHaveBeenCalledWith('?account=5')
     expect(screen.getByText('COLRUYT')).toBeInTheDocument()
+  })
+
+  it('shows which account you drilled into: bank name, balance, and IBAN', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [], isLoading: false, error: null,
+    })
+
+    renderAt(5)
+
+    expect(screen.getByRole('heading', { name: 'KBC' })).toBeInTheDocument()
+    expect(screen.getByText('€1,842.17')).toBeInTheDocument()
+    expect(screen.getByText('BE12 •••• •••• 0001')).toBeInTheDocument()
   })
 
   it('lets you correct a transaction\'s category', async () => {

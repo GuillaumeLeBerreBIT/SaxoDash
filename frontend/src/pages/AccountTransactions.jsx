@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
+import { useBankAccounts, useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { Card, PageHeader, Th, Td } from '../components/ui'
+import { Card, PageHeader, StatRow, StatStrip, Th, Td } from '../components/ui'
 import { CATEGORY_LABELS } from '../lib/categories'
 
 function CategoryCell({ tx, onChange }) {
@@ -22,21 +22,35 @@ function CategoryCell({ tx, onChange }) {
 export default function AccountTransactions() {
   const { accountId } = useParams()
   const { data, isLoading, error } = useBankTransactions(`?account=${accountId}`)
+  // A drill-down page needs to confirm which account you're looking at -
+  // the page previously showed no bank name, IBAN, or balance at all, so
+  // clicking a tile and landing here lost that context entirely.
+  const { data: accounts } = useBankAccounts()
+  const account = accounts?.find((a) => String(a.id) === accountId)
   const updateCategory = useUpdateBankTransactionCategory()
 
   if (error) return <div className="text-red-400 text-sm">Failed to load transactions</div>
   if (isLoading || !data) return <div className="text-zinc-500 text-sm">Loading…</div>
 
+  const hasAvailable = account && Number(account.available) !== Number(account.balance)
+
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Account transactions"
+        title={account?.bank ?? 'Account transactions'}
         subtitle={
           <Link to="/accounts" className="inline-flex items-center gap-1 text-zinc-400 hover:text-zinc-200">
             <ChevronLeft size={14} /> Back to Accounts
           </Link>
         }
       />
+      {account && (
+        <StatStrip>
+          <StatRow label="Balance" value={fmtEur(account.balance)} note={account.type} lead />
+          {hasAvailable && <StatRow label="Available" value={fmtEur(account.available)} />}
+          <StatRow label="IBAN" value={account.iban_masked} />
+        </StatStrip>
+      )}
       <Card padding={false}>
         <div className="overflow-x-auto">
           <table className="w-full text-[var(--fig-sm)]">
