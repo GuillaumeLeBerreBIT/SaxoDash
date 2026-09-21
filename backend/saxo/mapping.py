@@ -33,6 +33,15 @@ def _mark(base, view):
     0.0 with CurrentPriceType 'None' - but it still marks the book server-side,
     so ProfitLossOnTrade recovers the price. Both it and Amount are signed, so
     the one expression covers longs and shorts.
+
+    On a SIM account with no entitlement at all, Saxo reports
+    ProfitLossOnTrade as exactly -(OpenPrice * Amount) - "this position has no
+    mark", not "it lost 100% of its value" - which makes the formula above
+    land on exactly 0 (or, for a large enough loss against a small open price,
+    negative). Neither is ever a legitimate price for a real position, so
+    that result is rejected in favour of the 'cost' fallback rather than
+    reported as a real 'derived' mark. Verified live against a SIM account
+    2026-09-20.
     """
     open_price = _decimal(base['OpenPrice'])
 
@@ -42,7 +51,9 @@ def _mark(base, view):
 
     pnl, amount = view.get('ProfitLossOnTrade'), base.get('Amount')
     if pnl is not None and amount:
-        return open_price + _decimal(pnl) / _decimal(amount), 'derived'
+        derived = open_price + _decimal(pnl) / _decimal(amount)
+        if derived > 0:
+            return derived, 'derived'
 
     return open_price, 'cost'
 

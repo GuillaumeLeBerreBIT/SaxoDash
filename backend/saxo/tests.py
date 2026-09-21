@@ -251,6 +251,36 @@ class UnentitledPositionPricingTest(TestCase):
         self.assertEqual(fields['current_price'], Decimal('494.36'))
         self.assertEqual(fields['price_source'], 'cost')
 
+    def test_falls_back_to_cost_when_saxo_reports_the_position_as_a_total_loss(self):
+        # Saxo SIM (no market-data entitlement) reports ProfitLossOnTrade as
+        # exactly -(OpenPrice * Amount) - "this position is unpriced", not "it
+        # really lost 100% of its value" - so the derived-price formula lands
+        # on exactly 0.00. Verified live against a real SIM account 2026-09-20.
+        # A price of 0 is never a legitimate mark for a long position; it must
+        # fall through to 'cost' instead of being reported as 'derived'.
+        totally_unpriced = {
+            **UNENTITLED_POSITION,
+            'PositionView': {
+                **UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': -9887.20,
+            },
+        }
+        fields = mapping.to_position_fields(totally_unpriced)
+        self.assertEqual(fields['current_price'], Decimal('494.36'))
+        self.assertEqual(fields['price_source'], 'cost')
+
+    def test_falls_back_to_cost_when_the_derived_price_would_be_negative(self):
+        # A derived price can also come out negative for a large enough loss
+        # against a small open price - equally not a legitimate mark.
+        negative_derived = {
+            **UNENTITLED_POSITION,
+            'PositionView': {
+                **UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': -20000.0,
+            },
+        }
+        fields = mapping.to_position_fields(negative_derived)
+        self.assertEqual(fields['current_price'], Decimal('494.36'))
+        self.assertEqual(fields['price_source'], 'cost')
+
     def test_records_the_instrument_currency_and_its_rate(self):
         fields = mapping.to_position_fields(UNENTITLED_POSITION)
         self.assertEqual(fields['currency'], 'USD')
