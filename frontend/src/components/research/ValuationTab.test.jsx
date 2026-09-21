@@ -84,18 +84,7 @@ describe('ValuationTab', () => {
     expect(screen.queryByText('EPS: actual vs. estimate')).not.toBeInTheDocument()
   })
 
-  it('shows the next earnings date when the earnings feed has one', () => {
-    render(
-      <ValuationTab
-        fundamentals={{ data: AVAILABLE, isLoading: false }}
-        earnings={{ data: { available: true, next: { date: '2099-02-01', eps_estimate: 2.4 } } }}
-      />,
-    )
-    expect(screen.getByText('Next earnings')).toBeInTheDocument()
-    expect(screen.getByText('2099-02-01')).toBeInTheDocument()
-  })
-
-  it('omits the next earnings card when the earnings feed is absent', () => {
+  it('does not repeat the Next earnings card already on the Earnings tab', () => {
     render(<ValuationTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
     expect(screen.queryByText('Next earnings')).not.toBeInTheDocument()
   })

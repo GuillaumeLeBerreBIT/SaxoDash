@@ -11,7 +11,7 @@ import {
   priceGeometry,
   useWidth,
 } from '../../lib/chartGeometry'
-import { BEAT, MISS, REPORTED } from '../../lib/charts'
+import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
  *
@@ -38,7 +38,7 @@ function PriceAxis({ ticks, scaleY, width }) {
       <text
         x={width - PAD_R + 8}
         y={scaleY(value) + 3.5}
-        fill="#71717a"
+        fill={AXIS_TEXT}
         fontSize="10"
         fontFamily="Geist Mono"
       >
@@ -122,22 +122,25 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
     <g>
       <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} />
 
+      {/* SERIES_TOTAL is named for the net-worth chart's "Total" line, but is
+          really just the app's one accent blue for "the headline line" in
+          any chart - reused here for the price line itself. */}
       {type === 'area' ? (
         <g>
           <defs>
             <linearGradient id="tvArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              <stop offset="0%" stopColor={SERIES_TOTAL} stopOpacity="0.28" />
+              <stop offset="100%" stopColor={SERIES_TOTAL} stopOpacity="0" />
             </linearGradient>
           </defs>
           <path
             d={`${pricePath} L ${xAt(data.length - 1)} ${PAD_T + chartH} L ${xAt(0)} ${PAD_T + chartH} Z`}
             fill="url(#tvArea)"
           />
-          <path d={pricePath} fill="none" stroke="#60a5fa" strokeWidth="1.5" />
+          <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" />
         </g>
       ) : null}
-      {type === 'line' ? <path d={pricePath} fill="none" stroke="#60a5fa" strokeWidth="1.5" /> : null}
+      {type === 'line' ? <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" /> : null}
       {type === 'candles' ? <Candles data={data} geometry={geometry} /> : null}
       {type === 'bars' ? <Bars data={data} geometry={geometry} /> : null}
 
@@ -202,7 +205,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           strokeDasharray="3 3"
           opacity="0.7"
         />
-        <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill="#3b82f6" />
+        <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={REPORTED} />
         <text
           x={width - PAD_R + 6}
           y={scaleY(last) + 3.5}
@@ -227,7 +230,7 @@ function Crosshair({ bar, index, geometry, width }) {
         x2={xAt(index)}
         y1={PAD_T}
         y2={PAD_T + chartH}
-        stroke="#71717a"
+        stroke={AXIS_TEXT}
         strokeDasharray="3 3"
       />
       <line
@@ -235,7 +238,7 @@ function Crosshair({ bar, index, geometry, width }) {
         x2={width - PAD_R}
         y1={scaleY(bar.close)}
         y2={scaleY(bar.close)}
-        stroke="#71717a"
+        stroke={AXIS_TEXT}
         strokeDasharray="3 3"
       />
       <rect x={width - PAD_R + 2} y={scaleY(bar.close) - 8} width={PAD_R - 4} height={16} rx={2} fill="#3f3f46" />

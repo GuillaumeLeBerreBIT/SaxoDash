@@ -90,6 +90,10 @@ export default function SymbolBar({
           </>
         ) : null}
 
+        {/* No Buy/Sell here - SaxoDash doesn't place trades, and a button
+            that can never be clicked is worse than no button (see the
+            2026-09 UI audit's "dead UI" finding). Add-to-list is the one
+            real action available for an instrument on this bar. */}
         <div className="ml-auto flex items-center gap-1.5">
           <Menu
             label={memberships.length ? `In ${memberships.length} list${memberships.length > 1 ? 's' : ''}` : 'Add to list'}
@@ -114,22 +118,6 @@ export default function SymbolBar({
               ))
             )}
           </Menu>
-          <button
-            type="button"
-            disabled
-            title="Trading is not part of SaxoDash"
-            className="h-7 px-3 rounded-md bg-blue-500/60 text-white/80 text-[var(--fig-xs)] font-medium cursor-not-allowed"
-          >
-            Buy
-          </button>
-          <button
-            type="button"
-            disabled
-            title="Trading is not part of SaxoDash"
-            className="h-7 px-3 rounded-md border border-white/10 text-zinc-400 text-[var(--fig-xs)] font-medium cursor-not-allowed"
-          >
-            Sell
-          </button>
         </div>
       </div>
 

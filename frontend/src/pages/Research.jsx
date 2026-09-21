@@ -268,7 +268,7 @@ export default function Research() {
                 isEtf={instrumentIsEtf}
               />
             ) : null}
-            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} earnings={earnings} /> : null}
+            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
             {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
             {tab === 'earnings' ? (
               <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />

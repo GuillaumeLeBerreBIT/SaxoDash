@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
+import { DOWN, UP } from '../../lib/chartGeometry'
 import { TVChart } from './TVChart'
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
@@ -34,7 +35,7 @@ describe('TVChart', () => {
 
     // Each candle is a wick line plus a body rect; the last-price tag adds one
     // more rect, so bodies are counted by their fill colours.
-    const bodies = container.querySelectorAll('rect[fill="#26a17b"], rect[fill="#e5484d"]')
+    const bodies = container.querySelectorAll(`rect[fill="${UP}"], rect[fill="${DOWN}"]`)
     expect(bodies).toHaveLength(bars.length)
   })
 

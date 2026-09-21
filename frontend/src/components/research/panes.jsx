@@ -9,6 +9,12 @@ import {
   paneGeometry,
   useWidth,
 } from '../../lib/chartGeometry'
+import { AXIS_TEXT } from '../../lib/charts'
+
+// SVG text can't take a Tailwind class, so the app's actual mono face
+// (index.css's --font-mono) is spelled out literally here rather than
+// mistakenly typed as some other mono font.
+const MONO_FONT = "'Geist Mono', monospace"
 
 /** The lower panes of the Research chart: volume, RSI and MACD.
  *
@@ -25,7 +31,7 @@ const paneMouseProps = (slot, length, setHover) => ({
 })
 
 function HoverLine({ x, height }) {
-  return <line x1={x} x2={x} y1={0} y2={height} stroke="#71717a" strokeDasharray="3 3" />
+  return <line x1={x} x2={x} y1={0} y2={height} stroke={AXIS_TEXT} strokeDasharray="3 3" />
 }
 
 const volumeHeight = (volume, max, height) => (max === 0 ? 0 : (volume / max) * (height - 16))
@@ -78,7 +84,7 @@ export function VolumePane({ data, hover, setHover, height = 74 }) {
             <HoverLine x={xAt(hover)} height={height} />
           </>
         ) : null}
-        <text x={width - PAD_R + 8} y={14} fill="#71717a" fontSize="10" fontFamily="JetBrains Mono">
+        <text x={width - PAD_R + 8} y={14} fill={AXIS_TEXT} fontSize="10" fontFamily={MONO_FONT}>
           {(max / 1e6).toFixed(max >= 1e6 ? 0 : 1)}M
         </text>
       </svg>
@@ -111,9 +117,9 @@ const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height }) {
           <text
             x={width - PAD_R + 8}
             y={scaleY(level) + 3.5}
-            fill="#71717a"
+            fill={AXIS_TEXT}
             fontSize="10"
-            fontFamily="JetBrains Mono"
+            fontFamily={MONO_FONT}
           >
             {level}
           </text>
@@ -210,10 +216,10 @@ export function TimeAxis({ data }) {
             key={i}
             x={Math.min(chartW - 24, Math.max(20, xAt(i)))}
             y={14}
-            fill="#71717a"
+            fill={AXIS_TEXT}
             fontSize="10"
             textAnchor="middle"
-            fontFamily="JetBrains Mono"
+            fontFamily={MONO_FONT}
           >
             {new Date(data[i].date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
           </text>

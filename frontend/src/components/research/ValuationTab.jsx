@@ -1,4 +1,3 @@
-import { daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader } from '../ui'
@@ -85,25 +84,7 @@ function RecommendationBar({ recommendation }) {
   )
 }
 
-/** Earnings delivery as a valuation input: the next scheduled date, from the
- *  earnings feed when we have it. The actual-vs-estimate EPS chart lives on
- *  the Earnings tab only, so it isn't shown twice. */
-function EarningsDelivery({ earnings }) {
-  const next = earnings?.data?.available ? earnings.data.next : null
-  if (!next) return null
-
-  return (
-    <Card>
-      <CardHeader title="Next earnings" subtitle={daysUntil(next.date)} />
-      <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <Ratio label="Date" value={next.date} />
-        <Ratio label="EPS estimate" value={fmtNum(next.eps_estimate, 2)} />
-      </div>
-    </Card>
-  )
-}
-
-export default function ValuationTab({ fundamentals, earnings }) {
+export default function ValuationTab({ fundamentals }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
@@ -161,7 +142,6 @@ export default function ValuationTab({ fundamentals, earnings }) {
           </Card>
 
           <CashFlowTrendChart trend={data.cash_flow_trend} />
-          <EarningsDelivery earnings={earnings} />
           <RecommendationBar recommendation={data.recommendation} />
         </div>
       )}
