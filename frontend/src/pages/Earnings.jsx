@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { useEarningsCalendar } from '../api/queries'
 import BulletBar from '../components/BulletBar'
@@ -22,22 +23,6 @@ const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1
 const shortWeekday = (iso) =>
   new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' })
 const absPct = (v) => fmtPct(Math.abs(v), { sign: false, decimals: 1 })
-
-function Chevron({ dir = 'right', size = 14, className = '' }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      className={className}
-    >
-      <path d={dir === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'} />
-    </svg>
-  )
-}
 
 function SplitBar({ beat, missed, className = '' }) {
   const total = beat + missed
@@ -256,7 +241,7 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
         <RevenueCell event={event} />
       </span>
       <span className="text-zinc-600 flex">
-        <Chevron />
+        <ChevronRight size={14} />
       </span>
     </button>
   )
@@ -369,7 +354,7 @@ export default function Earnings() {
           aria-label="Previous week"
           className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
-          <Chevron dir="left" size={13} />
+          <ChevronLeft size={13} />
         </button>
         <span className="text-[var(--fig-sm)] num font-mono font-semibold text-zinc-200 min-w-[200px]">
           {weekLabel(data?.window)}
@@ -381,7 +366,7 @@ export default function Earnings() {
           aria-label="Next week"
           className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
-          <Chevron size={13} />
+          <ChevronRight size={13} />
         </button>
       </div>
 
