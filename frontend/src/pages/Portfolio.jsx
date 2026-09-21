@@ -4,14 +4,14 @@ import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } fro
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
 import { priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
-import { Card, CardHeader, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td } from '../components/ui'
+import { Card, CardHeader, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import AllocationDonut from '../components/AllocationDonut'
-import { SECTOR_PALETTE, colorForTicker } from '../lib/charts'
+import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from '../lib/charts'
 
 export default function Portfolio() {
   const summaryQuery = usePortfolioSummary()
@@ -45,28 +45,38 @@ export default function Portfolio() {
   const otherHoldingsValue = Math.max(totals.value - topHoldingsValue, 0)
   const allocationItems = [
     ...topHoldings.map((p) => ({ name: p.ticker, value: Number(p.value), color: colorForTicker(p.ticker) })),
-    ...(otherHoldingsValue > 0 ? [{ name: 'Other', value: otherHoldingsValue, color: '#52525b', logo: false }] : []),
+    ...(otherHoldingsValue > 0 ? [{ name: 'Other', value: otherHoldingsValue, color: OTHER_SLICE, logo: false }] : []),
   ]
 
+  const MAX_SECTOR_SLICES = 5
   const sectorTotals = new Map()
   positions.forEach((p) => {
     sectorTotals.set(p.sector, (sectorTotals.get(p.sector) || 0) + Number(p.value))
   })
-  const sectors = Array.from(sectorTotals.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, value], i) => ({
-      name,
-      pct: (value / totals.value) * 100,
-      color: SECTOR_PALETTE[i % SECTOR_PALETTE.length],
-    }))
+  const sectorEntries = Array.from(sectorTotals.entries()).sort((a, b) => b[1] - a[1])
+  const otherSectorsValue = sectorEntries.slice(MAX_SECTOR_SLICES).reduce((sum, [, value]) => sum + value, 0)
+  // Same donut+legend pattern as Holdings allocation above, same top-N+Other
+  // cap - one chart language for "share of X", not bars here and a donut
+  // there for two instances of the identical question.
+  const sectorAllocationItems = [
+    ...sectorEntries
+      .slice(0, MAX_SECTOR_SLICES)
+      .map(([name, value], i) => ({ name, value, color: SECTOR_PALETTE[i % SECTOR_PALETTE.length] })),
+    ...(otherSectorsValue > 0 ? [{ name: 'Other', value: otherSectorsValue, color: OTHER_SLICE, logo: false }] : []),
+  ]
+
+  const pnlTone =
+    summary.total_pnl_pct == null ? 'text-zinc-500' : Number(summary.total_pnl_pct) >= 0 ? 'text-emerald-400' : 'text-red-400'
 
   return (
     <div className="space-y-4">
       <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
 
-      <InstrumentSearchBar />
-
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,28%)_1fr] gap-4">
+        {/* One stat surface for portfolio totals, not two - this used to be a
+            3-row strip here plus a second "Overview" card in the sidebar
+            below restating Invested cost/Total P&L/Total P&L% for the same
+            underlying figures in a different visual pattern. */}
         <StatStrip vertical>
           <StatRow
             label="Total net worth"
@@ -78,17 +88,12 @@ export default function Portfolio() {
           <StatRow
             label="Investment portfolio"
             value={fmtEur(summary.total_value)}
-            note={
-              <span
-                className={
-                  summary.total_pnl_pct == null
-                    ? 'text-zinc-500'
-                    : Number(summary.total_pnl_pct) >= 0 ? 'text-emerald-400' : 'text-red-400'
-                }
-              >
-                {fmtPct(summary.total_pnl_pct)}
-              </span>
-            }
+            note={<span className={pnlTone}>{fmtPct(summary.total_pnl_pct)}</span>}
+          />
+          <StatRow
+            label="Total P&L"
+            value={<span className={pnlTone}>{fmtEur(summary.total_pnl, { sign: true })}</span>}
+            note={`${fmtEur(summary.total_cost)} invested`}
           />
           <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
         </StatStrip>
@@ -98,9 +103,11 @@ export default function Portfolio() {
           subtitle="Investment value over time"
           dataKey="portfolio_value"
           name="Portfolio"
-          color="#34d399"
+          color={SERIES_INVESTMENTS}
         />
       </div>
+
+      <InstrumentSearchBar />
 
       <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:66fr_34fr]">
         <div className="flex flex-col gap-4 h-full">
@@ -111,7 +118,7 @@ export default function Portfolio() {
             <div className="flex-1 min-h-[160px] overflow-y-auto overflow-x-auto">
               <table className="w-full text-[var(--fig-sm)]">
                 <thead>
-                  <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+                  <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-white/[0.06]">
                     <Th edge className="sticky top-0 z-10 bg-zinc-900">Name</Th>
                     <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Qty</Th>
                     <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
@@ -124,7 +131,7 @@ export default function Portfolio() {
                 </thead>
                 <tbody>
                   {positions.map((p) => (
-                    <tr key={p.ticker} className="border-b border-zinc-800/60 hover:bg-zinc-800/30">
+                    <Tr key={p.ticker}>
                       <Td edge>
                         <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
                           <InstrumentLogo
@@ -154,7 +161,7 @@ export default function Portfolio() {
                         {fmtEur(p.pnl, { sign: true })}
                       </Td>
                       <Td edge align="right" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
-                    </tr>
+                    </Tr>
                   ))}
                   <tr className="bg-zinc-800/20">
                     <Td edge className="font-medium text-zinc-300">
@@ -178,41 +185,21 @@ export default function Portfolio() {
 
         <div className="flex flex-col gap-4">
           <Card>
-            <CardHeader title="Overview" />
-            <div className="mt-4 divide-y divide-zinc-800">
-              {[
-                { label: 'Invested cost', val: fmtEur(summary.total_cost) },
-                { label: 'Total P&L', val: fmtEur(summary.total_pnl, { sign: true }) },
-                { label: 'Total P&L %', val: fmtPct(summary.total_pnl_pct) },
-              ].map((r) => (
-                <div key={r.label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                  <span className="text-[var(--fig-sm)] text-zinc-500">{r.label}</span>
-                  <span className="text-[var(--fig-sm)] text-zinc-100 num font-medium">{r.val}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
             <CardHeader title="Holdings allocation" subtitle="Top 5 by value" />
-            <AllocationDonut items={allocationItems} formatValue={fmtEur} showIcons />
+            {totals.value > 0 ? (
+              <AllocationDonut items={allocationItems} formatValue={fmtEur} showIcons />
+            ) : (
+              <EmptyState title="No priced holdings yet" hint="Allocation needs a value per holding to chart." />
+            )}
           </Card>
 
           <Card className="flex-1 flex flex-col">
-            <CardHeader title="Sector breakdown" />
-            <div className="mt-4 space-y-3">
-              {sectors.map((s) => (
-                <div key={s.name}>
-                  <div className="flex items-center justify-between text-[var(--fig-xs)] mb-1">
-                    <span className="text-zinc-300">{s.name}</span>
-                    <span className="text-zinc-400 num">{s.pct.toFixed(1)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${s.pct}%`, background: s.color }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CardHeader title="Sector breakdown" subtitle="By value" />
+            {totals.value > 0 ? (
+              <AllocationDonut items={sectorAllocationItems} formatValue={fmtEur} />
+            ) : (
+              <EmptyState title="No priced holdings yet" hint="Sector weight needs a value per holding to chart." />
+            )}
           </Card>
         </div>
       </div>

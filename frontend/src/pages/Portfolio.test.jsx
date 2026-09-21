@@ -106,6 +106,22 @@ describe('Portfolio holdings table', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
+  it('folds total cost/P&L into the one stat strip instead of a second Overview card', () => {
+    renderWithProviders(<Portfolio />)
+    expect(screen.queryByText('Overview')).not.toBeInTheDocument()
+    expect(screen.getByText('Total P&L')).toBeInTheDocument()
+    expect(screen.getByText('-€5.89')).toBeInTheDocument()
+    expect(screen.getByText('€31,573.70 invested')).toBeInTheDocument()
+  })
+
+  it('charts sector breakdown as a donut, the same pattern as holdings allocation', () => {
+    renderWithProviders(<Portfolio />)
+    const sectorCard = screen.getByText('Sector breakdown').closest('.flex-1.flex.flex-col')
+    expect(within(sectorCard).getByText('Technology')).toBeInTheDocument()
+    expect(within(sectorCard).getByText('€8,773.32')).toBeInTheDocument()
+    expect(within(sectorCard).getByText('100.0%')).toBeInTheDocument()
+  })
+
   it('shows the holding logo, keyed on the ticker symbol', () => {
     const { container } = renderWithProviders(<Portfolio />)
 
@@ -120,5 +136,28 @@ describe('Portfolio holdings table', () => {
     fireEvent.error(container.querySelector('img'))
 
     expect(container.querySelector('img')).not.toBeInTheDocument()
+  })
+
+  describe('when every position is unpriced (e.g. no market-data entitlement)', () => {
+    const unpriced = { ...msft, current_price: '0.00', value: '0.00', pnl: '-9887.20', weight: '0.00' }
+
+    it('shows an empty state for sector breakdown instead of NaN% or a blank donut', () => {
+      stub([unpriced])
+      renderWithProviders(<Portfolio />)
+      const sectorCard = screen.getByText('Sector breakdown').closest('.flex-1.flex.flex-col')
+      expect(within(sectorCard).getByText('No priced holdings yet')).toBeInTheDocument()
+      expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
+    })
+
+    it('shows an empty state instead of a blank allocation donut', () => {
+      stub([unpriced])
+      renderWithProviders(<Portfolio />)
+      // Both Holdings allocation and Sector breakdown fall back to the same
+      // EmptyState title when there's nothing priced to chart - distinguished
+      // by their hint text.
+      expect(screen.getAllByText('No priced holdings yet')).toHaveLength(2)
+      expect(screen.getByText('Allocation needs a value per holding to chart.')).toBeInTheDocument()
+      expect(screen.getByText('Sector weight needs a value per holding to chart.')).toBeInTheDocument()
+    })
   })
 })
