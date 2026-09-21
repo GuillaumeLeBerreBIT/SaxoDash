@@ -1,7 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
-import { InstrumentLogo, StatStrip, StatRow, Skeleton, Metric } from './ui'
+import {
+  Alert,
+  Button,
+  CardHeader,
+  EmptyState,
+  InstrumentLogo,
+  MetricTile,
+  StatStrip,
+  StatRow,
+  Skeleton,
+  Metric,
+} from './ui'
 
 describe('ui primitives', () => {
   it('StatStrip renders its StatRow children with label, value, badge and note', () => {
@@ -64,5 +75,45 @@ describe('ui primitives', () => {
     const img = container.querySelector('img')
     expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/COST')
     expect(screen.queryByText('CO')).not.toBeInTheDocument()
+  })
+
+  it('CardHeader renders its title as an h2 by default, for a real page->section heading level', () => {
+    render(<CardHeader title="Holdings" subtitle="All positions" />)
+    expect(screen.getByRole('heading', { level: 2, name: 'Holdings' })).toBeInTheDocument()
+  })
+
+  it('CardHeader renders as h3 when explicitly nested under another CardHeader', () => {
+    render(<CardHeader title="Nested" as="h3" />)
+    expect(screen.getByRole('heading', { level: 3, name: 'Nested' })).toBeInTheDocument()
+  })
+
+  it('Button fires onClick and respects the disabled state', () => {
+    const onClick = vi.fn()
+    render(<Button onClick={onClick}>Save</Button>)
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('Button defaults to type="button" so it never accidentally submits a form', () => {
+    render(<Button>Cancel</Button>)
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveAttribute('type', 'button')
+  })
+
+  it('MetricTile shows a label, a value and an optional hint', () => {
+    render(<MetricTile label="Sharpe ratio" value="1.42" hint="Downside-adjusted" />)
+    expect(screen.getByText('Sharpe ratio')).toBeInTheDocument()
+    expect(screen.getByText('1.42')).toBeInTheDocument()
+    expect(screen.getByText('Downside-adjusted')).toBeInTheDocument()
+  })
+
+  it('Alert renders its message', () => {
+    render(<Alert tone="error">Failed to load accounts</Alert>)
+    expect(screen.getByText('Failed to load accounts')).toBeInTheDocument()
+  })
+
+  it('EmptyState renders a title and optional hint', () => {
+    render(<EmptyState title="No transactions yet" hint="Connect a bank to get started" />)
+    expect(screen.getByText('No transactions yet')).toBeInTheDocument()
+    expect(screen.getByText('Connect a bank to get started')).toBeInTheDocument()
   })
 })

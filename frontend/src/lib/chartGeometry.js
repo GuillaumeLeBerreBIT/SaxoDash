@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
+import { NEGATIVE, POSITIVE } from './charts'
+
 /** Geometry and colours for the hand-drawn Research chart.
  *
  *  Separate from the components that use it because the SVG panes need the
@@ -7,8 +9,12 @@ import { useLayoutEffect, useRef, useState } from 'react'
  *  components and plain functions breaks React Fast Refresh.
  */
 
-export const UP = '#26a17b'
-export const DOWN = '#e5484d'
+// Candle/volume up-down aliased to the app's one gain/loss pair - this used
+// to be its own distinct '#26a17b'/'#e5484d', a different green/red than
+// every DayChange/badge/table cell elsewhere in the app for the identical
+// signal. lib/charts.js's policy is one green and one red, full stop.
+export const UP = POSITIVE
+export const DOWN = NEGATIVE
 
 export const OVERLAY_STROKES = {
   ma20: '#f59e0b',

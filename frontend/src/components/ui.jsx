@@ -1,9 +1,16 @@
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
 import { fmtPct } from '../lib/format'
 
+/** The one container primitive for a bounded, self-contained unit of page
+ *  content - reach for it when grouping information that's meaningfully
+ *  distinct from its neighbors. A single number with a label is a StatRow
+ *  or Metric, not its own Card; before adding a new Card, check whether a
+ *  table/chart/StatStrip already on the same page shows the same
+ *  information in another form (the 2026-09 audit's most common finding
+ *  was a Card that turned out to duplicate one already on the page). */
 export function Card({ children, className = '', padding = true, interactive = false, onClick }) {
   return (
     <div
@@ -17,11 +24,15 @@ export function Card({ children, className = '', padding = true, interactive = f
   )
 }
 
-export function CardHeader({ title, subtitle, right, className = '' }) {
+/** `as` defaults to h2: PageHeader's h1 is the only page-level heading, so a
+ *  CardHeader is that page's first section level for screen-reader
+ *  navigation, not a third-level heading with nothing at h2 in between. Pass
+ *  `as="h3"` only for a heading genuinely nested under another CardHeader. */
+export function CardHeader({ title, subtitle, right, className = '', as: Heading = 'h2' }) {
   return (
     <div className={`flex items-start justify-between gap-3 2xl:gap-4 ${className}`}>
       <div>
-        <h3 className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</h3>
+        <Heading className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</Heading>
         {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5 2xl:mt-1">{subtitle}</p>}
       </div>
       {right}
@@ -38,6 +49,70 @@ export function PageHeader({ title, subtitle, right }) {
       </div>
       {right}
     </div>
+  )
+}
+
+// The audit found 5+ ad hoc "primary button" treatments (bg-blue-600,
+// bg-blue-500, bg-zinc-800, a bordered outline, plus a permanently-disabled
+// one) and 3 different input heights with no shared source. Button/Input/
+// Select below are that shared source - every action button, text field, and
+// simple picker in the app should render through one of these three rather
+// than inventing new bg-*/border-*/h-* combinations.
+const buttonVariants = {
+  primary: 'bg-blue-500 text-white hover:bg-blue-400',
+  secondary: 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600',
+  ghost: 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]',
+  destructive: 'bg-red-500/90 text-white hover:bg-red-500',
+}
+
+const buttonSizes = {
+  sm: 'h-8 px-2.5 text-[var(--fig-xs)] gap-1.5',
+  md: 'h-9 px-3.5 text-[var(--fig-sm)] gap-2',
+}
+
+/** `variant`: primary (the one main action per view), secondary (everything
+ *  else that isn't primary or destructive - Export, Connect, Add), ghost
+ *  (a tertiary action inside a denser context), destructive (delete/remove).
+ *  Don't use `disabled` to hide a feature that will never ship (see the
+ *  audit's SymbolBar Buy/Sell finding) - remove the button instead. */
+export function Button({ variant = 'secondary', size = 'md', type = 'button', className = '', children, ...props }) {
+  return (
+    <button
+      type={type}
+      className={`inline-flex items-center justify-center rounded-md font-medium disabled:opacity-40 disabled:pointer-events-none ${
+        buttonVariants[variant] || buttonVariants.secondary
+      } ${buttonSizes[size] || buttonSizes.md} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** The one text-input treatment (lifted from Transactions' existing search
+ *  field, the most-used instance of this pattern already in the app). */
+export function Input({ className = '', ...props }) {
+  return (
+    <input
+      className={`h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 outline-none ${className}`}
+      {...props}
+    />
+  )
+}
+
+/** A native &lt;select&gt;, styled to match Input. Native selects already carry
+ *  full keyboard and screen-reader support for free - reach for the custom
+ *  `Menu` pattern (components/research/menu.jsx) only when the picker needs
+ *  more than "choose one option from a flat list" (multi-item, checkable
+ *  rows, or an inline search). */
+export function Select({ className = '', children, ...props }) {
+  return (
+    <select
+      className={`h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 focus:border-zinc-600 outline-none ${className}`}
+      {...props}
+    >
+      {children}
+    </select>
   )
 }
 
@@ -75,6 +150,35 @@ export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
   )
 }
 
+const alertTones = {
+  error: 'bg-red-500/10 border-red-500/20 text-red-300',
+  warning: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
+  info: 'bg-blue-500/10 border-blue-500/20 text-blue-300',
+}
+
+/** A page/section-level status banner - replaces the ad hoc
+ *  `&lt;div className="text-red-400 text-sm"&gt;Failed to load...&lt;/div&gt;`
+ *  every page's error branch currently hand-rolls independently. */
+export function Alert({ tone = 'error', children, className = '' }) {
+  return (
+    <div className={`rounded-md border px-3.5 py-3 text-[var(--fig-sm)] ${alertTones[tone] || alertTones.error} ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+/** A centered "nothing here yet" message - distinct from ChartPlaceholder
+ *  (which fills a fixed-height chart area) since this can sit inside a Card
+ *  or table body of any height (an empty transaction list, no budgets set). */
+export function EmptyState({ title, hint, className = '' }) {
+  return (
+    <div className={`text-center py-8 px-4 ${className}`}>
+      <div className="text-[var(--fig-sm)] text-zinc-400">{title}</div>
+      {hint && <div className="mt-1 text-[var(--fig-xs)] text-zinc-600">{hint}</div>}
+    </div>
+  )
+}
+
 /** A small "i" that reveals an explanation on hover or keyboard focus.
  *
  *  For jargon next to a chart or metric that isn't self-explanatory - what a
@@ -83,16 +187,34 @@ export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
  */
 export function InfoTip({ children }) {
   const [open, setOpen] = useState(false)
+  // Opens upward by default (the common case: a trigger below the fold with
+  // room above it) but flips below when there genuinely isn't room - a long
+  // explanation on a trigger near the top of a card otherwise renders with
+  // its opening lines pushed off the top of the viewport, unreadable. 160px
+  // is a rough "a few lines of tooltip" budget, not an exact measurement of
+  // this tip's actual height (which varies per caller and isn't known until
+  // it renders) - good enough to catch the real failure case.
+  const [openBelow, setOpenBelow] = useState(false)
+  const triggerRef = useRef(null)
   const id = useId()
+
+  const show = () => {
+    const rect = triggerRef.current?.getBoundingClientRect()
+    setOpenBelow(rect ? rect.top < 160 : false)
+    setOpen(true)
+  }
+  const hide = () => setOpen(false)
+
   return (
     <span className="relative inline-flex">
       <button
+        ref={triggerRef}
         type="button"
         aria-describedby={id}
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
         className="text-zinc-500 hover:text-zinc-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-full"
       >
         <Info size={13} />
@@ -101,7 +223,9 @@ export function InfoTip({ children }) {
         <span
           id={id}
           role="tooltip"
-          className="absolute z-20 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[var(--fig-2xs)] leading-snug text-zinc-300 shadow-lg shadow-black/40"
+          className={`absolute z-20 left-1/2 -translate-x-1/2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[var(--fig-2xs)] leading-snug text-zinc-300 shadow-lg shadow-black/40 ${
+            openBelow ? 'top-full mt-2' : 'bottom-full mb-2'
+          }`}
         >
           {children}
         </span>
@@ -122,6 +246,31 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
   )
 }
 
+
+/** Underline tab strip for switching between a page's sections (Analytics'
+ *  Performance/Risk/Projection, Research's Overview/Valuation/Peers/...) -
+ *  extracted from the identical markup both pages already hand-rolled. This
+ *  is the "switch section" pattern; for "toggle a filter or range" (a chart's
+ *  date range, a benchmark picker), use Pill/RangePills instead - that split
+ *  is already how the app uses the two, just not written down until now. */
+export function TabList({ children, className = '' }) {
+  return <div className={`flex items-center gap-1 border-b border-white/[0.06] ${className}`}>{children}</div>
+}
+
+export function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active}
+      className={`h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
+        active ? 'text-zinc-100 border-blue-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
 
 /** A row of headline stats as one bordered strip with dividers - the calm
  *  alternative to N separate single-stat cards. `vertical` stacks the rows
@@ -239,6 +388,28 @@ export function Metric({ label, value, tone = 'text-zinc-100', hint }) {
   )
 }
 
+/** Metric's bordered sibling, for a figure that needs visual separation from
+ *  its neighbors - a grid of risk stats, a week's summary tiles. The audit
+ *  found this exact box (bg-white/[0.02] border border-white/[0.06]) already
+ *  independently reimplemented as Analytics' MetricTile, Earnings'
+ *  SummaryTile, and Research's Ratio; this is that box, promoted once. Reach
+ *  for bare `Metric` instead when the tile doesn't need its own boundary
+ *  (e.g. already inside a Card with siblings). */
+export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right }) {
+  return (
+    <div className="bg-white/[0.02] border border-white/[0.06] rounded-md p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{label}</span>
+        {right}
+      </div>
+      {value != null && (
+        <div className={`mt-1.5 text-[var(--fig-lg)] font-semibold num font-mono tracking-tight ${tone}`}>{value}</div>
+      )}
+      {hint && <div className="mt-1 text-[var(--fig-2xs)] text-zinc-500">{hint}</div>}
+    </div>
+  )
+}
+
 /** Table header/body cell with the app's shared density scale - edge columns
  *  get more horizontal room than interior ones. Used by every data table
  *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
@@ -255,14 +426,38 @@ export function Th({ children, align = 'left', edge = false, className = '' }) {
   )
 }
 
+/** `whitespace-nowrap` by default - a numeric or date cell should never wrap
+ *  onto a second line (a large enough figure otherwise will, mid-number);
+ *  every table already scrolls horizontally rather than reflowing (see the
+ *  design system's table philosophy), so nowrap costs nothing it wasn't
+ *  already the intended behavior. A cell that genuinely needs to wrap can
+ *  still override via `className`. */
 export function Td({ children, align = 'left', edge = false, className = '' }) {
   return (
     <td
-      className={`${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
+      className={`whitespace-nowrap ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${className}`}
     >
       {children}
     </td>
+  )
+}
+
+/** A table body row with the app's shared border/hover/selected treatment -
+ *  use instead of hand-copying `border-b border-white/[0.06] hover:bg-...`
+ *  per table (the audit found both an older opaque `border-zinc-800` and a
+ *  newer `border-white/[0.06]` convention coexisting; this is the newer one,
+ *  standardized). */
+export function Tr({ children, selected = false, className = '', ...props }) {
+  return (
+    <tr
+      className={`border-b border-white/[0.06] last:border-0 ${
+        selected ? 'bg-blue-500/[0.06]' : 'hover:bg-white/[0.03]'
+      } ${className}`}
+      {...props}
+    >
+      {children}
+    </tr>
   )
 }

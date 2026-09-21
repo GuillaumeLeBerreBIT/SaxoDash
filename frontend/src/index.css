@@ -17,7 +17,13 @@
 /* Documented type scale for new components. Plain custom properties, not
    Tailwind @theme tokens, so nothing existing is overridden - reference these
    as text-[var(--fig-lg)] where a component wants to stay on the scale.
-   2xs 11 · xs 12 · sm 13 · md 15 · lg 19 · xl 22 · 2xl 24 (px) */
+   2xs 11 · xs 12 · sm 13 · md 15 · lg 19 · xl 22 · 2xl 24 (px)
+
+   This scale was audited (2026-09) against the "feels 150% zoomed in"
+   complaint and confirmed NOT to be the cause - it's already restrained.
+   Do not introduce a new size outside this list; where a page needs a
+   bigger "hero" figure, reuse StatRow's `lead` clamp() rather than adding
+   an --fig-3xl. */
 :root {
   --fig-2xs: 0.6875rem;
   --fig-xs: 0.75rem;
@@ -33,6 +39,35 @@
   --chart-h-sm: 200px;
   --chart-h-md: 220px;
   --chart-h-lg: 260px;
+
+  /* Semantic color reference - this is the canonical mapping from a role to
+     an existing Tailwind class. Components should reach for the Tailwind
+     class, not a new hex value; these custom properties exist for the few
+     places (below) that can't use a Tailwind class at all. For SVG/canvas/
+     recharts contexts (which can't use Tailwind classes either), use
+     lib/charts.js's exported constants instead - never inline a hex there.
+       background        -> bg-zinc-950           (#09090b)
+       surface (card)     -> bg-zinc-900 (gradiented, see Card in ui.jsx)
+       elevated surface   -> bg-zinc-900 + shadow-lg/2xl (menus, modals)
+       border             -> border-white/[0.06]
+       border (emphasis)  -> border-white/[0.10]
+       text primary       -> text-zinc-50 / text-zinc-100
+       text secondary     -> text-zinc-400
+       text muted         -> text-zinc-500 / text-zinc-600
+       positive           -> text-emerald-400  (also lib/charts.js BEAT/POSITIVE)
+       negative           -> text-red-400      (also lib/charts.js MISS/NEGATIVE)
+       warning            -> text-amber-400    (also lib/charts.js PENDING)
+       info / accent      -> text-blue-400     (also lib/charts.js REPORTED)
+     Financial state must never be color-only: pair with a +/- sign, an icon,
+     or a text label (see BudgetProgressBar for the one remaining gap). */
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-focus-ring: rgba(59, 130, 246, 0.5);
+
+  /* Motion - two durations cover every transition in the app. Don't add a
+     third without tying it to what's being communicated (state feedback vs.
+     navigation), per the audit's animation-philosophy finding. */
+  --motion-fast: 150ms;  /* hover/focus feedback - buttons, rows, inputs */
+  --motion-page: 200ms;  /* route change fade, expand/collapse */
 }
 
 html, body {
@@ -58,11 +93,11 @@ body::before {
 }
 
 button, a, [role="button"], tr, input, select {
-  transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .15s ease;
+  transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, opacity var(--motion-fast) ease;
 }
-button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible {
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible, select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
