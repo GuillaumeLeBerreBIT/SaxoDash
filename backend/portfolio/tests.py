@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
 from core.models import NetWorthSnapshot
-from portfolio import insights
+from portfolio import insights, sectors
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
 from portfolio.services import (
@@ -301,6 +301,88 @@ class InsightsPositionsTest(TestCase):
     def test_contributors_survive_zero_denominators(self):
         rows = insights._contributors(self.positions, Decimal('0'), Decimal('0'))
         self.assertTrue(all(r['contribution_pp'] == 0.0 for r in rows))
+
+
+class BackfillSectorsTest(TestCase):
+    """Position.sector defaults to 'Uncategorized' from the Saxo sync (see
+    saxo/mapping.py::to_position_fields) - this backs the separate,
+    lazily-scheduled backfill (portfolio.sectors), not the 30-minute sync
+    itself, so a Finnhub call doesn't ride along with every position sync."""
+
+    def setUp(self):
+        self.aapl = _pos('AAPL', '1', '1', '1', sector='Uncategorized')
+        self.googl = _pos('GOOGL', '1', '1', '1', sector='Uncategorized')
+
+    @patch('research.finnhub.industry')
+    def test_backfills_every_uncategorized_position(self, mock_industry):
+        mock_industry.side_effect = lambda ticker: {'AAPL': 'Technology', 'GOOGL': 'Media'}[ticker]
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 2)
+        self.aapl.refresh_from_db()
+        self.googl.refresh_from_db()
+        self.assertEqual(self.aapl.sector, 'Technology')
+        self.assertEqual(self.googl.sector, 'Media')
+
+    @patch('research.finnhub.industry')
+    def test_leaves_an_already_categorized_position_alone(self, mock_industry):
+        msft = _pos('MSFT', '1', '1', '1', sector='Technology')
+        mock_industry.return_value = 'Media'
+
+        sectors.backfill_sectors()
+
+        called_tickers = {call.args[0] for call in mock_industry.call_args_list}
+        self.assertNotIn('MSFT', called_tickers)
+        msft.refresh_from_db()
+        self.assertEqual(msft.sector, 'Technology')
+
+    @patch('research.finnhub.industry')
+    def test_a_symbol_finnhub_has_nothing_for_stays_uncategorized(self, mock_industry):
+        from research.finnhub import FinnhubNoData
+        mock_industry.side_effect = FinnhubNoData('AAPL')
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 0)
+        self.aapl.refresh_from_db()
+        self.assertEqual(self.aapl.sector, 'Uncategorized')
+
+    @patch('research.finnhub.industry')
+    def test_one_failing_symbol_does_not_abort_the_rest(self, mock_industry):
+        from research.providers import ProviderUnavailable
+        mock_industry.side_effect = lambda ticker: (
+            (_ for _ in ()).throw(ProviderUnavailable('rate limited'))
+            if ticker == 'AAPL' else 'Media'
+        )
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 1)
+        self.googl.refresh_from_db()
+        self.assertEqual(self.googl.sector, 'Media')
+
+
+class BackfillPositionSectorsCommandTest(TestCase):
+    @patch('research.finnhub.industry', return_value='Technology')
+    def test_backfills_and_reports_the_count(self, _mock_industry):
+        from io import StringIO
+        from django.core.management import call_command
+
+        _pos('AAPL', '1', '1', '1', sector='Uncategorized')
+        out = StringIO()
+        call_command('backfill_position_sectors', stdout=out)
+
+        self.assertIn('1 position', out.getvalue())
+        self.assertEqual(Position.objects.get(ticker='AAPL').sector, 'Technology')
+
+
+class BackfillPositionSectorsTaskTest(TestCase):
+    @patch('portfolio.tasks.backfill_sectors', return_value=2)
+    def test_delegates_to_backfill_sectors(self, mock_backfill):
+        from portfolio import tasks
+        self.assertEqual(tasks.backfill_position_sectors(), 2)
+        mock_backfill.assert_called_once_with()
 
 
 class UpcomingEarningsTest(TestCase):

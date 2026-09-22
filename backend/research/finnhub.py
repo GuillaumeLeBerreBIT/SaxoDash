@@ -410,6 +410,34 @@ def peers(symbol):
     return {'available': True, **data}
 
 
+# A week, not FUNDAMENTALS_TTL's 24h - a company's industry classification
+# moves on the order of years, not days, so there is no freshness reason to
+# recheck it daily the way a price-derived ratio needs to.
+INDUSTRY_TTL = 86400 * 7
+
+
+def _industry_cache_key(symbol):
+    return f'research:industry:v1:{symbol}'
+
+
+def industry(symbol):
+    """Finnhub's coarse industry/sector classification for a company - just
+    the one profile field, cached separately from fundamentals() (which
+    fetches three more endpoints this doesn't need). Backs the Position.sector
+    backfill in portfolio.sectors."""
+    def produce():
+        profile = get_profile(symbol)
+        value = profile.get('finnhubIndustry')
+        if not value:
+            # Same reasoning as fundamentals()'s own no-name check: raise
+            # before caching, so an ETF/unlisted symbol's "no data" doesn't
+            # get pinned for a week.
+            raise FinnhubNoData(symbol)
+        return value
+
+    return cache.get_or_set(_industry_cache_key(symbol), produce, INDUSTRY_TTL)
+
+
 def _to_news_item(row):
     ts = row.get('datetime')
     return {
