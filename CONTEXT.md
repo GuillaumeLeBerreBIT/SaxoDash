@@ -27,7 +27,7 @@ _Avoid_: Cash flow (reserved for the existing Saxo-based chart)
 Any KBC or Argenta account whose IBAN appears in one of the two `EnableBankingCredential.linked_accounts` lists — i.e. an account you've actually connected, as opposed to any arbitrary IBAN a Bank Transaction might reference.
 
 **Transfer**:
-A Bank Transaction matched (by amount and date) to a corresponding transaction on another Own Account, representing money moved between your own accounts rather than spent. Excluded from Spending totals, but shown as its own line on the Spending page for transparency rather than hidden.
+A Bank Transaction matched (by amount and date) to a corresponding transaction on another Own Account, representing money moved between your own accounts rather than spent. Excluded from Spending totals, but shown as its own line on the Spending page for transparency rather than hidden. Also covers a small, explicitly-confirmed set of payments to accounts outside Own Account (the user's own other account, and the joint household account shared with their partner) - matched by IBAN via `ManualIbanLabel`, or by an exact `counterparty_name` match for the handful of rows with no IBAN on them at all (see `enablebanking/categorization.py::_HOUSEHOLD_TRANSFER_NAMES`).
 
 **Refund/Credit**:
 An incoming Bank Transaction that isn't a Transfer or income. When it can be confidently matched to a prior outflow's merchant, it nets against that Category's total; otherwise it falls into a generic Refund/Credit bucket.

@@ -94,6 +94,25 @@ describe('Analytics', () => {
     expect(screen.getByText('Time-weighted (ann.)')).toBeInTheDocument()
   })
 
+  it('does not show a low-confidence caveat once a full year of history exists', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+    expect(screen.queryByText(/based on.*days/i)).not.toBeInTheDocument()
+  })
+
+  it('flags a low-confidence caveat with the actual day count while history is short', () => {
+    queries.useRiskMetrics.mockReturnValue({
+      data: { ...summary, data_quality: 'low', sample_size: 24 },
+      isLoading: false, error: null,
+    })
+    queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+    queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.getByText(/based on 24 days/i)).toBeInTheDocument()
+  })
+
   it('does not show a permanently-empty Money-weighted (XIRR) stat', () => {
     // The app doesn't sync deposit history, so this could never have a real
     // value - a stat row that can only ever show "—" doesn't earn a place.

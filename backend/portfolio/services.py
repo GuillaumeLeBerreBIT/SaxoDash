@@ -48,3 +48,28 @@ def _is_usable(valuation):
         valuation.currency == settings.REPORTING_CURRENCY
         and timezone.now() - valuation.as_of <= VALUATION_MAX_AGE
     )
+
+
+def get_saxo_account_value():
+    """Saxo's single reconciled cash+positions total, in REPORTING_CURRENCY,
+    or None when there is no usable figure right now.
+
+    This is the investable-pool value a return/performance series should be
+    built from - not get_portfolio_value(), which is positions-only and
+    drops every time a position is sold into cash, reading as a loss that
+    never happened. total_value and cash_balance come from the same Saxo
+    API response as positions_value (saxo.tasks.sync_account_balance writes
+    all three atomically), so a BUY/SELL that only reallocates within the
+    Saxo account leaves this figure unchanged - no trade-day special-casing
+    needed.
+
+    Deliberately has no positions-only fallback (unlike get_portfolio_value):
+    reconstructing cash+positions from two independently-synced sources when
+    the broker figure isn't usable would reintroduce the exact staleness
+    mismatch this value exists to avoid. None means "skip this day", not
+    "guess".
+    """
+    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    if valuation and _is_usable(valuation):
+        return Money(valuation.total_value, valuation.currency)
+    return None

@@ -3,7 +3,7 @@ from typing import NamedTuple
 from django.utils import timezone
 
 from accounts.services import get_total_bank_balance
-from portfolio.services import get_portfolio_value
+from portfolio.services import get_portfolio_value, get_saxo_account_value
 
 from .models import NetWorthSnapshot
 from .money import Money
@@ -34,13 +34,25 @@ def ensure_todays_snapshot():
     landing later never reached the chart.
     """
     net_worth = current_net_worth()
+    today = timezone.localdate()
+
+    # A None fetch (the Saxo credential is unusable right now) must not blank
+    # out a good value this same day already recorded from an earlier,
+    # usable sync - a mid-day re-auth lapse should not erase real data.
+    saxo_value = get_saxo_account_value()
+    if saxo_value is not None:
+        saxo_account_value = saxo_value.rounded().amount
+    else:
+        existing = NetWorthSnapshot.objects.filter(date=today).first()
+        saxo_account_value = existing.saxo_account_value if existing else None
 
     snapshot, _ = NetWorthSnapshot.objects.update_or_create(
-        date=timezone.localdate(),
+        date=today,
         defaults={
             'portfolio_value': net_worth.portfolio.rounded().amount,
             'bank_total': net_worth.bank.rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
+            'saxo_account_value': saxo_account_value,
         },
     )
     return snapshot

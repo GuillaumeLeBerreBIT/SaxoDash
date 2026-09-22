@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PenLine } from 'lucide-react'
 
 import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
@@ -142,6 +143,13 @@ export default function Portfolio() {
                           />
                           <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
                           {p.type === 'ETF' && <Badge tone="amber">ETF</Badge>}
+                          {p.has_thesis === false && (
+                            <PenLine
+                              size={12}
+                              className="text-zinc-600 shrink-0"
+                              title="No thesis written yet — add one on the Research page"
+                            />
+                          )}
                           <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
                         </Link>
                       </Td>

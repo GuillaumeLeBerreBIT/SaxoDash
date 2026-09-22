@@ -8,6 +8,13 @@ from .models import BankTransaction, Subscription
 
 AMOUNT_TOLERANCE = Decimal('0.10')
 
+# A habitual cash withdrawal (KBC/Argenta statements read "Geldopneming",
+# Dutch for "cash withdrawal") is mechanically indistinguishable from a
+# merchant charge by amount/cadence alone, but no interpretation makes one
+# a subscription - confirmed live 2026-09-22, a regular ATM withdrawal was
+# otherwise detected and would have shown up on the Spending page.
+CASH_WITHDRAWAL_MARKERS = ['GELDOPNEMING']
+
 # (min_days, max_days) average gap between charges for each cadence.
 CADENCE_WINDOWS = {
     'weekly': (5, 9),
@@ -42,6 +49,8 @@ def detect_subscriptions():
     detected = 0
     for merchant_key, txs in groups.items():
         if not merchant_key or len(txs) < 2:
+            continue
+        if any(marker in merchant_key for marker in CASH_WITHDRAWAL_MARKERS):
             continue
 
         dates = [tx.booking_date for tx in txs]

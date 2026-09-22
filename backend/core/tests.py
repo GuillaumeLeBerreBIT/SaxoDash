@@ -68,6 +68,73 @@ class EnsureTodaysSnapshotTest(TestCase):
         self.assertEqual(NetWorthSnapshot.objects.count(), 1)
 
 
+class SnapshotSaxoAccountValueTest(TestCase):
+    """saxo_account_value is the trade-neutral cash+positions total the
+    return series needs (see portfolio.services.get_saxo_account_value) -
+    additive alongside portfolio_value, which stays positions-only."""
+
+    def setUp(self):
+        Position.objects.create(
+            ticker='NVDA', name='NVIDIA', qty=10,
+            avg_cost=Decimal('100.00'), current_price=Decimal('150.00'),
+            sector='Technology', type='STOCK', color='#76b900',
+        )
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+
+    def test_populates_from_a_usable_saxo_valuation(self):
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('900.00'),
+            positions_value=Decimal('1500.00'),
+            total_value=Decimal('2400.00'),
+        )
+        snap = ensure_todays_snapshot()
+        self.assertEqual(snap.saxo_account_value, Decimal('2400.00'))
+
+    def test_a_later_null_fetch_the_same_day_does_not_erase_a_good_value(self):
+        # A good value was recorded this morning; Saxo needs re-auth by the
+        # afternoon. The afternoon's get_saxo_account_value() call returns
+        # None, but that must not blank out the morning's real figure.
+        valuation = PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('900.00'),
+            positions_value=Decimal('1500.00'),
+            total_value=Decimal('2400.00'),
+        )
+        ensure_todays_snapshot()
+
+        PortfolioValuation.objects.filter(pk=valuation.pk).update(
+            as_of=timezone.now() - timedelta(days=3),
+        )
+        snap = ensure_todays_snapshot()
+        self.assertEqual(snap.saxo_account_value, Decimal('2400.00'))
+
+    def test_is_null_when_there_is_no_usable_saxo_valuation(self):
+        # No PortfolioValuation row at all - demo data / first run / SIM
+        # never synced. portfolio_value still falls back to our own marks
+        # (unchanged behaviour); saxo_account_value has no such fallback.
+        snap = ensure_todays_snapshot()
+        self.assertIsNone(snap.saxo_account_value)
+
+    def test_a_later_refresh_the_same_day_can_fill_in_a_previously_null_value(self):
+        # Saxo reconnects mid-day: today's row already exists (positions-only
+        # for the morning), then a usable valuation appears.
+        snap = ensure_todays_snapshot()
+        self.assertIsNone(snap.saxo_account_value)
+
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('900.00'),
+            positions_value=Decimal('1500.00'),
+            total_value=Decimal('2400.00'),
+        )
+        snap = ensure_todays_snapshot()
+        self.assertEqual(snap.saxo_account_value, Decimal('2400.00'))
+
+
 class NetWorthHistoryAPITest(APITestCase):
     def setUp(self):
         user = User.objects.create_user(username='alex', password='pw')

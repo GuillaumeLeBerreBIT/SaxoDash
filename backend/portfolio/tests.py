@@ -6,23 +6,28 @@ from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
 from core.models import NetWorthSnapshot
-from portfolio import insights
+from portfolio import insights, sectors
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
 from portfolio.services import (
     VALUATION_MAX_AGE,
     get_portfolio_value,
     get_positions_value,
+    get_saxo_account_value,
 )
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-def _snap(d, portfolio, bank=Decimal('1000.00')):
+def _snap(d, portfolio, bank=Decimal('1000.00'), saxo=None):
+    # saxo defaults to mirroring portfolio - fine for tests with no trades
+    # in between; pass an explicit saxo= to make the two diverge (a sale
+    # moving value from positions into cash within the same Saxo account).
     return NetWorthSnapshot.objects.create(
-        date=d, portfolio_value=Decimal(portfolio), bank_total=bank,
-        net_worth=Decimal(portfolio) + bank,
+        date=d, portfolio_value=Decimal(portfolio),
+        saxo_account_value=Decimal(saxo) if saxo is not None else Decimal(portfolio),
+        bank_total=bank, net_worth=Decimal(portfolio) + bank,
     )
 
 
@@ -72,7 +77,21 @@ class PositionSerializerTest(TestCase):
         self.assertEqual(data['pnl'], Decimal('500.00'))
         self.assertEqual(data['pnl_pct'], Decimal('50.00'))
         self.assertEqual(data['weight'], Decimal('75.00'))  # 1500/2000
-        
+
+    def test_has_thesis_reads_from_context_not_a_query_per_row(self):
+        # Computed once by the view (see PositionListView) and passed
+        # through context, the same pattern total_value already uses for
+        # weight - not a query per position here.
+        data = PositionSerializer(self.p1, context={'tickers_with_thesis': {'NVDA'}}).data
+        self.assertTrue(data['has_thesis'])
+        data = PositionSerializer(self.p2, context={'tickers_with_thesis': {'NVDA'}}).data
+        self.assertFalse(data['has_thesis'])
+
+    def test_has_thesis_defaults_to_false_without_context(self):
+        data = PositionSerializer(self.p1, context={}).data
+        self.assertFalse(data['has_thesis'])
+
+
 class PortfolioAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
@@ -89,6 +108,14 @@ class PortfolioAPITest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['weight'], Decimal('100.00'))
+
+    def test_positions_list_reports_which_holdings_have_a_thesis(self):
+        from research.models import SymbolNote
+        SymbolNote.objects.create(symbol='NVDA', bull_case='Datacenter demand.')
+
+        response = self.client.get('/api/portfolio/positions/')
+
+        self.assertTrue(response.data[0]['has_thesis'])
 
     def test_summary(self):
         response = self.client.get('/api/portfolio/summary/')
@@ -145,6 +172,51 @@ class PortfolioValuationTrustTest(TestCase):
         self._position()
 
         self.assertEqual(get_portfolio_value().amount, Decimal('1100.00'))
+
+
+class SaxoAccountValueTest(TestCase):
+    """The single, broker-reconciled cash+positions total (Analytics'
+    return series needs this, not the positions-only figure - see
+    docs/superpowers/plans/2026-09-2x-return-methodology.md)."""
+
+    def _valuation(self, **overrides):
+        return PortfolioValuation.objects.create(**{
+            'source': SAXO_SOURCE,
+            'currency': 'EUR',
+            'cash_balance': Decimal('1000.00'),
+            'positions_value': Decimal('31567.81'),
+            'total_value': Decimal('32567.81'),
+            **overrides,
+        })
+
+    def test_returns_the_brokers_total_value_when_usable(self):
+        self._valuation()
+        value = get_saxo_account_value()
+        self.assertEqual(value.amount, Decimal('32567.81'))
+        self.assertEqual(value.currency, 'EUR')
+
+    def test_returns_none_when_there_is_no_valuation_yet(self):
+        self.assertIsNone(get_saxo_account_value())
+
+    def test_returns_none_for_a_stale_valuation_rather_than_reconstructing_one(self):
+        # Deliberately does not fall back to positions+cash from independent
+        # sources here (unlike get_portfolio_value) - those can be stale
+        # relative to each other, which is exactly the kind of contamination
+        # this series exists to avoid. A gap day is more honest than a
+        # synthesized one.
+        valuation = self._valuation()
+        PortfolioValuation.objects.filter(pk=valuation.pk).update(
+            as_of=timezone.now() - VALUATION_MAX_AGE - timedelta(hours=1)
+        )
+        self.assertIsNone(get_saxo_account_value())
+
+    def test_returns_none_for_a_valuation_in_a_foreign_currency(self):
+        # total_value has no fx_rate to convert with (unlike positions,
+        # which each carry their own) - same reasoning as get_portfolio_value's
+        # foreign-currency fallback, but there is no positions-only fallback
+        # here to fall back to.
+        self._valuation(currency='USD')
+        self.assertIsNone(get_saxo_account_value())
 
 
 class InsightsHelpersTest(TestCase):
@@ -253,6 +325,88 @@ class InsightsPositionsTest(TestCase):
         self.assertTrue(all(r['contribution_pp'] == 0.0 for r in rows))
 
 
+class BackfillSectorsTest(TestCase):
+    """Position.sector defaults to 'Uncategorized' from the Saxo sync (see
+    saxo/mapping.py::to_position_fields) - this backs the separate,
+    lazily-scheduled backfill (portfolio.sectors), not the 30-minute sync
+    itself, so a Finnhub call doesn't ride along with every position sync."""
+
+    def setUp(self):
+        self.aapl = _pos('AAPL', '1', '1', '1', sector='Uncategorized')
+        self.googl = _pos('GOOGL', '1', '1', '1', sector='Uncategorized')
+
+    @patch('research.finnhub.industry')
+    def test_backfills_every_uncategorized_position(self, mock_industry):
+        mock_industry.side_effect = lambda ticker: {'AAPL': 'Technology', 'GOOGL': 'Media'}[ticker]
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 2)
+        self.aapl.refresh_from_db()
+        self.googl.refresh_from_db()
+        self.assertEqual(self.aapl.sector, 'Technology')
+        self.assertEqual(self.googl.sector, 'Media')
+
+    @patch('research.finnhub.industry')
+    def test_leaves_an_already_categorized_position_alone(self, mock_industry):
+        msft = _pos('MSFT', '1', '1', '1', sector='Technology')
+        mock_industry.return_value = 'Media'
+
+        sectors.backfill_sectors()
+
+        called_tickers = {call.args[0] for call in mock_industry.call_args_list}
+        self.assertNotIn('MSFT', called_tickers)
+        msft.refresh_from_db()
+        self.assertEqual(msft.sector, 'Technology')
+
+    @patch('research.finnhub.industry')
+    def test_a_symbol_finnhub_has_nothing_for_stays_uncategorized(self, mock_industry):
+        from research.finnhub import FinnhubNoData
+        mock_industry.side_effect = FinnhubNoData('AAPL')
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 0)
+        self.aapl.refresh_from_db()
+        self.assertEqual(self.aapl.sector, 'Uncategorized')
+
+    @patch('research.finnhub.industry')
+    def test_one_failing_symbol_does_not_abort_the_rest(self, mock_industry):
+        from research.providers import ProviderUnavailable
+        mock_industry.side_effect = lambda ticker: (
+            (_ for _ in ()).throw(ProviderUnavailable('rate limited'))
+            if ticker == 'AAPL' else 'Media'
+        )
+
+        updated = sectors.backfill_sectors()
+
+        self.assertEqual(updated, 1)
+        self.googl.refresh_from_db()
+        self.assertEqual(self.googl.sector, 'Media')
+
+
+class BackfillPositionSectorsCommandTest(TestCase):
+    @patch('research.finnhub.industry', return_value='Technology')
+    def test_backfills_and_reports_the_count(self, _mock_industry):
+        from io import StringIO
+        from django.core.management import call_command
+
+        _pos('AAPL', '1', '1', '1', sector='Uncategorized')
+        out = StringIO()
+        call_command('backfill_position_sectors', stdout=out)
+
+        self.assertIn('1 position', out.getvalue())
+        self.assertEqual(Position.objects.get(ticker='AAPL').sector, 'Technology')
+
+
+class BackfillPositionSectorsTaskTest(TestCase):
+    @patch('portfolio.tasks.backfill_sectors', return_value=2)
+    def test_delegates_to_backfill_sectors(self, mock_backfill):
+        from portfolio import tasks
+        self.assertEqual(tasks.backfill_position_sectors(), 2)
+        mock_backfill.assert_called_once_with()
+
+
 class UpcomingEarningsTest(TestCase):
     def _win(self, events):
         return {'events': events, 'window': {}, 'ok': True}
@@ -318,6 +472,32 @@ class InsightsAttentionTest(TestCase):
         self.assertEqual(es['ticker'], 'MSFT')
         self.assertIn('in 3 days', es['text'])
 
+    def test_idle_cash_fires_at_its_threshold(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention(
+            [], [], date(2026, 9, 10), c, None, idle_cash_pct=97.0,
+        )
+        idle = next(i for i in items if i['kind'] == 'idle_cash')
+        # Informational, not a warning - cash can be intentional (see
+        # docs/superpowers plan: "communicate the situation without telling
+        # the user what they should invest").
+        self.assertEqual(idle['severity'], 'info')
+        self.assertIn('97%', idle['text'])
+
+    def test_idle_cash_does_not_fire_below_its_threshold(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention(
+            [], [], date(2026, 9, 10), c, None, idle_cash_pct=20.0,
+        )
+        self.assertFalse(any(i['kind'] == 'idle_cash' for i in items))
+
+    def test_idle_cash_is_silent_when_not_computable(self):
+        # No usable Saxo cash/positions figures right now (e.g. no
+        # PortfolioValuation yet) - silence, not a claim about 0% or 100%.
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention([], [], date(2026, 9, 10), c, None)
+        self.assertFalse(any(i['kind'] == 'idle_cash' for i in items))
+
     def test_no_history_when_under_two_snapshots(self):
         c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
         items = insights._attention([], [(date(2026, 9, 10), Decimal('1'))], date(2026, 9, 10), c, None)
@@ -347,6 +527,29 @@ class BuildInsightsTest(TestCase):
         self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
         self.assertEqual(len(payload['spark']), 2)
         self.assertEqual(payload['upcoming_earnings'], [])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_mostly_idle_saxo_cash_surfaces_as_an_attention_item(self, _mock):
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('97000.00'),
+            positions_value=Decimal('3000.00'),
+            total_value=Decimal('100000.00'),
+        )
+        payload = insights.build_insights()
+        idle = next(i for i in payload['attention'] if i['kind'] == 'idle_cash')
+        self.assertIn('97%', idle['text'])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_a_sale_moving_value_to_cash_does_not_read_as_a_loss(self, _mock):
+        # Same scenario as the real 2026-09-16 rebalance: portfolio_value
+        # (positions only) drops sharply on a sale, but the money just moved
+        # into Saxo cash - the Dashboard's own day-change pill must read the
+        # account total, not the positions-only figure.
+        _snap(date(2026, 9, 15), '32535', saxo='32535')
+        _snap(date(2026, 9, 16), '30145', saxo='32538')  # the rebalance day
+        payload = insights.build_insights()
+        self.assertGreater(payload['change']['day']['pct'], -1.0)
 
 
 class PortfolioInsightsViewTest(APITestCase):

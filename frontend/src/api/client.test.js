@@ -8,7 +8,6 @@ import {
   getNetWorthHistory,
   getRiskMetrics,
   getPerformance,
-  getCashFlow,
   getChart,
   getQuotes,
   removeWatchlistItem,
@@ -252,7 +251,7 @@ describe('getPerformance', () => {
   })
 })
 
-describe('getNetWorthHistory / getCashFlow', () => {
+describe('getNetWorthHistory', () => {
   it('requests net worth history with the given range', async () => {
     localStorage.setItem('access', 'valid-access')
     window.fetch = vi.fn().mockResolvedValue(jsonResponse([{ date: '2026-07-01', net_worth: '1000.00' }]))
@@ -274,19 +273,6 @@ describe('getNetWorthHistory / getCashFlow', () => {
 
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/core/net-worth-history/?range=ALL'),
-      expect.anything()
-    )
-  })
-
-  it('requests monthly cash flow', async () => {
-    localStorage.setItem('access', 'valid-access')
-    window.fetch = vi.fn().mockResolvedValue(jsonResponse([{ month: '2026-06', inflow: '500.00', outflow: '10.00' }]))
-
-    const result = await getCashFlow()
-
-    expect(result).toEqual([{ month: '2026-06', inflow: '500.00', outflow: '10.00' }])
-    expect(window.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/transactions/cash-flow/'),
       expect.anything()
     )
   })
