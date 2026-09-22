@@ -53,6 +53,17 @@ class DetectSubscriptionsTest(TestCase):
         self._charge('OWN OTHER ACCOUNT', -500, date(2026, 2, 1), 't2', category='TRANSFER')
         self.assertEqual(detect_subscriptions(), 0)
 
+    def test_a_regular_cash_withdrawal_is_not_a_subscription(self):
+        # Real KBC data (2026-09-22): a habitual monthly ATM withdrawal of a
+        # similar amount is mechanically indistinguishable from a merchant
+        # charge by amount/cadence alone, but "Geldopneming" (Dutch: cash
+        # withdrawal) on the counterparty is an unambiguous signal - no
+        # interpretation makes a cash withdrawal a subscription.
+        self._charge('Geldopneming via Bancontact', -40, date(2026, 1, 3), 'w1', category='UTILITIES')
+        self._charge('Geldopneming via Bancontact', -40, date(2026, 2, 3), 'w2', category='UTILITIES')
+        self._charge('Geldopneming via Bancontact', -40, date(2026, 3, 4), 'w3', category='UTILITIES')
+        self.assertEqual(detect_subscriptions(), 0)
+
     def test_rerun_preserves_dismissed_flag(self):
         self._charge('NETFLIX.COM', -12.99, date(2026, 1, 3), 'n1')
         self._charge('NETFLIX.COM', -12.99, date(2026, 2, 3), 'n2')
