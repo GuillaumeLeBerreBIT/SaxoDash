@@ -51,3 +51,51 @@ class CategorizeTest(TestCase):
         self.assertEqual(categorize('ZARA', '', Decimal('-50')), 'SHOPPING')
         self.assertEqual(categorize('JACK & JONES BRUGGE', '', Decimal('-50')), 'SHOPPING')
         self.assertEqual(categorize('ABERCROMBIE', '', Decimal('-50')), 'SHOPPING')
+
+    def test_matches_salary_from_the_users_own_employer(self):
+        # Confirmed by the user 2026-09-22. Real KBC memo text ("WEDDE" /
+        # "LOON" = Dutch for wage/salary) is the strongest signal, but the
+        # employer name alone is enough to match.
+        self.assertEqual(
+            categorize('TRANSPORT & LOGISTICS COMPETENCE CE', 'WEDDE JUNI + CAO + VAKANTIE', Decimal('4104.12')),
+            'INCOME',
+        )
+
+    def test_matches_a_household_payment_with_no_iban_on_the_row(self):
+        # Confirmed by the user 2026-09-22: transfers to the user's own other
+        # account ("GUILLAUME LE BERRE") and to the joint household account
+        # shared with their partner ("LE BERRE - MISSIAEN") are not spending.
+        # Most of these are matched by IBAN via ManualIbanLabel (see
+        # transfers.py), which this categorizer never sees - this rule is
+        # the fallback for the handful of rows with no counterparty_iban at
+        # all (a Bancontact/instant-payment row Enable Banking didn't
+        # structure), which ManualIbanLabel cannot match against.
+        self.assertEqual(categorize('GUILLAUME LE BERRE', '', Decimal('300')), 'TRANSFER')
+        self.assertEqual(categorize('LE BERRE - MISSIAEN', '', Decimal('-19.25')), 'TRANSFER')
+
+    def test_does_not_match_the_name_reversed_or_as_a_payment_memo(self):
+        # "LE BERRE GUILLAUME" (reversed) has its own known IBAN, handled by
+        # ManualIbanLabel - deliberately not a keyword here, since the same
+        # reversed string also turns up as a Wero payment *memo* from
+        # unrelated senders (e.g. a friend repaying the user), which must
+        # not be swept into TRANSFER.
+        self.assertEqual(
+            categorize('TOMMELEYN SARAH', 'Wero LE BERRE GUILLAUME', Decimal('4')), 'REFUND_CREDIT',
+        )
+
+    def test_does_not_match_an_ordinary_card_payment_naming_the_cardholder(self):
+        # Real KBC data (2026-09-22): a Bancontant card-payment description
+        # ends with the cardholder's own name ("...GUILLAUME LE BERRE") -
+        # that field identifies who paid, not who was paid. Matching on the
+        # combined counterparty_name+description haystack (as every other
+        # rule in this file does) would misread every card purchase the
+        # user makes as a household transfer, which is worse than the
+        # problem this rule exists to fix.
+        self.assertEqual(
+            categorize(
+                'BPOST OOSTKAMP         OOSTKAMP',
+                'BPOST OOSTKAMP.05-09-2026.11:25.OOSTKAMP.BE.5247********0999 .9402.GUILLAUME LE BERRE',
+                Decimal('-20'),
+            ),
+            'OTHER',
+        )
