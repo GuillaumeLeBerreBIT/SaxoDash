@@ -9,6 +9,9 @@ from .views import (
     EnableBankingConnectTicketView,
     EnableBankingConnectView,
     EnableBankingStatusView,
+    LabeledAccountCandidatesView,
+    LabeledAccountDetailView,
+    LabeledAccountListCreateView,
     SpendingSummaryView,
     SpendingTrendView,
     SubscriptionDetailView,
@@ -28,4 +31,7 @@ urlpatterns = [
     path('subscriptions/<int:pk>/', SubscriptionDetailView.as_view(), name='enablebanking-subscription-detail'),
     path('budgets/', BudgetListView.as_view(), name='enablebanking-budgets'),
     path('budgets/progress/', BudgetProgressView.as_view(), name='enablebanking-budget-progress'),
+    path('labeled-accounts/', LabeledAccountListCreateView.as_view(), name='enablebanking-labeled-accounts'),
+    path('labeled-accounts/candidates/', LabeledAccountCandidatesView.as_view(), name='enablebanking-labeled-account-candidates'),
+    path('labeled-accounts/<int:pk>/', LabeledAccountDetailView.as_view(), name='enablebanking-labeled-account-detail'),
 ]

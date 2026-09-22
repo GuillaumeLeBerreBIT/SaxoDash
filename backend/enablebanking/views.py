@@ -8,15 +8,16 @@ from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
 from . import client, credentials
 from .filters import BankTransactionFilter
-from .models import CATEGORY_CHOICES, BUDGETABLE_CATEGORIES, BankTransaction, Budget, EnableBankingCredential, Subscription
-from .serializers import BankTransactionSerializer, BudgetSerializer, SubscriptionSerializer
-from .services import budget_progress, spending_summary, spending_trend
+from .models import CATEGORY_CHOICES, BUDGETABLE_CATEGORIES, BankTransaction, Budget, EnableBankingCredential, ManualIbanLabel, Subscription
+from .recategorize import recategorize_for_label
+from .serializers import BankTransactionSerializer, BudgetSerializer, ManualIbanLabelSerializer, SubscriptionSerializer
+from .services import budget_progress, labeled_account_candidates, spending_summary, spending_trend
 
 logger = logging.getLogger(__name__)
 
@@ -209,3 +210,31 @@ class BudgetProgressView(APIView):
 
     def get(self, request):
         return Response(budget_progress())
+
+
+class LabeledAccountListCreateView(ListCreateAPIView):
+    queryset = ManualIbanLabel.objects.all().order_by('label')
+    serializer_class = ManualIbanLabelSerializer
+    pagination_class = None
+
+    def perform_create(self, serializer):
+        # Applied immediately, not at the next sync or a manually-run
+        # command - the whole point of a user-facing UI for this.
+        recategorize_for_label(serializer.save())
+
+
+class LabeledAccountDetailView(RetrieveUpdateDestroyAPIView):
+    queryset = ManualIbanLabel.objects.all()
+    serializer_class = ManualIbanLabelSerializer
+
+    def perform_update(self, serializer):
+        recategorize_for_label(serializer.save())
+
+
+class LabeledAccountCandidatesView(APIView):
+    """Recurring counterparties still in OTHER/REFUND_CREDIT - a shortlist
+    the user can label from, rather than hunting through raw transactions
+    for an IBAN themselves."""
+
+    def get(self, request):
+        return Response(labeled_account_candidates())

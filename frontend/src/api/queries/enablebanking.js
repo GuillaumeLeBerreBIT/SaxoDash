@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createLabeledAccount,
+  deleteLabeledAccount,
   getBankTransactions,
   getBudgetProgress,
   getBudgets,
   getEnableBankingStatus,
+  getLabeledAccountCandidates,
+  getLabeledAccounts,
   getSpendingSummary,
   getSpendingTrend,
   getSubscriptions,
   setBudget,
   updateBankTransactionCategory,
+  updateLabeledAccount,
   updateSubscription,
 } from '../client'
 import { unwrap } from './shared'
@@ -21,6 +26,8 @@ export const enableBankingKeys = {
   subscriptions: ['subscriptions'],
   budgets: ['budgets'],
   budgetProgress: ['budget-progress'],
+  labeledAccounts: ['labeled-accounts'],
+  labeledAccountCandidates: ['labeled-account-candidates'],
 }
 
 export function useEnableBankingStatus() {
@@ -93,5 +100,53 @@ export function useSetBudget() {
       queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgets })
       queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgetProgress })
     },
+  })
+}
+
+export function useLabeledAccounts() {
+  return useQuery({ queryKey: enableBankingKeys.labeledAccounts, queryFn: getLabeledAccounts, select: unwrap })
+}
+
+export function useLabeledAccountCandidates() {
+  return useQuery({
+    queryKey: enableBankingKeys.labeledAccountCandidates,
+    queryFn: getLabeledAccountCandidates,
+    select: unwrap,
+  })
+}
+
+// Saving a label recategorizes matching transactions immediately (see the
+// backend), so every view built from BankTransaction.category needs
+// invalidating too - not just the labeled-accounts list itself.
+function invalidateLabelEffects(queryClient) {
+  queryClient.invalidateQueries({ queryKey: enableBankingKeys.labeledAccounts })
+  queryClient.invalidateQueries({ queryKey: enableBankingKeys.labeledAccountCandidates })
+  queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
+  queryClient.invalidateQueries({ queryKey: ['spending-summary'] })
+  queryClient.invalidateQueries({ queryKey: ['spending-trend'] })
+  queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgetProgress })
+}
+
+export function useCreateLabeledAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createLabeledAccount,
+    onSuccess: () => invalidateLabelEffects(queryClient),
+  })
+}
+
+export function useUpdateLabeledAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }) => updateLabeledAccount(id, patch),
+    onSuccess: () => invalidateLabelEffects(queryClient),
+  })
+}
+
+export function useDeleteLabeledAccount() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deleteLabeledAccount,
+    onSuccess: () => invalidateLabelEffects(queryClient),
   })
 }

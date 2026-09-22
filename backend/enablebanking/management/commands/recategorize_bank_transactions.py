@@ -1,14 +1,8 @@
-"""Re-applies categorization.categorize() and transfers.mark_transfers() to
-every already-synced BankTransaction. A rule change (a new keyword, a new
-ManualIbanLabel row) only affects transactions a future sync fetches - the
-historical rows that prompted the rule change in the first place are
-exactly the ones that need it applied retroactively.
-"""
+"""See enablebanking/recategorize.py for why this exists."""
 from django.core.management.base import BaseCommand
 
-from ...categorization import categorize
 from ...models import BankTransaction
-from ...transfers import mark_transfers
+from ...recategorize import recategorize
 
 
 class Command(BaseCommand):
@@ -23,18 +17,10 @@ class Command(BaseCommand):
                             help='Write the changes. Without it this is a dry run.')
 
     def handle(self, *args, **options):
-        transactions = list(BankTransaction.objects.filter(category_override__isnull=True))
-        before = {tx.pk: tx.category for tx in transactions}
-
-        for tx in transactions:
-            tx.category = categorize(tx.counterparty_name, tx.description, tx.amount)
-        mark_transfers(transactions)
-
-        changed = [tx for tx in transactions if tx.category != before[tx.pk]]
+        changed = recategorize()
 
         for tx in changed:
-            self.stdout.write(f'{tx.booking_date} {tx.counterparty_name!r}: '
-                              f'{before[tx.pk]} -> {tx.category}')
+            self.stdout.write(f'{tx.booking_date} {tx.counterparty_name!r} -> {tx.category}')
 
         if not options['apply']:
             self.stdout.write(self.style.WARNING(

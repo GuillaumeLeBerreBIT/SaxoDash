@@ -24,23 +24,12 @@ _RULES = {
     'INCOME': ['TRANSPORT & LOGISTICS COMPETENCE CE'],
 }
 
-# Household payments with no counterparty_iban on the row at all - the
-# handful ManualIbanLabel (transfers.py) cannot match against, since it's
-# IBAN-keyed. Confirmed by the user 2026-09-22: the user's own other account
-# and the joint account shared with their partner.
-#
-# Matched on counterparty_name ALONE, exactly, never folded into _RULES'
-# combined counterparty_name+description haystack: a Bancontant card-payment
-# description ends with the cardholder's own name (e.g. "...GUILLAUME LE
-# BERRE"), which is the payer, not a transfer recipient - a haystack keyword
-# would misread every card purchase the user makes as a household transfer.
-_HOUSEHOLD_TRANSFER_NAMES = {'GUILLAUME LE BERRE', 'LE BERRE - MISSIAEN'}
-
 
 def categorize(counterparty_name, description, amount):
-    if (counterparty_name or '').strip().upper() in _HOUSEHOLD_TRANSFER_NAMES:
-        return 'TRANSFER'
-
+    # Which accounts/counterparties are the user's own or a household
+    # account is not a hardcoded rule here - it's user-managed data
+    # (ManualIbanLabel, applied by transfers.mark_transfers, matched by IBAN
+    # or - for a row with no IBAN at all - by an exact counterparty_name).
     haystack = f'{counterparty_name or ""} {description or ""}'.upper()
 
     for category, keywords in _RULES.items():

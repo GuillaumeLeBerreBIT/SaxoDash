@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from accounts.models import BankAccount
@@ -127,15 +128,33 @@ class Subscription(models.Model):
 
 
 class ManualIbanLabel(models.Model):
-    """Fallback for an account Enable Banking won't expose for consent (Plan B,
-    see the design spec) - a pure lookup table, no balance/transaction sync."""
+    """A manually-labeled account/counterparty the user has identified as
+    theirs or as a household account - a pure lookup table, no balance/
+    transaction sync. Two reasons to need one: Enable Banking won't expose
+    the account for consent (Plan B, see the design spec), matched by iban;
+    or the transaction has no counterparty_iban at all (a Bancontact/
+    instant-payment row Enable Banking never structured), matched by an
+    exact counterparty_name instead. At least one of the two is required -
+    see clean(). User-managed via the Accounts page, not hardcoded rules."""
 
-    iban = models.CharField(max_length=34, unique=True)
+    iban = models.CharField(max_length=34, null=True, blank=True, default=None, unique=True)
+    counterparty_name = models.CharField(max_length=200, null=True, blank=True, default=None, unique=True)
     label = models.CharField(max_length=100)
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='SAVINGS')
 
     def __str__(self):
-        return f'{self.label} ({self.iban})'
+        return f'{self.label} ({self.iban or self.counterparty_name})'
+
+    def clean(self):
+        if not self.iban and not self.counterparty_name:
+            raise ValidationError('Provide an IBAN or a counterparty name to match on.')
+
+    def save(self, *args, **kwargs):
+        # Normalized the same way transfers.py compares it, so a lookup
+        # never silently misses on case/whitespace.
+        if self.counterparty_name:
+            self.counterparty_name = self.counterparty_name.strip().upper()
+        super().save(*args, **kwargs)
 
 
 class Budget(models.Model):

@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import BankAccount
@@ -64,6 +65,27 @@ class ManualIbanLabelModelTest(TestCase):
     def test_defaults(self):
         label = ManualIbanLabel.objects.create(iban='BE00', label='Argenta Savings')
         self.assertEqual(label.category, 'SAVINGS')
+
+    def test_can_be_created_by_counterparty_name_alone_with_no_iban(self):
+        # The residual case ManualIbanLabel can't match by IBAN at all - a
+        # Bancontact/instant-payment row Enable Banking never structured a
+        # counterparty_iban for.
+        label = ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account')
+        self.assertIsNone(label.iban)
+        self.assertEqual(label.counterparty_name, 'GUILLAUME LE BERRE')  # normalized on save
+
+    def test_requires_at_least_one_of_iban_or_counterparty_name(self):
+        label = ManualIbanLabel(label='Nothing to match on')
+        with self.assertRaises(ValidationError):
+            label.full_clean()
+
+    def test_two_rows_with_no_iban_do_not_collide(self):
+        # NULL != NULL for uniqueness - two counterparty_name-only rows must
+        # not be treated as duplicates of each other just because both leave
+        # iban blank.
+        ManualIbanLabel.objects.create(counterparty_name='Alex', label='Alex')
+        ManualIbanLabel.objects.create(counterparty_name='Sam', label='Sam')
+        self.assertEqual(ManualIbanLabel.objects.count(), 2)
 
 
 class BankSyncRunKindTest(TestCase):

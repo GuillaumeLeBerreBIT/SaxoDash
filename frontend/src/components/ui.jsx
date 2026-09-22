@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { Info } from 'lucide-react'
+import { Info, X } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
 import { fmtPct } from '../lib/format'
@@ -175,6 +175,38 @@ export function EmptyState({ title, hint, className = '' }) {
     <div className={`text-center py-8 px-4 ${className}`}>
       <div className="text-[var(--fig-sm)] text-zinc-400">{title}</div>
       {hint && <div className="mt-1 text-[var(--fig-xs)] text-zinc-600">{hint}</div>}
+    </div>
+  )
+}
+
+/** The one modal/dialog primitive - same backdrop+panel pattern
+ *  CommandPalette already uses, generalized. Reach for this instead of a
+ *  bespoke overlay whenever a page needs to collect input in a focused
+ *  surface (a form, a confirmation) rather than inline on the page. */
+export function Modal({ title, children, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        className="w-[min(420px,92vw)] rounded-lg border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50"
+      >
+        <div className="flex items-center justify-between px-4 h-11 border-b border-white/[0.06]">
+          <span className="text-[var(--fig-sm)] font-medium text-zinc-100">{title}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="w-6 h-6 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 flex items-center justify-center"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        <div className="p-4">{children}</div>
+      </div>
     </div>
   )
 }

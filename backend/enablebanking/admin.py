@@ -46,7 +46,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(ManualIbanLabel)
 class ManualIbanLabelAdmin(admin.ModelAdmin):
-    list_display = ('label', 'iban', 'category')
+    list_display = ('label', 'iban', 'counterparty_name', 'category')
 
 
 @admin.register(Budget)

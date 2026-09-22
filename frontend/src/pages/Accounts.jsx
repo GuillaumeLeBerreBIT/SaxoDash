@@ -5,6 +5,7 @@ import { PageHeader, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
 import BankAccountTile from '../components/BankAccountTile'
+import LabeledAccountsSection from '../components/LabeledAccountsSection'
 import RecentTransactionsPanel from '../components/RecentTransactionsPanel'
 import { SERIES_BANK } from '../lib/charts'
 
@@ -70,6 +71,8 @@ export default function Accounts() {
         name="Bank"
         color={SERIES_BANK}
       />
+
+      <LabeledAccountsSection />
     </div>
   )
 }

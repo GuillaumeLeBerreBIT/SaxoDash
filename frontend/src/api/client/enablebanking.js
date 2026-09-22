@@ -28,3 +28,16 @@ export const setBudget = (category, monthlyLimit) =>
   jsonRequest('/api/enablebanking/budgets/', 'PUT', { category, monthly_limit: monthlyLimit })
 
 export const getBudgetProgress = () => apiFetch('/api/enablebanking/budgets/progress/')
+
+export const getLabeledAccounts = () => apiFetch('/api/enablebanking/labeled-accounts/')
+
+export const getLabeledAccountCandidates = () => apiFetch('/api/enablebanking/labeled-accounts/candidates/')
+
+export const createLabeledAccount = (label) =>
+  jsonRequest('/api/enablebanking/labeled-accounts/', 'POST', label)
+
+export const updateLabeledAccount = (id, patch) =>
+  jsonRequest(`/api/enablebanking/labeled-accounts/${id}/`, 'PATCH', patch)
+
+export const deleteLabeledAccount = (id) =>
+  apiFetch(`/api/enablebanking/labeled-accounts/${id}/`, { method: 'DELETE' })

@@ -8,6 +8,7 @@ import {
   EmptyState,
   InstrumentLogo,
   MetricTile,
+  Modal,
   StatStrip,
   StatRow,
   Skeleton,
@@ -115,5 +116,50 @@ describe('ui primitives', () => {
     render(<EmptyState title="No transactions yet" hint="Connect a bank to get started" />)
     expect(screen.getByText('No transactions yet')).toBeInTheDocument()
     expect(screen.getByText('Connect a bank to get started')).toBeInTheDocument()
+  })
+
+  it('Modal renders its title and children as a dialog', () => {
+    render(
+      <Modal title="Label an account" onClose={() => {}}>
+        <p>Form goes here</p>
+      </Modal>,
+    )
+    expect(screen.getByRole('dialog', { name: 'Label an account' })).toBeInTheDocument()
+    expect(screen.getByText('Form goes here')).toBeInTheDocument()
+  })
+
+  it('Modal calls onClose when the backdrop is clicked, not when the panel is', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal title="Label an account" onClose={onClose}>
+        <p>Form goes here</p>
+      </Modal>,
+    )
+    fireEvent.click(screen.getByText('Form goes here'))
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('dialog').parentElement)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('Modal calls onClose on Escape', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal title="Label an account" onClose={onClose}>
+        <p>Form goes here</p>
+      </Modal>,
+    )
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('Modal renders a close button', () => {
+    const onClose = vi.fn()
+    render(
+      <Modal title="Label an account" onClose={onClose}>
+        <p>Form goes here</p>
+      </Modal>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
