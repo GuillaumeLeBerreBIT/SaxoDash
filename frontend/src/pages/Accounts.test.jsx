@@ -41,6 +41,11 @@ function mockDefaults(overrides = {}) {
   // so the destructured hook results aren't undefined.
   queries.useEnableBankingStatus.mockReturnValue({ data: null, isLoading: false, error: null })
   queries.useNetWorthHistory.mockReturnValue({ data: [], isLoading: false, error: null })
+  // LabeledAccountsSection - same reasoning.
+  queries.useLabeledAccounts.mockReturnValue({ data: [], isLoading: false, error: null })
+  queries.useLabeledAccountCandidates.mockReturnValue({ data: [], isLoading: false, error: null })
+  queries.useCreateLabeledAccount.mockReturnValue({ mutate: vi.fn(), isPending: false })
+  queries.useDeleteLabeledAccount.mockReturnValue({ mutate: vi.fn() })
 }
 
 describe('Accounts', () => {

@@ -9,13 +9,23 @@ DATE_TOLERANCE = timedelta(days=2)
 
 
 def mark_transfers(bank_transactions):
-    manual_labels = {label.iban: label for label in ManualIbanLabel.objects.all()}
+    labels = list(ManualIbanLabel.objects.all())
+    manual_by_iban = {label.iban: label for label in labels if label.iban}
+    # Name-based labels only apply to a row with no IBAN at all - a row that
+    # does carry an IBAN is matched by IBAN rules only, never by a name
+    # coincidence (see test_manual_name_label_does_not_match_a_row_that_has_an_iban).
+    manual_by_name = {label.counterparty_name: label for label in labels if label.counterparty_name}
     batch = list(bank_transactions)
 
     for tx in batch:
-        if tx.counterparty_iban and tx.counterparty_iban in manual_labels:
-            tx.category = manual_labels[tx.counterparty_iban].category
+        if tx.counterparty_iban and tx.counterparty_iban in manual_by_iban:
+            tx.category = manual_by_iban[tx.counterparty_iban].category
             continue
+        if not tx.counterparty_iban:
+            name = (tx.counterparty_name or '').strip().upper()
+            if name and name in manual_by_name:
+                tx.category = manual_by_name[name].category
+                continue
 
         match = _find_own_account_match(tx, batch)
         if match is None:

@@ -1,10 +1,10 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Sum
-from django.db.models.functions import Coalesce, TruncMonth
+from django.db.models import Count, Sum
+from django.db.models.functions import Abs, Coalesce, TruncMonth
 
-from .models import BankTransaction, Budget
+from .models import BankTransaction, Budget, ManualIbanLabel
 
 TRANSFER_CATEGORIES = ('TRANSFER', 'SAVINGS')
 
@@ -125,3 +125,41 @@ def budget_progress():
             'pct': float(spent / budget.monthly_limit * 100),
         })
     return rows
+
+
+CANDIDATE_CATEGORIES = ('OTHER', 'REFUND_CREDIT')
+MIN_CANDIDATE_OCCURRENCES = 2
+MAX_CANDIDATES = 15
+
+
+def labeled_account_candidates():
+    """Recurring counterparties still landing in OTHER/REFUND_CREDIT - the
+    ones a household/own-account label would most plausibly help with,
+    surfaced so the user doesn't have to go digging for an IBAN themselves.
+    A category_override is respected the same way categorization already
+    is elsewhere: an overridden row is the user's own settled judgment, not
+    a gap to suggest filling.
+    """
+    labeled_ibans = set(
+        ManualIbanLabel.objects.exclude(iban__isnull=True).values_list('iban', flat=True)
+    )
+    labeled_names = set(
+        ManualIbanLabel.objects.exclude(counterparty_name__isnull=True)
+        .values_list('counterparty_name', flat=True)
+    )
+
+    rows = (
+        BankTransaction.objects
+        .filter(category__in=CANDIDATE_CATEGORIES, category_override__isnull=True)
+        .values('counterparty_name', 'counterparty_iban')
+        .annotate(count=Count('id'), total=Sum(Abs('amount')))
+        .filter(count__gte=MIN_CANDIDATE_OCCURRENCES)
+        .order_by('-total')
+    )
+
+    candidates = [
+        row for row in rows
+        if row['counterparty_iban'] not in labeled_ibans
+        and (row['counterparty_name'] or '').strip().upper() not in labeled_names
+    ]
+    return candidates[:MAX_CANDIDATES]

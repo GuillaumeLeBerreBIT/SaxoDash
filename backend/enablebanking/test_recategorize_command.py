@@ -47,6 +47,15 @@ class RecategorizeBankTransactionsCommandTest(TestCase):
         tx.refresh_from_db()
         self.assertEqual(tx.category, 'TRANSFER')
 
+    def test_applies_a_manual_name_label_to_a_row_with_no_iban(self):
+        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account', category='TRANSFER')
+        tx = self._tx('GUILLAUME LE BERRE', '300', 't5', category='REFUND_CREDIT')  # no iban=
+
+        call_command('recategorize_bank_transactions', '--apply', stdout=StringIO())
+
+        tx.refresh_from_db()
+        self.assertEqual(tx.category, 'TRANSFER')
+
     def test_never_touches_a_manual_override(self):
         tx = self._tx(
             'TRANSPORT & LOGISTICS COMPETENCE CE', '4104.12', 't3',

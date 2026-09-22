@@ -92,6 +92,41 @@ class MarkTransfersTest(TestCase):
         mark_transfers([tx])
         self.assertEqual(tx.category, 'SAVINGS')
 
+    def test_manual_name_label_matches_a_row_with_no_iban_at_all(self):
+        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account', category='TRANSFER')
+        tx = BankTransaction(
+            bank='kbc', bank_account=self.kbc, external_id='o8', amount=300,
+            currency='EUR', booking_date=date(2026, 1, 16), category='REFUND_CREDIT',
+            counterparty_name='GUILLAUME LE BERRE', counterparty_iban=None,
+        )
+        mark_transfers([tx])
+        self.assertEqual(tx.category, 'TRANSFER')
+
+    def test_manual_name_label_is_case_insensitive(self):
+        ManualIbanLabel.objects.create(counterparty_name='guillaume le berre', label='My other account', category='TRANSFER')
+        tx = BankTransaction(
+            bank='kbc', bank_account=self.kbc, external_id='o9', amount=300,
+            currency='EUR', booking_date=date(2026, 1, 16), category='REFUND_CREDIT',
+            counterparty_name='Guillaume Le Berre',
+        )
+        mark_transfers([tx])
+        self.assertEqual(tx.category, 'TRANSFER')
+
+    def test_manual_name_label_does_not_match_a_row_that_has_an_iban(self):
+        # A name label is the fallback for rows with no IBAN at all - a row
+        # that does carry counterparty_iban must be matched by IBAN rules
+        # only, not by a name coincidence (a card-payment description could
+        # otherwise collide with someone's own name - see categorization.py's
+        # history for exactly this false positive).
+        ManualIbanLabel.objects.create(counterparty_name='Bpost Oostkamp', label='Should not match', category='TRANSFER')
+        tx = BankTransaction(
+            bank='kbc', bank_account=self.kbc, external_id='o10', amount=-20,
+            currency='EUR', booking_date=date(2026, 1, 16), category='OTHER',
+            counterparty_name='BPOST OOSTKAMP', counterparty_iban='BE12345678901234',
+        )
+        mark_transfers([tx])
+        self.assertEqual(tx.category, 'OTHER')
+
     def test_same_account_outflow_and_inflow_do_not_match_each_other(self):
         outflow = BankTransaction(
             bank='kbc', bank_account=self.kbc, external_id='o6', amount=-80,
