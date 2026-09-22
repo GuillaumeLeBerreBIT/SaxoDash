@@ -10,7 +10,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from core.models import NetWorthSnapshot
-from portfolio.models import Position
+from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.services import get_portfolio_value
 
 logger = logging.getLogger(__name__)
@@ -18,6 +18,11 @@ logger = logging.getLogger(__name__)
 STALE_DAYS = 2
 SINGLE_NAME_PCT = 30
 TOP3_PCT = 60
+# Informational, not a warning - cash can be intentional (dry powder, a
+# recent sale, a deliberate short-term allocation). Set high enough that it
+# only fires when cash is clearly the majority of the Saxo account, not for
+# an ordinary buffer.
+IDLE_CASH_PCT = 50
 EARNINGS_SOON_DAYS = 7
 EARNINGS_HORIZON_DAYS = 14
 SPARK_POINTS = 30
@@ -161,7 +166,27 @@ def _upcoming_earnings(held_upper, today):
     return rows
 
 
-def _attention(positions, pairs, today, concentration, upcoming):
+def _idle_cash_pct():
+    """Cash as a share of the Saxo account (cash + positions), or None when
+    there's no valuation to compute it from.
+
+    Deliberately scoped to Saxo, not total net worth: KBC/Argenta balances
+    are everyday household liquidity, not money waiting to be invested, so
+    blending them in would misrepresent an emergency fund as idle capital.
+    Currency-agnostic by construction - cash_balance and positions_value
+    are always the same currency (one Saxo balance response), so the ratio
+    needs no reporting-currency conversion the way a summed total would.
+    """
+    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    if not valuation:
+        return None
+    total = valuation.cash_balance + valuation.positions_value
+    if not total:
+        return None
+    return float(valuation.cash_balance / total * 100)
+
+
+def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=None):
     items = []
     c = concentration
     if c['top1'] and c['top1']['pct'] >= SINGLE_NAME_PCT:
@@ -190,6 +215,10 @@ def _attention(positions, pairs, today, concentration, upcoming):
             when = 'today' if d == 0 else 'tomorrow' if d == 1 else f'in {d} days'
             items.append({'kind': 'earnings_soon', 'severity': 'info', 'ticker': soon['ticker'],
                           'text': f"{soon['ticker']} reports {when}."})
+    if idle_cash_pct is not None and idle_cash_pct >= IDLE_CASH_PCT:
+        items.append({'kind': 'idle_cash', 'severity': 'info',
+                      'text': f"{idle_cash_pct:.0f}% of your Saxo account is cash, "
+                              f"not invested."})
     if len(pairs) < 2:
         items.append({'kind': 'no_history', 'severity': 'info',
                       'text': 'Not enough history yet for change metrics.'})
@@ -223,6 +252,7 @@ def build_insights():
     concentration = _concentration(positions, total)
     held_upper = {p.ticker.upper() for p in positions if p.ticker}
     upcoming = _upcoming_earnings(held_upper, today)
+    idle_cash_pct = _idle_cash_pct()
 
     return {
         'as_of': pairs[-1][0].isoformat() if pairs else None,
@@ -245,6 +275,6 @@ def build_insights():
         'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
         'movers': _movers(positions),
         'contributors': _contributors(positions, total_cost, total_pnl),
-        'attention': _attention(positions, pairs, today, concentration, upcoming),
+        'attention': _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct),
         'upcoming_earnings': upcoming,
     }

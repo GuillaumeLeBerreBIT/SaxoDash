@@ -368,6 +368,32 @@ class InsightsAttentionTest(TestCase):
         self.assertEqual(es['ticker'], 'MSFT')
         self.assertIn('in 3 days', es['text'])
 
+    def test_idle_cash_fires_at_its_threshold(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention(
+            [], [], date(2026, 9, 10), c, None, idle_cash_pct=97.0,
+        )
+        idle = next(i for i in items if i['kind'] == 'idle_cash')
+        # Informational, not a warning - cash can be intentional (see
+        # docs/superpowers plan: "communicate the situation without telling
+        # the user what they should invest").
+        self.assertEqual(idle['severity'], 'info')
+        self.assertIn('97%', idle['text'])
+
+    def test_idle_cash_does_not_fire_below_its_threshold(self):
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention(
+            [], [], date(2026, 9, 10), c, None, idle_cash_pct=20.0,
+        )
+        self.assertFalse(any(i['kind'] == 'idle_cash' for i in items))
+
+    def test_idle_cash_is_silent_when_not_computable(self):
+        # No usable Saxo cash/positions figures right now (e.g. no
+        # PortfolioValuation yet) - silence, not a claim about 0% or 100%.
+        c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
+        items = insights._attention([], [], date(2026, 9, 10), c, None)
+        self.assertFalse(any(i['kind'] == 'idle_cash' for i in items))
+
     def test_no_history_when_under_two_snapshots(self):
         c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
         items = insights._attention([], [(date(2026, 9, 10), Decimal('1'))], date(2026, 9, 10), c, None)
@@ -397,6 +423,18 @@ class BuildInsightsTest(TestCase):
         self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
         self.assertEqual(len(payload['spark']), 2)
         self.assertEqual(payload['upcoming_earnings'], [])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_mostly_idle_saxo_cash_surfaces_as_an_attention_item(self, _mock):
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('97000.00'),
+            positions_value=Decimal('3000.00'),
+            total_value=Decimal('100000.00'),
+        )
+        payload = insights.build_insights()
+        idle = next(i for i in payload['attention'] if i['kind'] == 'idle_cash')
+        self.assertIn('97%', idle['text'])
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_a_sale_moving_value_to_cash_does_not_read_as_a_loss(self, _mock):
