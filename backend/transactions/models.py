@@ -3,6 +3,10 @@ from django.db import models
 
 class Transaction(models.Model):
 
+    # No sync ever writes DIVIDEND/DEPOSIT/FEE rows - Saxo SIM has no itemized
+    # cash-activity endpoint (verified live 2026-09-17: /hist/v1/cashtransactions,
+    # /hist/v1/activities, /cs/v1/reports/activities/me all 404 or empty).
+    # Kept for when that data becomes available rather than removed.
     TYPE_CHOICES = [
         ('BUY', 'Buy'), ('SELL', 'Sell'), ('DIVIDEND', 'Dividend'),
         ('DEPOSIT', 'Deposit'), ('FEE', 'Fee'),
