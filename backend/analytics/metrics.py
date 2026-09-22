@@ -12,6 +12,30 @@ from datetime import timedelta
 TRADING_DAYS = 252
 MIN_DAILY_POINTS = 2
 
+# Confidence tiers for annualised stats (volatility, Sharpe, Sortino, and -
+# via report.py - Beta/tracking error/information ratio/Jensen alpha).
+# Below LOW: has_data is already False (see MIN_DAILY_POINTS), so no tier
+# applies. 'low': technically computable but a variance/mean estimate this
+# short swings wildly once annualised - roughly a month of trading days is
+# the point volatility itself starts to stabilise. 'high': close to
+# TRADING_DAYS, where mean-return-based stats (Sharpe/Beta) stop being
+# dominated by estimation noise. 'medium' is everything in between - shown,
+# not hidden, per the product principle of trustworthy-but-visible data.
+DATA_QUALITY_LOW_MAX = 20
+DATA_QUALITY_HIGH_MIN = TRADING_DAYS
+
+
+def data_quality(n):
+    """One of 'low'/'medium'/'high' for n usable data points, or None if n
+    is below has_data's own MIN_DAILY_POINTS gate (not applicable)."""
+    if n < MIN_DAILY_POINTS:
+        return None
+    if n < DATA_QUALITY_LOW_MAX:
+        return 'low'
+    if n < DATA_QUALITY_HIGH_MIN:
+        return 'medium'
+    return 'high'
+
 # (label, trailing days, years to annualise over - None means "show as-is")
 PERFORMANCE_PERIODS = [
     ('1 month', 30, None),
@@ -155,6 +179,8 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
     if len(port_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
+            'data_quality': None,
+            'sample_size': len(port_values),
             'expected_return': None,
             'beta': None,
             'tracking_error': None,
@@ -171,6 +197,8 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
 
     return {
         'has_data': True,
+        'data_quality': data_quality(len(port_values)),
+        'sample_size': len(port_values),
         'expected_return': bench_expected,
         'beta': beta_value,
         'tracking_error': te,
@@ -288,6 +316,8 @@ def risk_summary(dated_values, risk_free_annual):
     if len(dated_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
+            'data_quality': None,
+            'sample_size': len(dated_values),
             'risk_free_annual': risk_free_annual,
             'expected_return': None,
             'volatility': None,
@@ -311,6 +341,8 @@ def risk_summary(dated_values, risk_free_annual):
 
     return {
         'has_data': True,
+        'data_quality': data_quality(len(dated_values)),
+        'sample_size': len(dated_values),
         'risk_free_annual': risk_free_annual,
         'expected_return': expected_annual_return(returns),
         'volatility': annualized_volatility(returns),

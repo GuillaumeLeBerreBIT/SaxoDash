@@ -198,8 +198,17 @@ def _attention(positions, pairs, today, concentration, upcoming):
 
 def build_insights():
     positions = list(Position.objects.all())
+    # saxo_account_value (cash+positions), not portfolio_value (positions
+    # only) - a BUY/SELL only reallocates within the same Saxo account and
+    # leaves the former unchanged; the latter drops every time a position is
+    # sold, and the day/week/month/YTD change pills below would read that as
+    # a loss that never happened. See analytics/views.py::_portfolio_dated_values
+    # for the same fix applied to the Analytics page.
     pairs = list(
-        NetWorthSnapshot.objects.order_by('date').values_list('date', 'portfolio_value')
+        NetWorthSnapshot.objects
+        .exclude(saxo_account_value__isnull=True)
+        .order_by('date')
+        .values_list('date', 'saxo_account_value')
     )
     latest = NetWorthSnapshot.objects.order_by('date').last()
     today = date.today()

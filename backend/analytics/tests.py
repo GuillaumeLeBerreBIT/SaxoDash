@@ -249,6 +249,7 @@ class RiskSummaryTest(TestCase):
         self.assertFalse(summary['has_data'])
         self.assertIsNone(summary['volatility'])
         self.assertEqual(summary['drawdown_series'], [])
+        self.assertIsNone(summary['data_quality'])
 
     def test_enough_history_produces_real_numbers(self):
         dated = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
@@ -260,6 +261,24 @@ class RiskSummaryTest(TestCase):
         self.assertEqual(len(summary['drawdown_series']), 5)
         self.assertEqual(summary['drawdown_series'][0]['date'], '2026-01-01')
         self.assertEqual(summary['risk_free_annual'], 0.02)
+
+    def test_data_quality_is_low_below_twenty_points(self):
+        # 5 points: has_data (>=2) but far short of a statistically stable
+        # annualized volatility/Sharpe estimate (~20 trading days minimum).
+        dated = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+        self.assertEqual(summary['data_quality'], 'low')
+        self.assertEqual(summary['sample_size'], 5)
+
+    def test_data_quality_is_medium_between_twenty_and_252_points(self):
+        dated = [(date(2026, 1, 1) + timedelta(days=i), 100 + i) for i in range(30)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+        self.assertEqual(summary['data_quality'], 'medium')
+
+    def test_data_quality_is_high_at_252_points_or_more(self):
+        dated = [(date(2026, 1, 1) + timedelta(days=i), 100 + i) for i in range(260)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+        self.assertEqual(summary['data_quality'], 'high')
 
 
 class BetaTest(TestCase):
@@ -322,6 +341,11 @@ class BenchmarkSummaryTest(TestCase):
         self.assertIsNotNone(summary['tracking_error'])
         self.assertIsNotNone(summary['information_ratio'])
         self.assertIsNotNone(summary['jensen_alpha'])
+        # Beta/tracking error/information ratio/Jensen alpha are the most
+        # estimation-noise-sensitive stats on the page - a regression-based
+        # fit over 5 aligned days is 'low' confidence, same tiering as
+        # risk_summary, based on the aligned (not raw) point count.
+        self.assertEqual(summary['data_quality'], 'low')
 
 
 class BenchmarkEurClosesTest(TestCase):
@@ -396,7 +420,8 @@ class PerformanceViewTest(APITestCase):
         for day in range(1, n + 1):
             NetWorthSnapshot.objects.create(
                 date=date(2026, 1, 1) + timedelta(days=day - 1),
-                portfolio_value=100 + day, bank_total=0, net_worth=100 + day,
+                portfolio_value=100 + day, saxo_account_value=100 + day,
+                bank_total=0, net_worth=100 + day,
             )
 
     def test_requires_authentication(self):
@@ -454,7 +479,7 @@ class RiskMetricsViewTest(APITestCase):
         for day, value in enumerate([100, 102, 101, 105, 103], start=1):
             NetWorthSnapshot.objects.create(
                 date=date(2026, 1, day), portfolio_value=value,
-                bank_total=50, net_worth=value + 50,
+                saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.status_code, 200)
@@ -462,11 +487,51 @@ class RiskMetricsViewTest(APITestCase):
         self.assertIsNotNone(response.data['volatility'])
         self.assertEqual(len(response.data['drawdown_series']), 5)
 
+    def test_a_sale_moving_value_from_positions_to_cash_is_not_a_drawdown(self):
+        # Reproduces the real 2026-09-16 rebalance: portfolio_value (positions
+        # only) drops sharply, but the money just moved into Saxo cash - the
+        # account's own reconciled total (saxo_account_value) barely moves.
+        # Risk metrics must read the smooth series, not the choppy one.
+        rows = [
+            (100, 32535),  # portfolio_value, saxo_account_value
+            (100, 32538),
+            (60, 32540),   # the "rebalance" day - positions value craters
+            (60, 32541),
+            (60, 32545),
+        ]
+        for day, (portfolio_value, saxo_value) in enumerate(rows, start=1):
+            NetWorthSnapshot.objects.create(
+                date=date(2026, 1, day), portfolio_value=portfolio_value,
+                saxo_account_value=saxo_value, bank_total=0, net_worth=portfolio_value,
+            )
+        response = self.client.get('/api/analytics/risk/')
+        self.assertEqual(response.status_code, 200)
+        # A 40% single-day drop in portfolio_value would read as roughly a
+        # -40% max drawdown if the view still sourced that column; the real
+        # (saxo_account_value-based) series barely moves.
+        self.assertGreater(response.data['max_drawdown'], -1.0)
+
+    def test_dated_values_skip_days_with_no_usable_saxo_valuation(self):
+        # saxo_account_value is null on a day the broker figure wasn't
+        # usable (see portfolio.services.get_saxo_account_value) - those
+        # days must be excluded, not treated as a zero/blank data point.
+        NetWorthSnapshot.objects.create(
+            date=date(2026, 1, 1), portfolio_value=100,
+            saxo_account_value=None, bank_total=0, net_worth=100,
+        )
+        NetWorthSnapshot.objects.create(
+            date=date(2026, 1, 2), portfolio_value=105,
+            saxo_account_value=None, bank_total=0, net_worth=105,
+        )
+        response = self.client.get('/api/analytics/risk/')
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['has_data'])
+
     def _seed_snapshots(self):
         for day, value in enumerate([100, 102, 101, 105, 103], start=1):
             NetWorthSnapshot.objects.create(
                 date=date(2026, 1, day), portfolio_value=value,
-                bank_total=50, net_worth=value + 50,
+                saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
 
     def test_advertises_the_available_benchmarks(self):

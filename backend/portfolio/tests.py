@@ -13,16 +13,21 @@ from portfolio.services import (
     VALUATION_MAX_AGE,
     get_portfolio_value,
     get_positions_value,
+    get_saxo_account_value,
 )
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-def _snap(d, portfolio, bank=Decimal('1000.00')):
+def _snap(d, portfolio, bank=Decimal('1000.00'), saxo=None):
+    # saxo defaults to mirroring portfolio - fine for tests with no trades
+    # in between; pass an explicit saxo= to make the two diverge (a sale
+    # moving value from positions into cash within the same Saxo account).
     return NetWorthSnapshot.objects.create(
-        date=d, portfolio_value=Decimal(portfolio), bank_total=bank,
-        net_worth=Decimal(portfolio) + bank,
+        date=d, portfolio_value=Decimal(portfolio),
+        saxo_account_value=Decimal(saxo) if saxo is not None else Decimal(portfolio),
+        bank_total=bank, net_worth=Decimal(portfolio) + bank,
     )
 
 
@@ -145,6 +150,51 @@ class PortfolioValuationTrustTest(TestCase):
         self._position()
 
         self.assertEqual(get_portfolio_value().amount, Decimal('1100.00'))
+
+
+class SaxoAccountValueTest(TestCase):
+    """The single, broker-reconciled cash+positions total (Analytics'
+    return series needs this, not the positions-only figure - see
+    docs/superpowers/plans/2026-09-2x-return-methodology.md)."""
+
+    def _valuation(self, **overrides):
+        return PortfolioValuation.objects.create(**{
+            'source': SAXO_SOURCE,
+            'currency': 'EUR',
+            'cash_balance': Decimal('1000.00'),
+            'positions_value': Decimal('31567.81'),
+            'total_value': Decimal('32567.81'),
+            **overrides,
+        })
+
+    def test_returns_the_brokers_total_value_when_usable(self):
+        self._valuation()
+        value = get_saxo_account_value()
+        self.assertEqual(value.amount, Decimal('32567.81'))
+        self.assertEqual(value.currency, 'EUR')
+
+    def test_returns_none_when_there_is_no_valuation_yet(self):
+        self.assertIsNone(get_saxo_account_value())
+
+    def test_returns_none_for_a_stale_valuation_rather_than_reconstructing_one(self):
+        # Deliberately does not fall back to positions+cash from independent
+        # sources here (unlike get_portfolio_value) - those can be stale
+        # relative to each other, which is exactly the kind of contamination
+        # this series exists to avoid. A gap day is more honest than a
+        # synthesized one.
+        valuation = self._valuation()
+        PortfolioValuation.objects.filter(pk=valuation.pk).update(
+            as_of=timezone.now() - VALUATION_MAX_AGE - timedelta(hours=1)
+        )
+        self.assertIsNone(get_saxo_account_value())
+
+    def test_returns_none_for_a_valuation_in_a_foreign_currency(self):
+        # total_value has no fx_rate to convert with (unlike positions,
+        # which each carry their own) - same reasoning as get_portfolio_value's
+        # foreign-currency fallback, but there is no positions-only fallback
+        # here to fall back to.
+        self._valuation(currency='USD')
+        self.assertIsNone(get_saxo_account_value())
 
 
 class InsightsHelpersTest(TestCase):
@@ -347,6 +397,17 @@ class BuildInsightsTest(TestCase):
         self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
         self.assertEqual(len(payload['spark']), 2)
         self.assertEqual(payload['upcoming_earnings'], [])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_a_sale_moving_value_to_cash_does_not_read_as_a_loss(self, _mock):
+        # Same scenario as the real 2026-09-16 rebalance: portfolio_value
+        # (positions only) drops sharply on a sale, but the money just moved
+        # into Saxo cash - the Dashboard's own day-change pill must read the
+        # account total, not the positions-only figure.
+        _snap(date(2026, 9, 15), '32535', saxo='32535')
+        _snap(date(2026, 9, 16), '30145', saxo='32538')  # the rebalance day
+        payload = insights.build_insights()
+        self.assertGreater(payload['change']['day']['pct'], -1.0)
 
 
 class PortfolioInsightsViewTest(APITestCase):

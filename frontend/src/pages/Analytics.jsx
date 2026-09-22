@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
-import { Card, CardHeader, ChartPlaceholder, MetricTile, PageHeader, StatStrip, StatRow, TabButton, TabList } from '../components/ui'
+import { Alert, Card, CardHeader, ChartPlaceholder, MetricTile, PageHeader, StatStrip, StatRow, TabButton, TabList } from '../components/ui'
 import { Pill } from '../components/RangePills'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
@@ -184,6 +184,24 @@ function RiskTab({ data }) {
   )
 }
 
+/** Below ~1 year of history, annualised stats (volatility, Sharpe, Beta...)
+ *  swing on estimation noise more than on real signal - shown, not hidden
+ *  (the product principle is trustworthy-but-visible, not empty), but named
+ *  for what it is rather than presented with false precision. 'high' and
+ *  the has_data=false case (already its own placeholder above) render
+ *  nothing here. */
+function DataQualityNotice({ dataQuality, sampleSize }) {
+  if (dataQuality !== 'low' && dataQuality !== 'medium') return null
+  const days = sampleSize === 1 ? '1 day' : `${sampleSize} days`
+  return (
+    <Alert tone="info">
+      Based on {days} of your own history — treat these figures as early
+      reads, not stable long-run statistics. They firm up as more history
+      accumulates.
+    </Alert>
+  )
+}
+
 export default function Analytics() {
   const [tab, setTab] = useState('performance')
   const [benchmark, setBenchmark] = useState('world')
@@ -212,6 +230,8 @@ export default function Analytics() {
         subtitle={SUBTITLE}
         right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
       />
+
+      <DataQualityNotice dataQuality={data.data_quality} sampleSize={data.sample_size} />
 
       <StatStrip>
         <StatRow
