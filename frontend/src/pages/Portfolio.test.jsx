@@ -101,6 +101,18 @@ describe('Portfolio holdings table', () => {
     expect(link).toHaveAttribute('href', '/research?symbol=MSFT')
   })
 
+  it('flags a holding with no thesis written yet', () => {
+    stub([{ ...msft, has_thesis: false }])
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByTitle(/no thesis written yet/i)).toBeInTheDocument()
+  })
+
+  it('says nothing extra once a thesis exists', () => {
+    stub([{ ...msft, has_thesis: true }])
+    renderWithProviders(<Portfolio />)
+    expect(screen.queryByTitle(/no thesis written yet/i)).not.toBeInTheDocument()
+  })
+
   it('offers a general instrument search to find any stock or ETF, not just holdings', () => {
     renderWithProviders(<Portfolio />)
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()

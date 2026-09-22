@@ -77,7 +77,21 @@ class PositionSerializerTest(TestCase):
         self.assertEqual(data['pnl'], Decimal('500.00'))
         self.assertEqual(data['pnl_pct'], Decimal('50.00'))
         self.assertEqual(data['weight'], Decimal('75.00'))  # 1500/2000
-        
+
+    def test_has_thesis_reads_from_context_not_a_query_per_row(self):
+        # Computed once by the view (see PositionListView) and passed
+        # through context, the same pattern total_value already uses for
+        # weight - not a query per position here.
+        data = PositionSerializer(self.p1, context={'tickers_with_thesis': {'NVDA'}}).data
+        self.assertTrue(data['has_thesis'])
+        data = PositionSerializer(self.p2, context={'tickers_with_thesis': {'NVDA'}}).data
+        self.assertFalse(data['has_thesis'])
+
+    def test_has_thesis_defaults_to_false_without_context(self):
+        data = PositionSerializer(self.p1, context={}).data
+        self.assertFalse(data['has_thesis'])
+
+
 class PortfolioAPITest(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='alex', password='pw')
@@ -94,6 +108,14 @@ class PortfolioAPITest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['weight'], Decimal('100.00'))
+
+    def test_positions_list_reports_which_holdings_have_a_thesis(self):
+        from research.models import SymbolNote
+        SymbolNote.objects.create(symbol='NVDA', bull_case='Datacenter demand.')
+
+        response = self.client.get('/api/portfolio/positions/')
+
+        self.assertTrue(response.data[0]['has_thesis'])
 
     def test_summary(self):
         response = self.client.get('/api/portfolio/summary/')

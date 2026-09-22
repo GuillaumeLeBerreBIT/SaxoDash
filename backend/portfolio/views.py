@@ -15,12 +15,15 @@ class PositionListView(ListAPIView):
     pagination_class = None
 
     def list(self, request, *args, **kwargs):
+        from research.thesis import tickers_with_thesis  # avoid a portfolio<->research import cycle
+
         positions = list(Position.objects.all())
         serializer = self.get_serializer(
             positions,
             many=True,
             context={
                 'total_value': get_positions_value().amount,
+                'tickers_with_thesis': tickers_with_thesis([p.ticker for p in positions]),
                 'request': request,
             },
         )
