@@ -64,6 +64,23 @@ class SaxoClientTest(TestCase):
         self.assertIn('DisplayAndFormat', mock_get.call_args.kwargs['params']['FieldGroups'])
 
     @patch('saxo.client.requests.get')
+    def test_get_closed_positions_handles_a_bare_list_response(self, mock_get):
+        # Saxo sends a Data-wrapped envelope when there are closed positions
+        # to report, but an unwrapped [] has been observed for an empty
+        # result on this endpoint (2026-09-20 production failure:
+        # 'list' object has no attribute 'get') - shape-tolerant, not just
+        # envelope-shaped.
+        mock_get.return_value = Mock(ok=True, json=lambda: [])
+        result = client.get_closed_positions('token')
+        self.assertEqual(result, [])
+
+    @patch('saxo.client.requests.get')
+    def test_get_closed_positions_handles_a_bare_list_with_rows(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: [{'ClosedPositionUniqueId': 1}])
+        result = client.get_closed_positions('token')
+        self.assertEqual(result, [{'ClosedPositionUniqueId': 1}])
+
+    @patch('saxo.client.requests.get')
     def test_get_propagates_api_errors_from_any_endpoint(self, mock_get):
         # Every endpoint function (get_positions, get_chart, get_infoprices...)
         # is a thin wrapper over _get - one contract test here replaces one

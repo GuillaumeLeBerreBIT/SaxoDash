@@ -123,7 +123,11 @@ def get_account_balance(access_token):
 
 def get_closed_positions(access_token):
     params = {'FieldGroups': 'ClosedPosition,DisplayAndFormat'}
-    return _get(access_token, '/port/v1/closedpositions/me', params=params).get('Data', [])
+    body = _get(access_token, '/port/v1/closedpositions/me', params=params)
+    # Unlike the other list endpoints here, this one has been observed
+    # returning a bare [] rather than {'Data': [...]} for an empty result
+    # (production failure 2026-09-20: 'list' object has no attribute 'get').
+    return body.get('Data', []) if isinstance(body, dict) else body
 
 
 # Market data. Uic alone is ambiguous - every one of these needs the matching

@@ -238,6 +238,19 @@ class SyncClosedPositionsTaskTest(TestCase):
         tasks.sync_closed_positions()
         self.assertEqual(Transaction.objects.count(), 1)
 
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_empty_result_completes_as_ok_not_failed(self, mock_get_closed_positions):
+        # Regression for the 2026-09-20 production failure: an empty result
+        # (client.get_closed_positions correctly normalizes a bare [] to [])
+        # must record a normal completion, not an AttributeError bubbling up
+        # through the @synced wrapper as outcome='failed'.
+        mock_get_closed_positions.return_value = []
+        tasks.sync_closed_positions()
+
+        run = SyncRun.objects.get(task='sync_closed_positions')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 0)
+
 
 @override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
 class ExpiredCredentialGuardTest(TestCase):
