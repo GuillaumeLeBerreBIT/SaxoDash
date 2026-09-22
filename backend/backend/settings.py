@@ -103,6 +103,9 @@ REST_FRAMEWORK = {
         'research.peers': '30/min',
         'research.earnings': '30/min',
         'research.news': '30/min',
+        # The one plausible brute-force target - everything else sits behind
+        # JWTAuthentication already.
+        'login': '10/min',
     },
 }
 
@@ -118,6 +121,16 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     o.strip()
     for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+    if o.strip()
+]
+
+# Django admin uses session+CSRF auth (the API itself is JWT, which doesn't
+# need this) - without an origin here, admin login from a real domain fails
+# CSRF checks. Empty by default: same-origin localhost admin doesn't need it,
+# and an unset production value should fail loudly rather than silently pass.
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
     if o.strip()
 ]
 

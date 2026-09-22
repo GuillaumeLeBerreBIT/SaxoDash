@@ -1,5 +1,10 @@
+from unittest.mock import patch
+
 from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.test import override_settings
 from rest_framework.test import APITestCase
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -57,3 +62,30 @@ class TokenLogoutTest(APITestCase):
         response = self.client.post('/api/token/logout/', {'refresh': refresh}, format='json')
 
         self.assertEqual(response.status_code, 205)
+
+
+# ScopedRateThrottle caches THROTTLE_RATES on the class at import, so
+# override_settings can't reach it - patch the dict directly (same pattern
+# as research/test_views.py's ThrottleTest).
+@patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'login': '3/min'})
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}})
+class TokenObtainThrottleTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        User.objects.create_user(username='alex', password='pw')
+
+    def test_login_is_throttled_past_its_scope_rate(self):
+        codes = [
+            self.client.post('/api/token/', {'username': 'alex', 'password': 'wrong'}, format='json').status_code
+            for _ in range(4)
+        ]
+        self.assertEqual(codes[:3], [401, 401, 401])
+        self.assertEqual(codes[3], 429)
+
+    def test_a_correct_login_still_counts_against_the_same_budget(self):
+        for _ in range(3):
+            self.client.post('/api/token/', {'username': 'alex', 'password': 'wrong'}, format='json')
+
+        response = self.client.post('/api/token/', {'username': 'alex', 'password': 'pw'}, format='json')
+        self.assertEqual(response.status_code, 429)
+
