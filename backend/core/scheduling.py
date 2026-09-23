@@ -55,6 +55,10 @@ PERIODIC_TASKS = {
         'task': 'portfolio.tasks.backfill_position_sectors',
         'crontab': {'minute': '0', 'hour': '4'},
     },
+    'Backup database': {
+        'task': 'core.tasks.backup_database_task',
+        'crontab': {'minute': '30', 'hour': '4'},
+    },
 }
 
 # Celery/django-celery-beat's own built-in tasks - never declared above,

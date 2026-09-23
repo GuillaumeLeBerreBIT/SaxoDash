@@ -15,6 +15,10 @@ db.sqlite3-shm
 staticfiles/
 media/
 
+# Local SQLite backups (core.backup) - already covered by *.sqlite3, listed
+# explicitly so the intent is obvious
+backend/backups/
+
 # Redis snapshot written into backend/ by the local broker
 dump.rdb
 

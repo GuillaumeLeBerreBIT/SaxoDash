@@ -34,6 +34,13 @@ class SyncPeriodicTasksTest(TestCase):
         self.assertEqual(task.crontab.minute, '40')
         self.assertEqual(task.crontab.hour, '23')
 
+    def test_backup_runs_daily_at_0430_utc(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Backup database')
+        self.assertEqual(task.task, 'core.tasks.backup_database_task')
+        self.assertEqual(task.crontab.minute, '30')
+        self.assertEqual(task.crontab.hour, '4')
+
     def test_reusing_an_existing_matching_schedule_does_not_duplicate_it(self):
         sync_periodic_tasks()
         sync_periodic_tasks()

@@ -1,5 +1,6 @@
 from celery import shared_task
 
+from .backup import backup_database
 from .services import ensure_todays_snapshot
 
 
@@ -16,3 +17,11 @@ def snapshot_net_worth():
     snapshot already exists, so overlapping with the view call is harmless.
     """
     return ensure_todays_snapshot().pk
+
+
+@shared_task
+def backup_database_task():
+    """Thin wrapper so a backup failure shows up as a failed Celery task -
+    visible the same way any other scheduled job's failure is - rather than
+    only in a log file nobody is tailing."""
+    return str(backup_database())

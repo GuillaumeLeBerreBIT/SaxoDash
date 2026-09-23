@@ -178,6 +178,12 @@ DATABASES = {
     }
 }
 
+# Local SQLite backups (core.backup) - a plain file copy via SQLite's own
+# online backup API (safe under WAL with concurrent writers), not a
+# database-agnostic abstraction, since this app only ever runs on SQLite.
+DB_BACKUP_DIR = Path(os.environ.get('DB_BACKUP_DIR') or (BASE_DIR / 'backups'))
+DB_BACKUP_RETAIN = int(os.environ.get('DB_BACKUP_RETAIN', '14'))
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
