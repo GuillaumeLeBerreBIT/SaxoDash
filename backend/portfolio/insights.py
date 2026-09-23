@@ -9,7 +9,10 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.db.models import F
+
 from core.models import NetWorthSnapshot
+from core.services import current_net_worth
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.services import get_portfolio_value
 
@@ -225,19 +228,34 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
     return items
 
 
+def _headline_net_worth(latest, today):
+    """The live 'right now' total, kept identical to the historical series'
+    last point whenever today's snapshot is already reconciled - same
+    source, so the headline and its own deltas cannot describe two
+    different quantities. Falls back to a fresh live computation (with an
+    explicit 'approximate' basis) before today's snapshot exists yet, or
+    when it exists but Saxo's figure wasn't usable when it was written."""
+    if latest and latest.date == today and latest.net_worth_basis == NetWorthSnapshot.Basis.RECONCILED:
+        return latest.net_worth, latest.net_worth_basis
+    net_worth = current_net_worth()
+    return net_worth.total.rounded().amount, net_worth.basis
+
+
 def build_insights():
     positions = list(Position.objects.all())
-    # saxo_account_value (cash+positions), not portfolio_value (positions
-    # only) - a BUY/SELL only reallocates within the same Saxo account and
-    # leaves the former unchanged; the latter drops every time a position is
-    # sold, and the day/week/month/YTD change pills below would read that as
-    # a loss that never happened. See analytics/views.py::_portfolio_dated_values
-    # for the same fix applied to the Analytics page.
+    # bank_total + saxo_account_value (everything the user has), not
+    # saxo_account_value alone - the old series excluded bank money
+    # entirely, which the headline never claimed to do either. Excluding
+    # null-saxo days rather than falling back to portfolio_value here too:
+    # a delta computed against an approximate (missing-cash) value would
+    # reintroduce a false swing on exactly the kind of day this guards
+    # against. See portfolio.services.get_saxo_account_value.
     pairs = list(
         NetWorthSnapshot.objects
         .exclude(saxo_account_value__isnull=True)
         .order_by('date')
-        .values_list('date', 'saxo_account_value')
+        .annotate(total=F('bank_total') + F('saxo_account_value'))
+        .values_list('date', 'total')
     )
     latest = NetWorthSnapshot.objects.order_by('date').last()
     today = date.today()
@@ -248,6 +266,7 @@ def build_insights():
 
     portfolio_value = get_portfolio_value().rounded().amount
     bank = latest.bank_total if latest else Decimal('0')
+    net_worth_value, net_worth_basis = _headline_net_worth(latest, today)
 
     concentration = _concentration(positions, total)
     held_upper = {p.ticker.upper() for p in positions if p.ticker}
@@ -258,7 +277,8 @@ def build_insights():
         'as_of': pairs[-1][0].isoformat() if pairs else None,
         'stale': bool(pairs) and (today - pairs[-1][0]).days > STALE_DAYS,
         'value': {
-            'net_worth': portfolio_value + bank,
+            'net_worth': net_worth_value,
+            'net_worth_basis': net_worth_basis,
             'portfolio': portfolio_value,
             'bank': bank,
         },

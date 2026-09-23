@@ -5,6 +5,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.utils import timezone
 from decimal import Decimal
+from accounts.models import BankAccount
 from core.models import NetWorthSnapshot
 from portfolio import insights, sectors
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
@@ -24,10 +25,16 @@ def _snap(d, portfolio, bank=Decimal('1000.00'), saxo=None):
     # saxo defaults to mirroring portfolio - fine for tests with no trades
     # in between; pass an explicit saxo= to make the two diverge (a sale
     # moving value from positions into cash within the same Saxo account).
+    # net_worth/net_worth_basis mirror what ensure_todays_snapshot() itself
+    # would compute for a row that does have a saxo_account_value (always
+    # true here, since saxo defaults to mirroring portfolio) - RECONCILED,
+    # bank + saxo_account_value.
+    saxo_account_value = Decimal(saxo) if saxo is not None else Decimal(portfolio)
     return NetWorthSnapshot.objects.create(
         date=d, portfolio_value=Decimal(portfolio),
-        saxo_account_value=Decimal(saxo) if saxo is not None else Decimal(portfolio),
-        bank_total=bank, net_worth=Decimal(portfolio) + bank,
+        saxo_account_value=saxo_account_value,
+        bank_total=bank, net_worth=bank + saxo_account_value,
+        net_worth_basis=NetWorthSnapshot.Basis.RECONCILED,
     )
 
 
@@ -519,11 +526,14 @@ class BuildInsightsTest(TestCase):
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_a_seeded_book_produces_the_expected_shape(self, _mock):
         _pos('NVDA', '10', '100', '600')
-        _snap(date(2026, 9, 8), '5000')
-        _snap(date(2026, 9, 9), '5500')
+        _snap(date(2026, 9, 8), '5000')  # bank defaults to 1000: total 6000
+        _snap(date(2026, 9, 9), '5500')  # total 6500
         payload = insights.build_insights()
         self.assertEqual(payload['as_of'], '2026-09-09')
-        self.assertEqual(payload['change']['day']['pct'], 10.0)
+        # The series is bank_total + saxo_account_value, not saxo_account_value
+        # alone: (1000+5500 - (1000+5000)) / (1000+5000) = 500/6000 = 8.33%,
+        # not the 10% a saxo-only series would show.
+        self.assertEqual(payload['change']['day']['pct'], 8.33)
         self.assertEqual(payload['concentration']['top1']['ticker'], 'NVDA')
         self.assertEqual(len(payload['spark']), 2)
         self.assertEqual(payload['upcoming_earnings'], [])
@@ -550,6 +560,71 @@ class BuildInsightsTest(TestCase):
         _snap(date(2026, 9, 16), '30145', saxo='32538')  # the rebalance day
         payload = insights.build_insights()
         self.assertGreater(payload['change']['day']['pct'], -1.0)
+
+
+class BuildInsightsNetWorthBasisTest(TestCase):
+    """insights.value.net_worth and insights.change.* must describe the same
+    quantity - see docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_headline_matches_todays_snapshot_when_reconciled(self, _mock):
+        today = date.today()
+        _snap(today - timedelta(days=1), '1500', bank=Decimal('2000.00'), saxo='2000')
+        _snap(today, '1500', bank=Decimal('2500.00'), saxo='2400')
+
+        payload = insights.build_insights()
+
+        # 2500 bank + 2400 saxo, matching the stored row exactly - not
+        # portfolio_value (1500) + bank, which would drop the idle cash.
+        self.assertEqual(payload['value']['net_worth'], Decimal('4900.00'))
+        self.assertEqual(payload['value']['net_worth_basis'], 'reconciled')
+        # (2500+2400) - (2000+2000) = 900, computed from the same series.
+        self.assertEqual(payload['change']['day']['abs'], Decimal('900.00'))
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_a_buy_sell_does_not_read_as_a_change_in_net_worth(self, _mock):
+        # A BUY only reallocates Saxo cash into a position - saxo_account_value
+        # is unchanged, so total net worth must not move either.
+        today = date.today()
+        _snap(today - timedelta(days=1), '1500', bank=Decimal('2500.00'), saxo='2400')
+        _snap(today, '2400', bank=Decimal('2500.00'), saxo='2400')  # bought more, same total
+
+        payload = insights.build_insights()
+        self.assertEqual(payload['change']['day']['abs'], Decimal('0.00'))
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_headline_falls_back_to_approximate_when_saxo_unavailable_today(self, _mock):
+        today = date.today()
+        _pos('NVDA', '10', '100', '150')  # value = 1500.00
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='-',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+        NetWorthSnapshot.objects.create(
+            date=today, portfolio_value=Decimal('1500.00'), bank_total=Decimal('2500.00'),
+            net_worth=Decimal('4000.00'), net_worth_basis=NetWorthSnapshot.Basis.APPROXIMATE,
+            saxo_account_value=None,
+        )
+
+        payload = insights.build_insights()
+        self.assertEqual(payload['value']['net_worth'], Decimal('4000.00'))
+        self.assertEqual(payload['value']['net_worth_basis'], 'approximate')
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_days_without_a_usable_saxo_value_are_excluded_from_the_series(self, _mock):
+        today = date.today()
+        _snap(today - timedelta(days=2), '2000', bank=Decimal('2000.00'), saxo='2000')
+        NetWorthSnapshot.objects.create(
+            date=today - timedelta(days=1), portfolio_value=Decimal('2000.00'),
+            bank_total=Decimal('2000.00'), net_worth=Decimal('4000.00'),
+            net_worth_basis=NetWorthSnapshot.Basis.APPROXIMATE, saxo_account_value=None,
+        )
+        _snap(today, '2400', bank=Decimal('2500.00'), saxo='2400')
+
+        payload = insights.build_insights()
+        # Only the two reconciled days are in the series - the outage day
+        # would poison a delta with an approximate (missing-cash) value.
+        self.assertEqual(payload['change']['day']['abs'], Decimal('900.00'))
 
 
 class PortfolioInsightsViewTest(APITestCase):
