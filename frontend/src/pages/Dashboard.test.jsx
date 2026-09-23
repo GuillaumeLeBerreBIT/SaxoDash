@@ -11,7 +11,7 @@ const idle = { data: undefined, isLoading: false, error: null }
 
 const insights = {
   as_of: '2026-09-09', stale: false,
-  value: { net_worth: '10000.00', net_worth_basis: 'reconciled', portfolio: '9000.00', bank: '1000.00' },
+  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00' },
   change: {
     day: { abs: '50.00', pct: 0.56 }, week: null, month: null,
     ytd: { abs: '800.00', pct: 9 }, all_time: { abs: '2000.00', pct: 25 },

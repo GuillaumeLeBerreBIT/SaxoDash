@@ -9,8 +9,6 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import F
-
 from core.models import NetWorthSnapshot
 from core.services import current_net_worth
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
@@ -230,32 +228,28 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
 
 def _headline_net_worth(latest, today):
     """The live 'right now' total, kept identical to the historical series'
-    last point whenever today's snapshot is already reconciled - same
-    source, so the headline and its own deltas cannot describe two
-    different quantities. Falls back to a fresh live computation (with an
-    explicit 'approximate' basis) before today's snapshot exists yet, or
-    when it exists but Saxo's figure wasn't usable when it was written."""
-    if latest and latest.date == today and latest.net_worth_basis == NetWorthSnapshot.Basis.RECONCILED:
-        return latest.net_worth, latest.net_worth_basis
-    net_worth = current_net_worth()
-    return net_worth.total.rounded().amount, net_worth.basis
+    last point whenever today's snapshot already exists - same source, so
+    the headline and its own deltas cannot describe two different
+    quantities. Falls back to a fresh live computation only before today's
+    snapshot exists yet (e.g. first request of the day, before the daily
+    snapshot task has run)."""
+    if latest and latest.date == today:
+        return latest.net_worth
+    return current_net_worth().total.rounded().amount
 
 
 def build_insights():
     positions = list(Position.objects.all())
-    # bank_total + saxo_account_value (everything the user has), not
-    # saxo_account_value alone - the old series excluded bank money
-    # entirely, which the headline never claimed to do either. Excluding
-    # null-saxo days rather than falling back to portfolio_value here too:
-    # a delta computed against an approximate (missing-cash) value would
-    # reintroduce a false swing on exactly the kind of day this guards
-    # against. See portfolio.services.get_saxo_account_value.
+    # net_worth (portfolio_value + bank_total), not saxo_account_value alone -
+    # the latter excludes bank money entirely, which the headline never
+    # claimed to do. net_worth is already trade-neutral for a BUY/SELL: a
+    # sale drops portfolio_value and raises the Saxo-cash-mirror balance
+    # (part of bank_total) by the same amount, from the same sync. See
+    # core.services.current_net_worth.
     pairs = list(
         NetWorthSnapshot.objects
-        .exclude(saxo_account_value__isnull=True)
         .order_by('date')
-        .annotate(total=F('bank_total') + F('saxo_account_value'))
-        .values_list('date', 'total')
+        .values_list('date', 'net_worth')
     )
     latest = NetWorthSnapshot.objects.order_by('date').last()
     today = date.today()
@@ -266,7 +260,7 @@ def build_insights():
 
     portfolio_value = get_portfolio_value().rounded().amount
     bank = latest.bank_total if latest else Decimal('0')
-    net_worth_value, net_worth_basis = _headline_net_worth(latest, today)
+    net_worth_value = _headline_net_worth(latest, today)
 
     concentration = _concentration(positions, total)
     held_upper = {p.ticker.upper() for p in positions if p.ticker}
@@ -278,7 +272,6 @@ def build_insights():
         'stale': bool(pairs) and (today - pairs[-1][0]).days > STALE_DAYS,
         'value': {
             'net_worth': net_worth_value,
-            'net_worth_basis': net_worth_basis,
             'portfolio': portfolio_value,
             'bank': bank,
         },

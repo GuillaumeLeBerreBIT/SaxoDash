@@ -12,7 +12,7 @@ import { chartPlaceholderFor } from '../lib/chartState'
 
 const VIEWS = [
   { key: 'ALL', label: 'All' },
-  { key: 'INVESTMENTS', label: 'Saxo' },
+  { key: 'INVESTMENTS', label: 'Investments' },
   { key: 'BANK', label: 'Bank' },
 ]
 
@@ -32,7 +32,7 @@ export default function NetWorthChart() {
     <Card>
       <CardHeader
         title="Net worth history"
-        subtitle="Saxo account (cash + positions) and bank accounts over time"
+        subtitle="Portfolio and bank accounts over time"
         right={
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 bg-zinc-900/60 rounded-md p-0.5 border border-white/[0.06]">
@@ -57,15 +57,14 @@ export default function NetWorthChart() {
             {showInvestments && (
               <Line
                 type="monotone"
-                dataKey="saxo_account_value"
-                name="Saxo (cash + positions)"
+                dataKey="portfolio_value"
+                name="Investments"
                 stroke={SERIES_INVESTMENTS}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
                 strokeDasharray={showTotal ? '4 3' : undefined}
                 dot={false}
                 isAnimationActive={false}
-                connectNulls={false}
               />
             )}
             {showBank && (
@@ -90,7 +89,6 @@ export default function NetWorthChart() {
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
-                connectNulls
               />
             )}
           </LineChart>

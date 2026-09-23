@@ -45,7 +45,28 @@ This satisfies the requirement exactly: the headline and its adjacent deltas wil
 
 ---
 
-## Task 1: `NetWorthSnapshot.net_worth_basis` field + corrected `core.services`
+## CORRECTION (found during Task 6 live verification against the real dev database) — Tasks 1–5 below were superseded
+
+Tasks 1–5 below were written and initially implemented exactly as documented. **Live verification against the real dev database (Task 6) found they introduce a real double-counting bug**, missed by the code-only investigation above: `saxo/tasks.py::sync_account_balance` writes **two** things atomically from the same Saxo balance response - `PortfolioValuation` (which backs `saxo_account_value`) **and** a `BankAccount` row (`external_id='saxo:cash'`, `saxo.mapping.SAXO_CASH_ACCOUNT_ID`) that mirrors the identical cash figure. `accounts.services.get_total_bank_balance()` sums *every* `BankAccount` row with no exclusion, so `bank_total` **already includes Saxo's own cash**. The planned `bank_total + saxo_account_value` formula therefore double-counts that cash - confirmed empirically against the real dev DB, where it inflated net worth from the correct €1,002,831.35 to €1,973,895.99 (nearly 2x).
+
+Working through why revealed the actual, much simpler fix: `portfolio_value + bank_total` (the **original**, pre-Phase-A formula, entirely unchanged) is *already* both complete (idle Saxo cash is counted, via the BankAccount mirror) and trade-neutral (a SELL drops `portfolio_value` and raises that same mirror, atomically, in the same sync) - given the current data model. **No new field, no "basis" concept, and no `core.models`/`core.serializers`/`accounts.views` changes were needed at all.** The only real bug was `portfolio/insights.py::build_insights()`'s `change`/`spark` series reading `saxo_account_value` alone (which excludes bank money entirely) while the headline used `portfolio_value + bank_total` - two different quantities shown together, exactly as originally diagnosed, just with a different (and much smaller) fix than Tasks 1-5 describe.
+
+**What actually shipped, replacing Tasks 1–5:**
+- `core/models.py` - **unchanged**, no `net_worth_basis` field.
+- `core/services.py::current_net_worth()`/`ensure_todays_snapshot()` - **unchanged** (reverted to the original `portfolio + bank` formula after a brief detour).
+- `core/serializers.py` / `accounts/views.py::NetWorthView` - **unchanged** (the `saxo_account_value` exposure and `net_worth_basis` field added then removed).
+- `portfolio/insights.py::build_insights()` - the actual fix: `pairs` now reads `NetWorthSnapshot.net_worth` directly (portfolio_value + bank_total, always present, never null) instead of `saxo_account_value` alone; a new `_headline_net_worth(latest, today)` returns `latest.net_worth` when today's snapshot already exists (guaranteeing the headline equals the delta series' last point exactly, by construction) and falls back to a fresh live computation only before today's snapshot exists yet.
+- Frontend (`HeroValue.jsx`, `HeroValue.test.jsx`, `NetWorthChart.jsx`, `Portfolio.jsx`, and their tests) - **fully reverted to their pre-Phase-A state**. `insights.py`'s output shape never changed (`value`/`change`/`spark` keep the same keys), so no frontend change was needed at all once the backend fix was corrected.
+- A new regression test, `core.tests.CurrentNetWorthDoesNotDoubleCountSaxoCashTest`, guards specifically against reintroducing this double-count.
+- The real dev database was affected during the flawed implementation (its `net_worth` migrated to the doubled figure via a data migration's `RunPython` step) and was manually repaired back to the correct `portfolio_value + bank_total` value for the two affected rows before the migration and its file were removed entirely.
+
+**Lesson for future work on this codebase:** `saxo_account_value` and the plain sum of `BankAccount` rows are **not independent** - Saxo's cash appears in both. Any future change combining them must explicitly exclude the `SAXO_CASH_ACCOUNT_ID` mirror from one side, or use only one of the two. This was not discoverable from a code-only read (both functions look independent) - only from live data.
+
+Tasks 1–5's original text is left below **verbatim, as a record of the flawed first design** - do not implement it. Task 6 (live verification) is what caught this, which is exactly why it was in the plan. Tasks 7 onward (Celery schedule, retry/backoff, last-sync parity, backup) are unaffected by this correction and proceed as written.
+
+---
+
+## Task 1 (SUPERSEDED — see correction above, not implemented as written): `NetWorthSnapshot.net_worth_basis` field + corrected `core.services`
 
 **Files:**
 - Modify: `backend/core/models.py`
@@ -332,7 +353,7 @@ git commit -m "feat: define net worth as bank + Saxo's reconciled total, not ban
 
 ---
 
-## Task 2: Fix the pre-existing tests whose assumptions just changed
+## Task 2 (SUPERSEDED — not implemented as written): Fix the pre-existing tests whose assumptions just changed
 
 **Files:**
 - Modify: `backend/core/tests.py`
@@ -441,7 +462,7 @@ git commit -m "test: update net-worth fixtures for the bank+Saxo-total definitio
 
 ---
 
-## Task 3: Serializer + `NetWorthView` expose the new fields
+## Task 3 (SUPERSEDED — not implemented as written): Serializer + `NetWorthView` expose the new fields
 
 **Files:**
 - Modify: `backend/core/serializers.py`
@@ -551,7 +572,7 @@ git commit -m "feat: expose net_worth_basis and saxo_account_value on the net-wo
 
 ---
 
-## Task 4: Fix `portfolio/insights.py::build_insights()` — headline and deltas from one series
+## Task 4 (SUPERSEDED — the actual, corrected fix is described above; this text is the flawed original): Fix `portfolio/insights.py::build_insights()` — headline and deltas from one series
 
 **Files:**
 - Modify: `backend/portfolio/insights.py`
@@ -760,7 +781,7 @@ git commit -m "fix: compute the Dashboard headline and its deltas from one net-w
 
 ---
 
-## Task 5: Frontend — `HeroValue`, `NetWorthChart`, `Portfolio.jsx` reflect the corrected/labeled total
+## Task 5 (SUPERSEDED — not implemented; frontend was reverted to its pre-Phase-A state instead): Frontend — `HeroValue`, `NetWorthChart`, `Portfolio.jsx` reflect the corrected/labeled total
 
 **Files:**
 - Modify: `frontend/src/components/dashboard/HeroValue.jsx`
@@ -1058,7 +1079,7 @@ git commit -m "fix: show the net-worth basis caveat and plot Saxo's full cash+po
 
 ---
 
-## Task 6: Manually verify Dashboard + Portfolio in the running app
+## Task 6: Manually verify Dashboard + Portfolio in the running app (THIS is the step that caught the double-counting bug — see the correction above)
 
 **Files:** none (manual verification step, per the user's explicit implementation order Step 4 "Verify Dashboard behavior").
 
