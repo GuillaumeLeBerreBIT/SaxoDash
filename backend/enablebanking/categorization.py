@@ -12,7 +12,9 @@ _RULES = {
     'DINING': ['UBER EATS', 'DELIVEROO', 'TAKEAWAY', "MCDONALD", 'QUICK', 'STARBUCKS', 'RESTAURANT'],
     'TRANSPORT': ['NMBS', 'SNCB', 'DE LIJN', 'STIB', 'MIVB', 'TEC', 'UBER', 'SHELL', 'TOTALENERGIES', 'TOTAL', 'Q8', 'ESSO', 'PARKING'],
     'UTILITIES': ['ENGIE', 'LUMINUS', 'PROXIMUS', 'TELENET', 'ORANGE BELGIUM', 'VOO', 'FLUVIUS', 'MOBILE VIKINGS'],
-    'SUBSCRIPTIONS': ['NETFLIX', 'SPOTIFY', 'DISNEY', 'AMAZON PRIME', 'YOUTUBE PREMIUM', 'ICLOUD', 'APPLE.COM/BILL', 'PLAYSTATION'],
+    # AMAZONPRIME (no space) is how KBC actually renders it ("AmazonPrimeBE")
+    # - kept alongside the spaced form in case another statement format uses it.
+    'SUBSCRIPTIONS': ['NETFLIX', 'SPOTIFY', 'DISNEY', 'AMAZON PRIME', 'AMAZONPRIME', 'YOUTUBE PREMIUM', 'ICLOUD', 'APPLE.COM/BILL', 'PLAYSTATION', 'ANTHROPIC'],
     'SHOPPING': ['AMAZON', 'BOL.COM', 'ZALANDO', 'MEDIAMARKT', 'COOLBLUE', 'IKEA', 'GAMMA', 'ZARA', 'JACK & JONES', 'ABERCROMBIE'],
     # PHARMACIE/APOTHEEK are the French/Dutch spellings seen on Belgian
     # statements; PHARMACY covers the English spelling used abroad.

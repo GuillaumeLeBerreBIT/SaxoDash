@@ -124,6 +124,7 @@ class PeersShapingTest(TestCase):
             finnhub.peers('AAPL')
 
 
+@override_settings(CACHES=LOCMEM)
 class IndustryShapingTest(TestCase):
     """finnhub.industry() backs the Position.sector backfill (portfolio.
     sectors) - a small, separately-cached read of just the profile, not the
