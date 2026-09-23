@@ -5,6 +5,13 @@ import { Badge } from './ui'
 
 const BANK_LABELS = { kbc: 'KBC', argenta: 'Argenta' }
 
+// Same reasoning as SaxoConnectionStatus - a connected bank whose sync is
+// quietly skipping or failing looks healthy otherwise.
+const SYNC_OUTCOME_NOTE = {
+  skipped: 'The last sync could not run, so this data may be stale',
+  failed: 'The last sync failed, so this data may be stale',
+}
+
 function OneBank({ bank, state, failed }) {
   const label = BANK_LABELS[bank]
 
@@ -42,11 +49,20 @@ function OneBank({ bank, state, failed }) {
   }
 
   return (
-    <Badge tone="emerald">
-      <span title={state.last_synced_at ? `Last synced ${state.last_synced_at}` : 'Never synced'}>
-        {label} connected
-      </span>
-    </Badge>
+    <span className="flex items-center gap-2">
+      {state.last_sync_outcome && state.last_sync_outcome !== 'ok' && (
+        <Badge tone="amber">
+          <span title={SYNC_OUTCOME_NOTE[state.last_sync_outcome]}>
+            {label} sync {state.last_sync_outcome}
+          </span>
+        </Badge>
+      )}
+      <Badge tone="emerald">
+        <span title={state.last_synced_at ? `Last synced ${state.last_synced_at}` : 'Never synced'}>
+          {label} connected
+        </span>
+      </Badge>
+    </span>
   )
 }
 
