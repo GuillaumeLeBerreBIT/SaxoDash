@@ -122,6 +122,13 @@ class EnableBankingStatusView(APIView):
                 'usable': state.usable,
                 'unusable_reason': state.reason,
                 'last_synced_at': last_sync.ran_at if last_sync else None,
+                # Worst across each sync kind's latest run, not whatever ran
+                # last - otherwise a healthy transactions sync masks a
+                # balances sync that always fails. Mirrors SaxoStatusView.
+                'last_sync_outcome': credentials.worst_recent_outcome(bank),
+                'failing_syncs': [
+                    run.kind for run in credentials.latest_run_per_kind(bank) if run.outcome != 'ok'
+                ],
             }
         return Response(result)
 

@@ -48,3 +48,26 @@ def active_credential(bank):
 
 def last_successful_sync(bank):
     return BankSyncRun.objects.filter(bank=bank, outcome='ok').first()
+
+
+# Weakest first, so the badge reflects the worst thing currently happening -
+# same reasoning and order as saxo.credentials._OUTCOME_RANK.
+_OUTCOME_RANK = ['failed', 'skipped', 'ok']
+
+
+def latest_run_per_kind(bank):
+    """The newest run of each sync kind (balances, transactions) for one
+    bank. The newest run overall answers "what ran last", not "is anything
+    broken" - a balances sync failing on every tick was hidden the moment a
+    later transactions sync succeeded."""
+    latest = {}
+    for run in BankSyncRun.objects.filter(bank=bank):
+        latest.setdefault(run.kind, run)
+    return list(latest.values())
+
+
+def worst_recent_outcome(bank):
+    """The worst outcome among this bank's most recent run of each kind, or
+    None if nothing has run yet."""
+    outcomes = {run.outcome for run in latest_run_per_kind(bank)}
+    return next((outcome for outcome in _OUTCOME_RANK if outcome in outcomes), None)

@@ -112,6 +112,31 @@ class ConnectionStateTest(TestCase):
         self.assertIsNone(credentials.last_successful_sync('argenta'))
 
 
+class WorstRecentOutcomePerBankTest(TestCase):
+    """Mirrors saxo.credentials.worst_recent_outcome/latest_run_per_task -
+    same reasoning, scoped per bank via BankSyncRun.kind instead of task
+    name. See docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
+
+    def test_none_when_nothing_has_run(self):
+        self.assertIsNone(credentials.worst_recent_outcome('kbc'))
+
+    def test_ok_when_the_latest_run_per_kind_succeeded(self):
+        BankSyncRun.objects.create(bank='kbc', kind='balances', outcome='ok')
+        BankSyncRun.objects.create(bank='kbc', kind='transactions', outcome='ok')
+        self.assertEqual(credentials.worst_recent_outcome('kbc'), 'ok')
+
+    def test_failed_beats_ok_even_if_it_ran_earlier(self):
+        BankSyncRun.objects.create(bank='kbc', kind='transactions', outcome='ok')
+        BankSyncRun.objects.create(bank='kbc', kind='balances', outcome='failed')
+        self.assertEqual(credentials.worst_recent_outcome('kbc'), 'failed')
+
+    def test_scoped_to_one_bank(self):
+        BankSyncRun.objects.create(bank='kbc', kind='balances', outcome='ok')
+        BankSyncRun.objects.create(bank='argenta', kind='balances', outcome='failed')
+        self.assertEqual(credentials.worst_recent_outcome('kbc'), 'ok')
+        self.assertEqual(credentials.worst_recent_outcome('argenta'), 'failed')
+
+
 @override_settings(
     ENABLE_BANKING_APPLICATION_ID='11111111-1111-1111-1111-111111111111',
     ENABLE_BANKING_PRIVATE_KEY=TEST_PRIVATE_KEY_PEM,
@@ -448,6 +473,29 @@ class EnableBankingStatusViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['kbc']['connected'])
         self.assertFalse(response.data['argenta']['connected'])
+
+    def test_includes_last_sync_outcome_and_failing_kinds(self):
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+        )
+        BankSyncRun.objects.create(bank='kbc', kind='balances', outcome='failed', detail='down')
+
+        response = self.client.get('/api/enablebanking/status/')
+
+        self.assertEqual(response.data['kbc']['last_sync_outcome'], 'failed')
+        self.assertEqual(response.data['kbc']['failing_syncs'], ['balances'])
+
+    def test_a_healthy_bank_reports_no_failing_syncs(self):
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+        )
+        BankSyncRun.objects.create(bank='kbc', kind='balances', outcome='ok')
+        BankSyncRun.objects.create(bank='kbc', kind='transactions', outcome='ok')
+
+        response = self.client.get('/api/enablebanking/status/')
+
+        self.assertEqual(response.data['kbc']['last_sync_outcome'], 'ok')
+        self.assertEqual(response.data['kbc']['failing_syncs'], [])
 
 
 class EnableBankingChecksTest(TestCase):
