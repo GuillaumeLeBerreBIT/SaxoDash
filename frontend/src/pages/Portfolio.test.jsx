@@ -42,7 +42,10 @@ function stub(positions = [msft]) {
   })
   queries.useNetWorth.mockReturnValue({
     ...idle,
-    data: { portfolio_value: '31567.81', bank_total: '968435.55', net_worth: '1000003.36' },
+    data: {
+      portfolio_value: '31567.81', bank_total: '968435.55', saxo_account_value: '31567.81',
+      net_worth: '1000003.36', net_worth_basis: 'reconciled',
+    },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })

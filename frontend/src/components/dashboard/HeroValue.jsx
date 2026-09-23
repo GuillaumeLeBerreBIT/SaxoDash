@@ -46,10 +46,19 @@ function FlatStat({ label, value }) {
 }
 
 export default function HeroValue({ value, change, spendingThisMonth }) {
+  // Saxo's cash balance wasn't usable when this total was computed - it
+  // falls back to positions + bank, which excludes any uninvested Saxo
+  // cash. Say so rather than showing it as if it were the precise figure.
+  const approximate = value.net_worth_basis === 'approximate'
   return (
     <Card className="h-full flex flex-col">
       <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
       <div className="mt-1 text-[clamp(22px,2.4vw,30px)] font-semibold tracking-tight num font-mono text-zinc-50">
+        {approximate && (
+          <span title="Saxo's cash balance is unavailable right now, so this excludes any uninvested Saxo cash">
+            ≈{' '}
+          </span>
+        )}
         {fmtEur(value.net_worth)}
       </div>
       <div className="mt-1 text-[var(--fig-xs)] text-zinc-500 num font-mono">
@@ -62,7 +71,9 @@ export default function HeroValue({ value, change, spendingThisMonth }) {
         {spendingThisMonth != null && <FlatStat label="Spent MTD" value={fmtEur(spendingThisMonth)} />}
       </div>
       <p className="mt-auto pt-3 text-[var(--fig-2xs)] text-zinc-600">
-        Change is end-of-day, from the daily net-worth snapshot.
+        {approximate
+          ? "Saxo's cash balance is unavailable right now - this total excludes any uninvested Saxo cash until it reconnects."
+          : 'Change is end-of-day, from the daily net-worth snapshot.'}
       </p>
     </Card>
   )

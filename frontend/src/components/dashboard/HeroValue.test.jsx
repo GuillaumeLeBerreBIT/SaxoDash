@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import HeroValue from './HeroValue'
 
 const base = {
-  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00' },
+  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00', net_worth_basis: 'reconciled' },
   change: {
     day: { abs: '50.00', pct: 0.56 },
     week: { abs: '-120.00', pct: -1.3 },
@@ -27,11 +27,6 @@ describe('HeroValue', () => {
     expect(screen.getByText('Month').closest('div')).toHaveTextContent('—')
   })
 
-  it('omits the sparkline when there is no series', () => {
-    const { container } = render(<HeroValue {...base} spark={[]} />)
-    expect(container.querySelector('svg')).toBeNull()
-  })
-
   it('shows spent-this-month as a flat figure alongside the delta pills', () => {
     render(<HeroValue {...base} spendingThisMonth="342.10" />)
     expect(screen.getByText('Spent MTD')).toBeInTheDocument()
@@ -41,5 +36,15 @@ describe('HeroValue', () => {
   it('omits the spent-this-month figure when not provided', () => {
     render(<HeroValue {...base} />)
     expect(screen.queryByText('Spent MTD')).not.toBeInTheDocument()
+  })
+
+  it('flags an approximate total with a caveat instead of the usual footer', () => {
+    render(<HeroValue {...base} value={{ ...base.value, net_worth_basis: 'approximate' }} />)
+    expect(screen.getByText(/excludes any uninvested Saxo cash/)).toBeInTheDocument()
+  })
+
+  it('does not show the approximate caveat for a reconciled total', () => {
+    render(<HeroValue {...base} />)
+    expect(screen.queryByText(/excludes any uninvested Saxo cash/)).not.toBeInTheDocument()
   })
 })

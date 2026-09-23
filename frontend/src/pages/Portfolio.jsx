@@ -81,8 +81,12 @@ export default function Portfolio() {
         <StatStrip vertical>
           <StatRow
             label="Total net worth"
-            value={fmtEur(netWorth.net_worth)}
-            note="Portfolio + bank accounts"
+            value={`${netWorth.net_worth_basis === 'approximate' ? '≈ ' : ''}${fmtEur(netWorth.net_worth)}`}
+            note={
+              netWorth.net_worth_basis === 'approximate'
+                ? 'Saxo cash unavailable right now - excludes it'
+                : 'Portfolio + bank + Saxo cash'
+            }
             tone="text-blue-400"
             lead
           />
