@@ -1,5 +1,6 @@
 from unittest.mock import Mock, patch
 from urllib.parse import parse_qs, urlparse
+import requests
 from django.test import TestCase, override_settings
 from backend import settings
 from . import client
@@ -88,6 +89,64 @@ class SaxoClientTest(TestCase):
         mock_get.return_value = Mock(ok=False, status_code=500, text='server error')
         with self.assertRaises(client.SaxoAPIError):
             client._get('token', '/some/path')
+
+
+class SaxoAPIErrorClassificationTest(TestCase):
+    """Only network failures, timeouts, 429, and 5xx should be retried by
+    Celery - a 4xx means the request itself is wrong and retrying cannot
+    help. See docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
+
+    @patch('saxo.client.requests.get')
+    def test_a_500_response_is_transient(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=500, text='Internal error')
+        with self.assertRaises(client.SaxoTransientError):
+            client._get('token', '/some/path')
+
+    @patch('saxo.client.requests.get')
+    def test_a_429_response_is_transient(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=429, text='Rate limited')
+        with self.assertRaises(client.SaxoTransientError):
+            client._get('token', '/some/path')
+
+    @patch('saxo.client.requests.get')
+    def test_a_400_response_is_permanent(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=400, text='Bad request')
+        with self.assertRaises(client.SaxoPermanentError):
+            client._get('token', '/some/path')
+
+    @patch('saxo.client.requests.get')
+    def test_a_404_response_is_permanent(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=404, text='Not found')
+        with self.assertRaises(client.SaxoPermanentError):
+            client._get('token', '/some/path')
+
+    @patch('saxo.client.requests.get', side_effect=requests.ConnectionError('refused'))
+    def test_a_network_error_is_transient(self, mock_get):
+        with self.assertRaises(client.SaxoTransientError):
+            client._get('token', '/some/path')
+
+    @patch('saxo.client.requests.get')
+    def test_a_non_json_body_is_permanent(self, mock_get):
+        response = Mock(ok=True)
+        response.json.side_effect = ValueError('not json')
+        mock_get.return_value = response
+        with self.assertRaises(client.SaxoPermanentError):
+            client._get('token', '/some/path')
+
+    def test_both_are_still_saxo_api_errors(self):
+        # research/market.py::_cached does `except client.SaxoAPIError` - both
+        # subclasses must still be caught by that.
+        self.assertTrue(issubclass(client.SaxoTransientError, client.SaxoAPIError))
+        self.assertTrue(issubclass(client.SaxoPermanentError, client.SaxoAPIError))
+
+    @patch('saxo.client.requests.post')
+    def test_token_requests_are_unaffected_by_the_split(self, mock_post):
+        # _token_request still raises plain SaxoAuthError, regardless of
+        # status code - it is never in Celery's autoretry_for, so it has no
+        # transient/permanent distinction to make.
+        mock_post.return_value = Mock(ok=False, status_code=500, text='down')
+        with self.assertRaises(client.SaxoAuthError):
+            client.exchange_code_for_token('some-code')
 
 
 class SaxoMarketDataClientTest(TestCase):

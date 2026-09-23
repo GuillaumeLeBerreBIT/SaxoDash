@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 REFRESH_MARGIN = timedelta(minutes=5)
 
 SYNC_TASK = {
-    'autoretry_for': (client.SaxoAPIError,),
+    # Only transient failures retry - a permanent 4xx/malformed-body error
+    # (client.SaxoPermanentError) needs a code fix or user action, not three
+    # retries with backoff that cannot possibly help it succeed.
+    'autoretry_for': (client.SaxoTransientError,),
     'retry_backoff': True,
     'max_retries': 3,
 }

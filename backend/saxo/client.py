@@ -34,6 +34,21 @@ class SaxoAPIError(Exception):
     """Raised when a Saxo OpenAPI request fails."""
 
 
+class SaxoTransientError(SaxoAPIError):
+    """A network failure, timeout, rate limit (429), or Saxo-side (5xx)
+    error - worth Celery's automatic retry, since the same request is
+    likely to succeed on its own shortly."""
+
+
+class SaxoPermanentError(SaxoAPIError):
+    """A 4xx response (other than 429) or an unparsable body - the request
+    itself is wrong or Saxo's contract changed, so retrying immediately
+    would not help; needs a code fix or user action instead."""
+
+
+_TRANSIENT_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+
+
 def _base_urls():
     return ENVIRONMENTS[settings.SAXO_ENVIRONMENT]
 
@@ -47,19 +62,31 @@ def _api_base_url():
 
 
 def _request(send, url, error_class, label, **kwargs):
+    """error_class is SaxoAuthError for a token request (no transient/
+    permanent split - refresh_saxo_token handles its own failures explicitly
+    and it is never in Celery's autoretry_for) or SaxoAPIError for an API
+    call, which is split into SaxoTransientError/SaxoPermanentError below."""
+    splits_by_failure_type = error_class is SaxoAPIError
+
     try:
         response = send(url, timeout=REQUEST_TIMEOUT, **kwargs)
     except requests.RequestException as exc:
-        raise error_class(f'{label} failed: {exc}') from exc
+        cls = SaxoTransientError if splits_by_failure_type else error_class
+        raise cls(f'{label} failed: {exc}') from exc
 
     if not response.ok:
         body = response.text[:ERROR_BODY_LIMIT]
-        raise error_class(f'{label} failed: {response.status_code} {body}')
+        if splits_by_failure_type:
+            cls = SaxoTransientError if response.status_code in _TRANSIENT_STATUSES else SaxoPermanentError
+        else:
+            cls = error_class
+        raise cls(f'{label} failed: {response.status_code} {body}')
 
     try:
         return response.json()
     except ValueError as exc:
-        raise error_class(f'{label} returned a non-JSON body') from exc
+        cls = SaxoPermanentError if splits_by_failure_type else error_class
+        raise cls(f'{label} returned a non-JSON body') from exc
 
 
 def _token_request(grant, label):
