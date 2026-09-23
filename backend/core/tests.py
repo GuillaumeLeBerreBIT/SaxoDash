@@ -12,7 +12,7 @@ from django.core.management.base import CommandError
 
 from .models import NetWorthSnapshot
 from .money import CurrencyMismatch, Money
-from .services import ensure_todays_snapshot
+from .services import current_net_worth, ensure_todays_snapshot
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.services import get_portfolio_value
 from accounts.models import BankAccount
@@ -61,6 +61,7 @@ class EnsureTodaysSnapshotTest(TestCase):
         self.assertEqual(snap.portfolio_value, Decimal('1500.00'))
         self.assertEqual(snap.bank_total, Decimal('2500.00'))
         self.assertEqual(snap.net_worth, Decimal('4000.00'))
+        self.assertEqual(snap.net_worth_basis, NetWorthSnapshot.Basis.APPROXIMATE)
 
     def test_is_idempotent_for_same_day(self):
         ensure_todays_snapshot()
@@ -209,6 +210,65 @@ class MoneyTest(TestCase):
         self.assertEqual(converted, Money(Decimal('86.00'), 'EUR'))
 
 
+class CurrentNetWorthBasisTest(TestCase):
+    """The headline total must equal bank + Saxo's own cash+positions figure
+    when Saxo has one - not bank + positions-only, which drops idle Saxo
+    cash entirely. See docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
+
+    def setUp(self):
+        Position.objects.create(
+            ticker='NVDA', name='NVIDIA', qty=10,
+            avg_cost=Decimal('100.00'), current_price=Decimal('150.00'),
+            sector='Technology', type='STOCK', color='#76b900',
+        )
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+
+    def test_total_is_bank_plus_saxo_account_value_when_available(self):
+        # Positions alone are worth 1500.00, but 900.00 of Saxo cash is idle -
+        # the old formula (portfolio_value + bank) would silently drop it.
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('900.00'),
+            positions_value=Decimal('1500.00'),
+            total_value=Decimal('2400.00'),
+        )
+        net_worth = current_net_worth()
+        self.assertEqual(net_worth.total, Money(Decimal('4900.00'), 'EUR'))  # 2500 bank + 2400 saxo
+        self.assertEqual(net_worth.basis, NetWorthSnapshot.Basis.RECONCILED)
+
+    def test_total_falls_back_to_approximate_when_saxo_value_unusable(self):
+        # No PortfolioValuation row at all - first run / demo data / SIM
+        # never synced. portfolio_value still falls back to local marks.
+        net_worth = current_net_worth()
+        self.assertEqual(net_worth.total, Money(Decimal('4000.00'), 'EUR'))  # 2500 bank + 1500 positions
+        self.assertEqual(net_worth.basis, NetWorthSnapshot.Basis.APPROXIMATE)
+
+    def test_zero_bank_balance(self):
+        BankAccount.objects.all().delete()
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('0'), positions_value=Decimal('1500.00'),
+            total_value=Decimal('1500.00'),
+        )
+        net_worth = current_net_worth()
+        self.assertEqual(net_worth.total, Money(Decimal('1500.00'), 'EUR'))
+        self.assertEqual(net_worth.basis, NetWorthSnapshot.Basis.RECONCILED)
+
+    def test_zero_portfolio_is_still_reconciled_from_bank_plus_saxo_cash(self):
+        # All-cash Saxo account: positions_value 0, cash_balance is the whole total.
+        PortfolioValuation.objects.create(
+            source=SAXO_SOURCE, currency='EUR',
+            cash_balance=Decimal('500.00'), positions_value=Decimal('0'),
+            total_value=Decimal('500.00'),
+        )
+        net_worth = current_net_worth()
+        self.assertEqual(net_worth.total, Money(Decimal('3000.00'), 'EUR'))  # 2500 bank + 500 saxo
+        self.assertEqual(net_worth.basis, NetWorthSnapshot.Basis.RECONCILED)
+
+
 class NetWorthCurrencyTest(TestCase):
     """The bug this whole change exists for: USD added to EUR without a rate."""
 
@@ -241,9 +301,15 @@ class PortfolioValuationPreferenceTest(TestCase):
             sector='Technology', type='STOCK', color='#00a4ef',
             currency='USD', fx_rate=Decimal('0.8600895'),
         )
+        # A real external bank, not a synthetic "Saxo" BankAccount - Saxo's
+        # own cash is represented by PortfolioValuation.cash_balance /
+        # saxo_account_value, never by a BankAccount row, in production.
+        # (Before the net-worth-basis fix, this fixture used a fake "Saxo"
+        # BankAccount whose balance happened to equal cash_balance below -
+        # that would now double-count the same cash twice.)
         BankAccount.objects.create(
-            bank='Saxo', type='Cash', iban_masked='-',
-            balance=Decimal('968435.55'), available=Decimal('968435.55'),
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
     def test_uses_saxos_own_figure_when_there_is_one(self):
@@ -256,11 +322,17 @@ class PortfolioValuationPreferenceTest(TestCase):
         snapshot = ensure_todays_snapshot()
 
         self.assertEqual(snapshot.portfolio_value, Decimal('31571.91'))
-        self.assertEqual(snapshot.net_worth, Decimal('1000007.46'))
+        # bank (2500.00) + saxo_account_value (1000007.46), not
+        # portfolio_value (31571.91) + bank - the old formula silently
+        # dropped the 968435.55 of idle Saxo cash from the headline.
+        self.assertEqual(snapshot.net_worth, Decimal('1002507.46'))
+        self.assertEqual(snapshot.net_worth_basis, NetWorthSnapshot.Basis.RECONCILED)
 
     def test_falls_back_to_our_own_marks_when_unsynced(self):
         snapshot = ensure_todays_snapshot()
         self.assertEqual(snapshot.portfolio_value, Decimal('8774.46'))
+        self.assertEqual(snapshot.net_worth, Decimal('11274.46'))  # 8774.46 + 2500.00 bank
+        self.assertEqual(snapshot.net_worth_basis, NetWorthSnapshot.Basis.APPROXIMATE)
 
 
 class SnapshotRefreshesTest(TestCase):
@@ -275,6 +347,7 @@ class SnapshotRefreshesTest(TestCase):
     def test_a_later_call_the_same_day_updates_the_row(self):
         first = ensure_todays_snapshot()
         self.assertEqual(first.net_worth, Decimal('1000.00'))
+        self.assertEqual(first.net_worth_basis, NetWorthSnapshot.Basis.APPROXIMATE)
 
         BankAccount.objects.update(balance=Decimal('1500.00'))
         second = ensure_todays_snapshot()
