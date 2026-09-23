@@ -160,6 +160,8 @@ class NetWorthHistoryAPITest(APITestCase):
         response = self.client.get('/api/core/net-worth-history/?range=ALL')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 5)
+        self.assertIn('net_worth_basis', response.data[0])
+        self.assertIn('saxo_account_value', response.data[0])
 
     def test_1m_range_filters_to_last_30_days(self):
         response = self.client.get('/api/core/net-worth-history/?range=1M')

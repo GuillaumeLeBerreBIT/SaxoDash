@@ -33,5 +33,10 @@ class NetWorthView(APIView):
         return Response({
             'portfolio_value': net_worth.portfolio.rounded().amount,
             'bank_total': net_worth.bank.rounded().amount,
+            'saxo_account_value': (
+                net_worth.saxo_account_value.rounded().amount
+                if net_worth.saxo_account_value is not None else None
+            ),
             'net_worth': net_worth.total.rounded().amount,
+            'net_worth_basis': net_worth.basis,
         })

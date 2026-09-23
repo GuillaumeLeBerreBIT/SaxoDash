@@ -71,6 +71,8 @@ class AccountsAPITest(APITestCase):
         self.assertEqual(response.data['portfolio_value'], Decimal('1500.00'))
         self.assertEqual(response.data['bank_total'], Decimal('3000.00'))
         self.assertEqual(response.data['net_worth'], Decimal('4500.00'))
+        self.assertEqual(response.data['net_worth_basis'], 'approximate')
+        self.assertIsNone(response.data['saxo_account_value'])
 
 class SaxoExternalIdBackfillTest(TestCase):
     """Covers the 0004 data migration, which deletes rows."""
