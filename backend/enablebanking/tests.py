@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
+import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from django.test import TestCase, override_settings
@@ -168,6 +169,40 @@ class EnableBankingClientTest(TestCase):
             client.get_balances('sess-1', 'acc-1')
 
 
+class EnableBankingAPIErrorClassificationTest(TestCase):
+    """Only network failures, timeouts, 429, and 5xx should be retried by
+    Celery - a 4xx means the request itself is wrong (or the session needs
+    re-auth) and retrying immediately cannot help. See
+    docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
+
+    @patch('enablebanking.client.requests.get')
+    def test_a_500_response_is_transient(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=500, text='Internal error')
+        with self.assertRaises(client.EnableBankingTransientError):
+            client.get_balances('sess-1', 'acc-1')
+
+    @patch('enablebanking.client.requests.get')
+    def test_a_429_response_is_transient(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=429, text='Rate limited')
+        with self.assertRaises(client.EnableBankingTransientError):
+            client.get_balances('sess-1', 'acc-1')
+
+    @patch('enablebanking.client.requests.get')
+    def test_a_400_response_is_permanent(self, mock_get):
+        mock_get.return_value = Mock(ok=False, status_code=400, text='Bad request')
+        with self.assertRaises(client.EnableBankingPermanentError):
+            client.get_balances('sess-1', 'acc-1')
+
+    @patch('enablebanking.client.requests.get', side_effect=requests.ConnectionError('refused'))
+    def test_a_network_error_is_transient(self, mock_get):
+        with self.assertRaises(client.EnableBankingTransientError):
+            client.get_balances('sess-1', 'acc-1')
+
+    def test_both_are_still_enablebanking_api_errors(self):
+        self.assertTrue(issubclass(client.EnableBankingTransientError, client.EnableBankingAPIError))
+        self.assertTrue(issubclass(client.EnableBankingPermanentError, client.EnableBankingAPIError))
+
+
 class ToAccountFieldsTest(TestCase):
     def test_maps_core_fields(self):
         fields = mapping.to_account_fields('kbc', SAMPLE_ACCOUNT, SAMPLE_BALANCES)
@@ -259,9 +294,49 @@ class SyncEnableBankingBalancesTaskTest(TestCase):
         )
         tasks.sync_enablebanking_balances()
 
-        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'ok')
+        # KBC's only linked account failed - a real outage for KBC, not
+        # 'nothing new since last sync' (see the two tests below).
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'failed')
         self.assertEqual(BankSyncRun.objects.get(bank='kbc').rows, 0)
         self.assertEqual(BankSyncRun.objects.get(bank='argenta').outcome, 'ok')
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_every_account_failing_is_recorded_as_failed_not_ok(self, mock_get_balances):
+        # A total outage must not look like an ordinary quiet sync
+        # (outcome='ok', rows=0) - that gap is exactly how the real
+        # multi-day Saxo re-auth lapse went unnoticed.
+        mock_get_balances.side_effect = tasks.client.EnableBankingAPIError('down')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT, {**LINKED_ACCOUNT, 'uid': 'acc-2'}],
+        )
+        tasks.sync_enablebanking_balances()
+
+        run = BankSyncRun.objects.get(bank='kbc')
+        self.assertEqual(run.outcome, 'failed')
+        self.assertEqual(run.rows, 0)
+        self.assertIn('down', run.detail)
+
+    @patch('enablebanking.tasks.mapping.to_account_fields')
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_one_of_two_accounts_failing_is_still_ok_with_a_note(
+        self, mock_get_balances, mock_to_fields
+    ):
+        mock_get_balances.side_effect = [tasks.client.EnableBankingAPIError('down'), BALANCES]
+        mock_to_fields.return_value = {
+            'bank': 'KBC', 'type': 'Current account', 'iban_masked': '-',
+            'balance': Decimal('100.00'), 'available': Decimal('100.00'), 'currency': 'EUR',
+        }
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT, {**LINKED_ACCOUNT, 'uid': 'acc-2'}],
+        )
+        tasks.sync_enablebanking_balances()
+
+        run = BankSyncRun.objects.get(bank='kbc')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 1)
+        self.assertIn('1 account(s) failed', run.detail)
 
 
 class EnableBankingConnectTicketViewTest(APITestCase):

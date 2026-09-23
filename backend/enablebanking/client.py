@@ -27,6 +27,19 @@ class EnableBankingAPIError(Exception):
     """Raised when an Enable Banking API request fails."""
 
 
+class EnableBankingTransientError(EnableBankingAPIError):
+    """A network failure, timeout, rate limit, or Enable-Banking-side (5xx)
+    error - worth an automatic retry."""
+
+
+class EnableBankingPermanentError(EnableBankingAPIError):
+    """A 4xx response - the request itself is wrong or the session needs
+    re-authentication, so an immediate retry would not help."""
+
+
+_TRANSIENT_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+
+
 def _jwt():
     """A fresh RS256 JWT, signed per-request - Enable Banking has no OAuth2
     client-secret exchange; this JWT *is* the app-level authentication, valid
@@ -47,18 +60,23 @@ def _headers(extra=None):
 def _raise_for_status(response, label):
     if not response.ok:
         body = response.text[:ERROR_BODY_LIMIT]
-        raise EnableBankingAPIError(f'{label} failed: {response.status_code} {body}')
+        cls = (
+            EnableBankingTransientError if response.status_code in _TRANSIENT_STATUSES
+            else EnableBankingPermanentError
+        )
+        raise cls(f'{label} failed: {response.status_code} {body}')
 
 
 def _call(fn, *args, **kwargs):
     """Wraps a requests call so a network-level failure (timeout, DNS,
-    connection reset) raises EnableBankingAPIError like an HTTP-status
-    failure already does via _raise_for_status - callers (task retry logic,
-    per-account skip-and-continue) only need to handle one exception type."""
+    connection reset) raises EnableBankingTransientError like a 5xx/429
+    already does via _raise_for_status - callers (task retry logic,
+    per-account skip-and-continue) only need to handle one base class,
+    EnableBankingAPIError, if they don't care about the distinction."""
     try:
         return fn(*args, **kwargs)
     except requests.exceptions.RequestException as exc:
-        raise EnableBankingAPIError(f'Request failed: {exc}') from exc
+        raise EnableBankingTransientError(f'Request failed: {exc}') from exc
 
 
 def _valid_until_180_days():

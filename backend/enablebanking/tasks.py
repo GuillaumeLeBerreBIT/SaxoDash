@@ -28,11 +28,13 @@ def _sync_one_bank(bank):
 
     credential = state.credential
     rows = 0
+    errors = []
     for account in credential.linked_accounts:
         try:
             balance_response = client.get_balances(credential.session_id, account['uid'])
         except client.EnableBankingAPIError as exc:
             logger.warning('Skipping %s account %s: %s', bank, account['uid'], exc)
+            errors.append(str(exc))
             continue
 
         fields = mapping.to_account_fields(bank, account, balance_response)
@@ -41,10 +43,18 @@ def _sync_one_bank(bank):
         )
         rows += 1
 
+    if errors and rows == 0:
+        # Every account failed - a real outage, not "nothing new since last
+        # sync". Must not read as 'ok', or a real multi-day outage looks
+        # exactly like a healthy quiet sync (see the 2026-09 Saxo incident
+        # this exact gap caused).
+        return 'failed', '; '.join(errors)[:200], 0
+    if errors:
+        return 'ok', f'{len(errors)} account(s) failed: ' + '; '.join(errors)[:150], rows
     return 'ok', '', rows
 
 
-@shared_task(autoretry_for=(client.EnableBankingAPIError,), retry_backoff=True, max_retries=3)
+@shared_task(autoretry_for=(client.EnableBankingTransientError,), retry_backoff=True, max_retries=3)
 def sync_enablebanking_balances():
     total = 0
     for bank in credentials.BANKS:
@@ -103,7 +113,7 @@ def _persist(batch):
         )
 
 
-@shared_task(autoretry_for=(client.EnableBankingAPIError,), retry_backoff=True, max_retries=3)
+@shared_task(autoretry_for=(client.EnableBankingTransientError,), retry_backoff=True, max_retries=3)
 def sync_enablebanking_transactions():
     all_new = []
     run_info = []  # (bank, outcome, detail, rows), recorded after persisting
