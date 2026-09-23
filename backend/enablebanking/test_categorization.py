@@ -52,6 +52,17 @@ class CategorizeTest(TestCase):
         self.assertEqual(categorize('JACK & JONES BRUGGE', '', Decimal('-50')), 'SHOPPING')
         self.assertEqual(categorize('ABERCROMBIE', '', Decimal('-50')), 'SHOPPING')
 
+    def test_matches_amazon_prime_with_no_space_before_the_country_suffix(self):
+        # Real KBC data (2026-09-22): "AmazonPrimeBE", not "Amazon Prime BE" -
+        # the existing 'AMAZON PRIME' keyword (with a space) never matches
+        # it, so it fell through to SHOPPING's bare 'AMAZON' instead.
+        self.assertEqual(categorize('AmazonPrimeBE', '', Decimal('-2.99')), 'SUBSCRIPTIONS')
+
+    def test_matches_anthropic_claude_subscription(self):
+        # Real KBC data (2026-09-22): "ANTHROPIC* CLAUDE SUB" - the '*' is a
+        # card-network merchant-category marker, not part of the name.
+        self.assertEqual(categorize('ANTHROPIC* CLAUDE SUB', '', Decimal('-22.39')), 'SUBSCRIPTIONS')
+
     def test_matches_salary_from_the_users_own_employer(self):
         # Confirmed by the user 2026-09-22. Real KBC memo text ("WEDDE" /
         # "LOON" = Dutch for wage/salary) is the strongest signal, but the
