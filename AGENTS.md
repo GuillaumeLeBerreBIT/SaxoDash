@@ -74,12 +74,15 @@ recipe.
 
 ## Code style
 
-Keep inline comments short. Add one only when the code genuinely can't say it
-itself — a non-obvious "why", a gotcha, a reference. Don't narrate what the
-code does, and don't paste multi-line rationale into a comment: that
-explanation belongs in the chat or PR description, not the source. (Some
-existing comments are more verbose than this — don't treat them as a
-template.)
+Generated code carries zero comments. Say it through names, structure and
+tests; the "why" goes in the chat or PR description, not the source. This
+covers new code and edits alike: when touching a function, leave its existing
+comments as they are and write none beside them.
+
+Exceptions: tool directives that change behaviour (`# noqa`, `# type: ignore`,
+`// eslint-disable-next-line`) and a comment the user asks for by name.
+
+Existing comments are legacy, not a template.
 
 ## Learning workspace (`learning/`, gitignored)
 
