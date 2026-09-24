@@ -9,7 +9,8 @@ To change a schedule: edit PERIODIC_TASKS here, then run
 `python manage.py sync_periodic_tasks` (or add a migration that calls
 sync_periodic_tasks() so existing environments pick it up automatically).
 """
-from django_celery_beat.models import CrontabSchedule, IntervalSchedule, PeriodicTask
+from django.apps import apps as global_apps
+from django_celery_beat.models import IntervalSchedule
 
 # Name -> {task, and either 'interval': (every, period) or 'crontab': {...}}.
 # Every entry here is exactly what was live in the dev database on
@@ -71,7 +72,7 @@ _UNMANAGED_TASK_PREFIXES = ('celery.',)
 _DEAD_TASKS = ('saxo.tasks.sync_transactions',)
 
 
-def sync_periodic_tasks(stdout=None):
+def sync_periodic_tasks(stdout=None, apps=global_apps):
     """Create/update every task in PERIODIC_TASKS, remove the known dead
     task, and warn (never silently delete) about anything else enabled in
     the DB that this module doesn't recognize - most likely drift from an
@@ -80,29 +81,33 @@ def sync_periodic_tasks(stdout=None):
         if stdout is not None:
             stdout.write(msg)
 
+    interval_model = apps.get_model('django_celery_beat', 'IntervalSchedule')
+    crontab_model = apps.get_model('django_celery_beat', 'CrontabSchedule')
+    task_model = apps.get_model('django_celery_beat', 'PeriodicTask')
+
     for name, spec in PERIODIC_TASKS.items():
         defaults = {'task': spec['task'], 'enabled': True}
         if 'interval' in spec:
             every, period = spec['interval']
-            schedule, _ = IntervalSchedule.objects.get_or_create(every=every, period=period)
+            schedule, _ = interval_model.objects.get_or_create(every=every, period=period)
             defaults['interval'] = schedule
             defaults['crontab'] = None
         else:
             crontab = spec['crontab']
-            schedule, _ = CrontabSchedule.objects.get_or_create(
+            schedule, _ = crontab_model.objects.get_or_create(
                 minute=crontab['minute'], hour=crontab['hour'],
                 day_of_week='*', day_of_month='*', month_of_year='*',
             )
             defaults['crontab'] = schedule
             defaults['interval'] = None
-        PeriodicTask.objects.update_or_create(name=name, defaults=defaults)
+        task_model.objects.update_or_create(name=name, defaults=defaults)
         log(f'  {name}: ok')
 
-    removed, _ = PeriodicTask.objects.filter(task__in=_DEAD_TASKS).delete()
+    removed, _ = task_model.objects.filter(task__in=_DEAD_TASKS).delete()
     if removed:
         log(f'  removed {removed} stale row(s) for {", ".join(_DEAD_TASKS)}')
 
-    orphans = PeriodicTask.objects.exclude(name__in=PERIODIC_TASKS).filter(enabled=True)
+    orphans = task_model.objects.exclude(name__in=PERIODIC_TASKS).filter(enabled=True)
     for orphan in orphans:
         if orphan.task.startswith(_UNMANAGED_TASK_PREFIXES):
             continue

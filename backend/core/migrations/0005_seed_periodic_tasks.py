@@ -5,7 +5,7 @@ from django.db import migrations
 
 def seed(apps, schema_editor):
     from core.scheduling import sync_periodic_tasks
-    sync_periodic_tasks()
+    sync_periodic_tasks(apps=apps)
 
 
 def noop(apps, schema_editor):
