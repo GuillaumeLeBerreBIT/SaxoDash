@@ -43,11 +43,11 @@ def _sync_one_bank(bank):
         )
         rows += 1
 
-    if errors and rows == 0:
-        # Every account failed - a real outage, not "nothing new since last
-        # sync". Must not read as 'ok', or a real multi-day outage looks
-        # exactly like a healthy quiet sync (see the 2026-09 Saxo incident
-        # this exact gap caused).
+    return _outcome(errors, succeeded=rows, rows=rows)
+
+
+def _outcome(errors, succeeded, rows):
+    if errors and succeeded == 0:
         return 'failed', '; '.join(errors)[:200], 0
     if errors:
         return 'ok', f'{len(errors)} account(s) failed: ' + '; '.join(errors)[:150], rows
@@ -126,13 +126,18 @@ def sync_enablebanking_transactions():
             continue
 
         bank_batch = []
+        errors = []
+        succeeded = 0
         for account in state.credential.linked_accounts:
             try:
                 bank_batch += _fetch_transactions_for_account(bank, state.credential, account)
             except client.EnableBankingAPIError as exc:
                 logger.warning('Skipping %s account %s transactions: %s', bank, account['uid'], exc)
+                errors.append(str(exc))
+                continue
+            succeeded += 1
 
-        run_info.append((bank, 'ok', '', len(bank_batch)))
+        run_info.append((bank, *_outcome(errors, succeeded, len(bank_batch))))
         all_new += bank_batch
 
     # Every bank's new transactions are combined before transfer detection

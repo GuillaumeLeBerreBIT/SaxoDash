@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from accounts.models import BankAccount
 
+from . import client
 from .models import BankSyncRun, BankTransaction, EnableBankingCredential
 from .tasks import sync_enablebanking_transactions
 
@@ -70,6 +71,29 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
 
         self.assertEqual(mock_iter.call_args.kwargs.get('date_from'), '2026-01-05')
         self.assertIsNone(mock_iter.call_args.kwargs.get('strategy'))
+
+    @patch('enablebanking.tasks.client.iter_transactions')
+    def test_every_account_failing_is_recorded_as_failed_not_ok(self, mock_iter):
+        mock_iter.side_effect = client.EnableBankingTransientError('503 upstream')
+        sync_enablebanking_transactions()
+        run = BankSyncRun.objects.get(bank='kbc', kind='transactions')
+        self.assertEqual(run.outcome, 'failed')
+        self.assertIn('503 upstream', run.detail)
+
+    @patch('enablebanking.tasks.client.iter_transactions')
+    def test_a_partial_failure_stays_ok_but_names_the_failure(self, mock_iter):
+        self.credential.linked_accounts = [LINKED_ACCOUNT, {**LINKED_ACCOUNT, 'uid': 'acc-2'}]
+        self.credential.save()
+        BankAccount.objects.create(
+            bank='KBC', type='Savings', iban_masked='BE12 •••• •••• 0002',
+            balance=0, available=0, external_id='enablebanking:kbc:acc-2',
+        )
+        mock_iter.side_effect = [iter([RAW_TX]), client.EnableBankingPermanentError('404 gone')]
+        sync_enablebanking_transactions()
+        run = BankSyncRun.objects.get(bank='kbc', kind='transactions')
+        self.assertEqual(run.outcome, 'ok')
+        self.assertEqual(run.rows, 1)
+        self.assertIn('1 account(s) failed', run.detail)
 
     @patch('enablebanking.tasks.client.iter_transactions')
     def test_rerun_upserts_rather_than_duplicating(self, mock_iter):
