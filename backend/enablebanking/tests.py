@@ -326,6 +326,43 @@ class SyncEnableBankingBalancesTaskTest(TestCase):
         self.assertEqual(BankSyncRun.objects.get(bank='argenta').outcome, 'ok')
 
     @patch('enablebanking.tasks.client.get_balances')
+    def test_a_transient_total_outage_is_recorded_then_retried(self, mock_get_balances):
+        mock_get_balances.side_effect = client.EnableBankingTransientError('503')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        with self.assertRaises(client.EnableBankingTransientError):
+            tasks.sync_enablebanking_balances()
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'failed')
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_a_permanent_total_outage_is_recorded_but_not_retried(self, mock_get_balances):
+        mock_get_balances.side_effect = client.EnableBankingPermanentError('401')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'failed')
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_a_partial_transient_failure_is_not_retried(self, mock_get_balances):
+        mock_get_balances.side_effect = [
+            client.EnableBankingTransientError('503'), {'balances': []},
+        ]
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT, {**LINKED_ACCOUNT, 'uid': 'acc-2'}],
+        )
+        with patch('enablebanking.tasks.mapping.to_account_fields', return_value={
+            'bank': 'KBC', 'type': 'Checking', 'iban_masked': '-',
+            'balance': Decimal('1'), 'available': Decimal('1'),
+        }):
+            tasks.sync_enablebanking_balances()
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').outcome, 'ok')
+
+    @patch('enablebanking.tasks.client.get_balances')
     def test_every_account_failing_is_recorded_as_failed_not_ok(self, mock_get_balances):
         # A total outage must not look like an ordinary quiet sync
         # (outcome='ok', rows=0) - that gap is exactly how the real

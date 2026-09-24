@@ -15,7 +15,7 @@ def _sync_one_bank(bank):
     state = credentials.connection_state(bank)
 
     if not state.connected:
-        return 'skipped', state.reason, 0
+        return ('skipped', state.reason, 0), None
 
     if state.needs_reauth:
         if not state.credential.needs_reauth:
@@ -24,7 +24,7 @@ def _sync_one_bank(bank):
             # second sync tick.
             state.credential.needs_reauth = True
             state.credential.save(update_fields=['needs_reauth'])
-        return 'skipped', state.reason, 0
+        return ('skipped', state.reason, 0), None
 
     credential = state.credential
     rows = 0
@@ -34,7 +34,7 @@ def _sync_one_bank(bank):
             balance_response = client.get_balances(credential.session_id, account['uid'])
         except client.EnableBankingAPIError as exc:
             logger.warning('Skipping %s account %s: %s', bank, account['uid'], exc)
-            errors.append(str(exc))
+            errors.append(exc)
             continue
 
         fields = mapping.to_account_fields(bank, account, balance_response)
@@ -43,24 +43,42 @@ def _sync_one_bank(bank):
         )
         rows += 1
 
-    return _outcome(errors, succeeded=rows, rows=rows)
+    return _outcome(errors, succeeded=rows, rows=rows), _transient_outage(errors, succeeded=rows)
 
 
 def _outcome(errors, succeeded, rows):
+    messages = '; '.join(str(error) for error in errors)
     if errors and succeeded == 0:
-        return 'failed', '; '.join(errors)[:200], 0
+        return 'failed', messages[:200], 0
     if errors:
-        return 'ok', f'{len(errors)} account(s) failed: ' + '; '.join(errors)[:150], rows
+        return 'ok', f'{len(errors)} account(s) failed: ' + messages[:150], rows
     return 'ok', '', rows
+
+
+def _transient_outage(errors, succeeded):
+    if succeeded == 0 and errors and all(
+        isinstance(error, client.EnableBankingTransientError) for error in errors
+    ):
+        return errors[-1]
+    return None
+
+
+def _retry_on(outages):
+    outage = next((outage for outage in outages if outage is not None), None)
+    if outage is not None:
+        raise outage
 
 
 @shared_task(autoretry_for=(client.EnableBankingTransientError,), retry_backoff=True, max_retries=3)
 def sync_enablebanking_balances():
     total = 0
+    outages = []
     for bank in credentials.BANKS:
-        outcome, detail, rows = _sync_one_bank(bank)
+        (outcome, detail, rows), outage = _sync_one_bank(bank)
         BankSyncRun.objects.create(bank=bank, outcome=outcome, detail=(detail or '')[:200], rows=rows)
+        outages.append(outage)
         total += rows
+    _retry_on(outages)
     return total
 
 
@@ -116,6 +134,7 @@ def _persist(batch):
 @shared_task(autoretry_for=(client.EnableBankingTransientError,), retry_backoff=True, max_retries=3)
 def sync_enablebanking_transactions():
     all_new = []
+    outages = []
     run_info = []  # (bank, outcome, detail, rows), recorded after persisting
 
     for bank in credentials.BANKS:
@@ -133,11 +152,12 @@ def sync_enablebanking_transactions():
                 bank_batch += _fetch_transactions_for_account(bank, state.credential, account)
             except client.EnableBankingAPIError as exc:
                 logger.warning('Skipping %s account %s transactions: %s', bank, account['uid'], exc)
-                errors.append(str(exc))
+                errors.append(exc)
                 continue
             succeeded += 1
 
         run_info.append((bank, *_outcome(errors, succeeded, len(bank_batch))))
+        outages.append(_transient_outage(errors, succeeded))
         all_new += bank_batch
 
     # Every bank's new transactions are combined before transfer detection
@@ -149,6 +169,7 @@ def sync_enablebanking_transactions():
     for bank, outcome, detail, rows in run_info:
         BankSyncRun.objects.create(bank=bank, kind='transactions', outcome=outcome, detail=detail[:200], rows=rows)
 
+    _retry_on(outages)
     return len(all_new)
 
 

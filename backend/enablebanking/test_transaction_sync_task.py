@@ -74,8 +74,17 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
 
     @patch('enablebanking.tasks.client.iter_transactions')
     def test_every_account_failing_is_recorded_as_failed_not_ok(self, mock_iter):
-        mock_iter.side_effect = client.EnableBankingTransientError('503 upstream')
+        mock_iter.side_effect = client.EnableBankingPermanentError('404 gone')
         sync_enablebanking_transactions()
+        run = BankSyncRun.objects.get(bank='kbc', kind='transactions')
+        self.assertEqual(run.outcome, 'failed')
+        self.assertIn('404 gone', run.detail)
+
+    @patch('enablebanking.tasks.client.iter_transactions')
+    def test_a_transient_total_outage_is_recorded_then_retried(self, mock_iter):
+        mock_iter.side_effect = client.EnableBankingTransientError('503 upstream')
+        with self.assertRaises(client.EnableBankingTransientError):
+            sync_enablebanking_transactions()
         run = BankSyncRun.objects.get(bank='kbc', kind='transactions')
         self.assertEqual(run.outcome, 'failed')
         self.assertIn('503 upstream', run.detail)
