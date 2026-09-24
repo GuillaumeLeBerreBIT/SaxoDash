@@ -42,13 +42,23 @@ def backup_database():
     stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')
     dest_path = backup_dir / f'db-{stamp}.sqlite3'
 
-    source = sqlite3.connect(str(settings.DATABASES['default']['NAME']))
-    dest = sqlite3.connect(str(dest_path))
+    source_path = Path(settings.DATABASES['default']['NAME'])
+    if not source_path.exists():
+        raise FileNotFoundError(f'No database to back up at {source_path}')
+
+    partial_path = dest_path.with_suffix('.partial')
+    source = sqlite3.connect(str(source_path))
+    dest = sqlite3.connect(str(partial_path))
     try:
         source.backup(dest)
+    except BaseException:
+        dest.close()
+        partial_path.unlink(missing_ok=True)
+        raise
     finally:
         dest.close()
         source.close()
+    partial_path.replace(dest_path)
 
     logger.info('Database backed up to %s', dest_path)
     _prune(backup_dir)

@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from django.test import override_settings
 
@@ -95,3 +96,37 @@ class BackupDatabaseTest(unittest.TestCase):
             ):
                 path = backup_database()
                 self.assertTrue(path.exists())
+
+    def test_a_failed_backup_leaves_nothing_that_looks_like_a_backup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'source.sqlite3'
+            self._make_source_db(source)
+            backup_dir = Path(tmp) / 'backups'
+            real_connect = sqlite3.connect
+            broken_source = MagicMock()
+            broken_source.backup.side_effect = sqlite3.OperationalError('disk I/O error')
+            connections = iter([broken_source])
+
+            def connect(path, *args, **kwargs):
+                return next(connections, None) or real_connect(path, *args, **kwargs)
+
+            with override_settings(
+                DATABASES={'default': {'NAME': source}},
+                DB_BACKUP_DIR=backup_dir, DB_BACKUP_RETAIN=14,
+            ), patch('core.backup.sqlite3.connect', side_effect=connect):
+                with self.assertRaises(sqlite3.OperationalError):
+                    backup_database()
+            self.assertEqual(list(backup_dir.iterdir()), [])
+
+    def test_a_missing_source_database_raises_instead_of_backing_up_an_empty_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'missing.sqlite3'
+            backup_dir = Path(tmp) / 'backups'
+            with override_settings(
+                DATABASES={'default': {'NAME': source}},
+                DB_BACKUP_DIR=backup_dir, DB_BACKUP_RETAIN=14,
+            ):
+                with self.assertRaises(FileNotFoundError):
+                    backup_database()
+            self.assertFalse(source.exists())
+            self.assertEqual(list(backup_dir.glob('db-*.sqlite3')), [])
