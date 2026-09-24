@@ -563,17 +563,21 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
     See docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
-    def test_headline_matches_todays_snapshot_exactly(self, _mock):
+    def test_headline_is_live_and_is_todays_point_of_the_delta_series(self, _mock):
         today = date.today()
         _snap(today - timedelta(days=1), '1500', bank=Decimal('2000.00'))
         _snap(today, '1500', bank=Decimal('2500.00'))
+        _pos('NVDA', '10', '100', '200')
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='-',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
 
         payload = insights.build_insights()
 
-        # Same row the delta series' last point comes from - same source,
-        # so headline and deltas cannot drift apart.
-        self.assertEqual(payload['value']['net_worth'], Decimal('4000.00'))
-        self.assertEqual(payload['change']['day']['abs'], Decimal('500.00'))
+        self.assertEqual(payload['value']['net_worth'], Decimal('4500.00'))
+        self.assertEqual(payload['change']['day']['abs'], Decimal('1000.00'))
+        self.assertEqual(payload['spark'][-1], {'date': today.isoformat(), 'value': 4500.0})
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_headline_is_computed_live_before_todays_snapshot_exists(self, _mock):

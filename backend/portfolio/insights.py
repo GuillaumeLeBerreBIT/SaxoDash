@@ -226,18 +226,6 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
     return items
 
 
-def _headline_net_worth(latest, today):
-    """The live 'right now' total, kept identical to the historical series'
-    last point whenever today's snapshot already exists - same source, so
-    the headline and its own deltas cannot describe two different
-    quantities. Falls back to a fresh live computation only before today's
-    snapshot exists yet (e.g. first request of the day, before the daily
-    snapshot task has run)."""
-    if latest and latest.date == today:
-        return latest.net_worth
-    return current_net_worth().total.rounded().amount
-
-
 def build_insights():
     positions = list(Position.objects.all())
     # net_worth (portfolio_value + bank_total), not saxo_account_value alone -
@@ -253,6 +241,9 @@ def build_insights():
     )
     latest = NetWorthSnapshot.objects.order_by('date').last()
     today = date.today()
+    net_worth_value = current_net_worth().total.rounded().amount
+    if pairs and pairs[-1][0] == today:
+        pairs[-1] = (today, net_worth_value)
 
     total = sum((p.value for p in positions), Decimal('0'))
     total_cost = sum((p.cost for p in positions), Decimal('0'))
@@ -260,7 +251,6 @@ def build_insights():
 
     portfolio_value = get_portfolio_value().rounded().amount
     bank = latest.bank_total if latest else Decimal('0')
-    net_worth_value = _headline_net_worth(latest, today)
 
     concentration = _concentration(positions, total)
     held_upper = {p.ticker.upper() for p in positions if p.ticker}
