@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.db.models import Count, Sum
 from django.db.models.functions import Abs, Coalesce, TruncMonth
+from django.utils import timezone
 
 from .models import BankTransaction, Budget, ManualIbanLabel
 
@@ -101,7 +102,7 @@ def _first_of_next_month(d):
 
 
 def budget_progress():
-    today = date.today()
+    today = timezone.localdate()
     start = _first_of_month(today)
     end = _first_of_next_month(today)
 

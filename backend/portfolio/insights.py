@@ -9,6 +9,8 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
+from django.utils import timezone
+
 from core.models import NetWorthSnapshot
 from core.services import current_net_worth
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
@@ -240,7 +242,7 @@ def build_insights():
         .values_list('date', 'net_worth')
     )
     latest = NetWorthSnapshot.objects.order_by('date').last()
-    today = date.today()
+    today = timezone.localdate()
     net_worth_value = current_net_worth().total.rounded().amount
     if pairs and pairs[-1][0] == today:
         pairs[-1] = (today, net_worth_value)
