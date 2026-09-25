@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
 
-from . import benchmarks, metrics, report
+from . import benchmarks, metrics, report, views
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -476,7 +476,7 @@ class RiskMetricsViewTest(APITestCase):
         self.assertFalse(response.data['has_data'])
 
     def test_computes_risk_from_portfolio_value_history(self):
-        for day, value in enumerate([100, 102, 101, 105, 103], start=1):
+        for day, value in enumerate([100, 102, 101, 105, 103], start=5):
             NetWorthSnapshot.objects.create(
                 date=date(2026, 1, day), portfolio_value=value,
                 saxo_account_value=value, bank_total=50, net_worth=value + 50,
@@ -643,3 +643,17 @@ class PerformanceReportTest(TestCase):
         self.assertEqual(out['benchmark']['key'], 'world')
         one_month = next(r for r in out['periods'] if r['label'] == '1 month')
         self.assertIsNone(one_month['benchmark_pct'])
+
+
+class PortfolioDatedValuesTest(TestCase):
+    def test_weekend_snapshots_are_left_out_of_the_trading_day_series(self):
+        friday = date(2026, 9, 18)
+        for offset, value in enumerate([100, 100, 100, 104]):
+            NetWorthSnapshot.objects.create(
+                date=friday + timedelta(days=offset),
+                portfolio_value=value, bank_total=0, net_worth=value, saxo_account_value=value,
+            )
+
+        dates = [d for d, _ in views._portfolio_dated_values()]
+
+        self.assertEqual(dates, [date(2026, 9, 18), date(2026, 9, 21)])

@@ -5,6 +5,8 @@ from core.models import NetWorthSnapshot
 
 from . import report
 
+WEEKEND = (1, 7)
+
 
 def _portfolio_dated_values():
     """The series risk/performance metrics are computed from.
@@ -20,6 +22,7 @@ def _portfolio_dated_values():
     return list(
         NetWorthSnapshot.objects
         .exclude(saxo_account_value__isnull=True)
+        .exclude(date__week_day__in=WEEKEND)
         .order_by('date')
         .values_list('date', 'saxo_account_value')
     )
