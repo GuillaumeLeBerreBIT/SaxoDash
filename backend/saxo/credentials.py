@@ -75,6 +75,9 @@ def last_successful_sync():
 _OUTCOME_RANK = ['failed', 'skipped', 'ok']
 
 
+SYNC_TASKS = ('sync_positions', 'sync_closed_positions', 'sync_account_balance')
+
+
 def latest_run_per_task():
     """The newest run of each sync task.
 
@@ -82,10 +85,7 @@ def latest_run_per_task():
     a sync_positions failing on every tick was hidden the moment a later
     sync_account_balance succeeded.
     """
-    latest = {}
-    for run in SyncRun.objects.all():
-        latest.setdefault(run.task, run)
-    return list(latest.values())
+    return [run for task in SYNC_TASKS if (run := SyncRun.objects.filter(task=task).first())]
 
 
 def worst_recent_outcome():

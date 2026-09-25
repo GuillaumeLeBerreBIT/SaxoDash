@@ -40,7 +40,10 @@ class SyncRun(models.Model):
 
     class Meta:
         ordering = ['-ran_at', '-id']
-        indexes = [models.Index(fields=['-ran_at', '-id'], name='syncrun_ran_at_desc_idx')]
+        indexes = [
+            models.Index(fields=['-ran_at', '-id'], name='syncrun_ran_at_desc_idx'),
+            models.Index(fields=['task', '-ran_at'], name='syncrun_task_ran_idx'),
+        ]
 
     def __str__(self):
         return f'{self.task} {self.outcome} at {self.ran_at}'

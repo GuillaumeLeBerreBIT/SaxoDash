@@ -60,10 +60,10 @@ def latest_run_per_kind(bank):
     bank. The newest run overall answers "what ran last", not "is anything
     broken" - a balances sync failing on every tick was hidden the moment a
     later transactions sync succeeded."""
-    latest = {}
-    for run in BankSyncRun.objects.filter(bank=bank):
-        latest.setdefault(run.kind, run)
-    return list(latest.values())
+    return [
+        run for kind, _ in BankSyncRun.KIND_CHOICES
+        if (run := BankSyncRun.objects.filter(bank=bank, kind=kind).first())
+    ]
 
 
 def worst_recent_outcome(bank):

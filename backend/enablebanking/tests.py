@@ -4,7 +4,9 @@ from unittest.mock import Mock, patch
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from decimal import Decimal
 
@@ -135,6 +137,18 @@ class WorstRecentOutcomePerBankTest(TestCase):
         BankSyncRun.objects.create(bank='argenta', kind='balances', outcome='failed')
         self.assertEqual(credentials.worst_recent_outcome('kbc'), 'ok')
         self.assertEqual(credentials.worst_recent_outcome('argenta'), 'failed')
+
+    def test_reads_one_row_per_kind_however_long_the_history(self):
+        BankSyncRun.objects.bulk_create(
+            BankSyncRun(bank='kbc', kind=kind, outcome='ok')
+            for kind, _ in BankSyncRun.KIND_CHOICES for _ in range(50)
+        )
+
+        with CaptureQueriesContext(connection) as queries:
+            runs = credentials.latest_run_per_kind('kbc')
+
+        self.assertEqual(len(runs), len(BankSyncRun.KIND_CHOICES))
+        self.assertTrue(all('LIMIT 1' in q['sql'] for q in queries.captured_queries))
 
 
 @override_settings(

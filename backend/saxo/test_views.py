@@ -227,3 +227,12 @@ class SaxoStatusFreshnessTest(APITestCase):
 
         response = self.client.get('/api/saxo/status/')
         self.assertTrue(response.data['needs_reauth'])
+
+    def test_a_retired_task_no_longer_counts_against_sync_health(self):
+        SyncRun.objects.create(task='sync_transactions', outcome='skipped', detail='retired')
+        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertEqual(response.data['last_sync_outcome'], 'ok')
+        self.assertEqual(response.data['failing_syncs'], [])

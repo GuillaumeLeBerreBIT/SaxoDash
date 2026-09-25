@@ -1,7 +1,9 @@
 from datetime import timedelta
 from decimal import Decimal
 from cryptography.fernet import Fernet
+from django.db import connection
 from django.test import TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from . import credentials
 from .models import SaxoCredential
@@ -58,3 +60,22 @@ class ActiveCredentialTest(TestCase):
 
         self.assertFalse(state.usable)
         self.assertTrue(state.needs_reauth)
+
+
+class LatestRunPerTaskTest(TestCase):
+    def test_reads_one_row_per_sync_task_however_long_the_history(self):
+        from .models import SyncRun
+        SyncRun.objects.bulk_create(
+            SyncRun(task=task, outcome='ok') for task in credentials.SYNC_TASKS for _ in range(50)
+        )
+
+        with CaptureQueriesContext(connection) as queries:
+            runs = credentials.latest_run_per_task()
+
+        self.assertEqual(sorted(run.task for run in runs), sorted(credentials.SYNC_TASKS))
+        self.assertTrue(all('LIMIT 1' in q['sql'] for q in queries.captured_queries))
+
+    def test_every_synced_task_is_a_declared_sync_task(self):
+        from .tasks import synced
+        with self.assertRaises(ValueError):
+            synced(lambda credential: 0)

@@ -12,7 +12,7 @@ from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
 
 from . import client, mapping
-from .credentials import SaxoNotConnected, active_credential
+from .credentials import SYNC_TASKS, SaxoNotConnected, active_credential
 from .models import SaxoCredential, SyncRun
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,9 @@ def synced(fn):
     keeps each task body to the work itself and makes a skip as visible as a
     completion. `fn` returns the number of rows it wrote.
     """
+    if fn.__name__ not in SYNC_TASKS:
+        raise ValueError(f'{fn.__name__} is not declared in saxo.credentials.SYNC_TASKS')
+
     @functools.wraps(fn)
     def run(*args, **kwargs):
         try:
