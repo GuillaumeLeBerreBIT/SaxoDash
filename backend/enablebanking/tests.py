@@ -232,6 +232,12 @@ class EnableBankingAPIErrorClassificationTest(TestCase):
         with self.assertRaises(client.EnableBankingPermanentError):
             client.get_balances('sess-1', 'acc-1')
 
+    @patch('enablebanking.client.requests.get')
+    def test_a_non_json_body_is_permanent(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=Mock(side_effect=ValueError('not json')))
+        with self.assertRaises(client.EnableBankingPermanentError):
+            client.get_balances('sess-1', 'acc-1')
+
     @patch('enablebanking.client.requests.get', side_effect=requests.ConnectionError('refused'))
     def test_a_network_error_is_transient(self, mock_get):
         with self.assertRaises(client.EnableBankingTransientError):

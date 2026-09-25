@@ -5,9 +5,9 @@ import jwt as pyjwt
 import requests
 from django.conf import settings
 
+from core.http_client import request_json
+
 API_BASE_URL = 'https://api.enablebanking.com'
-REQUEST_TIMEOUT = 10
-ERROR_BODY_LIMIT = 200
 
 # Verified live against GET /aspsps?country=BE (2026-09-17, Task 10 Step 2).
 # The listing also has a separate "KBC Brussels" entity, distinct from plain
@@ -37,9 +37,6 @@ class EnableBankingPermanentError(EnableBankingAPIError):
     re-authentication, so an immediate retry would not help."""
 
 
-_TRANSIENT_STATUSES = {408, 425, 429, 500, 502, 503, 504}
-
-
 def _jwt():
     """A fresh RS256 JWT, signed per-request - Enable Banking has no OAuth2
     client-secret exchange; this JWT *is* the app-level authentication, valid
@@ -57,26 +54,11 @@ def _headers(extra=None):
     return {'Authorization': f'Bearer {_jwt()}', **(extra or {})}
 
 
-def _raise_for_status(response, label):
-    if not response.ok:
-        body = response.text[:ERROR_BODY_LIMIT]
-        cls = (
-            EnableBankingTransientError if response.status_code in _TRANSIENT_STATUSES
-            else EnableBankingPermanentError
-        )
-        raise cls(f'{label} failed: {response.status_code} {body}')
-
-
-def _call(fn, *args, **kwargs):
-    """Wraps a requests call so a network-level failure (timeout, DNS,
-    connection reset) raises EnableBankingTransientError like a 5xx/429
-    already does via _raise_for_status - callers (task retry logic,
-    per-account skip-and-continue) only need to handle one base class,
-    EnableBankingAPIError, if they don't care about the distinction."""
-    try:
-        return fn(*args, **kwargs)
-    except requests.exceptions.RequestException as exc:
-        raise EnableBankingTransientError(f'Request failed: {exc}') from exc
+def _request(send, path, label, **kwargs):
+    return request_json(
+        send, f'{API_BASE_URL}{path}', label,
+        transient=EnableBankingTransientError, permanent=EnableBankingPermanentError, **kwargs,
+    )
 
 
 def _valid_until_180_days():
@@ -99,30 +81,18 @@ def build_authorize_url(bank, state, redirect_url, iban=None):
         'redirect_url': redirect_url,
         'psu_type': 'personal',
     }
-    response = _call(
-        requests.post, f'{API_BASE_URL}/auth', json=body, headers=_headers(), timeout=REQUEST_TIMEOUT,
-    )
-    _raise_for_status(response, 'Start authorization')
-    return response.json()['url']
+    return _request(requests.post, '/auth', 'Start authorization', json=body, headers=_headers())['url']
 
 
 def exchange_code_for_session(code):
-    response = _call(
-        requests.post, f'{API_BASE_URL}/sessions', json={'code': code}, headers=_headers(), timeout=REQUEST_TIMEOUT,
-    )
-    _raise_for_status(response, 'Session authorization')
-    return response.json()
+    return _request(requests.post, '/sessions', 'Session authorization', json={'code': code}, headers=_headers())
 
 
 def get_balances(session_id, account_uid):
-    response = _call(
-        requests.get,
-        f'{API_BASE_URL}/accounts/{account_uid}/balances',
+    return _request(
+        requests.get, f'/accounts/{account_uid}/balances', 'Get balances',
         headers=_headers({'X-Session-Id': session_id}),
-        timeout=REQUEST_TIMEOUT,
     )
-    _raise_for_status(response, 'Get balances')
-    return response.json()
 
 
 def get_transactions(session_id, account_uid, date_from=None, strategy=None, continuation_key=None):
@@ -134,15 +104,10 @@ def get_transactions(session_id, account_uid, date_from=None, strategy=None, con
     if continuation_key:
         params['continuation_key'] = continuation_key
 
-    response = _call(
-        requests.get,
-        f'{API_BASE_URL}/accounts/{account_uid}/transactions',
-        params=params,
-        headers=_headers({'X-Session-Id': session_id}),
-        timeout=REQUEST_TIMEOUT,
+    return _request(
+        requests.get, f'/accounts/{account_uid}/transactions', 'Get transactions',
+        params=params, headers=_headers({'X-Session-Id': session_id}),
     )
-    _raise_for_status(response, 'Get transactions')
-    return response.json()
 
 
 def iter_transactions(session_id, account_uid, date_from=None, strategy=None):
