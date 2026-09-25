@@ -91,7 +91,8 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    expect(screen.getByText('Time-weighted (ann.)')).toBeInTheDocument()
+    expect(screen.getByText('Avg. return (ann.)')).toBeInTheDocument()
+    expect(screen.getByText(/deposits count as gains/i)).toBeInTheDocument()
   })
 
   it('does not show a low-confidence caveat once a full year of history exists', () => {

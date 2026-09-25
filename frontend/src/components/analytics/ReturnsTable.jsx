@@ -7,7 +7,7 @@ export default function ReturnsTable({ periods, benchmarkName }) {
   return (
     <Card padding={false}>
       <div className="px-5 pt-5 pb-3">
-        <CardHeader title={`Returns vs ${benchmarkName}`} subtitle="Time-weighted, from portfolio-value history" />
+        <CardHeader title={`Returns vs ${benchmarkName}`} subtitle="Saxo account value change; deposits and withdrawals are not separated" />
       </div>
       <table className="w-full text-[var(--fig-sm)]">
         <thead>

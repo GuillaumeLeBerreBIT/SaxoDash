@@ -235,9 +235,9 @@ export default function Analytics() {
 
       <StatStrip>
         <StatRow
-          label="Time-weighted (ann.)"
+          label="Avg. return (ann.)"
           value={fmtPct(data.expected_return, { decimals: 1 })}
-          note="From your own portfolio-value history"
+          note="Mean daily change of your Saxo account; deposits count as gains"
         />
         <StatRow
           label="Volatility"
