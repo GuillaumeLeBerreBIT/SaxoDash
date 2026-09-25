@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { PAD_R, indexFromPointer, linePath, paneGeometry, priceGeometry } from './chartGeometry'
+import { PAD_R, donutOuterRadius, indexFromPointer, linePath, paneGeometry, priceGeometry } from './chartGeometry'
 
 const bars = [
   { high: 110, low: 90 },
@@ -104,5 +104,23 @@ describe('indexFromPointer', () => {
   it('clamps past either end of the dataset', () => {
     expect(indexFromPointer(event(-40), 10, 5)).toBe(0)
     expect(indexFromPointer(event(9999), 10, 5)).toBe(4)
+  })
+})
+
+describe('donutOuterRadius', () => {
+  it('uses the full ring when the container has room for it', () => {
+    expect(donutOuterRadius(600, 8)).toBe(112)
+  })
+
+  it('shrinks the ring to fit a narrow container instead of clipping it', () => {
+    expect(donutOuterRadius(200, 8)).toBe(92)
+  })
+
+  it('reserves room for labels drawn outside the ring', () => {
+    expect(donutOuterRadius(300, 64)).toBe(86)
+  })
+
+  it('never shrinks below the smallest readable ring', () => {
+    expect(donutOuterRadius(80, 8)).toBe(56)
   })
 })

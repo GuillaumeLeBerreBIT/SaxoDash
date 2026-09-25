@@ -1,10 +1,8 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTooltipProps } from '../lib/charts'
 import { instrumentLogoUrl } from '../lib/logos'
-import { useWidth } from '../lib/chartGeometry'
+import { donutOuterRadius, useWidth } from '../lib/chartGeometry'
 
-const MAX_OUTER_RADIUS = 112
-const MIN_OUTER_RADIUS = 56
 const RING_RATIO = 68 / 112 // inner/outer, preserved from the original ring
 const RADIAN = Math.PI / 180
 const CHART_MARGIN = 8
@@ -82,12 +80,7 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
   const [containerRef, width] = useWidth()
   const total = items.reduce((sum, d) => sum + d.value, 0)
 
-  // Icon-less donuts (account/sector breakdowns) draw no outward label, so
-  // they can always use the full ring; only the leader-line labels need to
-  // shrink the ring to fit a narrow column instead of running past it.
-  const outerRadius = showIcons
-    ? Math.min(MAX_OUTER_RADIUS, Math.max(MIN_OUTER_RADIUS, width / 2 - LABEL_RESERVE))
-    : MAX_OUTER_RADIUS
+  const outerRadius = donutOuterRadius(width, showIcons ? LABEL_RESERVE : CHART_MARGIN)
   const innerRadius = outerRadius * RING_RATIO
 
   return (

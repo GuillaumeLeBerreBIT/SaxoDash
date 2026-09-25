@@ -132,3 +132,10 @@ export function indexFromPointer(event, slot, length) {
   const index = Math.floor((event.clientX - box.left) / slot)
   return Math.max(0, Math.min(length - 1, index))
 }
+
+const DONUT_MAX_RADIUS = 112
+const DONUT_MIN_RADIUS = 56
+
+export function donutOuterRadius(width, reserve) {
+  return Math.min(DONUT_MAX_RADIUS, Math.max(DONUT_MIN_RADIUS, width / 2 - reserve))
+}
