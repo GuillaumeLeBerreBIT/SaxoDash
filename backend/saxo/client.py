@@ -3,6 +3,8 @@ from urllib.parse import urlencode
 import requests
 from django.conf import settings
 
+from core.http_client import request_json
+
 # Keyed by SAXO_ENVIRONMENT so going live is a config change, not an edit here.
 ENVIRONMENTS = {
     'sim': {
@@ -14,11 +16,6 @@ ENVIRONMENTS = {
         'api': 'https://gateway.saxobank.com/openapi',
     },
 }
-
-REQUEST_TIMEOUT = 10
-
-# Saxo error bodies can be long; enough to diagnose, not enough to flood a log.
-ERROR_BODY_LIMIT = 200
 
 # Saxo rejects a chart request asking for more samples than this.
 CHART_MAX_COUNT = 1200
@@ -46,9 +43,6 @@ class SaxoPermanentError(SaxoAPIError):
     would not help; needs a code fix or user action instead."""
 
 
-_TRANSIENT_STATUSES = {408, 425, 429, 500, 502, 503, 504}
-
-
 def _base_urls():
     return ENVIRONMENTS[settings.SAXO_ENVIRONMENT]
 
@@ -61,40 +55,13 @@ def _api_base_url():
     return _base_urls()['api']
 
 
-def _request(send, url, error_class, label, **kwargs):
-    """error_class is SaxoAuthError for a token request (no transient/
-    permanent split - refresh_saxo_token handles its own failures explicitly
-    and it is never in Celery's autoretry_for) or SaxoAPIError for an API
-    call, which is split into SaxoTransientError/SaxoPermanentError below."""
-    splits_by_failure_type = error_class is SaxoAPIError
-
-    try:
-        response = send(url, timeout=REQUEST_TIMEOUT, **kwargs)
-    except requests.RequestException as exc:
-        cls = SaxoTransientError if splits_by_failure_type else error_class
-        raise cls(f'{label} failed: {exc}') from exc
-
-    if not response.ok:
-        body = response.text[:ERROR_BODY_LIMIT]
-        if splits_by_failure_type:
-            cls = SaxoTransientError if response.status_code in _TRANSIENT_STATUSES else SaxoPermanentError
-        else:
-            cls = error_class
-        raise cls(f'{label} failed: {response.status_code} {body}')
-
-    try:
-        return response.json()
-    except ValueError as exc:
-        cls = SaxoPermanentError if splits_by_failure_type else error_class
-        raise cls(f'{label} returned a non-JSON body') from exc
-
-
 def _token_request(grant, label):
-    return _request(
+    return request_json(
         requests.post,
         f'{_auth_base_url()}/token',
-        SaxoAuthError,
         label,
+        transient=SaxoAuthError,
+        permanent=SaxoAuthError,
         data={
             **grant,
             'redirect_uri': settings.SAXO_REDIRECT_URI,
@@ -105,11 +72,12 @@ def _token_request(grant, label):
 
 
 def _get(access_token, path, params=None):
-    return _request(
+    return request_json(
         requests.get,
         f'{_api_base_url()}{path}',
-        SaxoAPIError,
         f'GET {path}',
+        transient=SaxoTransientError,
+        permanent=SaxoPermanentError,
         headers={'Authorization': f'Bearer {access_token}'},
         params=params,
     )

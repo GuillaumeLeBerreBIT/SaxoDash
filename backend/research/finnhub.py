@@ -11,11 +11,11 @@ import requests
 from django.conf import settings
 from django.core.cache import cache
 
+from core.http_client import request_json
+
 from .providers import ProviderUnavailable
 
 API_BASE = 'https://finnhub.io/api/v1'
-REQUEST_TIMEOUT = 10
-ERROR_BODY_LIMIT = 200
 
 # Every Finnhub failure is a ProviderUnavailable: the fundamentals endpoint's
 # contract is to answer 200 with `available: false`, never a status code.
@@ -60,23 +60,14 @@ def _get(path, **params):
     if not settings.FINNHUB_API_KEY:
         raise FinnhubNotConfigured()
 
-    try:
-        response = requests.get(
-            f'{API_BASE}{path}',
-            params={**params, 'token': settings.FINNHUB_API_KEY},
-            timeout=REQUEST_TIMEOUT,
-        )
-    except requests.RequestException as exc:
-        raise FinnhubAPIError(f'{path} failed: {exc}') from exc
-
-    if not response.ok:
-        body = response.text[:ERROR_BODY_LIMIT]
-        raise FinnhubAPIError(f'{path} failed: {response.status_code} {body}')
-
-    try:
-        return response.json()
-    except ValueError as exc:
-        raise FinnhubAPIError(f'{path} returned a non-JSON body') from exc
+    return request_json(
+        requests.get,
+        f'{API_BASE}{path}',
+        path,
+        transient=FinnhubAPIError,
+        permanent=FinnhubAPIError,
+        params={**params, 'token': settings.FINNHUB_API_KEY},
+    )
 
 
 def get_profile(symbol):
