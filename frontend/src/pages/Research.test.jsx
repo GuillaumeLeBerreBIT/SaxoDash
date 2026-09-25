@@ -68,6 +68,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
   queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
   queries.usePeerFundamentals.mockReturnValue([])
+  queries.useMarkReviewedMutation.mockReturnValue({ mutate: vi.fn(), isPending: false })
 }
 
 describe('Research', () => {

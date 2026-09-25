@@ -11,6 +11,7 @@ import {
   useSymbolEarnings,
   useSymbolNote,
   useSymbolNoteMutation,
+  useMarkReviewedMutation,
   useWatchlistMutations,
   useWatchlists,
 } from '../api/queries'
@@ -141,6 +142,7 @@ export default function Research() {
   const earnings = useSymbolEarnings(symbol)
   const note = useSymbolNote(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
+  const reviewMutation = useMarkReviewedMutation(symbol)
   const earningsMarkers = useMemo(
     () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
     [bars, earnings.data],
@@ -265,6 +267,8 @@ export default function Research() {
                 fundamentals={fundamentals}
                 note={note}
                 onSaveNote={(patch) => noteMutation.mutate(patch)}
+                onMarkReviewed={() => reviewMutation.mutate()}
+                reviewing={reviewMutation.isPending}
                 isEtf={instrumentIsEtf}
               />
             ) : null}

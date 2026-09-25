@@ -99,6 +99,8 @@ export default function OverviewTab({
   fundamentals,
   note,
   onSaveNote,
+  onMarkReviewed,
+  reviewing = false,
   isEtf = false,
 }) {
   return (
@@ -117,6 +119,8 @@ export default function OverviewTab({
       <ThesisAndRisksCard
         note={note?.data}
         onSave={onSaveNote}
+        onMarkReviewed={onMarkReviewed}
+        reviewing={reviewing}
         fundamentals={fundamentals}
         currency={details?.currency}
       />

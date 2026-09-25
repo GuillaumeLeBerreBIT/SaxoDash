@@ -4,6 +4,7 @@ import { AlertTriangle, Info } from 'lucide-react'
 import { researchHref } from '../../lib/research'
 
 const PORTFOLIO_KINDS = new Set(['concentration', 'single_name', 'price_basis'])
+const THESIS_KINDS = new Set(['thesis_review_due', 'target_reached'])
 
 function chipClass(severity) {
   return severity === 'warn'
@@ -25,6 +26,9 @@ function Chip({ item }) {
   )
   if (item.kind === 'earnings_soon' && item.ticker) {
     return <Link to={researchHref(item.ticker, 'earnings')}>{body}</Link>
+  }
+  if (THESIS_KINDS.has(item.kind) && item.ticker) {
+    return <Link to={researchHref(item.ticker, 'overview')}>{body}</Link>
   }
   if (PORTFOLIO_KINDS.has(item.kind)) {
     return <Link to="/portfolio">{body}</Link>

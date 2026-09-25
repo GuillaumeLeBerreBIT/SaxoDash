@@ -53,4 +53,18 @@ describe('ThesisAndRisksCard', () => {
     render(<ThesisAndRisksCard note={null} onSave={() => {}} fundamentals={{ data: { available: false } }} />)
     expect(screen.queryByText(/leveraged/i)).not.toBeInTheDocument()
   })
+
+  it('shows when the thesis was last reviewed', () => {
+    render(<ThesisAndRisksCard note={{ reviewed_at: null }} onSave={() => {}} onMarkReviewed={() => {}} />)
+    expect(screen.getByText('Never reviewed')).toBeInTheDocument()
+  })
+
+  it('marks the thesis reviewed on request', () => {
+    const onMarkReviewed = vi.fn()
+    render(<ThesisAndRisksCard note={{ reviewed_at: null }} onSave={() => {}} onMarkReviewed={onMarkReviewed} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /mark reviewed/i }))
+
+    expect(onMarkReviewed).toHaveBeenCalledOnce()
+  })
 })

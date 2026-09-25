@@ -18,6 +18,10 @@ _HAS_CONTENT = (
 )
 
 
+def notes_with_thesis(tickers):
+    return SymbolNote.objects.filter(symbol__in=tickers).filter(_HAS_CONTENT)
+
+
 def tickers_with_thesis(tickers):
     """The subset of `tickers` that have a non-empty SymbolNote.
 
@@ -27,9 +31,4 @@ def tickers_with_thesis(tickers):
     """
     if not tickers:
         return set()
-    return set(
-        SymbolNote.objects
-        .filter(symbol__in=tickers)
-        .filter(_HAS_CONTENT)
-        .values_list('symbol', flat=True)
-    )
+    return set(notes_with_thesis(tickers).values_list('symbol', flat=True))

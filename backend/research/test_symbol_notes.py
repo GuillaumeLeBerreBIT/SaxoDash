@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.contrib.auth.models import User
+from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -63,3 +64,36 @@ class SymbolNoteAPITest(APITestCase):
     def test_rejects_a_malformed_symbol(self):
         response = self.client.get('/api/research/notes/AAPL%20US/')
         self.assertEqual(response.status_code, 400)
+
+    def test_a_new_note_has_never_been_reviewed(self):
+        response = self.client.get('/api/research/notes/AAPL/')
+
+        self.assertIsNone(response.data['reviewed_at'])
+
+    def test_reviewed_at_cannot_be_patched_directly(self):
+        self.client.patch('/api/research/notes/AAPL/', {'reviewed_at': '2020-01-01T00:00:00Z'}, format='json')
+
+        self.assertIsNone(SymbolNote.objects.get(symbol='AAPL').reviewed_at)
+
+    def test_marking_reviewed_stamps_the_server_time(self):
+        before = timezone.now()
+
+        response = self.client.post('/api/research/notes/aapl/review/')
+
+        self.assertEqual(response.status_code, 200)
+        reviewed_at = SymbolNote.objects.get(symbol='AAPL').reviewed_at
+        self.assertGreaterEqual(reviewed_at, before)
+        self.assertEqual(response.data['symbol'], 'AAPL')
+        self.assertIsNotNone(response.data['reviewed_at'])
+
+    def test_marking_reviewed_does_not_touch_the_thesis(self):
+        SymbolNote.objects.create(symbol='AAPL', bull_case='Services growth.')
+
+        self.client.post('/api/research/notes/AAPL/review/')
+
+        self.assertEqual(SymbolNote.objects.get(symbol='AAPL').bull_case, 'Services growth.')
+
+    def test_marking_reviewed_requires_authentication(self):
+        self.client.credentials()
+
+        self.assertEqual(self.client.post('/api/research/notes/AAPL/review/').status_code, 401)

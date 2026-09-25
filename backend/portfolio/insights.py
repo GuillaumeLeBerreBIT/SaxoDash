@@ -27,6 +27,7 @@ TOP3_PCT = 60
 # an ordinary buffer.
 IDLE_CASH_PCT = 50
 EARNINGS_SOON_DAYS = 7
+THESIS_REVIEW_DAYS = 90
 EARNINGS_HORIZON_DAYS = 14
 SPARK_POINTS = 30
 MOVERS = 3
@@ -169,6 +170,29 @@ def _upcoming_earnings(held_upper, today):
     return rows
 
 
+def _thesis_attention(positions, today):
+    from research.thesis import notes_with_thesis
+
+    by_ticker = {p.ticker: p for p in positions}
+    items = []
+    for note in notes_with_thesis(list(by_ticker)):
+        position = by_ticker[note.symbol]
+        if note.reviewed_at is None:
+            items.append({'kind': 'thesis_review_due', 'severity': 'info', 'ticker': note.symbol,
+                          'text': f"{note.symbol} thesis has never been reviewed."})
+        else:
+            age = (today - timezone.localdate(note.reviewed_at)).days
+            if age > THESIS_REVIEW_DAYS:
+                items.append({'kind': 'thesis_review_due', 'severity': 'info', 'ticker': note.symbol,
+                              'text': f"{note.symbol} thesis last reviewed {age} days ago."})
+        if note.target_price is not None and position.current_price >= note.target_price:
+            basis = '' if position.price_source == 'live' else ' (price from Saxo P/L, not a live quote)'
+            items.append({'kind': 'target_reached', 'severity': 'info', 'ticker': note.symbol,
+                          'text': f"{note.symbol} reached your {note.target_price:,.2f} {position.currency} "
+                                  f"target at {position.current_price:,.2f}{basis}."})
+    return items
+
+
 def _idle_cash_pct():
     """Cash as a share of the Saxo account (cash + positions), or None when
     there's no valuation to compute it from.
@@ -280,6 +304,9 @@ def build_insights():
         'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
         'movers': _movers(positions),
         'contributors': _contributors(positions, total_cost, total_pnl),
-        'attention': _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct),
+        'attention': (
+            _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct)
+            + _thesis_attention(positions, today)
+        ),
         'upcoming_earnings': upcoming,
     }

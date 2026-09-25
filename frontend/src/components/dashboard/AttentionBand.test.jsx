@@ -29,6 +29,16 @@ describe('AttentionBand', () => {
     )
   })
 
+  it.each([
+    ['thesis_review_due', 'AAPL thesis last reviewed 120 days ago.'],
+    ['target_reached', 'AAPL reached your 250.00 USD target at 251.00.'],
+  ])('links a %s chip to the Research overview for its ticker', (kind, text) => {
+    renderWithProviders(<AttentionBand items={[{ kind, severity: 'info', ticker: 'AAPL', text }]} />)
+    expect(screen.getByRole('link', { name: text })).toHaveAttribute(
+      'href', '/research?symbol=AAPL&tab=overview',
+    )
+  })
+
   it('shows a calm line when nothing needs attention', () => {
     renderWithProviders(<AttentionBand items={[]} />)
     expect(screen.getByText(/Nothing needs attention/)).toBeInTheDocument()

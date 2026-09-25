@@ -2,7 +2,8 @@ import { useState } from 'react'
 
 import { fmtMoney } from '../../lib/format'
 import { healthVerdict } from '../../lib/snapshot'
-import { Card, CardHeader } from '../ui'
+import { reviewedLabel } from '../../lib/thesisReview'
+import { Button, Card, CardHeader } from '../ui'
 import VerdictBadge from './VerdictBadge'
 
 const FIELD_CLASS =
@@ -89,7 +90,7 @@ export function BusinessSummaryCard({ note, onSave }) {
 /** The investment thesis and its risks, after the data-driven read above -
  *  a bull/bear case, a target price, a sell trigger, and a leverage flag
  *  reusing the same verdict the Overview snapshot already computes. */
-export default function ThesisAndRisksCard({ note, onSave, fundamentals, currency }) {
+export default function ThesisAndRisksCard({ note, onSave, onMarkReviewed, reviewing = false, fundamentals, currency }) {
   const leverage = fundamentals?.data?.available ? healthVerdict(fundamentals.data) : null
 
   return (
@@ -137,6 +138,14 @@ export default function ThesisAndRisksCard({ note, onSave, fundamentals, currenc
       {note?.target_price != null && currency ? (
         <div className="mt-2 text-[var(--fig-2xs)] text-zinc-600">
           Target: {fmtMoney(note.target_price, currency)}
+        </div>
+      ) : null}
+      {onMarkReviewed ? (
+        <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-3">
+          <span className="text-[var(--fig-xs)] text-zinc-500">{reviewedLabel(note?.reviewed_at)}</span>
+          <Button size="sm" onClick={onMarkReviewed} disabled={reviewing}>
+            Mark reviewed
+          </Button>
         </div>
       ) : null}
     </Card>

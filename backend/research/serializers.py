@@ -47,6 +47,6 @@ class SymbolNoteSerializer(serializers.ModelSerializer):
         model = SymbolNote
         fields = [
             'symbol', 'business_summary', 'risks_to_watch',
-            'bull_case', 'bear_case', 'target_price', 'sell_trigger', 'updated_at',
+            'bull_case', 'bear_case', 'target_price', 'sell_trigger', 'reviewed_at', 'updated_at',
         ]
-        read_only_fields = ['symbol', 'updated_at']
+        read_only_fields = ['symbol', 'reviewed_at', 'updated_at']

@@ -25,6 +25,8 @@ export const getSymbolEarnings = (symbol) => apiFetch(`/api/research/earnings/${
 export const getSymbolNote = (symbol) => apiFetch(`/api/research/notes/${symbol}/`)
 export const updateSymbolNote = (symbol, patch) =>
   jsonRequest(`/api/research/notes/${symbol}/`, 'PATCH', patch)
+export const markSymbolNoteReviewed = (symbol) =>
+  jsonRequest(`/api/research/notes/${symbol}/review/`, 'POST', {})
 
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })

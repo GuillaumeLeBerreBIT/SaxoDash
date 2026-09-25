@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 
 from .models import SymbolNote
-from .thesis import tickers_with_thesis
+from .thesis import notes_with_thesis, tickers_with_thesis
 
 
 class TickersWithThesisTest(TestCase):
@@ -29,3 +29,19 @@ class TickersWithThesisTest(TestCase):
 
     def test_an_empty_ticker_list_is_a_no_op(self):
         self.assertEqual(tickers_with_thesis([]), set())
+
+
+class NotesWithThesisTest(TestCase):
+    def test_returns_only_populated_notes_for_the_requested_tickers(self):
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x')
+        SymbolNote.objects.create(symbol='MSFT')
+        SymbolNote.objects.create(symbol='NVDA', bull_case='y')
+
+        notes = notes_with_thesis(['AAPL', 'MSFT'])
+
+        self.assertEqual([note.symbol for note in notes], ['AAPL'])
+
+    def test_an_empty_ticker_list_returns_nothing(self):
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x')
+
+        self.assertEqual(list(notes_with_thesis([])), [])

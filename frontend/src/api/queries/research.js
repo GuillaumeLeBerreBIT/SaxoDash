@@ -21,8 +21,10 @@ import {
   removeWatchlistItem,
   searchInstruments,
   updateSymbolNote,
+  markSymbolNoteReviewed,
   updateWatchlist,
 } from '../client'
+import { portfolioKeys } from './portfolio'
 import { unwrap } from './shared'
 
 export const researchKeys = {
@@ -191,6 +193,17 @@ export function useSymbolNoteMutation(symbol) {
   return useMutation({
     mutationFn: (patch) => updateSymbolNote(symbol, patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: researchKeys.symbolNote(symbol) }),
+  })
+}
+
+export function useMarkReviewedMutation(symbol) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => markSymbolNoteReviewed(symbol),
+    onSuccess: (note) => {
+      queryClient.setQueryData(researchKeys.symbolNote(symbol), note)
+      queryClient.invalidateQueries({ queryKey: portfolioKeys.portfolioInsights })
+    },
   })
 }
 

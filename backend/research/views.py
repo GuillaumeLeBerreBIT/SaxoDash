@@ -1,6 +1,7 @@
 import re
 
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (
     CreateAPIView,
@@ -197,3 +198,12 @@ class SymbolNoteView(RetrieveUpdateAPIView):
         symbol = _symbol(self.kwargs['symbol'])
         note, _ = SymbolNote.objects.get_or_create(symbol=symbol)
         return note
+
+
+class SymbolNoteReviewView(APIView):
+
+    def post(self, request, symbol):
+        note, _ = SymbolNote.objects.get_or_create(symbol=_symbol(symbol))
+        note.reviewed_at = timezone.now()
+        note.save(update_fields=['reviewed_at'])
+        return Response(SymbolNoteSerializer(note).data)

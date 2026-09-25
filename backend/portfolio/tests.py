@@ -10,6 +10,7 @@ from core.models import NetWorthSnapshot
 from portfolio import insights, sectors
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
+from research.models import SymbolNote
 from portfolio.services import (
     VALUATION_MAX_AGE,
     get_portfolio_value,
@@ -504,6 +505,85 @@ class InsightsAttentionTest(TestCase):
         c = {'top1': None, 'top3_pct': None, 'hhi': None, 'positions': 0}
         items = insights._attention([], [(date(2026, 9, 10), Decimal('1'))], date(2026, 9, 10), c, None)
         self.assertEqual(items[-1]['kind'], 'no_history')
+
+
+class ThesisAttentionTest(TestCase):
+    today = date(2026, 9, 25)
+
+    def _reviewed(self, days_ago):
+        return timezone.make_aware(timezone.datetime(2026, 9, 25, 12) - timedelta(days=days_ago))
+
+    def _items(self, kind):
+        items = insights._thesis_attention(list(Position.objects.all()), self.today)
+        return [i for i in items if i['kind'] == kind]
+
+    def test_a_written_thesis_never_reviewed_is_due(self):
+        _pos('AAPL', '1', '100', '200')
+        SymbolNote.objects.create(symbol='AAPL', bull_case='Services growth.')
+
+        [item] = self._items('thesis_review_due')
+
+        self.assertEqual(item['ticker'], 'AAPL')
+        self.assertEqual(item['severity'], 'info')
+        self.assertIn('never been reviewed', item['text'])
+
+    def test_a_review_older_than_the_cadence_is_due(self):
+        _pos('AAPL', '1', '100', '200')
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x', reviewed_at=self._reviewed(91))
+
+        [item] = self._items('thesis_review_due')
+
+        self.assertIn('91 days ago', item['text'])
+
+    def test_a_review_inside_the_cadence_is_not_due(self):
+        _pos('AAPL', '1', '100', '200')
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x', reviewed_at=self._reviewed(insights.THESIS_REVIEW_DAYS))
+
+        self.assertEqual(self._items('thesis_review_due'), [])
+
+    def test_a_holding_without_a_written_thesis_is_left_to_the_portfolio_table(self):
+        _pos('AAPL', '1', '100', '200')
+        SymbolNote.objects.create(symbol='AAPL')
+
+        self.assertEqual(insights._thesis_attention(list(Position.objects.all()), self.today), [])
+
+    def test_a_note_for_a_symbol_no_longer_held_is_ignored(self):
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x')
+
+        self.assertEqual(insights._thesis_attention([], self.today), [])
+
+    def test_a_price_at_or_above_target_reports_the_target_reached(self):
+        _pos('AAPL', '1', '100', '250.00')
+        SymbolNote.objects.create(symbol='AAPL', target_price=Decimal('250.00'), reviewed_at=self._reviewed(1))
+
+        [item] = self._items('target_reached')
+
+        self.assertEqual(item['ticker'], 'AAPL')
+        self.assertIn('250.00 USD', item['text'])
+        self.assertNotIn('Saxo P/L', item['text'])
+
+    def test_a_price_below_target_is_silent(self):
+        _pos('AAPL', '1', '100', '249.99')
+        SymbolNote.objects.create(symbol='AAPL', target_price=Decimal('250.00'), reviewed_at=self._reviewed(1))
+
+        self.assertEqual(self._items('target_reached'), [])
+
+    def test_a_target_reached_on_a_derived_price_says_so(self):
+        _pos('AAPL', '1', '100', '260', price_source='derived')
+        SymbolNote.objects.create(symbol='AAPL', target_price=Decimal('250.00'), reviewed_at=self._reviewed(1))
+
+        [item] = self._items('target_reached')
+
+        self.assertIn('Saxo P/L', item['text'])
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_build_insights_surfaces_thesis_items(self, _mock):
+        _pos('AAPL', '1', '100', '200')
+        SymbolNote.objects.create(symbol='AAPL', bull_case='x')
+
+        kinds = [i['kind'] for i in insights.build_insights()['attention']]
+
+        self.assertIn('thesis_review_due', kinds)
 
 
 class BuildInsightsTest(TestCase):
