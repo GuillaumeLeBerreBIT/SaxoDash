@@ -71,6 +71,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useMarkReviewedMutation.mockReturnValue({ mutate: vi.fn(), isPending: false })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
   queries.useSymbolNoteMutation.mockReturnValue({ mutate: vi.fn() })
+  queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [{ id: 7, uic: 211, asset_type: 'Stock', price: '120.00' }] })
   queries.usePriceLineMutations.mockReturnValue({
     create: { mutate: vi.fn() },

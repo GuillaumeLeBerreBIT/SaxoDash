@@ -15,7 +15,7 @@ const instrument = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
 describe('useChartLines', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    queries.useSymbolNoteMutation.mockReturnValue({ mutate: noteMutate })
+    queries.useNoteLevelMutation.mockReturnValue({ mutate: noteMutate })
     queries.usePriceLines.mockReturnValue({ data: [{ id: 7, uic: 211, asset_type: 'Stock', price: '95.50' }] })
     queries.usePriceLineMutations.mockReturnValue({
       create: { mutate: createMutate },

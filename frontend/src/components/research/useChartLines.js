@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 
-import { usePriceLineMutations, usePriceLines, useSymbolNoteMutation } from '../../api/queries'
+import { useNoteLevelMutation, usePriceLineMutations, usePriceLines } from '../../api/queries'
 import { chartLines, linePatch, roundPrice } from '../../lib/priceLines'
 
 export function useChartLines({ symbol, uic, assetType, note }) {
-  const noteMutation = useSymbolNoteMutation(symbol)
+  const noteMutation = useNoteLevelMutation(symbol)
   const saved = usePriceLines(uic, assetType)
   const lineMutations = usePriceLineMutations(uic, assetType)
   const [failedFor, setFailedFor] = useState(null)

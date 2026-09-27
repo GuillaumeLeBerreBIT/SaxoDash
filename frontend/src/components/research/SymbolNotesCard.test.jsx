@@ -1,7 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
+vi.mock('../../api/client')
+import * as client from '../../api/client'
+import { useSymbolNote, useSymbolNoteMutation } from '../../api/queries'
 import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
+
+function SavedThesis({ symbol }) {
+  const note = useSymbolNote(symbol)
+  const save = useSymbolNoteMutation(symbol)
+  return (
+    <>
+      <ThesisAndRisksCard note={note.data} onSave={(patch) => save.mutate(patch)} />
+      {save.isError ? <span>save failed</span> : null}
+    </>
+  )
+}
 
 describe('BusinessSummaryCard', () => {
   it('renders the saved summary', () => {
@@ -97,5 +112,39 @@ describe('ThesisAndRisksCard', () => {
     fireEvent.change(field, { target: { value: '' } })
     fireEvent.blur(field)
     expect(onSave).toHaveBeenLastCalledWith({ stop_price: null })
+  })
+})
+
+describe('ThesisAndRisksCard saving through the note mutation', () => {
+  it('a failed text save keeps the draft', async () => {
+    let failSave
+    client.getSymbolNote.mockResolvedValue({ symbol: 'NVDA', bull_case: 'Old thesis' })
+    client.updateSymbolNote.mockReturnValue(
+      new Promise((_, reject) => {
+        failSave = reject
+      }),
+    )
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SavedThesis symbol="NVDA" />
+      </QueryClientProvider>,
+    )
+    const field = await screen.findByDisplayValue('Old thesis')
+
+    fireEvent.change(field, { target: { value: 'Paragraphs of new thesis' } })
+    fireEvent.blur(field)
+    await waitFor(() =>
+      expect(client.updateSymbolNote).toHaveBeenCalledWith('NVDA', { bull_case: 'Paragraphs of new thesis' }),
+    )
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      failSave(new Error('offline'))
+    })
+
+    await screen.findByText('save failed')
+    expect(field).toHaveValue('Paragraphs of new thesis')
   })
 })

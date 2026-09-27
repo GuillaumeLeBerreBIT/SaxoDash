@@ -195,6 +195,14 @@ export function useSymbolNote(symbol) {
 
 export function useSymbolNoteMutation(symbol) {
   const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (patch) => updateSymbolNote(symbol, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: researchKeys.symbolNote(symbol) }),
+  })
+}
+
+export function useNoteLevelMutation(symbol) {
+  const queryClient = useQueryClient()
   const key = researchKeys.symbolNote(symbol)
   return useMutation({
     mutationFn: (patch) => updateSymbolNote(symbol, patch),

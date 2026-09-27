@@ -6,10 +6,10 @@ vi.mock('../client')
 import * as client from '../client'
 import {
   researchKeys,
+  useNoteLevelMutation,
   usePriceLineMutations,
   usePriceLines,
   useSymbolNote,
-  useSymbolNoteMutation,
 } from './research'
 
 function setup(useHook) {
@@ -21,12 +21,12 @@ function setup(useHook) {
   return { queryClient, result }
 }
 
-describe('useSymbolNoteMutation', () => {
+describe('useNoteLevelMutation', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('shows the new level before the server answers', async () => {
     client.updateSymbolNote.mockReturnValue(new Promise(() => {}))
-    const { queryClient, result } = setup(() => useSymbolNoteMutation('NVDA'))
+    const { queryClient, result } = setup(() => useNoteLevelMutation('NVDA'))
     queryClient.setQueryData(researchKeys.symbolNote('NVDA'), { symbol: 'NVDA', target_price: '100.00' })
 
     act(() => result.current.mutate({ target_price: '120.00' }))
@@ -39,7 +39,7 @@ describe('useSymbolNoteMutation', () => {
   it('goes back to the saved level when the save fails', async () => {
     client.getSymbolNote.mockResolvedValue({ symbol: 'NVDA', target_price: '100.00' })
     client.updateSymbolNote.mockRejectedValue(new Error('boom'))
-    const { result } = setup(() => ({ note: useSymbolNote('NVDA'), save: useSymbolNoteMutation('NVDA') }))
+    const { result } = setup(() => ({ note: useSymbolNote('NVDA'), save: useNoteLevelMutation('NVDA') }))
     await waitFor(() => expect(result.current.note.data?.target_price).toBe('100.00'))
 
     act(() => result.current.save.mutate({ target_price: '120.00' }))
@@ -53,7 +53,7 @@ describe('useSymbolNoteMutation', () => {
     client.getSymbolNote.mockResolvedValueOnce({ symbol: 'NVDA', target_price: '100.00' })
     client.getSymbolNote.mockRejectedValue(new Error('offline'))
     client.updateSymbolNote.mockRejectedValue(new Error('offline'))
-    const { result } = setup(() => ({ note: useSymbolNote('NVDA'), save: useSymbolNoteMutation('NVDA') }))
+    const { result } = setup(() => ({ note: useSymbolNote('NVDA'), save: useNoteLevelMutation('NVDA') }))
     await waitFor(() => expect(result.current.note.data?.target_price).toBe('100.00'))
 
     act(() => result.current.save.mutate({ target_price: '120.00' }))
