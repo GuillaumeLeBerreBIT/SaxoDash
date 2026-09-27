@@ -8,6 +8,7 @@ export function useChartLines({ symbol, uic, assetType, note }) {
   const saved = usePriceLines(uic, assetType)
   const lineMutations = usePriceLineMutations(uic, assetType)
   const [failedFor, setFailedFor] = useState(null)
+  if (failedFor !== null && failedFor !== symbol) setFailedFor(null)
   const lines = useMemo(() => chartLines(note, saved.data ?? []), [note, saved.data])
 
   const report = {

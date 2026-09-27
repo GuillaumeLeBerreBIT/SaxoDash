@@ -92,6 +92,22 @@ describe('useChartLines', () => {
     expect(result.current.saveFailed).toBe(false)
   })
 
+  it('does not bring a failure back when returning to the symbol it happened on', () => {
+    updateMutate.mockImplementation((_, { onError }) => onError(new Error('boom')))
+    const { result, rerender } = renderHook((props) => useChartLines(props), {
+      initialProps: { ...instrument, note: {} },
+    })
+
+    act(() => result.current.move(result.current.lines[0], 90))
+    expect(result.current.saveFailed).toBe(true)
+
+    rerender({ symbol: 'MSFT', uic: 5, assetType: 'Stock', note: {} })
+    expect(result.current.saveFailed).toBe(false)
+
+    rerender({ ...instrument, note: {} })
+    expect(result.current.saveFailed).toBe(false)
+  })
+
   it('clears the failure once a save succeeds', () => {
     noteMutate.mockImplementationOnce((_, { onError }) => onError(new Error('boom')))
     noteMutate.mockImplementationOnce((_, { onSuccess }) => onSuccess())
