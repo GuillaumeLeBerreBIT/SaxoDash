@@ -40,6 +40,7 @@ import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
+import { useChartLines } from '../components/research/useChartLines'
 
 // `equityOnly` tabs are all Finnhub company-fundamentals underneath, which
 // Finnhub's free tier never returns for an ETF - so unlike a stock with
@@ -148,6 +149,7 @@ export default function Research() {
   const note = useSymbolNote(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
+  const priceLines = useChartLines({ symbol, note: note?.data })
   const earningsMarkers = useMemo(
     () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
     [bars, earnings.data],
@@ -241,6 +243,9 @@ export default function Research() {
               symbol={symbol}
               unresolved={!instrument && !chart.isLoading}
               earningsMarkers={earningsMarkers}
+              lines={priceLines.lines}
+              onMoveLine={priceLines.move}
+              lineSaveFailed={priceLines.saveFailed}
             />
 
             <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">

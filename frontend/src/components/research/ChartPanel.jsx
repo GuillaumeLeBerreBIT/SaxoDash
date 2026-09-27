@@ -72,7 +72,23 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
   )
 }
 
-export default function ChartPanel({ bars, ind, isLoading, error, controls, hover, setHover, symbol, unresolved, earningsMarkers = [] }) {
+export default function ChartPanel({
+  bars,
+  ind,
+  isLoading,
+  error,
+  controls,
+  hover,
+  setHover,
+  symbol,
+  unresolved,
+  earningsMarkers = [],
+  lines,
+  onMoveLine,
+  onCreateLine,
+  onDeleteLine,
+  lineSaveFailed = false,
+}) {
   const { range, type, overlays, panes, yScale, setRange, setType, setYScale, toggleOverlay, togglePane } = controls
   const activeCount = Object.values({ ...overlays, ...panes }).filter(Boolean).length
   const period = periodChange(bars)
@@ -134,6 +150,12 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
           ))}
         </Menu>
 
+        {lineSaveFailed ? (
+          <span role="alert" className="ml-2 text-[var(--fig-2xs)] text-red-400">
+            Couldn't save line
+          </span>
+        ) : null}
+
         {period == null ? null : (
           <span className="ml-auto text-[var(--fig-2xs)] text-zinc-500">
             Period{' '}
@@ -158,6 +180,7 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
 
           <div className="px-1 pb-1">
             <TVChart
+              key={symbol}
               data={bars}
               ind={ind}
               type={type}
@@ -168,6 +191,10 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
               earningsMarkers={earningsMarkers}
               yScale={yScale}
               onYScaleChange={setYScale}
+              lines={lines}
+              onMoveLine={onMoveLine}
+              onCreateLine={onCreateLine}
+              onDeleteLine={onDeleteLine}
             />
             {panes.volume ? (
               <SubPane title="Volume" height={74}>

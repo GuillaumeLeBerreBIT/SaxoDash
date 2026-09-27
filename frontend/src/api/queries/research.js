@@ -190,9 +190,14 @@ export function useSymbolNote(symbol) {
 
 export function useSymbolNoteMutation(symbol) {
   const queryClient = useQueryClient()
+  const key = researchKeys.symbolNote(symbol)
   return useMutation({
     mutationFn: (patch) => updateSymbolNote(symbol, patch),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: researchKeys.symbolNote(symbol) }),
+    onMutate: async (patch) => {
+      await queryClient.cancelQueries({ queryKey: key })
+      queryClient.setQueryData(key, (old) => (old ? { ...old, ...patch } : old))
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   })
 }
 
