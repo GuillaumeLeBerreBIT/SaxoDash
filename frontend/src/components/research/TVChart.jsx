@@ -1,4 +1,4 @@
-import { memo, useId, useMemo, useRef } from 'react'
+import { memo, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import {
   DOWN,
@@ -13,6 +13,8 @@ import {
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { isTypingTarget, roundPrice } from '../../lib/priceLines'
+import PriceLines, { PriceEditor } from './PriceLines'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
  *
@@ -265,6 +267,8 @@ function Crosshair({ bar, index, geometry, width }) {
   )
 }
 
+const NO_LINES = []
+
 function ScaleHandle({ width, height, yScale, onChange }) {
   const drag = useRef(null)
 
@@ -311,16 +315,47 @@ export function TVChart({
   earningsMarkers = [],
   yScale = 1,
   onYScaleChange,
+  lines = NO_LINES,
+  onMoveLine,
+  onCreateLine,
+  onDeleteLine,
 }) {
   const [ref, width] = useWidth()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
+  const [selectedId, setSelectedId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale }),
     [data, ind, width, height, overlays.bb, yScale],
   )
 
+  const selected = lines.find((line) => line.id === selectedId && line.kind === 'free') ?? null
+  const editing = lines.find((line) => line.id === editingId) ?? null
+
+  useEffect(() => {
+    if (!selected) return undefined
+    const onKeyDown = (event) => {
+      if (isTypingTarget(event.target)) return
+      if (event.key === 'Escape') setSelectedId(null)
+      if ((event.key === 'Delete' || event.key === 'Backspace') && onDeleteLine) {
+        event.preventDefault()
+        setSelectedId(null)
+        onDeleteLine(selected)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selected, onDeleteLine])
+
   if (data.length === 0) return null
+
+  const plotY = (event) => {
+    const box = event.currentTarget.getBoundingClientRect()
+    const x = event.clientX - box.left
+    const y = event.clientY - box.top
+    return x < width - PAD_R && y >= PAD_T && y <= PAD_T + geometry.chartH ? y : null
+  }
 
   return (
     <div
@@ -329,6 +364,12 @@ export function TVChart({
       style={{ height }}
       onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
       onMouseLeave={() => setHover(null)}
+      onClick={() => setSelectedId(null)}
+      onDoubleClick={(e) => {
+        if (!onCreateLine) return
+        const y = plotY(e)
+        if (y != null) onCreateLine(roundPrice(geometry.priceAtY(y)))
+      }}
     >
       <svg width={width} height={height}>
         <ChartBody
@@ -342,10 +383,32 @@ export function TVChart({
           clipId={clipId}
         />
         <ScaleHandle width={width} height={height} yScale={yScale} onChange={onYScaleChange} />
+        <PriceLines
+          lines={lines}
+          geometry={geometry}
+          width={width}
+          selectedId={selected?.id ?? null}
+          onMove={(line, price) => onMoveLine?.(line, price)}
+          onSelect={setSelectedId}
+          onEdit={(line) => setEditingId(line.id)}
+        />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
         ) : null}
       </svg>
+      {editing ? (
+        <PriceEditor
+          key={editing.id}
+          line={editing}
+          y={geometry.scaleY(editing.price)}
+          width={width}
+          onCommit={(line, price) => {
+            setEditingId(null)
+            onMoveLine?.(line, price)
+          }}
+          onCancel={() => setEditingId(null)}
+        />
+      ) : null}
     </div>
   )
 }

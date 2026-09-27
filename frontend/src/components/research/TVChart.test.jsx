@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
-import { DOWN, UP } from '../../lib/chartGeometry'
+import { DOWN, UP, priceGeometry } from '../../lib/chartGeometry'
 import { TVChart } from './TVChart'
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
@@ -128,5 +128,191 @@ describe('price-axis scaling', () => {
     const clipped = container.querySelector('g[clip-path]')
     expect(clipped).not.toBeNull()
     expect(clipped.querySelectorAll(`rect[fill="${UP}"], rect[fill="${DOWN}"]`)).toHaveLength(bars.length)
+  })
+})
+
+describe('price lines', () => {
+  const target = { id: 'target', kind: 'target', price: 110 }
+  const stop = { id: 'stop', kind: 'stop', price: 105 }
+  const free = { id: 7, kind: 'free', price: 115 }
+  const ind = computeIndicators(bars)
+  const yOf = (price, yScale = 1) =>
+    priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false, yScale }).scaleY(price)
+
+  const drag = (element, fromY, toY) => {
+    fireEvent.pointerDown(element, { clientY: fromY, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientY: toY, pointerId: 1 })
+    fireEvent.pointerUp(element, { clientY: toY, pointerId: 1 })
+  }
+
+  it('draws target, stop and freeform lines', () => {
+    const { getByTestId } = renderChart({ lines: [target, stop, free] })
+
+    expect(getByTestId('price-line-target')).toBeInTheDocument()
+    expect(getByTestId('price-line-stop')).toBeInTheDocument()
+    expect(getByTestId('price-line-7')).toBeInTheDocument()
+  })
+
+  it('shows an edge marker instead of a line for a price outside the visible range', () => {
+    const { queryByTestId, getByTestId } = renderChart({ lines: [{ ...target, price: 1000 }] })
+
+    expect(queryByTestId('price-line-target')).toBeNull()
+    expect(getByTestId('price-edge-target')).toBeInTheDocument()
+  })
+
+  it('saves a lower price when a line is dragged down', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [target], onMoveLine })
+
+    const y = yOf(target.price)
+    drag(getByTestId('price-hit-target'), y, y + 30)
+
+    expect(onMoveLine).toHaveBeenCalledTimes(1)
+    const [line, price] = onMoveLine.mock.calls[0]
+    expect(line).toEqual(target)
+    expect(price).toBeLessThan(target.price)
+    expect(Number(price.toFixed(2))).toBe(price)
+  })
+
+  it('does not save when a line is clicked without moving', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], onMoveLine })
+
+    const hit = getByTestId('price-hit-7')
+    fireEvent.pointerDown(hit, { clientY: 100, pointerId: 1 })
+    fireEvent.pointerUp(hit, { clientY: 100, pointerId: 1 })
+    fireEvent.click(hit)
+
+    expect(onMoveLine).not.toHaveBeenCalled()
+  })
+
+  it('clamps a line dragged below zero to the minimum price', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [target], onMoveLine, yScale: 20, onYScaleChange: vi.fn() })
+
+    drag(getByTestId('price-hit-target'), yOf(target.price, 20), 353)
+
+    expect(onMoveLine).toHaveBeenCalledWith(target, 0.01)
+  })
+
+  it('creates a freeform line where the plot is double-clicked', () => {
+    const onCreateLine = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine })
+
+    fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })
+
+    expect(onCreateLine).toHaveBeenCalledTimes(1)
+    expect(onCreateLine.mock.calls[0][0]).toBeGreaterThan(0)
+  })
+
+  it('does nothing on a double-click when lines cannot be created', () => {
+    const { container } = renderChart({ lines: [] })
+
+    expect(() => fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })).not.toThrow()
+  })
+
+  it('double-clicking the axis does not create a line', () => {
+    const onCreateLine = vi.fn()
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = renderChart({ lines: [], onCreateLine, onYScaleChange })
+
+    fireEvent.doubleClick(getByTestId('price-scale'), { clientX: 740, clientY: 200 })
+
+    expect(onYScaleChange).toHaveBeenCalledWith(1)
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+
+  it('double-clicking a line does not create another', () => {
+    const onCreateLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], onCreateLine })
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'), { clientX: 100, clientY: yOf(free.price) })
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+
+  it('deletes the selected freeform line with the Delete key', () => {
+    const onDeleteLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], onDeleteLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteLine).toHaveBeenCalledWith(free)
+  })
+
+  it('does not delete a line while the user is typing in a field', () => {
+    const onDeleteLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], onDeleteLine })
+    const field = document.createElement('textarea')
+    document.body.appendChild(field)
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.keyDown(field, { key: 'Backspace' })
+
+    expect(onDeleteLine).not.toHaveBeenCalled()
+    field.remove()
+  })
+
+  it('never selects the target or stop for deletion', () => {
+    const onDeleteLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [target], onDeleteLine })
+
+    fireEvent.click(getByTestId('price-hit-target'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteLine).not.toHaveBeenCalled()
+  })
+
+  it('clears the selection when the empty plot is clicked', () => {
+    const onDeleteLine = vi.fn()
+    const { container, getByTestId } = renderChart({ lines: [free], onDeleteLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.click(container.firstChild)
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteLine).not.toHaveBeenCalled()
+  })
+
+  it('saves an exact price typed into the badge editor', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [stop], onMoveLine })
+
+    fireEvent.click(getByTestId('price-badge-stop'))
+    const input = getByLabelText('Line price')
+    expect(input).toHaveValue('105.00')
+
+    fireEvent.change(input, { target: { value: '101.5' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onMoveLine).toHaveBeenCalledWith(stop, 101.5)
+    expect(queryByLabelText('Line price')).toBeNull()
+  })
+
+  it('cancels the editor on text that is not a price', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [stop], onMoveLine })
+
+    fireEvent.click(getByTestId('price-badge-stop'))
+    const input = getByLabelText('Line price')
+    fireEvent.change(input, { target: { value: '12,5' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onMoveLine).not.toHaveBeenCalled()
+    expect(queryByLabelText('Line price')).toBeNull()
+  })
+
+  it('does not save on Escape even when the field then blurs', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ lines: [stop], onMoveLine })
+
+    fireEvent.click(getByTestId('price-badge-stop'))
+    const input = getByLabelText('Line price')
+    fireEvent.change(input, { target: { value: '99' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
+    fireEvent.blur(input)
+
+    expect(onMoveLine).not.toHaveBeenCalled()
   })
 })

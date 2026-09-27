@@ -1,0 +1,175 @@
+import { useRef, useState } from 'react'
+
+import { PAD_R, PAD_T } from '../../lib/chartGeometry'
+import { LINE_STROKES, edgeOf, parsePriceInput, roundPrice } from '../../lib/priceLines'
+
+const TAG = { target: 'T', stop: 'S', free: '' }
+const HIT_WIDTH = 10
+
+const svgY = (event) => event.clientY - event.currentTarget.closest('svg').getBoundingClientRect().top
+const stop = (event) => event.stopPropagation()
+
+function Badge({ line, price, y, width, selected, onEdit }) {
+  const color = LINE_STROKES[line.kind]
+
+  return (
+    <g
+      data-testid={`price-badge-${line.id}`}
+      style={{ cursor: 'text' }}
+      onClick={(e) => {
+        e.stopPropagation()
+        onEdit(line)
+      }}
+      onDoubleClick={stop}
+      onPointerDown={stop}
+    >
+      <rect
+        x={width - PAD_R + 2}
+        y={y - 8}
+        width={PAD_R - 4}
+        height={16}
+        rx={2}
+        fill={selected ? color : '#18181b'}
+        stroke={color}
+      />
+      <text
+        x={width - PAD_R + 6}
+        y={y + 3.5}
+        fill={selected ? '#09090b' : color}
+        fontSize="10"
+        fontFamily="Geist Mono"
+      >
+        {`${TAG[line.kind]} ${price.toFixed(2)}`.trim()}
+      </text>
+    </g>
+  )
+}
+
+function EdgeMarker({ line, edge, width, chartH }) {
+  const color = LINE_STROKES[line.kind]
+  const x = width - PAD_R + 8
+  const y = edge === 'above' ? PAD_T + 6 : PAD_T + chartH - 6
+  const points =
+    edge === 'above'
+      ? `${x - 4},${y + 3} ${x + 4},${y + 3} ${x},${y - 4}`
+      : `${x - 4},${y - 3} ${x + 4},${y - 3} ${x},${y + 4}`
+
+  return (
+    <g data-testid={`price-edge-${line.id}`} pointerEvents="none">
+      <polygon points={points} fill={color} />
+      <text x={x + 8} y={y + 3.5} fill={color} fontSize="10" fontFamily="Geist Mono">
+        {line.price.toFixed(2)}
+      </text>
+    </g>
+  )
+}
+
+function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEdit }) {
+  const [preview, setPreview] = useState(null)
+  const drag = useRef(null)
+
+  const edge = preview == null ? edgeOf(line.price, geometry) : null
+  if (edge) return <EdgeMarker line={line} edge={edge} width={width} chartH={geometry.chartH} />
+
+  const price = preview ?? line.price
+  const y = geometry.scaleY(price)
+  const x2 = width - PAD_R
+
+  const cancel = () => {
+    drag.current = null
+    setPreview(null)
+  }
+
+  return (
+    <g data-testid={`price-line-${line.id}`}>
+      <line
+        x1={0}
+        x2={x2}
+        y1={y}
+        y2={y}
+        stroke={LINE_STROKES[line.kind]}
+        strokeWidth={selected ? 2 : 1}
+        strokeDasharray={line.kind === 'free' ? undefined : '6 4'}
+        pointerEvents="none"
+      />
+      <line
+        data-testid={`price-hit-${line.id}`}
+        x1={0}
+        x2={x2}
+        y1={y}
+        y2={y}
+        stroke="transparent"
+        strokeWidth={HIT_WIDTH}
+        style={{ cursor: 'ns-resize' }}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          e.currentTarget.setPointerCapture?.(e.pointerId)
+          drag.current = { moved: false }
+        }}
+        onPointerMove={(e) => {
+          if (!drag.current) return
+          drag.current.moved = true
+          setPreview(roundPrice(geometry.priceAtY(svgY(e))))
+        }}
+        onPointerUp={() => {
+          const moved = drag.current?.moved
+          cancel()
+          if (moved && preview != null && preview !== line.price) onMove(line, preview)
+        }}
+        onPointerCancel={cancel}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (line.kind === 'free') onSelect(line.id)
+        }}
+        onDoubleClick={stop}
+      />
+      <Badge line={line} price={price} y={y} width={width} selected={selected} onEdit={onEdit} />
+    </g>
+  )
+}
+
+export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect, onEdit }) {
+  return lines.map((line) => (
+    <DraggableLine
+      key={line.id}
+      line={line}
+      geometry={geometry}
+      width={width}
+      selected={line.id === selectedId}
+      onMove={onMove}
+      onSelect={onSelect}
+      onEdit={onEdit}
+    />
+  ))
+}
+
+export function PriceEditor({ line, y, width, onCommit, onCancel }) {
+  const [draft, setDraft] = useState(line.price.toFixed(2))
+  const done = useRef(false)
+
+  const close = (price) => {
+    if (done.current) return
+    done.current = true
+    if (price == null || price === line.price) onCancel()
+    else onCommit(line, price)
+  }
+
+  return (
+    <input
+      autoFocus
+      aria-label="Line price"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') close(parsePriceInput(draft))
+        if (e.key === 'Escape') close(null)
+      }}
+      onBlur={() => close(parsePriceInput(draft))}
+      onClick={stop}
+      onDoubleClick={stop}
+      onPointerDown={stop}
+      className="absolute h-5 px-1 rounded bg-zinc-900 border border-blue-500/60 text-[10px] font-mono text-zinc-100 outline-none"
+      style={{ left: width - PAD_R + 2, top: y - 10, width: PAD_R - 4 }}
+    />
+  )
+}
