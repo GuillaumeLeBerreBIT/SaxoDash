@@ -67,4 +67,35 @@ describe('ThesisAndRisksCard', () => {
 
     expect(onMarkReviewed).toHaveBeenCalledOnce()
   })
+
+  it('shows the saved stop price', () => {
+    render(
+      <ThesisAndRisksCard
+        note={{ stop_price: '180.50' }}
+        onSave={() => {}}
+        fundamentals={{ data: { available: false } }}
+      />,
+    )
+    expect(screen.getByDisplayValue('180.50')).toBeInTheDocument()
+  })
+
+  it('saves a changed stop price and clears an emptied one', () => {
+    const onSave = vi.fn()
+    render(
+      <ThesisAndRisksCard
+        note={{ stop_price: '180.50' }}
+        onSave={onSave}
+        fundamentals={{ data: { available: false } }}
+      />,
+    )
+    const field = screen.getByLabelText(/stop price/i)
+
+    fireEvent.change(field, { target: { value: '175' } })
+    fireEvent.blur(field)
+    expect(onSave).toHaveBeenLastCalledWith({ stop_price: '175' })
+
+    fireEvent.change(field, { target: { value: '' } })
+    fireEvent.blur(field)
+    expect(onSave).toHaveBeenLastCalledWith({ stop_price: null })
+  })
 })

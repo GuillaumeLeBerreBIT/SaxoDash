@@ -38,7 +38,7 @@ function NoteField({ label, value, placeholder, rows = 2, onSave }) {
   )
 }
 
-function TargetPriceField({ value, currency, onSave }) {
+function PriceLevelField({ label, value, currency, onSave }) {
   const [draft, setDraft] = useState(value ?? '')
   const [syncedValue, setSyncedValue] = useState(value ?? '')
   if ((value ?? '') !== syncedValue) {
@@ -47,13 +47,14 @@ function TargetPriceField({ value, currency, onSave }) {
   }
 
   return (
-    <div>
+    <label className="block">
       <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium mb-1">
-        Target price {currency ? `(${currency})` : ''}
+        {label} {currency ? `(${currency})` : ''}
       </div>
       <input
         type="number"
         step="0.01"
+        min="0.01"
         value={draft}
         placeholder="—"
         onChange={(e) => setDraft(e.target.value)}
@@ -63,7 +64,7 @@ function TargetPriceField({ value, currency, onSave }) {
         }}
         className={`${FIELD_CLASS} num font-mono`}
       />
-    </div>
+    </label>
   )
 }
 
@@ -115,11 +116,20 @@ export default function ThesisAndRisksCard({ note, onSave, onMarkReviewed, revie
         />
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <TargetPriceField
+        <PriceLevelField
+          label="Target price"
           value={note?.target_price}
           currency={currency}
           onSave={(v) => onSave({ target_price: v })}
         />
+        <PriceLevelField
+          label="Stop price"
+          value={note?.stop_price}
+          currency={currency}
+          onSave={(v) => onSave({ stop_price: v })}
+        />
+      </div>
+      <div className="mt-3">
         <NoteField
           label="Sell trigger"
           value={note?.sell_trigger}
