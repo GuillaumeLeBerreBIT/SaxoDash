@@ -12,13 +12,21 @@ import {
   useSymbolNote,
 } from './research'
 
-function setup(useHook) {
+function setup(useHook, initialProps) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
   const wrapper = ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  const { result } = renderHook(useHook, { wrapper })
-  return { queryClient, result }
+  const { result, rerender } = renderHook(useHook, { wrapper, initialProps })
+  return { queryClient, result, rerender }
+}
+
+function deferred() {
+  let reject
+  const promise = new Promise((_, fail) => {
+    reject = fail
+  })
+  return { promise, reject }
 }
 
 describe('useNoteLevelMutation', () => {
@@ -60,6 +68,26 @@ describe('useNoteLevelMutation', () => {
 
     await waitFor(() => expect(result.current.save.isError).toBe(true))
     await waitFor(() => expect(result.current.note.data.target_price).toBe('100.00'))
+  })
+  it('rolls back the instrument it was saved on after switching to another', async () => {
+    const save = deferred()
+    client.updateSymbolNote.mockReturnValue(save.promise)
+    const { queryClient, result, rerender } = setup(({ symbol }) => useNoteLevelMutation(symbol), {
+      symbol: 'NVDA',
+    })
+    queryClient.setQueryData(researchKeys.symbolNote('NVDA'), { symbol: 'NVDA', target_price: '100.00' })
+    queryClient.setQueryData(researchKeys.symbolNote('MSFT'), { symbol: 'MSFT', target_price: '300.00' })
+
+    act(() => result.current.mutate({ target_price: '120.00' }))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(researchKeys.symbolNote('NVDA')).target_price).toBe('120.00'),
+    )
+    rerender({ symbol: 'MSFT' })
+    await act(async () => save.reject(new Error('boom')))
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(queryClient.getQueryData(researchKeys.symbolNote('MSFT'))).toEqual({ symbol: 'MSFT', target_price: '300.00' })
+    expect(queryClient.getQueryData(researchKeys.symbolNote('NVDA')).target_price).toBe('100.00')
   })
 })
 
@@ -132,5 +160,23 @@ describe('price lines', () => {
 
     expect(client.createPriceLine).toHaveBeenCalledWith({ uic: 211, assetType: 'Stock', price: '95.00' })
     await waitFor(() => expect(client.getPriceLines).toHaveBeenCalledTimes(2))
+  })
+  it('rolls back the instrument a move was made on after switching to another', async () => {
+    const save = deferred()
+    client.updatePriceLine.mockReturnValue(save.promise)
+    const { queryClient, result, rerender } = setup(({ uic }) => usePriceLineMutations(uic, 'Stock'), { uic: 211 })
+    queryClient.setQueryData(researchKeys.priceLines(211, 'Stock'), [{ id: 1, price: '100.00' }])
+    queryClient.setQueryData(researchKeys.priceLines(5, 'Stock'), [{ id: 9, price: '300.00' }])
+
+    act(() => result.current.update.mutate({ id: 1, price: '120.00' }))
+    await waitFor(() =>
+      expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))[0].price).toBe('120.00'),
+    )
+    rerender({ uic: 5 })
+    await act(async () => save.reject(new Error('boom')))
+
+    await waitFor(() => expect(result.current.update.isError).toBe(true))
+    expect(queryClient.getQueryData(researchKeys.priceLines(5, 'Stock'))).toEqual([{ id: 9, price: '300.00' }])
+    expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))).toEqual([{ id: 1, price: '100.00' }])
   })
 })

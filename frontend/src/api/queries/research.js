@@ -210,12 +210,14 @@ export function useNoteLevelMutation(symbol) {
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData(key)
       queryClient.setQueryData(key, (old) => (old ? { ...old, ...patch } : old))
-      return { previous }
+      return { previous, key }
     },
     onError: (_error, _patch, context) => {
-      if (context?.previous) queryClient.setQueryData(key, context.previous)
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous)
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
+    onSettled: (_data, _error, _patch, context) => {
+      if (context) queryClient.invalidateQueries({ queryKey: context.key })
+    },
   })
 }
 
@@ -241,20 +243,23 @@ export function usePriceLines(uic, assetType) {
 export function usePriceLineMutations(uic, assetType) {
   const queryClient = useQueryClient()
   const key = researchKeys.priceLines(uic, assetType)
-  const refetch = () => queryClient.invalidateQueries({ queryKey: key })
+  const refetch = (_data, _error, _variables, context) => {
+    if (context) queryClient.invalidateQueries({ queryKey: context.key })
+  }
   const optimistic = (apply) => async (variables) => {
     await queryClient.cancelQueries({ queryKey: key })
     const previous = queryClient.getQueryData(key)
     queryClient.setQueryData(key, (old) => (old ? apply(old, variables) : old))
-    return { previous }
+    return { previous, key }
   }
   const rollback = (_error, _variables, context) => {
-    if (context?.previous) queryClient.setQueryData(key, context.previous)
+    if (context?.previous) queryClient.setQueryData(context.key, context.previous)
   }
 
   return {
     create: useMutation({
       mutationFn: ({ price }) => createPriceLine({ uic, assetType, price }),
+      onMutate: () => ({ key }),
       onSettled: refetch,
     }),
     update: useMutation({
