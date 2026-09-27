@@ -30,6 +30,13 @@ export const PAD_R = 62
 export const PAD_T = 10
 const PAD_B = 6
 
+export const MIN_Y_SCALE = 0.1
+export const MAX_Y_SCALE = 20
+
+export function scaleFromDrag(startScale, dy) {
+  return Math.min(MAX_Y_SCALE, Math.max(MIN_Y_SCALE, startScale * Math.exp(dy / 150)))
+}
+
 // jsdom and the first paint have no layout; this keeps both drawable.
 const FALLBACK_WIDTH = 760
 
@@ -72,7 +79,7 @@ export function useWidth() {
  *  Computed once per dataset and handed to both the chart body and the
  *  crosshair, so hovering does not recompute the scale for every frame.
  */
-export function priceGeometry({ data, ind, width, height, withBands }) {
+export function priceGeometry({ data, ind, width, height, withBands, yScale = 1 }) {
   const chartH = height - PAD_T - PAD_B
   const chartW = Math.max(80, width - PAD_R)
   const slot = chartW / Math.max(1, data.length)
@@ -95,8 +102,10 @@ export function priceGeometry({ data, ind, width, height, withBands }) {
   }
 
   const pad = (max - min) * 0.07 || 1
-  const top = max + pad
-  const bottom = min - pad
+  const mid = (max + min) / 2
+  const half = ((max - min) / 2 + pad) * yScale
+  const top = mid + half
+  const bottom = mid - half
 
   return {
     slot,
@@ -105,6 +114,9 @@ export function priceGeometry({ data, ind, width, height, withBands }) {
     candleWidth: Math.max(1, Math.min(14, slot * 0.68)),
     xAt: (i) => i * slot + slot / 2,
     scaleY: (value) => PAD_T + ((top - value) / (top - bottom)) * chartH,
+    priceAtY: (y) => top - ((y - PAD_T) / chartH) * (top - bottom),
+    top,
+    bottom,
     ticks: Array.from({ length: 6 }, (_, i) => bottom + ((top - bottom) * i) / 5),
   }
 }

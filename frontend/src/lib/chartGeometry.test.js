@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
-import { PAD_R, donutOuterRadius, indexFromPointer, linePath, paneGeometry, priceGeometry } from './chartGeometry'
+import {
+  MAX_Y_SCALE,
+  MIN_Y_SCALE,
+  PAD_R,
+  donutOuterRadius,
+  indexFromPointer,
+  linePath,
+  paneGeometry,
+  priceGeometry,
+  scaleFromDrag,
+} from './chartGeometry'
 
 const bars = [
   { high: 110, low: 90 },
@@ -122,5 +132,61 @@ describe('donutOuterRadius', () => {
 
   it('never shrinks below the smallest readable ring', () => {
     expect(donutOuterRadius(80, 8)).toBe(56)
+  })
+})
+
+describe('price scale', () => {
+  it('maps a price to y and back', () => {
+    const { scaleY, priceAtY } = geometry()
+
+    expect(priceAtY(scaleY(107.5))).toBeCloseTo(107.5)
+  })
+
+  it('keeps the automatic domain when the scale is 1', () => {
+    const { top, bottom } = geometry()
+
+    expect(top).toBeCloseTo(120 + 30 * 0.07)
+    expect(bottom).toBeCloseTo(90 - 30 * 0.07)
+  })
+
+  it('widens the domain around the same midpoint when compressed', () => {
+    const base = geometry()
+    const wide = geometry({ yScale: 2 })
+
+    expect((wide.top + wide.bottom) / 2).toBeCloseTo((base.top + base.bottom) / 2)
+    expect(wide.top - wide.bottom).toBeCloseTo(2 * (base.top - base.bottom))
+  })
+
+  it('narrows the domain when stretched', () => {
+    const base = geometry()
+    const narrow = geometry({ yScale: 0.5 })
+
+    expect(narrow.top - narrow.bottom).toBeCloseTo((base.top - base.bottom) / 2)
+  })
+
+  it('puts the ticks on the scaled domain', () => {
+    const { ticks, top, bottom } = geometry({ yScale: 3 })
+
+    expect(ticks[0]).toBeCloseTo(bottom)
+    expect(ticks[ticks.length - 1]).toBeCloseTo(top)
+  })
+})
+
+describe('scaleFromDrag', () => {
+  it('leaves the scale alone when the pointer has not moved', () => {
+    expect(scaleFromDrag(1.5, 0)).toBe(1.5)
+  })
+
+  it('compresses when dragged down', () => {
+    expect(scaleFromDrag(1, 60)).toBeGreaterThan(1)
+  })
+
+  it('stretches when dragged up', () => {
+    expect(scaleFromDrag(1, -60)).toBeLessThan(1)
+  })
+
+  it('clamps to the allowed range', () => {
+    expect(scaleFromDrag(1, 100_000)).toBe(MAX_Y_SCALE)
+    expect(scaleFromDrag(1, -100_000)).toBe(MIN_Y_SCALE)
   })
 })
