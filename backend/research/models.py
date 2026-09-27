@@ -54,6 +54,7 @@ class SymbolNote(models.Model):
     bull_case = models.TextField(blank=True, default='')
     bear_case = models.TextField(blank=True, default='')
     target_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    stop_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     sell_trigger = models.TextField(blank=True, default='')
 
     reviewed_at = models.DateTimeField(null=True, blank=True)

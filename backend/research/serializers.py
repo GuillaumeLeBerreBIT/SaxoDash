@@ -3,6 +3,12 @@ from rest_framework import serializers
 from .models import SymbolNote, Watchlist, WatchlistItem
 
 
+def _positive_or_none(value):
+    if value is not None and value <= 0:
+        raise serializers.ValidationError('Must be greater than zero.')
+    return value
+
+
 class WatchlistItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = WatchlistItem
@@ -47,6 +53,13 @@ class SymbolNoteSerializer(serializers.ModelSerializer):
         model = SymbolNote
         fields = [
             'symbol', 'business_summary', 'risks_to_watch',
-            'bull_case', 'bear_case', 'target_price', 'sell_trigger', 'reviewed_at', 'updated_at',
+            'bull_case', 'bear_case', 'target_price', 'stop_price', 'sell_trigger',
+            'reviewed_at', 'updated_at',
         ]
         read_only_fields = ['symbol', 'reviewed_at', 'updated_at']
+
+    def validate_target_price(self, value):
+        return _positive_or_none(value)
+
+    def validate_stop_price(self, value):
+        return _positive_or_none(value)

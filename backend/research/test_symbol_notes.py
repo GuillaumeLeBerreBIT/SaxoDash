@@ -97,3 +97,24 @@ class SymbolNoteAPITest(APITestCase):
         self.client.credentials()
 
         self.assertEqual(self.client.post('/api/research/notes/AAPL/review/').status_code, 401)
+
+    def test_patch_sets_and_clears_the_stop_price(self):
+        response = self.client.patch('/api/research/notes/AAPL/', {'stop_price': '180.50'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['stop_price'], '180.50')
+        self.assertEqual(SymbolNote.objects.get(symbol='AAPL').stop_price, Decimal('180.50'))
+
+        response = self.client.patch('/api/research/notes/AAPL/', {'stop_price': None}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data['stop_price'])
+
+    def test_rejects_a_price_level_at_or_below_zero(self):
+        for field in ('target_price', 'stop_price'):
+            for value in ('0', '-5.00'):
+                with self.subTest(field=field, value=value):
+                    response = self.client.patch('/api/research/notes/AAPL/', {field: value}, format='json')
+
+                    self.assertEqual(response.status_code, 400)
+                    self.assertIn(field, response.data)
