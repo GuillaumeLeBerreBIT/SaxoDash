@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from .views import (
     ChartView,
@@ -38,8 +38,8 @@ urlpatterns = [
     path('news/<str:symbol>/', CompanyNewsView.as_view(), name='research-company-news'),
     path('notes/<str:symbol>/', SymbolNoteView.as_view(), name='research-symbol-note'),
     path('notes/<str:symbol>/review/', SymbolNoteReviewView.as_view(), name='research-symbol-note-review'),
-    path(
-        'price-lines/<int:uic>/<str:asset_type>/',
+    re_path(
+        r'^price-lines/(?P<uic>[0-9]+)/(?P<asset_type>[A-Za-z]{1,20})/$',
         PriceLineListCreateView.as_view(),
         name='research-price-lines',
     ),

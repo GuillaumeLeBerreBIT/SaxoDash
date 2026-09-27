@@ -99,3 +99,32 @@ class PriceLineAPITest(APITestCase):
         line = self.line()
 
         self.assertEqual(self.client.get(detail_url(line.pk)).status_code, 405)
+
+    def test_rejects_an_asset_type_that_is_not_letters(self):
+        for asset_type in ('Stock1', 'Cfd-On-Stock', 'Stock%20X'):
+            with self.subTest(asset_type=asset_type):
+                response = self.client.get(f'/api/research/price-lines/211/{asset_type}/')
+
+                self.assertEqual(response.status_code, 404)
+
+    def test_rejects_an_asset_type_longer_than_twenty_letters(self):
+        response = self.client.post(
+            f'/api/research/price-lines/211/{"A" * 21}/', {'price': '1.00'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(PriceLine.objects.exists())
+
+    def test_accepts_a_saxo_asset_type_of_exactly_twenty_letters(self):
+        response = self.client.post(
+            f'/api/research/price-lines/211/{"A" * 20}/', {'price': '1.00'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_accepts_a_compound_saxo_asset_type(self):
+        PriceLine.objects.create(uic=211, asset_type='CfdOnStock', price=Decimal('10.00'))
+
+        response = self.client.get('/api/research/price-lines/211/CfdOnStock/')
+
+        self.assertEqual([line['price'] for line in response.data], ['10.00'])
