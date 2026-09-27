@@ -69,6 +69,14 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
   queries.usePeerFundamentals.mockReturnValue([])
   queries.useMarkReviewedMutation.mockReturnValue({ mutate: vi.fn(), isPending: false })
+  queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
+  queries.useSymbolNoteMutation.mockReturnValue({ mutate: vi.fn() })
+  queries.usePriceLines.mockReturnValue({ ...idle, data: [{ id: 7, uic: 211, asset_type: 'Stock', price: '120.00' }] })
+  queries.usePriceLineMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
 }
 
 describe('Research', () => {
@@ -263,5 +271,13 @@ describe('Research', () => {
     expect(chip).toBeInTheDocument()
     await userEvent.click(chip)
     expect(screen.getAllByText('TSLA').length).toBeGreaterThan(0)
+  })
+
+  it('draws the thesis target and the saved lines on the chart', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByTestId('price-line-target')).toBeInTheDocument()
+    expect(screen.getByTestId('price-line-7')).toBeInTheDocument()
+    expect(queries.usePriceLines).toHaveBeenCalledWith(211, 'Stock')
   })
 })

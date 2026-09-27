@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react'
 
-import { useSymbolNoteMutation } from '../../api/queries'
-import { chartLines, linePatch } from '../../lib/priceLines'
+import { usePriceLineMutations, usePriceLines, useSymbolNoteMutation } from '../../api/queries'
+import { chartLines, linePatch, roundPrice } from '../../lib/priceLines'
 
-export function useChartLines({ symbol, note }) {
+export function useChartLines({ symbol, uic, assetType, note }) {
   const noteMutation = useSymbolNoteMutation(symbol)
+  const saved = usePriceLines(uic, assetType)
+  const lineMutations = usePriceLineMutations(uic, assetType)
   const [failedFor, setFailedFor] = useState(null)
-  const lines = useMemo(() => chartLines(note), [note])
+  const lines = useMemo(() => chartLines(note, saved.data ?? []), [note, saved.data])
 
   const report = {
     onSuccess: () => setFailedFor(null),
     onError: () => setFailedFor(symbol),
   }
+  const cents = (price) => roundPrice(price).toFixed(2)
 
   return {
     lines,
@@ -19,6 +22,9 @@ export function useChartLines({ symbol, note }) {
     move: (line, price) => {
       const patch = linePatch(line, price)
       if (patch) noteMutation.mutate(patch, report)
+      else lineMutations.update.mutate({ id: line.id, price: cents(price) }, report)
     },
+    create: uic && assetType ? (price) => lineMutations.create.mutate({ price: cents(price) }, report) : undefined,
+    remove: (line) => lineMutations.remove.mutate(line.id, report),
   }
 }

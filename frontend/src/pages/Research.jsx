@@ -149,7 +149,12 @@ export default function Research() {
   const note = useSymbolNote(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
-  const priceLines = useChartLines({ symbol, note: note?.data })
+  const priceLines = useChartLines({
+    symbol,
+    uic: instrument?.uic,
+    assetType: instrument?.assetType,
+    note: note?.data,
+  })
   const earningsMarkers = useMemo(
     () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
     [bars, earnings.data],
@@ -245,6 +250,8 @@ export default function Research() {
               earningsMarkers={earningsMarkers}
               lines={priceLines.lines}
               onMoveLine={priceLines.move}
+              onCreateLine={priceLines.create}
+              onDeleteLine={priceLines.remove}
               lineSaveFailed={priceLines.saveFailed}
             />
 
