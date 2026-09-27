@@ -304,6 +304,28 @@ describe('price lines', () => {
     expect(onDeleteLine).not.toHaveBeenCalled()
   })
 
+  it('forgets the selection once the user presses anywhere outside the chart', () => {
+    const onDeleteLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], onDeleteLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.pointerDown(document.body)
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteLine).not.toHaveBeenCalled()
+  })
+
+  it('keeps the selection when the press lands inside the chart', () => {
+    const onDeleteLine = vi.fn()
+    const { container, getByTestId } = renderChart({ lines: [free], onDeleteLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.pointerDown(container.querySelector('svg'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteLine).toHaveBeenCalledWith(free)
+  })
+
   it('saves an exact price typed into the badge editor', () => {
     const onMoveLine = vi.fn()
     const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [stop], onMoveLine })

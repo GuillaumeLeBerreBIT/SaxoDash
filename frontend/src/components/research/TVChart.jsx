@@ -344,9 +344,16 @@ export function TVChart({
         onDeleteLine(selected)
       }
     }
+    const onPointerDown = (event) => {
+      if (!ref.current?.contains(event.target)) setSelectedId(null)
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selected, onDeleteLine])
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+    }
+  }, [selected, onDeleteLine, ref])
 
   if (data.length === 0) return null
 
