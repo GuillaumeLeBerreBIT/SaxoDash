@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useId, useMemo, useRef } from 'react'
 
 import {
   DOWN,
@@ -9,6 +9,7 @@ import {
   indexFromPointer,
   linePath,
   priceGeometry,
+  scaleFromDrag,
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
@@ -112,90 +113,96 @@ function EarningsMarkers({ markers, geometry }) {
   })
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers }) {
-  const { xAt, scaleY, chartH } = geometry
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, clipId }) {
+  const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
   const last = closes[closes.length - 1]
 
   return (
     <g>
+      <defs>
+        <clipPath id={clipId}>
+          <rect x={0} y={PAD_T} width={chartW} height={chartH} />
+        </clipPath>
+      </defs>
+
       <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} />
 
-      {/* SERIES_TOTAL is named for the net-worth chart's "Total" line, but is
-          really just the app's one accent blue for "the headline line" in
-          any chart - reused here for the price line itself. */}
-      {type === 'area' ? (
-        <g>
-          <defs>
-            <linearGradient id="tvArea" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={SERIES_TOTAL} stopOpacity="0.28" />
-              <stop offset="100%" stopColor={SERIES_TOTAL} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <path
-            d={`${pricePath} L ${xAt(data.length - 1)} ${PAD_T + chartH} L ${xAt(0)} ${PAD_T + chartH} Z`}
-            fill="url(#tvArea)"
-          />
-          <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" />
-        </g>
-      ) : null}
-      {type === 'line' ? <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" /> : null}
-      {type === 'candles' ? <Candles data={data} geometry={geometry} /> : null}
-      {type === 'bars' ? <Bars data={data} geometry={geometry} /> : null}
+      <g clipPath={`url(#${clipId})`}>
+        {/* SERIES_TOTAL is named for the net-worth chart's "Total" line, but is
+            really just the app's one accent blue for "the headline line" in
+            any chart - reused here for the price line itself. */}
+        {type === 'area' ? (
+          <g>
+            <defs>
+              <linearGradient id="tvArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={SERIES_TOTAL} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={SERIES_TOTAL} stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path
+              d={`${pricePath} L ${xAt(data.length - 1)} ${PAD_T + chartH} L ${xAt(0)} ${PAD_T + chartH} Z`}
+              fill="url(#tvArea)"
+            />
+            <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" />
+          </g>
+        ) : null}
+        {type === 'line' ? <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" /> : null}
+        {type === 'candles' ? <Candles data={data} geometry={geometry} /> : null}
+        {type === 'bars' ? <Bars data={data} geometry={geometry} /> : null}
 
-      {overlays.bb ? (
-        <g>
+        {overlays.bb ? (
+          <g>
+            <path
+              d={linePath(ind.bb.up, xAt, scaleY)}
+              fill="none"
+              stroke={OVERLAY_STROKES.bb}
+              strokeWidth="1"
+              opacity="0.55"
+            />
+            <path
+              d={linePath(ind.bb.mid, xAt, scaleY)}
+              fill="none"
+              stroke={OVERLAY_STROKES.bb}
+              strokeWidth="1"
+              opacity="0.35"
+              strokeDasharray="3 3"
+            />
+            <path
+              d={linePath(ind.bb.lo, xAt, scaleY)}
+              fill="none"
+              stroke={OVERLAY_STROKES.bb}
+              strokeWidth="1"
+              opacity="0.55"
+            />
+          </g>
+        ) : null}
+        {['ma20', 'ma50', 'ma200', 'ema9'].map((key) =>
+          overlays[key] ? (
+            <path
+              key={key}
+              d={linePath(ind[key], xAt, scaleY)}
+              fill="none"
+              stroke={OVERLAY_STROKES[key]}
+              strokeWidth="1.3"
+            />
+          ) : null,
+        )}
+        {overlays.vwap ? (
           <path
-            d={linePath(ind.bb.up, xAt, scaleY)}
+            d={linePath(ind.vwap, xAt, scaleY)}
             fill="none"
-            stroke={OVERLAY_STROKES.bb}
-            strokeWidth="1"
-            opacity="0.55"
+            stroke={OVERLAY_STROKES.vwap}
+            strokeWidth="1.2"
+            strokeDasharray="4 3"
           />
-          <path
-            d={linePath(ind.bb.mid, xAt, scaleY)}
-            fill="none"
-            stroke={OVERLAY_STROKES.bb}
-            strokeWidth="1"
-            opacity="0.35"
-            strokeDasharray="3 3"
-          />
-          <path
-            d={linePath(ind.bb.lo, xAt, scaleY)}
-            fill="none"
-            stroke={OVERLAY_STROKES.bb}
-            strokeWidth="1"
-            opacity="0.55"
-          />
-        </g>
-      ) : null}
-      {['ma20', 'ma50', 'ma200', 'ema9'].map((key) =>
-        overlays[key] ? (
-          <path
-            key={key}
-            d={linePath(ind[key], xAt, scaleY)}
-            fill="none"
-            stroke={OVERLAY_STROKES[key]}
-            strokeWidth="1.3"
-          />
-        ) : null,
-      )}
-      {overlays.vwap ? (
-        <path
-          d={linePath(ind.vwap, xAt, scaleY)}
-          fill="none"
-          stroke={OVERLAY_STROKES.vwap}
-          strokeWidth="1.2"
-          strokeDasharray="4 3"
-        />
-      ) : null}
+        ) : null}
 
-      {earningsMarkers.length > 0 ? (
-        <EarningsMarkers markers={earningsMarkers} geometry={geometry} />
-      ) : null}
+        {earningsMarkers.length > 0 ? (
+          <EarningsMarkers markers={earningsMarkers} geometry={geometry} />
+        ) : null}
 
-      <g>
         <line
           x1={0}
           x2={width - PAD_R}
@@ -205,6 +212,9 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           strokeDasharray="3 3"
           opacity="0.7"
         />
+      </g>
+
+      <g>
         <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={REPORTED} />
         <text
           x={width - PAD_R + 6}
@@ -224,7 +234,7 @@ function Crosshair({ bar, index, geometry, width }) {
   const { xAt, scaleY, chartH } = geometry
 
   return (
-    <g>
+    <g pointerEvents="none">
       <line
         x1={xAt(index)}
         x2={xAt(index)}
@@ -255,12 +265,59 @@ function Crosshair({ bar, index, geometry, width }) {
   )
 }
 
-export function TVChart({ data, ind, type, overlays, hover, setHover, height = 360, earningsMarkers = [] }) {
+function ScaleHandle({ width, height, yScale, onChange }) {
+  const drag = useRef(null)
+
+  if (!onChange) return null
+
+  const end = () => {
+    drag.current = null
+  }
+
+  return (
+    <rect
+      data-testid="price-scale"
+      x={width - PAD_R}
+      y={0}
+      width={PAD_R}
+      height={height}
+      fill="transparent"
+      style={{ cursor: 'ns-resize' }}
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture?.(e.pointerId)
+        drag.current = { y: e.clientY, scale: yScale }
+      }}
+      onPointerMove={(e) => {
+        if (drag.current) onChange(scaleFromDrag(drag.current.scale, e.clientY - drag.current.y))
+      }}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        onChange(1)
+      }}
+    />
+  )
+}
+
+export function TVChart({
+  data,
+  ind,
+  type,
+  overlays,
+  hover,
+  setHover,
+  height = 360,
+  earningsMarkers = [],
+  yScale = 1,
+  onYScaleChange,
+}) {
   const [ref, width] = useWidth()
+  const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
 
   const geometry = useMemo(
-    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb }),
-    [data, ind, width, height, overlays.bb],
+    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale }),
+    [data, ind, width, height, overlays.bb, yScale],
   )
 
   if (data.length === 0) return null
@@ -282,7 +339,9 @@ export function TVChart({ data, ind, type, overlays, hover, setHover, height = 3
           geometry={geometry}
           width={width}
           earningsMarkers={earningsMarkers}
+          clipId={clipId}
         />
+        <ScaleHandle width={width} height={height} yScale={yScale} onChange={onYScaleChange} />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
         ) : null}

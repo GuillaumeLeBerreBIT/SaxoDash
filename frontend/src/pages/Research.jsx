@@ -73,6 +73,11 @@ export default function Research() {
 
   const { data: positions = [] } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
+  const [scaledSymbol, setScaledSymbol] = useState(symbol)
+  if (scaledSymbol !== symbol) {
+    setScaledSymbol(symbol)
+    controls.setYScale(1)
+  }
   // `instrument`, when the caller already has it (a watchlist row, a search
   // pick), pins the exact uic so an ambiguous ticker like "NOW" can't
   // resolve to the wrong company once symbol search runs again on arrival.

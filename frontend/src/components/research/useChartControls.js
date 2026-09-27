@@ -12,12 +12,14 @@ export function useChartControls({ range = '6M', type = 'candles' } = {}) {
     type,
     overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
     panes: { volume: true, rsi: false, macd: false },
+    yScale: 1,
   })
 
   return {
     ...state,
     setRange: (next) => setState((s) => ({ ...s, range: next })),
     setType: (next) => setState((s) => ({ ...s, type: next })),
+    setYScale: (next) => setState((s) => ({ ...s, yScale: next })),
     toggleOverlay: (key) =>
       setState((s) => ({ ...s, overlays: { ...s.overlays, [key]: !s.overlays[key] } })),
     togglePane: (key) => setState((s) => ({ ...s, panes: { ...s.panes, [key]: !s.panes[key] } })),

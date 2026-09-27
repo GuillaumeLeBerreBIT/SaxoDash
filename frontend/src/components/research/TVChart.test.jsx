@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
 import { DOWN, UP } from '../../lib/chartGeometry'
@@ -81,5 +81,52 @@ describe('earnings markers', () => {
   it('renders none when no markers are given', () => {
     const { container } = renderChart()
     expect(container.querySelector('polygon[fill="#34d399"], polygon[fill="#f87171"], polygon[fill="#3b82f6"]')).toBeNull()
+  })
+})
+
+describe('price-axis scaling', () => {
+  it('has no scale handle unless the parent can change the scale', () => {
+    const { container } = renderChart()
+
+    expect(container.querySelector('[data-testid="price-scale"]')).toBeNull()
+  })
+
+  it('compresses the scale when the axis is dragged down', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = renderChart({ yScale: 1, onYScaleChange })
+
+    const handle = getByTestId('price-scale')
+    fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1 })
+    fireEvent.pointerMove(handle, { clientY: 160, pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientY: 160, pointerId: 1 })
+
+    expect(onYScaleChange).toHaveBeenCalled()
+    expect(onYScaleChange.mock.calls.at(-1)[0]).toBeGreaterThan(1)
+  })
+
+  it('ignores pointer movement over the axis when no drag started', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = renderChart({ yScale: 1, onYScaleChange })
+
+    fireEvent.pointerMove(getByTestId('price-scale'), { clientY: 160, pointerId: 1 })
+
+    expect(onYScaleChange).not.toHaveBeenCalled()
+  })
+
+  it('resets the scale on a double-click of the axis', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = renderChart({ yScale: 4, onYScaleChange })
+
+    fireEvent.doubleClick(getByTestId('price-scale'))
+
+    expect(onYScaleChange).toHaveBeenCalledWith(1)
+  })
+
+  it('clips the candles to the plot area', () => {
+    const { container } = renderChart({ yScale: 0.2, onYScaleChange: vi.fn() })
+
+    const clipped = container.querySelector('g[clip-path]')
+    expect(clipped).not.toBeNull()
+    expect(clipped.querySelectorAll(`rect[fill="${UP}"], rect[fill="${DOWN}"]`)).toHaveLength(bars.length)
   })
 })

@@ -73,7 +73,7 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
 }
 
 export default function ChartPanel({ bars, ind, isLoading, error, controls, hover, setHover, symbol, unresolved, earningsMarkers = [] }) {
-  const { range, type, overlays, panes, setRange, setType, toggleOverlay, togglePane } = controls
+  const { range, type, overlays, panes, yScale, setRange, setType, setYScale, toggleOverlay, togglePane } = controls
   const activeCount = Object.values({ ...overlays, ...panes }).filter(Boolean).length
   const period = periodChange(bars)
   const bar = bars[hover ?? bars.length - 1]
@@ -166,6 +166,8 @@ export default function ChartPanel({ bars, ind, isLoading, error, controls, hove
               setHover={setHover}
               height={CHART_HEIGHT}
               earningsMarkers={earningsMarkers}
+              yScale={yScale}
+              onYScaleChange={setYScale}
             />
             {panes.volume ? (
               <SubPane title="Volume" height={74}>
