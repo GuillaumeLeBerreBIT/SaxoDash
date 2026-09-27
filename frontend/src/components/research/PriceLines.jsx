@@ -5,6 +5,7 @@ import { LINE_STROKES, edgeOf, parsePriceInput, roundPrice } from '../../lib/pri
 
 const TAG = { target: 'T', stop: 'S', free: '' }
 const HIT_WIDTH = 10
+const DRAG_THRESHOLD = 3
 
 const svgY = (event) => event.clientY - event.currentTarget.closest('svg').getBoundingClientRect().top
 const stop = (event) => event.stopPropagation()
@@ -104,17 +105,21 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         onPointerDown={(e) => {
           e.stopPropagation()
           e.currentTarget.setPointerCapture?.(e.pointerId)
-          drag.current = { moved: false }
+          drag.current = { startY: svgY(e), lineY: y, moved: false, price: line.price }
         }}
         onPointerMove={(e) => {
           if (!drag.current) return
+          const offset = svgY(e) - drag.current.startY
+          if (!drag.current.moved && Math.abs(offset) < DRAG_THRESHOLD) return
           drag.current.moved = true
-          setPreview(roundPrice(geometry.priceAtY(svgY(e))))
+          const next = roundPrice(geometry.priceAtY(drag.current.lineY + offset))
+          drag.current.price = next
+          setPreview(next)
         }}
         onPointerUp={() => {
-          const moved = drag.current?.moved
+          const { moved, price: dragged } = drag.current ?? {}
           cancel()
-          if (moved && preview != null && preview !== line.price) onMove(line, preview)
+          if (moved && dragged != null && dragged !== line.price) onMove(line, dragged)
         }}
         onPointerCancel={cancel}
         onClick={(e) => {

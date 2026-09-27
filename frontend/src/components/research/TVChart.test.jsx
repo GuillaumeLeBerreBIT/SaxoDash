@@ -3,6 +3,7 @@ import { fireEvent, render } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
 import { DOWN, UP, priceGeometry } from '../../lib/chartGeometry'
+import { roundPrice } from '../../lib/priceLines'
 import { TVChart } from './TVChart'
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
@@ -186,6 +187,29 @@ describe('price lines', () => {
     expect(onMoveLine).not.toHaveBeenCalled()
   })
 
+  it('does not save a jitter smaller than the drag threshold', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [target], onMoveLine })
+
+    const y = yOf(target.price)
+    drag(getByTestId('price-hit-target'), y, y + 2)
+
+    expect(onMoveLine).not.toHaveBeenCalled()
+  })
+
+  it('moves a line by the pointer offset, not to the cursor', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [target], onMoveLine })
+
+    const lineY = yOf(target.price)
+    drag(getByTestId('price-hit-target'), lineY + 4, lineY + 4 + 30)
+
+    const expected = roundPrice(
+      priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false, yScale: 1 }).priceAtY(lineY + 30),
+    )
+    expect(onMoveLine).toHaveBeenCalledWith(target, expected)
+  })
+
   it('clamps a line dragged below zero to the minimum price', () => {
     const onMoveLine = vi.fn()
     const { getByTestId } = renderChart({ lines: [target], onMoveLine, yScale: 20, onYScaleChange: vi.fn() })
@@ -206,9 +230,14 @@ describe('price lines', () => {
   })
 
   it('does nothing on a double-click when lines cannot be created', () => {
+    const onError = vi.fn()
+    window.addEventListener('error', onError)
     const { container } = renderChart({ lines: [] })
 
-    expect(() => fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })).not.toThrow()
+    fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })
+
+    window.removeEventListener('error', onError)
+    expect(onError).not.toHaveBeenCalled()
   })
 
   it('double-clicking the axis does not create a line', () => {
