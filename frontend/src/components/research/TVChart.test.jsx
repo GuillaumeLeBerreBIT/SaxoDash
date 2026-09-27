@@ -17,18 +17,19 @@ const bars = Array.from({ length: 30 }, (_, i) => ({
 
 const overlays = { ma20: false, ma50: false, ma200: false, ema9: false, bb: false, vwap: false }
 
-const renderChart = (props = {}) =>
-  render(
-    <TVChart
-      data={bars}
-      ind={computeIndicators(bars)}
-      type="candles"
-      overlays={overlays}
-      hover={null}
-      setHover={vi.fn()}
-      {...props}
-    />,
-  )
+const chart = (props = {}) => (
+  <TVChart
+    data={bars}
+    ind={computeIndicators(bars)}
+    type="candles"
+    overlays={overlays}
+    hover={null}
+    setHover={vi.fn()}
+    {...props}
+  />
+)
+
+const renderChart = (props = {}) => render(chart(props))
 
 describe('TVChart', () => {
   it('draws one body per candle', () => {
@@ -208,6 +209,22 @@ describe('price lines', () => {
       priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false, yScale: 1 }).priceAtY(lineY + 30),
     )
     expect(onMoveLine).toHaveBeenCalledWith(target, expected)
+  })
+
+  it('holds a dropped line where it was dropped until its saved price changes', () => {
+    const onMoveLine = vi.fn()
+    const { getByTestId, rerender } = renderChart({ lines: [free], onMoveLine })
+    const hitY = () => Number(getByTestId('price-hit-7').getAttribute('y1'))
+
+    const lineY = yOf(free.price)
+    drag(getByTestId('price-hit-7'), lineY, lineY + 30)
+    const [, dropped] = onMoveLine.mock.calls[0]
+
+    expect(hitY()).toBeCloseTo(yOf(dropped))
+    rerender(chart({ lines: [{ ...free, price: dropped }], onMoveLine }))
+    expect(hitY()).toBeCloseTo(yOf(dropped))
+    rerender(chart({ lines: [free], onMoveLine }))
+    expect(hitY()).toBeCloseTo(yOf(free.price))
   })
 
   it('clamps a line dragged below zero to the minimum price', () => {

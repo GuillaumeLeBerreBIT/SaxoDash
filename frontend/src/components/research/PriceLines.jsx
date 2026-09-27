@@ -67,7 +67,12 @@ function EdgeMarker({ line, edge, width, chartH }) {
 
 function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEdit }) {
   const [preview, setPreview] = useState(null)
+  const [heldFrom, setHeldFrom] = useState(null)
   const drag = useRef(null)
+  if (heldFrom != null && heldFrom !== line.price) {
+    setHeldFrom(null)
+    setPreview(null)
+  }
 
   const edge = preview == null ? edgeOf(line.price, geometry) : null
   if (edge) return <EdgeMarker line={line} edge={edge} width={width} chartH={geometry.chartH} />
@@ -78,6 +83,7 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
 
   const cancel = () => {
     drag.current = null
+    setHeldFrom(null)
     setPreview(null)
   }
 
@@ -118,8 +124,10 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         }}
         onPointerUp={() => {
           const { moved, price: dragged } = drag.current ?? {}
-          cancel()
-          if (moved && dragged != null && dragged !== line.price) onMove(line, dragged)
+          if (!moved || dragged == null || dragged === line.price) return cancel()
+          drag.current = null
+          setHeldFrom(line.price)
+          onMove(line, dragged)
         }}
         onPointerCancel={cancel}
         onClick={(e) => {
