@@ -6,7 +6,9 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
 import {
   addWatchlistItem,
+  createPriceLine,
   createWatchlist,
+  deletePriceLine,
   deleteWatchlist,
   getChart,
   getCompanyNews,
@@ -14,12 +16,14 @@ import {
   getFundamentals,
   getInstrumentDetails,
   getPeers,
+  getPriceLines,
   getQuotes,
   getSymbolEarnings,
   getSymbolNote,
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  updatePriceLine,
   updateSymbolNote,
   markSymbolNoteReviewed,
   updateWatchlist,
@@ -43,6 +47,7 @@ export const researchKeys = {
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   symbolNote: (symbol) => ['symbol-note', symbol],
+  priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
 }
 
@@ -215,6 +220,50 @@ export function useMarkReviewedMutation(symbol) {
       queryClient.invalidateQueries({ queryKey: portfolioKeys.portfolioInsights })
     },
   })
+}
+
+export function usePriceLines(uic, assetType) {
+  return useQuery({
+    queryKey: researchKeys.priceLines(uic, assetType),
+    queryFn: () => getPriceLines({ uic, assetType }),
+    enabled: Boolean(uic && assetType),
+  })
+}
+
+export function usePriceLineMutations(uic, assetType) {
+  const queryClient = useQueryClient()
+  const key = researchKeys.priceLines(uic, assetType)
+  const refetch = () => queryClient.invalidateQueries({ queryKey: key })
+  const optimistic = (apply) => async (variables) => {
+    await queryClient.cancelQueries({ queryKey: key })
+    const previous = queryClient.getQueryData(key)
+    queryClient.setQueryData(key, (old) => (old ? apply(old, variables) : old))
+    return { previous }
+  }
+  const rollback = (_error, _variables, context) => {
+    if (context?.previous) queryClient.setQueryData(key, context.previous)
+  }
+
+  return {
+    create: useMutation({
+      mutationFn: ({ price }) => createPriceLine({ uic, assetType, price }),
+      onSettled: refetch,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, price }) => updatePriceLine(id, price),
+      onMutate: optimistic((old, { id, price }) =>
+        old.map((line) => (line.id === id ? { ...line, price } : line)),
+      ),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+    remove: useMutation({
+      mutationFn: (id) => deletePriceLine(id),
+      onMutate: optimistic((old, id) => old.filter((line) => line.id !== id)),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+  }
 }
 
 export function useWatchlists() {

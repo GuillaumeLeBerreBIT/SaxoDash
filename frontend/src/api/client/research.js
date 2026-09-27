@@ -28,6 +28,15 @@ export const updateSymbolNote = (symbol, patch) =>
 export const markSymbolNoteReviewed = (symbol) =>
   jsonRequest(`/api/research/notes/${symbol}/review/`, 'POST', {})
 
+export const getPriceLines = ({ uic, assetType }) =>
+  apiFetch(`/api/research/price-lines/${uic}/${assetType}/`)
+export const createPriceLine = ({ uic, assetType, price }) =>
+  jsonRequest(`/api/research/price-lines/${uic}/${assetType}/`, 'POST', { price })
+export const updatePriceLine = (id, price) =>
+  jsonRequest(`/api/research/price-lines/${id}/`, 'PATCH', { price })
+export const deletePriceLine = (id) =>
+  apiFetch(`/api/research/price-lines/${id}/`, { method: 'DELETE' })
+
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
 export const updateWatchlist = (id, patch) =>
