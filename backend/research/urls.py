@@ -8,6 +8,8 @@ from .views import (
     InstrumentDetailsView,
     InstrumentSearchView,
     PeersView,
+    PriceLineDetailView,
+    PriceLineListCreateView,
     QuotesView,
     SymbolEarningsView,
     SymbolNoteReviewView,
@@ -36,6 +38,12 @@ urlpatterns = [
     path('news/<str:symbol>/', CompanyNewsView.as_view(), name='research-company-news'),
     path('notes/<str:symbol>/', SymbolNoteView.as_view(), name='research-symbol-note'),
     path('notes/<str:symbol>/review/', SymbolNoteReviewView.as_view(), name='research-symbol-note-review'),
+    path(
+        'price-lines/<int:uic>/<str:asset_type>/',
+        PriceLineListCreateView.as_view(),
+        name='research-price-lines',
+    ),
+    path('price-lines/<int:pk>/', PriceLineDetailView.as_view(), name='research-price-line'),
     path('instruments/', InstrumentSearchView.as_view(), name='research-instruments'),
     path(
         'instruments/<int:uic>/<str:asset_type>/',

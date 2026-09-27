@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import SymbolNote, Watchlist, WatchlistItem
+from .models import PriceLine, SymbolNote, Watchlist, WatchlistItem
 
 
 def _positive_or_none(value):
@@ -62,4 +62,14 @@ class SymbolNoteSerializer(serializers.ModelSerializer):
         return _positive_or_none(value)
 
     def validate_stop_price(self, value):
+        return _positive_or_none(value)
+
+
+class PriceLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceLine
+        fields = ['id', 'uic', 'asset_type', 'price', 'created_at']
+        read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
+
+    def validate_price(self, value):
         return _positive_or_none(value)

@@ -16,9 +16,10 @@ from rest_framework.views import APIView
 from saxo import client
 
 from . import earnings, finnhub, market
-from .models import SymbolNote, Watchlist, WatchlistItem
+from .models import PriceLine, SymbolNote, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
+    PriceLineSerializer,
     SymbolNoteSerializer,
     WatchlistItemCreateSerializer,
     WatchlistSerializer,
@@ -207,3 +208,20 @@ class SymbolNoteReviewView(APIView):
         note.reviewed_at = timezone.now()
         note.save(update_fields=['reviewed_at'])
         return Response(SymbolNoteSerializer(note).data)
+
+
+class PriceLineListCreateView(ListCreateAPIView):
+    serializer_class = PriceLineSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return PriceLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+    def perform_create(self, serializer):
+        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+
+class PriceLineDetailView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ['patch', 'delete', 'options']
+    serializer_class = PriceLineSerializer
+    queryset = PriceLine.objects.all()

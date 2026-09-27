@@ -65,3 +65,17 @@ class SymbolNote(models.Model):
 
     def __str__(self):
         return f'Note for {self.symbol}'
+
+
+class PriceLine(models.Model):
+    uic = models.PositiveIntegerField()
+    asset_type = models.CharField(max_length=20)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        indexes = [models.Index(fields=['uic', 'asset_type'])]
+
+    def __str__(self):
+        return f'{self.price} on {self.uic}:{self.asset_type}'
