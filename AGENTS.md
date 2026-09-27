@@ -287,3 +287,11 @@ resolve to an empty string; that machinery was reverted (migrations
 `0005_position_isin` / `0006_remove_position_isin`) once discovered. The
 ticker every instrument already carries is the identifier that actually
 works, for both a stock and an ETF, with no Saxo call at all.
+
+**The Research price scale is the bars', not the annotations'.** `priceGeometry`
+takes a `yScale` the user sets by dragging the price axis, but never widens its
+automatic domain to fit a target, stop or `PriceLine` — a target 3× the price
+would flatten the candles. A line outside the visible range becomes an edge
+marker in the gutter. Target/stop live on `SymbolNote` (per symbol, thesis
+data); freeform lines are `PriceLine` rows keyed on uic + asset type like every
+other per-instrument record.
