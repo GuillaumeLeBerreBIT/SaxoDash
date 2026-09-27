@@ -42,4 +42,17 @@ describe('useSymbolNoteMutation', () => {
     await waitFor(() => expect(result.current.note.data.target_price).toBe('100.00'))
     expect(client.getSymbolNote).toHaveBeenCalledTimes(2)
   })
+
+  it('goes back to the saved level even when the server cannot be reached', async () => {
+    client.getSymbolNote.mockResolvedValueOnce({ symbol: 'NVDA', target_price: '100.00' })
+    client.getSymbolNote.mockRejectedValue(new Error('offline'))
+    client.updateSymbolNote.mockRejectedValue(new Error('offline'))
+    const { result } = setup(() => ({ note: useSymbolNote('NVDA'), save: useSymbolNoteMutation('NVDA') }))
+    await waitFor(() => expect(result.current.note.data?.target_price).toBe('100.00'))
+
+    act(() => result.current.save.mutate({ target_price: '120.00' }))
+
+    await waitFor(() => expect(result.current.save.isError).toBe(true))
+    await waitFor(() => expect(result.current.note.data.target_price).toBe('100.00'))
+  })
 })

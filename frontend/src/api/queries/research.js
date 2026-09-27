@@ -195,7 +195,12 @@ export function useSymbolNoteMutation(symbol) {
     mutationFn: (patch) => updateSymbolNote(symbol, patch),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData(key)
       queryClient.setQueryData(key, (old) => (old ? { ...old, ...patch } : old))
+      return { previous }
+    },
+    onError: (_error, _patch, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous)
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: key }),
   })
