@@ -63,21 +63,44 @@ export function linePath(values, xAt, scaleY) {
   return d.trim()
 }
 
-export function useWidth() {
+export function useSize() {
   const ref = useRef(null)
-  const [width, setWidth] = useState(FALLBACK_WIDTH)
+  const [size, setSize] = useState({ width: FALLBACK_WIDTH, height: 0 })
 
   useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
 
-    const observer = new ResizeObserver(() => setWidth(element.clientWidth || FALLBACK_WIDTH))
+    const measure = () =>
+      setSize((current) => {
+        const width = element.clientWidth || FALLBACK_WIDTH
+        const height = element.clientHeight
+        return width === current.width && height === current.height ? current : { width, height }
+      })
+    const observer = new ResizeObserver(measure)
     observer.observe(element)
-    setWidth(element.clientWidth || FALLBACK_WIDTH)
+    measure()
     return () => observer.disconnect()
   }, [])
 
-  return [ref, width]
+  return [ref, size]
+}
+
+export function useWidth() {
+  const [ref, size] = useSize()
+  return [ref, size.width]
+}
+
+const LEGEND_HEIGHT = 26
+const TIME_AXIS_HEIGHT = 22
+const CANVAS_PADDING = 4
+export const MIN_PRICE_HEIGHT = 240
+
+export function pricePaneHeight({ total, panes, paneHeights }) {
+  const lower = Object.keys(panes)
+    .filter((key) => panes[key])
+    .reduce((sum, key) => sum + paneHeights[key] + 1, 0)
+  return Math.max(MIN_PRICE_HEIGHT, Math.floor(total - LEGEND_HEIGHT - TIME_AXIS_HEIGHT - CANVAS_PADDING - lower))
 }
 
 /** Everything the price pane needs to place a bar: scales, slots and ticks.

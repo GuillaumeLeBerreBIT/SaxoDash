@@ -9,6 +9,7 @@ import Accounts from './pages/Accounts'
 import AccountTransactions from './pages/AccountTransactions'
 import Spending from './pages/Spending'
 import Research from './pages/Research'
+import ResearchChart from './pages/ResearchChart'
 import Earnings from './pages/Earnings'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
@@ -19,6 +20,7 @@ function App() {
     <Routes>
       <Route path='login' element={<Login />} />
       <Route element={<RequireAuth />}>
+        <Route path='research/chart' element={<ResearchChart />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path='portfolio' element={<Portfolio />} />

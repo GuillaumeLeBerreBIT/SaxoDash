@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   MAX_Y_SCALE,
+  MIN_PRICE_HEIGHT,
   MIN_Y_SCALE,
   PAD_R,
   donutOuterRadius,
@@ -9,6 +10,7 @@ import {
   linePath,
   paneGeometry,
   priceGeometry,
+  pricePaneHeight,
   scaleFromDrag,
   svgY,
 } from './chartGeometry'
@@ -183,6 +185,26 @@ describe('svgY', () => {
     }
 
     expect(svgY(event)).toBe(30)
+  })
+})
+
+describe('pricePaneHeight', () => {
+  const paneHeights = { volume: 96, rsi: 120, macd: 120 }
+  const none = { volume: false, rsi: false, macd: false }
+
+  it('gives the price pane everything but the legend, time axis and padding', () => {
+    expect(pricePaneHeight({ total: 800, panes: none, paneHeights })).toBe(800 - 26 - 22 - 4)
+  })
+
+  it('subtracts each enabled lower pane and its border', () => {
+    const panes = { volume: true, rsi: true, macd: false }
+    expect(pricePaneHeight({ total: 800, panes, paneHeights })).toBe(800 - 26 - 22 - 4 - 97 - 121)
+  })
+
+  it('never shrinks below the readable floor in a short window with every pane on', () => {
+    const panes = { volume: true, rsi: true, macd: true }
+    expect(pricePaneHeight({ total: 300, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
+    expect(pricePaneHeight({ total: 0, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
   })
 })
 
