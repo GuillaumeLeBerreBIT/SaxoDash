@@ -1,13 +1,11 @@
 import { useRef, useState } from 'react'
 
-import { PAD_R, PAD_T } from '../../lib/chartGeometry'
+import { DRAG_THRESHOLD, PAD_R, PAD_T, svgY } from '../../lib/chartGeometry'
 import { LINE_STROKES, badgePrice, edgeOf, parsePriceInput, roundPrice } from '../../lib/priceLines'
 
 const TAG = { target: 'T', stop: 'S', free: '' }
 const HIT_WIDTH = 10
-const DRAG_THRESHOLD = 3
 
-const svgY = (event) => event.clientY - event.currentTarget.closest('svg').getBoundingClientRect().top
 const stop = (event) => event.stopPropagation()
 
 function Badge({ line, price, y, width, selected }) {

@@ -2,6 +2,7 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import {
   DOWN,
+  DRAG_THRESHOLD,
   OVERLAY_STROKES,
   PAD_R,
   PAD_T,
@@ -10,6 +11,7 @@ import {
   linePath,
   priceGeometry,
   scaleFromDrag,
+  svgY,
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
@@ -295,7 +297,7 @@ function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
       onPointerMove={(e) => {
         if (!drag.current) return
         const dy = e.clientY - drag.current.y
-        if (!drag.current.moved && Math.abs(dy) < 3) return
+        if (!drag.current.moved && Math.abs(dy) < DRAG_THRESHOLD) return
         drag.current.moved = true
         if (onChange) onChange(scaleFromDrag(drag.current.scale, dy))
       }}
@@ -303,7 +305,7 @@ function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
         const current = drag.current
         drag.current = null
         if (current && !current.moved && onClickAt) {
-          onClickAt(e.clientY - e.currentTarget.closest('svg').getBoundingClientRect().top)
+          onClickAt(svgY(e))
         }
       }}
       onPointerCancel={end}

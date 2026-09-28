@@ -10,6 +10,7 @@ import {
   paneGeometry,
   priceGeometry,
   scaleFromDrag,
+  svgY,
 } from './chartGeometry'
 
 const bars = [
@@ -169,6 +170,19 @@ describe('price scale', () => {
 
     expect(ticks[0]).toBeCloseTo(bottom)
     expect(ticks[ticks.length - 1]).toBeCloseTo(top)
+  })
+})
+
+describe('svgY', () => {
+  it('converts a pointer event to an svg-local y', () => {
+    const event = {
+      clientY: 130,
+      currentTarget: {
+        closest: () => ({ getBoundingClientRect: () => ({ top: 100 }) }),
+      },
+    }
+
+    expect(svgY(event)).toBe(30)
   })
 })
 

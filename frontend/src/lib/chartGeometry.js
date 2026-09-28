@@ -33,8 +33,14 @@ const PAD_B = 6
 export const MIN_Y_SCALE = 0.1
 export const MAX_Y_SCALE = 20
 
+export const DRAG_THRESHOLD = 3
+
 export function scaleFromDrag(startScale, dy) {
   return Math.min(MAX_Y_SCALE, Math.max(MIN_Y_SCALE, startScale * Math.exp(dy / 150)))
+}
+
+export function svgY(event) {
+  return event.clientY - event.currentTarget.closest('svg').getBoundingClientRect().top
 }
 
 // jsdom and the first paint have no layout; this keeps both drawable.
