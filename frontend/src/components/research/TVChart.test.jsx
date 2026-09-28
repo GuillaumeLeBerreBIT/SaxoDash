@@ -147,6 +147,12 @@ describe('price lines', () => {
     fireEvent.pointerUp(element, { clientY: toY, pointerId: 1 })
   }
 
+  const clickGutter = (utils, y) => {
+    const g = utils.getByTestId('price-scale')
+    fireEvent.pointerDown(g, { clientY: y, pointerId: 1 })
+    fireEvent.pointerUp(g, { clientY: y, pointerId: 1 })
+  }
+
   it('draws target, stop and freeform lines', () => {
     const { getByTestId } = renderChart({ lines: [target, stop, free] })
 
@@ -345,9 +351,10 @@ describe('price lines', () => {
 
   it('saves an exact price typed into the badge editor', () => {
     const onMoveLine = vi.fn()
-    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [stop], onMoveLine })
+    const utils = renderChart({ lines: [stop], onMoveLine })
+    const { getByLabelText, queryByLabelText } = utils
 
-    fireEvent.click(getByTestId('price-badge-stop'))
+    clickGutter(utils, yOf(stop.price))
     const input = getByLabelText('Line price')
     expect(input).toHaveValue('105.00')
 
@@ -360,9 +367,10 @@ describe('price lines', () => {
 
   it('cancels the editor on text that is not a price', () => {
     const onMoveLine = vi.fn()
-    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [stop], onMoveLine })
+    const utils = renderChart({ lines: [stop], onMoveLine })
+    const { getByLabelText, queryByLabelText } = utils
 
-    fireEvent.click(getByTestId('price-badge-stop'))
+    clickGutter(utils, yOf(stop.price))
     const input = getByLabelText('Line price')
     fireEvent.change(input, { target: { value: '12,5' } })
     fireEvent.keyDown(input, { key: 'Enter' })
@@ -373,15 +381,84 @@ describe('price lines', () => {
 
   it('does not save on Escape even when the field then blurs', () => {
     const onMoveLine = vi.fn()
-    const { getByTestId, getByLabelText } = renderChart({ lines: [stop], onMoveLine })
+    const utils = renderChart({ lines: [stop], onMoveLine })
+    const { getByLabelText } = utils
 
-    fireEvent.click(getByTestId('price-badge-stop'))
+    clickGutter(utils, yOf(stop.price))
     const input = getByLabelText('Line price')
     fireEvent.change(input, { target: { value: '99' } })
     fireEvent.keyDown(input, { key: 'Escape' })
     fireEvent.blur(input)
 
     expect(onMoveLine).not.toHaveBeenCalled()
+  })
+
+  it('starts a scale drag on top of a badge', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId, queryByLabelText } = renderChart({ lines: [stop], onYScaleChange, yScale: 1 })
+
+    const handle = getByTestId('price-scale')
+    const y = yOf(stop.price)
+    fireEvent.pointerDown(handle, { clientY: y, pointerId: 1 })
+    fireEvent.pointerMove(handle, { clientY: y + 60, pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientY: y + 60, pointerId: 1 })
+
+    expect(onYScaleChange).toHaveBeenCalled()
+    expect(onYScaleChange.mock.calls.at(-1)[0]).toBeGreaterThan(1)
+    expect(queryByLabelText('Line price')).toBeNull()
+  })
+
+  it('treats a press with a tiny wobble on a badge as a click', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ lines: [stop], onYScaleChange, yScale: 1 })
+
+    const handle = getByTestId('price-scale')
+    const y = yOf(stop.price)
+    fireEvent.pointerDown(handle, { clientY: y, pointerId: 1 })
+    fireEvent.pointerMove(handle, { clientY: y + 2, pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientY: y + 2, pointerId: 1 })
+
+    expect(onYScaleChange).not.toHaveBeenCalled()
+    expect(getByLabelText('Line price')).toHaveValue('105.00')
+  })
+
+  it('does nothing on a click on bare axis', () => {
+    const onYScaleChange = vi.fn()
+    const utils = renderChart({ lines: [stop], onYScaleChange })
+    const { queryByLabelText } = utils
+
+    const bareY = yOf(stop.price) > 200 ? 30 : 330
+    clickGutter(utils, bareY)
+
+    expect(queryByLabelText('Line price')).toBeNull()
+    expect(onYScaleChange).not.toHaveBeenCalled()
+  })
+
+  it('opens a badge editor even when the scale cannot change', () => {
+    const utils = renderChart({ lines: [stop] })
+    const { getByLabelText } = utils
+
+    clickGutter(utils, yOf(stop.price))
+
+    expect(getByLabelText('Line price')).toBeInTheDocument()
+  })
+
+  it('does not open an editor for an off-screen line', () => {
+    const utils = renderChart({ lines: [{ ...target, price: 1000 }] })
+    const { queryByLabelText } = utils
+
+    clickGutter(utils, 16)
+
+    expect(queryByLabelText('Line price')).toBeNull()
+  })
+
+  it('picks the nearest badge when two overlap', () => {
+    const utils = renderChart({ lines: [target, { ...stop, price: target.price - 0.5 }] })
+    const { getByLabelText } = utils
+
+    clickGutter(utils, yOf(target.price))
+
+    expect(getByLabelText('Line price')).toHaveValue('110.00')
   })
 
   it('shows the badge price with no decimals from ten thousand up', () => {

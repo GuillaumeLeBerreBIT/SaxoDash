@@ -13,7 +13,7 @@ import {
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
-import { isTypingTarget, roundPrice } from '../../lib/priceLines'
+import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
@@ -269,10 +269,10 @@ function Crosshair({ bar, index, geometry, width }) {
 
 const NO_LINES = []
 
-function ScaleHandle({ width, height, yScale, onChange }) {
+function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
   const drag = useRef(null)
 
-  if (!onChange) return null
+  if (!onChange && !onClickAt) return null
 
   const end = () => {
     drag.current = null
@@ -289,16 +289,26 @@ function ScaleHandle({ width, height, yScale, onChange }) {
       style={{ cursor: 'ns-resize' }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture?.(e.pointerId)
-        drag.current = { y: e.clientY, scale: yScale }
+        drag.current = { y: e.clientY, scale: yScale, moved: false }
       }}
       onPointerMove={(e) => {
-        if (drag.current) onChange(scaleFromDrag(drag.current.scale, e.clientY - drag.current.y))
+        if (!drag.current) return
+        const dy = e.clientY - drag.current.y
+        if (!drag.current.moved && Math.abs(dy) < 3) return
+        drag.current.moved = true
+        if (onChange) onChange(scaleFromDrag(drag.current.scale, dy))
       }}
-      onPointerUp={end}
+      onPointerUp={(e) => {
+        const current = drag.current
+        drag.current = null
+        if (current && !current.moved && onClickAt) {
+          onClickAt(e.clientY - e.currentTarget.closest('svg').getBoundingClientRect().top)
+        }
+      }}
       onPointerCancel={end}
       onDoubleClick={(e) => {
         e.stopPropagation()
-        onChange(1)
+        if (onChange) onChange(1)
       }}
     />
   )
@@ -364,6 +374,16 @@ export function TVChart({
     return x < width - PAD_R && y >= PAD_T && y <= PAD_T + geometry.chartH ? y : null
   }
 
+  const editAt = (y) => {
+    let nearest = null
+    for (const line of lines) {
+      if (edgeOf(line.price, geometry)) continue
+      const distance = Math.abs(geometry.scaleY(line.price) - y)
+      if (distance <= 8 && (!nearest || distance < nearest.distance)) nearest = { line, distance }
+    }
+    if (nearest) setEditingId(nearest.line.id)
+  }
+
   return (
     <div
       ref={ref}
@@ -389,7 +409,13 @@ export function TVChart({
           earningsMarkers={earningsMarkers}
           clipId={clipId}
         />
-        <ScaleHandle width={width} height={height} yScale={yScale} onChange={onYScaleChange} />
+        <ScaleHandle
+          width={width}
+          height={height}
+          yScale={yScale}
+          onChange={onYScaleChange}
+          onClickAt={lines.length > 0 ? editAt : undefined}
+        />
         <PriceLines
           lines={lines}
           geometry={geometry}
@@ -397,7 +423,6 @@ export function TVChart({
           selectedId={selected?.id ?? null}
           onMove={(line, price) => onMoveLine?.(line, price)}
           onSelect={setSelectedId}
-          onEdit={(line) => setEditingId(line.id)}
         />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />

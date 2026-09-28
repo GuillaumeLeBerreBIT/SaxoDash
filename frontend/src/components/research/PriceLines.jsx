@@ -10,20 +10,11 @@ const DRAG_THRESHOLD = 3
 const svgY = (event) => event.clientY - event.currentTarget.closest('svg').getBoundingClientRect().top
 const stop = (event) => event.stopPropagation()
 
-function Badge({ line, price, y, width, selected, onEdit }) {
+function Badge({ line, price, y, width, selected }) {
   const color = LINE_STROKES[line.kind]
 
   return (
-    <g
-      data-testid={`price-badge-${line.id}`}
-      style={{ cursor: 'text' }}
-      onClick={(e) => {
-        e.stopPropagation()
-        onEdit(line)
-      }}
-      onDoubleClick={stop}
-      onPointerDown={stop}
-    >
+    <g data-testid={`price-badge-${line.id}`} pointerEvents="none">
       <rect
         x={width - PAD_R + 2}
         y={y - 8}
@@ -65,7 +56,7 @@ function EdgeMarker({ line, edge, width, chartH }) {
   )
 }
 
-function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEdit }) {
+function DraggableLine({ line, geometry, width, selected, onMove, onSelect }) {
   const [preview, setPreview] = useState(null)
   const [heldFrom, setHeldFrom] = useState(null)
   const drag = useRef(null)
@@ -136,12 +127,12 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         }}
         onDoubleClick={stop}
       />
-      <Badge line={line} price={price} y={y} width={width} selected={selected} onEdit={onEdit} />
+      <Badge line={line} price={price} y={y} width={width} selected={selected} />
     </g>
   )
 }
 
-export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect, onEdit }) {
+export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect }) {
   return lines.map((line) => (
     <DraggableLine
       key={line.id}
@@ -151,7 +142,6 @@ export default function PriceLines({ lines, geometry, width, selectedId, onMove,
       selected={line.id === selectedId}
       onMove={onMove}
       onSelect={onSelect}
-      onEdit={onEdit}
     />
   ))
 }
