@@ -3,33 +3,12 @@ import { CandlestickChart, Sigma } from 'lucide-react'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { INTERVALS, barChange, periodChange } from '../../lib/research'
 import { chartPlaceholderFor } from '../../lib/chartState'
+import { CHART_TYPES, OVERLAY_DEFS, PANE_DEFS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card, TBtn } from '../ui'
 import { Menu, MenuLabel, MenuRow, MenuSeparator } from './menu'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { OVERLAY_STROKES } from '../../lib/chartGeometry'
 import { SubPane, TVChart } from './TVChart'
-
-const CHART_TYPES = [
-  ['candles', 'Candles'],
-  ['bars', 'Bars'],
-  ['line', 'Line'],
-  ['area', 'Area'],
-]
-
-const OVERLAY_DEFS = [
-  { key: 'ma20', label: 'MA 20' },
-  { key: 'ma50', label: 'MA 50' },
-  { key: 'ma200', label: 'MA 200' },
-  { key: 'ema9', label: 'EMA 9' },
-  { key: 'bb', label: 'Bollinger (20, 2)' },
-  { key: 'vwap', label: 'VWAP' },
-]
-
-const PANE_DEFS = [
-  { key: 'volume', label: 'Volume' },
-  { key: 'rsi', label: 'RSI (14)' },
-  { key: 'macd', label: 'MACD (12, 26, 9)' },
-]
 
 const CHART_HEIGHT = 390
 
@@ -90,7 +69,7 @@ export default function ChartPanel({
   lineSaveFailed = false,
 }) {
   const { range, type, overlays, panes, yScale, setRange, setType, setYScale, toggleOverlay, togglePane } = controls
-  const activeCount = Object.values({ ...overlays, ...panes }).filter(Boolean).length
+  const activeCount = activeIndicatorCount(controls)
   const period = periodChange(bars)
   const bar = bars[hover ?? bars.length - 1]
 
