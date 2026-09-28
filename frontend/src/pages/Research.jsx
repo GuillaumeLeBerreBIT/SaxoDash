@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
-import { isEtf } from '../lib/research'
+import { chartHref, isEtf } from '../lib/research'
 import { PageHeader } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
@@ -145,6 +145,7 @@ export default function Research() {
               onCreateLine={priceLines.create}
               onDeleteLine={priceLines.remove}
               lineSaveFailed={priceLines.saveFailed}
+              expandHref={chartHref(symbol, instrument)}
             />
 
             <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">

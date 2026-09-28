@@ -5,6 +5,7 @@ import {
   WIDEST_RANGE_COUNT,
   barChange,
   barsForRange,
+  chartHref,
   earningsMarkersForBars,
   instrumentKey,
   isEtf,
@@ -295,6 +296,22 @@ describe('researchHref', () => {
 
   it('skips the pin without a uic', () => {
     expect(researchHref('NOW', undefined, {})).toBe('/research?symbol=NOW')
+  })
+})
+
+describe('chartHref', () => {
+  it('builds a symbol-only advanced chart link', () => {
+    expect(chartHref('NVDA')).toBe('/research/chart?symbol=NVDA')
+  })
+
+  it('pins the exact instrument, like researchHref', () => {
+    expect(chartHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe(
+      '/research/chart?symbol=NOW&uic=204300&assetType=Stock',
+    )
+  })
+
+  it('leaves out an asset type without a uic', () => {
+    expect(chartHref('NOW', { assetType: 'Stock' })).toBe('/research/chart?symbol=NOW')
   })
 })
 

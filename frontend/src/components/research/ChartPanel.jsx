@@ -1,55 +1,15 @@
-import { CandlestickChart, Sigma } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CandlestickChart, Maximize2, Sigma } from 'lucide-react'
 
-import { fmtNum, fmtPct } from '../../lib/format'
-import { INTERVALS, barChange, periodChange } from '../../lib/research'
-import { chartPlaceholderFor } from '../../lib/chartState'
-import { CHART_TYPES, OVERLAY_DEFS, PANE_DEFS, activeIndicatorCount } from '../../lib/chartOptions'
+import { fmtPct } from '../../lib/format'
+import { INTERVALS, periodChange } from '../../lib/research'
+import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card, TBtn } from '../ui'
-import { Menu, MenuLabel, MenuRow, MenuSeparator } from './menu'
-import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
-import { OVERLAY_STROKES } from '../../lib/chartGeometry'
-import { SubPane, TVChart } from './TVChart'
+import { Menu } from './menu'
+import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
+import ChartCanvas from './ChartCanvas'
 
 const CHART_HEIGHT = 390
-
-function valueAt(series, hover) {
-  if (!series?.length) return null
-  return series[hover ?? series.length - 1]
-}
-
-function OhlcLegend({ bar, change, overlays, ind, hover }) {
-  const up = bar.close >= bar.open
-
-  return (
-    <div className="flex items-center gap-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap">
-      <span className="text-zinc-400">{bar.date}</span>
-      {[
-        ['O', bar.open],
-        ['H', bar.high],
-        ['L', bar.low],
-        ['C', bar.close],
-      ].map(([key, value]) => (
-        <span key={key} className="text-zinc-500">
-          {key} <span className={up ? 'text-emerald-400' : 'text-red-400'}>{fmtNum(value, 2)}</span>
-        </span>
-      ))}
-      {change == null ? null : (
-        <span className={change >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmtPct(change)}</span>
-      )}
-      <span className="text-zinc-500">
-        Vol <span className="text-zinc-300">{fmtNum(bar.volume / 1e6, 1)}M</span>
-      </span>
-      {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
-        const value = valueAt(ind[o.key], hover)
-        return (
-          <span key={o.key} style={{ color: OVERLAY_STROKES[o.key] }} className="text-[var(--fig-2xs)]">
-            {o.label} {value == null ? '—' : fmtNum(value, 2)}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
 
 export default function ChartPanel({
   bars,
@@ -67,21 +27,11 @@ export default function ChartPanel({
   onCreateLine,
   onDeleteLine,
   lineSaveFailed = false,
+  expandHref,
 }) {
-  const { range, type, overlays, panes, yScale, setRange, setType, setYScale, toggleOverlay, togglePane } = controls
+  const { range, type, setRange } = controls
   const activeCount = activeIndicatorCount(controls)
   const period = periodChange(bars)
-  const bar = bars[hover ?? bars.length - 1]
-
-  const placeholder = chartPlaceholderFor({
-    isLoading,
-    error,
-    data: bars,
-    minPoints: 2,
-    height: CHART_HEIGHT,
-    symbol,
-    unresolved,
-  })
 
   return (
     <Card padding={false}>
@@ -97,36 +47,11 @@ export default function ChartPanel({
         <span className="w-px h-5 bg-white/[0.08] mx-1.5" />
 
         <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
-          {CHART_TYPES.map(([key, label]) => (
-            <MenuRow key={key} checked={type === key} onClick={() => setType(key)}>
-              {label}
-            </MenuRow>
-          ))}
+          <ChartTypeMenuItems controls={controls} />
         </Menu>
 
         <Menu label={`Indicators${activeCount ? ` · ${activeCount}` : ''}`} icon={Sigma} width={230}>
-          <MenuLabel>Overlays</MenuLabel>
-          {OVERLAY_DEFS.map((overlay) => (
-            <MenuRow
-              key={overlay.key}
-              checked={overlays[overlay.key]}
-              dot={OVERLAY_STROKES[overlay.key]}
-              onClick={() => toggleOverlay(overlay.key)}
-            >
-              {overlay.label}
-            </MenuRow>
-          ))}
-          <MenuSeparator />
-          <MenuLabel>Lower panes</MenuLabel>
-          {PANE_DEFS.map((pane) => (
-            <MenuRow
-              key={pane.key}
-              checked={panes[pane.key]}
-              onClick={() => togglePane(pane.key)}
-            >
-              {pane.label}
-            </MenuRow>
-          ))}
+          <IndicatorMenuItems controls={controls} />
         </Menu>
 
         {lineSaveFailed ? (
@@ -135,65 +60,46 @@ export default function ChartPanel({
           </span>
         ) : null}
 
-        {period == null ? null : (
-          <span className="ml-auto text-[var(--fig-2xs)] text-zinc-500">
-            Period{' '}
-            <span className={`num font-mono ${period >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {fmtPct(period)}
+        <div className="ml-auto flex items-center gap-2">
+          {period == null ? null : (
+            <span className="text-[var(--fig-2xs)] text-zinc-500">
+              Period{' '}
+              <span className={`num font-mono ${period >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {fmtPct(period)}
+              </span>
             </span>
-          </span>
-        )}
+          )}
+          {expandHref ? (
+            <Link
+              to={expandHref}
+              aria-label="Open advanced chart"
+              title="Open advanced chart"
+              className="w-7 h-7 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05]"
+            >
+              <Maximize2 size={13} />
+            </Link>
+          ) : null}
+        </div>
       </div>
 
-      {placeholder ?? (
-        <>
-          {bar ? (
-            <OhlcLegend
-              bar={bar}
-              change={barChange(bars, hover)}
-              overlays={overlays}
-              ind={ind}
-              hover={hover}
-            />
-          ) : null}
-
-          <div className="px-1 pb-1">
-            <TVChart
-              key={symbol}
-              data={bars}
-              ind={ind}
-              type={type}
-              overlays={overlays}
-              hover={hover}
-              setHover={setHover}
-              height={CHART_HEIGHT}
-              earningsMarkers={earningsMarkers}
-              yScale={yScale}
-              onYScaleChange={setYScale}
-              lines={lines}
-              onMoveLine={onMoveLine}
-              onCreateLine={onCreateLine}
-              onDeleteLine={onDeleteLine}
-            />
-            {panes.volume ? (
-              <SubPane title="Volume" height={74}>
-                <VolumePane data={bars} hover={hover} setHover={setHover} />
-              </SubPane>
-            ) : null}
-            {panes.rsi ? (
-              <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={92}>
-                <RsiPane values={ind.rsi} hover={hover} setHover={setHover} />
-              </SubPane>
-            ) : null}
-            {panes.macd ? (
-              <SubPane title="MACD 12 26 9" height={92}>
-                <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
-              </SubPane>
-            ) : null}
-            <TimeAxis data={bars} />
-          </div>
-        </>
-      )}
+      <ChartCanvas
+        bars={bars}
+        ind={ind}
+        controls={controls}
+        hover={hover}
+        setHover={setHover}
+        symbol={symbol}
+        isLoading={isLoading}
+        error={error}
+        unresolved={unresolved}
+        earningsMarkers={earningsMarkers}
+        lines={lines}
+        onMoveLine={onMoveLine}
+        onCreateLine={onCreateLine}
+        onDeleteLine={onDeleteLine}
+        priceHeight={CHART_HEIGHT}
+        paneHeights={DEFAULT_PANE_HEIGHTS}
+      />
     </Card>
   )
 }

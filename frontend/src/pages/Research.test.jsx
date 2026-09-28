@@ -281,4 +281,13 @@ describe('Research', () => {
     expect(screen.getByTestId('price-line-7')).toBeInTheDocument()
     expect(queries.usePriceLines).toHaveBeenCalledWith(211, 'Stock')
   })
+
+  it('links the chart to the advanced view, keeping the exact instrument', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByRole('link', { name: 'Open advanced chart' })).toHaveAttribute(
+      'href',
+      '/research/chart?symbol=NVDA&uic=211&assetType=Stock',
+    )
+  })
 })

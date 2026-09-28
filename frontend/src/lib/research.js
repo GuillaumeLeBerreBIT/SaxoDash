@@ -198,6 +198,12 @@ export function barChange(bars = [], index) {
   return ((bar.close - previous.close) / previous.close) * 100
 }
 
+function pinInstrument(params, instrument) {
+  if (!instrument?.uic) return
+  params.set('uic', instrument.uic)
+  if (instrument.assetType) params.set('assetType', instrument.assetType)
+}
+
 /** Canonical link to the Research page for a symbol, optionally on a tab.
  *  One builder so every "open this company" affordance agrees on the URL.
  *  `instrument` ({uic, assetType}) pins the exact row a caller already
@@ -207,11 +213,14 @@ export function barChange(bars = [], index) {
 export function researchHref(symbol, tab, instrument) {
   const params = new URLSearchParams({ symbol })
   if (tab) params.set('tab', tab)
-  if (instrument?.uic) {
-    params.set('uic', instrument.uic)
-    if (instrument.assetType) params.set('assetType', instrument.assetType)
-  }
+  pinInstrument(params, instrument)
   return `/research?${params.toString()}`
+}
+
+export function chartHref(symbol, instrument) {
+  const params = new URLSearchParams({ symbol })
+  pinInstrument(params, instrument)
+  return `/research/chart?${params.toString()}`
 }
 
 /** Past earnings dates mapped onto the currently-loaded bars, for the
