@@ -6,6 +6,10 @@ import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
 
 const RAIL_BUTTON = 'w-9 h-9 rounded flex items-center justify-center transition-colors'
 
+function RailDivider({ className = '' }) {
+  return <span role="separator" aria-orientation="horizontal" className={`w-6 h-px bg-white/[0.08] my-1 ${className}`} />
+}
+
 function RailButton({ label, icon: Icon, pressed, disabled = false, onClick }) {
   return (
     <button
@@ -36,7 +40,7 @@ export default function ChartToolRail({ controls, placingLine, onPlacingLineChan
         onClick={() => onPlacingLineChange(!placingLine)}
       />
 
-      <span className="w-6 h-px bg-white/[0.08] my-1" />
+      <RailDivider />
 
       <Menu side="right" label="Chart type" icon={CandlestickChart} width={160}>
         <ChartTypeMenuItems controls={controls} />
@@ -51,11 +55,13 @@ export default function ChartToolRail({ controls, placingLine, onPlacingLineChan
         onClick={() => controls.setYScale(1)}
       />
 
+      <RailDivider className="mt-auto" />
+
       <Link
         to={backHref}
         aria-label="Back to Research"
         title="Back to Research"
-        className={`${RAIL_BUTTON} mt-auto text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]`}
+        className={`${RAIL_BUTTON} text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]`}
       >
         <Minimize2 size={16} />
       </Link>

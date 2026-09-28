@@ -94,4 +94,11 @@ describe('ChartToolRail', () => {
       '/research?symbol=NOW&uic=204300&assetType=Stock',
     )
   })
+
+  it('sets Back to Research apart with its own divider', () => {
+    renderRail()
+    const separators = screen.getAllByRole('separator')
+    expect(separators).toHaveLength(2)
+    expect(separators[1].nextElementSibling).toBe(screen.getByRole('link', { name: 'Back to Research' }))
+  })
 })
