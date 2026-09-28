@@ -332,11 +332,14 @@ export function TVChart({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  placingLine = false,
+  onPlaced,
 }) {
   const [ref, width] = useWidth()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
   const [selectedId, setSelectedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
+  const placedRef = useRef(false)
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale }),
@@ -391,11 +394,26 @@ export function TVChart({
     <div
       ref={ref}
       className="relative w-full select-none"
-      style={{ height }}
+      style={{ height, cursor: placingLine ? 'crosshair' : undefined }}
       onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
       onMouseLeave={() => setHover(null)}
-      onClick={() => setSelectedId(null)}
+      onMouseDown={(e) => {
+        if (e.detail <= 1) placedRef.current = false
+      }}
+      onClick={(e) => {
+        setSelectedId(null)
+        if (!placingLine || !onCreateLine || e.detail > 1) return
+        const y = plotY(e)
+        if (y == null) return
+        placedRef.current = true
+        onCreateLine(roundPrice(geometry.priceAtY(y)))
+        onPlaced?.()
+      }}
       onDoubleClick={(e) => {
+        if (placedRef.current) {
+          placedRef.current = false
+          return
+        }
         if (!onCreateLine) return
         const y = plotY(e)
         if (y != null) onCreateLine(roundPrice(geometry.priceAtY(y)))

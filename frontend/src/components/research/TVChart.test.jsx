@@ -283,6 +283,79 @@ describe('price lines', () => {
     expect(onCreateLine).not.toHaveBeenCalled()
   })
 
+  it('places a line on a single click while the line tool is armed', () => {
+    const onCreateLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+
+    fireEvent.mouseDown(container.firstChild, { detail: 1 })
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    const geometry = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+    expect(onCreateLine).toHaveBeenCalledTimes(1)
+    expect(onCreateLine).toHaveBeenCalledWith(roundPrice(geometry.priceAtY(200)))
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not place a line on a single click when the tool is not armed', () => {
+    const onCreateLine = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+
+  it('creates exactly one line when the armed tool is double-clicked', () => {
+    const onCreateLine = vi.fn()
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const plot = container.firstChild
+
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    rerender(chart({ lines: [], onCreateLine, placingLine: false, onPlaced: vi.fn() }))
+    fireEvent.mouseDown(plot, { detail: 2 })
+    fireEvent.click(plot, { detail: 2, clientX: 100, clientY: 200 })
+    fireEvent.doubleClick(plot, { detail: 2, clientX: 100, clientY: 200 })
+
+    expect(onCreateLine).toHaveBeenCalledTimes(1)
+  })
+
+  it('still creates a line on a later double-click after placing one', () => {
+    const onCreateLine = vi.fn()
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const plot = container.firstChild
+
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    rerender(chart({ lines: [], onCreateLine }))
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 150 })
+    fireEvent.mouseDown(plot, { detail: 2 })
+    fireEvent.doubleClick(plot, { detail: 2, clientX: 100, clientY: 150 })
+
+    expect(onCreateLine).toHaveBeenCalledTimes(2)
+  })
+
+  it('never places a line from a click in the price-axis gutter', () => {
+    const onCreateLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 740, clientY: 200 })
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+    expect(onPlaced).not.toHaveBeenCalled()
+  })
+
+  it('shows a crosshair cursor only while the line tool is armed', () => {
+    const armed = renderChart({ lines: [], onCreateLine: vi.fn(), placingLine: true })
+    const idle = renderChart({ lines: [], onCreateLine: vi.fn() })
+
+    expect(armed.container.firstChild).toHaveStyle({ cursor: 'crosshair' })
+    expect(idle.container.firstChild).not.toHaveStyle({ cursor: 'crosshair' })
+  })
+
   it('deletes the selected freeform line with the Delete key', () => {
     const onDeleteLine = vi.fn()
     const { getByTestId } = renderChart({ lines: [free], onDeleteLine })
