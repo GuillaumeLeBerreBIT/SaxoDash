@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
-import { LINE_STROKES, edgeOf, parsePriceInput, roundPrice } from '../../lib/priceLines'
+import { LINE_STROKES, badgePrice, edgeOf, parsePriceInput, roundPrice } from '../../lib/priceLines'
 
 const TAG = { target: 'T', stop: 'S', free: '' }
 const HIT_WIDTH = 10
@@ -40,7 +40,7 @@ function Badge({ line, price, y, width, selected, onEdit }) {
         fontSize="10"
         fontFamily="Geist Mono"
       >
-        {`${TAG[line.kind]} ${price.toFixed(2)}`.trim()}
+        {`${TAG[line.kind]} ${badgePrice(price)}`.trim()}
       </text>
     </g>
   )
@@ -59,7 +59,7 @@ function EdgeMarker({ line, edge, width, chartH }) {
     <g data-testid={`price-edge-${line.id}`} pointerEvents="none">
       <polygon points={points} fill={color} />
       <text x={x + 8} y={y + 3.5} fill={color} fontSize="10" fontFamily="Geist Mono">
-        {line.price.toFixed(2)}
+        {badgePrice(line.price)}
       </text>
     </g>
   )

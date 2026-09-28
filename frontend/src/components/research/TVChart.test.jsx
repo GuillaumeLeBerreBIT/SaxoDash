@@ -383,4 +383,18 @@ describe('price lines', () => {
 
     expect(onMoveLine).not.toHaveBeenCalled()
   })
+
+  it('shows the badge price with no decimals from ten thousand up', () => {
+    const bigBars = bars.map((b) => ({ ...b, open: b.open * 100, high: b.high * 100, low: b.low * 100, close: b.close * 100 }))
+    const { getByTestId } = renderChart({ data: bigBars, ind: computeIndicators(bigBars), lines: [{ id: 'target', kind: 'target', price: 12345.67 }] })
+
+    expect(getByTestId('price-badge-target').textContent).toBe('T 12346')
+  })
+
+  it('shows the edge marker price with no decimals from ten thousand up', () => {
+    const bigBars = bars.map((b) => ({ ...b, open: b.open * 100, high: b.high * 100, low: b.low * 100, close: b.close * 100 }))
+    const { getByTestId } = renderChart({ data: bigBars, ind: computeIndicators(bigBars), lines: [{ id: 'stop', kind: 'stop', price: 99999.5 }] })
+
+    expect(getByTestId('price-edge-stop').textContent).toBe('100000')
+  })
 })

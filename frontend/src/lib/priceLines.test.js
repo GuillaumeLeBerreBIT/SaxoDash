@@ -4,6 +4,7 @@ import { CATEGORY_AXIS_TEXT, NEGATIVE, POSITIVE } from './charts'
 import {
   LINE_STROKES,
   MIN_PRICE,
+  badgePrice,
   chartLines,
   edgeOf,
   isTypingTarget,
@@ -11,6 +12,18 @@ import {
   parsePriceInput,
   roundPrice,
 } from './priceLines'
+
+describe('badgePrice', () => {
+  it('keeps cents below ten thousand', () => {
+    expect(badgePrice(9999.99)).toBe('9999.99')
+    expect(badgePrice(0.5)).toBe('0.50')
+  })
+
+  it('drops the decimals from ten thousand up so the badge fits', () => {
+    expect(badgePrice(10000)).toBe('10000')
+    expect(badgePrice(12345.67)).toBe('12346')
+  })
+})
 
 describe('chartLines', () => {
   it('turns the decimal strings DRF sends into numbers', () => {

@@ -27,6 +27,10 @@ export function chartLines(note, freeLines = []) {
   return lines
 }
 
+export function badgePrice(price) {
+  return price >= 10000 ? price.toFixed(0) : price.toFixed(2)
+}
+
 export function roundPrice(value) {
   return Math.max(MIN_PRICE, Math.round(value * 100) / 100)
 }
