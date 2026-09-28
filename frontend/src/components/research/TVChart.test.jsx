@@ -444,8 +444,13 @@ describe('price lines', () => {
   })
 
   it('does not open an editor for an off-screen line', () => {
-    const utils = renderChart({ lines: [{ ...target, price: 1000 }] })
-    const { queryByLabelText } = utils
+    const price = roundPrice(
+      priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false }).priceAtY(9),
+    )
+    const utils = renderChart({ lines: [{ ...target, price }] })
+    const { getByTestId, queryByLabelText } = utils
+
+    expect(getByTestId('price-edge-target')).toBeInTheDocument()
 
     clickGutter(utils, 16)
 
@@ -456,9 +461,9 @@ describe('price lines', () => {
     const utils = renderChart({ lines: [target, { ...stop, price: target.price - 0.5 }] })
     const { getByLabelText } = utils
 
-    clickGutter(utils, yOf(target.price))
+    clickGutter(utils, yOf(109.5))
 
-    expect(getByLabelText('Line price')).toHaveValue('110.00')
+    expect(getByLabelText('Line price')).toHaveValue('109.50')
   })
 
   it('shows the badge price with no decimals from ten thousand up', () => {
