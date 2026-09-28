@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import CommandPalette from './CommandPalette'
+import { useCommandPalette } from './useCommandPalette'
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(window.innerWidth < 1100)
-  const [paletteOpen, setPaletteOpen] = useState(false)
+  const palette = useCommandPalette()
 
   useEffect(() => {
     const onResize = () => setCollapsed(window.innerWidth < 1100)
@@ -13,23 +14,12 @@ export default function Layout() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        setPaletteOpen(true)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <Sidebar
         collapsed={collapsed}
         setCollapsed={setCollapsed}
-        onOpenPalette={() => setPaletteOpen(true)}
+        onOpenPalette={() => palette.setOpen(true)}
       />
       <main className="transition-[margin] duration-300 ease-out" style={{ marginLeft: collapsed ? 64 : 220 }}>
         <div
@@ -39,7 +29,7 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} />
     </div>
   )
 }

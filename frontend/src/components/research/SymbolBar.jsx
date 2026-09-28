@@ -28,6 +28,7 @@ export default function SymbolBar({
   bars,
   watchlists = [],
   onToggleList,
+  compact = false,
 }) {
   const last = bars[bars.length - 1]
   const price = quote?.price ?? last?.close ?? null
@@ -81,7 +82,7 @@ export default function SymbolBar({
           )}
         </div>
 
-        {last ? (
+        {last && !compact ? (
           <>
             <Divider />
             <Stat label="Day range" value={`${fmtNum(last.low, 2)}–${fmtNum(last.high, 2)}`} />

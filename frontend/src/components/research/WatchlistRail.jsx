@@ -22,7 +22,7 @@ const NO_ITEMS = []
  *  browser change; every write goes through useWatchlistMutations, which
  *  refetches the lists rather than patching a local copy.
  */
-export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
+export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fill = false }) {
   const { data: watchlists = [], isLoading } = useWatchlists()
   const { create, remove, addItem, removeItem } = useWatchlistMutations()
 
@@ -67,7 +67,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
   }
 
   return (
-    <Card padding={false}>
+    <Card padding={false} className={fill ? 'h-full min-h-0 flex flex-col' : ''}>
       <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center gap-1.5">
         <Menu label={active?.name ?? 'Watchlists'} icon={List} width={230}>
           {watchlists.map((list) => (
@@ -182,7 +182,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols }) {
         <span className="text-right w-14">Chg%</span>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto">
+      <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
         {isLoading ? <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">Loading…</div> : null}
 
         {!isLoading && watchlists.length === 0 ? (

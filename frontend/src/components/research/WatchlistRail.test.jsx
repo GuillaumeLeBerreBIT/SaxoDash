@@ -173,4 +173,15 @@ describe('WatchlistRail', () => {
 
     expect(screen.getByText(/No lists yet/)).toBeInTheDocument()
   })
+
+  it('caps the watchlist rows at 420px by default', () => {
+    const { container } = render()
+    expect(container.querySelector('.max-h-\\[420px\\]')).not.toBeNull()
+  })
+
+  it('lets the watchlist rows fill the height when asked to', () => {
+    const { container } = render({ fill: true })
+    expect(container.querySelector('.max-h-\\[420px\\]')).toBeNull()
+    expect(container.firstChild).toHaveClass('h-full')
+  })
 })

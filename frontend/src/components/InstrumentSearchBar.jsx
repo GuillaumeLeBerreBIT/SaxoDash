@@ -14,6 +14,9 @@ const FILTERS = [
   ['Etf', 'ETFs'],
 ]
 
+const researchResultHref = (result) =>
+  researchHref(result.symbol, undefined, { uic: result.uic, assetType: result.asset_type })
+
 /** A "jump to any instrument" bar for Portfolio and Research - distinct from
  *  WatchlistRail's "search to add to this list" box, which stays list-scoped.
  *  The results menu portals to <body>, positioned from a measured rect, the
@@ -21,7 +24,7 @@ const FILTERS = [
  *  unportaled dropdown had (1b14d3e, 0a4aa02) - but unlike that box, this one
  *  is always-visible page furniture rather than tucked in a table row, so it
  *  also dismisses on Escape or a click elsewhere. */
-export default function InstrumentSearchBar() {
+export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [assetTypes, setAssetTypes] = useState(ALL_ASSET_TYPES)
@@ -61,7 +64,7 @@ export default function InstrumentSearchBar() {
   }, [showMenu, deferredQuery])
 
   const go = (result) => {
-    navigate(researchHref(result.symbol, undefined, { uic: result.uic, assetType: result.asset_type }))
+    navigate(hrefFor(result))
     setQuery('')
   }
 

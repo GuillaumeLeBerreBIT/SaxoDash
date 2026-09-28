@@ -113,4 +113,12 @@ describe('InstrumentSearchBar', () => {
     await userEvent.type(input, 'x')
     expect(screen.getByText('TSLA')).toBeInTheDocument()
   })
+
+  it('navigates wherever hrefFor points when the caller supplies it', async () => {
+    queries.useInstrumentSearch.mockReturnValue({ data: [tsla], isError: false })
+    renderWithProviders(<InstrumentSearchBar hrefFor={(r) => `/research/chart?symbol=${r.symbol}`} />)
+    await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), 'tsla')
+    await userEvent.click(screen.getByText('Tesla Inc'))
+    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA')
+  })
 })
