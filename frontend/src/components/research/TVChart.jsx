@@ -288,6 +288,7 @@ function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
       fill="transparent"
       style={{ cursor: 'ns-resize' }}
       onPointerDown={(e) => {
+        if (e.button !== 0) return
         e.currentTarget.setPointerCapture?.(e.pointerId)
         drag.current = { y: e.clientY, scale: yScale, moved: false }
       }}

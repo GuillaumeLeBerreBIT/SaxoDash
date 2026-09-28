@@ -443,6 +443,30 @@ describe('price lines', () => {
     expect(getByLabelText('Line price')).toBeInTheDocument()
   })
 
+  it('ignores a right-click on the axis', () => {
+    const utils = renderChart({ lines: [stop] })
+    const { getByTestId, queryByLabelText } = utils
+
+    const handle = getByTestId('price-scale')
+    const y = yOf(stop.price)
+    fireEvent.pointerDown(handle, { clientY: y, pointerId: 1, button: 2 })
+    fireEvent.pointerUp(handle, { clientY: y, pointerId: 1, button: 2 })
+
+    expect(queryByLabelText('Line price')).toBeNull()
+  })
+
+  it('ignores a right-button drag on the axis', () => {
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = renderChart({ yScale: 1, onYScaleChange })
+
+    const handle = getByTestId('price-scale')
+    fireEvent.pointerDown(handle, { clientY: 100, pointerId: 1, button: 2 })
+    fireEvent.pointerMove(handle, { clientY: 160, pointerId: 1, button: 2 })
+    fireEvent.pointerUp(handle, { clientY: 160, pointerId: 1, button: 2 })
+
+    expect(onYScaleChange).not.toHaveBeenCalled()
+  })
+
   it('does not open an editor for an off-screen line', () => {
     const price = roundPrice(
       priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false }).priceAtY(9),
