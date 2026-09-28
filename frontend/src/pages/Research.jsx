@@ -1,35 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import {
-  useChart,
-  useFundamentals,
-  useInstrumentDetails,
-  useInstrumentSearch,
-  usePositions,
-  useQuotes,
-  useSymbolEarnings,
-  useSymbolNote,
-  useSymbolNoteMutation,
-  useMarkReviewedMutation,
-  useWatchlistMutations,
-  useWatchlists,
-} from '../api/queries'
-import { computeIndicatorsForRange } from '../lib/indicators'
-import {
-  DAILY_HORIZON,
-  WIDEST_RANGE_COUNT,
-  barsForRange,
-  earningsMarkersForBars,
-  isEtf,
-  needsInstrumentSearch,
-  resolveInstrument,
-} from '../lib/research'
+import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
+import { isEtf } from '../lib/research'
 import { PageHeader } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
-import { pushRecentSymbol, readRecentSymbols } from '../lib/recentSymbols'
-import { recordLook } from '../lib/lastLook'
+import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import GuideTab from '../components/research/GuideTab'
@@ -40,7 +17,9 @@ import SymbolBar from '../components/research/SymbolBar'
 import ValuationTab from '../components/research/ValuationTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
-import { useChartLines } from '../components/research/useChartLines'
+import { useChartData } from '../components/research/useChartData'
+import { useResearchInstrument } from '../components/research/useResearchInstrument'
+import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 // `equityOnly` tabs are all Finnhub company-fundamentals underneath, which
 // Finnhub's free tier never returns for an ETF - so unlike a stock with
@@ -58,61 +37,23 @@ const TABS = [
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
 const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
 
-const FALLBACK_SYMBOL = 'NVDA'
-
-// Hoisted so an empty result keeps a stable identity and the memos below do
-// not recompute on every render.
-const NO_BARS = []
-
 export default function Research() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
+  const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
   const requestedTab = params.get('tab')
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
-  const { data: positions = [] } = usePositions()
-  const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
   const [scaledSymbol, setScaledSymbol] = useState(symbol)
   if (scaledSymbol !== symbol) {
     setScaledSymbol(symbol)
     controls.setYScale(1)
   }
-  // `instrument`, when the caller already has it (a watchlist row, a search
-  // pick), pins the exact uic so an ambiguous ticker like "NOW" can't
-  // resolve to the wrong company once symbol search runs again on arrival.
-  const selectSymbol = (next, instrument) => {
-    const nextParams = { symbol: next }
-    if (instrument?.uic) {
-      nextParams.uic = instrument.uic
-      if (instrument.assetType) nextParams.assetType = instrument.assetType
-    }
-    setParams(nextParams, { replace: true })
-  }
-
-  const position = positions.find((p) => p.ticker === symbol) ?? null
-
-  useEffect(() => {
-    pushRecentSymbol(symbol)
-  }, [symbol])
 
   const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
-  // Only searched for when the portfolio cannot answer: a held instrument
-  // already knows its own uic.
-  const { data: searchResults = [] } = useInstrumentSearch(
-    needsInstrumentSearch(symbol, positions) ? symbol : '',
-  )
-  // A search dropdown (⌘K, add-peer) may have already picked the exact row
-  // for an ambiguous ticker - e.g. ServiceNow vs. NowVertical under "NOW".
-  // Carried in the URL so that choice survives the symbol search re-running.
-  const pinnedUic = Number(params.get('uic')) || null
-  const pinnedAssetType = params.get('assetType')
-  const instrument = useMemo(() => {
-    const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
-    return resolveInstrument({ symbol, positions, results: searchResults, pinned })
-  }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
   const instrumentIsEtf = isEtf(instrument)
   const visibleTabs = instrumentIsEtf ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
 
@@ -123,75 +64,26 @@ export default function Research() {
     setTab('overview')
   }
 
-  // One fetch at the widest range; the narrower ones are its tail. Keying on
-  // the range instead meant six Saxo calls to walk 1W→ALL.
-  const chart = useChart({
-    uic: instrument?.uic,
-    assetType: instrument?.assetType,
-    horizon: DAILY_HORIZON,
-    count: WIDEST_RANGE_COUNT,
-  })
-  const allBars = chart.data ?? NO_BARS
-  const bars = useMemo(() => barsForRange(allBars, controls.range), [allBars, controls.range])
-  // Indicators run on everything fetched and are sliced to match, so MA-50 has
-  // a value on a one-month view instead of being null for want of history.
-  const ind = useMemo(
-    () => computeIndicatorsForRange(allBars, bars.length),
-    [allBars, bars.length],
-  )
-
-  const details = useInstrumentDetails({
-    uic: instrument?.uic,
-    assetType: instrument?.assetType,
+  const { chart, bars, ind, earnings, earningsMarkers, note, priceLines, quote, details } = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
   })
   const fundamentals = useFundamentals(symbol)
-  const earnings = useSymbolEarnings(symbol)
-  const note = useSymbolNote(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
-  const priceLines = useChartLines({
+  const { watchlists, toggleList } = useWatchlistToggle({
     symbol,
-    uic: instrument?.uic,
-    assetType: instrument?.assetType,
-    note: note?.data,
+    instrument,
+    details: details.data,
+    position,
   })
-  const earningsMarkers = useMemo(
-    () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
-    [bars, earnings.data],
-  )
-  const liveQuotes = useQuotes(instrument?.uic ? [instrument.uic] : [], instrument?.assetType)
-
-  useEffect(() => {
-    recordLook(symbol, liveQuotes.data?.[0]?.price)
-  }, [symbol, liveQuotes.data])
-
-  const { data: watchlists = [] } = useWatchlists()
-  const { addItem, removeItem } = useWatchlistMutations()
 
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
 
   // A stale hover index outlives its dataset when the range or symbol changes;
   // clamping here beats an effect that fires after a bad render.
   const safeHover = hover != null && hover < bars.length ? hover : null
-
-  const toggleList = (list) => {
-    const existing = list.items.find((item) => item.uic === instrument?.uic)
-    if (existing) {
-      removeItem.mutate({ id: list.id, itemId: existing.id })
-      return
-    }
-    if (!instrument) return
-    addItem.mutate({
-      id: list.id,
-      item: {
-        symbol,
-        uic: instrument.uic,
-        asset_type: instrument.assetType,
-        description: details.data?.description ?? position?.name ?? '',
-        exchange: details.data?.exchange ?? '',
-      },
-    })
-  }
 
   return (
     <div>
@@ -227,7 +119,7 @@ export default function Research() {
           instrument={instrument}
           details={details.data}
           position={position}
-          quote={liveQuotes.data?.[0]}
+          quote={quote}
           bars={bars}
           watchlists={watchlists}
           onToggleList={toggleList}
