@@ -8,7 +8,7 @@ import { Check, ChevronDown } from 'lucide-react'
  *  promoted into components/ui.jsx. (TBtn already made that move.)
  */
 
-export function Menu({ label, icon: Icon, children, width = 220, align = 'left' }) {
+export function Menu({ label, icon: Icon, children, width = 220, align = 'left', side = 'bottom' }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
 
@@ -30,6 +30,10 @@ export function Menu({ label, icon: Icon, children, width = 220, align = 'left' 
     }
   }, [open])
 
+  const rail = side === 'right'
+  const idle = 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+  const openTone = 'bg-white/[0.09] text-zinc-100'
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -37,20 +41,32 @@ export function Menu({ label, icon: Icon, children, width = 220, align = 'left' 
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium flex items-center gap-1.5 transition-colors ${
-          open ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-        }`}
+        aria-label={rail ? label : undefined}
+        title={rail ? label : undefined}
+        className={
+          rail
+            ? `w-9 h-9 rounded flex items-center justify-center transition-colors ${open ? openTone : idle}`
+            : `h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium flex items-center gap-1.5 transition-colors ${
+                open ? openTone : idle
+              }`
+        }
       >
-        {Icon ? <Icon size={12} /> : null}
-        {label}
-        <ChevronDown size={11} />
+        {rail ? (
+          <Icon size={16} />
+        ) : (
+          <>
+            {Icon ? <Icon size={12} /> : null}
+            {label}
+            <ChevronDown size={11} />
+          </>
+        )}
       </button>
 
       {open ? (
         <div
           role="menu"
-          style={{ width, [align]: 0 }}
-          className="absolute z-30 mt-1 rounded-lg border border-white/10 bg-zinc-900 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)] p-1.5"
+          style={rail ? { width, left: '100%', top: 0 } : { width, [align]: 0 }}
+          className={`absolute z-30 ${rail ? 'ml-2' : 'mt-1'} rounded-lg border border-white/10 bg-zinc-900 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)] p-1.5`}
         >
           {children}
         </div>
