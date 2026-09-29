@@ -61,4 +61,9 @@ describe('ChartCanvas legend', () => {
     expect(screen.getByText(bars[bars.length - 1].date)).toBeInTheDocument()
     expect(screen.getByText('O')).toBeInTheDocument()
   })
+
+  it("reads the bar's volume against its 20-session average", () => {
+    render(canvas())
+    expect(screen.getByText(/1\.0× 20d avg/)).toBeInTheDocument()
+  })
 })

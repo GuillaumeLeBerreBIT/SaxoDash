@@ -10,6 +10,7 @@ import {
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT } from '../../lib/charts'
+import { RVOL_ELEVATED } from '../../lib/indicators'
 
 // SVG text can't take a Tailwind class, so the app's actual mono face
 // (index.css's --font-mono) is spelled out literally here rather than
@@ -36,7 +37,7 @@ function HoverLine({ x, height }) {
 
 const volumeHeight = (volume, max, height) => (max === 0 ? 0 : (volume / max) * (height - 16))
 
-const VolumeBars = memo(function VolumeBars({ data, slot, barWidth, height, max }) {
+const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth, height, max }) {
   return data.map((bar, i) => {
     const barHeight = volumeHeight(bar.volume, max, height)
     return (
@@ -47,13 +48,13 @@ const VolumeBars = memo(function VolumeBars({ data, slot, barWidth, height, max 
         width={barWidth}
         height={barHeight}
         fill={bar.close >= bar.open ? UP : DOWN}
-        opacity={0.4}
+        opacity={rvol?.[i] >= RVOL_ELEVATED ? 0.8 : 0.4}
       />
     )
   })
 })
 
-export function VolumePane({ data, hover, setHover, height = 74 }) {
+export function VolumePane({ data, rvol = null, hover, setHover, height = 74 }) {
   const [ref, width] = useWidth()
   const { slot, barWidth, xAt } = paneGeometry(width, data.length)
 
@@ -70,7 +71,7 @@ export function VolumePane({ data, hover, setHover, height = 74 }) {
   return (
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, data.length, setHover)}>
       <svg width={width} height={height}>
-        <VolumeBars data={data} slot={slot} barWidth={barWidth} height={height} max={max} />
+        <VolumeBars data={data} rvol={rvol} slot={slot} barWidth={barWidth} height={height} max={max} />
         {hovered ? (
           <>
             <rect

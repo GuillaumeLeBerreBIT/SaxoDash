@@ -107,6 +107,22 @@ export function vwapSeries(bars) {
   })
 }
 
+export const RVOL_WINDOW = 20
+export const RVOL_ELEVATED = 2
+
+export function relativeVolume(bars, window = RVOL_WINDOW) {
+  const minSamples = Math.ceil(window * 0.75)
+  return bars.map((bar, i) => {
+    if (!(bar.volume > 0)) return null
+    const prior = bars
+      .slice(Math.max(0, i - window), i)
+      .map((b) => b.volume)
+      .filter((volume) => volume > 0)
+    if (prior.length < minSamples) return null
+    return bar.volume / (prior.reduce((sum, volume) => sum + volume, 0) / prior.length)
+  })
+}
+
 /** Indicators for the last `count` bars, warmed up on the bars before them.
  *
  *  The lagging series need their leading period of history to hold a value at
@@ -135,6 +151,7 @@ export function computeIndicatorsForRange(bars, count) {
     rsi: tail(rsi(closes)),
     macd: tailEach(macd(closes)),
     vwap: vwapSeries(visible),
+    rvol: tail(relativeVolume(bars)),
   }
 }
 

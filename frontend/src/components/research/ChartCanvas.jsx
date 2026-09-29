@@ -3,6 +3,7 @@ import { barChange } from '../../lib/research'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { OVERLAY_STROKES, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
+import { RVOL_WINDOW } from '../../lib/indicators'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
 
@@ -13,6 +14,7 @@ function valueAt(series, hover) {
 
 function OhlcLegend({ bar, change, overlays, ind, hover }) {
   const up = bar.close >= bar.open
+  const rvol = valueAt(ind.rvol, hover)
 
   return (
     <div className="flex items-center gap-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap">
@@ -32,6 +34,7 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
       )}
       <span className="text-zinc-500">
         Vol <span className="text-zinc-300">{fmtNum(bar.volume / 1e6, 1)}M</span>
+        {rvol == null ? null : <span> · {fmtNum(rvol, 1)}× {RVOL_WINDOW}d avg</span>}
       </span>
       {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
         const value = valueAt(ind[o.key], hover)
@@ -116,7 +119,7 @@ export default function ChartCanvas({
           />
           {panes.volume ? (
             <SubPane title="Volume" height={paneHeights.volume}>
-              <VolumePane data={bars} hover={hover} setHover={setHover} />
+              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} />
             </SubPane>
           ) : null}
           {panes.rsi ? (

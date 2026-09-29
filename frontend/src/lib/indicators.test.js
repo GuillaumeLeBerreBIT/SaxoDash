@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bollinger, computeIndicators, computeIndicatorsForRange, ema, macd, rsi, sma, vwapSeries } from './indicators'
+import { bollinger, computeIndicators, computeIndicatorsForRange, ema, macd, relativeVolume, rsi, sma, vwapSeries } from './indicators'
 
 const closes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -109,12 +109,38 @@ describe('vwapSeries', () => {
   })
 })
 
+describe('relativeVolume', () => {
+  const withVolumes = (volumes) => volumes.map((volume, i) => ({ ...bars([10])[0], date: `d${i}`, volume }))
+
+  it('compares a bar with the 20 sessions before it, not including itself', () => {
+    expect(relativeVolume(withVolumes([...Array(20).fill(100), 300]))[20]).toBe(3)
+  })
+
+  it('has no reading until 15 sessions of history exist', () => {
+    const rvol = relativeVolume(withVolumes(Array(16).fill(100)))
+    expect(rvol.slice(0, 15).every((v) => v == null)).toBe(true)
+    expect(rvol[15]).toBe(1)
+  })
+
+  it('treats zero volume as missing, not as a quiet day', () => {
+    expect(relativeVolume(withVolumes([...Array(15).fill(100), ...Array(5).fill(0), 200]))[20]).toBe(2)
+  })
+
+  it('gives no reading when too many prior sessions are missing', () => {
+    expect(relativeVolume(withVolumes([...Array(14).fill(100), ...Array(6).fill(0), 200]))[20]).toBeNull()
+  })
+
+  it('gives no reading for a bar with no volume of its own', () => {
+    expect(relativeVolume(withVolumes([...Array(20).fill(100), 0]))[20]).toBeNull()
+  })
+})
+
 describe('computeIndicators', () => {
   it('returns every series the chart can draw', () => {
     const out = computeIndicators(bars(closes))
 
     expect(Object.keys(out).sort()).toEqual(
-      ['bb', 'ema9', 'ma20', 'ma50', 'ma200', 'macd', 'rsi', 'vwap'].sort(),
+      ['bb', 'ema9', 'ma20', 'ma50', 'ma200', 'macd', 'rsi', 'rvol', 'vwap'].sort(),
     )
   })
 
@@ -163,5 +189,17 @@ describe('computeIndicatorsForRange', () => {
 
   it('returns the whole series when the range is wider than the data', () => {
     expect(computeIndicatorsForRange(bars, 500).ma20).toHaveLength(bars.length)
+  })
+
+  it('warms relative volume up on the bars before the visible range', () => {
+    const series = Array.from({ length: 40 }, (_, i) => ({
+      high: 102 + i,
+      low: 98 + i,
+      close: 100 + i,
+      volume: i === 39 ? 2000 : 1000,
+    }))
+    const ranged = computeIndicatorsForRange(series, 5)
+    expect(ranged.rvol).toHaveLength(5)
+    expect(ranged.rvol[4]).toBe(2)
   })
 })
