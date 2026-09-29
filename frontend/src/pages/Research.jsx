@@ -64,7 +64,7 @@ export default function Research() {
     setTab('overview')
   }
 
-  const { chart, bars, ind, maxTimeOffset, earnings, earningsMarkers, note, priceLines, quote, details } =
+  const { chart, bars, rangeBars, ind, maxTimeOffset, earnings, earningsMarkers, note, priceLines, quote, details } =
     useChartData({
       symbol,
       instrument,
@@ -122,7 +122,7 @@ export default function Research() {
           details={details.data}
           position={position}
           quote={quote}
-          bars={bars}
+          bars={rangeBars}
           watchlists={watchlists}
           onToggleList={toggleList}
         />
@@ -175,7 +175,7 @@ export default function Research() {
                 position={position}
                 details={details.data}
                 detailsLoading={details.isLoading}
-                bars={bars}
+                bars={rangeBars}
                 range={controls.range}
                 fundamentals={fundamentals}
                 note={note}

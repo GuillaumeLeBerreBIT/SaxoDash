@@ -9,7 +9,7 @@ import {
 } from '../../api/queries'
 import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
-import { DAILY_HORIZON, WIDEST_RANGE_COUNT, earningsMarkersForBars, visibleWindow } from '../../lib/research'
+import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars, visibleWindow } from '../../lib/research'
 import { useChartLines } from './useChartLines'
 
 // Hoisted so an empty result keeps a stable identity and the memos below do
@@ -26,6 +26,7 @@ export function useChartData({ symbol, instrument, range, timeOffset = 0 }) {
   const allBars = chart.data ?? NO_BARS
   const view = useMemo(() => visibleWindow(allBars.length, range, timeOffset), [allBars.length, range, timeOffset])
   const bars = useMemo(() => allBars.slice(view.start, view.end), [allBars, view.start, view.end])
+  const rangeBars = useMemo(() => barsForRange(allBars, range), [allBars, range])
   // Indicators run on everything fetched and are sliced to match, so MA-50 has
   // a value on a one-month view instead of being null for want of history.
   const ind = useMemo(
@@ -50,6 +51,7 @@ export function useChartData({ symbol, instrument, range, timeOffset = 0 }) {
   return {
     chart,
     bars,
+    rangeBars,
     ind,
     maxTimeOffset: view.maxOffset,
     earnings,

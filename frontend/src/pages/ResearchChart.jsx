@@ -45,7 +45,7 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [placingLine])
 
-  const { chart, bars, ind, maxTimeOffset, earningsMarkers, priceLines, quote, details } = useChartData({
+  const { chart, bars, rangeBars, ind, maxTimeOffset, earningsMarkers, priceLines, quote, details } = useChartData({
     symbol,
     instrument,
     range: controls.range,
@@ -76,7 +76,7 @@ export default function ResearchChart() {
           details={details.data}
           position={position}
           quote={quote}
-          bars={bars}
+          bars={rangeBars}
           watchlists={watchlists}
           onToggleList={toggleList}
         />

@@ -185,3 +185,24 @@ describe('ResearchChart', () => {
     expect(screen.getByText(/^RSI 14/)).toBeInTheDocument()
   })
 })
+
+describe('ResearchChart panning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+    queries.useQuotes.mockReturnValue({ ...idle, data: [] })
+  })
+
+  it('keeps the header on the latest close while the chart is panned back', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+    expect(screen.getByText('141.00')).toBeInTheDocument()
+  })
+})
