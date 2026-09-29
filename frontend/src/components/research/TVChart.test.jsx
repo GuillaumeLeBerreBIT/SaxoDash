@@ -584,10 +584,52 @@ describe('panning', () => {
   const pannable = (props = {}) => renderChart({ onTimeOffsetChange: vi.fn(), onYShiftChange: vi.fn(), ...props })
 
   const pan = (element, dx, dy) => {
+    const length = Math.hypot(dx, dy) || 1
+    const x = 300 + (dx / length) * 8
+    const y = 200 + (dy / length) * 8
     fireEvent.pointerDown(element, { clientX: 300, clientY: 200, pointerId: 1 })
-    fireEvent.pointerMove(element, { clientX: 300 + dx, clientY: 200 + dy, pointerId: 1 })
-    fireEvent.pointerUp(element, { clientX: 300 + dx, clientY: 200 + dy, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientX: x, clientY: y, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientX: x + dx, clientY: y + dy, pointerId: 1 })
+    fireEvent.pointerUp(element, { clientX: x + dx, clientY: y + dy, pointerId: 1 })
   }
+
+  it('treats a click with a few pixels of hand movement as a click', () => {
+    const onCreateLine = vi.fn()
+    const onTimeOffsetChange = vi.fn()
+    const onYShiftChange = vi.fn()
+    const { container } = pannable({
+      lines: [],
+      onCreateLine,
+      placingLine: true,
+      onPlaced: vi.fn(),
+      onTimeOffsetChange,
+      onYShiftChange,
+    })
+    const plot = container.firstChild
+
+    fireEvent.pointerDown(plot, { clientX: 300, clientY: 200, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 304, clientY: 203, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 304, clientY: 203, pointerId: 1 })
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 304, clientY: 203 })
+
+    expect(onTimeOffsetChange).not.toHaveBeenCalled()
+    expect(onYShiftChange).not.toHaveBeenCalled()
+    expect(onCreateLine).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts a pan where it is recognised, so the chart does not jump', () => {
+    const onYShiftChange = vi.fn()
+    const { container } = pannable({ onYShiftChange })
+    const plot = container.firstChild
+
+    fireEvent.pointerDown(plot, { clientX: 300, clientY: 200, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 300, clientY: 210, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 300, clientY: 210 + chartH / 4, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 300, clientY: 210 + chartH / 4, pointerId: 1 })
+
+    expect(onYShiftChange.mock.calls.at(-1)[0]).toBeCloseTo(0.25)
+  })
 
   it('goes back in time when the plot is dragged right', () => {
     const onTimeOffsetChange = vi.fn()
@@ -610,8 +652,11 @@ describe('panning', () => {
   it('ignores a jitter smaller than the drag threshold', () => {
     const onTimeOffsetChange = vi.fn()
     const { container } = pannable({ onTimeOffsetChange })
+    const plot = container.firstChild
 
-    pan(container.firstChild, 2, 0)
+    fireEvent.pointerDown(plot, { clientX: 300, clientY: 200, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 302, clientY: 200, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 302, clientY: 200, pointerId: 1 })
 
     expect(onTimeOffsetChange).not.toHaveBeenCalled()
   })

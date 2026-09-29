@@ -199,6 +199,7 @@ describe('ResearchChart panning', () => {
     await userEvent.click(screen.getByRole('button', { name: '1W' }))
 
     fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 210, clientY: 150, pointerId: 1 })
     fireEvent.pointerMove(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
     fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
 

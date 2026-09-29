@@ -34,6 +34,7 @@ export const MIN_Y_SCALE = 0.1
 export const MAX_Y_SCALE = 20
 
 export const DRAG_THRESHOLD = 3
+export const PAN_THRESHOLD = 6
 
 export function scaleFromDrag(startScale, dy) {
   return Math.min(MAX_Y_SCALE, Math.max(MIN_Y_SCALE, startScale * Math.exp(dy / 150)))

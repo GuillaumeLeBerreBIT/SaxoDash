@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 
 import { DRAG_THRESHOLD } from '../../lib/chartGeometry'
 
-export function usePointerDrag({ onStart, onDrag }) {
+export function usePointerDrag({ onStart, onDrag, threshold = DRAG_THRESHOLD }) {
   const drag = useRef(null)
   const moved = useRef(false)
   const [dragging, setDragging] = useState(false)
@@ -23,16 +23,17 @@ export function usePointerDrag({ onStart, onDrag }) {
     onPointerMove: (event) => {
       const current = drag.current
       if (!current) return
-      const dx = event.clientX - current.x
-      const dy = event.clientY - current.y
       if (!current.active) {
-        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+        if (Math.hypot(event.clientX - current.x, event.clientY - current.y) < threshold) return
         current.active = true
+        current.x = event.clientX
+        current.y = event.clientY
         moved.current = true
         setDragging(true)
         event.currentTarget.setPointerCapture?.(event.pointerId)
+        return
       }
-      onDrag({ dx, dy, context: current.context })
+      onDrag({ dx: event.clientX - current.x, dy: event.clientY - current.y, context: current.context })
     },
     onPointerUp: end,
     onPointerCancel: end,

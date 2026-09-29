@@ -7,6 +7,7 @@ import {
   OVERLAY_STROKES,
   PAD_R,
   PAD_T,
+  PAN_THRESHOLD,
   UP,
   barsFromDrag,
   indexFromPointer,
@@ -359,6 +360,7 @@ export function TVChart({
 
   const canPan = Boolean(onTimeOffsetChange || onYShiftChange)
   const pan = usePointerDrag({
+    threshold: PAN_THRESHOLD,
     onStart: (event) => {
       if (!canPan || isTypingTarget(event.target) || event.target.closest?.('[data-no-pan]')) return null
       const x = event.clientX - event.currentTarget.getBoundingClientRect().left

@@ -84,6 +84,7 @@ describe('ChartCanvas panning', () => {
 
     const axis = screen.getByTestId('time-axis')
     fireEvent.pointerDown(axis, { clientX: 100, clientY: 5, pointerId: 1 })
+    fireEvent.pointerMove(axis, { clientX: 110, clientY: 5, pointerId: 1 })
     fireEvent.pointerMove(axis, { clientX: 400, clientY: 5, pointerId: 1 })
     fireEvent.pointerUp(axis, { clientX: 400, clientY: 5, pointerId: 1 })
 

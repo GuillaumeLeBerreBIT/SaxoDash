@@ -305,6 +305,7 @@ describe('Research panning', () => {
     const plot = screen.getByTestId('price-scale').closest('svg').parentElement
 
     fireEvent.pointerDown(plot, { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 210, clientY: 150, pointerId: 1 })
     fireEvent.pointerMove(plot, { clientX: 500, clientY: 150, pointerId: 1 })
     fireEvent.pointerUp(plot, { clientX: 500, clientY: 150, pointerId: 1 })
 
