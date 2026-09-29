@@ -185,3 +185,50 @@ describe('ResearchChart', () => {
     expect(screen.getByText(/^RSI 14/)).toBeInTheDocument()
   })
 })
+
+describe('ResearchChart panning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+    queries.useQuotes.mockReturnValue({ ...idle, data: [] })
+  })
+
+  it('keeps the header on the latest close while the chart is panned back', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 210, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+    expect(screen.getByText('141.00')).toBeInTheDocument()
+  })
+})
+
+describe('ResearchChart time-axis zoom', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+  })
+
+  it('leaves every range unselected while zoomed, and a range pick restores it', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const axis = screen.getByTestId('time-axis')
+
+    fireEvent.pointerDown(axis, { clientX: 300, clientY: 5, pointerId: 1 })
+    fireEvent.pointerMove(axis, { clientX: 310, clientY: 5, pointerId: 1 })
+    fireEvent.pointerMove(axis, { clientX: 460, clientY: 5, pointerId: 1 })
+    fireEvent.pointerUp(axis, { clientX: 460, clientY: 5, pointerId: 1 })
+
+    for (const range of ['1W', '1M', '3M', '6M', '1Y', 'ALL']) {
+      expect(screen.getByRole('button', { name: range })).toHaveAttribute('aria-pressed', 'false')
+    }
+
+    await userEvent.click(screen.getByRole('button', { name: '1M' }))
+    expect(screen.getByRole('button', { name: '1M' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})

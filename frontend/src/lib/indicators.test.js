@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bollinger, computeIndicators, computeIndicatorsForRange, ema, macd, relativeVolume, rsi, sma, vwapSeries } from './indicators'
+import { bollinger, computeIndicators, computeIndicatorsForRange, computeIndicatorsForWindow, ema, macd, relativeVolume, rsi, sma, vwapSeries } from './indicators'
 
 const closes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -201,5 +201,31 @@ describe('computeIndicatorsForRange', () => {
     const ranged = computeIndicatorsForRange(series, 5)
     expect(ranged.rvol).toHaveLength(5)
     expect(ranged.rvol[4]).toBe(2)
+  })
+})
+
+describe('computeIndicatorsForWindow', () => {
+  const bars = Array.from({ length: 120 }, (_, i) => ({
+    high: 102 + i + (i % 3),
+    low: 98 + i,
+    close: 100 + i + (i % 5),
+    volume: 1000 + (i % 7) * 100,
+  }))
+  const window = { start: 50, end: 72 }
+
+  it('lines a panned window up with the full-history values', () => {
+    const panned = computeIndicatorsForWindow(bars, window)
+    const full = computeIndicators(bars)
+
+    expect(panned.ma50).toEqual(full.ma50.slice(50, 72))
+    expect(panned.ema9).toEqual(full.ema9.slice(50, 72))
+    expect(panned.rsi).toEqual(full.rsi.slice(50, 72))
+    expect(panned.macd.hist).toEqual(full.macd.hist.slice(50, 72))
+    expect(panned.bb.lo).toEqual(full.bb.lo.slice(50, 72))
+    expect(panned.rvol).toEqual(full.rvol.slice(50, 72))
+  })
+
+  it('restarts VWAP at the first visible bar', () => {
+    expect(computeIndicatorsForWindow(bars, window).vwap).toEqual(computeIndicators(bars.slice(50, 72)).vwap)
   })
 })

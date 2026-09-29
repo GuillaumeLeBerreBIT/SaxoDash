@@ -31,7 +31,7 @@ export default function ResearchChart() {
   const [shownSymbol, setShownSymbol] = useState(symbol)
   if (shownSymbol !== symbol) {
     setShownSymbol(symbol)
-    controls.setYScale(1)
+    controls.resetView()
     setPlacingLine(false)
   }
 
@@ -45,10 +45,11 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [placingLine])
 
-  const { chart, bars, ind, earningsMarkers, priceLines, quote, details } = useChartData({
+  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote, details } = useChartData({
     symbol,
     instrument,
     range: controls.range,
+    timeView: controls.timeView,
   })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
@@ -75,7 +76,7 @@ export default function ResearchChart() {
           details={details.data}
           position={position}
           quote={quote}
-          bars={bars}
+          bars={rangeBars}
           watchlists={watchlists}
           onToggleList={toggleList}
         />
@@ -94,6 +95,7 @@ export default function ResearchChart() {
             <ChartCanvas
               bars={bars}
               ind={ind}
+              timeWindow={timeWindow}
               controls={controls}
               hover={safeHover}
               setHover={setHover}

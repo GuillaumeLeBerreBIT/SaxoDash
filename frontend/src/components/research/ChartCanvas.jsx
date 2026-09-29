@@ -1,5 +1,6 @@
 import { fmtNum, fmtPct } from '../../lib/format'
 import { barChange } from '../../lib/research'
+import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { OVERLAY_STROKES, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
@@ -68,8 +69,20 @@ export default function ChartCanvas({
   paneHeights = DEFAULT_PANE_HEIGHTS,
   placingLine = false,
   onPlaced,
+  timeWindow,
 }) {
-  const { type, overlays, panes, yScale, setYScale } = controls
+  const { type, overlays, panes, range, yScale, setYScale, yShift, setYShift, setTimeView } = controls
+  const shown = timeWindow ?? resolveTimeWindow(LATEST_TIME_VIEW, { total: bars.length, range })
+  const history = { total: shown.total, range }
+  const panTime = setTimeView ? (next) => setTimeView((view) => panTimeView(view, history, next)) : undefined
+  const zoomTime = setTimeView ? (count) => setTimeView((view) => zoomTimeView(view, history, count)) : undefined
+  const resetTime = setTimeView ? () => setTimeView(LATEST_TIME_VIEW) : undefined
+  const resetPriceScale = setYScale
+    ? () => {
+        setYScale(1)
+        setYShift?.(0)
+      }
+    : undefined
   const bar = bars[hover ?? bars.length - 1]
   const [legendRef, legendSize] = useSize()
 
@@ -110,6 +123,11 @@ export default function ChartCanvas({
             earningsMarkers={earningsMarkers}
             yScale={yScale}
             onYScaleChange={setYScale}
+            onPriceScaleReset={resetPriceScale}
+            yShift={yShift}
+            onYShiftChange={setYShift}
+            timeOffset={shown.offset}
+            onTimeOffsetChange={panTime}
             lines={lines}
             onMoveLine={onMoveLine}
             onCreateLine={onCreateLine}
@@ -132,7 +150,7 @@ export default function ChartCanvas({
               <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
             </SubPane>
           ) : null}
-          <TimeAxis data={bars} />
+          <TimeAxis data={bars} onBarCountChange={zoomTime} onReset={resetTime} />
         </div>
       )}
     </>

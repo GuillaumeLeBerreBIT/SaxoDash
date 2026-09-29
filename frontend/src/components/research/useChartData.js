@@ -7,16 +7,17 @@ import {
   useSymbolEarnings,
   useSymbolNote,
 } from '../../api/queries'
-import { computeIndicatorsForRange } from '../../lib/indicators'
+import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars } from '../../lib/research'
+import { LATEST_TIME_VIEW, resolveTimeWindow } from '../../lib/timeWindow'
 import { useChartLines } from './useChartLines'
 
 // Hoisted so an empty result keeps a stable identity and the memos below do
 // not recompute on every render.
 const NO_BARS = []
 
-export function useChartData({ symbol, instrument, range }) {
+export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME_VIEW }) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
 
@@ -24,10 +25,16 @@ export function useChartData({ symbol, instrument, range }) {
   // the range instead meant six Saxo calls to walk 1W→ALL.
   const chart = useChart({ uic, assetType, horizon: DAILY_HORIZON, count: WIDEST_RANGE_COUNT })
   const allBars = chart.data ?? NO_BARS
-  const bars = useMemo(() => barsForRange(allBars, range), [allBars, range])
+  const timeWindow = useMemo(
+    () => resolveTimeWindow(timeView, { total: allBars.length, range }),
+    [timeView, allBars.length, range],
+  )
+  const { start, end } = timeWindow
+  const bars = useMemo(() => allBars.slice(start, end), [allBars, start, end])
+  const rangeBars = useMemo(() => barsForRange(allBars, range), [allBars, range])
   // Indicators run on everything fetched and are sliced to match, so MA-50 has
   // a value on a one-month view instead of being null for want of history.
-  const ind = useMemo(() => computeIndicatorsForRange(allBars, bars.length), [allBars, bars.length])
+  const ind = useMemo(() => computeIndicatorsForWindow(allBars, { start, end }), [allBars, start, end])
 
   const details = useInstrumentDetails({ uic, assetType })
   const earnings = useSymbolEarnings(symbol)
@@ -46,7 +53,9 @@ export function useChartData({ symbol, instrument, range }) {
   return {
     chart,
     bars,
+    rangeBars,
     ind,
+    timeWindow,
     earnings,
     earningsMarkers,
     note,

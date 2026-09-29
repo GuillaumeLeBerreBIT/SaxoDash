@@ -19,6 +19,10 @@ A category manually assigned by the user on a specific Bank Transaction, which t
 A detected group of Bank Transactions from the same merchant, at a similar amount, recurring on a roughly regular cadence (monthly, weekly, or yearly). Persisted so it can be dismissed or confirmed by the user rather than re-evaluated fresh on every view.
 _Avoid_: Recurring payment (fine in conversation, but the stored concept is "Subscription")
 
+**Time Window**:
+The run of daily bars the Research chart shows right now: a slice of the one history fetch, fixed by the selected range, how far back it is panned, and an optional time zoom. Resolved by `lib/timeWindow.js`; the stored intent is the **Time View** (`offset`, `barCount`), which may be stale, while the Time Window is always inside the history.
+_Avoid_: Range (the 1W…ALL preset only), viewport
+
 **Spending**:
 Net outflow from Bank Transactions for a given period, grouped by Category: debits minus any Refund/Credit that nets against the same Category, excluding Transfer and Savings entirely. Always scoped to an explicit period (e.g. "this month") - an unscoped "Spending" figure is a bug, not a feature. Distinct from the existing "Cash Flow" chart on the Accounts page, which tracks Saxo-side deposits/dividends vs fees, not bank spending.
 _Avoid_: Cash flow (reserved for the existing Saxo-based chart)

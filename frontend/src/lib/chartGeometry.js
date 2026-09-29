@@ -34,9 +34,38 @@ export const MIN_Y_SCALE = 0.1
 export const MAX_Y_SCALE = 20
 
 export const DRAG_THRESHOLD = 3
+export const PAN_THRESHOLD = 6
 
 export function scaleFromDrag(startScale, dy) {
   return Math.min(MAX_Y_SCALE, Math.max(MIN_Y_SCALE, startScale * Math.exp(dy / 150)))
+}
+
+export const MAX_Y_SHIFT = 5
+
+export function shiftFromDrag(startShift, dy, chartH) {
+  return Math.min(MAX_Y_SHIFT, Math.max(-MAX_Y_SHIFT, startShift + dy / Math.max(1, chartH)))
+}
+
+export function barCountFromDrag(startCount, dx) {
+  return startCount * Math.exp(-dx / 150)
+}
+
+export function barsFromDrag(dx, slot) {
+  return Math.round(dx / slot) || 0
+}
+
+const HALF_YEAR_MS = 183 * 86_400_000
+
+export function timeLabelStyle(bars, now = new Date()) {
+  if (bars.length === 0) return 'day'
+  const first = new Date(bars[0].date)
+  const last = new Date(bars[bars.length - 1].date)
+  return last - first > HALF_YEAR_MS || last.getFullYear() !== now.getFullYear() ? 'month' : 'day'
+}
+
+export function formatTimeLabel(date, style) {
+  const options = style === 'month' ? { month: 'short', year: '2-digit' } : { day: '2-digit', month: 'short' }
+  return new Date(date).toLocaleDateString('en-GB', options)
 }
 
 export function svgY(event) {
@@ -107,7 +136,7 @@ export function pricePaneHeight({ total, legendHeight, panes, paneHeights }) {
  *  Computed once per dataset and handed to both the chart body and the
  *  crosshair, so hovering does not recompute the scale for every frame.
  */
-export function priceGeometry({ data, ind, width, height, withBands, yScale = 1 }) {
+export function priceGeometry({ data, ind, width, height, withBands, yScale = 1, yShift = 0 }) {
   const chartH = height - PAD_T - PAD_B
   const chartW = Math.max(80, width - PAD_R)
   const slot = chartW / Math.max(1, data.length)
@@ -132,8 +161,9 @@ export function priceGeometry({ data, ind, width, height, withBands, yScale = 1 
   const pad = (max - min) * 0.07 || 1
   const mid = (max + min) / 2
   const half = ((max - min) / 2 + pad) * yScale
-  const top = mid + half
-  const bottom = mid - half
+  const offset = 2 * half * yShift
+  const top = mid + half + offset
+  const bottom = mid - half + offset
 
   return {
     slot,

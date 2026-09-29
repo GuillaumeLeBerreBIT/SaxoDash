@@ -1,4 +1,5 @@
-import { memo, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { ChevronsRight } from 'lucide-react'
 
 import {
   DOWN,
@@ -6,17 +7,21 @@ import {
   OVERLAY_STROKES,
   PAD_R,
   PAD_T,
+  PAN_THRESHOLD,
   UP,
+  barsFromDrag,
   indexFromPointer,
   linePath,
   priceGeometry,
   scaleFromDrag,
+  shiftFromDrag,
   svgY,
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
+import { usePointerDrag } from './usePointerDrag'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
  *
@@ -271,10 +276,10 @@ function Crosshair({ bar, index, geometry, width }) {
 
 const NO_LINES = []
 
-function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
+function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
 
-  if (!onChange && !onClickAt) return null
+  if (!onChange && !onClickAt && !onReset) return null
 
   const end = () => {
     drag.current = null
@@ -283,6 +288,7 @@ function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
   return (
     <rect
       data-testid="price-scale"
+      data-no-pan
       x={width - PAD_R}
       y={0}
       width={PAD_R}
@@ -311,7 +317,8 @@ function ScaleHandle({ width, height, yScale, onChange, onClickAt }) {
       onPointerCancel={end}
       onDoubleClick={(e) => {
         e.stopPropagation()
-        if (onChange) onChange(1)
+        if (onReset) onReset()
+        else if (onChange) onChange(1)
       }}
     />
   )
@@ -328,6 +335,11 @@ export function TVChart({
   earningsMarkers = [],
   yScale = 1,
   onYScaleChange,
+  onPriceScaleReset,
+  yShift = 0,
+  onYShiftChange,
+  timeOffset = 0,
+  onTimeOffsetChange,
   lines = NO_LINES,
   onMoveLine,
   onCreateLine,
@@ -342,9 +354,47 @@ export function TVChart({
   const placedRef = useRef(false)
 
   const geometry = useMemo(
-    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale }),
-    [data, ind, width, height, overlays.bb, yScale],
+    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
+    [data, ind, width, height, overlays.bb, yScale, yShift],
   )
+
+  const canPan = Boolean(onTimeOffsetChange || onYShiftChange)
+  const pan = usePointerDrag({
+    threshold: PAN_THRESHOLD,
+    onStart: (event) => {
+      if (!canPan || isTypingTarget(event.target) || event.target.closest?.('[data-no-pan]')) return null
+      const x = event.clientX - event.currentTarget.getBoundingClientRect().left
+      return x < width - PAD_R ? { offset: timeOffset, shift: yShift } : null
+    },
+    onDrag: ({ dx, dy, context }) => {
+      onTimeOffsetChange?.(context.offset + barsFromDrag(dx, geometry.slot))
+      onYShiftChange?.(shiftFromDrag(context.shift, dy, geometry.chartH))
+    },
+  })
+
+  const wheelTarget = useRef({ slot: geometry.slot, onTimeOffsetChange })
+  useLayoutEffect(() => {
+    wheelTarget.current = { slot: geometry.slot, onTimeOffsetChange }
+  })
+
+  const hasData = data.length > 0
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return undefined
+    let carry = 0
+    const onWheel = (event) => {
+      const { slot, onTimeOffsetChange: change } = wheelTarget.current
+      if (!change || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return
+      event.preventDefault()
+      carry += event.deltaX
+      const steps = Math.trunc(carry / slot)
+      if (steps === 0) return
+      carry -= steps * slot
+      change((current) => current - steps)
+    }
+    element.addEventListener('wheel', onWheel, { passive: false })
+    return () => element.removeEventListener('wheel', onWheel)
+  }, [ref, hasData])
 
   const selected = lines.find((line) => line.id === selectedId && line.kind === 'free') ?? null
   const editing = lines.find((line) => line.id === editingId) ?? null
@@ -394,13 +444,15 @@ export function TVChart({
     <div
       ref={ref}
       className="relative w-full select-none"
-      style={{ height, cursor: placingLine ? 'crosshair' : undefined }}
+      style={{ height, cursor: pan.dragging ? 'grabbing' : placingLine ? 'crosshair' : undefined }}
+      {...pan.handlers}
       onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
       onMouseLeave={() => setHover(null)}
       onMouseDown={(e) => {
         if (e.detail <= 1) placedRef.current = false
       }}
       onClick={(e) => {
+        if (pan.consumeMoved()) return
         setSelectedId(null)
         if (!placingLine || !onCreateLine || e.detail > 1) return
         const y = plotY(e)
@@ -436,6 +488,7 @@ export function TVChart({
           yScale={yScale}
           onChange={onYScaleChange}
           onClickAt={lines.length > 0 ? editAt : undefined}
+          onReset={onPriceScaleReset}
         />
         <PriceLines
           lines={lines}
@@ -461,6 +514,23 @@ export function TVChart({
           }}
           onCancel={() => setEditingId(null)}
         />
+      ) : null}
+      {timeOffset > 0 && onTimeOffsetChange ? (
+        <button
+          type="button"
+          data-no-pan
+          aria-label="Jump to latest"
+          title="Jump to latest"
+          className="absolute bottom-2 flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-zinc-900/90 text-zinc-300 hover:text-white"
+          style={{ right: PAD_R + 8 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onTimeOffsetChange(0)
+          }}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <ChevronsRight size={14} aria-hidden="true" />
+        </button>
       ) : null}
     </div>
   )

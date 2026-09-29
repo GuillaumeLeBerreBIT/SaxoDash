@@ -291,3 +291,26 @@ describe('Research', () => {
     )
   })
 })
+
+describe('Research panning', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+  })
+
+  it('keeps the range statistics on the latest range while the chart is panned back', async () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+    const plot = screen.getByTestId('price-scale').closest('svg').parentElement
+
+    fireEvent.pointerDown(plot, { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 210, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 500, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 500, clientY: 150, pointerId: 1 })
+
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+    expect(screen.getByText('Last close').parentElement).toHaveTextContent('141.00')
+    expect(screen.getByText('1W high').parentElement).toHaveTextContent('143.00')
+  })
+})

@@ -134,24 +134,25 @@ export function relativeVolume(bars, window = RVOL_WINDOW) {
  *  it stays anchored to the range on screen.
  */
 export function computeIndicatorsForRange(bars, count) {
-  const visible = count == null || bars.length <= count ? bars : bars.slice(-count)
-  const from = bars.length - visible.length
-  const closes = bars.map((bar) => bar.close)
+  const shown = count == null ? bars.length : Math.min(count, bars.length)
+  return computeIndicatorsForWindow(bars, { start: bars.length - shown, end: bars.length })
+}
 
-  const tail = (series) => series.slice(from)
-  const tailEach = (group) =>
-    Object.fromEntries(Object.entries(group).map(([key, series]) => [key, tail(series)]))
+export function computeIndicatorsForWindow(bars, { start, end }) {
+  const closes = bars.map((bar) => bar.close)
+  const cut = (series) => series.slice(start, end)
+  const cutEach = (group) => Object.fromEntries(Object.entries(group).map(([key, series]) => [key, cut(series)]))
 
   return {
-    ma20: tail(sma(closes, 20)),
-    ma50: tail(sma(closes, 50)),
-    ma200: tail(sma(closes, 200)),
-    ema9: tail(ema(closes, 9)),
-    bb: tailEach(bollinger(closes)),
-    rsi: tail(rsi(closes)),
-    macd: tailEach(macd(closes)),
-    vwap: vwapSeries(visible),
-    rvol: tail(relativeVolume(bars)),
+    ma20: cut(sma(closes, 20)),
+    ma50: cut(sma(closes, 50)),
+    ma200: cut(sma(closes, 200)),
+    ema9: cut(ema(closes, 9)),
+    bb: cutEach(bollinger(closes)),
+    rsi: cut(rsi(closes)),
+    macd: cutEach(macd(closes)),
+    vwap: vwapSeries(bars.slice(start, end)),
+    rvol: cut(relativeVolume(bars)),
   }
 }
 
