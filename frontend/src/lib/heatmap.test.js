@@ -108,6 +108,15 @@ describe('layoutPortfolio', () => {
   it('lays out nothing for an empty book', () => {
     expect(layoutPortfolio([], { width: 760, height: 280 })).toEqual({ sectors: [], tiles: [] })
   })
+
+  it('heads no group when the whole book is one sector', () => {
+    const oneSector = [
+      { ticker: 'NVDA', sector: 'Uncategorized', value: '6000' },
+      { ticker: 'MSFT', sector: 'Uncategorized', value: '3000' },
+    ]
+    const { sectors } = layoutPortfolio(oneSector, { width: 760, height: 280 })
+    expect(sectors.every((s) => !s.headed)).toBe(true)
+  })
 })
 
 describe('labelLevel', () => {

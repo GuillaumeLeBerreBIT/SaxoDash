@@ -76,7 +76,7 @@ export function layoutPortfolio(positions, { width, height }) {
   const total = groups.reduce((sum, group) => sum + group.value, 0)
   const tiles = []
   const sectors = squarify(groups, { x: 0, y: 0, width, height }).map((group) => {
-    const headed = group.height >= MIN_HEADED_GROUP
+    const headed = groups.length > 1 && group.height >= MIN_HEADED_GROUP
     const inner = headed
       ? { x: group.x, y: group.y + SECTOR_HEADER, width: group.width, height: group.height - SECTOR_HEADER }
       : { x: group.x, y: group.y, width: group.width, height: group.height }
