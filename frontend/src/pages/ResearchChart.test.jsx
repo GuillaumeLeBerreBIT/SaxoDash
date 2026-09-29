@@ -122,6 +122,17 @@ describe('ResearchChart', () => {
     expect(backLink()).toHaveAttribute('href', '/research?symbol=TSLA&uic=9&assetType=Stock')
   })
 
+  it('disables the line tool when the symbol cannot resolve to an instrument', () => {
+    queries.usePositions.mockReturnValue({ ...idle, data: [] })
+    queries.useInstrumentSearch.mockImplementation(() => ({ ...idle, data: [], isError: false }))
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
+    queries.useChart.mockReturnValue({ data: [], isLoading: false, error: null })
+
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=ZZZZ' })
+
+    expect(screen.getByRole('button', { name: 'Horizontal line' })).toBeDisabled()
+  })
+
   it('places one line with the armed line tool, then returns to the crosshair', async () => {
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 
@@ -131,6 +142,27 @@ describe('ResearchChart', () => {
 
     expect(lineMutations.create.mutate).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('button', { name: 'Crosshair' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('disarms the line tool on Escape without leaving the page', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
+    expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.getByRole('button', { name: 'Crosshair' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('navigation', { name: 'Chart tools' })).toBeInTheDocument()
+  })
+
+  it('does not disarm the line tool when Escape is pressed while typing', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
+    await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), '{Escape}')
+
+    expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('disarms the line tool when the symbol changes', async () => {

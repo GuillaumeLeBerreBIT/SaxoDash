@@ -50,9 +50,17 @@ A discovery page with rows/grids of instruments (themes, movers, holdings, watch
 - Hovering a line badge shows the resize cursor rather than a text cursor.
 - Manual browser checks of the annotation features are worth a pass after any chart
   change.
-- At `/research/chart`, 1100×800 with Volume + RSI + MACD all on and a wrapped
-  two-row legend, `MIN_PRICE_HEIGHT`'s floor still pushes the canvas a little past
-  the container (time axis clipped by ~20px) — a pre-existing, accepted trade-off
-  (see `chartGeometry.test.js`'s "never shrinks below the readable floor" case),
-  now smaller after `LEGEND_HEIGHT` was corrected but not eliminated at the
-  narrowest width with every pane enabled.
+- At `/research/chart` with Volume + RSI + MACD all on, `MIN_PRICE_HEIGHT`'s
+  240px floor can still push the canvas a little past the container at narrow
+  widths, since the legend height is now measured rather than assumed — a
+  pre-existing, accepted trade-off (see `chartGeometry.test.js`'s "never
+  shrinks below the readable floor" case), not eliminated by measuring the
+  legend, just no longer tied to a stale pixel guess.
+- At the big view, hovering near a width where the legend sits on the edge of
+  wrapping to a second row can shift the price pane's height by one legend
+  row mid-hover.
+- The big view's per-symbol resets (price-scale zoom, line tool, chart
+  remount) are keyed on the ticker, not on uic + asset type, so switching
+  between two instruments that happen to share a ticker doesn't reset them.
+- With the line tool armed, clicking the chart to close an open rail menu
+  also places a line.

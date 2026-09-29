@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { ADVANCED_PANE_HEIGHTS } from '../lib/chartOptions'
 import { useSize } from '../lib/chartGeometry'
+import { isTypingTarget } from '../lib/priceLines'
 import { chartHref, researchHref } from '../lib/research'
 import { Card } from '../components/ui'
 import CommandPalette from '../components/CommandPalette'
@@ -19,6 +20,7 @@ import { useResearchInstrument } from '../components/research/useResearchInstrum
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, assetType: result.asset_type })
+const paletteHrefFor = (symbol, instrument) => chartHref(symbol, instrument)
 
 export default function ResearchChart() {
   const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
@@ -32,6 +34,16 @@ export default function ResearchChart() {
     controls.setYScale(1)
     setPlacingLine(false)
   }
+
+  useEffect(() => {
+    if (!placingLine) return undefined
+    const onKeyDown = (event) => {
+      if (isTypingTarget(event.target)) return
+      if (event.key === 'Escape') setPlacingLine(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [placingLine])
 
   const { chart, bars, ind, earningsMarkers, priceLines, quote, details } = useChartData({
     symbol,
@@ -110,7 +122,7 @@ export default function ResearchChart() {
         </div>
       </aside>
 
-      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} />
+      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} hrefFor={paletteHrefFor} />
     </div>
   )
 }

@@ -7,14 +7,16 @@ import { PAGE_COMMANDS } from '../lib/commands'
 import { rankInstrumentResults, researchHref } from '../lib/research'
 import { readRecentSymbols } from '../lib/recentSymbols'
 
+const defaultHrefFor = (symbol, instrument) => researchHref(symbol, undefined, instrument)
+
 /** ⌘K overlay: jump to any instrument's Research page or any app page.
  *  Mounted only while open, so `Panel` starts fresh each time. */
-export default function CommandPalette({ open, onClose }) {
+export default function CommandPalette({ open, onClose, hrefFor = defaultHrefFor }) {
   if (!open) return null
-  return <Panel onClose={onClose} />
+  return <Panel onClose={onClose} hrefFor={hrefFor} />
 }
 
-function Panel({ onClose }) {
+function Panel({ onClose, hrefFor }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
@@ -30,7 +32,7 @@ function Panel({ onClose }) {
 
     if (!trimmed) {
       const recent = readRecentSymbols().map((s) => ({
-        key: `recent:${s}`, label: s, hint: 'Recent', to: researchHref(s),
+        key: `recent:${s}`, label: s, hint: 'Recent', to: hrefFor(s),
       }))
       return [...recent, ...pages]
     }
@@ -41,10 +43,10 @@ function Panel({ onClose }) {
       key: `sym:${r.uic}:${r.asset_type}`,
       label: `${r.symbol}  ·  ${r.description}`,
       hint: r.exchange || 'Instrument',
-      to: researchHref(r.symbol, undefined, { uic: r.uic, assetType: r.asset_type }),
+      to: hrefFor(r.symbol, { uic: r.uic, assetType: r.asset_type }),
     }))
     return [...instruments, ...pages]
-  }, [trimmed, results])
+  }, [trimmed, results, hrefFor])
 
   // Focus only — no state written here, so no cascading render.
   useEffect(() => {

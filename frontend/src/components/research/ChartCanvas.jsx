@@ -88,7 +88,7 @@ export default function ChartCanvas({
   return (
     <>
       <div ref={legendRef}>
-        {bar ? (
+        {bar && !placeholder ? (
           <OhlcLegend bar={bar} change={barChange(bars, hover)} overlays={overlays} ind={ind} hover={hover} />
         ) : null}
       </div>

@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
+import { chartHref } from '../lib/research'
 import CommandPalette from './CommandPalette'
 
 vi.mock('../api/queries')
@@ -55,6 +56,20 @@ describe('CommandPalette', () => {
     // Pins the uic the search already resolved, so an ambiguous ticker
     // (e.g. "NOW" - ServiceNow vs. NowVertical) can't re-resolve wrong.
     expect(navigate).toHaveBeenCalledWith('/research?symbol=TSLA&uic=9&assetType=Stock')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('navigates through a custom hrefFor when one is given', async () => {
+    queries.useInstrumentSearch.mockReturnValue({
+      data: [{ symbol: 'TSLA', description: 'Tesla Inc', exchange: 'NASDAQ', uic: 9, asset_type: 'Stock' }],
+      isLoading: false, error: null,
+    })
+    const onClose = vi.fn()
+    const hrefFor = (symbol, instrument) => chartHref(symbol, instrument)
+    renderWithProviders(<CommandPalette open onClose={onClose} hrefFor={hrefFor} />)
+    await userEvent.type(screen.getByRole('combobox'), 'tsla')
+    await userEvent.click(screen.getByRole('option', { name: /TSLA/ }))
+    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA&uic=9&assetType=Stock')
     expect(onClose).toHaveBeenCalled()
   })
 
