@@ -1,6 +1,7 @@
 import { Card, CardHeader } from '../ui'
 import { fmtPct } from '../../lib/format'
-import { NEGATIVE, POSITIVE, PERFORMANCE_CAPS, performanceFill, withAlpha } from '../../lib/charts'
+import { PERFORMANCE_CAPS, performanceFill } from '../../lib/charts'
+import ScaleLegend from '../heatmap/ScaleLegend'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -18,16 +19,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns }) {
       <CardHeader
         title="Monthly returns"
         subtitle="Portfolio value, month over month"
-        right={
-          <div className="flex items-center gap-1.5 text-[var(--fig-2xs)] text-zinc-500">
-            <span>−9%</span>
-            <span
-              className="w-16 h-2 rounded-full"
-              style={{ background: `linear-gradient(90deg, ${withAlpha(NEGATIVE, 0.8)}, rgba(255,255,255,0.06), ${withAlpha(POSITIVE, 0.8)})` }}
-            />
-            <span>+9%</span>
-          </div>
-        }
+        right={<ScaleLegend cap={PERFORMANCE_CAPS.month} />}
       />
       <div className="mt-4 overflow-x-auto">
         <table className="w-full border-separate" style={{ borderSpacing: 3 }}>
