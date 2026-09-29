@@ -1,7 +1,7 @@
 import { fmtNum, fmtPct } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { chartPlaceholderFor } from '../../lib/chartState'
-import { OVERLAY_STROKES } from '../../lib/chartGeometry'
+import { OVERLAY_STROKES, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
@@ -61,67 +61,77 @@ export default function ChartCanvas({
   onCreateLine,
   onDeleteLine,
   priceHeight,
+  fitHeight,
   paneHeights = DEFAULT_PANE_HEIGHTS,
   placingLine = false,
   onPlaced,
 }) {
   const { type, overlays, panes, yScale, setYScale } = controls
   const bar = bars[hover ?? bars.length - 1]
+  const [legendRef, legendSize] = useSize()
+
+  const resolvedPriceHeight =
+    fitHeight != null
+      ? pricePaneHeight({ total: fitHeight, legendHeight: legendSize.height, panes, paneHeights })
+      : priceHeight
 
   const placeholder = chartPlaceholderFor({
     isLoading,
     error,
     data: bars,
     minPoints: 2,
-    height: priceHeight,
+    height: resolvedPriceHeight,
     symbol,
     unresolved,
   })
-  if (placeholder) return placeholder
 
   return (
     <>
-      {bar ? (
-        <OhlcLegend bar={bar} change={barChange(bars, hover)} overlays={overlays} ind={ind} hover={hover} />
-      ) : null}
-
-      <div className="px-1 pb-1">
-        <TVChart
-          key={symbol}
-          data={bars}
-          ind={ind}
-          type={type}
-          overlays={overlays}
-          hover={hover}
-          setHover={setHover}
-          height={priceHeight}
-          earningsMarkers={earningsMarkers}
-          yScale={yScale}
-          onYScaleChange={setYScale}
-          lines={lines}
-          onMoveLine={onMoveLine}
-          onCreateLine={onCreateLine}
-          onDeleteLine={onDeleteLine}
-          placingLine={placingLine}
-          onPlaced={onPlaced}
-        />
-        {panes.volume ? (
-          <SubPane title="Volume" height={paneHeights.volume}>
-            <VolumePane data={bars} hover={hover} setHover={setHover} />
-          </SubPane>
+      <div ref={legendRef}>
+        {bar ? (
+          <OhlcLegend bar={bar} change={barChange(bars, hover)} overlays={overlays} ind={ind} hover={hover} />
         ) : null}
-        {panes.rsi ? (
-          <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={paneHeights.rsi}>
-            <RsiPane values={ind.rsi} hover={hover} setHover={setHover} />
-          </SubPane>
-        ) : null}
-        {panes.macd ? (
-          <SubPane title="MACD 12 26 9" height={paneHeights.macd}>
-            <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
-          </SubPane>
-        ) : null}
-        <TimeAxis data={bars} />
       </div>
+
+      {placeholder ?? (
+        <div className="px-1 pb-1">
+          <TVChart
+            key={symbol}
+            data={bars}
+            ind={ind}
+            type={type}
+            overlays={overlays}
+            hover={hover}
+            setHover={setHover}
+            height={resolvedPriceHeight}
+            earningsMarkers={earningsMarkers}
+            yScale={yScale}
+            onYScaleChange={setYScale}
+            lines={lines}
+            onMoveLine={onMoveLine}
+            onCreateLine={onCreateLine}
+            onDeleteLine={onDeleteLine}
+            placingLine={placingLine}
+            onPlaced={onPlaced}
+          />
+          {panes.volume ? (
+            <SubPane title="Volume" height={paneHeights.volume}>
+              <VolumePane data={bars} hover={hover} setHover={setHover} />
+            </SubPane>
+          ) : null}
+          {panes.rsi ? (
+            <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={paneHeights.rsi}>
+              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} />
+            </SubPane>
+          ) : null}
+          {panes.macd ? (
+            <SubPane title="MACD 12 26 9" height={paneHeights.macd}>
+              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
+            </SubPane>
+          ) : null}
+          <TimeAxis data={bars} />
+        </div>
+      )}
     </>
   )
 }

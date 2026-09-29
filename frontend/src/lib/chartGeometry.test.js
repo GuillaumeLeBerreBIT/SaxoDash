@@ -193,18 +193,27 @@ describe('pricePaneHeight', () => {
   const none = { volume: false, rsi: false, macd: false }
 
   it('gives the price pane everything but the legend, time axis and padding', () => {
-    expect(pricePaneHeight({ total: 800, panes: none, paneHeights })).toBe(800 - 70 - 22 - 4)
+    expect(pricePaneHeight({ total: 800, legendHeight: 32, panes: none, paneHeights })).toBe(800 - 32 - 22 - 4)
+  })
+
+  it('takes less for a two-row legend than a one-row legend', () => {
+    const oneRow = pricePaneHeight({ total: 800, legendHeight: 32, panes: none, paneHeights })
+    const twoRow = pricePaneHeight({ total: 800, legendHeight: 68, panes: none, paneHeights })
+
+    expect(oneRow).toBe(800 - 32 - 22 - 4)
+    expect(twoRow).toBe(800 - 68 - 22 - 4)
+    expect(oneRow).toBeGreaterThan(twoRow)
   })
 
   it('subtracts each enabled lower pane and its border', () => {
     const panes = { volume: true, rsi: true, macd: false }
-    expect(pricePaneHeight({ total: 800, panes, paneHeights })).toBe(800 - 70 - 22 - 4 - 97 - 121)
+    expect(pricePaneHeight({ total: 800, legendHeight: 32, panes, paneHeights })).toBe(800 - 32 - 22 - 4 - 97 - 121)
   })
 
   it('never shrinks below the readable floor in a short window with every pane on', () => {
     const panes = { volume: true, rsi: true, macd: true }
-    expect(pricePaneHeight({ total: 300, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
-    expect(pricePaneHeight({ total: 0, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
+    expect(pricePaneHeight({ total: 300, legendHeight: 68, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
+    expect(pricePaneHeight({ total: 0, legendHeight: 68, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
   })
 })
 

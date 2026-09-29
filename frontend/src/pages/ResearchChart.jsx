@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { ADVANCED_PANE_HEIGHTS } from '../lib/chartOptions'
-import { pricePaneHeight, useSize } from '../lib/chartGeometry'
+import { useSize } from '../lib/chartGeometry'
 import { chartHref, researchHref } from '../lib/research'
 import { Card } from '../components/ui'
 import CommandPalette from '../components/CommandPalette'
@@ -43,11 +43,6 @@ export default function ResearchChart() {
   const palette = useCommandPalette()
 
   const [canvasRef, canvasSize] = useSize()
-  const priceHeight = pricePaneHeight({
-    total: canvasSize.height,
-    panes: controls.panes,
-    paneHeights: ADVANCED_PANE_HEIGHTS,
-  })
   const safeHover = hover != null && hover < bars.length ? hover : null
 
   return (
@@ -99,7 +94,7 @@ export default function ResearchChart() {
               onMoveLine={priceLines.move}
               onCreateLine={priceLines.create}
               onDeleteLine={priceLines.remove}
-              priceHeight={priceHeight}
+              fitHeight={canvasSize.height}
               paneHeights={ADVANCED_PANE_HEIGHTS}
               placingLine={placingLine}
               onPlaced={() => setPlacingLine(false)}

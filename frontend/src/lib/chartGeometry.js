@@ -91,16 +91,15 @@ export function useWidth() {
   return [ref, size.width]
 }
 
-const LEGEND_HEIGHT = 70
 const TIME_AXIS_HEIGHT = 22
 const CANVAS_PADDING = 4
 export const MIN_PRICE_HEIGHT = 240
 
-export function pricePaneHeight({ total, panes, paneHeights }) {
+export function pricePaneHeight({ total, legendHeight, panes, paneHeights }) {
   const lower = Object.keys(panes)
     .filter((key) => panes[key])
     .reduce((sum, key) => sum + paneHeights[key] + 1, 0)
-  return Math.max(MIN_PRICE_HEIGHT, Math.floor(total - LEGEND_HEIGHT - TIME_AXIS_HEIGHT - CANVAS_PADDING - lower))
+  return Math.max(MIN_PRICE_HEIGHT, Math.floor(total - legendHeight - TIME_AXIS_HEIGHT - CANVAS_PADDING - lower))
 }
 
 /** Everything the price pane needs to place a bar: scales, slots and ticks.
