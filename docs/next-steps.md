@@ -14,19 +14,13 @@ Done 2026-09-28 — `/research/chart`, spec
 Done 2026-09-29 — spec
 `docs/superpowers/specs/2026-09-29-market-heatmaps-design.md`.
 
-## 3. Axis panning (recommended next)
+## 3. Axis panning
 
-Drag the price axis to move the chart up and down; drag the time axis (or scroll) to
-go back through history.
+Done 2026-09-29 — spec `docs/superpowers/specs/2026-09-29-axis-panning-design.md`.
+Possible follow-ups: smooth sub-bar panning (1W/1M step a whole bar at a time),
+paging older history from Saxo past the 1,200-bar fetch, time-axis zoom.
 
-- **Why next:** pairs naturally with the big view and makes the chart feel like a
-  real charting tool.
-- **Risk:** the trickiest change. Today the chart always shows exactly the selected
-  range and the indicators are sliced to it (`barsForRange`,
-  `computeIndicatorsForRange`); a panned window breaks that assumption. Horizon is
-  daily-or-coarser only (see AGENTS.md "Chart bars are identified by their date").
-
-## 4. Per-line customisation
+## 4. Per-line customisation (recommended next)
 
 A small toolbar for a selected line: colour, maybe style.
 

@@ -304,3 +304,13 @@ has a market-wide feed. A quote's `change_basis` is `live` or `last_close`
 into "Latest session". Layout is a hand-rolled squarify in `lib/heatmap.js`, not
 Recharts' `Treemap`: HTML tiles are focusable, carry sector headers, and
 render in jsdom.
+
+**The chart pans within what it already fetched.** The visible bars are a window
+`{start, end}` into the one 1,200-bar fetch (`lib/research.js::visibleWindow`),
+from the range and an integer `timeOffset` back from the latest bar; indicators
+are computed over everything and cut to that window, VWAP restarts at its start.
+The price pan is a `yShift` applied after `yScale`, so the auto-fit is still the
+visible bars'. Only what describes the view follows the pan: the symbol header
+and the Overview's range statistics read `rangeBars` (the unpanned range), or a
+panned chart relabels a past close as "latest session". Only a horizontal wheel
+is captured — a vertical one belongs to the page.
