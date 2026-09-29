@@ -38,7 +38,9 @@ export function writeWorkspace({ layout, slots, active }) {
 }
 
 export function sameSlot(a, b) {
-  return Boolean(a && b) && a.symbol === b.symbol && a.uic === b.uic && a.assetType === b.assetType
+  if (a === null && b === null) return true
+  if (a === null || b === null) return false
+  return a.symbol === b.symbol && a.uic === b.uic && a.assetType === b.assetType
 }
 
 export function withActiveSlot(workspace, slot) {

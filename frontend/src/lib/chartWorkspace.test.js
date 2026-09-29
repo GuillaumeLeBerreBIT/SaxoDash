@@ -76,6 +76,11 @@ describe('withActiveSlot', () => {
     const filled = { layout: '2h', slots: [nvda, amd], active: 1 }
     expect(withActiveSlot(filled, { ...amd })).toBe(filled)
   })
+
+  it('returns the same workspace when the active pane already holds null', () => {
+    const empty = { layout: '2h', slots: [nvda, null], active: 1 }
+    expect(withActiveSlot(empty, null)).toBe(empty)
+  })
 })
 
 describe('sameSlot', () => {
@@ -83,5 +88,9 @@ describe('sameSlot', () => {
     expect(sameSlot(nvda, { ...nvda })).toBe(true)
     expect(sameSlot(nvda, { ...nvda, assetType: 'Cfd' })).toBe(false)
     expect(sameSlot(null, nvda)).toBe(false)
+  })
+
+  it('treats two empty slots as equal', () => {
+    expect(sameSlot(null, null)).toBe(true)
   })
 })
