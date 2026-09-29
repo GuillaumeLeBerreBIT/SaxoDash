@@ -1,15 +1,13 @@
 import { Card, CardHeader } from '../ui'
 import { fmtPct } from '../../lib/format'
-import { NEGATIVE, POSITIVE, withAlpha } from '../../lib/charts'
+import { NEGATIVE, POSITIVE, PERFORMANCE_CAPS, performanceFill, withAlpha } from '../../lib/charts'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 // Same red/green scale as the design, but one series - there's no benchmark
 // row to compare against yet.
 function cellStyle(pct) {
-  if (pct == null) return { background: 'rgba(255,255,255,0.02)' }
-  const intensity = Math.min(1, Math.abs(pct) / 9)
-  return { background: withAlpha(pct >= 0 ? POSITIVE : NEGATIVE, 0.12 + intensity * 0.65) }
+  return { background: performanceFill(pct, { cap: PERFORMANCE_CAPS.month, flat: 0 }) ?? 'rgba(255,255,255,0.02)' }
 }
 
 export default function MonthlyReturnsHeatmap({ monthlyReturns }) {

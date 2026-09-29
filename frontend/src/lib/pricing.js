@@ -60,3 +60,12 @@ export function fmtClock(iso, now = new Date()) {
   }
   return `${at.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`
 }
+
+export const LAST_SESSION_NOTE = 'No live market data on this account — showing the last completed session'
+
+export function moveLabel(quotes) {
+  for (const quote of quotes) {
+    if (quote?.change_basis === 'last_close') return 'Last session'
+  }
+  return 'Today'
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtClock, oldestPricedAt, priceBasis, weakestPriceBasis } from './pricing'
+import { fmtClock, moveLabel, oldestPricedAt, priceBasis, weakestPriceBasis } from './pricing'
 
 const position = (price_source, priced_at) => ({ price_source, priced_at })
 
@@ -81,5 +81,23 @@ describe('fmtClock', () => {
   it('is null for a missing or unparseable stamp', () => {
     expect(fmtClock(null, now)).toBeNull()
     expect(fmtClock('not a date', now)).toBeNull()
+  })
+})
+
+describe('moveLabel', () => {
+  it('says Today when every move is live', () => {
+    expect(moveLabel([{ change_basis: 'live' }, { change_basis: null }])).toBe('Today')
+  })
+
+  it('says Last session as soon as one move is a last close', () => {
+    expect(moveLabel([{ change_basis: 'live' }, { change_basis: 'last_close' }])).toBe('Last session')
+  })
+
+  it("reads a Map's values", () => {
+    expect(moveLabel(new Map([[1, { change_basis: 'last_close' }]]).values())).toBe('Last session')
+  })
+
+  it('says Today with no quotes at all', () => {
+    expect(moveLabel([])).toBe('Today')
   })
 })

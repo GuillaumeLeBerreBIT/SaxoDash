@@ -54,6 +54,18 @@ export function withAlpha(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
 }
 
+export const PERFORMANCE_CAPS = { day: 3, sincePurchase: 30, month: 9 }
+export const FLAT_MOVE = 0.1
+export const FLAT_FILL = withAlpha(AXIS_TEXT, 0.18)
+
+export function performanceFill(pct, { cap, flat = FLAT_MOVE }) {
+  if (pct == null || Number.isNaN(Number(pct))) return null
+  const n = Number(pct)
+  if (Math.abs(n) < flat) return FLAT_FILL
+  const intensity = Math.min(1, Math.abs(n) / cap)
+  return withAlpha(n >= 0 ? POSITIVE : NEGATIVE, 0.12 + intensity * 0.65)
+}
+
 export const chartTooltipProps = {
   contentStyle: {
     background: '#18181b',
