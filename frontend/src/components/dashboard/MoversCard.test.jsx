@@ -23,9 +23,9 @@ describe('MoversCard', () => {
   })
 
   const positions = [
-    { ticker: 'NVDA', value: '1020.00', uic: 211 },
-    { ticker: 'INTC', value: '990.00', uic: 212 },
-    { ticker: 'KO', value: '500.00', uic: 213 },
+    { ticker: 'NVDA', value: '1020.00', uic: 211, asset_type: 'Stock' },
+    { ticker: 'INTC', value: '990.00', uic: 212, asset_type: 'Stock' },
+    { ticker: 'KO', value: '500.00', uic: 213, asset_type: 'Stock' },
   ]
   const live = new Map([
     [211, { uic: 211, change_pct: 2, change_basis: 'live' }],
@@ -45,6 +45,15 @@ describe('MoversCard', () => {
     expect(screen.getByText('+2.0%')).toBeInTheDocument()
     expect(screen.getByText('-1.0%')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'KO' })).not.toBeInTheDocument()
+  })
+
+  it("links a Today row to the instrument Saxo resolved, not just the ticker", async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<MoversCard movers={movers} positions={positions} quotes={live} />)
+    await user.click(screen.getByRole('button', { name: 'Today' }))
+    const href = screen.getByRole('link', { name: 'NVDA' }).getAttribute('href')
+    expect(href).toContain('uic=211')
+    expect(href).toContain('assetType=Stock')
   })
 
   it('calls a last-close move the latest session', async () => {

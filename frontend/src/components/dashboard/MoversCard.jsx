@@ -10,12 +10,12 @@ import { Card, CardHeader, TBtn } from '../ui'
 const NO_POSITIONS = []
 const NO_QUOTES = new Map()
 
-function Row({ ticker, pct, eur }) {
+function Row({ ticker, pct, eur, instrument }) {
   const up = Number(pct) >= 0
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <Link
-        to={researchHref(ticker)}
+        to={researchHref(ticker, undefined, instrument)}
         className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
       >
         {ticker}
@@ -42,7 +42,12 @@ function Column({ title, rows }) {
 }
 
 const sincePurchaseRows = (rows) => rows.map((r) => ({ ticker: r.ticker, pct: r.pnl_pct, eur: r.pnl }))
-const dayRows = (moves) => moves.map((m) => ({ ticker: m.position.ticker, pct: m.changePct, eur: m.impactEur }))
+const dayRows = (moves) => moves.map((m) => ({
+  ticker: m.position.ticker,
+  pct: m.changePct,
+  eur: m.impactEur,
+  instrument: { uic: m.position.uic, assetType: m.position.asset_type },
+}))
 
 export default function MoversCard({ movers, positions = NO_POSITIONS, quotes = NO_QUOTES }) {
   const [metric, setMetric] = useState('sincePurchase')
