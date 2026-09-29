@@ -70,6 +70,7 @@ export default function Research() {
       instrument,
       range: controls.range,
       timeOffset: controls.timeOffset,
+      barCount: controls.barCount,
     })
   const fundamentals = useFundamentals(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)

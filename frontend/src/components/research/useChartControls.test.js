@@ -75,4 +75,20 @@ describe('useChartControls', () => {
 
     expect(result.current).toMatchObject({ yScale: 1, timeOffset: 0, yShift: 0 })
   })
+
+  it('shows the range until the time axis is zoomed, and goes back to it on a range pick or a reset', () => {
+    const { result } = renderHook(() => useChartControls())
+    expect(result.current.barCount).toBeNull()
+
+    act(() => result.current.setBarCount(40))
+    expect(result.current.barCount).toBe(40)
+    expect(stored() ?? {}).not.toHaveProperty('barCount')
+
+    act(() => result.current.setRange('1Y'))
+    expect(result.current.barCount).toBeNull()
+
+    act(() => result.current.setBarCount(40))
+    act(() => result.current.resetView())
+    expect(result.current.barCount).toBeNull()
+  })
 })

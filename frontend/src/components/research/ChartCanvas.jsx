@@ -70,11 +70,28 @@ export default function ChartCanvas({
   onPlaced,
   maxTimeOffset = 0,
 }) {
-  const { type, overlays, panes, yScale, setYScale, yShift, setYShift, timeOffset, setTimeOffset } = controls
+  const { type, overlays, panes, yScale, setYScale, yShift, setYShift, timeOffset, setTimeOffset, setBarCount } =
+    controls
+  const totalBars = bars.length + maxTimeOffset
   const panTime = setTimeOffset
     ? (next) =>
         setTimeOffset((current) => clampTimeOffset(typeof next === 'function' ? next(current) : next, maxTimeOffset))
     : undefined
+  const zoomTime = setBarCount
+    ? (next) => {
+        setBarCount(next)
+        if (setTimeOffset && timeOffset > totalBars - next) {
+          setTimeOffset((current) => clampTimeOffset(current, totalBars - next))
+        }
+      }
+    : undefined
+  const resetTime =
+    setBarCount || panTime
+      ? () => {
+          setBarCount?.(null)
+          panTime?.(0)
+        }
+      : undefined
   const resetPriceScale = setYScale
     ? () => {
         setYScale(1)
@@ -148,7 +165,7 @@ export default function ChartCanvas({
               <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
             </SubPane>
           ) : null}
-          <TimeAxis data={bars} timeOffset={timeOffset} onTimeOffsetChange={panTime} />
+          <TimeAxis data={bars} totalBars={totalBars} onBarCountChange={zoomTime} onReset={resetTime} />
         </div>
       )}
     </>

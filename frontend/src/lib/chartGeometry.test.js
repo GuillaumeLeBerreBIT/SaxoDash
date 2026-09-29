@@ -6,6 +6,8 @@ import {
   MIN_PRICE_HEIGHT,
   MIN_Y_SCALE,
   PAD_R,
+  MIN_VISIBLE_BARS,
+  barCountFromDrag,
   barsFromDrag,
   donutOuterRadius,
   formatTimeLabel,
@@ -295,5 +297,21 @@ describe('time labels', () => {
   it('formats each style', () => {
     expect(formatTimeLabel('2024-03-12', 'day')).toBe('12 Mar')
     expect(formatTimeLabel('2024-03-12', 'month')).toBe('Mar 24')
+  })
+})
+
+describe('time-axis zoom', () => {
+  it('shows fewer bars as the axis is dragged right', () => {
+    expect(barCountFromDrag(100, 150, 1200)).toBe(37)
+  })
+
+  it('shows more bars as the axis is dragged left', () => {
+    expect(barCountFromDrag(100, -150, 1200)).toBe(272)
+  })
+
+  it('keeps a readable minimum and never exceeds what was fetched', () => {
+    expect(barCountFromDrag(100, 10_000, 1200)).toBe(MIN_VISIBLE_BARS)
+    expect(barCountFromDrag(100, -10_000, 1200)).toBe(1200)
+    expect(barCountFromDrag(3, 0, 3)).toBe(3)
   })
 })

@@ -313,4 +313,8 @@ The price pan is a `yShift` applied after `yScale`, so the auto-fit is still the
 visible bars'. Only what describes the view follows the pan: the symbol header
 and the Overview's range statistics read `rangeBars` (the unpanned range), or a
 panned chart relabels a past close as "latest session". Only a horizontal wheel
-is captured — a vertical one belongs to the page.
+is captured — a vertical one belongs to the page. Each axis zooms when dragged,
+and dragging the candles pans. Dragging the date strip sets `barCount`, which
+overrides the range's count (5 to all fetched, right edge anchored), and no range
+button is highlighted while it is set. A range pick, a symbol switch or a
+double-click on the strip clears it.

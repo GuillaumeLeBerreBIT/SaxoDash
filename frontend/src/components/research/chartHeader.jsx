@@ -6,7 +6,7 @@ export function RangeButtons({ controls }) {
   return (
     <div className="flex items-center gap-0.5">
       {INTERVALS.map((interval) => (
-        <TBtn key={interval} active={controls.range === interval} onClick={() => controls.setRange(interval)}>
+        <TBtn key={interval} active={controls.range === interval && controls.barCount == null} onClick={() => controls.setRange(interval)}>
           {interval}
         </TBtn>
       ))}

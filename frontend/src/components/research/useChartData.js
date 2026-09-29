@@ -16,7 +16,7 @@ import { useChartLines } from './useChartLines'
 // not recompute on every render.
 const NO_BARS = []
 
-export function useChartData({ symbol, instrument, range, timeOffset = 0 }) {
+export function useChartData({ symbol, instrument, range, timeOffset = 0, barCount = null }) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
 
@@ -24,7 +24,10 @@ export function useChartData({ symbol, instrument, range, timeOffset = 0 }) {
   // the range instead meant six Saxo calls to walk 1W→ALL.
   const chart = useChart({ uic, assetType, horizon: DAILY_HORIZON, count: WIDEST_RANGE_COUNT })
   const allBars = chart.data ?? NO_BARS
-  const view = useMemo(() => visibleWindow(allBars.length, range, timeOffset), [allBars.length, range, timeOffset])
+  const view = useMemo(
+    () => visibleWindow(allBars.length, range, timeOffset, barCount),
+    [allBars.length, range, timeOffset, barCount],
+  )
   const bars = useMemo(() => allBars.slice(view.start, view.end), [allBars, view.start, view.end])
   const rangeBars = useMemo(() => barsForRange(allBars, range), [allBars, range])
   // Indicators run on everything fetched and are sliced to match, so MA-50 has

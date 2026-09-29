@@ -145,7 +145,16 @@ Test-first, vitest.
 ## Out of scope
 
 - Fetching history older than the 1,200-bar fetch.
-- Time-axis zoom (changing how many bars are visible by dragging/wheel) — range pills
-  still decide that.
+- Wheel or pinch time zoom.
+
+## Addendum 2026-09-29: time-axis zoom
+
+Added after review at the user's request. Dragging the date strip now zooms time
+the way dragging the price axis zooms price, and no longer pans. Panning stays on
+dragging the candles and horizontal swipes. Dragging right shows fewer bars and
+dragging left shows more (`barCountFromDrag`, exponential, 5 to all fetched). The
+newest visible bar stays anchored. While `barCount` is set, no range button is
+highlighted; a range pick, a symbol switch or a double-click on the strip returns
+to the range.
 - Panning from the lower panes.
 - Persisting the pan across reloads.

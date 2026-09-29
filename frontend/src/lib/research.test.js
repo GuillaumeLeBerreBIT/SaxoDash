@@ -252,6 +252,28 @@ describe('visibleWindow', () => {
   })
 })
 
+describe('visibleWindow with a zoomed time axis', () => {
+  it('shows the zoomed number of bars instead of the range', () => {
+    expect(visibleWindow(1200, '1M', 0, 100)).toEqual({ start: 1100, end: 1200, offset: 0, maxOffset: 1100 })
+  })
+
+  it('keeps the pan on top of the zoom', () => {
+    expect(visibleWindow(1200, '1M', 50, 100)).toMatchObject({ start: 1050, end: 1150 })
+  })
+
+  it('still stops at the oldest bar', () => {
+    expect(visibleWindow(1200, '1M', 1150, 100)).toMatchObject({ start: 0, end: 100, offset: 1100 })
+  })
+
+  it('never shows more than was fetched', () => {
+    expect(visibleWindow(1200, '1M', 0, 5000)).toEqual({ start: 0, end: 1200, offset: 0, maxOffset: 0 })
+  })
+
+  it('falls back to the range when not zoomed', () => {
+    expect(visibleWindow(1200, '1M', 0, null)).toEqual(visibleWindow(1200, '1M', 0))
+  })
+})
+
 describe('clampTimeOffset', () => {
   it('keeps an offset between latest and the oldest bar', () => {
     expect(clampTimeOffset(-2, 10)).toBe(0)

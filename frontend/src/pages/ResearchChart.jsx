@@ -50,6 +50,7 @@ export default function ResearchChart() {
     instrument,
     range: controls.range,
     timeOffset: controls.timeOffset,
+    barCount: controls.barCount,
   })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])

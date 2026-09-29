@@ -75,30 +75,66 @@ describe('ChartCanvas panning', () => {
     setYShift: vi.fn(),
     timeOffset: 0,
     setTimeOffset: vi.fn(),
+    barCount: null,
+    setBarCount: vi.fn(),
     ...overrides,
   })
 
-  it('pans through time when the time axis is dragged, never past the oldest bar', () => {
-    const setTimeOffset = vi.fn()
-    render(canvas({ controls: pannableControls({ setTimeOffset }), maxTimeOffset: 2 }))
-
+  const dragAxis = (dx) => {
     const axis = screen.getByTestId('time-axis')
-    fireEvent.pointerDown(axis, { clientX: 100, clientY: 5, pointerId: 1 })
-    fireEvent.pointerMove(axis, { clientX: 110, clientY: 5, pointerId: 1 })
-    fireEvent.pointerMove(axis, { clientX: 400, clientY: 5, pointerId: 1 })
-    fireEvent.pointerUp(axis, { clientX: 400, clientY: 5, pointerId: 1 })
+    const step = Math.sign(dx) * 10
+    fireEvent.pointerDown(axis, { clientX: 300, clientY: 5, pointerId: 1 })
+    fireEvent.pointerMove(axis, { clientX: 300 + step, clientY: 5, pointerId: 1 })
+    fireEvent.pointerMove(axis, { clientX: 300 + step + dx, clientY: 5, pointerId: 1 })
+    fireEvent.pointerUp(axis, { clientX: 300 + step + dx, clientY: 5, pointerId: 1 })
+  }
 
-    const update = setTimeOffset.mock.calls.at(-1)[0]
-    expect(update(0)).toBe(2)
+  it('shows fewer bars when the time axis is dragged right', () => {
+    const setBarCount = vi.fn()
+    const setTimeOffset = vi.fn()
+    render(canvas({ controls: pannableControls({ setBarCount, setTimeOffset }), maxTimeOffset: 100 }))
+
+    dragAxis(150)
+
+    expect(setBarCount).toHaveBeenLastCalledWith(Math.round(bars.length * Math.exp(-1)))
+    expect(setTimeOffset).not.toHaveBeenCalled()
   })
 
-  it('returns to the latest bars on a double-click of the time axis', () => {
+  it('shows more bars when the time axis is dragged left, never more than were fetched', () => {
+    const setBarCount = vi.fn()
+    render(canvas({ controls: pannableControls({ setBarCount }), maxTimeOffset: 10 }))
+
+    dragAxis(-600)
+
+    expect(setBarCount).toHaveBeenLastCalledWith(bars.length + 10)
+  })
+
+  it('keeps a panned view inside the history when zooming out', () => {
     const setTimeOffset = vi.fn()
-    render(canvas({ controls: pannableControls({ setTimeOffset, timeOffset: 3 }), maxTimeOffset: 10 }))
+    render(
+      canvas({
+        controls: pannableControls({ setBarCount: vi.fn(), setTimeOffset, timeOffset: 10 }),
+        maxTimeOffset: 10,
+      }),
+    )
+
+    dragAxis(-30)
+
+    const update = setTimeOffset.mock.calls.at(-1)[0]
+    expect(update(10)).toBe(40 - Math.round(bars.length * Math.exp(0.2)))
+  })
+
+  it('returns to the range and the latest bars on a double-click of the time axis', () => {
+    const setTimeOffset = vi.fn()
+    const setBarCount = vi.fn()
+    render(
+      canvas({ controls: pannableControls({ setTimeOffset, setBarCount, timeOffset: 3, barCount: 12 }), maxTimeOffset: 10 }),
+    )
 
     fireEvent.doubleClick(screen.getByTestId('time-axis'))
 
     expect(setTimeOffset.mock.calls.at(-1)[0](3)).toBe(0)
+    expect(setBarCount).toHaveBeenLastCalledWith(null)
   })
 
   it('resets zoom and shift from the price axis', () => {

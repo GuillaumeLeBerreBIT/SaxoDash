@@ -16,9 +16,10 @@ Done 2026-09-29 — spec
 
 ## 3. Axis panning
 
-Done 2026-09-29 — spec `docs/superpowers/specs/2026-09-29-axis-panning-design.md`.
-Possible follow-ups: smooth sub-bar panning (1W/1M step a whole bar at a time),
-paging older history from Saxo past the 1,200-bar fetch, time-axis zoom.
+Done 2026-09-29 — spec `docs/superpowers/specs/2026-09-29-axis-panning-design.md`,
+plus time-axis zoom (drag the date strip). Possible follow-ups: smooth sub-bar
+panning (1W/1M step a whole bar at a time), paging older history from Saxo past the
+1,200-bar fetch, pinch / Ctrl+scroll zoom.
 
 ## 4. Per-line customisation (recommended next)
 

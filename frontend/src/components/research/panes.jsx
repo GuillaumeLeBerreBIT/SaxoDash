@@ -4,7 +4,7 @@ import {
   DOWN,
   PAD_R,
   UP,
-  barsFromDrag,
+  barCountFromDrag,
   formatTimeLabel,
   indexFromPointer,
   linePath,
@@ -201,12 +201,12 @@ export function MacdPane({ macd, hover, setHover, height = 92 }) {
   )
 }
 
-export function TimeAxis({ data, timeOffset = 0, onTimeOffsetChange }) {
+export function TimeAxis({ data, totalBars = data.length, onBarCountChange, onReset }) {
   const [ref, width] = useWidth()
-  const { chartW, xAt, slot } = paneGeometry(width, data.length)
+  const { chartW, xAt } = paneGeometry(width, data.length)
   const drag = usePointerDrag({
-    onStart: () => (onTimeOffsetChange ? { offset: timeOffset } : null),
-    onDrag: ({ dx, context }) => onTimeOffsetChange(context.offset + barsFromDrag(dx, slot)),
+    onStart: () => (onBarCountChange ? { count: data.length } : null),
+    onDrag: ({ dx, context }) => onBarCountChange(barCountFromDrag(context.count, dx, totalBars)),
   })
   const count = Math.min(7, data.length)
 
@@ -217,7 +217,7 @@ export function TimeAxis({ data, timeOffset = 0, onTimeOffsetChange }) {
     count === 1
       ? [0]
       : Array.from({ length: count }, (_, i) => Math.floor(((data.length - 1) * i) / (count - 1)))
-  const cursor = onTimeOffsetChange ? (drag.dragging ? 'grabbing' : 'ew-resize') : undefined
+  const cursor = onBarCountChange ? 'ew-resize' : undefined
 
   return (
     <div
@@ -226,7 +226,7 @@ export function TimeAxis({ data, timeOffset = 0, onTimeOffsetChange }) {
       className="w-full border-t border-white/[0.06] select-none"
       style={{ height: 22, cursor }}
       {...drag.handlers}
-      onDoubleClick={() => onTimeOffsetChange?.(0)}
+      onDoubleClick={() => onReset?.()}
     >
       <svg width={width} height={22}>
         {indexes.map((i) => (

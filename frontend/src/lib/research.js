@@ -37,8 +37,8 @@ export function barsForRange(bars = [], range, timeOffset = 0) {
   return start === 0 && end === bars.length ? bars : bars.slice(start, end)
 }
 
-export function visibleWindow(total, range, timeOffset = 0) {
-  const count = Math.min(total, RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT)
+export function visibleWindow(total, range, timeOffset = 0, barCount = null) {
+  const count = Math.min(total, barCount ?? RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT)
   const maxOffset = total - count
   const offset = clampTimeOffset(Math.round(timeOffset) || 0, maxOffset)
   return { start: maxOffset - offset, end: total - offset, offset, maxOffset }

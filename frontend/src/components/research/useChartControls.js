@@ -7,6 +7,7 @@ export function useChartControls() {
   const [yScale, setYScale] = useState(1)
   const [yShift, setYShift] = useState(0)
   const [timeOffset, setTimeOffset] = useState(0)
+  const [barCount, setBarCount] = useState(null)
 
   useEffect(() => {
     writeChartPrefs(prefs)
@@ -20,15 +21,19 @@ export function useChartControls() {
     setYShift,
     timeOffset,
     setTimeOffset,
+    barCount,
+    setBarCount,
     resetView: () => {
       setYScale(1)
       setYShift(0)
       setTimeOffset(0)
+      setBarCount(null)
     },
     setRange: (next) => {
       setPrefs((p) => ({ ...p, range: next }))
       setTimeOffset(0)
       setYShift(0)
+      setBarCount(null)
     },
     setType: (next) => setPrefs((p) => ({ ...p, type: next })),
     toggleOverlay: (key) => setPrefs((p) => ({ ...p, overlays: { ...p.overlays, [key]: !p.overlays[key] } })),

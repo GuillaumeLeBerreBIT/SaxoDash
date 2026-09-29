@@ -46,6 +46,13 @@ export function shiftFromDrag(startShift, dy, chartH) {
   return Math.min(MAX_Y_SHIFT, Math.max(-MAX_Y_SHIFT, startShift + dy / Math.max(1, chartH)))
 }
 
+export const MIN_VISIBLE_BARS = 5
+
+export function barCountFromDrag(startCount, dx, total) {
+  const next = Math.round(startCount * Math.exp(-dx / 150))
+  return Math.min(total, Math.max(MIN_VISIBLE_BARS, next))
+}
+
 export function barsFromDrag(dx, slot) {
   return Math.round(dx / slot) || 0
 }
