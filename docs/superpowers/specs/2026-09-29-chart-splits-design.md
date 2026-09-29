@@ -76,9 +76,10 @@ components/research/ChartToolRail.jsx      + Layout menu
 ```
 
 **`lib/chartLayouts.js`** (pure, tested):
-- `CHART_LAYOUTS`: the five presets — `{ id, panes, columns, rows, spans }`, where
-  `columns`/`rows` are CSS grid templates and `spans` marks the one pane that spans
-  two rows in layout `3`.
+- `CHART_LAYOUTS`: the five presets — `{ id, label, panes, columns, rows, tallPane }`,
+  where `columns`/`rows` are CSS grid templates and `tallPane` is the index of the
+  one pane that spans two rows (layout `3`), else `null`. `gridStyle(preset)` and
+  `paneStyle(preset, index)` turn a preset into inline grid styles.
 - `layoutById(id)` → a preset, falling back to `1` for an unknown id.
 - `resizeSlots(slots, count)` → the first `count` slots, padded with `null`.
 - `activeAfterResize(active, slots)` → index of the first empty slot if the
@@ -100,7 +101,8 @@ components/research/ChartToolRail.jsx      + Layout menu
 - **Arrival:** with `?symbol=` in the URL, the URL wins (a deep link loads into the
   stored active pane). Without it, if the stored active slot holds a symbol, the
   hook calls `selectSymbol` with it once. That keeps `useResearchInstrument`'s
-  fallback (first position, then NVDA) from overwriting the saved workspace.
+  fallback (first position, then NVDA) from overwriting the saved workspace:
+  while that restore is pending, the active slot does not copy the URL.
 - `activate(index)`: sets `active`, then, if the slot holds a symbol, calls
   `selectSymbol(slot.symbol, { uic, assetType })` in the same event, so the URL
   (and the `SymbolBar`, rail highlight and watchlist toggle) follow the new
