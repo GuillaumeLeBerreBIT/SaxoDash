@@ -184,4 +184,22 @@ describe('WatchlistRail', () => {
     expect(container.querySelector('.max-h-\\[420px\\]')).toBeNull()
     expect(container.firstChild).toHaveClass('h-full')
   })
+
+  it('offers no grid view outside the advanced chart', () => {
+    render()
+    expect(screen.queryByRole('button', { name: 'Grid view' })).not.toBeInTheDocument()
+  })
+
+  it('switches to the heatmap grid and remembers the choice', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render({ gridView: true })
+
+    await user.click(screen.getByRole('button', { name: 'Grid view' }))
+    expect(screen.getByText(/sorted by move/)).toBeInTheDocument()
+    expect(localStorage.getItem('saxodash:watchlist-view')).toBe('grid')
+
+    unmount()
+    render({ gridView: true })
+    expect(screen.getByText(/sorted by move/)).toBeInTheDocument()
+  })
 })

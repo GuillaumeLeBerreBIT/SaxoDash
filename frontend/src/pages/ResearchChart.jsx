@@ -118,7 +118,7 @@ export default function ResearchChart() {
       <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0">
         <InstrumentSearchBar hrefFor={chartResultHref} />
         <div className="flex-1 min-h-0">
-          <WatchlistRail fill symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+          <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
       </aside>
 

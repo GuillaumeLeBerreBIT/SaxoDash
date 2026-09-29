@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react'
-import { Check, List, Plus, Search, X } from 'lucide-react'
+import { Check, LayoutGrid, LayoutList, List, Plus, Search, X } from 'lucide-react'
 
 import {
   useInstrumentSearch,
@@ -10,11 +10,30 @@ import {
 import { fmtNum } from '../../lib/format'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
-import { Card, DayChange, InstrumentLogo } from '../ui'
+import { Card, DayChange, InstrumentLogo, TBtn } from '../ui'
 import { Menu, MenuRow, MenuSeparator } from './menu'
+import WatchlistHeatmap from './WatchlistHeatmap'
 
 // Hoisted so a list with no items keeps a stable identity across renders.
 const NO_ITEMS = []
+
+const VIEW_KEY = 'saxodash:watchlist-view'
+
+function readView() {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
+function writeView(view) {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+  } catch {
+    return
+  }
+}
 
 /** The 300px rail: watchlists, symbol search, and a live quote per row.
  *
@@ -22,7 +41,7 @@ const NO_ITEMS = []
  *  browser change; every write goes through useWatchlistMutations, which
  *  refetches the lists rather than patching a local copy.
  */
-export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fill = false }) {
+export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fill = false, gridView = false }) {
   const { data: watchlists = [], isLoading } = useWatchlists()
   const { create, remove, addItem, removeItem } = useWatchlistMutations()
 
@@ -30,6 +49,12 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
   const [naming, setNaming] = useState(false)
   const [newName, setNewName] = useState('')
   const [query, setQuery] = useState('')
+  const [view, setView] = useState(readView)
+  const showGrid = gridView && view === 'grid'
+  const chooseView = (next) => {
+    setView(next)
+    writeView(next)
+  }
 
   // Keeps the input responsive while a slower search render catches up.
   const deferredQuery = useDeferredValue(query)
@@ -91,6 +116,16 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
           ) : null}
         </Menu>
         <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono ml-auto">{items.length}</span>
+        {gridView ? (
+          <div className="flex items-center gap-0.5">
+            <TBtn active={!showGrid} onClick={() => chooseView('list')} title="List view">
+              <LayoutList size={12} />
+            </TBtn>
+            <TBtn active={showGrid} onClick={() => chooseView('grid')} title="Grid view">
+              <LayoutGrid size={12} />
+            </TBtn>
+          </div>
+        ) : null}
       </div>
 
       {naming ? (
@@ -176,11 +211,13 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
         </div>
       ) : null}
 
-      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
-        <span>Symbol</span>
-        <span className="text-right">Last</span>
-        <span className="text-right w-14">Chg%</span>
-      </div>
+      {showGrid ? null : (
+        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
+          <span>Symbol</span>
+          <span className="text-right">Last</span>
+          <span className="text-right w-14">Chg%</span>
+        </div>
+      )}
 
       <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
         {isLoading ? <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">Loading…</div> : null}
@@ -197,63 +234,75 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
           </div>
         ) : null}
 
-        {items.map((item) => {
-          const quote = quotes.get(item.uic)
-          const change = quote?.change_pct
-          const sinceLastLook = changeSinceLastLook(item.symbol, quote?.price)
-          return (
-            <div
-              key={item.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
-              }}
-              className={`grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
-                symbol === item.symbol
-                  ? 'bg-blue-500/[0.07] border-l-blue-500'
-                  : 'border-l-transparent hover:bg-white/[0.04]'
-              }`}
-            >
-              <div className="min-w-0 flex items-center gap-1.5">
-                <InstrumentLogo
-                  symbol={item.symbol}
-                  size={16}
-                  className="rounded-sm"
-                  fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
-                />
-                <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{item.symbol}</span>
-                {heldSymbols.has(item.symbol) ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
-                ) : null}
-                <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
-                {sinceLastLook != null ? (
-                  <span title="Since you last looked" className="shrink-0">
-                    <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
-                  </span>
-                ) : null}
+        {showGrid ? (
+          items.length > 0 ? (
+            <WatchlistHeatmap
+              items={items}
+              quotes={quotes}
+              symbol={symbol}
+              heldSymbols={heldSymbols}
+              onSelectSymbol={onSelectSymbol}
+            />
+          ) : null
+        ) : (
+          items.map((item) => {
+            const quote = quotes.get(item.uic)
+            const change = quote?.change_pct
+            const sinceLastLook = changeSinceLastLook(item.symbol, quote?.price)
+            return (
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
+                }}
+                className={`grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
+                  symbol === item.symbol
+                    ? 'bg-blue-500/[0.07] border-l-blue-500'
+                    : 'border-l-transparent hover:bg-white/[0.04]'
+                }`}
+              >
+                <div className="min-w-0 flex items-center gap-1.5">
+                  <InstrumentLogo
+                    symbol={item.symbol}
+                    size={16}
+                    className="rounded-sm"
+                    fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
+                  />
+                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{item.symbol}</span>
+                  {heldSymbols.has(item.symbol) ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
+                  ) : null}
+                  <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
+                  {sinceLastLook != null ? (
+                    <span title="Since you last looked" className="shrink-0">
+                      <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
+                  {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
+                </span>
+                <span className="flex items-center justify-end gap-1">
+                  <DayChange value={change} className="text-[var(--fig-xs)]" />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeItem.mutate({ id: active.id, itemId: item.id })
+                    }}
+                    aria-label={`Remove ${item.symbol}`}
+                    className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 -mr-1"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
               </div>
-              <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
-                {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
-              </span>
-              <span className="flex items-center justify-end gap-1">
-                <DayChange value={change} className="text-[var(--fig-xs)]" />
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    removeItem.mutate({ id: active.id, itemId: item.id })
-                  }}
-                  aria-label={`Remove ${item.symbol}`}
-                  className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 -mr-1"
-                >
-                  <X size={11} />
-                </button>
-              </span>
-            </div>
-          )
-        })}
+            )
+          })
+        )}
       </div>
     </Card>
   )
