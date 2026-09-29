@@ -122,10 +122,9 @@ export default function Dashboard() {
           was dropped from here entirely - Analytics' Attribution already
           computes the same thing from the same positions, and Dashboard
           doesn't need its own independent copy of that analysis. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         <MoversCard movers={insights.movers} />
         <ExposureCard
-          sector={insights.sector_exposure}
           currency={insights.currency_exposure}
           concentration={insights.concentration}
         />
