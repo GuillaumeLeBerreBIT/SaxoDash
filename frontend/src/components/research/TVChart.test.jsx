@@ -577,3 +577,130 @@ describe('price lines', () => {
     expect(getByTestId('price-edge-stop').textContent).toBe('100000')
   })
 })
+
+describe('panning', () => {
+  const slot = (760 - 62) / bars.length
+  const chartH = 360 - 10 - 6
+  const pannable = (props = {}) => renderChart({ onTimeOffsetChange: vi.fn(), onYShiftChange: vi.fn(), ...props })
+
+  const pan = (element, dx, dy) => {
+    fireEvent.pointerDown(element, { clientX: 300, clientY: 200, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientX: 300 + dx, clientY: 200 + dy, pointerId: 1 })
+    fireEvent.pointerUp(element, { clientX: 300 + dx, clientY: 200 + dy, pointerId: 1 })
+  }
+
+  it('goes back in time when the plot is dragged right', () => {
+    const onTimeOffsetChange = vi.fn()
+    const { container } = pannable({ timeOffset: 4, onTimeOffsetChange })
+
+    pan(container.firstChild, slot * 3, 0)
+
+    expect(onTimeOffsetChange).toHaveBeenLastCalledWith(7)
+  })
+
+  it('moves the price window with a vertical drag', () => {
+    const onYShiftChange = vi.fn()
+    const { container } = pannable({ yShift: 0.1, onYShiftChange })
+
+    pan(container.firstChild, 0, chartH / 4)
+
+    expect(onYShiftChange.mock.calls.at(-1)[0]).toBeCloseTo(0.35)
+  })
+
+  it('ignores a jitter smaller than the drag threshold', () => {
+    const onTimeOffsetChange = vi.fn()
+    const { container } = pannable({ onTimeOffsetChange })
+
+    pan(container.firstChild, 2, 0)
+
+    expect(onTimeOffsetChange).not.toHaveBeenCalled()
+  })
+
+  it('neither places a line nor clears the selection after a pan, but the next click does', () => {
+    const onCreateLine = vi.fn()
+    const { container } = pannable({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const plot = container.firstChild
+
+    pan(plot, 60, 0)
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 360, clientY: 200 })
+    expect(onCreateLine).not.toHaveBeenCalled()
+
+    fireEvent.pointerDown(plot, { clientX: 100, clientY: 200, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 100, clientY: 200, pointerId: 1 })
+    fireEvent.mouseDown(plot, { detail: 1 })
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    expect(onCreateLine).toHaveBeenCalledTimes(1)
+  })
+
+  it('moves a dragged line instead of panning', () => {
+    const onTimeOffsetChange = vi.fn()
+    const onYShiftChange = vi.fn()
+    const onMoveLine = vi.fn()
+    const free = { id: 7, kind: 'free', price: 115 }
+    const { getByTestId } = pannable({ lines: [free], onMoveLine, onTimeOffsetChange, onYShiftChange })
+
+    const handle = getByTestId('price-hit-7')
+    fireEvent.pointerDown(handle, { clientX: 200, clientY: 100, pointerId: 1 })
+    fireEvent.pointerMove(handle, { clientX: 260, clientY: 140, pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientX: 260, clientY: 140, pointerId: 1 })
+
+    expect(onMoveLine).toHaveBeenCalled()
+    expect(onTimeOffsetChange).not.toHaveBeenCalled()
+    expect(onYShiftChange).not.toHaveBeenCalled()
+  })
+
+  it('does not pan from the price-axis gutter', () => {
+    const onTimeOffsetChange = vi.fn()
+    const onYShiftChange = vi.fn()
+    const { getByTestId } = pannable({ onTimeOffsetChange, onYShiftChange, onYScaleChange: vi.fn() })
+
+    pan(getByTestId('price-scale'), 40, 40)
+
+    expect(onTimeOffsetChange).not.toHaveBeenCalled()
+    expect(onYShiftChange).not.toHaveBeenCalled()
+  })
+
+  it('resets zoom and shift together on a double-click of the axis', () => {
+    const onPriceScaleReset = vi.fn()
+    const onYScaleChange = vi.fn()
+    const { getByTestId } = pannable({ onYScaleChange, onPriceScaleReset, yShift: 0.4 })
+
+    fireEvent.doubleClick(getByTestId('price-scale'))
+
+    expect(onPriceScaleReset).toHaveBeenCalledTimes(1)
+    expect(onYScaleChange).not.toHaveBeenCalled()
+  })
+
+  it('pans through time on a horizontal wheel and keeps the page from navigating', () => {
+    const onTimeOffsetChange = vi.fn()
+    const { container } = pannable({ onTimeOffsetChange })
+
+    const allowed = fireEvent.wheel(container.firstChild, { deltaX: slot * 2, deltaY: 0 })
+
+    expect(allowed).toBe(false)
+    const update = onTimeOffsetChange.mock.calls.at(-1)[0]
+    expect(update(10)).toBe(8)
+  })
+
+  it('leaves a vertical wheel to scroll the page', () => {
+    const onTimeOffsetChange = vi.fn()
+    const { container } = pannable({ onTimeOffsetChange })
+
+    const allowed = fireEvent.wheel(container.firstChild, { deltaX: 0, deltaY: 120 })
+
+    expect(allowed).toBe(true)
+    expect(onTimeOffsetChange).not.toHaveBeenCalled()
+  })
+
+  it('offers a way back to the latest bars only while panned', () => {
+    const onTimeOffsetChange = vi.fn()
+    const { queryByRole, rerender } = pannable({ onTimeOffsetChange, timeOffset: 0 })
+    expect(queryByRole('button', { name: 'Jump to latest' })).toBeNull()
+
+    rerender(chart({ onTimeOffsetChange, onYShiftChange: vi.fn(), timeOffset: 5 }))
+    fireEvent.click(queryByRole('button', { name: 'Jump to latest' }))
+
+    expect(onTimeOffsetChange).toHaveBeenCalledWith(0)
+  })
+})
