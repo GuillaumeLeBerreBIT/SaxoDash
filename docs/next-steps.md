@@ -9,7 +9,12 @@ brainstorm it before building.
 Done 2026-09-28 — `/research/chart`, spec
 `docs/superpowers/specs/2026-09-28-advanced-chart-view-design.md`.
 
-## 2. Axis panning (recommended next)
+## 2. Market heatmaps (Phase 1)
+
+Done 2026-09-29 — spec
+`docs/superpowers/specs/2026-09-29-market-heatmaps-design.md`.
+
+## 3. Axis panning (recommended next)
 
 Drag the price axis to move the chart up and down; drag the time axis (or scroll) to
 go back through history.
@@ -21,14 +26,14 @@ go back through history.
   `computeIndicatorsForRange`); a panned window breaks that assumption. Horizon is
   daily-or-coarser only (see AGENTS.md "Chart bars are identified by their date").
 
-## 3. Per-line customisation
+## 4. Per-line customisation
 
 A small toolbar for a selected line: colour, maybe style.
 
 - **Size:** smallest of the list — a `PriceLine` column (+ migration) and a small
   line toolbar. Target/stop colours stay fixed unless decided otherwise.
 
-## 4. "App store / Netflix" browse view for stocks
+## 5. "App store / Netflix" browse view for stocks
 
 A discovery page with rows/grids of instruments (themes, movers, holdings, watchlists).
 
@@ -36,7 +41,7 @@ A discovery page with rows/grids of instruments (themes, movers, holdings, watch
   minute (one fundamentals miss is four calls). Needs caching/batching before it
   scales; no third-party price data beyond Saxo (a closed decision).
 
-## 5. ML prediction (last)
+## 6. ML prediction (last)
 
 - **Why last:** high effort (training/backtest pipeline) and, on a personal-finance
   app, a real risk of presenting noise as signal. If ever picked up, scope it down to

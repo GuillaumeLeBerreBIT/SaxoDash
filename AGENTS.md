@@ -295,3 +295,12 @@ would flatten the candles. A line outside the visible range becomes an edge
 marker in the gutter. Target/stop live on `SymbolNote` (per symbol, thesis
 data); freeform lines are `PriceLine` rows keyed on uic + asset type like every
 other per-instrument record.
+
+**Heatmaps run over what the app already prices, and say what "today" means.**
+The Dashboard's portfolio heatmap and the Advanced View's watchlist grid cover
+your positions and your watchlist only — neither Saxo nor Finnhub's free tier
+has a market-wide feed. A quote's `change_basis` is `live` or `last_close`
+(the SIM fallback's close-to-close move); any `last_close` row turns "Today"
+into "Last session". Layout is a hand-rolled squarify in `lib/heatmap.js`, not
+Recharts' `Treemap`: HTML tiles are focusable, carry sector headers, and
+render in jsdom.
