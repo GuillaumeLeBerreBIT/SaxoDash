@@ -91,7 +91,7 @@ export function useWidth() {
   return [ref, size.width]
 }
 
-const LEGEND_HEIGHT = 26
+const LEGEND_HEIGHT = 70
 const TIME_AXIS_HEIGHT = 22
 const CANVAS_PADDING = 4
 export const MIN_PRICE_HEIGHT = 240

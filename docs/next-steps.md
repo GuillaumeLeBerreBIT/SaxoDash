@@ -1,28 +1,20 @@
 # SaxoDash — next steps
 
 Candidate directions after the Research chart annotations work (price-axis scaling,
-draggable target/stop lines, freeform price lines — merged 2026-09-28). Listed in
-recommended order; none started. Pick one and brainstorm it before building.
+draggable target/stop lines, freeform price lines — merged 2026-09-28). Pick one and
+brainstorm it before building.
 
-## 1. Advanced chart view (recommended next)
+## 1. Advanced chart view
 
-An expand button on the Research chart opens a full-page, TradingView-lite layout:
-slim tool toolbar on the left, a big chart in the centre, watchlists and the
-instrument search bar on the right. No heavy customisation.
+Done 2026-09-28 — `/research/chart`, spec
+`docs/superpowers/specs/2026-09-28-advanced-chart-view-design.md`.
 
-- **Why first:** most everyday value for the least risk. It mostly re-arranges pieces
-  that already exist — `TVChart`, `WatchlistRail`, `InstrumentSearchBar` — on a new
-  route with a new layout.
-- **Open questions:** its own route or a modal/overlay; which indicators/panes the
-  toolbar exposes; how it shares chart state (range, `yScale`, overlays) with the
-  normal Research page.
-
-## 2. Axis panning
+## 2. Axis panning (recommended next)
 
 Drag the price axis to move the chart up and down; drag the time axis (or scroll) to
 go back through history.
 
-- **Why second:** pairs naturally with the big view and makes the chart feel like a
+- **Why next:** pairs naturally with the big view and makes the chart feel like a
   real charting tool.
 - **Risk:** the trickiest change. Today the chart always shows exactly the selected
   range and the indicators are sliced to it (`barsForRange`,
@@ -58,3 +50,9 @@ A discovery page with rows/grids of instruments (themes, movers, holdings, watch
 - Hovering a line badge shows the resize cursor rather than a text cursor.
 - Manual browser checks of the annotation features are worth a pass after any chart
   change.
+- At `/research/chart`, 1100×800 with Volume + RSI + MACD all on and a wrapped
+  two-row legend, `MIN_PRICE_HEIGHT`'s floor still pushes the canvas a little past
+  the container (time axis clipped by ~20px) — a pre-existing, accepted trade-off
+  (see `chartGeometry.test.js`'s "never shrinks below the readable floor" case),
+  now smaller after `LEGEND_HEIGHT` was corrected but not eliminated at the
+  narrowest width with every pane enabled.

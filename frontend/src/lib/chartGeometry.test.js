@@ -193,12 +193,12 @@ describe('pricePaneHeight', () => {
   const none = { volume: false, rsi: false, macd: false }
 
   it('gives the price pane everything but the legend, time axis and padding', () => {
-    expect(pricePaneHeight({ total: 800, panes: none, paneHeights })).toBe(800 - 26 - 22 - 4)
+    expect(pricePaneHeight({ total: 800, panes: none, paneHeights })).toBe(800 - 70 - 22 - 4)
   })
 
   it('subtracts each enabled lower pane and its border', () => {
     const panes = { volume: true, rsi: true, macd: false }
-    expect(pricePaneHeight({ total: 800, panes, paneHeights })).toBe(800 - 26 - 22 - 4 - 97 - 121)
+    expect(pricePaneHeight({ total: 800, panes, paneHeights })).toBe(800 - 70 - 22 - 4 - 97 - 121)
   })
 
   it('never shrinks below the readable floor in a short window with every pane on', () => {

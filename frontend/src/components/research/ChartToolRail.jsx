@@ -20,7 +20,7 @@ function RailButton({ label, icon: Icon, pressed, disabled = false, onClick }) {
       disabled={disabled}
       onClick={onClick}
       className={`${RAIL_BUTTON} disabled:opacity-35 disabled:pointer-events-none ${
-        pressed ? 'bg-blue-500/15 text-blue-300' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'
+        pressed ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'
       }`}
     >
       <Icon size={16} />
