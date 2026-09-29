@@ -43,3 +43,5 @@ learning/
 .claude/
 .qwen/
 skills-lock.json
+
+.superpowers/
