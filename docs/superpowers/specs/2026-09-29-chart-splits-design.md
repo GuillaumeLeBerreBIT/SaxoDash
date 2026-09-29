@@ -45,9 +45,15 @@ pick, a ⌘K pick, and a deep link `/research/chart?symbol=…`. None of these e
 points change: the active pane is driven by the URL exactly as the single chart is
 today (`useResearchInstrument`).
 
-**Shared across all panes:** range, chart type, overlays/indicator panes, and
-"Reset price scale". One set of controls (`useChartControls`), one row of range
-buttons above the grid. The line tool places on the active pane only.
+**Shared across all panes:** range, chart type and overlays/indicator panes. One
+set of preferences (`useChartControls`), one row of range buttons above the grid.
+The line tool places on the active pane only.
+
+**Per pane:** the view that axis panning added (price zoom, price shift, time
+window) belongs to each pane (`usePaneViews`). Dragging one chart never moves
+another. "Reset price scale" in the rail acts on the active pane. A pane's view
+resets when its content or the range changes, not when another pane is
+activated. Syncing the time window across panes is the later "Time sync" switch.
 
 **Growing the split** adds empty panes. An empty pane shows "Pick a symbol from the
 watchlist" and nothing else. The first empty pane becomes active, so the next

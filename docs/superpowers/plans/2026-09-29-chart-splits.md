@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Prerequisite:** start only after `feat/axis-panning` has merged into `main`. Both change `frontend/src/pages/ResearchChart.jsx`, and panning may change `ChartCanvas`'s props. The code below is written against `main` at `4e4ff93`. Where panning added or renamed a `ChartCanvas` prop or page-level state, carry it through exactly as the merged `ResearchChart` passes it. Shared chart state goes on the page and is passed to every pane; per-chart state goes inside `ChartPane`.
+- **Axis panning has merged** (`main` at `7100728`), and this plan is written against it. Panning put the chart's view state (`yScale`, `yShift`, `timeView`, `resetView`) on `useChartControls`, and `ChartCanvas` reads it from `controls`. That state belongs to **one** chart, so here it moves to `usePaneViews` (Task 5), one view per pane. The page passes `{ ...controls, ...paneView(index) }` wherever a chart or the rail needs it. Shared preferences stay on `controls`: `range`, `type`, `overlays`, `panes`, `setRange`, `setType`, `toggleOverlay`, `togglePane`. The Research page (`pages/Research.jsx`) keeps using `useChartControls` unchanged.
 - Generated code carries **zero comments** (AGENTS.md "Code style"). Existing comments in touched files stay as they are.
 - ESLint runs `eslint-plugin-react-hooks` 7 `recommended`, which includes `set-state-in-effect`, `set-state-in-render`, `refs` and `exhaustive-deps`. So: no `setState` inside `useEffect`; for derived state, use the conditional "adjust state during render" pattern `ResearchChart` already uses (`if (shownSymbol !== symbol) { … }`); no `ref.current` reads during render; use `useEffectEvent` (React 19.2) for effect logic that calls a non-stable callback.
 - No new npm dependencies. Chart colours only from `lib/charts.js`; everything else uses the Tailwind classes already in use (`ring-1 ring-blue-500` is the active treatment).
@@ -23,9 +23,9 @@
 
 ## Review Focus
 
-- **A stored pane with no uic** (a slot saved while its symbol was still resolving) must render the chart's "unresolved" placeholder, not crash or fetch with an undefined uic. Pinned in Task 5.
+- **A stored pane with no uic** (a slot saved while its symbol was still resolving) must render the chart's "unresolved" placeholder, not crash or fetch with an undefined uic. Pinned in Task 6.
 - **localStorage unavailable** (private window, blocked site data) must give a working single-pane chart. Pinned in Task 2.
-- **Two panes on the same instrument** must both render. Their requests dedupe through TanStack Query. Pinned in Task 7.
+- **Two panes on the same instrument** must both render. Their requests dedupe through TanStack Query. Pinned in Task 8.
 - **Shrinking below the active pane** must move the active pane to the last one kept and put its symbol in the URL. Pinned in Task 3.
 - **Opening `/research/chart` with no `?symbol=`** must restore the saved active symbol, not the first-position/NVDA fallback. Pinned in Task 3.
 
@@ -663,15 +663,173 @@ git commit -m "refactor: share the move caption between the symbol bar and chart
 
 ---
 
-### Task 5: `ChartPane`
+### Task 5: One view per pane (`usePaneViews`)
+
+**Files:**
+- Create: `frontend/src/components/research/usePaneViews.js`
+- Test: `frontend/src/components/research/usePaneViews.test.js`
+
+**Interfaces:**
+- Consumes: `LATEST_TIME_VIEW` from `lib/timeWindow.js` (`{ offset: 0, barCount: null }`); workspace slots (`{ symbol, uic, assetType } | null`, Task 3).
+- Produces: `usePaneViews(slots, range) → paneView(index)`, where `paneView(index)` returns `{ yScale, yShift, timeView, setYScale, setYShift, setTimeView, resetView }`. That is the same view shape `useChartControls` exposes and `ChartCanvas` reads. Each setter accepts a value or an updater function, because `ChartCanvas` calls `setTimeView(view => panTimeView(view, …))`. Reset rules:
+  - A range change resets every pane, as `useChartControls.setRange` does for the single chart.
+  - A pane whose content changes (symbol, uic or asset type) resets.
+  - A pane whose content stays keeps its view. So activating another pane, which only changes the URL, never resets anything.
+  - New panes start fresh.
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+import { describe, expect, it } from 'vitest'
+import { act, renderHook } from '@testing-library/react'
+
+import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
+import { usePaneViews } from './usePaneViews'
+
+const FRESH = { yScale: 1, yShift: 0, timeView: LATEST_TIME_VIEW }
+const nvda = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
+const amd = { symbol: 'AMD', uic: 7, assetType: 'Stock' }
+const tsla = { symbol: 'TSLA', uic: 9, assetType: 'Stock' }
+
+const renderViews = (slots = [nvda, amd], range = '6M') =>
+  renderHook((props) => usePaneViews(props.slots, props.range), { initialProps: { slots, range } })
+
+describe('usePaneViews', () => {
+  it('gives every pane a fresh view', () => {
+    const { result } = renderViews()
+    expect(result.current(0)).toMatchObject(FRESH)
+    expect(result.current(1)).toMatchObject(FRESH)
+  })
+
+  it('keeps each pane view separate', () => {
+    const { result } = renderViews()
+    act(() => result.current(1).setYShift(12))
+    act(() => result.current(1).setYScale(2))
+    expect(result.current(0)).toMatchObject(FRESH)
+    expect(result.current(1)).toMatchObject({ yScale: 2, yShift: 12 })
+  })
+
+  it('accepts updater functions, as the chart canvas passes them', () => {
+    const { result } = renderViews()
+    act(() => result.current(0).setTimeView((view) => ({ ...view, offset: view.offset + 5 })))
+    expect(result.current(0).timeView).toEqual({ offset: 5, barCount: null })
+  })
+
+  it('resets one pane without touching the others', () => {
+    const { result } = renderViews()
+    act(() => result.current(0).setYScale(3))
+    act(() => result.current(1).setYScale(2))
+    act(() => result.current(1).resetView())
+    expect(result.current(0).yScale).toBe(3)
+    expect(result.current(1)).toMatchObject(FRESH)
+  })
+
+  it('resets every pane when the range changes', () => {
+    const { result, rerender } = renderViews()
+    act(() => result.current(0).setYShift(4))
+    act(() => result.current(1).setYScale(2))
+    rerender({ slots: [nvda, amd], range: '1Y' })
+    expect(result.current(0)).toMatchObject(FRESH)
+    expect(result.current(1)).toMatchObject(FRESH)
+  })
+
+  it('resets only the pane whose symbol changed', () => {
+    const { result, rerender } = renderViews()
+    act(() => result.current(0).setYScale(2))
+    act(() => result.current(1).setYScale(3))
+    rerender({ slots: [nvda, tsla], range: '6M' })
+    expect(result.current(0).yScale).toBe(2)
+    expect(result.current(1)).toMatchObject(FRESH)
+  })
+
+  it('keeps a view when the same content is passed again', () => {
+    const { result, rerender } = renderViews()
+    act(() => result.current(1).setYScale(3))
+    rerender({ slots: [{ ...nvda }, { ...amd }], range: '6M' })
+    expect(result.current(1).yScale).toBe(3)
+  })
+
+  it('keeps the views of panes that survive a change in pane count', () => {
+    const { result, rerender } = renderViews()
+    act(() => result.current(0).setYScale(2))
+    rerender({ slots: [nvda, amd, null, null], range: '6M' })
+    expect(result.current(0).yScale).toBe(2)
+    expect(result.current(3)).toMatchObject(FRESH)
+    rerender({ slots: [nvda], range: '6M' })
+    expect(result.current(0).yScale).toBe(2)
+  })
+})
+```
+
+- [ ] **Step 2: Run to verify it fails**
+
+Run: `cd frontend && npx vitest run src/components/research/usePaneViews.test.js`
+Expected: FAIL — cannot resolve `./usePaneViews`.
+
+- [ ] **Step 3: Implement**
+
+```js
+import { useState } from 'react'
+
+import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
+
+const FRESH_VIEW = { yScale: 1, yShift: 0, timeView: LATEST_TIME_VIEW }
+const freshViews = (count) => Array.from({ length: count }, () => FRESH_VIEW)
+const resolve = (next, current) => (typeof next === 'function' ? next(current) : next)
+const slotKey = (slot) => (slot ? `${slot.symbol}:${slot.uic}:${slot.assetType}` : '')
+
+export function usePaneViews(slots, range) {
+  const keys = slots.map(slotKey)
+  const [views, setViews] = useState(() => freshViews(keys.length))
+  const [seen, setSeen] = useState({ range, keys })
+
+  if (seen.range !== range) {
+    setSeen({ range, keys })
+    setViews(freshViews(keys.length))
+  } else if (seen.keys.join('|') !== keys.join('|')) {
+    const previous = seen.keys
+    setSeen({ range, keys })
+    setViews((current) =>
+      keys.map((key, index) => (key !== '' && key === previous[index] ? (current[index] ?? FRESH_VIEW) : FRESH_VIEW)),
+    )
+  }
+
+  const update = (index, change) =>
+    setViews((current) => current.map((view, i) => (i === index ? { ...view, ...change(view) } : view)))
+
+  return (index) => ({
+    ...(views[index] ?? FRESH_VIEW),
+    setYScale: (next) => update(index, (view) => ({ yScale: resolve(next, view.yScale) })),
+    setYShift: (next) => update(index, (view) => ({ yShift: resolve(next, view.yShift) })),
+    setTimeView: (next) => update(index, (view) => ({ timeView: resolve(next, view.timeView) })),
+    resetView: () => update(index, () => FRESH_VIEW),
+  })
+}
+```
+
+- [ ] **Step 4: Run to verify it passes**
+
+Run: `cd frontend && npx vitest run src/components/research/usePaneViews.test.js && npx eslint src/components/research/usePaneViews.js src/components/research/usePaneViews.test.js`
+Expected: PASS, no lint output.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/components/research/usePaneViews.js frontend/src/components/research/usePaneViews.test.js
+git commit -m "feat: one pan/zoom view per chart pane"
+```
+
+---
+
+### Task 6: `ChartPane`
 
 **Files:**
 - Create: `frontend/src/components/research/ChartPane.jsx`
 - Test: `frontend/src/components/research/ChartPane.test.jsx`
 
 **Interfaces:**
-- Consumes: `useChartData` (existing; returns `{ chart, bars, ind, earningsMarkers, priceLines, quote, details }`); `moveCaption` (Task 4); `ChartCanvas`, `LineSaveAlert`, `PeriodChange`, `useSize`, `Card`, `InstrumentLogo` (existing).
-- Produces: `ChartPane({ slot, active, outlined, controls, onActivate, placingLine, onPlaced, paneHeights, style, className = 'flex' })`. `slot` is `{ symbol, uic, assetType } | null`. It renders a `<section>` with `aria-label` `"<SYMBOL> chart"` or `"Empty chart"`, and `aria-current="true"` when active. `outlined` draws the blue ring; the page passes it only when more than one pane is shown.
+- Consumes: `useChartData({ symbol, instrument, range, timeView })` (existing; returns `{ chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote, details }`, where `bars` is the panned/zoomed window and `rangeBars` is the whole selected range up to the latest bar); a pane view from `usePaneViews` (Task 5); `moveCaption` (Task 4); `ChartCanvas`, `LineSaveAlert`, `PeriodChange`, `useSize`, `Card`, `InstrumentLogo` (existing).
+- Produces: `ChartPane({ slot, active, outlined, controls, view, onActivate, placingLine, onPlaced, paneHeights, style, className = 'flex' })`. `controls` carries the shared preferences; `view` is this pane's `paneView(index)`. `ChartCanvas` gets `{ ...controls, ...view }`. `slot` is `{ symbol, uic, assetType } | null`. It renders a `<section>` with `aria-label` `"<SYMBOL> chart"` or `"Empty chart"`, and `aria-current="true"` when active. `outlined` draws the blue ring; the page passes it only when more than one pane is shown.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -682,6 +840,7 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { DEFAULT_CHART_PREFS } from '../../lib/chartPrefs'
 import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
+import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
 import ChartPane from './ChartPane'
 
 vi.mock('../../api/queries')
@@ -697,7 +856,16 @@ const bars = Array.from({ length: 30 }, (_, i) => ({
 }))
 const idle = { data: undefined, isLoading: false, error: null }
 const nvda = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
-const controls = { ...DEFAULT_CHART_PREFS, yScale: 1, setRange: vi.fn(), setType: vi.fn(), setYScale: vi.fn(), toggleOverlay: vi.fn(), togglePane: vi.fn() }
+const controls = { ...DEFAULT_CHART_PREFS, setRange: vi.fn(), setType: vi.fn(), toggleOverlay: vi.fn(), togglePane: vi.fn() }
+const view = {
+  yScale: 1,
+  yShift: 0,
+  timeView: LATEST_TIME_VIEW,
+  setYScale: vi.fn(),
+  setYShift: vi.fn(),
+  setTimeView: vi.fn(),
+  resetView: vi.fn(),
+}
 
 function stub() {
   queries.useChart.mockReturnValue({ data: bars, isLoading: false, error: null })
@@ -724,6 +892,7 @@ const renderPane = (props = {}) =>
       active={false}
       outlined={false}
       controls={controls}
+      view={view}
       onActivate={vi.fn()}
       placingLine={false}
       onPlaced={vi.fn()}
@@ -793,10 +962,10 @@ import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
 import { useChartData } from './useChartData'
 
-function PaneHeader({ symbol, quote, bars, lineSaveFailed }) {
-  const last = bars[bars.length - 1]
+function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed }) {
+  const last = rangeBars[rangeBars.length - 1]
   const price = quote?.price ?? last?.close ?? null
-  const { change, suffix } = moveCaption(quote, bars)
+  const { change, suffix } = moveCaption(quote, rangeBars)
   return (
     <div className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0">
       <InstrumentLogo
@@ -818,18 +987,19 @@ function PaneHeader({ symbol, quote, bars, lineSaveFailed }) {
       )}
       <LineSaveAlert failed={lineSaveFailed} />
       <div className="ml-auto">
-        <PeriodChange bars={bars} />
+        <PeriodChange bars={windowBars} />
       </div>
     </div>
   )
 }
 
-function FilledPane({ slot, controls, placingLine, onPlaced, paneHeights }) {
+function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
-  const { chart, bars, ind, earningsMarkers, priceLines, quote } = useChartData({
+  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
     symbol: slot.symbol,
     instrument,
     range: controls.range,
+    timeView: view.timeView,
   })
   const [hover, setHover] = useState(null)
   const [canvasRef, canvasSize] = useSize()
@@ -837,12 +1007,19 @@ function FilledPane({ slot, controls, placingLine, onPlaced, paneHeights }) {
 
   return (
     <>
-      <PaneHeader symbol={slot.symbol} quote={quote} bars={bars} lineSaveFailed={priceLines.saveFailed} />
+      <PaneHeader
+        symbol={slot.symbol}
+        quote={quote}
+        rangeBars={rangeBars}
+        windowBars={bars}
+        lineSaveFailed={priceLines.saveFailed}
+      />
       <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
         <ChartCanvas
           bars={bars}
           ind={ind}
-          controls={controls}
+          timeWindow={timeWindow}
+          controls={{ ...controls, ...view }}
           hover={safeHover}
           setHover={setHover}
           symbol={slot.symbol}
@@ -869,6 +1046,7 @@ export default function ChartPane({
   active,
   outlined,
   controls,
+  view,
   onActivate,
   placingLine,
   onPlaced,
@@ -890,6 +1068,7 @@ export default function ChartPane({
             key={`${slot.symbol}:${slot.uic}:${slot.assetType}`}
             slot={slot}
             controls={controls}
+            view={view}
             placingLine={active && placingLine}
             onPlaced={onPlaced}
             paneHeights={paneHeights}
@@ -905,7 +1084,7 @@ export default function ChartPane({
 }
 ```
 
-(Prerequisite reminder: if the panning merge changed the `ChartCanvas` props that `ResearchChart` passes, `FilledPane` passes the same set. Pan state that belongs to one chart lives here in `FilledPane`.)
+(`FilledPane` passes `ChartCanvas` the same props the pre-split `ResearchChart` passed on `main` at `7100728`, with `controls` replaced by `{ ...controls, ...view }`. If `ChartCanvas` has gained a prop since, pass it the same way.)
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -921,7 +1100,7 @@ git commit -m "feat: a self-contained chart pane with its own header and data"
 
 ---
 
-### Task 6: Layout menu in the tool rail
+### Task 7: Layout menu in the tool rail
 
 **Files:**
 - Modify: `frontend/src/components/research/ChartToolRail.jsx`
@@ -1015,14 +1194,14 @@ git commit -m "feat: layout menu in the chart tool rail"
 
 ---
 
-### Task 7: `ResearchChart` becomes a grid of panes
+### Task 8: `ResearchChart` becomes a grid of panes
 
 **Files:**
 - Modify: `frontend/src/pages/ResearchChart.jsx`
 - Test: `frontend/src/pages/ResearchChart.test.jsx`
 
 **Interfaces:**
-- Consumes: `useChartWorkspace` (Task 3), `ChartPane` (Task 5), `ChartToolRail`'s `layout`/`onLayoutChange` (Task 6), `layoutById`, `gridStyle`, `paneStyle` (Task 1), `DEFAULT_PANE_HEIGHTS`, `ADVANCED_PANE_HEIGHTS` (`lib/chartOptions`).
+- Consumes: `useChartWorkspace` (Task 3), `usePaneViews` (Task 5), `ChartPane` (Task 6), `ChartToolRail`'s `layout`/`onLayoutChange` (Task 7), `layoutById`, `gridStyle`, `paneStyle` (Task 1), `DEFAULT_PANE_HEIGHTS`, `ADVANCED_PANE_HEIGHTS` (`lib/chartOptions`).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1112,7 +1291,7 @@ Expected: the new tests FAIL (no regions, no Layout button in the page).
 
 - [ ] **Step 3: Implement**
 
-Rewrite `ResearchChart.jsx`. Written against `main` at `4e4ff93`; carry over anything the panning merge added, per the Global Constraints.
+Rewrite `ResearchChart.jsx`. This is written against `main` at `7100728`, after panning. The page keeps shared preferences on `useChartControls` and moves each chart's view to `usePaneViews`.
 
 ```jsx
 import { useEffect, useMemo, useState } from 'react'
@@ -1133,6 +1312,7 @@ import { RangeButtons } from '../components/research/chartHeader'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useChartWorkspace } from '../components/research/useChartWorkspace'
+import { usePaneViews } from '../components/research/usePaneViews'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
@@ -1143,12 +1323,13 @@ export default function ResearchChart() {
   const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
+  const paneView = usePaneViews(workspace.slots, controls.range)
+  const activeView = paneView(workspace.active)
   const [placingLine, setPlacingLine] = useState(false)
 
   const [shownSymbol, setShownSymbol] = useState(symbol)
   if (shownSymbol !== symbol) {
     setShownSymbol(symbol)
-    controls.setYScale(1)
     setPlacingLine(false)
   }
 
@@ -1162,7 +1343,7 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [placingLine])
 
-  const { bars, priceLines, quote, details } = useChartData({ symbol, instrument, range: controls.range })
+  const { rangeBars, priceLines, quote, details } = useChartData({ symbol, instrument, range: controls.range })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
@@ -1175,7 +1356,7 @@ export default function ResearchChart() {
   return (
     <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
       <ChartToolRail
-        controls={controls}
+        controls={{ ...controls, ...activeView }}
         placingLine={placingLine}
         onPlacingLineChange={setPlacingLine}
         canPlaceLine={Boolean(activeSlot && priceLines.create)}
@@ -1192,7 +1373,7 @@ export default function ResearchChart() {
           details={details.data}
           position={position}
           quote={quote}
-          bars={bars}
+          bars={rangeBars}
           watchlists={watchlists}
           onToggleList={toggleList}
         />
@@ -1214,6 +1395,7 @@ export default function ResearchChart() {
                 active={active}
                 outlined={split && active}
                 controls={controls}
+                view={paneView(index)}
                 onActivate={() => workspace.activate(index)}
                 placingLine={placingLine}
                 onPlaced={() => setPlacingLine(false)}
@@ -1239,10 +1421,12 @@ export default function ResearchChart() {
 }
 ```
 
+The old page reset the whole view (`controls.resetView()`) when the symbol changed. Now a pane's view resets when that pane's content changes (`usePaneViews`), so the page only disarms the line tool.
+
 - [ ] **Step 4: Run to verify they pass**
 
 Run: `cd frontend && npx vitest run src/pages/ResearchChart.test.jsx && npx eslint src/pages/ResearchChart.jsx src/pages/ResearchChart.test.jsx`
-Expected: PASS, including every pre-existing test. They render the default single pane, so `getByTestId('price-scale')` stays unique. If a pre-existing test looked for the range buttons or the line-save alert inside the old chart `Card`, re-point it at their new place (the toolbar row; the pane header) without changing what it asserts.
+Expected: PASS, including every pre-existing test, the panning and reset tests included. They render the default single pane, whose view is `paneView(0)`, so `getByTestId('price-scale')` stays unique. If a pre-existing test looked for the range buttons or the line-save alert inside the old chart `Card`, re-point it at their new place (the toolbar row; the pane header) without changing what it asserts.
 
 - [ ] **Step 5: Commit**
 
@@ -1253,7 +1437,7 @@ git commit -m "feat: advanced chart splits into up to four panes, each its own s
 
 ---
 
-### Task 8: Verify, screenshot, record the decision
+### Task 9: Verify, screenshot, record the decision
 
 **Files:**
 - Modify: `AGENTS.md`, `docs/next-steps.md`
