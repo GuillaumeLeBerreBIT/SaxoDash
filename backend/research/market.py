@@ -106,13 +106,15 @@ def to_quote(row):
 
     price = details.get('LastTraded') or quote.get('Mid') or quote.get('Bid')
 
+    change_pct = price_info.get('PercentChange')
     return {
         'uic': row.get('Uic'),
         'asset_type': row.get('AssetType', ''),
         'price': None if price is None else float(price),
         'bid': quote.get('Bid'),
         'ask': quote.get('Ask'),
-        'change_pct': price_info.get('PercentChange'),
+        'change_pct': change_pct,
+        'change_basis': None if change_pct is None else 'live',
     }
 
 
@@ -179,6 +181,8 @@ def quotes(uics, asset_type):
         for row in mapped:
             if row['change_pct'] is None and row['uic'] is not None:
                 row['change_pct'] = _last_session_change_pct(row['uic'], asset_type)
+                if row['change_pct'] is not None:
+                    row['change_basis'] = 'last_close'
         return mapped
 
     key = _cache_key('quotes', uics=','.join(str(u) for u in sorted(uics)), asset_type=asset_type)

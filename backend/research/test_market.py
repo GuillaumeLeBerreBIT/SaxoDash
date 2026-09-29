@@ -107,6 +107,13 @@ class ShapingTest(TestCase):
     def test_quote_survives_a_row_with_no_prices_at_all(self):
         self.assertIsNone(market.to_quote({'Uic': 211})['price'])
 
+    def test_quote_marks_a_saxo_change_as_live(self):
+        self.assertEqual(market.to_quote(SAMPLE_INFOPRICE)['change_basis'], 'live')
+
+    def test_quote_without_a_change_has_no_basis(self):
+        row = {'Uic': 211, 'AssetType': 'Stock', 'Quote': {}}
+        self.assertIsNone(market.to_quote(row)['change_basis'])
+
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM)
 class MarketDataViewTest(APITestCase):
@@ -313,6 +320,41 @@ class MarketDataViewTest(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertAlmostEqual(response.data[0]['change_pct'], 2.5)
         mock_get_chart.assert_called_once()
+
+    @patch('research.market.client.get_chart')
+    @patch('research.market.client.get_infoprices')
+    def test_quotes_mark_a_fallback_move_as_last_close(self, mock_infoprices, mock_get_chart):
+        self._connect_saxo()
+        mock_infoprices.return_value = [{'Uic': 211, 'AssetType': 'Stock', 'Quote': {}}]
+        mock_get_chart.return_value = [
+            {**SAMPLE_CANDLE, 'Time': '2026-08-28T00:00:00Z', 'Close': 400.0},
+            {**SAMPLE_CANDLE, 'Time': '2026-08-31T00:00:00Z', 'Close': 410.0},
+        ]
+
+        response = self.client.get('/api/research/quotes/?uics=211&asset_type=Stock')
+
+        self.assertEqual(response.data[0]['change_basis'], 'last_close')
+
+    @patch('research.market.client.get_chart')
+    @patch('research.market.client.get_infoprices')
+    def test_quotes_leave_the_basis_empty_when_no_move_is_known(self, mock_infoprices, mock_get_chart):
+        self._connect_saxo()
+        mock_infoprices.return_value = [{'Uic': 211, 'AssetType': 'Stock', 'Quote': {}}]
+        mock_get_chart.return_value = []
+
+        response = self.client.get('/api/research/quotes/?uics=211&asset_type=Stock')
+
+        self.assertIsNone(response.data[0]['change_pct'])
+        self.assertIsNone(response.data[0]['change_basis'])
+
+    @patch('research.market.client.get_infoprices')
+    def test_quotes_mark_a_live_move_as_live(self, mock_infoprices):
+        self._connect_saxo()
+        mock_infoprices.return_value = [SAMPLE_INFOPRICE]
+
+        response = self.client.get('/api/research/quotes/?uics=211&asset_type=Stock')
+
+        self.assertEqual(response.data[0]['change_basis'], 'live')
 
     @patch('research.market.client.get_chart')
     @patch('research.market.client.get_infoprices')
