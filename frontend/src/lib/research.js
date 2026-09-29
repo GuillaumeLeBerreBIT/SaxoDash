@@ -32,9 +32,20 @@ export const WIDEST_RANGE_COUNT = Math.max(...RANGES.map((range) => range.bars))
  *  once and slices: stepping 1W→ALL used to cost six Saxo calls for data the
  *  last one already held.
  */
-export function barsForRange(bars = [], range) {
-  const count = RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT
-  return bars.length <= count ? bars : bars.slice(-count)
+export function barsForRange(bars = [], range, timeOffset = 0) {
+  const { start, end } = visibleWindow(bars.length, range, timeOffset)
+  return start === 0 && end === bars.length ? bars : bars.slice(start, end)
+}
+
+export function visibleWindow(total, range, timeOffset = 0) {
+  const count = Math.min(total, RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT)
+  const maxOffset = total - count
+  const offset = clampTimeOffset(Math.round(timeOffset) || 0, maxOffset)
+  return { start: maxOffset - offset, end: total - offset, offset, maxOffset }
+}
+
+export function clampTimeOffset(value, maxOffset) {
+  return Math.min(maxOffset, Math.max(0, value))
 }
 
 // Saxo's Horizon is in minutes; 1440 is one daily candle. The backend admits
