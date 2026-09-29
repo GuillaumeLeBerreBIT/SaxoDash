@@ -12,9 +12,12 @@ export default function WatchlistHeatmap({ items, quotes, symbol, heldSymbols, o
 
   return (
     <>
-      <div className="flex items-center justify-between px-3 h-7 text-[var(--fig-2xs)] text-zinc-500 border-b border-white/[0.06]">
-        <span>{moveLabel(quotes.values())} · sorted by move</span>
-        <span className="num font-mono" aria-label={`${counts.up} up, ${counts.down} down`}>
+      <div className="flex items-center justify-between gap-2 px-3 h-7 text-[var(--fig-2xs)] text-zinc-500 border-b border-white/[0.06]">
+        <span className="min-w-0 truncate">{moveLabel(quotes.values())} · sorted by move</span>
+        <span
+          className="shrink-0 whitespace-nowrap num font-mono"
+          aria-label={`${counts.up} up, ${counts.down} down`}
+        >
           <span className="text-emerald-400">▲ {counts.up}</span>{' '}
           <span className="text-red-400">▼ {counts.down}</span>
         </span>

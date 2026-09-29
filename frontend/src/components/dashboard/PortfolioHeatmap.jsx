@@ -90,21 +90,18 @@ export default function PortfolioHeatmap({ positions, quotes }) {
 
   return (
     <Card>
-      <CardHeader
-        title="Allocation & movement"
-        subtitle="Sized by value, grouped by sector"
-        right={
-          <div className="flex items-center gap-3">
-            <ScaleLegend cap={cap} />
-            <div className="flex items-center gap-0.5">
-              <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>{dayLabel}</TBtn>
-              <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
-                Since purchase
-              </TBtn>
-            </div>
-          </div>
-        }
-      />
+      <CardHeader title="Allocation & movement" subtitle="Sized by value, grouped by sector" />
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <ScaleLegend cap={cap} />
+        <div className="flex items-center gap-0.5">
+          <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>
+            <span className="whitespace-nowrap">{dayLabel}</span>
+          </TBtn>
+          <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
+            <span className="whitespace-nowrap">Since purchase</span>
+          </TBtn>
+        </div>
+      </div>
       <p className="mt-2 text-[var(--fig-xs)] text-zinc-500 num">
         {metric === 'day' ? (
           <DayLine summary={daySummary([...moves.values()])} label={dayLabel} />

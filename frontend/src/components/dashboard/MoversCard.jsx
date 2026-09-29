@@ -63,18 +63,15 @@ export default function MoversCard({ movers, positions = NO_POSITIONS, quotes = 
 
   return (
     <Card>
-      <CardHeader
-        title="Movers"
-        subtitle={subtitle}
-        right={
-          <div className="flex items-center gap-0.5">
-            <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>{dayLabel}</TBtn>
-            <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
-              Since purchase
-            </TBtn>
-          </div>
-        }
-      />
+      <CardHeader title="Movers" subtitle={subtitle} />
+      <div className="flex items-center gap-0.5 mt-2">
+        <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>
+          <span className="whitespace-nowrap">{dayLabel}</span>
+        </TBtn>
+        <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
+          <span className="whitespace-nowrap">Since purchase</span>
+        </TBtn>
+      </div>
       {empty ? (
         <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
           {metric === 'day' ? 'No price moves available yet.' : 'No holdings to compare yet.'}
