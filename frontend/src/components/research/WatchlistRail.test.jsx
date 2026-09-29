@@ -195,11 +195,11 @@ describe('WatchlistRail', () => {
     const { unmount } = render({ gridView: true })
 
     await user.click(screen.getByRole('button', { name: 'Grid view' }))
-    expect(screen.getByText(/sorted by move/)).toBeInTheDocument()
+    expect(screen.getByText(/by move/)).toBeInTheDocument()
     expect(localStorage.getItem('saxodash:watchlist-view')).toBe('grid')
 
     unmount()
     render({ gridView: true })
-    expect(screen.getByText(/sorted by move/)).toBeInTheDocument()
+    expect(screen.getByText(/by move/)).toBeInTheDocument()
   })
 })

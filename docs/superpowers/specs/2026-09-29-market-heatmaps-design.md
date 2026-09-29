@@ -100,7 +100,7 @@ lib/indicators.js     relativeVolume(bars, window); computeIndicatorsForRange ad
 components/heatmap/HeatTile.jsx                 shared tile: fill, ticker, signed %, a11y label
 components/heatmap/ScaleLegend.jsx              −cap … +cap gradient (also adopted by MonthlyReturnsHeatmap)
 components/dashboard/PortfolioHeatmap.jsx       squarified, sector-grouped, value-sized
-components/research/WatchlistHeatmap.jsx        uniform CSS grid, sorted by move, header reads "<label> · by move"
+components/research/WatchlistHeatmap.jsx        uniform CSS grid, tiles ordered by move, header reads "<label> · by move"
 ```
 
 Changed: `Dashboard.jsx`, `ExposureCard.jsx`, `MoversCard.jsx`,

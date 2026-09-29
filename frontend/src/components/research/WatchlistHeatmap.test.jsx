@@ -52,6 +52,12 @@ describe('WatchlistHeatmap', () => {
     expect(screen.getByRole('button', { name: /^NVDA/ })).toHaveAccessibleName('NVDA +3.1%, in portfolio')
   })
 
+  it('gives each tile a title matching its aria-label', () => {
+    renderGrid()
+    const nvda = screen.getByRole('button', { name: /^NVDA/ })
+    expect(nvda).toHaveAttribute('title', nvda.getAttribute('aria-label'))
+  })
+
   it('loads a tile into the chart', async () => {
     const user = userEvent.setup()
     const onSelectSymbol = renderGrid()
@@ -61,6 +67,6 @@ describe('WatchlistHeatmap', () => {
 
   it('calls a last-close move the latest session', () => {
     renderGrid({ quotes: new Map([[2, { uic: 2, change_pct: 3.1, change_basis: 'last_close' }]]) })
-    expect(screen.getByText('Latest session · sorted by move')).toBeInTheDocument()
+    expect(screen.getByText('Latest session · by move')).toBeInTheDocument()
   })
 })

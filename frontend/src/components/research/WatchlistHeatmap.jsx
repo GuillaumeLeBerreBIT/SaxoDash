@@ -13,7 +13,7 @@ export default function WatchlistHeatmap({ items, quotes, symbol, heldSymbols, o
   return (
     <>
       <div className="flex items-center justify-between gap-2 px-3 h-7 text-[var(--fig-2xs)] text-zinc-500 border-b border-white/[0.06]">
-        <span className="min-w-0 truncate">{moveLabel(quotes.values())} · sorted by move</span>
+        <span className="min-w-0 truncate">{moveLabel(quotes.values())} · by move</span>
         <span
           className="shrink-0 whitespace-nowrap num font-mono"
           aria-label={`${counts.up} up, ${counts.down} down`}
@@ -26,6 +26,7 @@ export default function WatchlistHeatmap({ items, quotes, symbol, heldSymbols, o
         {sorted.map((item) => {
           const change = quotes.get(item.uic)?.change_pct ?? null
           const held = heldSymbols.has(item.symbol)
+          const label = `${item.symbol} ${fmtPct(change, { decimals: 1 })}${held ? ', in portfolio' : ''}`
           return (
             <HeatTile
               key={item.id}
@@ -34,7 +35,8 @@ export default function WatchlistHeatmap({ items, quotes, symbol, heldSymbols, o
               fill={performanceFill(change, { cap: PERFORMANCE_CAPS.day })}
               active={item.symbol === symbol}
               marker={held ? <span className="w-1.5 h-1.5 rounded-full bg-blue-400" /> : null}
-              aria-label={`${item.symbol} ${fmtPct(change, { decimals: 1 })}${held ? ', in portfolio' : ''}`}
+              aria-label={label}
+              title={label}
               className="h-12"
               onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
             />
