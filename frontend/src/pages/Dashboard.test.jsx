@@ -56,6 +56,7 @@ function stub(over = {}) {
     isLoading: false,
     error: null,
   })
+  queries.usePositionQuotes.mockReturnValue(new Map())
 }
 
 describe('Dashboard', () => {
@@ -123,5 +124,10 @@ describe('Dashboard', () => {
     renderWithProviders(<Dashboard />)
     expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
     expect(screen.getByText(/Groceries is over budget/)).toBeInTheDocument()
+  })
+
+  it('maps where the capital sits and what is moving it', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText('Allocation & movement')).toBeInTheDocument()
   })
 })

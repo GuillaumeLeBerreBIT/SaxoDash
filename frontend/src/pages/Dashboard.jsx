@@ -4,6 +4,7 @@ import {
   useBudgetProgress,
   usePortfolioInsights,
   usePortfolioSummary,
+  usePositionQuotes,
   usePositions,
   useSpendingSummary,
   useTransactions,
@@ -17,8 +18,11 @@ import AttentionBand from '../components/dashboard/AttentionBand'
 import MoversCard from '../components/dashboard/MoversCard'
 import UpcomingEarnings from '../components/dashboard/UpcomingEarnings'
 import ExposureCard from '../components/dashboard/ExposureCard'
+import PortfolioHeatmap from '../components/dashboard/PortfolioHeatmap'
 
 const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
+
+const NO_POSITIONS = []
 
 const ViewAllLink = ({ to }) => (
   <Link to={to} className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
@@ -37,6 +41,7 @@ export default function Dashboard() {
   const firstOfMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
   const spendingQuery = useSpendingSummary(`?date_from=${firstOfMonthISO}`)
   const budgetProgressQuery = useBudgetProgress()
+  const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
 
   const failed =
     insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error || spendingQuery.error
@@ -106,6 +111,9 @@ export default function Dashboard() {
           />
           <StatRow label="Holdings" value={fmtNum(positions.length)} note="Across all accounts" />
         </StatStrip>
+        <div className="mt-4">
+          <PortfolioHeatmap positions={positions} quotes={quotes} />
+        </div>
       </div>
 
       {/* Tier 3: things worth a second look, not permanent standing cards -
