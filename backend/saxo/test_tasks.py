@@ -126,6 +126,24 @@ class SyncPositionsTaskTest(TestCase):
         self.assertEqual(run.rows, 1)
 
     @patch('saxo.tasks.client.get_positions')
+    def test_a_new_position_starts_uncategorized(self, mock_get_positions):
+        mock_get_positions.return_value = [SAMPLE_POSITION]
+        tasks.sync_positions()
+        self.assertEqual(Position.objects.get(ticker='NVDA').sector, 'Uncategorized')
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_resync_keeps_a_backfilled_sector(self, mock_get_positions):
+        mock_get_positions.return_value = [SAMPLE_POSITION]
+        tasks.sync_positions()
+        Position.objects.filter(ticker='NVDA').update(sector='Semiconductors')
+
+        tasks.sync_positions()
+
+        position = Position.objects.get(ticker='NVDA')
+        self.assertEqual(position.sector, 'Semiconductors')
+        self.assertEqual(position.current_price, Decimal('875.40'))
+
+    @patch('saxo.tasks.client.get_positions')
     def test_removes_positions_no_longer_present(self, mock_get_positions):
         Position.objects.create(
             ticker='OLD', name='Old Corp', qty=1, avg_cost=Decimal('1'),

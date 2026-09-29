@@ -18,6 +18,7 @@ from .models import SaxoCredential, SyncRun
 logger = logging.getLogger(__name__)
 
 REFRESH_MARGIN = timedelta(minutes=5)
+CREATE_ONLY_FIELDS = frozenset({'sector'})
 
 SYNC_TASK = {
     # Only transient failures retry - a permanent 4xx/malformed-body error
@@ -127,7 +128,10 @@ def sync_positions(credential):
     with transaction.atomic():
         seen_tickers = []
         for fields in _mapped_rows(saxo_positions, mapping.to_position_fields):
-            Position.objects.update_or_create(ticker=fields['ticker'], defaults=fields)
+            synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
+            Position.objects.update_or_create(
+                ticker=fields['ticker'], defaults=synced, create_defaults=fields
+            )
             seen_tickers.append(fields['ticker'])
 
         # Saxo returning nothing is a real "you hold nothing" and should prune.
