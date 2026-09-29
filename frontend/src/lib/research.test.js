@@ -6,8 +6,6 @@ import {
   barChange,
   barsForRange,
   chartHref,
-  clampTimeOffset,
-  visibleWindow,
   earningsMarkersForBars,
   instrumentKey,
   isEtf,
@@ -215,70 +213,6 @@ describe('barsForRange', () => {
 
   it('survives no bars at all', () => {
     expect(barsForRange(undefined, '1M')).toEqual([])
-  })
-
-  it('slices the panned window when given an offset', () => {
-    const week = barsForRange(many, '1W', 7)
-
-    expect(week).toHaveLength(RANGE_COUNTS['1W'])
-    expect(week[week.length - 1]).toBe(many[many.length - 8])
-  })
-})
-
-describe('visibleWindow', () => {
-  it('shows the newest bars when not panned', () => {
-    expect(visibleWindow(1200, '1M', 0)).toEqual({ start: 1178, end: 1200, offset: 0, maxOffset: 1178 })
-  })
-
-  it('moves the window back by the offset', () => {
-    expect(visibleWindow(1200, '1M', 100)).toMatchObject({ start: 1078, end: 1100, offset: 100 })
-  })
-
-  it('stops at the oldest bar', () => {
-    expect(visibleWindow(1200, '1M', 5000)).toMatchObject({ start: 0, end: 22, offset: 1178 })
-  })
-
-  it('never pans into the future', () => {
-    expect(visibleWindow(1200, '1M', -3)).toMatchObject({ start: 1178, end: 1200, offset: 0 })
-  })
-
-  it('cannot pan when the range already shows everything', () => {
-    expect(visibleWindow(1200, 'ALL', 40)).toEqual({ start: 0, end: 1200, offset: 0, maxOffset: 0 })
-    expect(visibleWindow(10, '1M', 4)).toEqual({ start: 0, end: 10, offset: 0, maxOffset: 0 })
-  })
-
-  it('survives no bars', () => {
-    expect(visibleWindow(0, '1M', 3)).toEqual({ start: 0, end: 0, offset: 0, maxOffset: 0 })
-  })
-})
-
-describe('visibleWindow with a zoomed time axis', () => {
-  it('shows the zoomed number of bars instead of the range', () => {
-    expect(visibleWindow(1200, '1M', 0, 100)).toEqual({ start: 1100, end: 1200, offset: 0, maxOffset: 1100 })
-  })
-
-  it('keeps the pan on top of the zoom', () => {
-    expect(visibleWindow(1200, '1M', 50, 100)).toMatchObject({ start: 1050, end: 1150 })
-  })
-
-  it('still stops at the oldest bar', () => {
-    expect(visibleWindow(1200, '1M', 1150, 100)).toMatchObject({ start: 0, end: 100, offset: 1100 })
-  })
-
-  it('never shows more than was fetched', () => {
-    expect(visibleWindow(1200, '1M', 0, 5000)).toEqual({ start: 0, end: 1200, offset: 0, maxOffset: 0 })
-  })
-
-  it('falls back to the range when not zoomed', () => {
-    expect(visibleWindow(1200, '1M', 0, null)).toEqual(visibleWindow(1200, '1M', 0))
-  })
-})
-
-describe('clampTimeOffset', () => {
-  it('keeps an offset between latest and the oldest bar', () => {
-    expect(clampTimeOffset(-2, 10)).toBe(0)
-    expect(clampTimeOffset(4, 10)).toBe(4)
-    expect(clampTimeOffset(40, 10)).toBe(10)
   })
 })
 

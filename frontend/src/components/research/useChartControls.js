@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 
 import { readChartPrefs, writeChartPrefs } from '../../lib/chartPrefs'
+import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
 
 export function useChartControls() {
   const [prefs, setPrefs] = useState(readChartPrefs)
   const [yScale, setYScale] = useState(1)
   const [yShift, setYShift] = useState(0)
-  const [timeOffset, setTimeOffset] = useState(0)
-  const [barCount, setBarCount] = useState(null)
+  const [timeView, setTimeView] = useState(LATEST_TIME_VIEW)
 
   useEffect(() => {
     writeChartPrefs(prefs)
@@ -19,21 +19,17 @@ export function useChartControls() {
     setYScale,
     yShift,
     setYShift,
-    timeOffset,
-    setTimeOffset,
-    barCount,
-    setBarCount,
+    timeView,
+    setTimeView,
     resetView: () => {
       setYScale(1)
       setYShift(0)
-      setTimeOffset(0)
-      setBarCount(null)
+      setTimeView(LATEST_TIME_VIEW)
     },
     setRange: (next) => {
       setPrefs((p) => ({ ...p, range: next }))
-      setTimeOffset(0)
       setYShift(0)
-      setBarCount(null)
+      setTimeView(LATEST_TIME_VIEW)
     },
     setType: (next) => setPrefs((p) => ({ ...p, type: next })),
     toggleOverlay: (key) => setPrefs((p) => ({ ...p, overlays: { ...p.overlays, [key]: !p.overlays[key] } })),

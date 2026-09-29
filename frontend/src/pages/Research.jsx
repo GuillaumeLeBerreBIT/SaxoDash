@@ -64,13 +64,12 @@ export default function Research() {
     setTab('overview')
   }
 
-  const { chart, bars, rangeBars, ind, maxTimeOffset, earnings, earningsMarkers, note, priceLines, quote, details } =
+  const { chart, bars, rangeBars, ind, timeWindow, earnings, earningsMarkers, note, priceLines, quote, details } =
     useChartData({
       symbol,
       instrument,
       range: controls.range,
-      timeOffset: controls.timeOffset,
-      barCount: controls.barCount,
+      timeView: controls.timeView,
     })
   const fundamentals = useFundamentals(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
@@ -135,7 +134,7 @@ export default function Research() {
             <ChartPanel
               bars={bars}
               ind={ind}
-              maxTimeOffset={maxTimeOffset}
+              timeWindow={timeWindow}
               isLoading={chart.isLoading}
               error={chart.error}
               controls={controls}

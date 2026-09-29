@@ -201,12 +201,12 @@ export function MacdPane({ macd, hover, setHover, height = 92 }) {
   )
 }
 
-export function TimeAxis({ data, totalBars = data.length, onBarCountChange, onReset }) {
+export function TimeAxis({ data, onBarCountChange, onReset }) {
   const [ref, width] = useWidth()
   const { chartW, xAt } = paneGeometry(width, data.length)
   const drag = usePointerDrag({
     onStart: () => (onBarCountChange ? { count: data.length } : null),
-    onDrag: ({ dx, context }) => onBarCountChange(barCountFromDrag(context.count, dx, totalBars)),
+    onDrag: ({ dx, context }) => onBarCountChange(barCountFromDrag(context.count, dx)),
   })
   const count = Math.min(7, data.length)
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 
 import { DEFAULT_CHART_PREFS, writeChartPrefs } from '../../lib/chartPrefs'
+import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
 import { useChartControls } from './useChartControls'
 
 const stored = () => JSON.parse(localStorage.getItem('saxodash:chart-prefs'))
@@ -44,51 +45,35 @@ describe('useChartControls', () => {
     expect(again.result.current.yScale).toBe(1)
   })
 
-  it('starts unpanned and keeps the pan in memory only', () => {
+  it('starts on the latest bars of the range and keeps the view in memory only', () => {
     const { result } = renderHook(() => useChartControls())
-    expect(result.current.timeOffset).toBe(0)
+    expect(result.current.timeView).toEqual(LATEST_TIME_VIEW)
     expect(result.current.yShift).toBe(0)
 
-    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setTimeView({ offset: 12, barCount: 40 }))
     act(() => result.current.setYShift(0.3))
-    expect(result.current.timeOffset).toBe(12)
-    expect(stored() ?? {}).not.toHaveProperty('timeOffset')
+    expect(result.current.timeView).toEqual({ offset: 12, barCount: 40 })
+    expect(stored() ?? {}).not.toHaveProperty('timeView')
     expect(stored() ?? {}).not.toHaveProperty('yShift')
   })
 
-  it('snaps back to the latest bars when a range is picked', () => {
+  it('snaps back to the latest bars of a range when one is picked', () => {
     const { result } = renderHook(() => useChartControls())
-    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setTimeView({ offset: 12, barCount: 40 }))
     act(() => result.current.setYShift(0.3))
     act(() => result.current.setRange('6M'))
 
-    expect(result.current.timeOffset).toBe(0)
+    expect(result.current.timeView).toEqual(LATEST_TIME_VIEW)
     expect(result.current.yShift).toBe(0)
   })
 
-  it('resets zoom and pan together for a new symbol', () => {
+  it('resets zoom and pan on both axes for a new symbol', () => {
     const { result } = renderHook(() => useChartControls())
     act(() => result.current.setYScale(3))
-    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setTimeView({ offset: 12, barCount: 40 }))
     act(() => result.current.setYShift(0.3))
     act(() => result.current.resetView())
 
-    expect(result.current).toMatchObject({ yScale: 1, timeOffset: 0, yShift: 0 })
-  })
-
-  it('shows the range until the time axis is zoomed, and goes back to it on a range pick or a reset', () => {
-    const { result } = renderHook(() => useChartControls())
-    expect(result.current.barCount).toBeNull()
-
-    act(() => result.current.setBarCount(40))
-    expect(result.current.barCount).toBe(40)
-    expect(stored() ?? {}).not.toHaveProperty('barCount')
-
-    act(() => result.current.setRange('1Y'))
-    expect(result.current.barCount).toBeNull()
-
-    act(() => result.current.setBarCount(40))
-    act(() => result.current.resetView())
-    expect(result.current.barCount).toBeNull()
+    expect(result.current).toMatchObject({ yScale: 1, timeView: LATEST_TIME_VIEW, yShift: 0 })
   })
 })
