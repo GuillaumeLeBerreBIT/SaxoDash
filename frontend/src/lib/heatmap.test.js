@@ -162,6 +162,12 @@ describe('rankDayMoves', () => {
     const { best } = rankDayMoves([1, 2, 3, 4].map((c) => move(`T${c}`, c)))
     expect(best.map((m) => m.position.ticker)).toEqual(['T4', 'T3', 'T2'])
   })
+
+  it('keeps a move inside the flat band out of both sides', () => {
+    const { best, worst } = rankDayMoves([move('A', 0.02), move('B', -0.02)])
+    expect(best).toEqual([])
+    expect(worst).toEqual([])
+  })
 })
 
 describe('sincePurchaseSummary', () => {

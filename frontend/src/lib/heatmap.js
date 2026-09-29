@@ -122,8 +122,8 @@ export function daySummary(moves) {
 export function rankDayMoves(moves, count = 3) {
   const known = moves.filter((move) => move.changePct != null)
   return {
-    best: known.filter((m) => m.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, count),
-    worst: known.filter((m) => m.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, count),
+    best: known.filter((m) => m.changePct >= FLAT_MOVE).sort((a, b) => b.changePct - a.changePct).slice(0, count),
+    worst: known.filter((m) => m.changePct <= -FLAT_MOVE).sort((a, b) => a.changePct - b.changePct).slice(0, count),
   }
 }
 
