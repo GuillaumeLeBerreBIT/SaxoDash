@@ -298,10 +298,11 @@ class InsightsPositionsTest(TestCase):
         self.assertIn('Unknown', [r['name'] for r in rows])
 
     def test_movers_of_a_small_book_are_all_best_and_no_worst(self):
-        # 3 holdings, MOVERS=3 -> best takes all, worst dedups to empty.
+        # NVDA +500%, KO +100% are gains; AAPL -25% is a loss - sign decides
+        # the side, not rank, so best never lists a loser and vice versa.
         m = insights._movers(self.positions)
-        self.assertEqual([r['ticker'] for r in m['best']], ['NVDA', 'KO', 'AAPL'])
-        self.assertEqual(m['worst'], [])
+        self.assertEqual([r['ticker'] for r in m['best']], ['NVDA', 'KO'])
+        self.assertEqual([r['ticker'] for r in m['worst']], ['AAPL'])
 
     def test_movers_split_best_and_worst_without_overlap(self):
         _pos('AMD', '10', '100', '250')   # +150%
@@ -313,6 +314,18 @@ class InsightsPositionsTest(TestCase):
         self.assertEqual(best, ['NVDA', 'AMD', 'KO'])
         self.assertEqual(worst, ['INTC', 'AAPL', 'F'])
         self.assertFalse(set(best) & set(worst))
+
+    def test_movers_of_only_gains_has_no_worst(self):
+        gains_only = [p for p in self.positions if p.ticker != 'AAPL']
+        m = insights._movers(gains_only)
+        self.assertEqual([r['ticker'] for r in m['best']], ['NVDA', 'KO'])
+        self.assertEqual(m['worst'], [])
+
+    def test_movers_flat_position_is_in_neither_side(self):
+        _pos('FLAT', '10', '100', '100')  # 0%
+        m = insights._movers(list(Position.objects.all()))
+        tickers = {r['ticker'] for r in m['best']} | {r['ticker'] for r in m['worst']}
+        self.assertNotIn('FLAT', tickers)
 
     def test_contributors_ordered_by_absolute_contribution(self):
         total_cost = sum((p.cost for p in self.positions), Decimal('0'))

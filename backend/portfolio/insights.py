@@ -115,10 +115,10 @@ def _mover_row(p):
 def _movers(positions):
     if not positions:
         return {'best': [], 'worst': []}
-    ranked = sorted(positions, key=lambda p: p.pnl_pct, reverse=True)
-    best = ranked[:MOVERS]
-    best_tickers = {p.ticker for p in best}
-    worst = [p for p in reversed(ranked) if p.ticker not in best_tickers][:MOVERS]
+    gainers = sorted((p for p in positions if p.pnl_pct > 0), key=lambda p: p.pnl_pct, reverse=True)
+    losers = sorted((p for p in positions if p.pnl_pct < 0), key=lambda p: p.pnl_pct)
+    best = gainers[:MOVERS]
+    worst = losers[:MOVERS]
     return {'best': [_mover_row(p) for p in best], 'worst': [_mover_row(p) for p in worst]}
 
 
