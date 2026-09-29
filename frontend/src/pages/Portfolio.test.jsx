@@ -95,6 +95,18 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('2.5')).toBeInTheDocument()
   })
 
+  it('heads the day column "Day %" when every quote is live or absent', () => {
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('columnheader', { name: 'Day %' })).toBeInTheDocument()
+  })
+
+  it('heads the day column "Latest session %" when a quote is not live', () => {
+    queries.usePositionQuotes.mockReturnValue(new Map([[1, { uic: 1, change_pct: -1, change_basis: 'last_close' }]]))
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('columnheader', { name: 'Latest session %' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Day %' })).not.toBeInTheDocument()
+  })
+
   it('links each holding name to its research page', () => {
     renderWithProviders(<Portfolio />)
     const link = screen.getByRole('link', { name: /MSFT/ })

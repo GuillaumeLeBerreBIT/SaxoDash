@@ -3,7 +3,7 @@ import { PenLine } from 'lucide-react'
 
 import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
-import { priceBasis } from '../lib/pricing'
+import { moveLabel, priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import { Card, CardHeader, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
@@ -68,6 +68,7 @@ export default function Portfolio() {
 
   const pnlTone =
     summary.total_pnl_pct == null ? 'text-zinc-500' : Number(summary.total_pnl_pct) >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const dayColumnLabel = moveLabel(quotes.values()) === 'Today' ? 'Day %' : 'Latest session %'
 
   return (
     <div className="space-y-4">
@@ -123,7 +124,7 @@ export default function Portfolio() {
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Qty</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Price</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Day %</Th>
+                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Value</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">P&L</Th>
                   <Th edge align="right" className="sticky top-0 z-10 bg-zinc-900">Weight</Th>

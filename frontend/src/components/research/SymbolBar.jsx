@@ -1,6 +1,7 @@
 import { Star } from 'lucide-react'
 
 import { fmtNum, fmtPct } from '../../lib/format'
+import { moveLabel } from '../../lib/pricing'
 import { barChange, isEtf } from '../../lib/research'
 import { Badge, Card, InstrumentLogo } from '../ui'
 import { Menu, MenuRow } from './menu'
@@ -32,7 +33,9 @@ export default function SymbolBar({
 }) {
   const last = bars[bars.length - 1]
   const price = quote?.price ?? last?.close ?? null
-  const change = quote?.change_pct ?? barChange(bars)
+  const quoteChange = quote?.change_pct ?? null
+  const change = quoteChange ?? barChange(bars)
+  const changeSuffix = quoteChange == null ? null : moveLabel([quote]).toLowerCase()
   const currency = details?.currency ?? ''
   const exchange = details?.exchange ?? ''
   const name = details?.description ?? position?.name ?? ''
@@ -77,7 +80,7 @@ export default function SymbolBar({
                 change >= 0 ? 'text-emerald-400' : 'text-red-400'
               }`}
             >
-              {fmtPct(change)} today
+              {fmtPct(change)}{changeSuffix ? ` ${changeSuffix}` : ''}
             </span>
           )}
         </div>
