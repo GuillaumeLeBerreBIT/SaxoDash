@@ -4,13 +4,17 @@ import {
   DOWN,
   PAD_R,
   UP,
+  barsFromDrag,
+  formatTimeLabel,
   indexFromPointer,
   linePath,
   paneGeometry,
+  timeLabelStyle,
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT } from '../../lib/charts'
 import { RVOL_ELEVATED } from '../../lib/indicators'
+import { usePointerDrag } from './usePointerDrag'
 
 // SVG text can't take a Tailwind class, so the app's actual mono face
 // (index.css's --font-mono) is spelled out literally here rather than
@@ -197,20 +201,33 @@ export function MacdPane({ macd, hover, setHover, height = 92 }) {
   )
 }
 
-export function TimeAxis({ data }) {
+export function TimeAxis({ data, timeOffset = 0, onTimeOffsetChange }) {
   const [ref, width] = useWidth()
-  const { chartW, xAt } = paneGeometry(width, data.length)
+  const { chartW, xAt, slot } = paneGeometry(width, data.length)
+  const drag = usePointerDrag({
+    onStart: () => (onTimeOffsetChange ? { offset: timeOffset } : null),
+    onDrag: ({ dx, context }) => onTimeOffsetChange(context.offset + barsFromDrag(dx, slot)),
+  })
   const count = Math.min(7, data.length)
 
   if (data.length === 0) return null
 
+  const style = timeLabelStyle(data)
   const indexes =
     count === 1
       ? [0]
       : Array.from({ length: count }, (_, i) => Math.floor(((data.length - 1) * i) / (count - 1)))
+  const cursor = onTimeOffsetChange ? (drag.dragging ? 'grabbing' : 'ew-resize') : undefined
 
   return (
-    <div ref={ref} className="w-full border-t border-white/[0.06]" style={{ height: 22 }}>
+    <div
+      ref={ref}
+      data-testid="time-axis"
+      className="w-full border-t border-white/[0.06] select-none"
+      style={{ height: 22, cursor }}
+      {...drag.handlers}
+      onDoubleClick={() => onTimeOffsetChange?.(0)}
+    >
       <svg width={width} height={22}>
         {indexes.map((i) => (
           <text
@@ -222,7 +239,7 @@ export function TimeAxis({ data }) {
             textAnchor="middle"
             fontFamily={MONO_FONT}
           >
-            {new Date(data[i].date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+            {formatTimeLabel(data[i].date, style)}
           </text>
         ))}
       </svg>

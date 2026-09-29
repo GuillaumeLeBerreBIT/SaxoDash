@@ -1,5 +1,5 @@
 import { fmtNum, fmtPct } from '../../lib/format'
-import { barChange } from '../../lib/research'
+import { barChange, clampTimeOffset } from '../../lib/research'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { OVERLAY_STROKES, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
@@ -68,8 +68,19 @@ export default function ChartCanvas({
   paneHeights = DEFAULT_PANE_HEIGHTS,
   placingLine = false,
   onPlaced,
+  maxTimeOffset = 0,
 }) {
-  const { type, overlays, panes, yScale, setYScale } = controls
+  const { type, overlays, panes, yScale, setYScale, yShift, setYShift, timeOffset, setTimeOffset } = controls
+  const panTime = setTimeOffset
+    ? (next) =>
+        setTimeOffset((current) => clampTimeOffset(typeof next === 'function' ? next(current) : next, maxTimeOffset))
+    : undefined
+  const resetPriceScale = setYScale
+    ? () => {
+        setYScale(1)
+        setYShift?.(0)
+      }
+    : undefined
   const bar = bars[hover ?? bars.length - 1]
   const [legendRef, legendSize] = useSize()
 
@@ -110,6 +121,11 @@ export default function ChartCanvas({
             earningsMarkers={earningsMarkers}
             yScale={yScale}
             onYScaleChange={setYScale}
+            onPriceScaleReset={resetPriceScale}
+            yShift={yShift}
+            onYShiftChange={setYShift}
+            timeOffset={timeOffset}
+            onTimeOffsetChange={panTime}
             lines={lines}
             onMoveLine={onMoveLine}
             onCreateLine={onCreateLine}
@@ -132,7 +148,7 @@ export default function ChartCanvas({
               <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
             </SubPane>
           ) : null}
-          <TimeAxis data={bars} />
+          <TimeAxis data={bars} timeOffset={timeOffset} onTimeOffsetChange={panTime} />
         </div>
       )}
     </>
