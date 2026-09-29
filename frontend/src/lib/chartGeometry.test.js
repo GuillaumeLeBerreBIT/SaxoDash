@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import {
   MAX_Y_SCALE,
+  MAX_Y_SHIFT,
   MIN_PRICE_HEIGHT,
   MIN_Y_SCALE,
   PAD_R,
+  barsFromDrag,
   donutOuterRadius,
+  formatTimeLabel,
   indexFromPointer,
+  shiftFromDrag,
+  timeLabelStyle,
   linePath,
   paneGeometry,
   priceGeometry,
@@ -233,5 +238,62 @@ describe('scaleFromDrag', () => {
   it('clamps to the allowed range', () => {
     expect(scaleFromDrag(1, 100_000)).toBe(MAX_Y_SCALE)
     expect(scaleFromDrag(1, -100_000)).toBe(MIN_Y_SCALE)
+  })
+})
+
+describe('price panning', () => {
+  it('moves the price window without changing its span', () => {
+    const still = geometry()
+    const moved = geometry({ yShift: 0.25 })
+    const span = still.top - still.bottom
+
+    expect(moved.top - moved.bottom).toBeCloseTo(span)
+    expect(moved.top).toBeCloseTo(still.top + span * 0.25)
+    expect(moved.bottom).toBeCloseTo(still.bottom + span * 0.25)
+  })
+
+  it('pans on top of the zoomed scale', () => {
+    const zoomed = geometry({ yScale: 2 })
+    const both = geometry({ yScale: 2, yShift: -0.5 })
+
+    expect(both.top).toBeCloseTo(zoomed.top - (zoomed.top - zoomed.bottom) * 0.5)
+  })
+
+  it('turns a vertical drag into a fraction of the plot height', () => {
+    expect(shiftFromDrag(0, 86, 344)).toBeCloseTo(0.25)
+    expect(shiftFromDrag(0.5, -172, 344)).toBeCloseTo(0)
+  })
+
+  it('bounds the shift so the bars cannot be lost for good', () => {
+    expect(shiftFromDrag(0, 1e6, 344)).toBe(MAX_Y_SHIFT)
+    expect(shiftFromDrag(0, -1e6, 344)).toBe(-MAX_Y_SHIFT)
+  })
+
+  it('turns a horizontal drag into whole bars', () => {
+    expect(barsFromDrag(70, 23.27)).toBe(3)
+    expect(barsFromDrag(-70, 23.27)).toBe(-3)
+    expect(Object.is(barsFromDrag(-5, 23.27), 0)).toBe(true)
+  })
+})
+
+describe('time labels', () => {
+  const now = new Date('2026-09-29')
+  const days = (from, to) => [{ date: from }, { date: to }]
+
+  it('uses day labels for a short window in the current year', () => {
+    expect(timeLabelStyle(days('2026-08-01', '2026-09-28'), now)).toBe('day')
+  })
+
+  it('uses month-year labels once the window spans more than half a year', () => {
+    expect(timeLabelStyle(days('2025-09-01', '2026-09-28'), now)).toBe('month')
+  })
+
+  it('uses month-year labels for a window panned into an earlier year', () => {
+    expect(timeLabelStyle(days('2024-03-01', '2024-04-01'), now)).toBe('month')
+  })
+
+  it('formats each style', () => {
+    expect(formatTimeLabel('2024-03-12', 'day')).toBe('12 Mar')
+    expect(formatTimeLabel('2024-03-12', 'month')).toBe('Mar 24')
   })
 })
