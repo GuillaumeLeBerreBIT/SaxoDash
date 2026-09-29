@@ -46,6 +46,32 @@ describe('PortfolioHeatmap', () => {
     expect(summary).toHaveTextContent('NVDA +€118')
   })
 
+  it('discloses partial coverage when not every position has a move', () => {
+    renderWithProviders(<PortfolioHeatmap positions={positions} quotes={live} />)
+    const summary = screen.getByText(/biggest driver/).closest('p')
+    expect(summary).toHaveTextContent('2 of 3 priced')
+  })
+
+  it('says nothing about coverage when every position is priced', () => {
+    const koWithUic = { ...positions[2], uic: 213 }
+    const allPriced = new Map([...live, [213, { uic: 213, change_pct: 0.5, change_basis: 'live' }]])
+    renderWithProviders(<PortfolioHeatmap positions={[positions[0], positions[1], koWithUic]} quotes={allPriced} />)
+    const summary = screen.getByText(/biggest driver/).closest('p')
+    expect(summary).not.toHaveTextContent('priced')
+  })
+
+  it('colours a day that rounds to zero neutral, not green', () => {
+    const flat = [
+      { id: 1, ticker: 'FLAT', name: 'Flat', sector: 'Tech', value: '1000.00', weight: '100.0', pnl: '0', pnl_pct: 0, uic: 1, asset_type: 'Stock' },
+    ]
+    const flatQuotes = new Map([[1, { uic: 1, change_pct: 0, change_basis: 'live' }]])
+    renderWithProviders(<PortfolioHeatmap positions={flat} quotes={flatQuotes} />)
+    const summary = screen.getByText(/biggest driver/).closest('p')
+    const figure = summary.querySelector('span')
+    expect(figure).toHaveClass('text-zinc-300')
+    expect(figure).not.toHaveClass('text-emerald-400')
+  })
+
   it('switches to the return since purchase', async () => {
     const user = userEvent.setup()
     renderWithProviders(<PortfolioHeatmap positions={positions} quotes={live} />)

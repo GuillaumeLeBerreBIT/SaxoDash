@@ -32,18 +32,24 @@ function tileTitle(position, sector, move, dayLabel) {
   ].join('\n')
 }
 
-function DayLine({ summary, label }) {
+function dayTone(impactEur) {
+  if (Math.round(impactEur) === 0) return 'text-zinc-300'
+  return impactEur > 0 ? 'text-emerald-400' : 'text-red-400'
+}
+
+function DayLine({ summary, label, coverage }) {
   if (!summary) return 'No price moves available yet.'
   return (
     <>
       {label}{' '}
-      <span className={summary.impactEur >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+      <span className={dayTone(summary.impactEur)}>
         {signedEur(summary.impactEur)} ({fmtPct(summary.pct, { decimals: 1 })})
       </span>
       {' · biggest driver '}
       <span className="text-zinc-300">
         {summary.driver.position.ticker} {signedEur(summary.driver.impactEur)}
       </span>
+      {coverage && coverage.priced < coverage.total ? ` · ${coverage.priced} of ${coverage.total} priced` : null}
     </>
   )
 }
@@ -87,6 +93,10 @@ export default function PortfolioHeatmap({ positions, quotes }) {
   )
   const dayLabel = moveLabel(quotes.values())
   const cap = metric === 'day' ? PERFORMANCE_CAPS.day : PERFORMANCE_CAPS.sincePurchase
+  const coverage = {
+    priced: layout.tiles.filter((tile) => moves.get(tile.position.ticker)?.impactEur != null).length,
+    total: layout.tiles.length,
+  }
 
   return (
     <Card>
@@ -104,7 +114,7 @@ export default function PortfolioHeatmap({ positions, quotes }) {
       </div>
       <p className="mt-2 text-[var(--fig-xs)] text-zinc-500 num">
         {metric === 'day' ? (
-          <DayLine summary={daySummary([...moves.values()])} label={dayLabel} />
+          <DayLine summary={daySummary([...moves.values()])} label={dayLabel} coverage={coverage} />
         ) : (
           <SincePurchaseLine summary={sincePurchaseSummary(positions)} />
         )}
