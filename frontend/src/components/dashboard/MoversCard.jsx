@@ -59,7 +59,7 @@ export default function MoversCard({ movers, positions = NO_POSITIONS, quotes = 
       ? 'Unrealized return vs. average cost'
       : dayLabel === 'Today'
         ? 'Price move today'
-        : 'Last completed session'
+        : 'Latest session, from daily bars'
 
   return (
     <Card>

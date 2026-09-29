@@ -59,8 +59,8 @@ describe('WatchlistHeatmap', () => {
     expect(onSelectSymbol).toHaveBeenCalledWith('NVDA', { uic: 2, assetType: 'Stock' })
   })
 
-  it('calls a last-close move the last session', () => {
+  it('calls a last-close move the latest session', () => {
     renderGrid({ quotes: new Map([[2, { uic: 2, change_pct: 3.1, change_basis: 'last_close' }]]) })
-    expect(screen.getByText('Last session · sorted by move')).toBeInTheDocument()
+    expect(screen.getByText('Latest session · sorted by move')).toBeInTheDocument()
   })
 })

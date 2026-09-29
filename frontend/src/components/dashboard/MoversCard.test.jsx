@@ -47,12 +47,12 @@ describe('MoversCard', () => {
     expect(screen.queryByRole('link', { name: 'KO' })).not.toBeInTheDocument()
   })
 
-  it('calls a last-close move the last session', async () => {
+  it('calls a last-close move the latest session', async () => {
     const user = userEvent.setup()
     const lastClose = new Map([[211, { uic: 211, change_pct: 2, change_basis: 'last_close' }]])
     renderWithProviders(<MoversCard movers={movers} positions={positions} quotes={lastClose} />)
-    await user.click(screen.getByRole('button', { name: 'Last session' }))
-    expect(screen.getByText('Last completed session')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Latest session' }))
+    expect(screen.getByText('Latest session, from daily bars')).toBeInTheDocument()
   })
 
   it('says so when no holding has a move today', async () => {

@@ -301,6 +301,6 @@ The Dashboard's portfolio heatmap and the Advanced View's watchlist grid cover
 your positions and your watchlist only — neither Saxo nor Finnhub's free tier
 has a market-wide feed. A quote's `change_basis` is `live` or `last_close`
 (the SIM fallback's close-to-close move); any `last_close` row turns "Today"
-into "Last session". Layout is a hand-rolled squarify in `lib/heatmap.js`, not
+into "Latest session". Layout is a hand-rolled squarify in `lib/heatmap.js`, not
 Recharts' `Treemap`: HTML tiles are focusable, carry sector headers, and
 render in jsdom.

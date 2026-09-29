@@ -58,7 +58,7 @@ this. Six findings changed the design:
    closes — yesterday's move — and the frontend can't tell which it got. Per
    the app's "a stale mark is disclosed, not passed off as live" rule, quote
    rows gain a `change_basis` field (`live` / `last_close`), and every "Today"
-   label becomes "Last session" when any shown row is `last_close`. This is
+   label becomes "Latest session" when any shown row is `last_close`. This is
    the one backend change.
 5. **"All-time" in `MoversCard` is ambiguous.** It is `pnl_pct` of the
    currently open position against its *average cost*: unrealized, excluding
@@ -94,13 +94,13 @@ lib/charts.js         performanceFill(pct, cap), PERFORMANCE_CAPS
 lib/heatmap.js        squarify(), groupBySector(), layoutPortfolio(), labelLevel(),
                       dayMoves(), daySummary(), rankDayMoves(), sincePurchaseSummary(),
                       sortByMove(), breadth()
-lib/pricing.js        moveLabel(quotes) -> 'Today' | 'Last session', LAST_SESSION_NOTE
+lib/pricing.js        moveLabel(quotes) -> 'Today' | 'Latest session', LAST_SESSION_NOTE
 lib/indicators.js     relativeVolume(bars, window); computeIndicatorsForRange adds `rvol`
 
 components/heatmap/HeatTile.jsx                 shared tile: fill, ticker, signed %, a11y label
 components/heatmap/ScaleLegend.jsx              −cap … +cap gradient (also adopted by MonthlyReturnsHeatmap)
 components/dashboard/PortfolioHeatmap.jsx       squarified, sector-grouped, value-sized
-components/research/WatchlistHeatmap.jsx        uniform CSS grid, sorted by move
+components/research/WatchlistHeatmap.jsx        uniform CSS grid, sorted by move, header reads "<label> · by move"
 ```
 
 Changed: `Dashboard.jsx`, `ExposureCard.jsx`, `MoversCard.jsx`,
@@ -210,9 +210,9 @@ Every tile prints a signed percentage — color is never the only signal
 
 **Portfolio heatmap.** Title "Allocation & movement", subtitle "Sized by
 value, grouped by sector". Header right: legend + segmented toggle
-`Today | Since purchase` ("Last session" instead of "Today" when any quote is
-`last_close`, with a one-line caption: "No live market data on this account —
-showing the last completed session"). Summary line:
+`Today | Since purchase` ("Latest session" instead of "Today" when any quote is
+`last_close`, with a one-line caption: "No live quotes on this account — moves
+are from the latest daily bars"). Summary line:
 - Today: `+€1,240 (+0.8%) · biggest driver NVDA +€610`
 - Since purchase: `Biggest contributor NVDA +€3,100 · biggest drag TSLA −€800`
 
@@ -221,8 +221,8 @@ today % and ≈€ impact, since-purchase %. Tiles link to the holding's
 Research overview (`researchHref`), like `MoversCard` rows.
 
 **Watchlist heatmap.** A list/grid icon toggle (`List` / `LayoutGrid`,
-lucide) in the rail header. Grid header: `Today · sorted by move` (or
-`Last session …`) and breadth `▲ 12 ▼ 5` (flat and no-data not counted).
+lucide) in the rail header. Grid header: `Today · by move` (or
+`Latest session · by move`) and breadth `▲ 12 ▼ 5` (flat and no-data not counted).
 Tiles sorted by change, descending (gainers top-left, losers bottom-right,
 no-data last, ties by symbol). The chart's current symbol gets the same blue
 active treatment as the list row; held symbols keep the list's blue dot.
@@ -283,7 +283,7 @@ Frontend unit (vitest):
 
 Frontend components:
 - `PortfolioHeatmap.test.jsx` — one tile per position with signed %, sector
-  headers, toggle switches metric and summary, "Last session" disclosure,
+  headers, toggle switches metric and summary, "Latest session" disclosure,
   empty state, tile link targets.
 - `WatchlistHeatmap.test.jsx` — sort order, no-data last, breadth counts,
   active symbol state, click/Enter select.
@@ -298,7 +298,7 @@ jsdom, so the tile tests are real rendering, not mocks.
 
 Manual: `saxodash-design-system` screenshot review at 1440px and 390px for
 Dashboard and `/research/chart`; one live check against SIM (the refresh
-token expired 2026-09-29 — reconnect first) to see the "Last session" path
+token expired 2026-09-29 — reconnect first) to see the "Latest session" path
 for real.
 
 ## 8. Implementation order

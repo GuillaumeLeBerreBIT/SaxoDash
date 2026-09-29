@@ -56,10 +56,10 @@ describe('PortfolioHeatmap', () => {
     expect(summary).toHaveTextContent('MSFT -€200')
   })
 
-  it('discloses a last-session move instead of calling it today', () => {
+  it('discloses a latest-session move instead of calling it today', () => {
     const lastClose = new Map([[211, { uic: 211, change_pct: 2.0, change_basis: 'last_close' }]])
     renderWithProviders(<PortfolioHeatmap positions={positions} quotes={lastClose} />)
-    expect(screen.getByRole('button', { name: 'Last session' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Latest session' })).toBeInTheDocument()
     expect(screen.getByText(LAST_SESSION_NOTE)).toBeInTheDocument()
   })
 

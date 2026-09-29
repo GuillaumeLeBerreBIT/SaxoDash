@@ -89,12 +89,12 @@ describe('moveLabel', () => {
     expect(moveLabel([{ change_basis: 'live' }, { change_basis: null }])).toBe('Today')
   })
 
-  it('says Last session as soon as one move is a last close', () => {
-    expect(moveLabel([{ change_basis: 'live' }, { change_basis: 'last_close' }])).toBe('Last session')
+  it('says Latest session as soon as one move is a last close', () => {
+    expect(moveLabel([{ change_basis: 'live' }, { change_basis: 'last_close' }])).toBe('Latest session')
   })
 
   it("reads a Map's values", () => {
-    expect(moveLabel(new Map([[1, { change_basis: 'last_close' }]]).values())).toBe('Last session')
+    expect(moveLabel(new Map([[1, { change_basis: 'last_close' }]]).values())).toBe('Latest session')
   })
 
   it('says Today with no quotes at all', () => {
