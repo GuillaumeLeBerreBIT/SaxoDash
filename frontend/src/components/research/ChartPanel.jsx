@@ -13,6 +13,7 @@ const CHART_HEIGHT = 390
 export default function ChartPanel({
   bars,
   ind,
+  maxTimeOffset,
   isLoading,
   error,
   controls,
@@ -66,6 +67,7 @@ export default function ChartPanel({
       <ChartCanvas
         bars={bars}
         ind={ind}
+        maxTimeOffset={maxTimeOffset}
         controls={controls}
         hover={hover}
         setHover={setHover}

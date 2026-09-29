@@ -7,16 +7,16 @@ import {
   useSymbolEarnings,
   useSymbolNote,
 } from '../../api/queries'
-import { computeIndicatorsForRange } from '../../lib/indicators'
+import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
-import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars } from '../../lib/research'
+import { DAILY_HORIZON, WIDEST_RANGE_COUNT, earningsMarkersForBars, visibleWindow } from '../../lib/research'
 import { useChartLines } from './useChartLines'
 
 // Hoisted so an empty result keeps a stable identity and the memos below do
 // not recompute on every render.
 const NO_BARS = []
 
-export function useChartData({ symbol, instrument, range }) {
+export function useChartData({ symbol, instrument, range, timeOffset = 0 }) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
 
@@ -24,10 +24,14 @@ export function useChartData({ symbol, instrument, range }) {
   // the range instead meant six Saxo calls to walk 1W→ALL.
   const chart = useChart({ uic, assetType, horizon: DAILY_HORIZON, count: WIDEST_RANGE_COUNT })
   const allBars = chart.data ?? NO_BARS
-  const bars = useMemo(() => barsForRange(allBars, range), [allBars, range])
+  const view = useMemo(() => visibleWindow(allBars.length, range, timeOffset), [allBars.length, range, timeOffset])
+  const bars = useMemo(() => allBars.slice(view.start, view.end), [allBars, view.start, view.end])
   // Indicators run on everything fetched and are sliced to match, so MA-50 has
   // a value on a one-month view instead of being null for want of history.
-  const ind = useMemo(() => computeIndicatorsForRange(allBars, bars.length), [allBars, bars.length])
+  const ind = useMemo(
+    () => computeIndicatorsForWindow(allBars, { start: view.start, end: view.end }),
+    [allBars, view.start, view.end],
+  )
 
   const details = useInstrumentDetails({ uic, assetType })
   const earnings = useSymbolEarnings(symbol)
@@ -47,6 +51,7 @@ export function useChartData({ symbol, instrument, range }) {
     chart,
     bars,
     ind,
+    maxTimeOffset: view.maxOffset,
     earnings,
     earningsMarkers,
     note,

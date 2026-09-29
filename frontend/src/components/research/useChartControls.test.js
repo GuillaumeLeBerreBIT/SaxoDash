@@ -43,4 +43,36 @@ describe('useChartControls', () => {
     const again = renderHook(() => useChartControls())
     expect(again.result.current.yScale).toBe(1)
   })
+
+  it('starts unpanned and keeps the pan in memory only', () => {
+    const { result } = renderHook(() => useChartControls())
+    expect(result.current.timeOffset).toBe(0)
+    expect(result.current.yShift).toBe(0)
+
+    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setYShift(0.3))
+    expect(result.current.timeOffset).toBe(12)
+    expect(stored() ?? {}).not.toHaveProperty('timeOffset')
+    expect(stored() ?? {}).not.toHaveProperty('yShift')
+  })
+
+  it('snaps back to the latest bars when a range is picked', () => {
+    const { result } = renderHook(() => useChartControls())
+    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setYShift(0.3))
+    act(() => result.current.setRange('6M'))
+
+    expect(result.current.timeOffset).toBe(0)
+    expect(result.current.yShift).toBe(0)
+  })
+
+  it('resets zoom and pan together for a new symbol', () => {
+    const { result } = renderHook(() => useChartControls())
+    act(() => result.current.setYScale(3))
+    act(() => result.current.setTimeOffset(12))
+    act(() => result.current.setYShift(0.3))
+    act(() => result.current.resetView())
+
+    expect(result.current).toMatchObject({ yScale: 1, timeOffset: 0, yShift: 0 })
+  })
 })

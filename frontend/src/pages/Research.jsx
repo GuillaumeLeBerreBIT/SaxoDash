@@ -49,7 +49,7 @@ export default function Research() {
   const [scaledSymbol, setScaledSymbol] = useState(symbol)
   if (scaledSymbol !== symbol) {
     setScaledSymbol(symbol)
-    controls.setYScale(1)
+    controls.resetView()
   }
 
   const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
@@ -64,11 +64,13 @@ export default function Research() {
     setTab('overview')
   }
 
-  const { chart, bars, ind, earnings, earningsMarkers, note, priceLines, quote, details } = useChartData({
-    symbol,
-    instrument,
-    range: controls.range,
-  })
+  const { chart, bars, ind, maxTimeOffset, earnings, earningsMarkers, note, priceLines, quote, details } =
+    useChartData({
+      symbol,
+      instrument,
+      range: controls.range,
+      timeOffset: controls.timeOffset,
+    })
   const fundamentals = useFundamentals(symbol)
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
@@ -132,6 +134,7 @@ export default function Research() {
             <ChartPanel
               bars={bars}
               ind={ind}
+              maxTimeOffset={maxTimeOffset}
               isLoading={chart.isLoading}
               error={chart.error}
               controls={controls}
