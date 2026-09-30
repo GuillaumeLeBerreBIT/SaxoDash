@@ -7,8 +7,10 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import {
   addWatchlistItem,
   createPriceLine,
+  createTrendLine,
   createWatchlist,
   deletePriceLine,
+  deleteTrendLine,
   deleteWatchlist,
   getChart,
   getCompanyNews,
@@ -20,11 +22,13 @@ import {
   getQuotes,
   getSymbolEarnings,
   getSymbolNote,
+  getTrendLines,
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
   updatePriceLine,
   updateSymbolNote,
+  updateTrendLine,
   markSymbolNoteReviewed,
   updateWatchlist,
 } from '../client'
@@ -48,6 +52,7 @@ export const researchKeys = {
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   symbolNote: (symbol) => ['symbol-note', symbol],
   priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
+  trendLines: (uic, assetType) => ['trend-lines', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
 }
 
@@ -272,6 +277,51 @@ export function usePriceLineMutations(uic, assetType) {
     }),
     remove: useMutation({
       mutationFn: (id) => deletePriceLine(id),
+      onMutate: optimistic((old, id) => old.filter((line) => line.id !== id)),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+  }
+}
+
+export function useTrendLines(uic, assetType) {
+  return useQuery({
+    queryKey: researchKeys.trendLines(uic, assetType),
+    queryFn: () => getTrendLines({ uic, assetType }),
+    enabled: Boolean(uic && assetType),
+  })
+}
+
+export function useTrendLineMutations(uic, assetType) {
+  const queryClient = useQueryClient()
+  const key = researchKeys.trendLines(uic, assetType)
+  const refetch = (_data, _error, _variables, context) => {
+    if (context) queryClient.invalidateQueries({ queryKey: context.key })
+  }
+  const optimistic = (apply) => async (variables) => {
+    await queryClient.cancelQueries({ queryKey: key })
+    const previous = queryClient.getQueryData(key)
+    queryClient.setQueryData(key, (old) => (old ? apply(old, variables) : old))
+    return { previous, key }
+  }
+  const rollback = (_error, _variables, context) => {
+    if (context?.previous) queryClient.setQueryData(context.key, context.previous)
+  }
+
+  return {
+    create: useMutation({
+      mutationFn: (payload) => createTrendLine({ uic, assetType, ...payload }),
+      onMutate: () => ({ key }),
+      onSettled: refetch,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, patch }) => updateTrendLine(id, patch),
+      onMutate: optimistic((old, { id, patch }) => old.map((line) => (line.id === id ? { ...line, ...patch } : line))),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+    remove: useMutation({
+      mutationFn: (id) => deleteTrendLine(id),
       onMutate: optimistic((old, id) => old.filter((line) => line.id !== id)),
       onError: rollback,
       onSettled: refetch,

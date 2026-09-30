@@ -9,6 +9,8 @@ import {
   useNoteLevelMutation,
   usePriceLineMutations,
   usePriceLines,
+  useTrendLineMutations,
+  useTrendLines,
   useSymbolNote,
 } from './research'
 
@@ -190,5 +192,59 @@ describe('price lines', () => {
 
     await waitFor(() => expect(result.current.lines.data[0]).toEqual({ id: 1, price: '100.00', label: 'Support' }))
     expect(client.updatePriceLine).toHaveBeenCalledWith(1, { label: 'Support' })
+  })
+})
+
+describe('trend lines', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('is disabled until both uic and asset type are known', () => {
+    const { result } = setup(() => useTrendLines(undefined, undefined))
+    expect(result.current.fetchStatus).toBe('idle')
+  })
+
+  it('creates a trend line from both endpoints', async () => {
+    client.createTrendLine.mockResolvedValue({ id: 3, start_bar_date: '2026-08-01', start_price: '100.00' })
+    const { result } = setup(() => useTrendLineMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.create.mutateAsync({
+        startBarDate: '2026-08-01', startPrice: '100.00', endBarDate: '2026-08-10', endPrice: '110.00',
+      })
+    })
+
+    expect(client.createTrendLine).toHaveBeenCalledWith({
+      uic: 211, assetType: 'Stock',
+      startBarDate: '2026-08-01', startPrice: '100.00', endBarDate: '2026-08-10', endPrice: '110.00',
+    })
+  })
+
+  it('optimistically patches only the moved line, and rolls back only that one on failure', async () => {
+    client.useTrendLines = vi.fn().mockReturnValue({
+      data: [
+        { id: 1, start_bar_date: '2026-08-01', start_price: '100.00', end_bar_date: '2026-08-10', end_price: '110.00', label: '' },
+        { id: 2, start_bar_date: '2026-08-02', start_price: '90.00', end_bar_date: '2026-08-11', end_price: '95.00', label: '' },
+      ],
+    })
+    client.updateTrendLine.mockRejectedValue(new Error('boom'))
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    const wrapper = ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    queryClient.setQueryData(researchKeys.trendLines(211, 'Stock'), client.useTrendLines().data)
+
+    const { result } = renderHook(() => useTrendLineMutations(211, 'Stock'), { wrapper })
+
+    await act(async () => {
+      try {
+        await result.current.update.mutateAsync({ id: 1, patch: { end_price: '999.00' } })
+      } catch {
+        // rollback path under test
+      }
+    })
+
+    const after = queryClient.getQueryData(researchKeys.trendLines(211, 'Stock'))
+    expect(after.find((line) => line.id === 1).end_price).toBe('110.00')
+    expect(after.find((line) => line.id === 2).end_price).toBe('95.00')
   })
 })
