@@ -43,7 +43,7 @@ describe('resolveTrendLines', () => {
     expect(resolved.x1).toBe(0)
     expect(resolved.y1).toBe(100)
     expect(resolved.x2).toBe(19)
-    expect(resolved.y2).toBeCloseTo(100 + ((110 - 100) / 4) * 18)
+    expect(resolved.y2).toBeCloseTo(100 + ((110 - 100) / 4) * 19)
   })
 
   it('keeps projecting forward after both anchors have scrolled out of the window', () => {
@@ -51,7 +51,9 @@ describe('resolveTrendLines', () => {
 
     expect(resolved).toBeDefined()
     expect(resolved.x1).toBe(0)
+    expect(resolved.y1).toBeCloseTo(125)
     expect(resolved.x2).toBe(9)
+    expect(resolved.y2).toBeCloseTo(147.5)
   })
 
   it('extends from whichever anchor is earlier, regardless of which was start or end', () => {
@@ -64,8 +66,20 @@ describe('resolveTrendLines', () => {
     expect(resolved.y1).toBe(100)
   })
 
-  it('omits a line whose earlier anchor has not been reached yet by the window', () => {
-    const resolved = resolveTrendLines([line()], { allBars, windowStart: 0, windowLength: 3 })
+  it('renders a partial ray when only its earlier anchor is within the window', () => {
+    const [resolved] = resolveTrendLines([line()], { allBars, windowStart: 0, windowLength: 3 })
+
+    expect(resolved).toBeDefined()
+    expect(resolved.x1).toBe(0)
+    expect(resolved.x2).toBe(2)
+  })
+
+  it("omits a line whose earlier anchor the window hasn't panned back to yet", () => {
+    const future = line({
+      start_bar_date: '2026-08-16', start_price: '100.00',
+      end_bar_date: '2026-08-20', end_price: '110.00',
+    })
+    const resolved = resolveTrendLines([future], { allBars, windowStart: 0, windowLength: 5 })
 
     expect(resolved).toEqual([])
   })

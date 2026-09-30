@@ -23,15 +23,13 @@ export function resolveTrendLines(lines, { allBars, windowStart, windowLength })
     const [iEarly, iLate] = i1 < i2 ? [i1, i2] : [i2, i1]
     const [pEarly, pLate] = i1 < i2 ? [line.start.price, line.end.price] : [line.end.price, line.start.price]
 
-    if (windowLength < iLate - iEarly) continue
-
     const edgeIndexFull = windowStart + windowLength - 1
     if (iEarly > edgeIndexFull) continue
 
     const slope = (pLate - pEarly) / (iLate - iEarly)
     const startIndexFull = Math.max(iEarly, windowStart)
     const startPrice = pEarly + slope * (startIndexFull - iEarly)
-    const edgePrice = pEarly + slope * (edgeIndexFull - 1 - iEarly)
+    const edgePrice = pEarly + slope * (edgeIndexFull - iEarly)
 
     resolved.push({
       id: line.id,
