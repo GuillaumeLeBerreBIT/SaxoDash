@@ -42,13 +42,14 @@ describe('usePaneViews', () => {
     expect(result.current(1)).toMatchObject(FRESH)
   })
 
-  it('resets every pane when the range changes', () => {
+  it('clears pan but keeps zoom when the range changes', () => {
     const { result, rerender } = renderViews()
+    act(() => result.current(0).setYScale(2))
     act(() => result.current(0).setYShift(4))
-    act(() => result.current(1).setYScale(2))
+    act(() => result.current(1).setTimeView({ offset: 5, barCount: null }))
     rerender({ slots: [nvda, amd], range: '1Y' })
-    expect(result.current(0)).toMatchObject(FRESH)
-    expect(result.current(1)).toMatchObject(FRESH)
+    expect(result.current(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current(1)).toMatchObject({ yScale: 1, yShift: 0, timeView: LATEST_TIME_VIEW })
   })
 
   it('resets only the pane whose symbol changed', () => {
@@ -75,5 +76,14 @@ describe('usePaneViews', () => {
     expect(result.current(3)).toMatchObject(FRESH)
     rerender({ slots: [nvda], range: '6M' })
     expect(result.current(0).yScale).toBe(2)
+  })
+
+  it('applies per-pane rules when range and content both change', () => {
+    const { result, rerender } = renderViews()
+    act(() => result.current(0).setYScale(2))
+    act(() => result.current(1).setYScale(2))
+    rerender({ slots: [nvda, tsla], range: '1Y' })
+    expect(result.current(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current(1)).toMatchObject(FRESH)
   })
 })

@@ -13,8 +13,11 @@ export function usePaneViews(slots, range) {
   const [seen, setSeen] = useState({ range, keys })
 
   if (seen.range !== range) {
+    const previous = seen.keys
     setSeen({ range, keys })
-    setViews(freshViews(keys.length))
+    setViews((current) =>
+      keys.map((key, index) => (key !== '' && key === previous[index] ? { ...(current[index] ?? FRESH_VIEW), yShift: 0, timeView: LATEST_TIME_VIEW } : FRESH_VIEW)),
+    )
   } else if (seen.keys.join('|') !== keys.join('|')) {
     const previous = seen.keys
     setSeen({ range, keys })
