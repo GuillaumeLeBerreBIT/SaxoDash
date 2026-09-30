@@ -129,6 +129,11 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         }}
       />
       <Badge line={line} price={price} y={y} width={width} selected={selected} />
+      {line.label ? (
+        <text x={4} y={y - 6} fill={LINE_STROKES[line.kind]} fontSize="10" fontFamily="Geist Mono" pointerEvents="none">
+          {line.label}
+        </text>
+      ) : null}
     </g>
   )
 }

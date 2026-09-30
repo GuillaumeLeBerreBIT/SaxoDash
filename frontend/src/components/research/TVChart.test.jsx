@@ -598,6 +598,13 @@ describe('price lines', () => {
 
     expect(onEditLineLabel).toHaveBeenCalledWith(free, 'Support')
   })
+
+  it('shows a label near the line once one is set', () => {
+    const labeled = { ...free, label: 'Support' }
+    const { getByTestId } = renderChart({ lines: [labeled] })
+
+    expect(getByTestId('price-line-7')).toHaveTextContent('Support')
+  })
 })
 
 describe('panning', () => {
