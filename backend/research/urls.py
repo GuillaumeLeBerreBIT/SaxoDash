@@ -3,6 +3,8 @@ from django.urls import path, re_path
 from .views import (
     ChartView,
     CompanyNewsView,
+    DiscoverShelfView,
+    DiscoverView,
     EarningsCalendarView,
     FundamentalsView,
     InstrumentDetailsView,
@@ -21,6 +23,8 @@ from .views import (
 )
 
 urlpatterns = [
+    path('discover/', DiscoverView.as_view(), name='research-discover'),
+    path('discover/<slug:key>/', DiscoverShelfView.as_view(), name='research-discover-shelf'),
     path('chart/', ChartView.as_view(), name='research-chart'),
     path('quotes/', QuotesView.as_view(), name='research-quotes'),
     path('fundamentals/<str:symbol>/', FundamentalsView.as_view(), name='research-fundamentals'),
