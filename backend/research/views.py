@@ -16,11 +16,12 @@ from rest_framework.views import APIView
 from saxo import client
 
 from . import earnings, finnhub, market
-from .models import PriceLine, SymbolNote, Watchlist, WatchlistItem
+from .models import PriceLine, SymbolNote, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
     PriceLineSerializer,
     SymbolNoteSerializer,
+    TrendLineSerializer,
     WatchlistItemCreateSerializer,
     WatchlistSerializer,
 )
@@ -225,3 +226,20 @@ class PriceLineDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = PriceLineSerializer
     queryset = PriceLine.objects.all()
+
+
+class TrendLineListCreateView(ListCreateAPIView):
+    serializer_class = TrendLineSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return TrendLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+    def perform_create(self, serializer):
+        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+
+class TrendLineDetailView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ['patch', 'delete', 'options']
+    serializer_class = TrendLineSerializer
+    queryset = TrendLine.objects.all()

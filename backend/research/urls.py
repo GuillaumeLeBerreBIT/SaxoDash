@@ -14,6 +14,8 @@ from .views import (
     SymbolEarningsView,
     SymbolNoteReviewView,
     SymbolNoteView,
+    TrendLineDetailView,
+    TrendLineListCreateView,
     WatchlistDetailView,
     WatchlistItemCreateView,
     WatchlistItemDeleteView,
@@ -44,6 +46,12 @@ urlpatterns = [
         name='research-price-lines',
     ),
     path('price-lines/<int:pk>/', PriceLineDetailView.as_view(), name='research-price-line'),
+    re_path(
+        r'^trend-lines/(?P<uic>[0-9]+)/(?P<asset_type>[A-Za-z]{1,20})/$',
+        TrendLineListCreateView.as_view(),
+        name='research-trend-lines',
+    ),
+    path('trend-lines/<int:pk>/', TrendLineDetailView.as_view(), name='research-trend-line'),
     path('instruments/', InstrumentSearchView.as_view(), name='research-instruments'),
     path(
         'instruments/<int:uic>/<str:asset_type>/',
