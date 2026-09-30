@@ -9,6 +9,7 @@ import {
   earningsMarkersForBars,
   instrumentKey,
   isEtf,
+  moveCaption,
   needsInstrumentSearch,
   nextEmptySlot,
   periodChange,
@@ -392,5 +393,28 @@ describe('nextEmptySlot', () => {
   it('returns -1 once every slot up to MAX_PEER_SLOTS is filled', () => {
     const slots = Array.from({ length: MAX_PEER_SLOTS }, (_, i) => ({ slot: i, symbol: `S${i}` }))
     expect(nextEmptySlot(slots)).toBe(-1)
+  })
+})
+
+describe('moveCaption', () => {
+  const bars = [{ close: 100 }, { close: 101 }]
+
+  it('labels a live quote move as today', () => {
+    expect(moveCaption({ change_pct: 1.5, change_basis: 'live' }, bars)).toEqual({ change: 1.5, suffix: 'today' })
+  })
+
+  it('labels a last-close quote move as the latest session', () => {
+    expect(moveCaption({ change_pct: -0.4, change_basis: 'last_close' }, bars)).toEqual({
+      change: -0.4,
+      suffix: 'latest session',
+    })
+  })
+
+  it('keeps a flat quote move instead of falling back to the bars', () => {
+    expect(moveCaption({ change_pct: 0, change_basis: 'live' }, bars).change).toBe(0)
+  })
+
+  it('falls back to the latest bar with no suffix', () => {
+    expect(moveCaption(null, bars)).toEqual({ change: barChange(bars), suffix: null })
   })
 })

@@ -5,6 +5,7 @@
  *  without rendering a chart.
  */
 
+import { moveLabel } from './pricing'
 import { surpriseSign } from './charts'
 
 /** A range and how many bars it spans, in one place.
@@ -196,6 +197,12 @@ export function barChange(bars = [], index) {
   const previous = bars[at - 1]
   if (!bar || !previous || !previous.close) return null
   return ((bar.close - previous.close) / previous.close) * 100
+}
+
+export function moveCaption(quote, bars) {
+  const quoted = quote?.change_pct ?? null
+  if (quoted != null) return { change: quoted, suffix: moveLabel([quote]).toLowerCase() }
+  return { change: barChange(bars), suffix: null }
 }
 
 function pinInstrument(params, instrument) {
