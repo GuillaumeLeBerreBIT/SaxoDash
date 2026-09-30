@@ -106,6 +106,7 @@ export default function ResearchChart() {
                 paneHeights={paneHeights}
                 style={paneStyle(layout, index)}
                 className={active ? 'flex' : 'hidden lg:flex'}
+                split={split}
               />
             )
           })}

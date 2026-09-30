@@ -8,29 +8,33 @@ import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
 import { useChartData } from './useChartData'
 
-function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed }) {
+function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, showIdentity }) {
   const last = rangeBars[rangeBars.length - 1]
   const price = quote?.price ?? last?.close ?? null
   const { change, suffix } = moveCaption(quote, rangeBars)
   return (
     <div className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0">
-      <InstrumentLogo
-        symbol={symbol}
-        size={14}
-        className="rounded-sm"
-        fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
-      />
-      <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{symbol}</span>
-      <span className="text-[var(--fig-xs)] num font-mono text-zinc-300">{price == null ? '—' : fmtNum(price, 2)}</span>
-      {change == null ? null : (
-        <span
-          className={`text-[var(--fig-2xs)] num font-mono whitespace-nowrap ${
-            change >= 0 ? 'text-emerald-400' : 'text-red-400'
-          }`}
-        >
-          {fmtPct(change)}{suffix ? ` ${suffix}` : ''}
-        </span>
-      )}
+      {showIdentity ? (
+        <>
+          <InstrumentLogo
+            symbol={symbol}
+            size={14}
+            className="rounded-sm"
+            fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
+          />
+          <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{symbol}</span>
+          <span className="text-[var(--fig-xs)] num font-mono text-zinc-300">{price == null ? '—' : fmtNum(price, 2)}</span>
+          {change == null ? null : (
+            <span
+              className={`text-[var(--fig-2xs)] num font-mono whitespace-nowrap ${
+                change >= 0 ? 'text-emerald-400' : 'text-red-400'
+              }`}
+            >
+              {fmtPct(change)}{suffix ? ` ${suffix}` : ''}
+            </span>
+          )}
+        </>
+      ) : null}
       <LineSaveAlert failed={lineSaveFailed} />
       <div className="ml-auto">
         <PeriodChange bars={windowBars} />
@@ -39,7 +43,7 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed }) {
   )
 }
 
-function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights }) {
+function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, split }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
   const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
     symbol: slot.symbol,
@@ -59,6 +63,7 @@ function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights }
         rangeBars={rangeBars}
         windowBars={bars}
         lineSaveFailed={priceLines.saveFailed}
+        showIdentity={split}
       />
       <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
         <ChartCanvas
@@ -99,6 +104,7 @@ export default function ChartPane({
   paneHeights,
   style,
   className = 'flex',
+  split = true,
 }) {
   return (
     <section
@@ -118,6 +124,7 @@ export default function ChartPane({
             placingLine={active && placingLine}
             onPlaced={onPlaced}
             paneHeights={paneHeights}
+            split={split}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">

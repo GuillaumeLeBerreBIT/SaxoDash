@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -196,6 +196,24 @@ describe('ResearchChart', () => {
     expect(panes()).toHaveLength(1)
   })
 
+  it('does not repeat the symbol bar inside the single pane header', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const pane = screen.getByRole('region', { name: 'NVDA chart' })
+    expect(within(pane).queryByText('NVDA')).not.toBeInTheDocument()
+    expect(within(pane).queryByText('875.40')).not.toBeInTheDocument()
+  })
+
+  it('shows the symbol bar identity in each pane once split', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await pickLayout(user, 'Side by side')
+
+    const pane = screen.getByRole('region', { name: 'NVDA chart' })
+    expect(within(pane).getByText('NVDA')).toBeInTheDocument()
+    expect(within(pane).getByText('875.40')).toBeInTheDocument()
+  })
+
   it('splits into four panes with the first new one active and empty', async () => {
     const user = userEvent.setup()
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
@@ -274,7 +292,7 @@ describe('ResearchChart panning', () => {
     fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
 
     expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
-    expect(screen.getAllByText('141.00')).toHaveLength(2)
+    expect(screen.getByText('141.00')).toBeInTheDocument()
   })
 })
 

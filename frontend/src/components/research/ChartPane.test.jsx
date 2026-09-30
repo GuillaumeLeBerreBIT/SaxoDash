@@ -87,6 +87,15 @@ describe('ChartPane', () => {
     expect(within(pane).getByTestId('price-scale')).toBeInTheDocument()
   })
 
+  it('drops the ticker, price and move in a single-pane layout, leaving the period change', () => {
+    renderPane({ split: false })
+    const pane = screen.getByRole('region', { name: 'NVDA chart' })
+    expect(within(pane).queryByText('NVDA')).not.toBeInTheDocument()
+    expect(within(pane).queryByText('875.40')).not.toBeInTheDocument()
+    expect(within(pane).queryByText('+1.42% latest session')).not.toBeInTheDocument()
+    expect(within(pane).getByText(/^Period/)).toBeInTheDocument()
+  })
+
   it('shows the unresolved state for a stored pane with no uic', () => {
     renderPane({ slot: { symbol: 'XYZ', uic: null, assetType: null } })
     expect(screen.getByRole('region', { name: 'XYZ chart' })).toBeInTheDocument()
