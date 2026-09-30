@@ -15,75 +15,90 @@ const renderViews = (slots = [nvda, amd], range = '6M') =>
 describe('usePaneViews', () => {
   it('gives every pane a fresh view', () => {
     const { result } = renderViews()
-    expect(result.current(0)).toMatchObject(FRESH)
-    expect(result.current(1)).toMatchObject(FRESH)
+    expect(result.current.view(0)).toMatchObject(FRESH)
+    expect(result.current.view(1)).toMatchObject(FRESH)
   })
 
   it('keeps each pane view separate', () => {
     const { result } = renderViews()
-    act(() => result.current(1).setYShift(12))
-    act(() => result.current(1).setYScale(2))
-    expect(result.current(0)).toMatchObject(FRESH)
-    expect(result.current(1)).toMatchObject({ yScale: 2, yShift: 12 })
+    act(() => result.current.view(1).setYShift(12))
+    act(() => result.current.view(1).setYScale(2))
+    expect(result.current.view(0)).toMatchObject(FRESH)
+    expect(result.current.view(1)).toMatchObject({ yScale: 2, yShift: 12 })
   })
 
   it('accepts updater functions, as the chart canvas passes them', () => {
     const { result } = renderViews()
-    act(() => result.current(0).setTimeView((view) => ({ ...view, offset: view.offset + 5 })))
-    expect(result.current(0).timeView).toEqual({ offset: 5, barCount: null })
+    act(() => result.current.view(0).setTimeView((view) => ({ ...view, offset: view.offset + 5 })))
+    expect(result.current.view(0).timeView).toEqual({ offset: 5, barCount: null })
   })
 
   it('resets one pane without touching the others', () => {
     const { result } = renderViews()
-    act(() => result.current(0).setYScale(3))
-    act(() => result.current(1).setYScale(2))
-    act(() => result.current(1).resetView())
-    expect(result.current(0).yScale).toBe(3)
-    expect(result.current(1)).toMatchObject(FRESH)
+    act(() => result.current.view(0).setYScale(3))
+    act(() => result.current.view(1).setYScale(2))
+    act(() => result.current.view(1).resetView())
+    expect(result.current.view(0).yScale).toBe(3)
+    expect(result.current.view(1)).toMatchObject(FRESH)
   })
 
   it('clears pan but keeps zoom when the range changes', () => {
     const { result, rerender } = renderViews()
-    act(() => result.current(0).setYScale(2))
-    act(() => result.current(0).setYShift(4))
-    act(() => result.current(1).setTimeView({ offset: 5, barCount: null }))
+    act(() => result.current.view(0).setYScale(2))
+    act(() => result.current.view(0).setYShift(4))
+    act(() => result.current.view(1).setTimeView({ offset: 5, barCount: null }))
     rerender({ slots: [nvda, amd], range: '1Y' })
-    expect(result.current(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
-    expect(result.current(1)).toMatchObject({ yScale: 1, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current.view(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current.view(1)).toMatchObject({ yScale: 1, yShift: 0, timeView: LATEST_TIME_VIEW })
   })
 
   it('resets only the pane whose symbol changed', () => {
     const { result, rerender } = renderViews()
-    act(() => result.current(0).setYScale(2))
-    act(() => result.current(1).setYScale(3))
+    act(() => result.current.view(0).setYScale(2))
+    act(() => result.current.view(1).setYScale(3))
     rerender({ slots: [nvda, tsla], range: '6M' })
-    expect(result.current(0).yScale).toBe(2)
-    expect(result.current(1)).toMatchObject(FRESH)
+    expect(result.current.view(0).yScale).toBe(2)
+    expect(result.current.view(1)).toMatchObject(FRESH)
   })
 
   it('keeps a view when the same content is passed again', () => {
     const { result, rerender } = renderViews()
-    act(() => result.current(1).setYScale(3))
+    act(() => result.current.view(1).setYScale(3))
     rerender({ slots: [{ ...nvda }, { ...amd }], range: '6M' })
-    expect(result.current(1).yScale).toBe(3)
+    expect(result.current.view(1).yScale).toBe(3)
   })
 
   it('keeps the views of panes that survive a change in pane count', () => {
     const { result, rerender } = renderViews()
-    act(() => result.current(0).setYScale(2))
+    act(() => result.current.view(0).setYScale(2))
     rerender({ slots: [nvda, amd, null, null], range: '6M' })
-    expect(result.current(0).yScale).toBe(2)
-    expect(result.current(3)).toMatchObject(FRESH)
+    expect(result.current.view(0).yScale).toBe(2)
+    expect(result.current.view(3)).toMatchObject(FRESH)
     rerender({ slots: [nvda], range: '6M' })
-    expect(result.current(0).yScale).toBe(2)
+    expect(result.current.view(0).yScale).toBe(2)
   })
 
   it('applies per-pane rules when range and content both change', () => {
     const { result, rerender } = renderViews()
-    act(() => result.current(0).setYScale(2))
-    act(() => result.current(1).setYScale(2))
+    act(() => result.current.view(0).setYScale(2))
+    act(() => result.current.view(1).setYScale(2))
     rerender({ slots: [nvda, tsla], range: '1Y' })
-    expect(result.current(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
-    expect(result.current(1)).toMatchObject(FRESH)
+    expect(result.current.view(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current.view(1)).toMatchObject(FRESH)
+  })
+})
+
+describe('usePaneViews rangePicked', () => {
+  it('clears pan and time-zoom on every pane, keeping each yScale, even when the range value is unchanged', () => {
+    const { result } = renderViews()
+    act(() => result.current.view(0).setYScale(2))
+    act(() => result.current.view(0).setYShift(6))
+    act(() => result.current.view(1).setYScale(3))
+    act(() => result.current.view(1).setTimeView({ offset: 8, barCount: 40 }))
+
+    act(() => result.current.rangePicked())
+
+    expect(result.current.view(0)).toMatchObject({ yScale: 2, yShift: 0, timeView: LATEST_TIME_VIEW })
+    expect(result.current.view(1)).toMatchObject({ yScale: 3, yShift: 0, timeView: LATEST_TIME_VIEW })
   })
 })

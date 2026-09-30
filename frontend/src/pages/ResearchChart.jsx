@@ -27,8 +27,16 @@ export default function ResearchChart() {
   const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
-  const paneView = usePaneViews(workspace.slots, controls.range)
+  const { view: paneView, rangePicked } = usePaneViews(workspace.slots, controls.range)
   const activeView = paneView(workspace.active)
+  const rangeControls = {
+    ...controls,
+    ...activeView,
+    setRange: (next) => {
+      controls.setRange(next)
+      rangePicked()
+    },
+  }
   const [placingLine, setPlacingLine] = useState(false)
 
   const [shownSymbol, setShownSymbol] = useState(symbol)
@@ -60,7 +68,7 @@ export default function ResearchChart() {
   return (
     <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
       <ChartToolRail
-        controls={{ ...controls, ...activeView }}
+        controls={rangeControls}
         placingLine={placingLine}
         onPlacingLineChange={setPlacingLine}
         canPlaceLine={Boolean(activeSlot && priceLines.create)}
@@ -83,7 +91,7 @@ export default function ResearchChart() {
         />
 
         <div className="flex items-center gap-1 px-1">
-          <RangeButtons controls={{ ...controls, ...activeView }} />
+          <RangeButtons controls={rangeControls} />
           <div className="ml-auto">
             <SaxoConnectionStatus />
           </div>

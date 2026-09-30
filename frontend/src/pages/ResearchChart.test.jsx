@@ -294,6 +294,21 @@ describe('ResearchChart panning', () => {
     expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
     expect(screen.getByText('141.00')).toBeInTheDocument()
   })
+
+  it('returns a panned pane to the latest bar when the current range is re-picked', async () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 210, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+
+    expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument()
+  })
 })
 
 describe('ResearchChart time-axis zoom', () => {

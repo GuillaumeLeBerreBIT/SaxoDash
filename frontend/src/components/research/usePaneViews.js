@@ -29,11 +29,16 @@ export function usePaneViews(slots, range) {
   const update = (index, change) =>
     setViews((current) => current.map((view, i) => (i === index ? { ...view, ...change(view) } : view)))
 
-  return (index) => ({
+  const view = (index) => ({
     ...(views[index] ?? FRESH_VIEW),
-    setYScale: (next) => update(index, (view) => ({ yScale: resolve(next, view.yScale) })),
-    setYShift: (next) => update(index, (view) => ({ yShift: resolve(next, view.yShift) })),
-    setTimeView: (next) => update(index, (view) => ({ timeView: resolve(next, view.timeView) })),
+    setYScale: (next) => update(index, (v) => ({ yScale: resolve(next, v.yScale) })),
+    setYShift: (next) => update(index, (v) => ({ yShift: resolve(next, v.yShift) })),
+    setTimeView: (next) => update(index, (v) => ({ timeView: resolve(next, v.timeView) })),
     resetView: () => update(index, () => FRESH_VIEW),
   })
+
+  const rangePicked = () =>
+    setViews((current) => current.map((v) => ({ ...(v ?? FRESH_VIEW), yShift: 0, timeView: LATEST_TIME_VIEW })))
+
+  return { view, rangePicked }
 }
