@@ -101,4 +101,21 @@ describe('ChartToolRail', () => {
     expect(separators).toHaveLength(2)
     expect(separators[1].nextElementSibling).toBe(screen.getByRole('link', { name: 'Back to Research' }))
   })
+
+  it('offers the chart layouts and reports the one picked', async () => {
+    const user = userEvent.setup()
+    const props = renderRail({ layout: '1', onLayoutChange: vi.fn() })
+
+    await user.click(screen.getByRole('button', { name: 'Layout' }))
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Single chart',
+      'Side by side',
+      'Stacked',
+      'One large, two small',
+      'Grid of four',
+    ])
+
+    await user.click(screen.getByRole('menuitem', { name: 'Grid of four' }))
+    expect(props.onLayoutChange).toHaveBeenCalledWith('4')
+  })
 })
