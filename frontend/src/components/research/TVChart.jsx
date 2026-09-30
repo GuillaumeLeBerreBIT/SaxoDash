@@ -21,6 +21,7 @@ import {
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
+import TrendLines, { TrendLineLabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
 
@@ -276,6 +277,7 @@ function Crosshair({ bar, index, geometry, width }) {
 }
 
 const NO_LINES = []
+const NO_TREND_LINES = []
 
 function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
@@ -345,6 +347,11 @@ export function TVChart({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  trendLines = NO_TREND_LINES,
+  onMoveTrendLineEndpoint,
+  onDeleteTrendLine,
+  onEditTrendLineLabel,
+  onSelectTrendLine,
   tool = 'crosshair',
   onPlaced,
 }) {
@@ -355,6 +362,9 @@ export function TVChart({
   const placedRef = useRef(false)
   const freeLines = useMemo(() => lines.filter((line) => line.kind === 'free'), [lines])
   const freeSelection = useAnnotationSelection({ containerRef: ref, items: freeLines, onDelete: onDeleteLine })
+  const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
+  const [editingTrendLineId, setEditingTrendLineId] = useState(null)
+  const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
@@ -434,6 +444,7 @@ export function TVChart({
       onClick={(e) => {
         if (pan.consumeMoved()) return
         freeSelection.clear()
+        trendSelection.clear()
         if (!placingLine || !onCreateLine || e.detail > 1) return
         const y = plotY(e)
         if (y == null) return
@@ -478,6 +489,18 @@ export function TVChart({
           onMove={(line, price) => onMoveLine?.(line, price)}
           onSelect={freeSelection.select}
         />
+        <TrendLines
+          lines={trendLines}
+          geometry={geometry}
+          data={data}
+          selectedId={trendSelection.selected?.id ?? null}
+          onSelect={(id) => {
+            trendSelection.select(id)
+            onSelectTrendLine?.(id)
+          }}
+          onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
+          onEdit={setEditingTrendLineId}
+        />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
         ) : null}
@@ -493,6 +516,19 @@ export function TVChart({
             onMoveLine?.(line, price)
           }}
           onCancel={() => setEditingId(null)}
+        />
+      ) : null}
+      {editingTrendLine ? (
+        <TrendLineLabelEditor
+          key={editingTrendLine.id}
+          line={editingTrendLine}
+          x={geometry.xAt(editingTrendLine.x1) + 6}
+          y={geometry.scaleY(editingTrendLine.y1)}
+          onCommit={(line, label) => {
+            setEditingTrendLineId(null)
+            onEditTrendLineLabel?.(line, label)
+          }}
+          onCancel={() => setEditingTrendLineId(null)}
         />
       ) : null}
       {timeOffset > 0 && onTimeOffsetChange ? (

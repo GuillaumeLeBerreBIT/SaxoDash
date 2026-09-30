@@ -749,3 +749,125 @@ describe('panning', () => {
     expect(onTimeOffsetChange).toHaveBeenCalledWith(0)
   })
 })
+
+describe('trend lines', () => {
+  const ray = { id: 1, label: '', x1: 2, y1: 105, x2: 20, y2: 130 }
+  const geometry = () =>
+    priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+  const drag = (element, fromY, toY, fromX, toX) => {
+    fireEvent.pointerDown(element, { clientX: fromX, clientY: fromY, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientX: toX, clientY: toY, pointerId: 1 })
+    fireEvent.pointerUp(element, { clientX: toX, clientY: toY, pointerId: 1 })
+  }
+
+  it('draws a line from its resolved start to its resolved end', () => {
+    const { getByTestId } = renderChart({ trendLines: [ray] })
+    const g = geometry()
+    const line = getByTestId('trend-line-1')
+
+    expect(line.querySelector('line')).toHaveAttribute('x1', g.xAt(ray.x1).toFixed(2))
+    expect(line.querySelector('line')).toHaveAttribute('x2', g.xAt(ray.x2).toFixed(2))
+  })
+
+  it('selects a ray by clicking its body', () => {
+    const onSelect = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onSelectTrendLine: onSelect })
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+
+    expect(onSelect).toHaveBeenCalledWith(1)
+  })
+
+  it('moves the end handle to a new bar and price on drag', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-end')
+    drag(handle, g.scaleY(ray.y2), g.scaleY(ray.y2) + 10, g.xAt(ray.x2), g.xAt(5))
+
+    expect(onMoveTrendLineEndpoint).toHaveBeenCalledTimes(1)
+    const [line, endpoint, point] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(line).toEqual(ray)
+    expect(endpoint).toBe('end')
+    expect(point.barDate).toBe(bars[5].date)
+    expect(point.price).toBeLessThan(ray.y2)
+  })
+
+  it('moves the start handle independently of the end', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-start')
+    drag(handle, g.scaleY(ray.y1), g.scaleY(ray.y1) - 10, g.xAt(ray.x1), g.xAt(1))
+
+    const [, endpoint] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(endpoint).toBe('start')
+  })
+
+  it('does not move anything on a click without dragging', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+    const handle = getByTestId('trend-line-handle-1-end')
+
+    fireEvent.pointerDown(handle, { clientX: g.xAt(ray.x2), clientY: g.scaleY(ray.y2), pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientX: g.xAt(ray.x2), clientY: g.scaleY(ray.y2), pointerId: 1 })
+
+    expect(onMoveTrendLineEndpoint).not.toHaveBeenCalled()
+  })
+
+  it('deletes the selected ray with the Delete key', () => {
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onDeleteTrendLine })
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTrendLine).toHaveBeenCalledWith(ray)
+  })
+
+  it('does not delete a ray while the user is typing', () => {
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onDeleteTrendLine })
+    const field = document.createElement('textarea')
+    document.body.appendChild(field)
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(field, { key: 'Backspace' })
+
+    expect(onDeleteTrendLine).not.toHaveBeenCalled()
+    field.remove()
+  })
+
+  it('opens a label editor on a double-click of the line body', () => {
+    const { getByTestId, getByLabelText } = renderChart({ trendLines: [{ ...ray, label: 'Support' }] })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+
+    expect(getByLabelText('Trend line label')).toHaveValue('Support')
+  })
+
+  it('saves an edited label on Enter', () => {
+    const onEditTrendLineLabel = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ trendLines: [ray], onEditTrendLineLabel })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+    const input = getByLabelText('Trend line label')
+    fireEvent.change(input, { target: { value: 'Resistance' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditTrendLineLabel).toHaveBeenCalledWith(ray, 'Resistance')
+  })
+
+  it("a double-click on the line body does not also create a horizontal line", () => {
+    const onCreateLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onCreateLine })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+})
