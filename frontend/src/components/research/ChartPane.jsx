@@ -1,0 +1,130 @@
+import { useState } from 'react'
+
+import { useSize } from '../../lib/chartGeometry'
+import { fmtNum, fmtPct } from '../../lib/format'
+import { moveCaption } from '../../lib/research'
+import { Card, InstrumentLogo } from '../ui'
+import ChartCanvas from './ChartCanvas'
+import { LineSaveAlert, PeriodChange } from './chartHeader'
+import { useChartData } from './useChartData'
+
+function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed }) {
+  const last = rangeBars[rangeBars.length - 1]
+  const price = quote?.price ?? last?.close ?? null
+  const { change, suffix } = moveCaption(quote, rangeBars)
+  return (
+    <div className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0">
+      <InstrumentLogo
+        symbol={symbol}
+        size={14}
+        className="rounded-sm"
+        fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
+      />
+      <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{symbol}</span>
+      <span className="text-[var(--fig-xs)] num font-mono text-zinc-300">{price == null ? '—' : fmtNum(price, 2)}</span>
+      {change == null ? null : (
+        <span
+          className={`text-[var(--fig-2xs)] num font-mono whitespace-nowrap ${
+            change >= 0 ? 'text-emerald-400' : 'text-red-400'
+          }`}
+        >
+          {fmtPct(change)}{suffix ? ` ${suffix}` : ''}
+        </span>
+      )}
+      <LineSaveAlert failed={lineSaveFailed} />
+      <div className="ml-auto">
+        <PeriodChange bars={windowBars} />
+      </div>
+    </div>
+  )
+}
+
+function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights }) {
+  const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
+  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
+    symbol: slot.symbol,
+    instrument,
+    range: controls.range,
+    timeView: view.timeView,
+  })
+  const [hover, setHover] = useState(null)
+  const [canvasRef, canvasSize] = useSize()
+  const safeHover = hover != null && hover < bars.length ? hover : null
+
+  return (
+    <>
+      <PaneHeader
+        symbol={slot.symbol}
+        quote={quote}
+        rangeBars={rangeBars}
+        windowBars={bars}
+        lineSaveFailed={priceLines.saveFailed}
+      />
+      <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
+        <ChartCanvas
+          bars={bars}
+          ind={ind}
+          timeWindow={timeWindow}
+          controls={{ ...controls, ...view }}
+          hover={safeHover}
+          setHover={setHover}
+          symbol={slot.symbol}
+          isLoading={chart.isLoading}
+          error={chart.error}
+          unresolved={!instrument && !chart.isLoading}
+          earningsMarkers={earningsMarkers}
+          lines={priceLines.lines}
+          onMoveLine={priceLines.move}
+          onCreateLine={priceLines.create}
+          onDeleteLine={priceLines.remove}
+          fitHeight={canvasSize.height}
+          paneHeights={paneHeights}
+          placingLine={placingLine}
+          onPlaced={onPlaced}
+        />
+      </div>
+    </>
+  )
+}
+
+export default function ChartPane({
+  slot,
+  active,
+  outlined,
+  controls,
+  view,
+  onActivate,
+  placingLine,
+  onPlaced,
+  paneHeights,
+  style,
+  className = 'flex',
+}) {
+  return (
+    <section
+      aria-label={slot ? `${slot.symbol} chart` : 'Empty chart'}
+      aria-current={active || undefined}
+      onMouseDown={onActivate}
+      style={style}
+      className={`flex-col flex-1 min-h-0 min-w-0 ${className}`}
+    >
+      <Card padding={false} className={`flex-1 min-h-0 flex flex-col overflow-hidden ${outlined ? 'ring-1 ring-blue-500' : ''}`}>
+        {slot ? (
+          <FilledPane
+            key={`${slot.symbol}:${slot.uic}:${slot.assetType}`}
+            slot={slot}
+            controls={controls}
+            view={view}
+            placingLine={active && placingLine}
+            onPlaced={onPlaced}
+            paneHeights={paneHeights}
+          />
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
+            Pick a symbol from the watchlist
+          </div>
+        )}
+      </Card>
+    </section>
+  )
+}
