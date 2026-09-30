@@ -220,26 +220,18 @@ describe('trend lines', () => {
   })
 
   it('optimistically patches only the moved line, and rolls back only that one on failure', async () => {
-    client.useTrendLines = vi.fn().mockReturnValue({
-      data: [
-        { id: 1, start_bar_date: '2026-08-01', start_price: '100.00', end_bar_date: '2026-08-10', end_price: '110.00', label: '' },
-        { id: 2, start_bar_date: '2026-08-02', start_price: '90.00', end_bar_date: '2026-08-11', end_price: '95.00', label: '' },
-      ],
-    })
     client.updateTrendLine.mockRejectedValue(new Error('boom'))
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-    })
-    const wrapper = ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    queryClient.setQueryData(researchKeys.trendLines(211, 'Stock'), client.useTrendLines().data)
-
-    const { result } = renderHook(() => useTrendLineMutations(211, 'Stock'), { wrapper })
+    const { queryClient, result } = setup(() => useTrendLineMutations(211, 'Stock'))
+    queryClient.setQueryData(researchKeys.trendLines(211, 'Stock'), [
+      { id: 1, start_bar_date: '2026-08-01', start_price: '100.00', end_bar_date: '2026-08-10', end_price: '110.00', label: '' },
+      { id: 2, start_bar_date: '2026-08-02', start_price: '90.00', end_bar_date: '2026-08-11', end_price: '95.00', label: '' },
+    ])
 
     await act(async () => {
       try {
         await result.current.update.mutateAsync({ id: 1, patch: { end_price: '999.00' } })
       } catch {
-        // rollback path under test
+        return
       }
     })
 
