@@ -33,7 +33,7 @@ function LayoutIcon({ preset }) {
   return (
     <span
       aria-hidden="true"
-      className="w-5 h-3.5 grid gap-px p-px rounded-sm border border-zinc-500 shrink-0"
+      className="w-5 h-3.5 inline-grid align-middle mr-1.5 gap-px p-px rounded-sm border border-zinc-500 shrink-0"
       style={gridStyle(preset)}
     >
       {Array.from({ length: preset.panes }, (_, index) => (

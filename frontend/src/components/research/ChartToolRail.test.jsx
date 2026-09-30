@@ -118,4 +118,15 @@ describe('ChartToolRail', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Grid of four' }))
     expect(props.onLayoutChange).toHaveBeenCalledWith('4')
   })
+
+  it('keeps each layout icon on the same line as its label', async () => {
+    const user = userEvent.setup()
+    renderRail()
+
+    await user.click(screen.getByRole('button', { name: 'Layout' }))
+    const icon = screen.getAllByRole('menuitem')[0].querySelector('[aria-hidden="true"]')
+
+    expect(icon).toHaveClass('inline-grid')
+    expect(icon).not.toHaveClass('grid')
+  })
 })
