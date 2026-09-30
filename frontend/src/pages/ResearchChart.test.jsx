@@ -62,6 +62,12 @@ function stubQueries() {
 
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement
 const backLink = () => screen.getByRole('link', { name: 'Back to Research' })
+const panes = () => screen.getAllByRole('region', { name: /chart$/ })
+
+async function pickLayout(user, label) {
+  await user.click(screen.getByRole('button', { name: 'Layout' }))
+  await user.click(screen.getByRole('menuitem', { name: label }))
+}
 
 describe('ResearchChart', () => {
   beforeEach(() => {
@@ -184,6 +190,70 @@ describe('ResearchChart', () => {
 
     expect(screen.getByText(/^RSI 14/)).toBeInTheDocument()
   })
+
+  it('starts as one chart', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expect(panes()).toHaveLength(1)
+  })
+
+  it('splits into four panes with the first new one active and empty', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await pickLayout(user, 'Grid of four')
+
+    expect(panes()).toHaveLength(4)
+    expect(screen.getByRole('region', { name: 'NVDA chart' })).not.toHaveAttribute('aria-current')
+    const empties = screen.getAllByRole('region', { name: 'Empty chart' })
+    expect(empties).toHaveLength(3)
+    expect(empties[0]).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('loads a watchlist pick into the active pane and keeps the other', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await pickLayout(user, 'Side by side')
+    await user.click(screen.getByRole('button', { name: /^TSLA/ }))
+
+    expect(screen.getByRole('region', { name: 'NVDA chart' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'TSLA chart' })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('disables the line tool while the active pane is empty', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    await pickLayout(user, 'Stacked')
+
+    expect(screen.getByRole('button', { name: 'Horizontal line' })).toBeDisabled()
+  })
+
+  it('shows the same instrument in two panes', () => {
+    localStorage.setItem(
+      'saxodash:chart-workspace',
+      JSON.stringify({
+        layout: '2h',
+        slots: [
+          { symbol: 'NVDA', uic: 211, assetType: 'Stock' },
+          { symbol: 'NVDA', uic: 211, assetType: 'Stock' },
+        ],
+        active: 0,
+      }),
+    )
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expect(screen.getAllByRole('region', { name: 'NVDA chart' })).toHaveLength(2)
+  })
+
+  it('remembers the layout across visits', async () => {
+    const user = userEvent.setup()
+    const first = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    await pickLayout(user, 'Stacked')
+    first.unmount()
+
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expect(panes()).toHaveLength(2)
+  })
 })
 
 describe('ResearchChart panning', () => {
@@ -204,7 +274,7 @@ describe('ResearchChart panning', () => {
     fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
 
     expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
-    expect(screen.getByText('141.00')).toBeInTheDocument()
+    expect(screen.getAllByText('141.00')).toHaveLength(2)
   })
 })
 
