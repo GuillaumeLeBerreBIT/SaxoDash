@@ -18,7 +18,7 @@ import {
   svgY,
   useWidth,
 } from '../../lib/chartGeometry'
-import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { AXIS_TEXT, BEAT, CATEGORY_AXIS_TEXT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
 import TrendLines, { LabelEditor } from './TrendLines'
@@ -352,6 +352,7 @@ export function TVChart({
   onMoveTrendLineEndpoint,
   onDeleteTrendLine,
   onEditTrendLineLabel,
+  onCreateTrendLine,
   tool = 'crosshair',
   onPlaced,
 }) {
@@ -367,6 +368,14 @@ export function TVChart({
   const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
   const [editingTrendLineId, setEditingTrendLineId] = useState(null)
   const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
+  const [rayStart, setRayStart] = useState(null)
+  const [rayPreview, setRayPreview] = useState(null)
+  const [rayTool, setRayTool] = useState(tool)
+  if (tool !== rayTool) {
+    setRayTool(tool)
+    setRayStart(null)
+    setRayPreview(null)
+  }
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
@@ -432,13 +441,26 @@ export function TVChart({
     if (nearest) setEditingId(nearest.line.id)
   }
 
+  const barAt = (event) => {
+    const y = plotY(event)
+    if (y == null) return null
+    const index = indexFromPointer(event, geometry.slot, data.length)
+    return { barDate: data[index].date, price: roundPrice(geometry.priceAtY(y)), x: geometry.xAt(index), y }
+  }
+
   return (
     <div
       ref={ref}
       className="relative w-full select-none"
       style={{ height, cursor: pan.dragging ? 'grabbing' : tool !== 'crosshair' ? 'crosshair' : undefined }}
       {...pan.handlers}
-      onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
+      onMouseMove={(e) => {
+        setHover(indexFromPointer(e, geometry.slot, data.length))
+        if (tool === 'ray' && rayStart) {
+          const point = barAt(e)
+          if (point) setRayPreview(point)
+        }
+      }}
       onMouseLeave={() => setHover(null)}
       onMouseDown={(e) => {
         if (e.detail <= 1) placedRef.current = false
@@ -447,6 +469,25 @@ export function TVChart({
         if (pan.consumeMoved()) return
         freeSelection.clear()
         trendSelection.clear()
+        if (tool === 'ray' && onCreateTrendLine && e.detail === 1) {
+          const point = barAt(e)
+          if (point) {
+            if (!rayStart) {
+              setRayStart(point)
+            } else if (point.barDate !== rayStart.barDate) {
+              onCreateTrendLine(
+                { barDate: rayStart.barDate, price: rayStart.price },
+                { barDate: point.barDate, price: point.price },
+              )
+              setRayStart(null)
+              setRayPreview(null)
+              onPlaced?.()
+            } else {
+              setRayPreview(point)
+            }
+          }
+          return
+        }
         if (!placingLine || !onCreateLine || e.detail > 1) return
         const y = plotY(e)
         if (y == null) return
@@ -501,6 +542,18 @@ export function TVChart({
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
           onEdit={setEditingTrendLineId}
         />
+        {rayStart && rayPreview ? (
+          <line
+            data-testid="trend-line-preview"
+            x1={rayStart.x}
+            y1={rayStart.y}
+            x2={rayPreview.x}
+            y2={rayPreview.y}
+            stroke={CATEGORY_AXIS_TEXT}
+            strokeDasharray="3 3"
+            pointerEvents="none"
+          />
+        ) : null}
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
         ) : null}

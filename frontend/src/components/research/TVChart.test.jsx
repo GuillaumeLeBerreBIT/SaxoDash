@@ -899,3 +899,81 @@ describe('trend lines', () => {
     expect(onCreateLine).not.toHaveBeenCalled()
   })
 })
+
+describe('placing a ray', () => {
+  it('does nothing on the first click, and shows no preview yet', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    expect(onCreateTrendLine).not.toHaveBeenCalled()
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+
+  it('previews a line from the first click to the current pointer position', () => {
+    const { container, getByTestId } = renderChart({ tool: 'ray', onCreateTrendLine: vi.fn() })
+    const plot = container.firstChild
+
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    fireEvent.mouseMove(plot, { clientX: 300, clientY: 150 })
+
+    const preview = getByTestId('trend-line-preview')
+    expect(preview).toHaveAttribute('y2', '150')
+  })
+
+  it('commits both points on the second click', () => {
+    const onCreateTrendLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container } = renderChart({ tool: 'ray', onCreateTrendLine, onPlaced })
+    const plot = container.firstChild
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(9), clientY: 150 })
+
+    expect(onCreateTrendLine).toHaveBeenCalledTimes(1)
+    const [start, end] = onCreateTrendLine.mock.calls[0]
+    expect(start.barDate).toBe(bars[3].date)
+    expect(end.barDate).toBe(bars[9].date)
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('a same-bar second click does not commit and stays armed', () => {
+    const onCreateTrendLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container, getByTestId } = renderChart({ tool: 'ray', onCreateTrendLine, onPlaced })
+    const plot = container.firstChild
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 150 })
+
+    expect(onCreateTrendLine).not.toHaveBeenCalled()
+    expect(onPlaced).not.toHaveBeenCalled()
+    expect(getByTestId('trend-line-preview')).toBeInTheDocument()
+  })
+
+  it('clears the in-progress first point when the tool changes away', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, rerender, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+    const plot = container.firstChild
+
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    rerender(chart({ tool: 'crosshair', onCreateTrendLine }))
+    rerender(chart({ tool: 'ray', onCreateTrendLine }))
+    fireEvent.mouseMove(plot, { clientX: 300, clientY: 150 })
+
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+
+  it('never starts a ray from a click in the price-axis gutter', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 740, clientY: 200 })
+    fireEvent.mouseMove(container.firstChild, { clientX: 300, clientY: 150 })
+
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+})
