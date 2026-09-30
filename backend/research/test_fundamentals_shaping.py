@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 
 from . import finnhub
 
@@ -347,3 +347,27 @@ class CashFlowTrendShapingTest(TestCase):
     def test_to_fundamentals_omits_cash_flow_trend_when_absent(self):
         result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
         self.assertNotIn('cash_flow_trend', result)
+
+
+class ScreenerFundamentalsTest(SimpleTestCase):
+    def test_maps_every_screener_metric(self):
+        financials = {'metric': {
+            'peNormalizedAnnual': 24.5, 'forwardPE': 21.0, 'roeTTM': 31.2,
+            'netProfitMarginTTM': 18.4, 'epsGrowth5Y': 12.0,
+            'totalDebt/totalEquityAnnual': 0.8, 'dividendYieldIndicatedAnnual': 1.1,
+            'marketCapitalization': 250000.0,
+        }}
+        self.assertEqual(finnhub.to_screener_fundamentals(financials), {
+            'pe': 24.5, 'forward_pe': 21.0, 'roe': 31.2, 'net_margin': 18.4,
+            'eps_growth_5y': 12.0, 'debt_to_equity': 0.8, 'dividend_yield': 1.1,
+            'market_cap': 250000.0,
+        })
+
+    def test_missing_metrics_are_null_not_zero(self):
+        shaped = finnhub.to_screener_fundamentals({'metric': {'peNormalizedAnnual': 10.0}})
+        self.assertEqual(shaped['pe'], 10.0)
+        self.assertIsNone(shaped['roe'])
+        self.assertIsNone(shaped['market_cap'])
+
+    def test_empty_payload_is_all_null(self):
+        self.assertTrue(all(v is None for v in finnhub.to_screener_fundamentals({}).values()))
