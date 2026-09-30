@@ -576,6 +576,28 @@ describe('price lines', () => {
 
     expect(getByTestId('price-edge-stop').textContent).toBe('100000')
   })
+
+  it('opens a label editor on a double-click of a freeform line, but not target or stop', () => {
+    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [target, free] })
+
+    fireEvent.doubleClick(getByTestId('price-hit-target'))
+    expect(queryByLabelText('Line label')).toBeNull()
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'))
+    expect(getByLabelText('Line label')).toHaveValue('')
+  })
+
+  it('saves an edited line label on Enter', () => {
+    const onEditLineLabel = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ lines: [free], onEditLineLabel })
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'))
+    const input = getByLabelText('Line label')
+    fireEvent.change(input, { target: { value: 'Support' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditLineLabel).toHaveBeenCalledWith(free, 'Support')
+  })
 })
 
 describe('panning', () => {

@@ -21,7 +21,7 @@ import {
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
-import TrendLines, { TrendLineLabelEditor } from './TrendLines'
+import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
 
@@ -347,6 +347,7 @@ export function TVChart({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  onEditLineLabel,
   trendLines = NO_TREND_LINES,
   onMoveTrendLineEndpoint,
   onDeleteTrendLine,
@@ -361,6 +362,8 @@ export function TVChart({
   const placedRef = useRef(false)
   const freeLines = useMemo(() => lines.filter((line) => line.kind === 'free'), [lines])
   const freeSelection = useAnnotationSelection({ containerRef: ref, items: freeLines, onDelete: onDeleteLine })
+  const [editingFreeLineId, setEditingFreeLineId] = useState(null)
+  const editingFreeLine = freeLines.find((line) => line.id === editingFreeLineId) ?? null
   const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
   const [editingTrendLineId, setEditingTrendLineId] = useState(null)
   const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
@@ -487,6 +490,7 @@ export function TVChart({
           selectedId={freeSelection.selected?.id ?? null}
           onMove={(line, price) => onMoveLine?.(line, price)}
           onSelect={freeSelection.select}
+          onEditLabel={setEditingFreeLineId}
         />
         <TrendLines
           lines={trendLines}
@@ -514,15 +518,30 @@ export function TVChart({
           onCancel={() => setEditingId(null)}
         />
       ) : null}
+      {editingFreeLine ? (
+        <LabelEditor
+          key={editingFreeLine.id}
+          value={editingFreeLine.label ?? ''}
+          x={width - PAD_R + 2}
+          y={geometry.scaleY(editingFreeLine.price) + 20}
+          ariaLabel="Line label"
+          onCommit={(label) => {
+            setEditingFreeLineId(null)
+            onEditLineLabel?.(editingFreeLine, label)
+          }}
+          onCancel={() => setEditingFreeLineId(null)}
+        />
+      ) : null}
       {editingTrendLine ? (
-        <TrendLineLabelEditor
+        <LabelEditor
           key={editingTrendLine.id}
-          line={editingTrendLine}
+          value={editingTrendLine.label}
           x={geometry.xAt(editingTrendLine.x1) + 6}
           y={geometry.scaleY(editingTrendLine.y1)}
-          onCommit={(line, label) => {
+          ariaLabel="Trend line label"
+          onCommit={(label) => {
             setEditingTrendLineId(null)
-            onEditTrendLineLabel?.(line, label)
+            onEditTrendLineLabel?.(editingTrendLine, label)
           }}
           onCancel={() => setEditingTrendLineId(null)}
         />

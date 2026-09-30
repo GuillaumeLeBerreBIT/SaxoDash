@@ -127,21 +127,21 @@ export default function TrendLines({ lines, geometry, data, selectedId, onSelect
   ))
 }
 
-export function TrendLineLabelEditor({ line, x, y, onCommit, onCancel }) {
-  const [draft, setDraft] = useState(line.label)
+export function LabelEditor({ value, x, y, ariaLabel, onCommit, onCancel }) {
+  const [draft, setDraft] = useState(value)
   const done = useRef(false)
 
-  const close = (label) => {
+  const close = (next) => {
     if (done.current) return
     done.current = true
-    if (label == null || label === line.label) onCancel()
-    else onCommit(line, label)
+    if (next == null || next === value) onCancel()
+    else onCommit(next)
   }
 
   return (
     <input
       autoFocus
-      aria-label="Trend line label"
+      aria-label={ariaLabel}
       value={draft}
       maxLength={60}
       onChange={(e) => setDraft(e.target.value)}

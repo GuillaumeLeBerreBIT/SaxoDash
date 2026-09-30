@@ -64,6 +64,7 @@ export default function ChartCanvas({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  onEditLineLabel,
   priceHeight,
   fitHeight,
   paneHeights = DEFAULT_PANE_HEIGHTS,
@@ -132,6 +133,7 @@ export default function ChartCanvas({
             onMoveLine={onMoveLine}
             onCreateLine={onCreateLine}
             onDeleteLine={onDeleteLine}
+            onEditLineLabel={onEditLineLabel}
             tool={tool}
             onPlaced={onPlaced}
           />

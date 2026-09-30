@@ -55,8 +55,16 @@ describe('useChartLines', () => {
 
     act(() => result.current.move(result.current.lines[0], 96.125))
 
-    expect(updateMutate).toHaveBeenCalledWith({ id: 7, price: '96.13' }, expect.any(Object))
+    expect(updateMutate).toHaveBeenCalledWith({ id: 7, patch: { price: '96.13' } }, expect.any(Object))
     expect(noteMutate).not.toHaveBeenCalled()
+  })
+
+  it('saves an edited label for a freeform line', () => {
+    const { result } = renderHook(() => useChartLines({ ...instrument, note: {} }))
+
+    act(() => result.current.setLabel(result.current.lines[0], 'Support'))
+
+    expect(updateMutate).toHaveBeenCalledWith({ id: 7, patch: { label: 'Support' } }, expect.any(Object))
   })
 
   it('creates and removes freeform lines', () => {

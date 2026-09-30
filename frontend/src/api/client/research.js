@@ -32,8 +32,8 @@ export const getPriceLines = ({ uic, assetType }) =>
   apiFetch(`/api/research/price-lines/${uic}/${assetType}/`)
 export const createPriceLine = ({ uic, assetType, price }) =>
   jsonRequest(`/api/research/price-lines/${uic}/${assetType}/`, 'POST', { price })
-export const updatePriceLine = (id, price) =>
-  jsonRequest(`/api/research/price-lines/${id}/`, 'PATCH', { price })
+export const updatePriceLine = (id, patch) =>
+  jsonRequest(`/api/research/price-lines/${id}/`, 'PATCH', patch)
 export const deletePriceLine = (id) =>
   apiFetch(`/api/research/price-lines/${id}/`, { method: 'DELETE' })
 

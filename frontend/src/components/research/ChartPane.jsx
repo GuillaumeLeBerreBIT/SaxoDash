@@ -82,6 +82,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           onMoveLine={priceLines.move}
           onCreateLine={priceLines.create}
           onDeleteLine={priceLines.remove}
+          onEditLineLabel={priceLines.setLabel}
           fitHeight={canvasSize.height}
           paneHeights={paneHeights}
           tool={tool}

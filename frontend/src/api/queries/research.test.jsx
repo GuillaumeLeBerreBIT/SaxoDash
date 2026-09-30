@@ -108,10 +108,10 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('120.00'))
-    expect(client.updatePriceLine).toHaveBeenCalledWith(1, '120.00')
+    expect(client.updatePriceLine).toHaveBeenCalledWith(1, { price: '120.00' })
   })
 
   it('puts a line back when the move fails', async () => {
@@ -120,7 +120,7 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.edit.update.isError).toBe(true))
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('100.00'))
@@ -133,7 +133,7 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.edit.update.isError).toBe(true))
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('100.00'))
@@ -168,7 +168,7 @@ describe('price lines', () => {
     queryClient.setQueryData(researchKeys.priceLines(211, 'Stock'), [{ id: 1, price: '100.00' }])
     queryClient.setQueryData(researchKeys.priceLines(5, 'Stock'), [{ id: 9, price: '300.00' }])
 
-    act(() => result.current.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.update.mutate({ id: 1, patch: { price: '120.00' } }))
     await waitFor(() =>
       expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))[0].price).toBe('120.00'),
     )
@@ -178,5 +178,17 @@ describe('price lines', () => {
     await waitFor(() => expect(result.current.update.isError).toBe(true))
     expect(queryClient.getQueryData(researchKeys.priceLines(5, 'Stock'))).toEqual([{ id: 9, price: '300.00' }])
     expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))).toEqual([{ id: 1, price: '100.00' }])
+  })
+
+  it('can patch just the label, leaving the price alone', async () => {
+    client.getPriceLines.mockResolvedValue([{ id: 1, price: '100.00', label: '' }])
+    client.updatePriceLine.mockReturnValue(new Promise(() => {}))
+    const { result } = setup(useLines)
+    await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
+
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { label: 'Support' } }))
+
+    await waitFor(() => expect(result.current.lines.data[0]).toEqual({ id: 1, price: '100.00', label: 'Support' }))
+    expect(client.updatePriceLine).toHaveBeenCalledWith(1, { label: 'Support' })
   })
 })

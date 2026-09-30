@@ -263,9 +263,9 @@ export function usePriceLineMutations(uic, assetType) {
       onSettled: refetch,
     }),
     update: useMutation({
-      mutationFn: ({ id, price }) => updatePriceLine(id, price),
-      onMutate: optimistic((old, { id, price }) =>
-        old.map((line) => (line.id === id ? { ...line, price } : line)),
+      mutationFn: ({ id, patch }) => updatePriceLine(id, patch),
+      onMutate: optimistic((old, { id, patch }) =>
+        old.map((line) => (line.id === id ? { ...line, ...patch } : line)),
       ),
       onError: rollback,
       onSettled: refetch,
