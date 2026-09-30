@@ -200,6 +200,13 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertIsNotNone(response.data['last_synced_at'])
         self.assertEqual(response.data['last_sync_outcome'], 'skipped')
 
+    def test_a_scan_run_is_not_reported_as_a_portfolio_sync(self):
+        SyncRun.objects.create(task='scan_universe', outcome='ok', rows=500)
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertIsNone(response.data['last_synced_at'])
+
     def test_freshness_survives_reauthentication(self):
         SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
 

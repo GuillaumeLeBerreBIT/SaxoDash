@@ -68,7 +68,7 @@ def active_credential():
 
 
 def last_successful_sync():
-    return SyncRun.objects.filter(outcome='ok').first()
+    return SyncRun.objects.filter(outcome='ok', task__in=SYNC_TASKS).first()
 
 
 # Weakest first, so the badge reflects the worst thing currently happening.
