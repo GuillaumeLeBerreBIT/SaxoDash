@@ -71,6 +71,7 @@ class PriceLine(models.Model):
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    label = models.CharField(max_length=60, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

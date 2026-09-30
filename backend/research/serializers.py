@@ -68,7 +68,7 @@ class SymbolNoteSerializer(serializers.ModelSerializer):
 class PriceLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = PriceLine
-        fields = ['id', 'uic', 'asset_type', 'price', 'created_at']
+        fields = ['id', 'uic', 'asset_type', 'price', 'label', 'created_at']
         read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
 
     def validate_price(self, value):
