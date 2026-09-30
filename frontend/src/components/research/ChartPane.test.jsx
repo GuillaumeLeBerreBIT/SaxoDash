@@ -58,7 +58,7 @@ const renderPane = (props = {}) =>
       controls={controls}
       view={view}
       onActivate={vi.fn()}
-      placingLine={false}
+      tool="crosshair"
       onPlaced={vi.fn()}
       paneHeights={DEFAULT_PANE_HEIGHTS}
       {...props}

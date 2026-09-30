@@ -286,7 +286,7 @@ describe('price lines', () => {
   it('places a line on a single click while the line tool is armed', () => {
     const onCreateLine = vi.fn()
     const onPlaced = vi.fn()
-    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+    const { container } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced })
 
     fireEvent.mouseDown(container.firstChild, { detail: 1 })
     fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
@@ -308,12 +308,12 @@ describe('price lines', () => {
 
   it('creates exactly one line when the armed tool is double-clicked', () => {
     const onCreateLine = vi.fn()
-    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     fireEvent.mouseDown(plot, { detail: 1 })
     fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
-    rerender(chart({ lines: [], onCreateLine, placingLine: false, onPlaced: vi.fn() }))
+    rerender(chart({ lines: [], onCreateLine, tool: 'crosshair', onPlaced: vi.fn() }))
     fireEvent.mouseDown(plot, { detail: 2 })
     fireEvent.click(plot, { detail: 2, clientX: 100, clientY: 200 })
     fireEvent.doubleClick(plot, { detail: 2, clientX: 100, clientY: 200 })
@@ -323,7 +323,7 @@ describe('price lines', () => {
 
   it('still creates a line on a later double-click after placing one', () => {
     const onCreateLine = vi.fn()
-    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     fireEvent.mouseDown(plot, { detail: 1 })
@@ -340,7 +340,7 @@ describe('price lines', () => {
   it('never places a line from a click in the price-axis gutter', () => {
     const onCreateLine = vi.fn()
     const onPlaced = vi.fn()
-    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+    const { container } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced })
 
     fireEvent.click(container.firstChild, { detail: 1, clientX: 740, clientY: 200 })
 
@@ -349,7 +349,7 @@ describe('price lines', () => {
   })
 
   it('shows a crosshair cursor only while the line tool is armed', () => {
-    const armed = renderChart({ lines: [], onCreateLine: vi.fn(), placingLine: true })
+    const armed = renderChart({ lines: [], onCreateLine: vi.fn(), tool: 'hline' })
     const idle = renderChart({ lines: [], onCreateLine: vi.fn() })
 
     expect(armed.container.firstChild).toHaveStyle({ cursor: 'crosshair' })
@@ -600,7 +600,7 @@ describe('panning', () => {
     const { container } = pannable({
       lines: [],
       onCreateLine,
-      placingLine: true,
+      tool: 'hline',
       onPlaced: vi.fn(),
       onTimeOffsetChange,
       onYShiftChange,
@@ -663,7 +663,7 @@ describe('panning', () => {
 
   it('neither places a line nor clears the selection after a pan, but the next click does', () => {
     const onCreateLine = vi.fn()
-    const { container } = pannable({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container } = pannable({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     pan(plot, 60, 0)

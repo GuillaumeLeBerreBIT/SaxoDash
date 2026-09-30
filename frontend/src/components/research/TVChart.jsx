@@ -21,6 +21,7 @@ import {
 import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
+import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
@@ -344,14 +345,16 @@ export function TVChart({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
-  placingLine = false,
+  tool = 'crosshair',
   onPlaced,
 }) {
   const [ref, width] = useWidth()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
-  const [selectedId, setSelectedId] = useState(null)
+  const placingLine = tool === 'hline'
   const [editingId, setEditingId] = useState(null)
   const placedRef = useRef(false)
+  const freeLines = useMemo(() => lines.filter((line) => line.kind === 'free'), [lines])
+  const freeSelection = useAnnotationSelection({ containerRef: ref, items: freeLines, onDelete: onDeleteLine })
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
@@ -396,30 +399,7 @@ export function TVChart({
     return () => element.removeEventListener('wheel', onWheel)
   }, [ref, hasData])
 
-  const selected = lines.find((line) => line.id === selectedId && line.kind === 'free') ?? null
   const editing = lines.find((line) => line.id === editingId) ?? null
-
-  useEffect(() => {
-    if (!selected) return undefined
-    const onKeyDown = (event) => {
-      if (isTypingTarget(event.target)) return
-      if (event.key === 'Escape') setSelectedId(null)
-      if ((event.key === 'Delete' || event.key === 'Backspace') && onDeleteLine) {
-        event.preventDefault()
-        setSelectedId(null)
-        onDeleteLine(selected)
-      }
-    }
-    const onPointerDown = (event) => {
-      if (!ref.current?.contains(event.target)) setSelectedId(null)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    document.addEventListener('pointerdown', onPointerDown, true)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('pointerdown', onPointerDown, true)
-    }
-  }, [selected, onDeleteLine, ref])
 
   if (data.length === 0) return null
 
@@ -444,7 +424,7 @@ export function TVChart({
     <div
       ref={ref}
       className="relative w-full select-none"
-      style={{ height, cursor: pan.dragging ? 'grabbing' : placingLine ? 'crosshair' : undefined }}
+      style={{ height, cursor: pan.dragging ? 'grabbing' : tool !== 'crosshair' ? 'crosshair' : undefined }}
       {...pan.handlers}
       onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
       onMouseLeave={() => setHover(null)}
@@ -453,7 +433,7 @@ export function TVChart({
       }}
       onClick={(e) => {
         if (pan.consumeMoved()) return
-        setSelectedId(null)
+        freeSelection.clear()
         if (!placingLine || !onCreateLine || e.detail > 1) return
         const y = plotY(e)
         if (y == null) return
@@ -494,9 +474,9 @@ export function TVChart({
           lines={lines}
           geometry={geometry}
           width={width}
-          selectedId={selected?.id ?? null}
+          selectedId={freeSelection.selected?.id ?? null}
           onMove={(line, price) => onMoveLine?.(line, price)}
-          onSelect={setSelectedId}
+          onSelect={freeSelection.select}
         />
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />

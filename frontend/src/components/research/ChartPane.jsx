@@ -43,7 +43,7 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
   )
 }
 
-function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, split }) {
+function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
   const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
     symbol: slot.symbol,
@@ -84,7 +84,7 @@ function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, 
           onDeleteLine={priceLines.remove}
           fitHeight={canvasSize.height}
           paneHeights={paneHeights}
-          placingLine={placingLine}
+          tool={tool}
           onPlaced={onPlaced}
         />
       </div>
@@ -99,7 +99,7 @@ export default function ChartPane({
   controls,
   view,
   onActivate,
-  placingLine,
+  tool,
   onPlaced,
   paneHeights,
   style,
@@ -121,7 +121,7 @@ export default function ChartPane({
             slot={slot}
             controls={controls}
             view={view}
-            placingLine={active && placingLine}
+            tool={active ? tool : 'crosshair'}
             onPlaced={onPlaced}
             paneHeights={paneHeights}
             split={split}

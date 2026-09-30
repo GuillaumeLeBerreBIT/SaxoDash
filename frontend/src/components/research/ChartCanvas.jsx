@@ -67,7 +67,7 @@ export default function ChartCanvas({
   priceHeight,
   fitHeight,
   paneHeights = DEFAULT_PANE_HEIGHTS,
-  placingLine = false,
+  tool = 'crosshair',
   onPlaced,
   timeWindow,
 }) {
@@ -132,7 +132,7 @@ export default function ChartCanvas({
             onMoveLine={onMoveLine}
             onCreateLine={onCreateLine}
             onDeleteLine={onDeleteLine}
-            placingLine={placingLine}
+            tool={tool}
             onPlaced={onPlaced}
           />
           {panes.volume ? (

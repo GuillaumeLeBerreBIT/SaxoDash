@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CandlestickChart, Check, Crosshair, LayoutGrid, Minimize2, Minus, RotateCcw, Sigma } from 'lucide-react'
+import { CandlestickChart, Check, Crosshair, LayoutGrid, Minimize2, Minus, RotateCcw, Sigma, Slash, Type } from 'lucide-react'
 
 import { Menu, MenuRow } from './menu'
 import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
@@ -43,16 +43,30 @@ function LayoutIcon({ preset }) {
   )
 }
 
-export default function ChartToolRail({ controls, placingLine, onPlacingLineChange, canPlaceLine, backHref, layout = '1', onLayoutChange }) {
+export default function ChartToolRail({ controls, tool, onToolChange, canAnnotate, backHref, layout = '1', onLayoutChange }) {
   return (
     <nav aria-label="Chart tools" className="flex flex-col items-center gap-1 py-2 border-r border-white/[0.06]">
-      <RailButton label="Crosshair" icon={Crosshair} pressed={!placingLine} onClick={() => onPlacingLineChange(false)} />
+      <RailButton label="Crosshair" icon={Crosshair} pressed={tool === 'crosshair'} onClick={() => onToolChange('crosshair')} />
       <RailButton
         label="Horizontal line"
         icon={Minus}
-        pressed={placingLine}
-        disabled={!canPlaceLine}
-        onClick={() => onPlacingLineChange(!placingLine)}
+        pressed={tool === 'hline'}
+        disabled={!canAnnotate}
+        onClick={() => onToolChange(tool === 'hline' ? 'crosshair' : 'hline')}
+      />
+      <RailButton
+        label="Ray"
+        icon={Slash}
+        pressed={tool === 'ray'}
+        disabled={!canAnnotate}
+        onClick={() => onToolChange(tool === 'ray' ? 'crosshair' : 'ray')}
+      />
+      <RailButton
+        label="Text"
+        icon={Type}
+        pressed={tool === 'text'}
+        disabled={!canAnnotate}
+        onClick={() => onToolChange(tool === 'text' ? 'crosshair' : 'text')}
       />
 
       <RailDivider />
