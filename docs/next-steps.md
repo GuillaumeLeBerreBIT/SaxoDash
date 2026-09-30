@@ -9,6 +9,24 @@ brainstorm it before building.
 Done 2026-09-28 — `/research/chart`, spec
 `docs/superpowers/specs/2026-09-28-advanced-chart-view-design.md`.
 
+## Chart splits
+
+Done 2026-09-30 — up to four panes on `/research/chart`, each its own symbol,
+spec `docs/superpowers/specs/2026-09-29-chart-splits-design.md`. Next Advanced
+View slices, in rough order (see that spec's "Roadmap"):
+
+1. Workspace follow-ups: sync switches (symbol, range, crosshair; time/scroll
+   sync after axis panning), a custom rows × cols grid, saved named workspace
+   tabs.
+2. Panels menu: Overview (fundamentals of the active pane), News (compact),
+   Notes (thesis/target/stop), Lines (price lines).
+3. Drawing tools: trend line, ray, rectangle, Fibonacci and text, with visible
+   modes, alongside today's line/crosshair pair.
+4. Styling & config: per-line colour/style, indicator parameters, themes.
+5. Scripting: user-defined indicators from a small formula language, shown as
+   overlays or panes.
+6. ML / scoring: backtest scripted rules, technical scoring — not "prediction".
+
 ## 2. Market heatmaps (Phase 1)
 
 Done 2026-09-29 — spec

@@ -321,3 +321,11 @@ and dragging the candles pans. Dragging the date strip sets the time view's
 `barCount`, which overrides the range's count (5 to all fetched, right edge
 anchored), and no range button is highlighted while it is set. A range pick, a
 symbol switch or a double-click on the strip returns to `LATEST_TIME_VIEW`.
+
+**The active chart pane is the URL.** `/research/chart` shows up to four panes
+(`lib/chartLayouts.js`), saved per browser under `saxodash:chart-workspace`. The
+active pane is whatever `?symbol=` names: the watchlist, search and ⌘K reach it by
+navigating, unchanged. `useChartWorkspace` copies each navigation into the active
+slot, keyed on `location.key`, so re-picking the symbol already in the URL still
+fills an empty pane. The other panes render from their stored uic + asset type
+and never re-resolve.
