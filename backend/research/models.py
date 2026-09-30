@@ -79,3 +79,60 @@ class PriceLine(models.Model):
 
     def __str__(self):
         return f'{self.price} on {self.uic}:{self.asset_type}'
+
+
+TECHNICAL_FIELDS = (
+    'last_close', 'change_1d', 'change_1m', 'change_3m', 'change_1y',
+    'ma50', 'ma200', 'pct_vs_ma200', 'rsi14', 'pct_from_52w_high', 'rvol', 'sparkline',
+)
+FUNDAMENTAL_FIELDS = (
+    'pe', 'forward_pe', 'roe', 'net_margin', 'eps_growth_5y',
+    'debt_to_equity', 'dividend_yield', 'market_cap',
+)
+
+
+class ScreenerRow(models.Model):
+    OK = 'ok'
+    UNMATCHED = 'unmatched'
+    FAILED = 'failed'
+    STATUS_CHOICES = [(OK, 'OK'), (UNMATCHED, 'Unmatched'), (FAILED, 'Failed')]
+
+    ticker = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=120)
+    sector = models.CharField(max_length=60, blank=True, default='')
+    indexes = models.CharField(max_length=20)
+    uic = models.PositiveIntegerField(null=True, blank=True)
+    asset_type = models.CharField(max_length=20, default='Stock')
+
+    last_close = models.FloatField(null=True, blank=True)
+    change_1d = models.FloatField(null=True, blank=True)
+    change_1m = models.FloatField(null=True, blank=True)
+    change_3m = models.FloatField(null=True, blank=True)
+    change_1y = models.FloatField(null=True, blank=True)
+    ma50 = models.FloatField(null=True, blank=True)
+    ma200 = models.FloatField(null=True, blank=True)
+    pct_vs_ma200 = models.FloatField(null=True, blank=True)
+    rsi14 = models.FloatField(null=True, blank=True)
+    pct_from_52w_high = models.FloatField(null=True, blank=True)
+    rvol = models.FloatField(null=True, blank=True)
+    sparkline = models.JSONField(default=list, blank=True)
+
+    pe = models.FloatField(null=True, blank=True)
+    forward_pe = models.FloatField(null=True, blank=True)
+    roe = models.FloatField(null=True, blank=True)
+    net_margin = models.FloatField(null=True, blank=True)
+    eps_growth_5y = models.FloatField(null=True, blank=True)
+    debt_to_equity = models.FloatField(null=True, blank=True)
+    dividend_yield = models.FloatField(null=True, blank=True)
+    market_cap = models.FloatField(null=True, blank=True)
+
+    technicals_at = models.DateTimeField(null=True, blank=True)
+    fundamentals_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=UNMATCHED)
+    error = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        ordering = ['ticker']
+
+    def __str__(self):
+        return self.ticker
