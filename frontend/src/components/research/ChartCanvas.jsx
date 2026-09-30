@@ -13,12 +13,27 @@ function valueAt(series, hover) {
   return series[hover ?? series.length - 1]
 }
 
-function OhlcLegend({ bar, change, overlays, ind, hover }) {
+const WIDEST_BAR = { date: '0000-00-00', open: 99999.99, high: 99999.99, low: 99999.99, close: 99999.99, volume: 99999.9e6 }
+const WIDEST_VALUE = 99999.99
+const WIDEST_CHANGE = -999.99
+const WIDEST_RVOL = 99.9
+
+function legendValues(ind, hover) {
+  const overlays = {}
+  for (const { key } of OVERLAY_DEFS) overlays[key] = valueAt(ind[key], hover)
+  return { rvol: valueAt(ind.rvol, hover), overlays }
+}
+
+const WIDEST_VALUES = {
+  rvol: WIDEST_RVOL,
+  overlays: Object.fromEntries(OVERLAY_DEFS.map(({ key }) => [key, WIDEST_VALUE])),
+}
+
+function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) {
   const up = bar.close >= bar.open
-  const rvol = valueAt(ind.rvol, hover)
 
   return (
-    <div className="flex items-center gap-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap">
+    <div className={`flex items-center gap-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap ${className}`} {...rest}>
       <span className="text-zinc-400">{bar.date}</span>
       {[
         ['O', bar.open],
@@ -35,10 +50,10 @@ function OhlcLegend({ bar, change, overlays, ind, hover }) {
       )}
       <span className="text-zinc-500">
         Vol <span className="text-zinc-300">{fmtNum(bar.volume / 1e6, 1)}M</span>
-        {rvol == null ? null : <span> · {fmtNum(rvol, 1)}× {RVOL_WINDOW}d avg</span>}
+        {values.rvol == null ? null : <span> · {fmtNum(values.rvol, 1)}× {RVOL_WINDOW}d avg</span>}
       </span>
       {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
-        const value = valueAt(ind[o.key], hover)
+        const value = values.overlays[o.key]
         return (
           <span key={o.key} style={{ color: OVERLAY_STROKES[o.key] }} className="text-[var(--fig-2xs)]">
             {o.label} {value == null ? '—' : fmtNum(value, 2)}
@@ -103,9 +118,25 @@ export default function ChartCanvas({
 
   return (
     <>
-      <div ref={legendRef}>
+      <div ref={legendRef} className="relative">
         {bar && !placeholder ? (
-          <OhlcLegend bar={bar} change={barChange(bars, hover)} overlays={overlays} ind={ind} hover={hover} />
+          <>
+            <OhlcLegend
+              bar={WIDEST_BAR}
+              change={WIDEST_CHANGE}
+              overlays={overlays}
+              values={WIDEST_VALUES}
+              className="invisible"
+              aria-hidden="true"
+            />
+            <OhlcLegend
+              bar={bar}
+              change={barChange(bars, hover)}
+              overlays={overlays}
+              values={legendValues(ind, hover)}
+              className="absolute inset-x-0 top-0"
+            />
+          </>
         ) : null}
       </div>
 

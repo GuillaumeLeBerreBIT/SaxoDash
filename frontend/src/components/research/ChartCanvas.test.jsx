@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import { ApiError } from '../../api/client'
@@ -60,7 +60,7 @@ describe('ChartCanvas legend', () => {
     render(canvas())
 
     expect(screen.getByText(bars[bars.length - 1].date)).toBeInTheDocument()
-    expect(screen.getByText('O')).toBeInTheDocument()
+    expect(screen.getAllByText('O').length).toBeGreaterThan(0)
   })
 
   it("reads the bar's volume against its 20-session average", () => {
@@ -154,5 +154,41 @@ describe('ChartCanvas panning and zoom', () => {
 
     expect(setYScale).toHaveBeenCalledWith(1)
     expect(setYShift).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('ChartCanvas legend height', () => {
+  let wrapAt = Infinity
+  const LINE = 18
+  beforeEach(() => {
+    Object.defineProperty(Element.prototype, 'clientHeight', {
+      configurable: true,
+      get() {
+        const wraps = this.firstElementChild?.classList.contains('flex-wrap')
+        return wraps ? LINE * (1 + Math.floor(this.firstElementChild.textContent.length / wrapAt)) : 0
+      },
+    })
+  })
+
+  afterEach(() => {
+    delete Element.prototype.clientHeight
+  })
+
+  const uneven = bars.map((bar, i) => ({ ...bar, volume: i % 2 ? 250_000_000 : 1_000_000 }))
+
+  const priceHeightAt = (hover) => {
+    const { container, unmount } = render(
+      canvas({ bars: uneven, ind: computeIndicators(uneven), hover, fitHeight: 1000 }),
+    )
+    const height = container.querySelector('.select-none').style.height
+    unmount()
+    return height
+  }
+
+  it('keeps the price pane the same height whichever bar is hovered', () => {
+    const probe = render(canvas({ bars: uneven, ind: computeIndicators(uneven), hover: 0 }))
+    wrapAt = probe.container.querySelector('.flex-wrap').textContent.length + 1
+    probe.unmount()
+    expect(priceHeightAt(0)).toBe(priceHeightAt(1))
   })
 })
