@@ -770,13 +770,12 @@ describe('trend lines', () => {
     expect(line.querySelector('line')).toHaveAttribute('x2', g.xAt(ray.x2).toFixed(2))
   })
 
-  it('selects a ray by clicking its body', () => {
-    const onSelect = vi.fn()
-    const { getByTestId } = renderChart({ trendLines: [ray], onSelectTrendLine: onSelect })
+  it('shows a thicker stroke on the visible line once selected', () => {
+    const { getByTestId } = renderChart({ trendLines: [ray] })
 
     fireEvent.click(getByTestId('trend-line-hit-1'))
 
-    expect(onSelect).toHaveBeenCalledWith(1)
+    expect(getByTestId('trend-line-1').querySelector('line')).toHaveAttribute('stroke-width', '2')
   })
 
   it('moves the end handle to a new bar and price on drag', () => {

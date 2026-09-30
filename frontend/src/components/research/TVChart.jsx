@@ -351,7 +351,6 @@ export function TVChart({
   onMoveTrendLineEndpoint,
   onDeleteTrendLine,
   onEditTrendLineLabel,
-  onSelectTrendLine,
   tool = 'crosshair',
   onPlaced,
 }) {
@@ -494,10 +493,7 @@ export function TVChart({
           geometry={geometry}
           data={data}
           selectedId={trendSelection.selected?.id ?? null}
-          onSelect={(id) => {
-            trendSelection.select(id)
-            onSelectTrendLine?.(id)
-          }}
+          onSelect={trendSelection.select}
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
           onEdit={setEditingTrendLineId}
         />
