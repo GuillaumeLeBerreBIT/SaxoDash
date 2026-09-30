@@ -60,6 +60,10 @@ PERIODIC_TASKS = {
         'task': 'core.tasks.backup_database_task',
         'crontab': {'minute': '30', 'hour': '4'},
     },
+    'Scan Discover universe': {
+        'task': 'research.tasks.scan_universe',
+        'crontab': {'minute': '30', 'hour': '22'},
+    },
 }
 
 # Celery/django-celery-beat's own built-in tasks - never declared above,

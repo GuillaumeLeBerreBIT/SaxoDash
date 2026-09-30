@@ -1,7 +1,9 @@
 from celery import shared_task
 
 from portfolio.models import Position
+from saxo.tasks import synced
 
+from . import scan
 from .watchlists import sync_open_positions_watchlist
 
 
@@ -17,3 +19,9 @@ def sync_watchlists():
     periodic-task registration in admin, same as sync_account_balance did.
     """
     sync_open_positions_watchlist(Position.objects.exclude(uic__isnull=True))
+
+
+@shared_task
+@synced(reports_health=False)
+def scan_universe(credential):
+    return scan.scan_universe()

@@ -12,6 +12,12 @@ class SyncPeriodicTasksTest(TestCase):
             len(PERIODIC_TASKS),
         )
 
+    def test_discover_scan_runs_nightly_after_the_us_close(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Scan Discover universe')
+        self.assertEqual(task.task, 'research.tasks.scan_universe')
+        self.assertEqual((task.crontab.minute, task.crontab.hour), ('30', '22'))
+
     def test_is_idempotent(self):
         sync_periodic_tasks()
         sync_periodic_tasks()
