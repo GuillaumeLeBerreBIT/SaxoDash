@@ -63,18 +63,20 @@ export default function ChartToolRail({ controls, placingLine, onPlacingLineChan
       <Menu side="right" label="Indicators" icon={Sigma} width={230}>
         <IndicatorMenuItems controls={controls} />
       </Menu>
-      <Menu side="right" label="Layout" icon={LayoutGrid} width={210}>
-        {CHART_LAYOUTS.map((preset) => (
-          <MenuRow
-            key={preset.id}
-            onClick={() => onLayoutChange(preset.id)}
-            right={preset.id === layout ? <Check size={12} className="text-blue-400" /> : null}
-          >
-            <LayoutIcon preset={preset} />
-            {preset.label}
-          </MenuRow>
-        ))}
-      </Menu>
+      <div className="hidden lg:flex">
+        <Menu side="right" label="Layout" icon={LayoutGrid} width={210}>
+          {CHART_LAYOUTS.map((preset) => (
+            <MenuRow
+              key={preset.id}
+              onClick={() => onLayoutChange(preset.id)}
+              right={preset.id === layout ? <Check size={12} className="text-blue-400" /> : null}
+            >
+              <LayoutIcon preset={preset} />
+              {preset.label}
+            </MenuRow>
+          ))}
+        </Menu>
+      </div>
       <RailButton
         label="Reset price scale"
         icon={RotateCcw}

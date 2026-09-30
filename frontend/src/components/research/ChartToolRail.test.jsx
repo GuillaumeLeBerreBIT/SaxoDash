@@ -129,4 +129,10 @@ describe('ChartToolRail', () => {
     expect(icon).toHaveClass('inline-grid')
     expect(icon).not.toHaveClass('grid')
   })
+
+  it('hides the layout menu below the lg breakpoint, where the rail itself is hidden', () => {
+    renderRail()
+    const wrapper = screen.getByRole('button', { name: 'Layout' }).closest('.hidden')
+    expect(wrapper).toHaveClass('hidden', 'lg:flex')
+  })
 })
