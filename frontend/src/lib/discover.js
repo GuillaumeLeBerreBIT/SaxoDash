@@ -21,10 +21,10 @@ export function healthNotice(health, asOf) {
     return { tone: 'info', text: 'No scan yet. It runs nightly, or run `manage.py scan_universe`.' }
   }
   if (health?.state === 'failed') {
-    return { tone: 'error', text: `The last scan failed. Showing data from ${asDate(asOf)}.` }
+    return { tone: 'error', text: asOf ? `The last scan failed. Showing data from ${asDate(asOf)}.` : 'The last scan failed.' }
   }
   if (health?.state === 'stale') {
-    return { tone: 'warning', text: `No fresh scan since ${asDate(asOf)}.` }
+    return { tone: 'warning', text: asOf ? `No fresh scan since ${asDate(asOf)}.` : 'No fresh scan recently.' }
   }
   return null
 }

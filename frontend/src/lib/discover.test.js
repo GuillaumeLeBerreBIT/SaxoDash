@@ -27,6 +27,11 @@ describe('healthNotice', () => {
     expect(healthNotice({ state: 'stale' }, '2026-09-28T22:40:00Z')).toMatchObject({ tone: 'warning' })
   })
 
+  it('does not invent a date when the scan has none', () => {
+    expect(healthNotice({ state: 'failed' }, null).text).toBe('The last scan failed.')
+    expect(healthNotice({ state: 'stale' }, null).text).toBe('No fresh scan recently.')
+  })
+
   it('explains how to run the first scan', () => {
     expect(healthNotice({ state: 'never' }, null).text).toMatch(/manage\.py scan_universe/)
   })

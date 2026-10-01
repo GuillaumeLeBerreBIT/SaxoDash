@@ -17,7 +17,7 @@ export default function ShelfRow({ shelf }) {
         ) : null}
       </div>
       {shelf.total === 0 ? (
-        <p className="text-[var(--fig-xs)] text-zinc-600">Nothing {shelf.title.toLowerCase()} today</p>
+        <p className="text-[var(--fig-xs)] text-zinc-600">{shelf.empty}</p>
       ) : (
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0">
           {shelf.items.map((item) => (

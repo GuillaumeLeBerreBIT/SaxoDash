@@ -10,8 +10,8 @@ vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [], toggleList: vi.fn() }),
 }))
 
-const shelf = (key, title, total, items = []) => ({
-  key, title, subtitle: `${title} rule`, metric: 'rsi14', total, items,
+const shelf = (key, title, total, items = [], empty = `Nothing ${title.toLowerCase()} today`) => ({
+  key, title, subtitle: `${title} rule`, empty, metric: 'rsi14', total, items,
 })
 const card = { ticker: 'NVDA', name: 'NVIDIA', uic: 1, asset_type: 'Stock', last_close: 100, change_1d: 1, metric_value: 81, sparkline: [] }
 
@@ -26,9 +26,9 @@ describe('Discover page', () => {
   })
 
   it('collapses an empty shelf to a quiet note', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('oversold', 'Oversold', 0)] } })
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('strong-trend', 'Strong trend', 0, [], 'No strong trends today')] } })
     renderPage()
-    expect(screen.getByText('Nothing oversold today')).toBeInTheDocument()
+    expect(screen.getByText('No strong trends today')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /See all/ })).not.toBeInTheDocument()
   })
 
@@ -39,8 +39,10 @@ describe('Discover page', () => {
   })
 
   it('explains the first scan when none has run', () => {
-    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'never' }, shelves: [] } })
+    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'never' }, shelves: [shelf('oversold', 'Oversold', 0)] } })
     renderPage()
     expect(screen.getByText(/manage\.py scan_universe/)).toBeInTheDocument()
+    expect(screen.queryByText(/Nothing/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Oversold' })).not.toBeInTheDocument()
   })
 })

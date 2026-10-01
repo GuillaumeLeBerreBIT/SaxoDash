@@ -17,7 +17,7 @@ export default function Discover() {
       {error ? <Alert>Could not load Discover.</Alert> : null}
       {data ? <DiscoverHealth health={data.health} asOf={data.as_of} /> : null}
       {isLoading ? <Skeleton className="h-48" /> : null}
-      {data?.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />)}
+      {data && data.health?.state !== 'never' ? data.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />) : null}
     </div>
   )
 }
