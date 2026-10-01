@@ -16,6 +16,8 @@ import {
   deleteWatchlist,
   getChart,
   getCompanyNews,
+  getDiscover,
+  getDiscoverShelf,
   getEarningsCalendar,
   getFundamentals,
   getInstrumentDetails,
@@ -59,6 +61,8 @@ export const researchKeys = {
   textAnnotations: (uic, assetType) => ['text-annotations', instrumentKey(uic, assetType)],
   trendLines: (uic, assetType) => ['trend-lines', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
+  discover: ['discover'],
+  discoverShelf: (key) => ['discover', key],
 }
 
 export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
@@ -408,4 +412,17 @@ export function useWatchlistMutations() {
       onSuccess,
     }),
   }
+}
+
+export function useDiscover() {
+  return useQuery({ queryKey: researchKeys.discover, queryFn: getDiscover, staleTime: 5 * 60_000 })
+}
+
+export function useDiscoverShelf(key) {
+  return useQuery({
+    queryKey: researchKeys.discoverShelf(key),
+    queryFn: () => getDiscoverShelf(key),
+    enabled: !!key,
+    staleTime: 5 * 60_000,
+  })
 }

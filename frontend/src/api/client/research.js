@@ -71,3 +71,6 @@ export const addWatchlistItem = (id, item) =>
   jsonRequest(`/api/research/watchlists/${id}/items/`, 'POST', item)
 export const removeWatchlistItem = (id, itemId) =>
   apiFetch(`/api/research/watchlists/${id}/items/${itemId}/`, { method: 'DELETE' })
+
+export const getDiscover = () => apiFetch('/api/research/discover/')
+export const getDiscoverShelf = (key) => apiFetch(`/api/research/discover/${key}/`)

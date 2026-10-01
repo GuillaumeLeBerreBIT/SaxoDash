@@ -1,5 +1,6 @@
 import re
 
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
@@ -15,7 +16,7 @@ from rest_framework.views import APIView
 
 from saxo import client
 
-from . import earnings, finnhub, market
+from . import discover, earnings, finnhub, market, shelves
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -261,3 +262,34 @@ class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = TextAnnotationSerializer
     queryset = TextAnnotation.objects.all()
+
+
+def _shelf_payload(shelf, limit=None):
+    rows = shelves.matching(shelf)
+    selected = rows[:limit] if limit else rows
+    return {
+        'key': shelf.key,
+        'title': shelf.title,
+        'subtitle': shelf.subtitle,
+        'empty': shelf.empty,
+        'metric': shelf.metric,
+        'total': rows.count(),
+        'items': [shelves.card(row, shelf) for row in selected],
+    }
+
+
+class DiscoverView(APIView):
+    def get(self, request):
+        return Response({
+            'as_of': discover.as_of(),
+            'health': discover.health(),
+            'shelves': [_shelf_payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
+        })
+
+
+class DiscoverShelfView(APIView):
+    def get(self, request, key):
+        shelf = shelves.by_key(key)
+        if shelf is None:
+            raise Http404
+        return Response(_shelf_payload(shelf))

@@ -305,6 +305,16 @@ into "Latest session". Layout is a hand-rolled squarify in `lib/heatmap.js`, not
 Recharts' `Treemap`: HTML tiles are focusable, carry sector headers, and
 render in jsdom.
 
+**Discover is a nightly snapshot, not a live screener.** `research.tasks.scan_universe`
+fills `ScreenerRow` for the S&P 500 ∪ Nasdaq-100 listed in `research/universe.csv`
+(hand-refreshed; no free constituents feed): Saxo daily bars for technicals, one
+Finnhub metrics call for fundamentals, paced 1.2 s per symbol. The page reads only
+that table. Shelves are declarative rules in `research/shelves.py`; a rule never
+matches a null metric. RSI/SMA/RVOL are computed in `research/technicals.py` with the
+same definitions as `lib/indicators.js`, pinned by the shared
+`lib/fixtures/indicator-parity.json`. The scan records `SyncRun`s but is
+`@synced(reports_health=False)`, so it never affects the header's Saxo health badge.
+
 **The chart pans within what it already fetched.** The visible bars are a time
 window `{start, end}` into the one 1,200-bar fetch. `lib/timeWindow.js` is the only
 module that knows the rules. The controls store a `timeView` (`offset` back from the

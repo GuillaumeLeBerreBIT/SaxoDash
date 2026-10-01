@@ -483,3 +483,24 @@ class SyncRunTest(TestCase):
             tasks.sync_positions()
 
         self.assertEqual(SyncRun.objects.first().outcome, 'failed')
+
+
+class SyncedHealthDeclarationTest(TestCase):
+    def test_synced_without_health_accepts_an_undeclared_task_and_records_runs(self):
+        SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+        @tasks.synced(reports_health=False)
+        def scan_something(credential):
+            return 3
+
+        self.assertEqual(scan_something(), 3)
+        self.assertTrue(SyncRun.objects.filter(task='scan_something', outcome='ok', rows=3).exists())
+
+    def test_synced_with_health_still_rejects_an_undeclared_task(self):
+        with self.assertRaises(ValueError):
+            @tasks.synced
+            def not_declared(credential):
+                return 0

@@ -130,6 +130,22 @@ def _metric(financials, key):
     return (financials.get('metric') or {}).get(key)
 
 
+SCREENER_METRICS = {
+    'pe': 'peNormalizedAnnual',
+    'forward_pe': 'forwardPE',
+    'roe': 'roeTTM',
+    'net_margin': 'netProfitMarginTTM',
+    'eps_growth_5y': 'epsGrowth5Y',
+    'debt_to_equity': 'totalDebt/totalEquityAnnual',
+    'dividend_yield': 'dividendYieldIndicatedAnnual',
+    'market_cap': 'marketCapitalization',
+}
+
+
+def to_screener_fundamentals(financials):
+    return {field: _metric(financials, key) for field, key in SCREENER_METRICS.items()}
+
+
 def _peg_ratio(pe, eps_growth_5y):
     if pe is None or not eps_growth_5y:
         return None

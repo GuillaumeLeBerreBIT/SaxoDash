@@ -10,6 +10,8 @@ import AccountTransactions from './pages/AccountTransactions'
 import Spending from './pages/Spending'
 import Research from './pages/Research'
 import ResearchChart from './pages/ResearchChart'
+import Discover from './pages/Discover'
+import DiscoverShelf from './pages/DiscoverShelf'
 import Earnings from './pages/Earnings'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
@@ -30,6 +32,8 @@ function App() {
           <Route path='accounts/:accountId' element={<AccountTransactions />} />
           <Route path='spending' element={<Spending />} />
           <Route path='research' element={<Research />} />
+          <Route path='discover' element={<Discover />} />
+          <Route path='discover/:key' element={<DiscoverShelf />} />
           <Route path='earnings' element={<Earnings />} />
         </Route>
       </Route>

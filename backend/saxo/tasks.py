@@ -34,7 +34,7 @@ class SyncRefused(Exception):
     """Raised when a sync would corrupt what it is meant to keep current."""
 
 
-def synced(fn):
+def synced(fn=None, *, reports_health=True):
     """Give `fn` a usable credential and record what the run actually did.
 
     Every sync shared the same preamble - get a credential or bail - and bailed
@@ -42,7 +42,9 @@ def synced(fn):
     keeps each task body to the work itself and makes a skip as visible as a
     completion. `fn` returns the number of rows it wrote.
     """
-    if fn.__name__ not in SYNC_TASKS:
+    if fn is None:
+        return functools.partial(synced, reports_health=reports_health)
+    if reports_health and fn.__name__ not in SYNC_TASKS:
         raise ValueError(f'{fn.__name__} is not declared in saxo.credentials.SYNC_TASKS')
 
     @functools.wraps(fn)
