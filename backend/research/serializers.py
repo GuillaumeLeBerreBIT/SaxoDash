@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import PriceLine, SymbolNote, TrendLine, Watchlist, WatchlistItem
+from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 
 
 def _positive_or_none(value):
@@ -97,3 +97,13 @@ class TrendLineSerializer(serializers.ModelSerializer):
         if start is not None and end is not None and start == end:
             raise serializers.ValidationError('A trend line needs two different bars.')
         return attrs
+
+
+class TextAnnotationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TextAnnotation
+        fields = ['id', 'uic', 'asset_type', 'bar_date', 'price', 'text', 'created_at']
+        read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
+
+    def validate_price(self, value):
+        return _positive_or_none(value)
