@@ -40,6 +40,7 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(len(shelves['overbought']['items']), 20)
         self.assertEqual(shelves['overbought']['items'][0]['ticker'], 'T24')
         self.assertEqual(shelves['overbought']['metric'], 'rsi14')
+        self.assertEqual(shelves['overbought']['empty'], 'Nothing overbought today')
         self.assertEqual((shelves['oversold']['total'], shelves['oversold']['items']), (0, []))
         self.assertEqual(response.data['health']['state'], 'ok')
         self.assertIsNotNone(response.data['as_of'])

@@ -69,7 +69,7 @@ def technical_fields(bars):
     ma50 = _last(sma(closes, 50))
     ma200 = _last(sma(closes, 200))
     year = bars[-YEAR_SESSIONS:]
-    high = max((bar['high'] for bar in year), default=None)
+    high = max((bar['high'] for bar in year), default=None) if len(bars) >= YEAR_SESSIONS else None
 
     fields = {
         'last_close': last_close,

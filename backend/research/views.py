@@ -235,6 +235,7 @@ def _shelf_payload(shelf, limit=None):
         'key': shelf.key,
         'title': shelf.title,
         'subtitle': shelf.subtitle,
+        'empty': shelf.empty,
         'metric': shelf.metric,
         'total': rows.count(),
         'items': [shelves.card(row, shelf) for row in selected],

@@ -78,4 +78,5 @@ class ShelfRulesTest(TestCase):
         self.assertEqual(len(keys), len(set(keys)))
         self.assertEqual(len(keys), 7)
         self.assertTrue(all(shelf.subtitle for shelf in shelves.SHELVES))
+        self.assertTrue(all(shelf.empty for shelf in shelves.SHELVES))
         self.assertIsNone(shelves.by_key('nope'))

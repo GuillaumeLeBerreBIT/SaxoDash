@@ -65,6 +65,7 @@ class TechnicalFieldsTest(SimpleTestCase):
         self.assertIsNone(fields['ma200'])
         self.assertIsNone(fields['pct_vs_ma200'])
         self.assertIsNone(fields['change_1y'])
+        self.assertIsNone(fields['pct_from_52w_high'])
         self.assertIsNotNone(fields['ma50'])
         self.assertIsNotNone(fields['change_3m'])
 
