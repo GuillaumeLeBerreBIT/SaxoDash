@@ -7,8 +7,10 @@ import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import {
   addWatchlistItem,
   createPriceLine,
+  createTextAnnotation,
   createTrendLine,
   createWatchlist,
+  deleteTextAnnotation,
   deletePriceLine,
   deleteTrendLine,
   deleteWatchlist,
@@ -22,12 +24,14 @@ import {
   getQuotes,
   getSymbolEarnings,
   getSymbolNote,
+  getTextAnnotations,
   getTrendLines,
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
   updatePriceLine,
   updateSymbolNote,
+  updateTextAnnotation,
   updateTrendLine,
   markSymbolNoteReviewed,
   updateWatchlist,
@@ -52,6 +56,7 @@ export const researchKeys = {
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
   symbolNote: (symbol) => ['symbol-note', symbol],
   priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
+  textAnnotations: (uic, assetType) => ['text-annotations', instrumentKey(uic, assetType)],
   trendLines: (uic, assetType) => ['trend-lines', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
 }
@@ -323,6 +328,51 @@ export function useTrendLineMutations(uic, assetType) {
     remove: useMutation({
       mutationFn: (id) => deleteTrendLine(id),
       onMutate: optimistic((old, id) => old.filter((line) => line.id !== id)),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+  }
+}
+
+export function useTextAnnotations(uic, assetType) {
+  return useQuery({
+    queryKey: researchKeys.textAnnotations(uic, assetType),
+    queryFn: () => getTextAnnotations({ uic, assetType }),
+    enabled: Boolean(uic && assetType),
+  })
+}
+
+export function useTextAnnotationMutations(uic, assetType) {
+  const queryClient = useQueryClient()
+  const key = researchKeys.textAnnotations(uic, assetType)
+  const refetch = (_data, _error, _variables, context) => {
+    if (context) queryClient.invalidateQueries({ queryKey: context.key })
+  }
+  const optimistic = (apply) => async (variables) => {
+    await queryClient.cancelQueries({ queryKey: key })
+    const previous = queryClient.getQueryData(key)
+    queryClient.setQueryData(key, (old) => (old ? apply(old, variables) : old))
+    return { previous, key }
+  }
+  const rollback = (_error, _variables, context) => {
+    if (context?.previous) queryClient.setQueryData(context.key, context.previous)
+  }
+
+  return {
+    create: useMutation({
+      mutationFn: (payload) => createTextAnnotation({ uic, assetType, ...payload }),
+      onMutate: () => ({ key }),
+      onSettled: refetch,
+    }),
+    update: useMutation({
+      mutationFn: ({ id, patch }) => updateTextAnnotation(id, patch),
+      onMutate: optimistic((old, { id, patch }) => old.map((item) => (item.id === id ? { ...item, ...patch } : item))),
+      onError: rollback,
+      onSettled: refetch,
+    }),
+    remove: useMutation({
+      mutationFn: (id) => deleteTextAnnotation(id),
+      onMutate: optimistic((old, id) => old.filter((item) => item.id !== id)),
       onError: rollback,
       onSettled: refetch,
     }),

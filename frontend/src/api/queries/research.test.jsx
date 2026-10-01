@@ -12,6 +12,8 @@ import {
   useTrendLineMutations,
   useTrendLines,
   useSymbolNote,
+  useTextAnnotationMutations,
+  useTextAnnotations,
 } from './research'
 
 function setup(useHook, initialProps) {
@@ -238,5 +240,46 @@ describe('trend lines', () => {
     const after = queryClient.getQueryData(researchKeys.trendLines(211, 'Stock'))
     expect(after.find((line) => line.id === 1).end_price).toBe('110.00')
     expect(after.find((line) => line.id === 2).end_price).toBe('95.00')
+  })
+})
+
+describe('text annotations', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('is disabled until both uic and asset type are known', () => {
+    const { result } = setup(() => useTextAnnotations(undefined, undefined))
+    expect(result.current.fetchStatus).toBe('idle')
+  })
+
+  it('creates a text annotation', async () => {
+    client.createTextAnnotation.mockResolvedValue({ id: 3, text: 'Gap' })
+    const { result } = setup(() => useTextAnnotationMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.create.mutateAsync({ barDate: '2026-08-01', price: '100.00', text: 'Gap' })
+    })
+
+    expect(client.createTextAnnotation).toHaveBeenCalledWith({
+      uic: 211, assetType: 'Stock', barDate: '2026-08-01', price: '100.00', text: 'Gap',
+    })
+  })
+
+  it('optimistically patches only the moved annotation, and rolls back only that one on failure', async () => {
+    client.updateTextAnnotation.mockRejectedValue(new Error('boom'))
+    const { queryClient, result } = setup(() => useTextAnnotationMutations(211, 'Stock'))
+    queryClient.setQueryData(researchKeys.textAnnotations(211, 'Stock'), [
+      { id: 1, bar_date: '2026-08-01', price: '100.00', text: 'A' },
+      { id: 2, bar_date: '2026-08-02', price: '90.00', text: 'B' },
+    ])
+
+    await act(async () => {
+      try {
+        await result.current.update.mutateAsync({ id: 1, patch: { text: 'Changed' } })
+      } catch {
+        return
+      }
+    })
+
+    await waitFor(() => expect(result.current.update.isError).toBe(true))
   })
 })

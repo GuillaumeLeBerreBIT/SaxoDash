@@ -51,6 +51,15 @@ export const updateTrendLine = (id, patch) =>
 export const deleteTrendLine = (id) =>
   apiFetch(`/api/research/trend-lines/${id}/`, { method: 'DELETE' })
 
+export const getTextAnnotations = ({ uic, assetType }) =>
+  apiFetch(`/api/research/text-annotations/${uic}/${assetType}/`)
+export const createTextAnnotation = ({ uic, assetType, barDate, price, text }) =>
+  jsonRequest(`/api/research/text-annotations/${uic}/${assetType}/`, 'POST', { bar_date: barDate, price, text })
+export const updateTextAnnotation = (id, patch) =>
+  jsonRequest(`/api/research/text-annotations/${id}/`, 'PATCH', patch)
+export const deleteTextAnnotation = (id) =>
+  apiFetch(`/api/research/text-annotations/${id}/`, { method: 'DELETE' })
+
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })
 export const updateWatchlist = (id, patch) =>
