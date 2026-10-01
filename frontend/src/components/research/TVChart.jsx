@@ -518,6 +518,7 @@ export function TVChart({
         onPlaced?.()
       }}
       onDoubleClick={(e) => {
+        if (tool === 'ray' || tool === 'text') return
         if (placedRef.current) {
           placedRef.current = false
           return
@@ -552,7 +553,11 @@ export function TVChart({
           width={width}
           selectedId={freeSelection.selected?.id ?? null}
           onMove={(line, price) => onMoveLine?.(line, price)}
-          onSelect={freeSelection.select}
+          onSelect={(id) => {
+            trendSelection.clear()
+            textSelection.clear()
+            freeSelection.select(id)
+          }}
           onEditLabel={setEditingFreeLineId}
         />
         <TrendLines
@@ -560,7 +565,11 @@ export function TVChart({
           geometry={geometry}
           data={data}
           selectedId={trendSelection.selected?.id ?? null}
-          onSelect={trendSelection.select}
+          onSelect={(id) => {
+            freeSelection.clear()
+            textSelection.clear()
+            trendSelection.select(id)
+          }}
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
           onEdit={setEditingTrendLineId}
         />
@@ -569,7 +578,11 @@ export function TVChart({
           geometry={geometry}
           data={data}
           selectedId={textSelection.selected?.id ?? null}
-          onSelect={textSelection.select}
+          onSelect={(id) => {
+            freeSelection.clear()
+            trendSelection.clear()
+            textSelection.select(id)
+          }}
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
           onEdit={setEditingTextId}
         />

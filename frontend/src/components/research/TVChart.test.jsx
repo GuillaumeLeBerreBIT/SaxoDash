@@ -780,7 +780,7 @@ describe('panning', () => {
 })
 
 describe('trend lines', () => {
-  const ray = { id: 1, label: '', x1: 2, y1: 105, x2: 20, y2: 130 }
+  const ray = { id: 1, label: '', earlyField: 'start', x1: 2, y1: 105, x2: 20, y2: 130 }
   const geometry = () =>
     priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
 
@@ -833,6 +833,20 @@ describe('trend lines', () => {
 
     const [, endpoint] = onMoveTrendLineEndpoint.mock.calls[0]
     expect(endpoint).toBe('start')
+  })
+
+  it('patches the field that is actually early when a ray was stored right-to-left', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const reversedRay = { ...ray, earlyField: 'end' }
+    const { getByTestId } = renderChart({ trendLines: [reversedRay], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-end')
+    drag(handle, g.scaleY(ray.y1), g.scaleY(ray.y1) - 10, g.xAt(ray.x1), g.xAt(1))
+
+    expect(onMoveTrendLineEndpoint).toHaveBeenCalledTimes(1)
+    const [, endpoint] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(endpoint).toBe('end')
   })
 
   it('does not move anything on a click without dragging', () => {
@@ -895,6 +909,35 @@ describe('trend lines', () => {
     const { getByTestId } = renderChart({ trendLines: [ray], onCreateLine })
 
     fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+})
+
+describe('cross-kind selection', () => {
+  const free = { id: 7, kind: 'free', price: 115 }
+  const ray = { id: 1, label: '', earlyField: 'start', x1: 2, y1: 105, x2: 20, y2: 130 }
+
+  it('selecting a ray after a freeform line clears the line selection, so Delete only removes the ray', () => {
+    const onDeleteLine = vi.fn()
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], trendLines: [ray], onDeleteLine, onDeleteTrendLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTrendLine).toHaveBeenCalledWith(ray)
+    expect(onDeleteLine).not.toHaveBeenCalled()
+  })
+})
+
+describe('double-clicking with a drawing tool armed', () => {
+  it.each(['ray', 'text'])('does not create a stray horizontal line while the %s tool is armed', (tool) => {
+    const onCreateLine = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine, tool })
+
+    fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })
 
     expect(onCreateLine).not.toHaveBeenCalled()
   })

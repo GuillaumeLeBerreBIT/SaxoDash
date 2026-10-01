@@ -147,6 +147,7 @@ export default function Research() {
               onMoveLine={priceLines.move}
               onCreateLine={priceLines.create}
               onDeleteLine={priceLines.remove}
+              onEditLineLabel={priceLines.setLabel}
               lineSaveFailed={priceLines.saveFailed}
               expandHref={chartHref(symbol, instrument)}
             />

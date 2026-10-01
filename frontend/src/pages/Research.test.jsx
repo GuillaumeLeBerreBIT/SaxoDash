@@ -294,6 +294,23 @@ describe('Research', () => {
     expect(queries.usePriceLines).toHaveBeenCalledWith(211, 'Stock')
   })
 
+  it('saves an edited freeform-line label typed in the compact chart panel, not just opens the editor', () => {
+    const updateMutate = vi.fn()
+    queries.usePriceLineMutations.mockReturnValue({
+      create: { mutate: vi.fn() },
+      update: { mutate: updateMutate },
+      remove: { mutate: vi.fn() },
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    fireEvent.doubleClick(screen.getByTestId('price-hit-7'))
+    const input = screen.getByLabelText('Line label')
+    fireEvent.change(input, { target: { value: 'Support' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(updateMutate).toHaveBeenCalledWith({ id: 7, patch: { label: 'Support' } }, expect.anything())
+  })
+
   it('links the chart to the advanced view, keeping the exact instrument', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 

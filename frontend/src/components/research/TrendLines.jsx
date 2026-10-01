@@ -106,8 +106,16 @@ function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
           {line.label}
         </text>
       ) : null}
-      <Handle line={line} endpoint="start" x={x1} y={y1} geometry={geometry} data={data} onMove={onMove} />
-      <Handle line={line} endpoint="end" x={x2} y={y2} geometry={geometry} data={data} onMove={onMove} />
+      <Handle line={line} endpoint={line.earlyField} x={x1} y={y1} geometry={geometry} data={data} onMove={onMove} />
+      <Handle
+        line={line}
+        endpoint={line.earlyField === 'start' ? 'end' : 'start'}
+        x={x2}
+        y={y2}
+        geometry={geometry}
+        data={data}
+        onMove={onMove}
+      />
     </g>
   )
 }

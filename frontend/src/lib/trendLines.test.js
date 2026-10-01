@@ -44,6 +44,7 @@ describe('resolveTrendLines', () => {
     expect(resolved.y1).toBe(100)
     expect(resolved.x2).toBe(19)
     expect(resolved.y2).toBeCloseTo(100 + ((110 - 100) / 4) * 19)
+    expect(resolved.earlyField).toBe('start')
   })
 
   it('keeps projecting forward after both anchors have scrolled out of the window', () => {
@@ -64,6 +65,16 @@ describe('resolveTrendLines', () => {
     const [resolved] = resolveTrendLines([reversed], { allBars, windowStart: 0, windowLength: 20 })
 
     expect(resolved.y1).toBe(100)
+  })
+
+  it('reports which stored field is the earlier anchor, so a dragged handle patches the right one', () => {
+    const reversed = line({
+      start_bar_date: '2026-08-05', start_price: '110.00',
+      end_bar_date: '2026-08-01', end_price: '100.00',
+    })
+    const [resolved] = resolveTrendLines([reversed], { allBars, windowStart: 0, windowLength: 20 })
+
+    expect(resolved.earlyField).toBe('end')
   })
 
   it('renders a partial ray when only its earlier anchor is within the window', () => {
