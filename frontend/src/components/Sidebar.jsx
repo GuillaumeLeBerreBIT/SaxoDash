@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, CalendarClock, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search, PiggyBank } from 'lucide-react'
+import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, Compass, CalendarClock, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search, PiggyBank } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
 
 const items = [
@@ -7,6 +7,7 @@ const items = [
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { to: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
   { to: '/research', label: 'Research', icon: CandlestickChart },
+  { to: '/discover', label: 'Discover', icon: Compass },
   { to: '/earnings', label: 'Earnings', icon: CalendarClock },
   { to: '/transactions', label: 'Transactions', icon: List },
   { to: '/accounts', label: 'Accounts', icon: Landmark },
