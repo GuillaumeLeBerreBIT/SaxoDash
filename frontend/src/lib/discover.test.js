@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatShelfMetric, healthNotice } from './discover'
+import { SCANNING_POLL_MS, discoverPollInterval, formatShelfMetric, healthNotice } from './discover'
+
+describe('discoverPollInterval', () => {
+  it('polls only while the first scan is running', () => {
+    expect(discoverPollInterval({ health: { state: 'scanning' } })).toBe(SCANNING_POLL_MS)
+    expect(discoverPollInterval({ health: { state: 'ok' } })).toBe(false)
+    expect(discoverPollInterval({ health: { state: 'never' } })).toBe(false)
+    expect(discoverPollInterval(undefined)).toBe(false)
+  })
+})
 
 describe('formatShelfMetric', () => {
   it('names the metric that put a stock on the shelf', () => {
@@ -34,5 +43,12 @@ describe('healthNotice', () => {
 
   it('explains how to run the first scan', () => {
     expect(healthNotice({ state: 'never' }, null).text).toMatch(/manage\.py scan_universe/)
+  })
+
+  it('reports a first scan in progress with how far it got', () => {
+    expect(healthNotice({ state: 'scanning', scanned: 144, total: 518 }, null)).toEqual({
+      tone: 'info',
+      text: 'First scan in progress: 144 of 518 stocks so far. Shelves appear when it finishes.',
+    })
   })
 })

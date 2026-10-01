@@ -51,6 +51,20 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(response.data['health']['state'], 'never')
         self.assertIsNone(response.data['as_of'])
 
+    def test_health_is_scanning_while_a_first_scan_writes_rows(self):
+        self.stock('AAA', rsi14=80.0)
+        self.stock('BBB', rsi14=80.0)
+        ScreenerRow.objects.create(ticker='CCC', name='CCC', indexes='SP500')
+        response = self.client.get(reverse('research-discover'))
+        self.assertEqual(response.data['health']['state'], 'scanning')
+        self.assertEqual((response.data['health']['scanned'], response.data['health']['total']), (2, 3))
+        self.assertIsNone(response.data['as_of'])
+
+    def test_health_is_never_when_a_first_scan_stopped_writing_rows(self):
+        self.stock('AAA', rsi14=80.0)
+        ScreenerRow.objects.update(technicals_at=timezone.now() - timedelta(hours=1))
+        self.assertEqual(self.client.get(reverse('research-discover')).data['health']['state'], 'never')
+
     def test_health_is_stale_after_36_hours(self):
         self.run_at('ok', 37)
         self.assertEqual(self.client.get(reverse('research-discover')).data['health']['state'], 'stale')

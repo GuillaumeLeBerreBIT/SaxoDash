@@ -45,4 +45,11 @@ describe('Discover page', () => {
     expect(screen.queryByText(/Nothing/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Oversold' })).not.toBeInTheDocument()
   })
+
+  it('holds the shelves back while the first scan is still running', () => {
+    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'scanning', scanned: 144, total: 518 }, shelves: [shelf('oversold', 'Oversold', 0)] } })
+    renderPage()
+    expect(screen.getByText(/First scan in progress: 144 of 518/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Oversold' })).not.toBeInTheDocument()
+  })
 })
