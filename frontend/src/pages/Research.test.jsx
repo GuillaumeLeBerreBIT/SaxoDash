@@ -84,6 +84,12 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
     update: { mutate: vi.fn() },
     remove: { mutate: vi.fn() },
   })
+  queries.useTextAnnotations.mockReturnValue({ ...idle, data: [] })
+  queries.useTextAnnotationMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
 }
 
 describe('Research', () => {
