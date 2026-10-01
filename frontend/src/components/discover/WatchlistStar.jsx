@@ -12,7 +12,7 @@ export default function WatchlistStar({ ticker, name, uic, assetType }) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
-  const rect = usePortalMenuRect(buttonRef, open, { minWidth: MENU_WIDTH })
+  const rect = usePortalMenuRect(buttonRef, open)
   const { watchlists, toggleList } = useWatchlistToggle({
     symbol: ticker,
     instrument: { uic, assetType },
@@ -27,7 +27,18 @@ export default function WatchlistStar({ ticker, name, uic, assetType }) {
       setOpen(false)
     }
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') {
+        setOpen(false)
+        buttonRef.current?.focus()
+        return
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+      const rows = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') ?? [])
+      if (rows.length === 0) return
+      event.preventDefault()
+      const step = event.key === 'ArrowDown' ? 1 : -1
+      const next = (rows.indexOf(document.activeElement) + step + rows.length) % rows.length
+      rows[next].focus()
     }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -36,6 +47,15 @@ export default function WatchlistStar({ ticker, name, uic, assetType }) {
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [open])
+
+  const menuOpen = Boolean(rect)
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.querySelector('[role="menuitem"]')?.focus()
+  }, [menuOpen])
+
+  const menuLeft = rect
+    ? Math.min(Math.max(8, rect.left + rect.width - MENU_WIDTH), window.innerWidth - MENU_WIDTH - 8)
+    : 0
 
   return (
     <>
@@ -56,7 +76,7 @@ export default function WatchlistStar({ ticker, name, uic, assetType }) {
         <div
           ref={menuRef}
           role="menu"
-          style={{ position: 'fixed', top: rect.top + 4, left: Math.max(8, rect.left + rect.width - MENU_WIDTH), width: MENU_WIDTH }}
+          style={{ position: 'fixed', top: rect.top + 4, left: menuLeft, width: MENU_WIDTH }}
           className="z-50 max-h-64 overflow-y-auto p-1 bg-zinc-900 border border-white/10 rounded shadow-lg"
         >
           {watchlists.length === 0 ? (
