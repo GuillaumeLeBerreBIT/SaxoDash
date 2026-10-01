@@ -1,11 +1,12 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Discover from './Discover'
 
 const useDiscover = vi.fn()
-vi.mock('../api/queries', () => ({ useDiscover: () => useDiscover() }))
+const startScan = { mutate: vi.fn(), error: null }
+vi.mock('../api/queries', () => ({ useDiscover: () => useDiscover(), useStartDiscoverScan: () => startScan }))
 vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [], toggleList: vi.fn() }),
 }))
@@ -18,6 +19,11 @@ const card = { ticker: 'NVDA', name: 'NVIDIA', uic: 1, asset_type: 'Stock', last
 const renderPage = () => render(<MemoryRouter><Discover /></MemoryRouter>)
 
 describe('Discover page', () => {
+  beforeEach(() => {
+    startScan.mutate.mockClear()
+    startScan.error = null
+  })
+
   it('renders each shelf with a See all link', () => {
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('overbought', 'Overbought', 1, [card])] } })
     renderPage()
@@ -46,10 +52,36 @@ describe('Discover page', () => {
     expect(screen.queryByRole('heading', { name: 'Oversold' })).not.toBeInTheDocument()
   })
 
-  it('holds the shelves back while the first scan is still running', () => {
-    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'scanning', scanned: 144, total: 518 }, shelves: [shelf('oversold', 'Oversold', 0)] } })
+  it('starts the first scan when there has never been one', () => {
+    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'never', progress: null }, shelves: [] } })
     renderPage()
-    expect(screen.getByText(/First scan in progress: 144 of 518/)).toBeInTheDocument()
+    expect(startScan.mutate).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not start a scan once one has run', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok', progress: null }, shelves: [] } })
+    renderPage()
+    expect(startScan.mutate).not.toHaveBeenCalled()
+  })
+
+  it('asks for Saxo when the first scan cannot start without it', () => {
+    startScan.error = Object.assign(new Error('Saxo is not connected.'), { status: 409 })
+    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'never', progress: null }, shelves: [] } })
+    renderPage()
+    expect(screen.getByText(/Connect Saxo to run the first scan/)).toBeInTheDocument()
+  })
+
+  it('holds the shelves back and shows progress while the first scan runs', () => {
+    useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'scanning', progress: { done: 144, total: 518 } }, shelves: [shelf('oversold', 'Oversold', 0)] } })
+    renderPage()
+    expect(screen.getByRole('progressbar', { name: 'Scanning stocks · 144 of 518' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Oversold' })).not.toBeInTheDocument()
+  })
+
+  it('keeps last night’s shelves on screen while a rescan runs', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok', progress: { done: 10, total: 518 } }, shelves: [shelf('overbought', 'Overbought', 1, [card])] } })
+    renderPage()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '10')
+    expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
   })
 })

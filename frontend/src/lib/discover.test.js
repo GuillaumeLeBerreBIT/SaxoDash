@@ -1,13 +1,27 @@
 import { describe, expect, it } from 'vitest'
 
-import { SCANNING_POLL_MS, discoverPollInterval, formatShelfMetric, healthNotice } from './discover'
+import { SCANNING_POLL_MS, discoverPollInterval, formatShelfMetric, healthNotice, scanProgressLabel } from './discover'
 
 describe('discoverPollInterval', () => {
-  it('polls only while the first scan is running', () => {
-    expect(discoverPollInterval({ health: { state: 'scanning' } })).toBe(SCANNING_POLL_MS)
-    expect(discoverPollInterval({ health: { state: 'ok' } })).toBe(false)
-    expect(discoverPollInterval({ health: { state: 'never' } })).toBe(false)
+  it('polls while any scan reports progress, first or nightly', () => {
+    expect(discoverPollInterval({ health: { state: 'scanning', progress: { done: 0, total: null } } })).toBe(SCANNING_POLL_MS)
+    expect(discoverPollInterval({ health: { state: 'ok', progress: { done: 10, total: 518 } } })).toBe(SCANNING_POLL_MS)
+  })
+
+  it('stays quiet when nothing is scanning', () => {
+    expect(discoverPollInterval({ health: { state: 'ok', progress: null } })).toBe(false)
+    expect(discoverPollInterval({ health: { state: 'never', progress: null } })).toBe(false)
     expect(discoverPollInterval(undefined)).toBe(false)
+  })
+})
+
+describe('scanProgressLabel', () => {
+  it('counts stocks once the scan knows its total', () => {
+    expect(scanProgressLabel({ done: 144, total: 518 })).toBe('Scanning stocks · 144 of 518')
+  })
+
+  it('says the scan is starting before its first stock', () => {
+    expect(scanProgressLabel({ done: 0, total: null })).toBe('Starting scan…')
   })
 })
 
@@ -45,10 +59,10 @@ describe('healthNotice', () => {
     expect(healthNotice({ state: 'never' }, null).text).toMatch(/manage\.py scan_universe/)
   })
 
-  it('reports a first scan in progress with how far it got', () => {
-    expect(healthNotice({ state: 'scanning', scanned: 144, total: 518 }, null)).toEqual({
+  it('says shelves wait for the first scan to finish', () => {
+    expect(healthNotice({ state: 'scanning', progress: { done: 144, total: 518 } }, null)).toEqual({
       tone: 'info',
-      text: 'First scan in progress: 144 of 518 stocks so far. Shelves appear when it finishes.',
+      text: 'First scan in progress. Shelves appear when it finishes.',
     })
   })
 })

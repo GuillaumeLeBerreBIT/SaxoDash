@@ -16,19 +16,19 @@ export function formatShelfMetric(metric, value) {
 
 export const SCANNING_POLL_MS = 10_000
 
-export const discoverPollInterval = (data) => (data?.health?.state === 'scanning' ? SCANNING_POLL_MS : false)
+export const discoverPollInterval = (data) => (data?.health?.progress ? SCANNING_POLL_MS : false)
 
-const asDate =(iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+export const scanProgressLabel = ({ done, total }) =>
+  total == null ? 'Starting scan…' : `Scanning stocks · ${done} of ${total}`
+
+const asDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
 export function healthNotice(health, asOf) {
   if (health?.state === 'never') {
     return { tone: 'info', text: 'No scan yet. It runs nightly, or run `manage.py scan_universe`.' }
   }
   if (health?.state === 'scanning') {
-    return {
-      tone: 'info',
-      text: `First scan in progress: ${health.scanned} of ${health.total} stocks so far. Shelves appear when it finishes.`,
-    }
+    return { tone: 'info', text: 'First scan in progress. Shelves appear when it finishes.' }
   }
   if (health?.state === 'failed') {
     return { tone: 'error', text: asOf ? `The last scan failed. Showing data from ${asDate(asOf)}.` : 'The last scan failed.' }

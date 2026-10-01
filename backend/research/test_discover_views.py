@@ -1,16 +1,26 @@
 from datetime import timedelta
 
+from unittest import mock
+
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from research import scan_progress
 from research.models import ScreenerRow
+from saxo.credentials import ConnectionState
 from saxo.models import SyncRun
 
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
+
+@override_settings(CACHES=LOCMEM)
 class DiscoverViewTest(APITestCase):
     def setUp(self):
+        cache.clear()
         user = get_user_model().objects.create_user('u', password='p')
         self.client.force_authenticate(user)
 
@@ -51,19 +61,25 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(response.data['health']['state'], 'never')
         self.assertIsNone(response.data['as_of'])
 
-    def test_health_is_scanning_while_a_first_scan_writes_rows(self):
-        self.stock('AAA', rsi14=80.0)
-        self.stock('BBB', rsi14=80.0)
-        ScreenerRow.objects.create(ticker='CCC', name='CCC', indexes='SP500')
+    def test_health_is_scanning_while_a_first_scan_reports_progress(self):
+        scan_progress.report(144, 518)
         response = self.client.get(reverse('research-discover'))
         self.assertEqual(response.data['health']['state'], 'scanning')
-        self.assertEqual((response.data['health']['scanned'], response.data['health']['total']), (2, 3))
+        self.assertEqual(response.data['health']['progress'], {'done': 144, 'total': 518})
         self.assertIsNone(response.data['as_of'])
 
-    def test_health_is_never_when_a_first_scan_stopped_writing_rows(self):
+    def test_a_rescan_keeps_the_last_results_and_reports_its_progress(self):
+        self.run_at('ok', 20)
         self.stock('AAA', rsi14=80.0)
-        ScreenerRow.objects.update(technicals_at=timezone.now() - timedelta(hours=1))
-        self.assertEqual(self.client.get(reverse('research-discover')).data['health']['state'], 'never')
+        scan_progress.report(10, 518)
+        response = self.client.get(reverse('research-discover'))
+        self.assertEqual(response.data['health']['state'], 'ok')
+        self.assertEqual(response.data['health']['progress'], {'done': 10, 'total': 518})
+        self.assertIsNotNone(response.data['as_of'])
+
+    def test_no_progress_when_nothing_is_scanning(self):
+        self.run_at('ok', 1)
+        self.assertIsNone(self.client.get(reverse('research-discover')).data['health']['progress'])
 
     def test_health_is_stale_after_36_hours(self):
         self.run_at('ok', 37)
@@ -94,3 +110,48 @@ class DiscoverViewTest(APITestCase):
 
     def test_unknown_shelf_is_404(self):
         self.assertEqual(self.client.get(reverse('research-discover-shelf', args=['nope'])).status_code, 404)
+
+
+CONNECTED = ConnectionState(object(), None, False)
+DISCONNECTED = ConnectionState(None, 'Saxo is not connected.', False)
+
+
+@override_settings(CACHES=LOCMEM)
+@mock.patch('research.views.tasks.scan_universe.delay')
+@mock.patch('research.views.connection_state', return_value=CONNECTED)
+class StartDiscoverScanTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.client.force_authenticate(get_user_model().objects.create_user('u', password='p'))
+
+    def start(self):
+        return self.client.post(reverse('research-discover-scan'))
+
+    def test_queues_the_first_scan_and_shows_it_as_starting(self, _state, delay):
+        response = self.start()
+        self.assertEqual((response.status_code, response.data), (202, {'queued': True}))
+        delay.assert_called_once_with()
+        self.assertEqual(scan_progress.current(), {'done': 0, 'total': None})
+
+    def test_a_second_request_does_not_queue_another_scan(self, _state, delay):
+        self.start()
+        response = self.start()
+        self.assertEqual((response.status_code, response.data), (200, {'queued': False}))
+        delay.assert_called_once_with()
+
+    def test_does_nothing_once_a_scan_has_succeeded(self, _state, delay):
+        SyncRun.objects.create(task='scan_universe', outcome='ok')
+        self.assertEqual(self.start().data, {'queued': False})
+        delay.assert_not_called()
+
+    def test_without_saxo_it_answers_409_and_claims_nothing(self, state, delay):
+        state.return_value = DISCONNECTED
+        response = self.start()
+        self.assertEqual(response.status_code, 409)
+        delay.assert_not_called()
+        self.assertIsNone(scan_progress.current())
+
+    def test_requires_authentication(self, _state, delay):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.start().status_code, 401)
+        delay.assert_not_called()

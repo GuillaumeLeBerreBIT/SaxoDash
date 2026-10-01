@@ -3,7 +3,7 @@ import time
 
 from django.utils import timezone
 
-from . import finnhub, market, technicals
+from . import finnhub, market, scan_progress, technicals
 from .models import ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -98,8 +98,13 @@ def scan_row(row, *, with_fundamentals):
 
 def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
     load_universe(universe)
+    rows = list(ScreenerRow.objects.order_by('ticker'))
     with_fundamentals = True
-    for row in ScreenerRow.objects.order_by('ticker'):
-        with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
-        pause(PAUSE_SECONDS)
+    try:
+        for done, row in enumerate(rows, start=1):
+            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
+            scan_progress.report(done, len(rows))
+            pause(PAUSE_SECONDS)
+    finally:
+        scan_progress.clear()
     return ScreenerRow.objects.filter(status=ScreenerRow.OK).count()

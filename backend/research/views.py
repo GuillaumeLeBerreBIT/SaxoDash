@@ -3,6 +3,7 @@ import re
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (
     CreateAPIView,
@@ -15,8 +16,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from saxo import client
+from saxo.credentials import connection_state
 
-from . import discover, earnings, finnhub, market, shelves
+from . import discover, earnings, finnhub, market, scan_progress, shelves, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -285,6 +287,19 @@ class DiscoverView(APIView):
             'health': discover.health(),
             'shelves': [_shelf_payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
         })
+
+
+class StartDiscoverScanView(APIView):
+    def post(self, request):
+        if discover.health()['state'] != 'never':
+            return Response({'queued': False})
+        saxo = connection_state()
+        if not saxo.usable:
+            return Response({'detail': saxo.reason}, status=status.HTTP_409_CONFLICT)
+        if not scan_progress.claim():
+            return Response({'queued': False})
+        tasks.scan_universe.delay()
+        return Response({'queued': True}, status=status.HTTP_202_ACCEPTED)
 
 
 class DiscoverShelfView(APIView):

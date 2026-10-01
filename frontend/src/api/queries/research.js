@@ -32,6 +32,7 @@ import {
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  startDiscoverScan,
   updatePriceLine,
   updateSymbolNote,
   updateTextAnnotation,
@@ -421,6 +422,14 @@ export function useDiscover() {
     queryFn: getDiscover,
     staleTime: 5 * 60_000,
     refetchInterval: (query) => discoverPollInterval(query.state.data),
+  })
+}
+
+export function useStartDiscoverScan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: startDiscoverScan,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: researchKeys.discover }),
   })
 }
 

@@ -12,6 +12,7 @@ import {
   getQuotes,
   removeWatchlistItem,
   createWatchlist,
+  startDiscoverScan,
   searchInstruments,
   getFundamentals,
   getEarningsCalendar,
@@ -345,6 +346,16 @@ describe('research endpoints', () => {
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/research/chart/?uic=211&asset_type=Stock&horizon=1440&count=66'),
       expect.anything()
+    )
+  })
+
+  it('posts to start the Discover scan', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ queued: true }, true, 202))
+
+    await expect(startDiscoverScan()).resolves.toEqual({ queued: true })
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/discover/scan/'),
+      expect.objectContaining({ method: 'POST' })
     )
   })
 

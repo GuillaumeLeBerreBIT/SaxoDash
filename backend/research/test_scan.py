@@ -2,9 +2,10 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 
-from django.test import TestCase
+from django.core.cache import cache
+from django.test import TestCase, override_settings
 
-from research import scan
+from research import scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
 from research.models import ScreenerRow
 from research.providers import ProviderError, ProviderNotConnected
@@ -13,6 +14,7 @@ BARS = [
     {'date': f'2025-{i:04d}', 'open': 100.0, 'high': 101.0, 'low': 99.0, 'close': 100.0 + i * 0.1, 'volume': 1_000_000}
     for i in range(260)
 ]
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 FINANCIALS = {'metric': {'peNormalizedAnnual': 20.0, 'roeTTM': 25.0}}
 
 
@@ -40,8 +42,10 @@ class ResolveTest(TestCase):
 @mock.patch('research.scan.finnhub.get_basic_financials', return_value=FINANCIALS)
 @mock.patch('research.scan.market.chart', return_value=BARS)
 @mock.patch('research.scan.market.search')
+@override_settings(CACHES=LOCMEM)
 class ScanUniverseTest(TestCase):
     def setUp(self):
+        cache.clear()
         ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500|NDX')
         ScreenerRow.objects.create(ticker='BRK.B', name='Berkshire', indexes='SP500')
         self.universe = self.write_universe('AAPL', 'BRK.B')
@@ -141,6 +145,20 @@ class ScanUniverseTest(TestCase):
         pauses = []
         self.run_scan(pause=pauses.append)
         self.assertEqual(pauses, [scan.PAUSE_SECONDS, scan.PAUSE_SECONDS])
+
+    def test_reports_progress_after_each_symbol_and_clears_it_at_the_end(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        seen = []
+        self.run_scan(pause=lambda _seconds: seen.append(scan_progress.current()))
+        self.assertEqual(seen, [{'done': 1, 'total': 2}, {'done': 2, 'total': 2}])
+        self.assertIsNone(scan_progress.current())
+
+    def test_a_run_that_stops_early_clears_its_progress(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        chart.side_effect = ProviderNotConnected('Saxo is not connected.')
+        with self.assertRaises(ProviderNotConnected):
+            self.run_scan()
+        self.assertIsNone(scan_progress.current())
 
     def test_loads_tickers_missing_from_the_table_before_scanning(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212, 'MSFT': 213})
