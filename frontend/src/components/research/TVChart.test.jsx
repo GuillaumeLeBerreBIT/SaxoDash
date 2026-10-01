@@ -988,13 +988,12 @@ describe('text annotations', () => {
     expect(getByTestId('text-annotation-1')).toHaveTextContent('Earnings gap')
   })
 
-  it('selects an annotation by clicking it', () => {
-    const onSelect = vi.fn()
-    const { getByTestId } = renderChart({ textAnnotations: [note], onSelectTextAnnotation: onSelect })
+  it('shows the selected colour on the text once clicked', () => {
+    const { getByTestId } = renderChart({ textAnnotations: [note] })
 
     fireEvent.click(getByTestId('text-annotation-hit-1'))
 
-    expect(onSelect).toHaveBeenCalledWith(1)
+    expect(getByTestId('text-annotation-1').querySelector('text')).toHaveAttribute('fill', '#e4e4e7')
   })
 
   it('moves the annotation on drag', () => {

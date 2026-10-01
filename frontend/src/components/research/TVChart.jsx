@@ -360,7 +360,6 @@ export function TVChart({
   onDeleteTextAnnotation,
   onEditTextAnnotationText,
   onCreateTextAnnotation,
-  onSelectTextAnnotation,
   tool = 'crosshair',
   onPlaced,
 }) {
@@ -570,10 +569,7 @@ export function TVChart({
           geometry={geometry}
           data={data}
           selectedId={textSelection.selected?.id ?? null}
-          onSelect={(id) => {
-            textSelection.select(id)
-            onSelectTextAnnotation?.(id)
-          }}
+          onSelect={textSelection.select}
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
           onEdit={setEditingTextId}
         />
