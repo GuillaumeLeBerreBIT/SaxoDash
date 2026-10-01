@@ -43,6 +43,12 @@ function stub() {
     update: { mutate: vi.fn() },
     remove: { mutate: vi.fn() },
   })
+  queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useTrendLineMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
   queries.useQuotes.mockReturnValue({
     ...idle,
     data: [{ uic: 211, price: 875.4, change_pct: 1.42, change_basis: 'last_close' }],

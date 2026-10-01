@@ -78,6 +78,12 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
     update: { mutate: vi.fn() },
     remove: { mutate: vi.fn() },
   })
+  queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useTrendLineMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
 }
 
 describe('Research', () => {

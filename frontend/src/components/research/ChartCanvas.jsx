@@ -65,6 +65,11 @@ export default function ChartCanvas({
   onCreateLine,
   onDeleteLine,
   onEditLineLabel,
+  trendLines,
+  onMoveTrendLineEndpoint,
+  onCreateTrendLine,
+  onDeleteTrendLine,
+  onEditTrendLineLabel,
   priceHeight,
   fitHeight,
   paneHeights = DEFAULT_PANE_HEIGHTS,
@@ -134,6 +139,11 @@ export default function ChartCanvas({
             onCreateLine={onCreateLine}
             onDeleteLine={onDeleteLine}
             onEditLineLabel={onEditLineLabel}
+            trendLines={trendLines}
+            onMoveTrendLineEndpoint={onMoveTrendLineEndpoint}
+            onCreateTrendLine={onCreateTrendLine}
+            onDeleteTrendLine={onDeleteTrendLine}
+            onEditTrendLineLabel={onEditTrendLineLabel}
             tool={tool}
             onPlaced={onPlaced}
           />

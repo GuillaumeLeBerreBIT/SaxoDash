@@ -45,7 +45,7 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
 
 function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
-  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
+  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, trendLines, trendLineActions, quote } = useChartData({
     symbol: slot.symbol,
     instrument,
     range: controls.range,
@@ -62,7 +62,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
         quote={quote}
         rangeBars={rangeBars}
         windowBars={bars}
-        lineSaveFailed={priceLines.saveFailed}
+        lineSaveFailed={priceLines.saveFailed || trendLineActions.saveFailed}
         showIdentity={split}
       />
       <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
@@ -83,6 +83,11 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           onCreateLine={priceLines.create}
           onDeleteLine={priceLines.remove}
           onEditLineLabel={priceLines.setLabel}
+          trendLines={trendLines}
+          onMoveTrendLineEndpoint={trendLineActions.moveEndpoint}
+          onCreateTrendLine={trendLineActions.create}
+          onDeleteTrendLine={trendLineActions.remove}
+          onEditTrendLineLabel={trendLineActions.setLabel}
           fitHeight={canvasSize.height}
           paneHeights={paneHeights}
           tool={tool}
