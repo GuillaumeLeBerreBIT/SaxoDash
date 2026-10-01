@@ -286,7 +286,7 @@ describe('price lines', () => {
   it('places a line on a single click while the line tool is armed', () => {
     const onCreateLine = vi.fn()
     const onPlaced = vi.fn()
-    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+    const { container } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced })
 
     fireEvent.mouseDown(container.firstChild, { detail: 1 })
     fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
@@ -308,12 +308,12 @@ describe('price lines', () => {
 
   it('creates exactly one line when the armed tool is double-clicked', () => {
     const onCreateLine = vi.fn()
-    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     fireEvent.mouseDown(plot, { detail: 1 })
     fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
-    rerender(chart({ lines: [], onCreateLine, placingLine: false, onPlaced: vi.fn() }))
+    rerender(chart({ lines: [], onCreateLine, tool: 'crosshair', onPlaced: vi.fn() }))
     fireEvent.mouseDown(plot, { detail: 2 })
     fireEvent.click(plot, { detail: 2, clientX: 100, clientY: 200 })
     fireEvent.doubleClick(plot, { detail: 2, clientX: 100, clientY: 200 })
@@ -323,7 +323,7 @@ describe('price lines', () => {
 
   it('still creates a line on a later double-click after placing one', () => {
     const onCreateLine = vi.fn()
-    const { container, rerender } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container, rerender } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     fireEvent.mouseDown(plot, { detail: 1 })
@@ -340,7 +340,7 @@ describe('price lines', () => {
   it('never places a line from a click in the price-axis gutter', () => {
     const onCreateLine = vi.fn()
     const onPlaced = vi.fn()
-    const { container } = renderChart({ lines: [], onCreateLine, placingLine: true, onPlaced })
+    const { container } = renderChart({ lines: [], onCreateLine, tool: 'hline', onPlaced })
 
     fireEvent.click(container.firstChild, { detail: 1, clientX: 740, clientY: 200 })
 
@@ -349,7 +349,7 @@ describe('price lines', () => {
   })
 
   it('shows a crosshair cursor only while the line tool is armed', () => {
-    const armed = renderChart({ lines: [], onCreateLine: vi.fn(), placingLine: true })
+    const armed = renderChart({ lines: [], onCreateLine: vi.fn(), tool: 'hline' })
     const idle = renderChart({ lines: [], onCreateLine: vi.fn() })
 
     expect(armed.container.firstChild).toHaveStyle({ cursor: 'crosshair' })
@@ -576,6 +576,35 @@ describe('price lines', () => {
 
     expect(getByTestId('price-edge-stop').textContent).toBe('100000')
   })
+
+  it('opens a label editor on a double-click of a freeform line, but not target or stop', () => {
+    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [target, free] })
+
+    fireEvent.doubleClick(getByTestId('price-hit-target'))
+    expect(queryByLabelText('Line label')).toBeNull()
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'))
+    expect(getByLabelText('Line label')).toHaveValue('')
+  })
+
+  it('saves an edited line label on Enter', () => {
+    const onEditLineLabel = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ lines: [free], onEditLineLabel })
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'))
+    const input = getByLabelText('Line label')
+    fireEvent.change(input, { target: { value: 'Support' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditLineLabel).toHaveBeenCalledWith(free, 'Support')
+  })
+
+  it('shows a label near the line once one is set', () => {
+    const labeled = { ...free, label: 'Support' }
+    const { getByTestId } = renderChart({ lines: [labeled] })
+
+    expect(getByTestId('price-line-7')).toHaveTextContent('Support')
+  })
 })
 
 describe('panning', () => {
@@ -600,7 +629,7 @@ describe('panning', () => {
     const { container } = pannable({
       lines: [],
       onCreateLine,
-      placingLine: true,
+      tool: 'hline',
       onPlaced: vi.fn(),
       onTimeOffsetChange,
       onYShiftChange,
@@ -663,7 +692,7 @@ describe('panning', () => {
 
   it('neither places a line nor clears the selection after a pan, but the next click does', () => {
     const onCreateLine = vi.fn()
-    const { container } = pannable({ lines: [], onCreateLine, placingLine: true, onPlaced: vi.fn() })
+    const { container } = pannable({ lines: [], onCreateLine, tool: 'hline', onPlaced: vi.fn() })
     const plot = container.firstChild
 
     pan(plot, 60, 0)
@@ -747,5 +776,349 @@ describe('panning', () => {
     fireEvent.click(queryByRole('button', { name: 'Jump to latest' }))
 
     expect(onTimeOffsetChange).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('trend lines', () => {
+  const ray = { id: 1, label: '', earlyField: 'start', x1: 2, y1: 105, x2: 20, y2: 130 }
+  const geometry = () =>
+    priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+  const drag = (element, fromY, toY, fromX, toX) => {
+    fireEvent.pointerDown(element, { clientX: fromX, clientY: fromY, pointerId: 1 })
+    fireEvent.pointerMove(element, { clientX: toX, clientY: toY, pointerId: 1 })
+    fireEvent.pointerUp(element, { clientX: toX, clientY: toY, pointerId: 1 })
+  }
+
+  it('draws a line from its resolved start to its resolved end', () => {
+    const { getByTestId } = renderChart({ trendLines: [ray] })
+    const g = geometry()
+    const line = getByTestId('trend-line-1')
+
+    expect(line.querySelector('line')).toHaveAttribute('x1', g.xAt(ray.x1).toFixed(2))
+    expect(line.querySelector('line')).toHaveAttribute('x2', g.xAt(ray.x2).toFixed(2))
+  })
+
+  it('shows a thicker stroke on the visible line once selected', () => {
+    const { getByTestId } = renderChart({ trendLines: [ray] })
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+
+    expect(getByTestId('trend-line-1').querySelector('line')).toHaveAttribute('stroke-width', '2')
+  })
+
+  it('moves the end handle to a new bar and price on drag', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-end')
+    drag(handle, g.scaleY(ray.y2), g.scaleY(ray.y2) + 10, g.xAt(ray.x2), g.xAt(5))
+
+    expect(onMoveTrendLineEndpoint).toHaveBeenCalledTimes(1)
+    const [line, endpoint, point] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(line).toEqual(ray)
+    expect(endpoint).toBe('end')
+    expect(point.barDate).toBe(bars[5].date)
+    expect(point.price).toBeLessThan(ray.y2)
+  })
+
+  it('moves the start handle independently of the end', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-start')
+    drag(handle, g.scaleY(ray.y1), g.scaleY(ray.y1) - 10, g.xAt(ray.x1), g.xAt(1))
+
+    const [, endpoint] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(endpoint).toBe('start')
+  })
+
+  it('patches the field that is actually early when a ray was stored right-to-left', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const reversedRay = { ...ray, earlyField: 'end' }
+    const { getByTestId } = renderChart({ trendLines: [reversedRay], onMoveTrendLineEndpoint })
+    const g = geometry()
+
+    const handle = getByTestId('trend-line-handle-1-end')
+    drag(handle, g.scaleY(ray.y1), g.scaleY(ray.y1) - 10, g.xAt(ray.x1), g.xAt(1))
+
+    expect(onMoveTrendLineEndpoint).toHaveBeenCalledTimes(1)
+    const [, endpoint] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(endpoint).toBe('end')
+  })
+
+  it('does not move anything on a click without dragging', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const g = geometry()
+    const handle = getByTestId('trend-line-handle-1-end')
+
+    fireEvent.pointerDown(handle, { clientX: g.xAt(ray.x2), clientY: g.scaleY(ray.y2), pointerId: 1 })
+    fireEvent.pointerUp(handle, { clientX: g.xAt(ray.x2), clientY: g.scaleY(ray.y2), pointerId: 1 })
+
+    expect(onMoveTrendLineEndpoint).not.toHaveBeenCalled()
+  })
+
+  it('deletes the selected ray with the Delete key', () => {
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onDeleteTrendLine })
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTrendLine).toHaveBeenCalledWith(ray)
+  })
+
+  it('does not delete a ray while the user is typing', () => {
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onDeleteTrendLine })
+    const field = document.createElement('textarea')
+    document.body.appendChild(field)
+
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(field, { key: 'Backspace' })
+
+    expect(onDeleteTrendLine).not.toHaveBeenCalled()
+    field.remove()
+  })
+
+  it('opens a label editor on a double-click of the line body', () => {
+    const { getByTestId, getByLabelText } = renderChart({ trendLines: [{ ...ray, label: 'Support' }] })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+
+    expect(getByLabelText('Trend line label')).toHaveValue('Support')
+  })
+
+  it('saves an edited label on Enter', () => {
+    const onEditTrendLineLabel = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ trendLines: [ray], onEditTrendLineLabel })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+    const input = getByLabelText('Trend line label')
+    fireEvent.change(input, { target: { value: 'Resistance' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditTrendLineLabel).toHaveBeenCalledWith(ray, 'Resistance')
+  })
+
+  it("a double-click on the line body does not also create a horizontal line", () => {
+    const onCreateLine = vi.fn()
+    const { getByTestId } = renderChart({ trendLines: [ray], onCreateLine })
+
+    fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+})
+
+describe('cross-kind selection', () => {
+  const free = { id: 7, kind: 'free', price: 115 }
+  const ray = { id: 1, label: '', earlyField: 'start', x1: 2, y1: 105, x2: 20, y2: 130 }
+
+  it('selecting a ray after a freeform line clears the line selection, so Delete only removes the ray', () => {
+    const onDeleteLine = vi.fn()
+    const onDeleteTrendLine = vi.fn()
+    const { getByTestId } = renderChart({ lines: [free], trendLines: [ray], onDeleteLine, onDeleteTrendLine })
+
+    fireEvent.click(getByTestId('price-hit-7'))
+    fireEvent.click(getByTestId('trend-line-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTrendLine).toHaveBeenCalledWith(ray)
+    expect(onDeleteLine).not.toHaveBeenCalled()
+  })
+})
+
+describe('double-clicking with a drawing tool armed', () => {
+  it.each(['ray', 'text'])('does not create a stray horizontal line while the %s tool is armed', (tool) => {
+    const onCreateLine = vi.fn()
+    const { container } = renderChart({ lines: [], onCreateLine, tool })
+
+    fireEvent.doubleClick(container.firstChild, { clientX: 100, clientY: 200 })
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+})
+
+describe('placing a ray', () => {
+  it('does nothing on the first click, and shows no preview yet', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    expect(onCreateTrendLine).not.toHaveBeenCalled()
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+
+  it('previews a line from the first click to the current pointer position', () => {
+    const { container, getByTestId } = renderChart({ tool: 'ray', onCreateTrendLine: vi.fn() })
+    const plot = container.firstChild
+
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    fireEvent.mouseMove(plot, { clientX: 300, clientY: 150 })
+
+    const preview = getByTestId('trend-line-preview')
+    expect(preview).toHaveAttribute('y2', '150')
+  })
+
+  it('commits both points on the second click', () => {
+    const onCreateTrendLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container } = renderChart({ tool: 'ray', onCreateTrendLine, onPlaced })
+    const plot = container.firstChild
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(9), clientY: 150 })
+
+    expect(onCreateTrendLine).toHaveBeenCalledTimes(1)
+    const [start, end] = onCreateTrendLine.mock.calls[0]
+    expect(start.barDate).toBe(bars[3].date)
+    expect(end.barDate).toBe(bars[9].date)
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('a same-bar second click does not commit and stays armed', () => {
+    const onCreateTrendLine = vi.fn()
+    const onPlaced = vi.fn()
+    const { container, getByTestId } = renderChart({ tool: 'ray', onCreateTrendLine, onPlaced })
+    const plot = container.firstChild
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 150 })
+
+    expect(onCreateTrendLine).not.toHaveBeenCalled()
+    expect(onPlaced).not.toHaveBeenCalled()
+    expect(getByTestId('trend-line-preview')).toBeInTheDocument()
+  })
+
+  it('clears the in-progress first point when the tool changes away', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, rerender, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+    const plot = container.firstChild
+
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    rerender(chart({ tool: 'crosshair', onCreateTrendLine }))
+    rerender(chart({ tool: 'ray', onCreateTrendLine }))
+    fireEvent.mouseMove(plot, { clientX: 300, clientY: 150 })
+
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+
+  it('never starts a ray from a click in the price-axis gutter', () => {
+    const onCreateTrendLine = vi.fn()
+    const { container, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 740, clientY: 200 })
+    fireEvent.mouseMove(container.firstChild, { clientX: 300, clientY: 150 })
+
+    expect(queryByTestId('trend-line-preview')).toBeNull()
+  })
+})
+
+describe('text annotations', () => {
+  const note = { id: 1, text: 'Earnings gap', index: 5, price: 108 }
+  const geometry = () =>
+    priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+  it('draws the text at its resolved point', () => {
+    const { getByTestId } = renderChart({ textAnnotations: [note] })
+    expect(getByTestId('text-annotation-1')).toHaveTextContent('Earnings gap')
+  })
+
+  it('shows the selected colour on the text once clicked', () => {
+    const { getByTestId } = renderChart({ textAnnotations: [note] })
+
+    fireEvent.click(getByTestId('text-annotation-hit-1'))
+
+    expect(getByTestId('text-annotation-1').querySelector('text')).toHaveAttribute('fill', '#e4e4e7')
+  })
+
+  it('moves the annotation on drag', () => {
+    const onMoveTextAnnotation = vi.fn()
+    const { getByTestId } = renderChart({ textAnnotations: [note], onMoveTextAnnotation })
+    const g = geometry()
+    const hit = getByTestId('text-annotation-hit-1')
+
+    fireEvent.pointerDown(hit, { clientX: g.xAt(note.index), clientY: g.scaleY(note.price), pointerId: 1 })
+    fireEvent.pointerMove(hit, { clientX: g.xAt(12), clientY: g.scaleY(note.price) - 10, pointerId: 1 })
+    fireEvent.pointerUp(hit, { clientX: g.xAt(12), clientY: g.scaleY(note.price) - 10, pointerId: 1 })
+
+    expect(onMoveTextAnnotation).toHaveBeenCalledTimes(1)
+    const [item, point] = onMoveTextAnnotation.mock.calls[0]
+    expect(item).toEqual(note)
+    expect(point.barDate).toBe(bars[12].date)
+  })
+
+  it('opens a text editor on a double-click', () => {
+    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note] })
+
+    fireEvent.doubleClick(getByTestId('text-annotation-hit-1'))
+
+    expect(getByLabelText('Annotation text')).toHaveValue('Earnings gap')
+  })
+
+  it('saves edited text on Enter, and ignores an emptied save', () => {
+    const onEditTextAnnotationText = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note], onEditTextAnnotationText })
+
+    fireEvent.doubleClick(getByTestId('text-annotation-hit-1'))
+    const input = getByLabelText('Annotation text')
+    fireEvent.change(input, { target: { value: 'Revised' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditTextAnnotationText).toHaveBeenCalledWith(note, 'Revised')
+  })
+
+  it('deletes the selected annotation with the Delete key', () => {
+    const onDeleteTextAnnotation = vi.fn()
+    const { getByTestId } = renderChart({ textAnnotations: [note], onDeleteTextAnnotation })
+
+    fireEvent.click(getByTestId('text-annotation-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTextAnnotation).toHaveBeenCalledWith(note)
+  })
+})
+
+describe('placing a text annotation', () => {
+  it('opens a blank editor at the clicked point on the first click', () => {
+    const { container, getByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation: vi.fn() })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    expect(getByLabelText('Annotation text')).toHaveValue('')
+  })
+
+  it('commits on Enter with non-blank text', () => {
+    const onCreateTextAnnotation = vi.fn()
+    const onPlaced = vi.fn()
+    const { container, getByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation, onPlaced })
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: g.xAt(7), clientY: 200 })
+    const input = getByLabelText('Annotation text')
+    fireEvent.change(input, { target: { value: 'Breakout' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onCreateTextAnnotation).toHaveBeenCalledWith({ barDate: bars[7].date, price: expect.any(Number), text: 'Breakout' })
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not commit an empty text block', () => {
+    const onCreateTextAnnotation = vi.fn()
+    const { container, getByLabelText, queryByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+    const input = getByLabelText('Annotation text')
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    expect(onCreateTextAnnotation).not.toHaveBeenCalled()
+    expect(queryByLabelText('Annotation text')).toBeNull()
   })
 })

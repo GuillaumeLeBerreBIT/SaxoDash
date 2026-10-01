@@ -58,6 +58,18 @@ function stubQueries() {
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
   queries.usePriceLineMutations.mockReturnValue(lineMutations)
+  queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useTrendLineMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
+  queries.useTextAnnotations.mockReturnValue({ ...idle, data: [] })
+  queries.useTextAnnotationMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
 }
 
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement

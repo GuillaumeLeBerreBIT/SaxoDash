@@ -9,7 +9,11 @@ import {
   useNoteLevelMutation,
   usePriceLineMutations,
   usePriceLines,
+  useTrendLineMutations,
+  useTrendLines,
   useSymbolNote,
+  useTextAnnotationMutations,
+  useTextAnnotations,
 } from './research'
 
 function setup(useHook, initialProps) {
@@ -108,10 +112,10 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('120.00'))
-    expect(client.updatePriceLine).toHaveBeenCalledWith(1, '120.00')
+    expect(client.updatePriceLine).toHaveBeenCalledWith(1, { price: '120.00' })
   })
 
   it('puts a line back when the move fails', async () => {
@@ -120,7 +124,7 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.edit.update.isError).toBe(true))
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('100.00'))
@@ -133,7 +137,7 @@ describe('price lines', () => {
     const { result } = setup(useLines)
     await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
 
-    act(() => result.current.edit.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { price: '120.00' } }))
 
     await waitFor(() => expect(result.current.edit.update.isError).toBe(true))
     await waitFor(() => expect(result.current.lines.data[0].price).toBe('100.00'))
@@ -168,7 +172,7 @@ describe('price lines', () => {
     queryClient.setQueryData(researchKeys.priceLines(211, 'Stock'), [{ id: 1, price: '100.00' }])
     queryClient.setQueryData(researchKeys.priceLines(5, 'Stock'), [{ id: 9, price: '300.00' }])
 
-    act(() => result.current.update.mutate({ id: 1, price: '120.00' }))
+    act(() => result.current.update.mutate({ id: 1, patch: { price: '120.00' } }))
     await waitFor(() =>
       expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))[0].price).toBe('120.00'),
     )
@@ -178,5 +182,104 @@ describe('price lines', () => {
     await waitFor(() => expect(result.current.update.isError).toBe(true))
     expect(queryClient.getQueryData(researchKeys.priceLines(5, 'Stock'))).toEqual([{ id: 9, price: '300.00' }])
     expect(queryClient.getQueryData(researchKeys.priceLines(211, 'Stock'))).toEqual([{ id: 1, price: '100.00' }])
+  })
+
+  it('can patch just the label, leaving the price alone', async () => {
+    client.getPriceLines.mockResolvedValue([{ id: 1, price: '100.00', label: '' }])
+    client.updatePriceLine.mockReturnValue(new Promise(() => {}))
+    const { result } = setup(useLines)
+    await waitFor(() => expect(result.current.lines.data).toHaveLength(1))
+
+    act(() => result.current.edit.update.mutate({ id: 1, patch: { label: 'Support' } }))
+
+    await waitFor(() => expect(result.current.lines.data[0]).toEqual({ id: 1, price: '100.00', label: 'Support' }))
+    expect(client.updatePriceLine).toHaveBeenCalledWith(1, { label: 'Support' })
+  })
+})
+
+describe('trend lines', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('is disabled until both uic and asset type are known', () => {
+    const { result } = setup(() => useTrendLines(undefined, undefined))
+    expect(result.current.fetchStatus).toBe('idle')
+  })
+
+  it('creates a trend line from both endpoints', async () => {
+    client.createTrendLine.mockResolvedValue({ id: 3, start_bar_date: '2026-08-01', start_price: '100.00' })
+    const { result } = setup(() => useTrendLineMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.create.mutateAsync({
+        startBarDate: '2026-08-01', startPrice: '100.00', endBarDate: '2026-08-10', endPrice: '110.00',
+      })
+    })
+
+    expect(client.createTrendLine).toHaveBeenCalledWith({
+      uic: 211, assetType: 'Stock',
+      startBarDate: '2026-08-01', startPrice: '100.00', endBarDate: '2026-08-10', endPrice: '110.00',
+    })
+  })
+
+  it('optimistically patches only the moved line, and rolls back only that one on failure', async () => {
+    client.updateTrendLine.mockRejectedValue(new Error('boom'))
+    const { queryClient, result } = setup(() => useTrendLineMutations(211, 'Stock'))
+    queryClient.setQueryData(researchKeys.trendLines(211, 'Stock'), [
+      { id: 1, start_bar_date: '2026-08-01', start_price: '100.00', end_bar_date: '2026-08-10', end_price: '110.00', label: '' },
+      { id: 2, start_bar_date: '2026-08-02', start_price: '90.00', end_bar_date: '2026-08-11', end_price: '95.00', label: '' },
+    ])
+
+    await act(async () => {
+      try {
+        await result.current.update.mutateAsync({ id: 1, patch: { end_price: '999.00' } })
+      } catch {
+        return
+      }
+    })
+
+    const after = queryClient.getQueryData(researchKeys.trendLines(211, 'Stock'))
+    expect(after.find((line) => line.id === 1).end_price).toBe('110.00')
+    expect(after.find((line) => line.id === 2).end_price).toBe('95.00')
+  })
+})
+
+describe('text annotations', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('is disabled until both uic and asset type are known', () => {
+    const { result } = setup(() => useTextAnnotations(undefined, undefined))
+    expect(result.current.fetchStatus).toBe('idle')
+  })
+
+  it('creates a text annotation', async () => {
+    client.createTextAnnotation.mockResolvedValue({ id: 3, text: 'Gap' })
+    const { result } = setup(() => useTextAnnotationMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.create.mutateAsync({ barDate: '2026-08-01', price: '100.00', text: 'Gap' })
+    })
+
+    expect(client.createTextAnnotation).toHaveBeenCalledWith({
+      uic: 211, assetType: 'Stock', barDate: '2026-08-01', price: '100.00', text: 'Gap',
+    })
+  })
+
+  it('optimistically patches only the moved annotation, and rolls back only that one on failure', async () => {
+    client.updateTextAnnotation.mockRejectedValue(new Error('boom'))
+    const { queryClient, result } = setup(() => useTextAnnotationMutations(211, 'Stock'))
+    queryClient.setQueryData(researchKeys.textAnnotations(211, 'Stock'), [
+      { id: 1, bar_date: '2026-08-01', price: '100.00', text: 'A' },
+      { id: 2, bar_date: '2026-08-02', price: '90.00', text: 'B' },
+    ])
+
+    await act(async () => {
+      try {
+        await result.current.update.mutateAsync({ id: 1, patch: { text: 'Changed' } })
+      } catch {
+        return
+      }
+    })
+
+    await waitFor(() => expect(result.current.update.isError).toBe(true))
   })
 })

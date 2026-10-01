@@ -71,6 +71,7 @@ class PriceLine(models.Model):
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    label = models.CharField(max_length=60, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -79,3 +80,37 @@ class PriceLine(models.Model):
 
     def __str__(self):
         return f'{self.price} on {self.uic}:{self.asset_type}'
+
+
+class TrendLine(models.Model):
+    uic = models.PositiveIntegerField()
+    asset_type = models.CharField(max_length=20)
+    start_bar_date = models.DateField()
+    start_price = models.DecimalField(max_digits=12, decimal_places=2)
+    end_bar_date = models.DateField()
+    end_price = models.DecimalField(max_digits=12, decimal_places=2)
+    label = models.CharField(max_length=60, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        indexes = [models.Index(fields=['uic', 'asset_type'])]
+
+    def __str__(self):
+        return f'{self.start_price}@{self.start_bar_date} -> {self.end_price}@{self.end_bar_date} on {self.uic}:{self.asset_type}'
+
+
+class TextAnnotation(models.Model):
+    uic = models.PositiveIntegerField()
+    asset_type = models.CharField(max_length=20)
+    bar_date = models.DateField()
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    text = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+        indexes = [models.Index(fields=['uic', 'asset_type'])]
+
+    def __str__(self):
+        return f'"{self.text}" at {self.price}@{self.bar_date} on {self.uic}:{self.asset_type}'

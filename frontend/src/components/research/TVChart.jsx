@@ -18,9 +18,12 @@ import {
   svgY,
   useWidth,
 } from '../../lib/chartGeometry'
-import { AXIS_TEXT, BEAT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { AXIS_TEXT, BEAT, CATEGORY_AXIS_TEXT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
+import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
+import TrendLines, { LabelEditor } from './TrendLines'
+import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
@@ -275,6 +278,8 @@ function Crosshair({ bar, index, geometry, width }) {
 }
 
 const NO_LINES = []
+const NO_TREND_LINES = []
+const NO_TEXT_ANNOTATIONS = []
 
 function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
@@ -344,14 +349,49 @@ export function TVChart({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
-  placingLine = false,
+  onEditLineLabel,
+  trendLines = NO_TREND_LINES,
+  onMoveTrendLineEndpoint,
+  onDeleteTrendLine,
+  onEditTrendLineLabel,
+  onCreateTrendLine,
+  textAnnotations = NO_TEXT_ANNOTATIONS,
+  onMoveTextAnnotation,
+  onDeleteTextAnnotation,
+  onEditTextAnnotationText,
+  onCreateTextAnnotation,
+  tool = 'crosshair',
   onPlaced,
 }) {
   const [ref, width] = useWidth()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
-  const [selectedId, setSelectedId] = useState(null)
+  const placingLine = tool === 'hline'
   const [editingId, setEditingId] = useState(null)
   const placedRef = useRef(false)
+  const freeLines = useMemo(() => lines.filter((line) => line.kind === 'free'), [lines])
+  const freeSelection = useAnnotationSelection({ containerRef: ref, items: freeLines, onDelete: onDeleteLine })
+  const [editingFreeLineId, setEditingFreeLineId] = useState(null)
+  const editingFreeLine = freeLines.find((line) => line.id === editingFreeLineId) ?? null
+  const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
+  const [editingTrendLineId, setEditingTrendLineId] = useState(null)
+  const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
+  const textSelection = useAnnotationSelection({ containerRef: ref, items: textAnnotations, onDelete: onDeleteTextAnnotation })
+  const [editingTextId, setEditingTextId] = useState(null)
+  const editingText = textAnnotations.find((item) => item.id === editingTextId) ?? null
+  const [textDraftPoint, setTextDraftPoint] = useState(null)
+  const [textTool, setTextTool] = useState(tool)
+  if (tool !== textTool) {
+    setTextTool(tool)
+    setTextDraftPoint(null)
+  }
+  const [rayStart, setRayStart] = useState(null)
+  const [rayPreview, setRayPreview] = useState(null)
+  const [rayTool, setRayTool] = useState(tool)
+  if (tool !== rayTool) {
+    setRayTool(tool)
+    setRayStart(null)
+    setRayPreview(null)
+  }
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
@@ -396,30 +436,7 @@ export function TVChart({
     return () => element.removeEventListener('wheel', onWheel)
   }, [ref, hasData])
 
-  const selected = lines.find((line) => line.id === selectedId && line.kind === 'free') ?? null
   const editing = lines.find((line) => line.id === editingId) ?? null
-
-  useEffect(() => {
-    if (!selected) return undefined
-    const onKeyDown = (event) => {
-      if (isTypingTarget(event.target)) return
-      if (event.key === 'Escape') setSelectedId(null)
-      if ((event.key === 'Delete' || event.key === 'Backspace') && onDeleteLine) {
-        event.preventDefault()
-        setSelectedId(null)
-        onDeleteLine(selected)
-      }
-    }
-    const onPointerDown = (event) => {
-      if (!ref.current?.contains(event.target)) setSelectedId(null)
-    }
-    window.addEventListener('keydown', onKeyDown)
-    document.addEventListener('pointerdown', onPointerDown, true)
-    return () => {
-      window.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('pointerdown', onPointerDown, true)
-    }
-  }, [selected, onDeleteLine, ref])
 
   if (data.length === 0) return null
 
@@ -440,20 +457,59 @@ export function TVChart({
     if (nearest) setEditingId(nearest.line.id)
   }
 
+  const barAt = (event) => {
+    const y = plotY(event)
+    if (y == null) return null
+    const index = indexFromPointer(event, geometry.slot, data.length)
+    return { barDate: data[index].date, price: roundPrice(geometry.priceAtY(y)), x: geometry.xAt(index), y }
+  }
+
   return (
     <div
       ref={ref}
       className="relative w-full select-none"
-      style={{ height, cursor: pan.dragging ? 'grabbing' : placingLine ? 'crosshair' : undefined }}
+      style={{ height, cursor: pan.dragging ? 'grabbing' : tool !== 'crosshair' ? 'crosshair' : undefined }}
       {...pan.handlers}
-      onMouseMove={(e) => setHover(indexFromPointer(e, geometry.slot, data.length))}
+      onMouseMove={(e) => {
+        setHover(indexFromPointer(e, geometry.slot, data.length))
+        if (tool === 'ray' && rayStart) {
+          const point = barAt(e)
+          if (point) setRayPreview(point)
+        }
+      }}
       onMouseLeave={() => setHover(null)}
       onMouseDown={(e) => {
         if (e.detail <= 1) placedRef.current = false
       }}
       onClick={(e) => {
         if (pan.consumeMoved()) return
-        setSelectedId(null)
+        freeSelection.clear()
+        trendSelection.clear()
+        textSelection.clear()
+        if (tool === 'ray' && onCreateTrendLine && e.detail === 1) {
+          const point = barAt(e)
+          if (point) {
+            if (!rayStart) {
+              setRayStart(point)
+            } else if (point.barDate !== rayStart.barDate) {
+              onCreateTrendLine(
+                { barDate: rayStart.barDate, price: rayStart.price },
+                { barDate: point.barDate, price: point.price },
+              )
+              setRayStart(null)
+              setRayPreview(null)
+              onPlaced?.()
+            } else {
+              setRayPreview(point)
+            }
+          }
+          return
+        }
+        if (tool === 'text' && e.detail === 1) {
+          const point = barAt(e)
+          if (point) setTextDraftPoint(point)
+          return
+        }
         if (!placingLine || !onCreateLine || e.detail > 1) return
         const y = plotY(e)
         if (y == null) return
@@ -462,6 +518,7 @@ export function TVChart({
         onPlaced?.()
       }}
       onDoubleClick={(e) => {
+        if (tool === 'ray' || tool === 'text') return
         if (placedRef.current) {
           placedRef.current = false
           return
@@ -494,10 +551,53 @@ export function TVChart({
           lines={lines}
           geometry={geometry}
           width={width}
-          selectedId={selected?.id ?? null}
+          selectedId={freeSelection.selected?.id ?? null}
           onMove={(line, price) => onMoveLine?.(line, price)}
-          onSelect={setSelectedId}
+          onSelect={(id) => {
+            trendSelection.clear()
+            textSelection.clear()
+            freeSelection.select(id)
+          }}
+          onEditLabel={setEditingFreeLineId}
         />
+        <TrendLines
+          lines={trendLines}
+          geometry={geometry}
+          data={data}
+          selectedId={trendSelection.selected?.id ?? null}
+          onSelect={(id) => {
+            freeSelection.clear()
+            textSelection.clear()
+            trendSelection.select(id)
+          }}
+          onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
+          onEdit={setEditingTrendLineId}
+        />
+        <TextAnnotations
+          items={textAnnotations}
+          geometry={geometry}
+          data={data}
+          selectedId={textSelection.selected?.id ?? null}
+          onSelect={(id) => {
+            freeSelection.clear()
+            trendSelection.clear()
+            textSelection.select(id)
+          }}
+          onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
+          onEdit={setEditingTextId}
+        />
+        {rayStart && rayPreview ? (
+          <line
+            data-testid="trend-line-preview"
+            x1={rayStart.x}
+            y1={rayStart.y}
+            x2={rayPreview.x}
+            y2={rayPreview.y}
+            stroke={CATEGORY_AXIS_TEXT}
+            strokeDasharray="3 3"
+            pointerEvents="none"
+          />
+        ) : null}
         {hover != null && data[hover] ? (
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
         ) : null}
@@ -513,6 +613,61 @@ export function TVChart({
             onMoveLine?.(line, price)
           }}
           onCancel={() => setEditingId(null)}
+        />
+      ) : null}
+      {editingFreeLine ? (
+        <LabelEditor
+          key={editingFreeLine.id}
+          value={editingFreeLine.label ?? ''}
+          x={width - PAD_R + 2}
+          y={geometry.scaleY(editingFreeLine.price) + 20}
+          ariaLabel="Line label"
+          onCommit={(label) => {
+            setEditingFreeLineId(null)
+            onEditLineLabel?.(editingFreeLine, label)
+          }}
+          onCancel={() => setEditingFreeLineId(null)}
+        />
+      ) : null}
+      {editingTrendLine ? (
+        <LabelEditor
+          key={editingTrendLine.id}
+          value={editingTrendLine.label}
+          x={geometry.xAt(editingTrendLine.x1) + 6}
+          y={geometry.scaleY(editingTrendLine.y1)}
+          ariaLabel="Trend line label"
+          onCommit={(label) => {
+            setEditingTrendLineId(null)
+            onEditTrendLineLabel?.(editingTrendLine, label)
+          }}
+          onCancel={() => setEditingTrendLineId(null)}
+        />
+      ) : null}
+      {editingText ? (
+        <TextAnnotationEditor
+          key={editingText.id}
+          text={editingText.text}
+          x={geometry.xAt(editingText.index) + 6}
+          y={geometry.scaleY(editingText.price)}
+          onCommit={(text) => {
+            setEditingTextId(null)
+            onEditTextAnnotationText?.(editingText, text)
+          }}
+          onCancel={() => setEditingTextId(null)}
+        />
+      ) : null}
+      {textDraftPoint ? (
+        <TextAnnotationEditor
+          key="draft"
+          text=""
+          x={textDraftPoint.x + 6}
+          y={textDraftPoint.y}
+          onCommit={(text) => {
+            onCreateTextAnnotation?.({ barDate: textDraftPoint.barDate, price: textDraftPoint.price, text })
+            setTextDraftPoint(null)
+            onPlaced?.()
+          }}
+          onCancel={() => setTextDraftPoint(null)}
         />
       ) : null}
       {timeOffset > 0 && onTimeOffsetChange ? (

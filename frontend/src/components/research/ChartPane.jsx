@@ -43,9 +43,22 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
   )
 }
 
-function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, split }) {
+function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
-  const { chart, bars, rangeBars, ind, timeWindow, earningsMarkers, priceLines, quote } = useChartData({
+  const {
+    chart,
+    bars,
+    rangeBars,
+    ind,
+    timeWindow,
+    earningsMarkers,
+    priceLines,
+    trendLines,
+    trendLineActions,
+    textAnnotations,
+    textAnnotationActions,
+    quote,
+  } = useChartData({
     symbol: slot.symbol,
     instrument,
     range: controls.range,
@@ -62,7 +75,7 @@ function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, 
         quote={quote}
         rangeBars={rangeBars}
         windowBars={bars}
-        lineSaveFailed={priceLines.saveFailed}
+        lineSaveFailed={priceLines.saveFailed || trendLineActions.saveFailed || textAnnotationActions.saveFailed}
         showIdentity={split}
       />
       <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
@@ -82,9 +95,20 @@ function FilledPane({ slot, controls, view, placingLine, onPlaced, paneHeights, 
           onMoveLine={priceLines.move}
           onCreateLine={priceLines.create}
           onDeleteLine={priceLines.remove}
+          onEditLineLabel={priceLines.setLabel}
+          trendLines={trendLines}
+          onMoveTrendLineEndpoint={trendLineActions.moveEndpoint}
+          onCreateTrendLine={trendLineActions.create}
+          onDeleteTrendLine={trendLineActions.remove}
+          onEditTrendLineLabel={trendLineActions.setLabel}
+          textAnnotations={textAnnotations}
+          onMoveTextAnnotation={textAnnotationActions.move}
+          onCreateTextAnnotation={textAnnotationActions.create}
+          onDeleteTextAnnotation={textAnnotationActions.remove}
+          onEditTextAnnotationText={textAnnotationActions.setText}
           fitHeight={canvasSize.height}
           paneHeights={paneHeights}
-          placingLine={placingLine}
+          tool={tool}
           onPlaced={onPlaced}
         />
       </div>
@@ -99,7 +123,7 @@ export default function ChartPane({
   controls,
   view,
   onActivate,
-  placingLine,
+  tool,
   onPlaced,
   paneHeights,
   style,
@@ -121,7 +145,7 @@ export default function ChartPane({
             slot={slot}
             controls={controls}
             view={view}
-            placingLine={active && placingLine}
+            tool={active ? tool : 'crosshair'}
             onPlaced={onPlaced}
             paneHeights={paneHeights}
             split={split}

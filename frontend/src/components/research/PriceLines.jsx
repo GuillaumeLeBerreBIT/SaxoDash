@@ -54,7 +54,7 @@ function EdgeMarker({ line, edge, width, chartH }) {
   )
 }
 
-function DraggableLine({ line, geometry, width, selected, onMove, onSelect }) {
+function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEditLabel }) {
   const [preview, setPreview] = useState(null)
   const [heldFrom, setHeldFrom] = useState(null)
   const drag = useRef(null)
@@ -123,14 +123,22 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect }) {
           e.stopPropagation()
           if (line.kind === 'free') onSelect(line.id)
         }}
-        onDoubleClick={stop}
+        onDoubleClick={(e) => {
+          e.stopPropagation()
+          if (line.kind === 'free') onEditLabel(line.id)
+        }}
       />
       <Badge line={line} price={price} y={y} width={width} selected={selected} />
+      {line.label ? (
+        <text x={4} y={y - 6} fill={LINE_STROKES[line.kind]} fontSize="10" fontFamily="Geist Mono" pointerEvents="none">
+          {line.label}
+        </text>
+      ) : null}
     </g>
   )
 }
 
-export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect }) {
+export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect, onEditLabel }) {
   return lines.map((line) => (
     <DraggableLine
       key={line.id}
@@ -140,6 +148,7 @@ export default function PriceLines({ lines, geometry, width, selectedId, onMove,
       selected={line.id === selectedId}
       onMove={onMove}
       onSelect={onSelect}
+      onEditLabel={onEditLabel}
     />
   ))
 }

@@ -11,7 +11,11 @@ import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars } from '../../lib/research'
 import { LATEST_TIME_VIEW, resolveTimeWindow } from '../../lib/timeWindow'
+import { resolveTextAnnotations } from '../../lib/textAnnotations'
+import { resolveTrendLines } from '../../lib/trendLines'
 import { useChartLines } from './useChartLines'
+import { useChartTextAnnotations } from './useChartTextAnnotations'
+import { useChartTrendLines } from './useChartTrendLines'
 
 // Hoisted so an empty result keeps a stable identity and the memos below do
 // not recompute on every render.
@@ -40,6 +44,16 @@ export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME
   const earnings = useSymbolEarnings(symbol)
   const note = useSymbolNote(symbol)
   const priceLines = useChartLines({ symbol, uic, assetType, note: note?.data })
+  const savedTrendLines = useChartTrendLines({ symbol, uic, assetType })
+  const trendLines = useMemo(
+    () => resolveTrendLines(savedTrendLines.lines, { allBars, windowStart: start, windowLength: bars.length }),
+    [savedTrendLines.lines, allBars, start, bars.length],
+  )
+  const savedTextAnnotations = useChartTextAnnotations({ symbol, uic, assetType })
+  const textAnnotations = useMemo(
+    () => resolveTextAnnotations(savedTextAnnotations.items, { allBars, windowStart: start, windowLength: bars.length }),
+    [savedTextAnnotations.items, allBars, start, bars.length],
+  )
   const earningsMarkers = useMemo(
     () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
     [bars, earnings.data],
@@ -60,6 +74,10 @@ export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME
     earningsMarkers,
     note,
     priceLines,
+    trendLines,
+    trendLineActions: savedTrendLines,
+    textAnnotations,
+    textAnnotationActions: savedTextAnnotations,
     quote: liveQuotes.data?.[0],
     details,
   }

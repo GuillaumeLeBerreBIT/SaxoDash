@@ -20,9 +20,9 @@ const makeControls = (overrides = {}) => ({
 const renderRail = (props = {}) => {
   const all = {
     controls: makeControls(),
-    placingLine: false,
-    onPlacingLineChange: vi.fn(),
-    canPlaceLine: true,
+    tool: 'crosshair',
+    onToolChange: vi.fn(),
+    canAnnotate: true,
     backHref: '/research?symbol=NOW&uic=204300&assetType=Stock',
     ...props,
   }
@@ -38,25 +38,37 @@ describe('ChartToolRail', () => {
   })
 
   it('arms the line tool', async () => {
-    const { onPlacingLineChange } = renderRail()
+    const { onToolChange } = renderRail()
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
-    expect(onPlacingLineChange).toHaveBeenCalledWith(true)
+    expect(onToolChange).toHaveBeenCalledWith('hline')
   })
 
   it('disarms the line tool from the line button or the crosshair', async () => {
-    const { onPlacingLineChange } = renderRail({ placingLine: true })
+    const { onToolChange } = renderRail({ tool: 'hline' })
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'true')
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
     await userEvent.click(screen.getByRole('button', { name: 'Crosshair' }))
 
-    expect(onPlacingLineChange).toHaveBeenNthCalledWith(1, false)
-    expect(onPlacingLineChange).toHaveBeenNthCalledWith(2, false)
+    expect(onToolChange).toHaveBeenNthCalledWith(1, 'crosshair')
+    expect(onToolChange).toHaveBeenNthCalledWith(2, 'crosshair')
   })
 
-  it('disables the line tool when lines cannot be created', () => {
-    renderRail({ canPlaceLine: false })
+  it('disables the line, ray and text tools when annotations cannot be created', () => {
+    renderRail({ canAnnotate: false })
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Ray' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Text' })).toBeDisabled()
+  })
+
+  it('arms and disarms the ray and text tools', async () => {
+    const { onToolChange } = renderRail()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ray' }))
+    expect(onToolChange).toHaveBeenNthCalledWith(1, 'ray')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Text' }))
+    expect(onToolChange).toHaveBeenNthCalledWith(2, 'text')
   })
 
   it('disables reset while the price scale is already automatic', () => {

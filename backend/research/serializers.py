@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import PriceLine, SymbolNote, Watchlist, WatchlistItem
+from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 
 
 def _positive_or_none(value):
@@ -68,7 +68,41 @@ class SymbolNoteSerializer(serializers.ModelSerializer):
 class PriceLineSerializer(serializers.ModelSerializer):
     class Meta:
         model = PriceLine
-        fields = ['id', 'uic', 'asset_type', 'price', 'created_at']
+        fields = ['id', 'uic', 'asset_type', 'price', 'label', 'created_at']
+        read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
+
+    def validate_price(self, value):
+        return _positive_or_none(value)
+
+
+class TrendLineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrendLine
+        fields = [
+            'id', 'uic', 'asset_type',
+            'start_bar_date', 'start_price', 'end_bar_date', 'end_price',
+            'label', 'created_at',
+        ]
+        read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
+
+    def validate_start_price(self, value):
+        return _positive_or_none(value)
+
+    def validate_end_price(self, value):
+        return _positive_or_none(value)
+
+    def validate(self, attrs):
+        start = attrs.get('start_bar_date', getattr(self.instance, 'start_bar_date', None))
+        end = attrs.get('end_bar_date', getattr(self.instance, 'end_bar_date', None))
+        if start is not None and end is not None and start == end:
+            raise serializers.ValidationError('A trend line needs two different bars.')
+        return attrs
+
+
+class TextAnnotationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TextAnnotation
+        fields = ['id', 'uic', 'asset_type', 'bar_date', 'price', 'text', 'created_at']
         read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
 
     def validate_price(self, value):

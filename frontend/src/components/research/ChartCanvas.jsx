@@ -79,10 +79,21 @@ export default function ChartCanvas({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  onEditLineLabel,
+  trendLines,
+  onMoveTrendLineEndpoint,
+  onCreateTrendLine,
+  onDeleteTrendLine,
+  onEditTrendLineLabel,
+  textAnnotations,
+  onMoveTextAnnotation,
+  onCreateTextAnnotation,
+  onDeleteTextAnnotation,
+  onEditTextAnnotationText,
   priceHeight,
   fitHeight,
   paneHeights = DEFAULT_PANE_HEIGHTS,
-  placingLine = false,
+  tool = 'crosshair',
   onPlaced,
   timeWindow,
 }) {
@@ -163,7 +174,18 @@ export default function ChartCanvas({
             onMoveLine={onMoveLine}
             onCreateLine={onCreateLine}
             onDeleteLine={onDeleteLine}
-            placingLine={placingLine}
+            onEditLineLabel={onEditLineLabel}
+            trendLines={trendLines}
+            onMoveTrendLineEndpoint={onMoveTrendLineEndpoint}
+            onCreateTrendLine={onCreateTrendLine}
+            onDeleteTrendLine={onDeleteTrendLine}
+            onEditTrendLineLabel={onEditTrendLineLabel}
+            textAnnotations={textAnnotations}
+            onMoveTextAnnotation={onMoveTextAnnotation}
+            onCreateTextAnnotation={onCreateTextAnnotation}
+            onDeleteTextAnnotation={onDeleteTextAnnotation}
+            onEditTextAnnotationText={onEditTextAnnotationText}
+            tool={tool}
             onPlaced={onPlaced}
           />
           {panes.volume ? (

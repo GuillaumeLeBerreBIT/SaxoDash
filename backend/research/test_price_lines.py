@@ -128,3 +128,21 @@ class PriceLineAPITest(APITestCase):
         response = self.client.get('/api/research/price-lines/211/CfdOnStock/')
 
         self.assertEqual([line['price'] for line in response.data], ['10.00'])
+
+    def test_create_and_patch_set_the_label(self):
+        response = self.client.post(LIST_URL, {'price': '100.00', 'label': 'Breakout level'}, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['label'], 'Breakout level')
+
+        line = PriceLine.objects.get()
+        response = self.client.patch(detail_url(line.pk), {'label': 'Retest'}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data['label'], 'Retest')
+
+    def test_label_defaults_to_empty(self):
+        response = self.client.post(LIST_URL, {'price': '100.00'}, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data['label'], '')

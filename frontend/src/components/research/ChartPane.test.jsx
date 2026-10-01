@@ -43,6 +43,18 @@ function stub() {
     update: { mutate: vi.fn() },
     remove: { mutate: vi.fn() },
   })
+  queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useTrendLineMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
+  queries.useTextAnnotations.mockReturnValue({ ...idle, data: [] })
+  queries.useTextAnnotationMutations.mockReturnValue({
+    create: { mutate: vi.fn() },
+    update: { mutate: vi.fn() },
+    remove: { mutate: vi.fn() },
+  })
   queries.useQuotes.mockReturnValue({
     ...idle,
     data: [{ uic: 211, price: 875.4, change_pct: 1.42, change_basis: 'last_close' }],
@@ -58,7 +70,7 @@ const renderPane = (props = {}) =>
       controls={controls}
       view={view}
       onActivate={vi.fn()}
-      placingLine={false}
+      tool="crosshair"
       onPlaced={vi.fn()}
       paneHeights={DEFAULT_PANE_HEIGHTS}
       {...props}

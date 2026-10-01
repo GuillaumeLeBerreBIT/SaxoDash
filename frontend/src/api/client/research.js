@@ -32,10 +32,33 @@ export const getPriceLines = ({ uic, assetType }) =>
   apiFetch(`/api/research/price-lines/${uic}/${assetType}/`)
 export const createPriceLine = ({ uic, assetType, price }) =>
   jsonRequest(`/api/research/price-lines/${uic}/${assetType}/`, 'POST', { price })
-export const updatePriceLine = (id, price) =>
-  jsonRequest(`/api/research/price-lines/${id}/`, 'PATCH', { price })
+export const updatePriceLine = (id, patch) =>
+  jsonRequest(`/api/research/price-lines/${id}/`, 'PATCH', patch)
 export const deletePriceLine = (id) =>
   apiFetch(`/api/research/price-lines/${id}/`, { method: 'DELETE' })
+
+export const getTrendLines = ({ uic, assetType }) =>
+  apiFetch(`/api/research/trend-lines/${uic}/${assetType}/`)
+export const createTrendLine = ({ uic, assetType, startBarDate, startPrice, endBarDate, endPrice }) =>
+  jsonRequest(`/api/research/trend-lines/${uic}/${assetType}/`, 'POST', {
+    start_bar_date: startBarDate,
+    start_price: startPrice,
+    end_bar_date: endBarDate,
+    end_price: endPrice,
+  })
+export const updateTrendLine = (id, patch) =>
+  jsonRequest(`/api/research/trend-lines/${id}/`, 'PATCH', patch)
+export const deleteTrendLine = (id) =>
+  apiFetch(`/api/research/trend-lines/${id}/`, { method: 'DELETE' })
+
+export const getTextAnnotations = ({ uic, assetType }) =>
+  apiFetch(`/api/research/text-annotations/${uic}/${assetType}/`)
+export const createTextAnnotation = ({ uic, assetType, barDate, price, text }) =>
+  jsonRequest(`/api/research/text-annotations/${uic}/${assetType}/`, 'POST', { bar_date: barDate, price, text })
+export const updateTextAnnotation = (id, patch) =>
+  jsonRequest(`/api/research/text-annotations/${id}/`, 'PATCH', patch)
+export const deleteTextAnnotation = (id) =>
+  apiFetch(`/api/research/text-annotations/${id}/`, { method: 'DELETE' })
 
 export const getWatchlists = () => apiFetch('/api/research/watchlists/')
 export const createWatchlist = (name) => jsonRequest('/api/research/watchlists/', 'POST', { name })

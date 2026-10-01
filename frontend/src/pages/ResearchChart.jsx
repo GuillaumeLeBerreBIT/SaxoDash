@@ -37,23 +37,23 @@ export default function ResearchChart() {
       rangePicked()
     },
   }
-  const [placingLine, setPlacingLine] = useState(false)
+  const [tool, setTool] = useState('crosshair')
 
   const [shownSymbol, setShownSymbol] = useState(symbol)
   if (shownSymbol !== symbol) {
     setShownSymbol(symbol)
-    setPlacingLine(false)
+    setTool('crosshair')
   }
 
   useEffect(() => {
-    if (!placingLine) return undefined
+    if (tool === 'crosshair') return undefined
     const onKeyDown = (event) => {
       if (isTypingTarget(event.target)) return
-      if (event.key === 'Escape') setPlacingLine(false)
+      if (event.key === 'Escape') setTool('crosshair')
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [placingLine])
+  }, [tool])
 
   const { rangeBars, priceLines, quote, details } = useChartData({ symbol, instrument, range: controls.range })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
@@ -69,9 +69,9 @@ export default function ResearchChart() {
     <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
       <ChartToolRail
         controls={rangeControls}
-        placingLine={placingLine}
-        onPlacingLineChange={setPlacingLine}
-        canPlaceLine={Boolean(activeSlot && priceLines.create)}
+        tool={tool}
+        onToolChange={setTool}
+        canAnnotate={Boolean(activeSlot && priceLines.create)}
         backHref={researchHref(symbol, undefined, instrument)}
         layout={workspace.layout}
         onLayoutChange={workspace.setLayout}
@@ -109,8 +109,8 @@ export default function ResearchChart() {
                 controls={controls}
                 view={paneView(index)}
                 onActivate={() => workspace.activate(index)}
-                placingLine={placingLine}
-                onPlaced={() => setPlacingLine(false)}
+                tool={tool}
+                onPlaced={() => setTool('crosshair')}
                 paneHeights={paneHeights}
                 style={paneStyle(layout, index)}
                 className={active ? 'flex' : 'hidden lg:flex'}

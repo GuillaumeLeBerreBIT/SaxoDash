@@ -23,8 +23,9 @@ export function useChartLines({ symbol, uic, assetType, note }) {
     move: (line, price) => {
       const patch = linePatch(line, price)
       if (patch) noteMutation.mutate(patch, report)
-      else lineMutations.update.mutate({ id: line.id, price: cents(price) }, report)
+      else lineMutations.update.mutate({ id: line.id, patch: { price: cents(price) } }, report)
     },
+    setLabel: (line, label) => lineMutations.update.mutate({ id: line.id, patch: { label } }, report),
     create: uic && assetType ? (price) => lineMutations.create.mutate({ price: cents(price) }, report) : undefined,
     remove: (line) => lineMutations.remove.mutate(line.id, report),
   }

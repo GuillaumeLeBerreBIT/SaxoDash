@@ -26,6 +26,7 @@ export default function ChartPanel({
   onMoveLine,
   onCreateLine,
   onDeleteLine,
+  onEditLineLabel,
   lineSaveFailed = false,
   expandHref,
 }) {
@@ -80,6 +81,7 @@ export default function ChartPanel({
         onMoveLine={onMoveLine}
         onCreateLine={onCreateLine}
         onDeleteLine={onDeleteLine}
+        onEditLineLabel={onEditLineLabel}
         priceHeight={CHART_HEIGHT}
         paneHeights={DEFAULT_PANE_HEIGHTS}
       />
