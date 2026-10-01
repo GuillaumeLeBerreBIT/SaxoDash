@@ -977,3 +977,106 @@ describe('placing a ray', () => {
     expect(queryByTestId('trend-line-preview')).toBeNull()
   })
 })
+
+describe('text annotations', () => {
+  const note = { id: 1, text: 'Earnings gap', index: 5, price: 108 }
+  const geometry = () =>
+    priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+  it('draws the text at its resolved point', () => {
+    const { getByTestId } = renderChart({ textAnnotations: [note] })
+    expect(getByTestId('text-annotation-1')).toHaveTextContent('Earnings gap')
+  })
+
+  it('selects an annotation by clicking it', () => {
+    const onSelect = vi.fn()
+    const { getByTestId } = renderChart({ textAnnotations: [note], onSelectTextAnnotation: onSelect })
+
+    fireEvent.click(getByTestId('text-annotation-hit-1'))
+
+    expect(onSelect).toHaveBeenCalledWith(1)
+  })
+
+  it('moves the annotation on drag', () => {
+    const onMoveTextAnnotation = vi.fn()
+    const { getByTestId } = renderChart({ textAnnotations: [note], onMoveTextAnnotation })
+    const g = geometry()
+    const hit = getByTestId('text-annotation-hit-1')
+
+    fireEvent.pointerDown(hit, { clientX: g.xAt(note.index), clientY: g.scaleY(note.price), pointerId: 1 })
+    fireEvent.pointerMove(hit, { clientX: g.xAt(12), clientY: g.scaleY(note.price) - 10, pointerId: 1 })
+    fireEvent.pointerUp(hit, { clientX: g.xAt(12), clientY: g.scaleY(note.price) - 10, pointerId: 1 })
+
+    expect(onMoveTextAnnotation).toHaveBeenCalledTimes(1)
+    const [item, point] = onMoveTextAnnotation.mock.calls[0]
+    expect(item).toEqual(note)
+    expect(point.barDate).toBe(bars[12].date)
+  })
+
+  it('opens a text editor on a double-click', () => {
+    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note] })
+
+    fireEvent.doubleClick(getByTestId('text-annotation-hit-1'))
+
+    expect(getByLabelText('Annotation text')).toHaveValue('Earnings gap')
+  })
+
+  it('saves edited text on Enter, and ignores an emptied save', () => {
+    const onEditTextAnnotationText = vi.fn()
+    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note], onEditTextAnnotationText })
+
+    fireEvent.doubleClick(getByTestId('text-annotation-hit-1'))
+    const input = getByLabelText('Annotation text')
+    fireEvent.change(input, { target: { value: 'Revised' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onEditTextAnnotationText).toHaveBeenCalledWith(note, 'Revised')
+  })
+
+  it('deletes the selected annotation with the Delete key', () => {
+    const onDeleteTextAnnotation = vi.fn()
+    const { getByTestId } = renderChart({ textAnnotations: [note], onDeleteTextAnnotation })
+
+    fireEvent.click(getByTestId('text-annotation-hit-1'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteTextAnnotation).toHaveBeenCalledWith(note)
+  })
+})
+
+describe('placing a text annotation', () => {
+  it('opens a blank editor at the clicked point on the first click', () => {
+    const { container, getByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation: vi.fn() })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+
+    expect(getByLabelText('Annotation text')).toHaveValue('')
+  })
+
+  it('commits on Enter with non-blank text', () => {
+    const onCreateTextAnnotation = vi.fn()
+    const onPlaced = vi.fn()
+    const { container, getByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation, onPlaced })
+    const g = priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: g.xAt(7), clientY: 200 })
+    const input = getByLabelText('Annotation text')
+    fireEvent.change(input, { target: { value: 'Breakout' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onCreateTextAnnotation).toHaveBeenCalledWith({ barDate: bars[7].date, price: expect.any(Number), text: 'Breakout' })
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not commit an empty text block', () => {
+    const onCreateTextAnnotation = vi.fn()
+    const { container, getByLabelText, queryByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation })
+
+    fireEvent.click(container.firstChild, { detail: 1, clientX: 100, clientY: 200 })
+    const input = getByLabelText('Annotation text')
+    fireEvent.keyDown(input, { key: 'Escape' })
+
+    expect(onCreateTextAnnotation).not.toHaveBeenCalled()
+    expect(queryByLabelText('Annotation text')).toBeNull()
+  })
+})

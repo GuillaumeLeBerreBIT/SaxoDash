@@ -21,6 +21,7 @@ import {
 import { AXIS_TEXT, BEAT, CATEGORY_AXIS_TEXT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
+import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
@@ -278,6 +279,7 @@ function Crosshair({ bar, index, geometry, width }) {
 
 const NO_LINES = []
 const NO_TREND_LINES = []
+const NO_TEXT_ANNOTATIONS = []
 
 function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
@@ -353,6 +355,12 @@ export function TVChart({
   onDeleteTrendLine,
   onEditTrendLineLabel,
   onCreateTrendLine,
+  textAnnotations = NO_TEXT_ANNOTATIONS,
+  onMoveTextAnnotation,
+  onDeleteTextAnnotation,
+  onEditTextAnnotationText,
+  onCreateTextAnnotation,
+  onSelectTextAnnotation,
   tool = 'crosshair',
   onPlaced,
 }) {
@@ -368,6 +376,15 @@ export function TVChart({
   const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
   const [editingTrendLineId, setEditingTrendLineId] = useState(null)
   const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
+  const textSelection = useAnnotationSelection({ containerRef: ref, items: textAnnotations, onDelete: onDeleteTextAnnotation })
+  const [editingTextId, setEditingTextId] = useState(null)
+  const editingText = textAnnotations.find((item) => item.id === editingTextId) ?? null
+  const [textDraftPoint, setTextDraftPoint] = useState(null)
+  const [textTool, setTextTool] = useState(tool)
+  if (tool !== textTool) {
+    setTextTool(tool)
+    setTextDraftPoint(null)
+  }
   const [rayStart, setRayStart] = useState(null)
   const [rayPreview, setRayPreview] = useState(null)
   const [rayTool, setRayTool] = useState(tool)
@@ -469,6 +486,7 @@ export function TVChart({
         if (pan.consumeMoved()) return
         freeSelection.clear()
         trendSelection.clear()
+        textSelection.clear()
         if (tool === 'ray' && onCreateTrendLine && e.detail === 1) {
           const point = barAt(e)
           if (point) {
@@ -486,6 +504,11 @@ export function TVChart({
               setRayPreview(point)
             }
           }
+          return
+        }
+        if (tool === 'text' && e.detail === 1) {
+          const point = barAt(e)
+          if (point) setTextDraftPoint(point)
           return
         }
         if (!placingLine || !onCreateLine || e.detail > 1) return
@@ -542,6 +565,18 @@ export function TVChart({
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
           onEdit={setEditingTrendLineId}
         />
+        <TextAnnotations
+          items={textAnnotations}
+          geometry={geometry}
+          data={data}
+          selectedId={textSelection.selected?.id ?? null}
+          onSelect={(id) => {
+            textSelection.select(id)
+            onSelectTextAnnotation?.(id)
+          }}
+          onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
+          onEdit={setEditingTextId}
+        />
         {rayStart && rayPreview ? (
           <line
             data-testid="trend-line-preview"
@@ -597,6 +632,33 @@ export function TVChart({
             onEditTrendLineLabel?.(editingTrendLine, label)
           }}
           onCancel={() => setEditingTrendLineId(null)}
+        />
+      ) : null}
+      {editingText ? (
+        <TextAnnotationEditor
+          key={editingText.id}
+          text={editingText.text}
+          x={geometry.xAt(editingText.index) + 6}
+          y={geometry.scaleY(editingText.price)}
+          onCommit={(text) => {
+            setEditingTextId(null)
+            onEditTextAnnotationText?.(editingText, text)
+          }}
+          onCancel={() => setEditingTextId(null)}
+        />
+      ) : null}
+      {textDraftPoint ? (
+        <TextAnnotationEditor
+          key="draft"
+          text=""
+          x={textDraftPoint.x + 6}
+          y={textDraftPoint.y}
+          onCommit={(text) => {
+            onCreateTextAnnotation?.({ barDate: textDraftPoint.barDate, price: textDraftPoint.price, text })
+            setTextDraftPoint(null)
+            onPlaced?.()
+          }}
+          onCancel={() => setTextDraftPoint(null)}
         />
       ) : null}
       {timeOffset > 0 && onTimeOffsetChange ? (
