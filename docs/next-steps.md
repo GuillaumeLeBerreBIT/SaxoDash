@@ -51,6 +51,7 @@ A small toolbar for a selected line: colour, maybe style.
 **Built** on branch `feat/discover-shelves` (Discover page at `/discover`, spec `docs/superpowers/specs/2026-09-30-discover-shelves-design.md`).
 
 Remains:
+- **Post-merge steps:** `python manage.py migrate`, then `python manage.py scan_universe` (it loads the universe CSV itself, so no separate `load_universe` run)
 - **Live scan:** `python manage.py scan_universe` against the dev database with Saxo connected (~10–11 minutes)
 - **Screenshot review:** follow the `saxodash-design-system` skill's harness recipe at 1440×1000 and 390×844
 - **Follow-ups out of scope:**

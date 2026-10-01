@@ -1,3 +1,5 @@
+import tempfile
+from pathlib import Path
 from unittest import mock
 
 from django.test import TestCase
@@ -42,13 +44,26 @@ class ScanUniverseTest(TestCase):
     def setUp(self):
         ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500|NDX')
         ScreenerRow.objects.create(ticker='BRK.B', name='Berkshire', indexes='SP500')
+        self.universe = self.write_universe('AAPL', 'BRK.B')
+
+    def write_universe(self, *tickers):
+        directory = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: [path.unlink() for path in directory.iterdir()] and directory.rmdir())
+        path = directory / 'universe.csv'
+        lines = ['ticker,name,sector,indexes'] + [f'{ticker},{ticker} Inc,Tech,SP500' for ticker in tickers]
+        path.write_text('\n'.join(lines) + '\n')
+        return path
+
+    def run_scan(self, **kwargs):
+        kwargs.setdefault('pause', no_pause)
+        return scan.scan_universe(universe=self.universe, **kwargs)
 
     def search_for(self, search, known):
         search.side_effect = lambda ticker, _types: [instrument(ticker, known[ticker])] if ticker in known else []
 
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
-        self.assertEqual(scan.scan_universe(pause=no_pause), 2)
+        self.assertEqual(self.run_scan(), 2)
         apple = ScreenerRow.objects.get(ticker='AAPL')
         self.assertEqual((apple.uic, apple.asset_type, apple.status), (211, 'Stock', ScreenerRow.OK))
         self.assertIsNotNone(apple.rsi14)
@@ -60,15 +75,15 @@ class ScanUniverseTest(TestCase):
 
     def test_unmatched_ticker_is_marked_and_skipped(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211})
-        self.assertEqual(scan.scan_universe(pause=no_pause), 1)
+        self.assertEqual(self.run_scan(), 1)
         berkshire = ScreenerRow.objects.get(ticker='BRK.B')
         self.assertEqual(berkshire.status, ScreenerRow.UNMATCHED)
         self.assertIsNone(berkshire.rsi14)
 
     def test_resolved_uic_is_reused_without_searching(self, search, chart, financials):
         ScreenerRow.objects.filter(ticker='AAPL').update(uic=211)
-        ScreenerRow.objects.filter(ticker='BRK.B').delete()
-        scan.scan_universe(pause=no_pause)
+        self.universe = self.write_universe('AAPL')
+        self.run_scan()
         search.assert_not_called()
 
     def test_one_failing_symbol_does_not_stop_the_run(self, search, chart, financials):
@@ -81,7 +96,7 @@ class ScanUniverseTest(TestCase):
 
         chart.side_effect = chart_for
         with self.assertLogs('research.scan', level='WARNING'):
-            self.assertEqual(scan.scan_universe(pause=no_pause), 1)
+            self.assertEqual(self.run_scan(), 1)
         apple = ScreenerRow.objects.get(ticker='AAPL')
         self.assertEqual(apple.status, ScreenerRow.FAILED)
         self.assertIn('boom', apple.error)
@@ -91,7 +106,7 @@ class ScanUniverseTest(TestCase):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         ScreenerRow.objects.filter(ticker='AAPL').update(pe=15.0)
         financials.side_effect = FinnhubAPIError('upstream 500')
-        scan.scan_universe(pause=no_pause)
+        self.run_scan()
         apple = ScreenerRow.objects.get(ticker='AAPL')
         self.assertEqual(apple.status, ScreenerRow.OK)
         self.assertEqual(apple.pe, 15.0)
@@ -100,7 +115,7 @@ class ScanUniverseTest(TestCase):
     def test_finnhub_not_configured_stops_asking_for_the_rest_of_the_run(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         financials.side_effect = FinnhubNotConfigured()
-        self.assertEqual(scan.scan_universe(pause=no_pause), 2)
+        self.assertEqual(self.run_scan(), 2)
         self.assertEqual(financials.call_count, 1)
 
     def test_a_search_error_fails_only_that_symbol(self, search, chart, financials):
@@ -111,18 +126,62 @@ class ScanUniverseTest(TestCase):
 
         search.side_effect = search_for
         with self.assertLogs('research.scan', level='WARNING'):
-            self.assertEqual(scan.scan_universe(pause=no_pause), 1)
+            self.assertEqual(self.run_scan(), 1)
         self.assertEqual(ScreenerRow.objects.get(ticker='AAPL').status, ScreenerRow.FAILED)
 
     def test_losing_the_saxo_connection_mid_run_stops_the_run(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         chart.side_effect = ProviderNotConnected('Saxo is not connected.')
         with self.assertRaises(ProviderNotConnected):
-            scan.scan_universe(pause=no_pause)
+            self.run_scan()
         self.assertFalse(ScreenerRow.objects.filter(status=ScreenerRow.FAILED).exists())
 
     def test_pauses_between_symbols(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         pauses = []
-        scan.scan_universe(pause=pauses.append)
+        self.run_scan(pause=pauses.append)
         self.assertEqual(pauses, [scan.PAUSE_SECONDS, scan.PAUSE_SECONDS])
+
+    def test_loads_tickers_missing_from_the_table_before_scanning(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212, 'MSFT': 213})
+        self.universe = self.write_universe('AAPL', 'BRK.B', 'MSFT')
+        self.assertEqual(self.run_scan(), 3)
+        self.assertEqual(ScreenerRow.objects.get(ticker='MSFT').status, ScreenerRow.OK)
+
+    def test_an_unexpected_fundamentals_error_keeps_the_row_ok_and_the_run_going(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        ScreenerRow.objects.filter(ticker='AAPL').update(pe=15.0)
+        financials.side_effect = [AttributeError('malformed'), FINANCIALS]
+        with self.assertLogs('research.scan', level='WARNING'):
+            self.assertEqual(self.run_scan(), 2)
+        apple = ScreenerRow.objects.get(ticker='AAPL')
+        self.assertEqual((apple.status, apple.pe), (ScreenerRow.OK, 15.0))
+        self.assertIn('malformed', apple.error)
+        self.assertIsNone(apple.fundamentals_at)
+        self.assertEqual(ScreenerRow.objects.get(ticker='BRK.B').pe, 20.0)
+
+    def test_a_non_numeric_metric_leaves_no_half_new_fundamentals(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        ScreenerRow.objects.filter(ticker='AAPL').update(pe=15.0, roe=9.0)
+        with mock.patch('research.scan.finnhub.to_screener_fundamentals', side_effect=[ValueError('nan'), {'pe': 20.0}]):
+            with self.assertLogs('research.scan', level='WARNING'):
+                self.run_scan()
+        apple = ScreenerRow.objects.get(ticker='AAPL')
+        self.assertEqual((apple.pe, apple.roe), (15.0, 9.0))
+
+    def test_a_failing_save_fails_only_that_row(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        real_save = ScreenerRow.save
+        calls = {'count': 0}
+
+        def flaky_save(row, *args, **kwargs):
+            if row.ticker == 'AAPL' and row.status == ScreenerRow.OK and calls['count'] == 0:
+                calls['count'] += 1
+                raise RuntimeError('disk full')
+            return real_save(row, *args, **kwargs)
+
+        with mock.patch.object(ScreenerRow, 'save', flaky_save):
+            with self.assertLogs('research.scan', level='WARNING'):
+                self.assertEqual(self.run_scan(), 1)
+        self.assertEqual(ScreenerRow.objects.get(ticker='AAPL').status, ScreenerRow.FAILED)
+        self.assertEqual(ScreenerRow.objects.get(ticker='BRK.B').status, ScreenerRow.OK)

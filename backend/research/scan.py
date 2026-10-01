@@ -6,6 +6,7 @@ from django.utils import timezone
 from . import finnhub, market, technicals
 from .models import ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
+from .universe import UNIVERSE_CSV, load_universe
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,16 @@ def _resolved(row):
     return True
 
 
+def _mark_failed(row, exc):
+    logger.warning('Scan failed for %s', row.ticker, exc_info=True)
+    row.status = ScreenerRow.FAILED
+    row.error = str(exc)[:200]
+    try:
+        row.save()
+    except Exception:
+        logger.error('Could not record the failure for %s', row.ticker, exc_info=True)
+
+
 def scan_row(row, *, with_fundamentals):
     try:
         if not _resolved(row):
@@ -61,10 +72,7 @@ def scan_row(row, *, with_fundamentals):
     except ProviderNotConnected:
         raise
     except Exception as exc:
-        logger.warning('Scan failed for %s', row.ticker, exc_info=True)
-        row.status = ScreenerRow.FAILED
-        row.error = str(exc)[:200]
-        row.save()
+        _mark_failed(row, exc)
         return with_fundamentals
 
     row.status = ScreenerRow.OK
@@ -76,11 +84,20 @@ def scan_row(row, *, with_fundamentals):
             with_fundamentals = False
         except ProviderUnavailable as exc:
             row.error = str(exc)[:200]
-    row.save()
+        except ProviderNotConnected:
+            raise
+        except Exception as exc:
+            logger.warning('Fundamentals failed for %s', row.ticker, exc_info=True)
+            row.error = str(exc)[:200]
+    try:
+        row.save()
+    except Exception as exc:
+        _mark_failed(row, exc)
     return with_fundamentals
 
 
-def scan_universe(pause=time.sleep):
+def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
+    load_universe(universe)
     with_fundamentals = True
     for row in ScreenerRow.objects.order_by('ticker'):
         with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
