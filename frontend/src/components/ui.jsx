@@ -217,7 +217,7 @@ export function Modal({ title, children, onClose }) {
  *  Monte Carlo band means, why Sharpe uses a risk-free rate. Not a click
  *  target: nothing else on the page depends on it opening or closing.
  */
-export function InfoTip({ children }) {
+export function InfoTip({ children, label }) {
   const [open, setOpen] = useState(false)
   // Opens upward by default (the common case: a trigger below the fold with
   // room above it) but flips below when there genuinely isn't room - a long
@@ -242,6 +242,7 @@ export function InfoTip({ children }) {
       <button
         ref={triggerRef}
         type="button"
+        aria-label={label}
         aria-describedby={id}
         onMouseEnter={show}
         onMouseLeave={hide}

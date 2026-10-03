@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom'
 
-import { formatShelfMetric } from '../../lib/discover'
+import { formatReason } from '../../lib/discover'
 import { fmtMoney } from '../../lib/format'
-import { chartHref } from '../../lib/research'
+import { researchHref } from '../../lib/research'
 import { DayChange, InstrumentLogo } from '../ui'
 import Sparkline from './Sparkline'
 import WatchlistStar from './WatchlistStar'
 
-export default function DiscoverCard({ item, metric }) {
+export default function DiscoverCard({ item }) {
   return (
     <div className="relative w-56 shrink-0 snap-start rounded-lg border border-white/[0.06] bg-zinc-900/60 hover:border-white/[0.14] transition-colors">
       <Link
-        to={chartHref(item.ticker, { uic: item.uic, assetType: item.asset_type })}
+        to={researchHref(item.ticker, 'overview', { uic: item.uic, assetType: item.asset_type })}
         className="block p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 rounded-lg"
       >
         <div className="flex items-center gap-2 pr-7">
@@ -25,7 +25,11 @@ export default function DiscoverCard({ item, metric }) {
           <span className="num font-mono text-[var(--fig-sm)] text-zinc-200">{fmtMoney(item.last_close, 'USD')}</span>
           <DayChange value={item.change_1d} className="text-[var(--fig-xs)]" />
         </div>
-        <div className="mt-1 text-[var(--fig-xs)] text-blue-300">{formatShelfMetric(metric, item.metric_value)}</div>
+        <ul aria-label={`Why ${item.ticker} is here`} className="mt-1 flex flex-wrap gap-x-2 text-[var(--fig-xs)] text-blue-300">
+          {item.reasons.map((reason) => (
+            <li key={reason.field} className="whitespace-nowrap">{formatReason(reason)}</li>
+          ))}
+        </ul>
         <div className="mt-2">
           <Sparkline values={item.sparkline} />
         </div>

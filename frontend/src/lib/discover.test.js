@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { SCANNING_POLL_MS, discoverPollInterval, formatShelfMetric, healthNotice, scanProgressLabel } from './discover'
+import { SCANNING_POLL_MS, discoverPollInterval, formatFieldValue, healthNotice, reasonsLine, scanProgressLabel } from './discover'
 
 describe('discoverPollInterval', () => {
   it('polls while any scan reports progress, first or nightly', () => {
@@ -25,18 +25,28 @@ describe('scanProgressLabel', () => {
   })
 })
 
-describe('formatShelfMetric', () => {
-  it('names the metric that put a stock on the shelf', () => {
-    expect(formatShelfMetric('rsi14', 78.4)).toBe('RSI 78')
-    expect(formatShelfMetric('pct_vs_ma200', -8.21)).toBe('-8.2% vs 200-day MA')
-    expect(formatShelfMetric('change_3m', 12.34)).toBe('+12.3% in 3 months')
-    expect(formatShelfMetric('pct_from_52w_high', -1.5)).toBe('-1.5% from 52-week high')
-    expect(formatShelfMetric('pe', 11.26)).toBe('P/E 11.3')
-    expect(formatShelfMetric('rvol', 2.54)).toBe('2.5× average volume')
+describe('formatFieldValue', () => {
+  it('formats each kind the backend describes', () => {
+    expect(formatFieldValue('number', 78.4)).toBe('78')
+    expect(formatFieldValue('pct', 31.24)).toBe('31%')
+    expect(formatFieldValue('signed_pct', 14.06)).toBe('+14.1%')
+    expect(formatFieldValue('signed_pct', -8.21)).toBe('-8.2%')
+    expect(formatFieldValue('ratio', 11.26)).toBe('11.3')
+    expect(formatFieldValue('multiple', 2.54)).toBe('2.5×')
   })
 
   it('renders an absent value as a dash', () => {
-    expect(formatShelfMetric('rsi14', null)).toBe('—')
+    expect(formatFieldValue('pct', null)).toBe('—')
+  })
+})
+
+describe('reasonsLine', () => {
+  it('lists every reason with its label, in order', () => {
+    expect(reasonsLine([
+      { field: 'roe', label: 'ROE', value: 31.2, format: 'pct' },
+      { field: 'pct_vs_ma200', label: 'vs 200D', value: -22.04, format: 'signed_pct' },
+      { field: 'pct_from_52w_high', label: 'From high', value: null, format: 'signed_pct' },
+    ])).toBe('ROE 31% · vs 200D -22.0% · From high —')
   })
 })
 

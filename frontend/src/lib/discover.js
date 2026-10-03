@@ -1,17 +1,27 @@
 import { UNKNOWN, fmtNum, fmtPct } from './format'
 
-const METRIC_LABELS = {
-  rsi14: (v) => `RSI ${fmtNum(v, 0)}`,
-  pct_vs_ma200: (v) => `${fmtPct(v, { decimals: 1 })} vs 200-day MA`,
-  change_3m: (v) => `${fmtPct(v, { decimals: 1 })} in 3 months`,
-  pct_from_52w_high: (v) => `${fmtPct(v, { decimals: 1 })} from 52-week high`,
-  pe: (v) => `P/E ${fmtNum(v, 1)}`,
-  rvol: (v) => `${fmtNum(v, 1)}× average volume`,
+const FIELD_FORMATS = {
+  number: (v) => fmtNum(v, 0),
+  pct: (v) => fmtPct(v, { sign: false, decimals: 0 }),
+  signed_pct: (v) => fmtPct(v, { decimals: 1 }),
+  ratio: (v) => fmtNum(v, 1),
+  multiple: (v) => `${fmtNum(v, 1)}×`,
 }
 
-export function formatShelfMetric(metric, value) {
+export function formatFieldValue(format, value) {
   if (value == null) return UNKNOWN
-  return (METRIC_LABELS[metric] ?? ((v) => fmtNum(v, 2)))(value)
+  return (FIELD_FORMATS[format] ?? ((v) => fmtNum(v, 2)))(value)
+}
+
+export const formatReason = ({ label, value, format }) => `${label} ${formatFieldValue(format, value)}`
+
+export const reasonsLine = (reasons) => reasons.map(formatReason).join(' · ')
+
+export const stockCount = (total) => `${total} ${total === 1 ? 'stock' : 'stocks'}`
+
+export function shelfNote({ order, total, items }) {
+  const shown = items.length < total ? ` Showing the first ${items.length} of ${total}.` : ''
+  return `${order}.${shown} A filter on the last scan, not a recommendation.`
 }
 
 export const SCANNING_POLL_MS = 10_000

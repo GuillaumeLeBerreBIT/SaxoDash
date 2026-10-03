@@ -183,7 +183,6 @@ def card(row, shelf):
         'change_1d': row.change_1d,
         'sparkline': row.sparkline,
         'reasons': reasons(row, shelf),
-        'metric_value': getattr(row, shelf.card_fields[0]),
     }
 
 
@@ -200,7 +199,6 @@ def payload(shelf, limit=None):
         'empty': EMPTY,
         'criteria': [asdict(criterion) for criterion in shelf.criteria],
         'sort': {'field': shelf.sort, 'descending': shelf.descending},
-        'metric': shelf.card_fields[0],
         'total': rows.count(),
         'items': [card(row, shelf) for row in selected],
     }

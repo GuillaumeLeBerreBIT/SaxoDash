@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Discover from './Discover'
@@ -11,10 +11,13 @@ vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [], toggleList: vi.fn() }),
 }))
 
-const shelf = (key, title, total, items = [], empty = `Nothing ${title.toLowerCase()} today`) => ({
-  key, title, subtitle: `${title} rule`, empty, metric: 'rsi14', total, items,
+const shelf = (key, title, total, items = [], empty = 'No stocks match these criteria in the last session.') => ({
+  key, title, subtitle: 'RSI 14 ≥ 70', order: 'Ordered by RSI 14, highest first', empty, total, items,
 })
-const card = { ticker: 'NVDA', name: 'NVIDIA', uic: 1, asset_type: 'Stock', last_close: 100, change_1d: 1, metric_value: 81, sparkline: [] }
+const card = {
+  ticker: 'NVDA', name: 'NVIDIA', uic: 1, asset_type: 'Stock', last_close: 100, change_1d: 1, sparkline: [],
+  reasons: [{ field: 'rsi14', label: 'RSI', value: 81, format: 'number' }],
+}
 
 const renderPage = () => render(<MemoryRouter><Discover /></MemoryRouter>)
 
@@ -24,17 +27,29 @@ describe('Discover page', () => {
     startScan.error = null
   })
 
-  it('renders each shelf with a See all link', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('overbought', 'Overbought', 1, [card])] } })
+  it('renders each shelf with its criteria, count and a See all link', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()
     expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /See all \(1\)/ })).toHaveAttribute('href', '/discover/overbought')
+    expect(screen.getByText('RSI 14 ≥ 70')).toBeInTheDocument()
+    expect(screen.getByText('7 stocks')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/discover/overbought')
+  })
+
+  it('explains the order and that a lens is not a recommendation', async () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
+    renderPage()
+    fireEvent.focus(screen.getByRole('button', { name: 'About Overbought' }))
+    expect(screen.getByRole('tooltip')).toHaveTextContent(
+      'Ordered by RSI 14, highest first. Showing the first 1 of 7. A filter on the last scan, not a recommendation.',
+    )
   })
 
   it('collapses an empty shelf to a quiet note', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('strong-trend', 'Strong trend', 0, [], 'No strong trends today')] } })
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('above-moving-averages', 'Above 50- & 200-day averages', 0)] } })
     renderPage()
-    expect(screen.getByText('No strong trends today')).toBeInTheDocument()
+    expect(screen.getByText('No stocks match these criteria in the last session.')).toBeInTheDocument()
+    expect(screen.getByText('0 stocks')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /See all/ })).not.toBeInTheDocument()
   })
 

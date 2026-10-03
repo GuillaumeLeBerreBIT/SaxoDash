@@ -116,7 +116,6 @@ class ShelfTextTest(TestCase):
                 {'field': 'eps_growth_5y', 'label': 'EPS 5Y', 'value': 8.0, 'format': 'signed_pct'},
                 {'field': 'pct_vs_ma200', 'label': 'vs 200D', 'value': -6.0, 'format': 'signed_pct'},
             ],
-            'metric_value': 20.0,
         })
 
 
