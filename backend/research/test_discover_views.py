@@ -45,15 +45,36 @@ class DiscoverViewTest(APITestCase):
         response = self.client.get(reverse('research-discover'))
         self.assertEqual(response.status_code, 200)
         shelves = {s['key']: s for s in response.data['shelves']}
-        self.assertEqual(len(shelves), 7)
+        self.assertEqual(len(shelves), 6)
         self.assertEqual(shelves['overbought']['total'], 25)
         self.assertEqual(len(shelves['overbought']['items']), 20)
         self.assertEqual(shelves['overbought']['items'][0]['ticker'], 'T24')
         self.assertEqual(shelves['overbought']['metric'], 'rsi14')
-        self.assertEqual(shelves['overbought']['empty'], 'Nothing overbought today')
+        self.assertEqual(shelves['overbought']['items'][0]['metric_value'], 94.0)
         self.assertEqual((shelves['oversold']['total'], shelves['oversold']['items']), (0, []))
         self.assertEqual(response.data['health']['state'], 'ok')
         self.assertIsNotNone(response.data['as_of'])
+
+    def test_each_shelf_describes_its_rule_and_order(self):
+        self.run_at('ok', 1)
+        self.stock('AAA', rsi14=80.0)
+        response = self.client.get(reverse('research-discover'))
+        self.assertEqual(response.data['groups'], [
+            {'key': 'price', 'title': 'Price action'},
+            {'key': 'fundamentals', 'title': 'Fundamentals'},
+        ])
+        shelf = next(s for s in response.data['shelves'] if s['key'] == 'overbought')
+        self.assertEqual({k: shelf[k] for k in ('title', 'short', 'group', 'subtitle', 'order', 'sort', 'criteria')}, {
+            'title': 'Overbought',
+            'short': 'Overbought',
+            'group': 'price',
+            'subtitle': 'RSI 14 ≥ 70',
+            'order': 'Ordered by RSI 14, highest first',
+            'sort': {'field': 'rsi14', 'descending': True},
+            'criteria': [{'field': 'rsi14', 'op': 'gte', 'value': 70, 'ref': None}],
+        })
+        self.assertEqual(shelf['empty'], 'No stocks match these criteria in the last session.')
+        self.assertEqual(shelf['items'][0]['reasons'], [{'field': 'rsi14', 'label': 'RSI', 'value': 80.0, 'format': 'number'}])
 
     def test_health_is_never_before_any_successful_run(self):
         self.run_at('skipped', 1)
@@ -107,9 +128,11 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(response.data['total'], 25)
         self.assertEqual(len(response.data['items']), 25)
         self.assertEqual(response.data['title'], 'Overbought')
+        self.assertEqual(response.data['subtitle'], 'RSI 14 ≥ 70')
 
-    def test_unknown_shelf_is_404(self):
-        self.assertEqual(self.client.get(reverse('research-discover-shelf', args=['nope'])).status_code, 404)
+    def test_unknown_and_retired_shelves_are_404(self):
+        for key in ('nope', 'quality-on-sale', 'near-high'):
+            self.assertEqual(self.client.get(reverse('research-discover-shelf', args=[key])).status_code, 404, key)
 
 
 CONNECTED = ConnectionState(object(), None, False)

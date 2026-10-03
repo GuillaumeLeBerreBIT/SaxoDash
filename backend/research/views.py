@@ -266,26 +266,13 @@ class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
     queryset = TextAnnotation.objects.all()
 
 
-def _shelf_payload(shelf, limit=None):
-    rows = shelves.matching(shelf)
-    selected = rows[:limit] if limit else rows
-    return {
-        'key': shelf.key,
-        'title': shelf.title,
-        'subtitle': shelf.subtitle,
-        'empty': shelf.empty,
-        'metric': shelf.metric,
-        'total': rows.count(),
-        'items': [shelves.card(row, shelf) for row in selected],
-    }
-
-
 class DiscoverView(APIView):
     def get(self, request):
         return Response({
             'as_of': discover.as_of(),
             'health': discover.health(),
-            'shelves': [_shelf_payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
+            'groups': [{'key': key, 'title': title} for key, title in shelves.GROUPS],
+            'shelves': [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
         })
 
 
@@ -307,4 +294,4 @@ class DiscoverShelfView(APIView):
         shelf = shelves.by_key(key)
         if shelf is None:
             raise Http404
-        return Response(_shelf_payload(shelf))
+        return Response(shelves.payload(shelf))
