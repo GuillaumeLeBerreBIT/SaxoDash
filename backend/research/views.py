@@ -278,14 +278,12 @@ class DiscoverView(APIView):
 
 class StartDiscoverScanView(APIView):
     def post(self, request):
-        if discover.health()['state'] != 'never':
-            return Response({'queued': False})
         saxo = connection_state()
         if not saxo.usable:
             return Response({'detail': saxo.reason}, status=status.HTTP_409_CONFLICT)
         if not scan_progress.claim():
             return Response({'queued': False})
-        tasks.scan_universe.delay()
+        tasks.scan_universe.delay(claimed=True)
         return Response({'queued': True}, status=status.HTTP_202_ACCEPTED)
 
 

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { SCANNING_POLL_MS, discoverPollInterval, formatFieldValue, healthNotice, reasonsLine, scanProgressLabel } from './discover'
+import {
+  SCANNING_POLL_MS,
+  discoverPollInterval,
+  formatFieldValue,
+  healthNotice,
+  reasonsLine,
+  scanProgressLabel,
+  updatedLabel,
+} from './discover'
 
 describe('discoverPollInterval', () => {
   it('polls while any scan reports progress, first or nightly', () => {
@@ -50,7 +58,30 @@ describe('reasonsLine', () => {
   })
 })
 
+describe('updatedLabel', () => {
+  const now = new Date('2026-10-03T12:00:00Z')
+  const ago = (ms) => new Date(now.getTime() - ms).toISOString()
+
+  it('says how long ago the last good scan finished', () => {
+    expect(updatedLabel(ago(30_000), now)).toBe('Updated just now')
+    expect(updatedLabel(ago(5 * 60_000), now)).toBe('Updated 5 min ago')
+    expect(updatedLabel(ago(3 * 3_600_000), now)).toBe('Updated 3 h ago')
+    expect(updatedLabel(ago(26 * 3_600_000), now)).toBe('Updated 1 day ago')
+    expect(updatedLabel(ago(50 * 3_600_000), now)).toBe('Updated 2 days ago')
+  })
+
+  it('says so when nothing has been scanned yet', () => {
+    expect(updatedLabel(null, now)).toBe('Not scanned yet')
+  })
+})
+
 describe('healthNotice', () => {
+  it('says why the latest scan did not refresh the data', () => {
+    expect(healthNotice({ state: 'stale', issue: 'Saxo needs re-authentication.' }, '2026-10-01T17:28:00Z').text)
+      .toBe('No fresh scan since 1 Oct. Last attempt: Saxo needs re-authentication.')
+    expect(healthNotice({ state: 'failed', issue: 'boom' }, null).text).toBe('The last scan failed. Last attempt: boom')
+  })
+
   it('is silent for a healthy scan', () => {
     expect(healthNotice({ state: 'ok' }, '2026-09-30T22:40:00Z')).toBeNull()
   })

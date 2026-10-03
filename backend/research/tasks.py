@@ -1,9 +1,10 @@
 from celery import shared_task
 
 from portfolio.models import Position
+from saxo.models import SyncRun
 from saxo.tasks import synced
 
-from . import scan
+from . import scan, scan_progress
 from .watchlists import sync_open_positions_watchlist
 
 
@@ -21,7 +22,20 @@ def sync_watchlists():
     sync_open_positions_watchlist(Position.objects.exclude(uic__isnull=True))
 
 
-@shared_task
-@synced(reports_health=False)
-def scan_universe(credential):
+ALREADY_RUNNING = 'A scan was already running.'
+
+
+@synced(reports_health=False, task=scan.SCAN_TASK)
+def _scan_with_credential(credential):
     return scan.scan_universe()
+
+
+@shared_task
+def scan_universe(claimed=False):
+    if not claimed and not scan_progress.claim():
+        SyncRun.objects.create(task=scan.SCAN_TASK, outcome='skipped', detail=ALREADY_RUNNING)
+        return None
+    try:
+        return _scan_with_credential()
+    finally:
+        scan_progress.clear()

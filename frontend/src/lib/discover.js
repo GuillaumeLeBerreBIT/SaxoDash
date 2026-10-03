@@ -33,6 +33,22 @@ export const scanProgressLabel = ({ done, total }) =>
 
 const asDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
+const MINUTE_MS = 60_000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+
+export function updatedLabel(iso, now = new Date()) {
+  if (!iso) return 'Not scanned yet'
+  const elapsed = now - new Date(iso)
+  if (elapsed < MINUTE_MS) return 'Updated just now'
+  if (elapsed < HOUR_MS) return `Updated ${Math.floor(elapsed / MINUTE_MS)} min ago`
+  if (elapsed < DAY_MS) return `Updated ${Math.floor(elapsed / HOUR_MS)} h ago`
+  const days = Math.floor(elapsed / DAY_MS)
+  return `Updated ${days} ${days === 1 ? 'day' : 'days'} ago`
+}
+
+const withIssue = (text, issue) => (issue ? `${text} Last attempt: ${issue}` : text)
+
 export function healthNotice(health, asOf) {
   if (health?.state === 'never') {
     return { tone: 'info', text: 'No scan yet. It runs nightly, or run `manage.py scan_universe`.' }
@@ -41,10 +57,12 @@ export function healthNotice(health, asOf) {
     return { tone: 'info', text: 'First scan in progress. Shelves appear when it finishes.' }
   }
   if (health?.state === 'failed') {
-    return { tone: 'error', text: asOf ? `The last scan failed. Showing data from ${asDate(asOf)}.` : 'The last scan failed.' }
+    const text = asOf ? `The last scan failed. Showing data from ${asDate(asOf)}.` : 'The last scan failed.'
+    return { tone: 'error', text: withIssue(text, health.issue) }
   }
   if (health?.state === 'stale') {
-    return { tone: 'warning', text: asOf ? `No fresh scan since ${asDate(asOf)}.` : 'No fresh scan recently.' }
+    const text = asOf ? `No fresh scan since ${asDate(asOf)}.` : 'No fresh scan recently.'
+    return { tone: 'warning', text: withIssue(text, health.issue) }
   }
   return null
 }

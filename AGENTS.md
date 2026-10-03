@@ -314,6 +314,9 @@ matches a null metric. RSI/SMA/RVOL are computed in `research/technicals.py` wit
 same definitions as `lib/indicators.js`, pinned by the shared
 `lib/fixtures/indicator-parity.json`. The scan records `SyncRun`s but is
 `@synced(reports_health=False)`, so it never affects the header's Saxo health badge.
+The page's Refresh button starts the same scan on demand. Both paths take one cache
+lock (`scan_progress.claim`), so a manual refresh and the 22:30 run never overlap and
+double the Finnhub rate; a run that finds the lock taken records itself as `skipped`.
 
 **The chart pans within what it already fetched.** The visible bars are a time
 window `{start, end}` into the one 1,200-bar fetch. `lib/timeWindow.js` is the only

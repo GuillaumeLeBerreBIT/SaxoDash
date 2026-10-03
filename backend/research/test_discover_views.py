@@ -24,9 +24,11 @@ class DiscoverViewTest(APITestCase):
         user = get_user_model().objects.create_user('u', password='p')
         self.client.force_authenticate(user)
 
-    def run_at(self, outcome, hours_ago):
-        run = SyncRun.objects.create(task='scan_universe', outcome=outcome)
-        SyncRun.objects.filter(pk=run.pk).update(ran_at=timezone.now() - timedelta(hours=hours_ago))
+    def run_at(self, outcome, hours_ago, detail=''):
+        run = SyncRun.objects.create(task='scan_universe', outcome=outcome, detail=detail)
+        ran_at = timezone.now() - timedelta(hours=hours_ago)
+        SyncRun.objects.filter(pk=run.pk).update(ran_at=ran_at)
+        return ran_at
 
     def stock(self, ticker, **fields):
         return ScreenerRow.objects.create(
@@ -106,6 +108,28 @@ class DiscoverViewTest(APITestCase):
         self.run_at('ok', 37)
         self.assertEqual(self.client.get(reverse('research-discover')).data['health']['state'], 'stale')
 
+    def test_health_reports_when_the_last_good_scan_finished(self):
+        finished = self.run_at('ok', 20)
+        self.run_at('skipped', 2, 'A scan was already running.')
+        health = self.client.get(reverse('research-discover')).data['health']
+        self.assertEqual(health['last_ok_at'], finished)
+        self.assertEqual(health['issue'], 'A scan was already running.')
+
+    def test_health_says_why_the_latest_run_did_not_succeed(self):
+        self.run_at('ok', 40)
+        self.run_at('skipped', 10, 'Saxo needs re-authentication.')
+        health = self.client.get(reverse('research-discover')).data['health']
+        self.assertEqual((health['state'], health['issue']), ('stale', 'Saxo needs re-authentication.'))
+
+    def test_health_has_no_issue_after_a_good_run(self):
+        self.run_at('failed', 5, 'boom')
+        self.run_at('ok', 1)
+        self.assertIsNone(self.client.get(reverse('research-discover')).data['health']['issue'])
+
+    def test_health_has_no_last_ok_before_any_good_run(self):
+        self.run_at('skipped', 1, 'Saxo needs re-authentication.')
+        self.assertIsNone(self.client.get(reverse('research-discover')).data['health']['last_ok_at'])
+
     def test_health_is_failed_when_latest_run_failed(self):
         self.run_at('ok', 25)
         self.run_at('failed', 1)
@@ -153,17 +177,22 @@ class StartDiscoverScanTest(APITestCase):
     def test_queues_the_first_scan_and_shows_it_as_starting(self, _state, delay):
         response = self.start()
         self.assertEqual((response.status_code, response.data), (202, {'queued': True}))
-        delay.assert_called_once_with()
+        delay.assert_called_once_with(claimed=True)
         self.assertEqual(scan_progress.current(), {'done': 0, 'total': None})
 
     def test_a_second_request_does_not_queue_another_scan(self, _state, delay):
         self.start()
         response = self.start()
         self.assertEqual((response.status_code, response.data), (200, {'queued': False}))
-        delay.assert_called_once_with()
+        delay.assert_called_once_with(claimed=True)
 
-    def test_does_nothing_once_a_scan_has_succeeded(self, _state, delay):
+    def test_refreshes_after_a_scan_has_succeeded(self, _state, delay):
         SyncRun.objects.create(task='scan_universe', outcome='ok')
+        self.assertEqual(self.start().status_code, 202)
+        delay.assert_called_once_with(claimed=True)
+
+    def test_does_not_start_while_a_scan_is_running(self, _state, delay):
+        scan_progress.report(144, 518)
         self.assertEqual(self.start().data, {'queued': False})
         delay.assert_not_called()
 

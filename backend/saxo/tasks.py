@@ -34,7 +34,7 @@ class SyncRefused(Exception):
     """Raised when a sync would corrupt what it is meant to keep current."""
 
 
-def synced(fn=None, *, reports_health=True):
+def synced(fn=None, *, reports_health=True, task=None):
     """Give `fn` a usable credential and record what the run actually did.
 
     Every sync shared the same preamble - get a credential or bail - and bailed
@@ -43,28 +43,29 @@ def synced(fn=None, *, reports_health=True):
     completion. `fn` returns the number of rows it wrote.
     """
     if fn is None:
-        return functools.partial(synced, reports_health=reports_health)
-    if reports_health and fn.__name__ not in SYNC_TASKS:
-        raise ValueError(f'{fn.__name__} is not declared in saxo.credentials.SYNC_TASKS')
+        return functools.partial(synced, reports_health=reports_health, task=task)
+    name = task or fn.__name__
+    if reports_health and name not in SYNC_TASKS:
+        raise ValueError(f'{name} is not declared in saxo.credentials.SYNC_TASKS')
 
     @functools.wraps(fn)
     def run(*args, **kwargs):
         try:
             credential = active_credential()
         except SaxoNotConnected as exc:
-            SyncRun.objects.create(task=fn.__name__, outcome='skipped', detail=str(exc))
-            logger.info('Skipping %s: %s', fn.__name__, exc)
+            SyncRun.objects.create(task=name, outcome='skipped', detail=str(exc))
+            logger.info('Skipping %s: %s', name, exc)
             return
 
         try:
             rows = fn(credential, *args, **kwargs)
         except Exception as exc:
             SyncRun.objects.create(
-                task=fn.__name__, outcome='failed', detail=str(exc)[:200]
+                task=name, outcome='failed', detail=str(exc)[:200]
             )
             raise
 
-        SyncRun.objects.create(task=fn.__name__, outcome='ok', rows=rows)
+        SyncRun.objects.create(task=name, outcome='ok', rows=rows)
         return rows
 
     # functools.wraps sets __wrapped__ and inspect.signature follows it, so

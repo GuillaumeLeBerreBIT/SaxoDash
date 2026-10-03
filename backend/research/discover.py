@@ -12,6 +12,12 @@ from .scan import SCAN_TASK
 STALE_AFTER = timedelta(hours=36)
 
 
+def _issue(run):
+    if run is None or run.outcome == 'ok':
+        return None
+    return run.detail or None
+
+
 def health(now=None):
     now = now or timezone.now()
     runs = SyncRun.objects.filter(task=SCAN_TASK)
@@ -26,7 +32,13 @@ def health(now=None):
         state = 'stale'
     else:
         state = 'ok'
-    return {'state': state, 'last_run_at': latest.ran_at if latest else None, 'progress': progress}
+    return {
+        'state': state,
+        'last_run_at': latest.ran_at if latest else None,
+        'last_ok_at': last_ok.ran_at if last_ok else None,
+        'issue': _issue(latest),
+        'progress': progress,
+    }
 
 
 def as_of():

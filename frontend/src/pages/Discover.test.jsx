@@ -86,6 +86,28 @@ describe('Discover page', () => {
     expect(screen.getByText(/Connect Saxo to run the first scan/)).toBeInTheDocument()
   })
 
+  it('says when the data was last updated and refreshes on request', () => {
+    const lastOk = new Date(Date.now() - 50 * 3_600_000).toISOString()
+    useDiscover.mockReturnValue({ data: { as_of: lastOk, health: { state: 'ok', last_ok_at: lastOk, progress: null }, shelves: [] } })
+    renderPage()
+    expect(screen.getByText('Updated 2 days ago')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(startScan.mutate).toHaveBeenCalledTimes(1)
+  })
+
+  it('cannot start a second scan while one runs', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-10-01T17:28:00Z', health: { state: 'ok', last_ok_at: '2026-10-01T17:28:00Z', progress: { done: 10, total: 518 } }, shelves: [] } })
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Scanning…' })).toBeDisabled()
+  })
+
+  it('asks for Saxo when a refresh cannot start without it', () => {
+    startScan.error = Object.assign(new Error('Saxo is not connected.'), { status: 409 })
+    useDiscover.mockReturnValue({ data: { as_of: '2026-10-01T17:28:00Z', health: { state: 'ok', progress: null }, shelves: [] } })
+    renderPage()
+    expect(screen.getByText('Connect Saxo to refresh.')).toBeInTheDocument()
+  })
+
   it('holds the shelves back and shows progress while the first scan runs', () => {
     useDiscover.mockReturnValue({ data: { as_of: null, health: { state: 'scanning', progress: { done: 144, total: 518 } }, shelves: [shelf('oversold', 'Oversold', 0)] } })
     renderPage()
