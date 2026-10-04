@@ -56,7 +56,7 @@ describe('Discover page', () => {
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()
     expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
-    expect(screen.getByText('RSI 14 ≥ 70')).toBeInTheDocument()
+    expect(screen.getByText(/RSI 14/)).toBeInTheDocument()
     expect(screen.getByText('7 stocks')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'See all 7' })).toHaveAttribute('href', '/discover/overbought')
   })

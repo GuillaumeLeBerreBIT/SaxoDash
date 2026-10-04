@@ -15,7 +15,7 @@ export default function DiscoverCard({ item, className = '' }) {
         to={researchHref(item.ticker, 'overview', { uic: item.uic, assetType: item.asset_type })}
         className="block p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 rounded-lg"
       >
-        <div className="flex items-center gap-2 pr-7">
+        <div className="flex items-center gap-2 pr-11 sm:pr-7">
           <InstrumentLogo symbol={item.ticker} size={24} className="rounded" fallback={<TickerInitial ticker={item.ticker} size={24} />} />
           <div className="min-w-0">
             <div className="text-[var(--fig-sm)] font-semibold text-zinc-100">{item.ticker}</div>

@@ -6,7 +6,7 @@ import { useDiscover, useStartDiscoverScan } from '../api/queries'
 import DiscoverHealth from '../components/discover/DiscoverHealth'
 import ScanProgress from '../components/discover/ScanProgress'
 import ShelfRow from '../components/discover/ShelfRow'
-import { REFRESH_HINT, updatedLabel } from '../lib/discover'
+import { REFRESH_HINT, SCANNING_POLL_MS, updatedLabel } from '../lib/discover'
 import { useNow } from '../lib/useNow'
 import { Alert, Button, PageHeader, Skeleton } from '../components/ui'
 
@@ -65,7 +65,7 @@ function ScanControls({ health, startScan, now }) {
 export default function Discover() {
   const { data, isLoading, error } = useDiscover()
   const startScan = useFirstScanOnOpen(data?.health)
-  const now = useNow(60_000)
+  const now = useNow(data?.health?.progress ? SCANNING_POLL_MS : 60_000)
   const firstScan = data?.health?.state === 'never'
 
   return (

@@ -128,6 +128,10 @@ describe('scanEtaLabel', () => {
     expect(scanEtaLabel({ done: 0, total: null }, now)).toBeNull()
   })
 
+  it('has no estimate when the scan started after the clock reading', () => {
+    expect(scanEtaLabel({ done: 100, total: 518, started_at: '2026-10-04T07:34:45Z' }, now)).toBeNull()
+  })
+
   it('has no estimate for progress reported without a start time', () => {
     expect(scanEtaLabel({ done: 100, total: 518 }, now)).toBeNull()
   })

@@ -46,9 +46,11 @@ export const REFRESH_HINT = 'Rescans every stock in the S&P 500 and Nasdaq-100. 
 export function scanEtaLabel(progress, now = new Date()) {
   const { done, total, started_at: startedAt } = progress ?? {}
   if (!startedAt || !done || total == null) return null
-  const perStock = (now - new Date(startedAt)) / done
+  const elapsed = now - new Date(startedAt)
+  if (!(elapsed > 0)) return null
+  const perStock = elapsed / done
   const remaining = perStock * (total - done)
-  if (!Number.isFinite(remaining)) return null
+  if (!Number.isFinite(remaining) || remaining < 0) return null
   if (remaining < MINUTE_MS) return 'Less than a minute left'
   return `About ${Math.ceil(remaining / MINUTE_MS)} min left`
 }

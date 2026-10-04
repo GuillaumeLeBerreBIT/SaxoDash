@@ -39,6 +39,12 @@ describe('ShelfRow', () => {
     expect(screen.getByText('102 stocks')).toHaveClass('whitespace-nowrap')
   })
 
+  it('keeps the info tip on the same line as the subtitle last word', () => {
+    renderRow(shelf(102, 20))
+    const tip = screen.getByRole('button', { name: 'About Overbought' })
+    expect(tip.closest('.whitespace-nowrap')).toHaveTextContent('70')
+  })
+
   it('says a shelf is empty in readable contrast', () => {
     renderRow(shelf(0, 0))
     expect(screen.getByText('No stocks match these criteria in the last session.')).not.toHaveClass('text-zinc-600')
