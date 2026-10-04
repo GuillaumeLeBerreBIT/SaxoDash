@@ -1,5 +1,5 @@
 import tempfile
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from unittest import mock
 
@@ -47,6 +47,9 @@ class ResolveTest(TestCase):
 class ScanUniverseTest(TestCase):
     def setUp(self):
         cache.clear()
+        calendar = mock.patch('research.scan.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+        self.calendar = calendar.start()
+        self.addCleanup(calendar.stop)
         ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500|NDX')
         ScreenerRow.objects.create(ticker='BRK.B', name='Berkshire', indexes='SP500')
         self.universe = self.write_universe('AAPL', 'BRK.B')
@@ -58,6 +61,17 @@ class ScanUniverseTest(TestCase):
         lines = ['ticker,name,sector,indexes'] + [f'{ticker},{ticker} Inc,Tech,SP500' for ticker in tickers]
         path.write_text('\n'.join(lines) + '\n')
         return path
+
+    def test_fills_earnings_dates_once_after_the_symbols(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        self.calendar.assert_called_once()
+
+    def test_a_failed_calendar_call_does_not_fail_the_scan(self, search, chart, financials):
+        self.calendar.side_effect = FinnhubNotConfigured('no key')
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        with self.assertLogs('research.scan', level='WARNING'):
+            self.assertEqual(self.run_scan(), 2)
 
     def run_scan(self, **kwargs):
         kwargs.setdefault('pause', no_pause)
@@ -220,3 +234,48 @@ class ScanUniverseTest(TestCase):
                 self.assertEqual(self.run_scan(), 1)
         self.assertEqual(ScreenerRow.objects.get(ticker='AAPL').status, ScreenerRow.FAILED)
         self.assertEqual(ScreenerRow.objects.get(ticker='BRK.B').status, ScreenerRow.OK)
+
+
+@override_settings(CACHES=LOCMEM)
+class EarningsDatesTest(TestCase):
+    today = date(2026, 10, 4)
+
+    def setUp(self):
+        for ticker in ('AAPL', 'KO', 'MSFT'):
+            ScreenerRow.objects.create(ticker=ticker, name=ticker, indexes='SP500')
+
+    def dates(self):
+        return dict(ScreenerRow.objects.values_list('ticker', 'next_earnings_date'))
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_each_stock_gets_its_earliest_upcoming_date_in_the_window(self, calendar):
+        calendar.return_value = {'earningsCalendar': [
+            {'symbol': 'AAPL', 'date': '2026-10-30'},
+            {'symbol': 'AAPL', 'date': '2026-10-09'},
+            {'symbol': 'KO', 'date': '2026-10-03'},
+            {'symbol': 'ZZZZ', 'date': '2026-10-05'},
+        ]}
+        scan.refresh_earnings_dates(self.today)
+        calendar.assert_called_once_with(None, '2026-10-04', '2026-10-18')
+        self.assertEqual(self.dates(), {'AAPL': date(2026, 10, 9), 'KO': None, 'MSFT': None})
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_a_stock_no_longer_in_the_calendar_loses_its_old_date(self, calendar):
+        ScreenerRow.objects.filter(ticker='MSFT').update(next_earnings_date=date(2026, 10, 1))
+        calendar.return_value = {'earningsCalendar': []}
+        scan.refresh_earnings_dates(self.today)
+        self.assertIsNone(self.dates()['MSFT'])
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar', side_effect=FinnhubAPIError('429'))
+    def test_a_failed_calendar_call_keeps_the_dates_it_had(self, calendar):
+        ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
+        with self.assertLogs('research.scan', level='WARNING'):
+            scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar', return_value={'earningsCalendar': [{'symbol': 'AAPL', 'date': 'soon'}]})
+    def test_a_malformed_calendar_keeps_the_dates_it_had(self, calendar):
+        ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
+        with self.assertLogs('research.scan', level='WARNING'):
+            scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))

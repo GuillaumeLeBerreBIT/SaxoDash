@@ -1,6 +1,8 @@
 import logging
 import time
+from datetime import date, timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
 from . import finnhub, market, scan_progress, technicals
@@ -15,6 +17,7 @@ DAILY_HORIZON = 1440
 CHART_BARS = 260
 PAUSE_SECONDS = 1.2
 US_EXCHANGES = ('NASDAQ', 'NYSE')
+EARNINGS_WINDOW_DAYS = 14
 
 
 def resolve(ticker):
@@ -96,6 +99,29 @@ def scan_row(row, *, with_fundamentals):
     return with_fundamentals
 
 
+def _earliest_dates(events, today, until):
+    earliest = {}
+    for event in events:
+        when = date.fromisoformat(event['date'])
+        if today <= when <= until and (event['symbol'] not in earliest or when < earliest[event['symbol']]):
+            earliest[event['symbol']] = when
+    return earliest
+
+
+def refresh_earnings_dates(today):
+    until = today + timedelta(days=EARNINGS_WINDOW_DAYS)
+    try:
+        events = finnhub.get_earnings_calendar(None, today.isoformat(), until.isoformat()).get('earningsCalendar', [])
+        earliest = _earliest_dates(events, today, until)
+    except Exception:
+        logger.warning('Earnings calendar refresh failed; keeping stored dates', exc_info=True)
+        return
+    with transaction.atomic():
+        ScreenerRow.objects.exclude(ticker__in=earliest).update(next_earnings_date=None)
+        for ticker, when in earliest.items():
+            ScreenerRow.objects.filter(ticker=ticker).update(next_earnings_date=when)
+
+
 def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
     load_universe(universe)
     rows = list(ScreenerRow.objects.order_by('ticker'))
@@ -106,6 +132,7 @@ def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
             with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
             scan_progress.report(done, len(rows), started_at)
             pause(PAUSE_SECONDS)
+        refresh_earnings_dates(timezone.localdate())
     finally:
         scan_progress.clear()
     return ScreenerRow.objects.filter(status=ScreenerRow.OK).count()
