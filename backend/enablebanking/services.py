@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -8,6 +9,19 @@ from django.utils import timezone
 from .models import BankTransaction, Budget, ManualIbanLabel
 
 TRANSFER_CATEGORIES = ('TRANSFER', 'SAVINGS')
+
+
+def _today():
+    return timezone.localdate()
+
+
+def _shift_month(day, delta):
+    index = day.year * 12 + day.month - 1 + delta
+    return date(index // 12, index % 12 + 1, 1)
+
+
+def _spend_by_category(nets):
+    return {category: -net for category, net in nets if net < 0}
 
 
 def _previous_period(date_from, date_to):
@@ -31,12 +45,10 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
         .annotate(total=Sum('amount'))
         .order_by('effective_category')
     )
-    # A category whose signed total is >= 0 (fully refunded, or nothing but
-    # an unmatched credit) is dropped, not shown as negative spending.
-    categories = [
-        {'category': row['effective_category'], 'amount': -row['total']}
-        for row in spending_rows if row['total'] < 0
-    ]
+    spend = _spend_by_category(
+        (row['effective_category'], row['total']) for row in spending_rows
+    )
+    categories = [{'category': category, 'amount': amount} for category, amount in spend.items()]
 
     transfers_total = -(
         qs.filter(effective_category__in=TRANSFER_CATEGORIES, amount__lt=0)
@@ -75,20 +87,31 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
 
 
 def spending_trend(months=6):
-    qs = (
+    months = max(1, months)
+    current = _today().replace(day=1)
+    starts = [_shift_month(current, offset) for offset in range(1 - months, 1)]
+
+    rows = (
         BankTransaction.objects
+        .filter(booking_date__gte=starts[0])
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .exclude(effective_category__in=TRANSFER_CATEGORIES)
         .annotate(month=TruncMonth('booking_date'))
-        .values('month')
+        .values('month', 'effective_category')
         .annotate(total=Sum('amount'))
-        .order_by('month')
     )
-    rows = [
-        {'month': row['month'].strftime('%Y-%m'), 'total': -row['total']}
-        for row in qs if row['total'] < 0
+    nets_by_month = defaultdict(list)
+    for row in rows:
+        nets_by_month[row['month']].append((row['effective_category'], row['total']))
+
+    return [
+        {
+            'month': start.strftime('%Y-%m'),
+            'total': sum(_spend_by_category(nets_by_month[start]).values(), Decimal('0')),
+            'partial': start == current,
+        }
+        for start in starts
     ]
-    return rows[-months:]
 
 
 def _first_of_month(d):

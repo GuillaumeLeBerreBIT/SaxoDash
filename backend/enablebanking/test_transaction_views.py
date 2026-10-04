@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -161,11 +162,18 @@ class SpendingTrendViewTest(APITestCase):
             bank='kbc', bank_account=account, external_id='t1', amount=-40,
             currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
         )
+        patcher = patch('enablebanking.services._today', return_value=date(2026, 1, 20))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
-    def test_returns_monthly_totals(self):
+    def test_returns_monthly_totals_with_the_partial_flag(self):
         response = self.client.get('/api/enablebanking/spending/trend/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]['month'], '2026-01')
+        self.assertEqual(len(response.data), 6)
+        self.assertEqual(response.data[-1]['month'], '2026-01')
+        self.assertEqual(response.data[-1]['total'], Decimal('40'))
+        self.assertTrue(response.data[-1]['partial'])
+        self.assertFalse(response.data[0]['partial'])
 
     def test_respects_months_query_param(self):
         response = self.client.get('/api/enablebanking/spending/trend/?months=1')
