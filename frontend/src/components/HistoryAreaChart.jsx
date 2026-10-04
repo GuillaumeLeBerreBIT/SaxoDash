@@ -9,7 +9,8 @@ import { chartPlaceholderFor } from '../lib/chartState'
 
 export default function HistoryAreaChart({ title, subtitle, dataKey, name, color }) {
   const [range, setRange] = useState('6M')
-  const { data, isLoading, error } = useNetWorthHistory(range)
+  const { data: history, isLoading, error } = useNetWorthHistory(range)
+  const data = history?.filter((row) => row[dataKey] != null)
 
   const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
   const gradientId = `${dataKey}Fill`
