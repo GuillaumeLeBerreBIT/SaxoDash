@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import ShelfRow from './ShelfRow'
@@ -42,5 +42,11 @@ describe('ShelfRow', () => {
   it('says a shelf is empty in readable contrast', () => {
     renderRow(shelf(0, 0))
     expect(screen.getByText('No stocks match these criteria in the last session.')).not.toHaveClass('text-zinc-600')
+  })
+
+  it('counts only the cards on screen in its note', () => {
+    renderRow(shelf(99, 20))
+    fireEvent.focus(screen.getByRole('button', { name: 'About Overbought' }))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Showing the first 3 of 99')
   })
 })

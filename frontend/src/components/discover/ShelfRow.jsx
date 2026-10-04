@@ -24,6 +24,8 @@ function Cards({ items, fit }) {
 
 export default function ShelfRow({ shelf }) {
   const [ref, width] = useWidth()
+  const fit = cardsThatFit(width)
+  const shown = fit == null ? shelf.items.length : Math.min(fit, shelf.items.length)
   return (
     <section ref={ref} aria-labelledby={`shelf-${shelf.key}`} className="space-y-2">
       <div className="flex items-start justify-between gap-3">
@@ -33,7 +35,7 @@ export default function ShelfRow({ shelf }) {
             <span className="num whitespace-nowrap">{stockCount(shelf.total)}</span>
             <span aria-hidden="true">·</span>
             <span>{shelf.subtitle}</span>
-            <InfoTip label={`About ${shelf.title}`}>{shelfNote(shelf)}</InfoTip>
+            <InfoTip label={`About ${shelf.title}`}>{shelfNote(shelf, shown)}</InfoTip>
           </p>
         </div>
         {shelf.total > 0 ? (
@@ -45,7 +47,7 @@ export default function ShelfRow({ shelf }) {
       {shelf.total === 0 ? (
         <EmptyState title={shelf.empty} className="py-4" />
       ) : (
-        <Cards items={shelf.items} fit={cardsThatFit(width)} />
+        <Cards items={shelf.items} fit={fit} />
       )}
     </section>
   )

@@ -19,8 +19,8 @@ export const reasonsLine = (reasons) => reasons.map(formatReason).join(' · ')
 
 export const stockCount = (total) => `${total} ${total === 1 ? 'stock' : 'stocks'}`
 
-export function shelfNote({ order, total, items }) {
-  const shown = items.length < total ? ` Showing the first ${items.length} of ${total}.` : ''
+export function shelfNote({ order, total }, shownCount) {
+  const shown = shownCount < total ? ` Showing the first ${shownCount} of ${total}.` : ''
   return `${order}.${shown} A filter on the last scan, not a recommendation.`
 }
 
