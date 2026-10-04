@@ -290,6 +290,8 @@ Fundamentals
   …
 ```
 
+**Compact view (added 2026-10-04).** The default is cards. A "Cards | Compact" toggle, remembered per browser, swaps to a grid of lens columns, three per row on wide screens. Each column shows that lens's first five stocks in the lens's declared order, with the value it is ordered by, without rank numbers. Rows display logo, ticker, 1-day change, and the ordering value; price is omitted to keep columns narrow (it stays on cards and See all). A strip of jump chips (lens short name + count) sits above the groups in both views, with group titles ("Price action", "Fundamentals") rendered as section headings.
+
 - Each shelf header shows the title, **count** ("99", or "12 in Energy" when a
   sector filter is active), and an `InfoTip` with the criteria list, the
   ordering sentence, and "A filter, not a recommendation." The subtitle is the
