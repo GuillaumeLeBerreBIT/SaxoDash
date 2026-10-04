@@ -108,7 +108,7 @@ export default function Discover() {
       {data ? <ScanProgress progress={data.health?.progress} now={now} /> : null}
       {data ? <DiscoverHealth health={data.health} asOf={data.as_of} /> : null}
       {showShelves && data.shelves.length > 0 ? (
-        <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <LensChips shelves={data.shelves} />
           <ViewToggle view={view} onChange={chooseView} />
         </div>

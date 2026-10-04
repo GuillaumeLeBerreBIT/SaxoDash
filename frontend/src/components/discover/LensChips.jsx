@@ -1,6 +1,6 @@
 export default function LensChips({ shelves }) {
   return (
-    <nav aria-label="Lenses" className="min-w-0 flex flex-wrap gap-2 sm:flex-nowrap sm:overflow-x-auto sm:whitespace-nowrap sm:pb-1">
+    <nav aria-label="Lenses" className="min-w-0 flex flex-wrap gap-2 sm:flex-1">
       {shelves.map((shelf) => (
         <a
           key={shelf.key}
