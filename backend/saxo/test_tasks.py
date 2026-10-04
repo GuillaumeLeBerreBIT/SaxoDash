@@ -504,3 +504,54 @@ class SyncedHealthDeclarationTest(TestCase):
             @tasks.synced
             def not_declared(credential):
                 return 0
+
+
+class TransactionCurrencySyncTest(TestCase):
+    def setUp(self):
+        self.cred = SaxoCredential.objects.create(
+            access_token='a', refresh_token='b',
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        self.usd_position = {
+            **SAMPLE_POSITION,
+            'PositionView': {'CurrentPrice': 875.40, 'ConversionRateCurrent': 0.86},
+            'DisplayAndFormat': {
+                'Symbol': 'NVDA:xnas', 'Description': 'NVIDIA Corporation', 'Currency': 'USD',
+            },
+        }
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_sync_positions_writes_currency_and_fx_rate_on_the_transaction(self, mock_get_positions):
+        mock_get_positions.return_value = [self.usd_position]
+        tasks.sync_positions()
+        txn = Transaction.objects.get(ticker='NVDA')
+        self.assertEqual(txn.currency, 'USD')
+        self.assertEqual(txn.fx_rate, Decimal('0.86'))
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_resync_keeps_the_stored_fx_rate(self, mock_get_positions):
+        mock_get_positions.return_value = [self.usd_position]
+        tasks.sync_positions()
+        moved = {
+            **self.usd_position,
+            'PositionView': {'CurrentPrice': 875.40, 'ConversionRateCurrent': 0.91},
+        }
+        mock_get_positions.return_value = [moved]
+        tasks.sync_positions()
+        self.assertEqual(Transaction.objects.get(ticker='NVDA').fx_rate, Decimal('0.86'))
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_resync_fills_a_null_fx_rate(self, mock_get_positions):
+        mock_get_positions.return_value = [self.usd_position]
+        tasks.sync_positions()
+        Transaction.objects.filter(ticker='NVDA').update(fx_rate=None)
+        tasks.sync_positions()
+        self.assertEqual(Transaction.objects.get(ticker='NVDA').fx_rate, Decimal('0.86'))
+
+    @patch('saxo.tasks.client.get_closed_positions')
+    def test_sync_closed_positions_writes_currency_and_leaves_unknown_fx_null(self, mock_get_closed):
+        mock_get_closed.return_value = [SAMPLE_CLOSED_POSITION]
+        tasks.sync_closed_positions()
+        txn = Transaction.objects.get(ticker='META')
+        self.assertEqual(txn.currency, 'USD')
+        self.assertIsNone(txn.fx_rate)
