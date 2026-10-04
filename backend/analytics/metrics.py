@@ -164,7 +164,6 @@ def jensen_alpha(port_expected_return, bench_expected_return, beta_value, risk_f
 
 
 def _aligned(dated_values_a, dated_values_b):
-    """Two date-ascending series -> common dates plus same-length value lists over them."""
     by_date_a = dict(dated_values_a)
     by_date_b = dict(dated_values_b)
     common_dates = sorted(set(by_date_a) & set(by_date_b))
@@ -180,8 +179,6 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
 
     Aligned on dates present in both series - a portfolio snapshot with no
     matching benchmark bar (or vice versa) is excluded rather than guessed at.
-    History is measured on that shared window, so a benchmark with a longer
-    record never lends the portfolio extra days.
     """
     common_dates, port_values, bench_values = _aligned(port_dated_values, bench_dated_values)
     days = history.span_days(common_dates)
