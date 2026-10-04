@@ -29,7 +29,7 @@ function ShelfGroup({ group, children }) {
 
 function ViewToggle({ view, onChange }) {
   return (
-    <div role="group" aria-label="View" className="shrink-0 flex items-center gap-1">
+    <div role="group" aria-label="View" className="shrink-0 flex items-center gap-1 self-end sm:self-auto">
       <TBtn active={view === 'cards'} onClick={() => onChange('cards')}>Cards</TBtn>
       <TBtn active={view === 'compact'} onClick={() => onChange('compact')}>Compact</TBtn>
     </div>
@@ -107,8 +107,8 @@ export default function Discover() {
       ) : null}
       {data ? <ScanProgress progress={data.health?.progress} now={now} /> : null}
       {data ? <DiscoverHealth health={data.health} asOf={data.as_of} /> : null}
-      {showShelves ? (
-        <div className="flex items-center justify-between gap-3">
+      {showShelves && data.shelves.length > 0 ? (
+        <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
           <LensChips shelves={data.shelves} />
           <ViewToggle view={view} onChange={chooseView} />
         </div>

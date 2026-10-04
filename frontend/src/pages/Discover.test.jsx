@@ -48,6 +48,13 @@ describe('Discover page', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('title', expect.stringMatching(/several minutes/))
   })
 
+  it('shows no lens chips or view toggle when there are no shelves', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-10-04T08:00:00Z', health: { state: 'ok', progress: null }, groups, shelves: [] } })
+    renderPage()
+    expect(screen.queryByRole('navigation', { name: 'Lenses' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'View' })).toBeNull()
+  })
+
   it('loads with shelf-shaped placeholders', () => {
     useDiscover.mockReturnValue({ data: undefined, isLoading: true })
     renderPage()
