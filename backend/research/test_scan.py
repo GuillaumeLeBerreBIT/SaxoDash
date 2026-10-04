@@ -1,10 +1,12 @@
 import tempfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest import mock
 
 from django.core.cache import cache
+from django.db import DatabaseError
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from research import scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
@@ -63,9 +65,13 @@ class ScanUniverseTest(TestCase):
         return path
 
     def test_fills_earnings_dates_once_after_the_symbols(self, search, chart, financials):
+        today = timezone.localdate()
+        self.calendar.return_value = {'earningsCalendar': [{'symbol': 'AAPL', 'date': today.isoformat()}]}
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.run_scan()
-        self.calendar.assert_called_once()
+        self.calendar.assert_called_once_with(None, today.isoformat(), (today + timedelta(days=14)).isoformat())
+        self.assertEqual(ScreenerRow.objects.get(ticker='AAPL').next_earnings_date, today)
+        self.assertIsNone(ScreenerRow.objects.get(ticker='BRK.B').next_earnings_date)
 
     def test_a_failed_calendar_call_does_not_fail_the_scan(self, search, chart, financials):
         self.calendar.side_effect = FinnhubNotConfigured()
@@ -273,9 +279,66 @@ class EarningsDatesTest(TestCase):
             scan.refresh_earnings_dates(self.today)
         self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
 
-    @mock.patch('research.scan.finnhub.get_earnings_calendar', return_value={'earningsCalendar': [{'symbol': 'AAPL', 'date': 'soon'}]})
-    def test_a_malformed_calendar_keeps_the_dates_it_had(self, calendar):
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_a_row_with_a_null_date_does_not_discard_the_good_rows(self, calendar):
+        calendar.return_value = {'earningsCalendar': [
+            {'symbol': 'KO', 'date': None},
+            {'symbol': None, 'date': '2026-10-06'},
+            {'symbol': 'AAPL', 'date': '2026-10-09'},
+        ]}
+        scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates(), {'AAPL': date(2026, 10, 9), 'KO': None, 'MSFT': None})
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_a_garbage_date_does_not_discard_the_good_rows(self, calendar):
+        calendar.return_value = {'earningsCalendar': [
+            {'symbol': 'KO', 'date': 'soon'},
+            {'symbol': 'AAPL', 'date': '2026-10-09'},
+        ]}
+        scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_a_calendar_with_only_malformed_rows_clears_the_dates(self, calendar):
         ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
-        with self.assertLogs('research.scan', level='WARNING'):
+        calendar.return_value = {'earningsCalendar': [{'symbol': 'AAPL', 'date': 'soon'}]}
+        scan.refresh_earnings_dates(self.today)
+        self.assertIsNone(self.dates()['AAPL'])
+
+    def test_an_unreadable_calendar_keeps_the_dates_it_had(self):
+        for payload in (None, {'earningsCalendar': None}, {'earningsCalendar': 'oops'}, {}):
+            with self.subTest(payload=payload):
+                ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
+                with mock.patch('research.scan.finnhub.get_earnings_calendar', return_value=payload):
+                    with self.assertLogs('research.scan', level='WARNING'):
+                        scan.refresh_earnings_dates(self.today)
+                self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_the_window_includes_its_last_day_and_excludes_the_next(self, calendar):
+        calendar.return_value = {'earningsCalendar': [
+            {'symbol': 'AAPL', 'date': '2026-10-18'},
+            {'symbol': 'KO', 'date': '2026-10-19'},
+        ]}
+        scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates(), {'AAPL': date(2026, 10, 18), 'KO': None, 'MSFT': None})
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_stocks_sharing_a_date_are_written_together(self, calendar):
+        calendar.return_value = {'earningsCalendar': [
+            {'symbol': 'AAPL', 'date': '2026-10-09'},
+            {'symbol': 'KO', 'date': '2026-10-09'},
+            {'symbol': 'MSFT', 'date': '2026-10-10'},
+        ]}
+        with self.assertNumQueries(6):
             scan.refresh_earnings_dates(self.today)
+        self.assertEqual(self.dates(), {'AAPL': date(2026, 10, 9), 'KO': date(2026, 10, 9), 'MSFT': date(2026, 10, 10)})
+
+    @mock.patch('research.scan.finnhub.get_earnings_calendar')
+    def test_a_failing_write_does_not_escape_and_keeps_the_dates(self, calendar):
+        ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
+        calendar.return_value = {'earningsCalendar': [{'symbol': 'KO', 'date': '2026-10-06'}]}
+        with mock.patch('research.scan.ScreenerRow.objects.exclude', side_effect=DatabaseError('locked')):
+            with self.assertLogs('research.scan', level='WARNING'):
+                scan.refresh_earnings_dates(self.today)
         self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
