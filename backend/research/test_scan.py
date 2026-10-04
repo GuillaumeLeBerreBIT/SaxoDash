@@ -68,7 +68,7 @@ class ScanUniverseTest(TestCase):
         self.calendar.assert_called_once()
 
     def test_a_failed_calendar_call_does_not_fail_the_scan(self, search, chart, financials):
-        self.calendar.side_effect = FinnhubNotConfigured('no key')
+        self.calendar.side_effect = FinnhubNotConfigured()
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         with self.assertLogs('research.scan', level='WARNING'):
             self.assertEqual(self.run_scan(), 2)
