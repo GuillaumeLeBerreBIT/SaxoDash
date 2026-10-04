@@ -10,8 +10,9 @@ function LeadReason({ reason }) {
   if (!reason) return null
   const { label, value } = reasonParts(reason)
   return (
-    <span className="shrink-0 whitespace-nowrap text-[var(--fig-xs)]">
-      <span className="text-zinc-500">{label}</span> <span className="num font-mono text-zinc-200">{value}</span>
+    <span className="ml-auto flex min-w-0 items-baseline justify-end gap-1 text-[var(--fig-xs)]">
+      <span title={label} className="min-w-0 truncate text-zinc-500">{label}</span>{' '}
+      <span className="num shrink-0 whitespace-nowrap font-mono text-zinc-200">{value}</span>
     </span>
   )
 }
@@ -33,8 +34,8 @@ export default function LensColumn({ shelf }) {
               >
                 <InstrumentLogo symbol={item.ticker} size={16} className="rounded" fallback={<TickerInitial ticker={item.ticker} size={16} />} />
                 <span className="w-14 shrink-0 text-[var(--fig-sm)] font-semibold text-zinc-100">{item.ticker}</span>
-                <DayChange value={item.change_1d} className="text-[var(--fig-xs)]" />
-                <span className="ml-auto shrink-0"><LeadReason reason={leadReason(item, shelf.sort)} /></span>
+                <DayChange value={item.change_1d} className="shrink-0 text-[var(--fig-xs)]" />
+                <LeadReason reason={leadReason(item, shelf.sort)} />
               </Link>
             </li>
           ))}
