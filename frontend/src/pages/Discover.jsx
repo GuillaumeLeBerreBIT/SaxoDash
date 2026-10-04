@@ -1,14 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 import { isNotConnected } from '../api/client'
 import { useDiscover, useStartDiscoverScan } from '../api/queries'
 import DiscoverHealth from '../components/discover/DiscoverHealth'
+import LensChips from '../components/discover/LensChips'
+import LensColumn from '../components/discover/LensColumn'
 import ScanProgress from '../components/discover/ScanProgress'
 import ShelfRow from '../components/discover/ShelfRow'
-import { REFRESH_HINT, groupShelves, SCANNING_POLL_MS, updatedLabel } from '../lib/discover'
+import { REFRESH_HINT, groupShelves, readDiscoverView, SCANNING_POLL_MS, updatedLabel, writeDiscoverView } from '../lib/discover'
 import { useNow } from '../lib/useNow'
-import { Alert, Button, PageHeader, Skeleton } from '../components/ui'
+import { Alert, Button, PageHeader, Skeleton, TBtn } from '../components/ui'
 
 const SKELETON_SHELVES = 3
 const SHELVES_HIDDEN = new Set(['never', 'scanning'])
@@ -22,6 +24,15 @@ function ShelfGroup({ group, children }) {
       <h2 id={`group-${group.key}`} className="text-[var(--fig-xs)] font-semibold uppercase tracking-wider text-zinc-500">{group.title}</h2>
       {children}
     </section>
+  )
+}
+
+function ViewToggle({ view, onChange }) {
+  return (
+    <div role="group" aria-label="View" className="shrink-0 flex items-center gap-1">
+      <TBtn active={view === 'cards'} onClick={() => onChange('cards')}>Cards</TBtn>
+      <TBtn active={view === 'compact'} onClick={() => onChange('compact')}>Compact</TBtn>
+    </div>
   )
 }
 
@@ -73,6 +84,11 @@ function ScanControls({ health, startScan, now }) {
 
 export default function Discover() {
   const { data, isLoading, error } = useDiscover()
+  const [view, setView] = useState(readDiscoverView)
+  const chooseView = (next) => {
+    setView(next)
+    writeDiscoverView(next)
+  }
   const startScan = useFirstScanOnOpen(data?.health)
   const now = useNow(data?.health?.progress ? SCANNING_POLL_MS : 60_000)
   const showShelves = data && !SHELVES_HIDDEN.has(data.health?.state)
@@ -91,11 +107,23 @@ export default function Discover() {
       ) : null}
       {data ? <ScanProgress progress={data.health?.progress} now={now} /> : null}
       {data ? <DiscoverHealth health={data.health} asOf={data.as_of} /> : null}
+      {showShelves ? (
+        <div className="flex items-center justify-between gap-3">
+          <LensChips shelves={data.shelves} />
+          <ViewToggle view={view} onChange={chooseView} />
+        </div>
+      ) : null}
       {isLoading ? Array.from({ length: SKELETON_SHELVES }, (_, i) => <ShelfSkeleton key={i} />) : null}
       {showShelves
         ? groupShelves(data.groups, data.shelves).map((group) => (
             <ShelfGroup key={group.key} group={group}>
-              {group.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />)}
+              {view === 'compact' ? (
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {group.shelves.map((shelf) => <LensColumn key={shelf.key} shelf={shelf} />)}
+                </div>
+              ) : (
+                group.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />)
+              )}
             </ShelfGroup>
           ))
         : null}

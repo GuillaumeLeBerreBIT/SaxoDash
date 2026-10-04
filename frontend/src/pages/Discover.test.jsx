@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Discover from './Discover'
@@ -26,6 +26,7 @@ describe('Discover page', () => {
   beforeEach(() => {
     startScan.mutate.mockClear()
     startScan.error = null
+    localStorage.clear()
   })
 
   it('keeps the updated label current while the page stays open', () => {
@@ -158,5 +159,31 @@ describe('Discover page', () => {
     renderPage()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '10')
     expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
+  })
+
+  it('offers a jump chip per lens that lands on its heading', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
+    renderPage()
+    const nav = screen.getByRole('navigation', { name: 'Lenses' })
+    expect(within(nav).getByRole('link', { name: 'Overbought 7' })).toHaveAttribute('href', '#shelf-overbought')
+  })
+
+  it('shows cards until compact is chosen, then remembers it', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
+    const { unmount } = renderPage()
+    expect(screen.getByRole('button', { name: 'Cards' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('list', { name: 'Overbought stocks' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Compact' }))
+    expect(screen.getByRole('list', { name: 'Overbought stocks' })).toBeInTheDocument()
+    unmount()
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Compact' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps the lens heading a jump target in compact view', () => {
+    localStorage.setItem('saxodash:discover-view', 'compact')
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
+    renderPage()
+    expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
   })
 })
