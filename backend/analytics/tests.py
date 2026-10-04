@@ -217,6 +217,9 @@ class CalendarYearReturnsTest(TestCase):
 
 
 class PerformanceSummaryTest(TestCase):
+    def _row(self, summary, label):
+        return next(row for row in summary['periods'] if row['label'] == label)
+
     def test_includes_alpha_as_the_difference_between_portfolio_and_benchmark(self):
         port = [(date(2026, 1, i), 100 + i) for i in range(1, 32)]
         bench = [(date(2026, 1, i), 50 + i * 0.4) for i in range(1, 32)]
@@ -241,6 +244,103 @@ class PerformanceSummaryTest(TestCase):
         self.assertIsNotNone(one_month['portfolio_pct'])
         self.assertIsNone(one_month['benchmark_pct'])
         self.assertIsNone(one_month['alpha_pct'])
+
+    def test_eight_days_of_history_leaves_every_trailing_period_empty(self):
+        summary = metrics.performance_summary(synthetic_series(8), benchmark_series(8))
+
+        self.assertEqual(summary['history_days'], 8)
+        for label, missing in [
+            ('1 month', 22), ('3 months', 83), ('1 year', 357),
+            ('3 years (ann.)', 1087), ('5 years (ann.)', 1817),
+        ]:
+            row = self._row(summary, label)
+            self.assertIsNone(row['portfolio_pct'], label)
+            self.assertIsNone(row['benchmark_pct'], label)
+            self.assertIsNone(row['alpha_pct'], label)
+            self.assertEqual(row['needs_days'], missing, label)
+
+    def test_eight_days_of_history_still_reports_since_inception_unannualised(self):
+        port = synthetic_series(8)
+        summary = metrics.performance_summary(port, benchmark_series(8))
+
+        inception = self._row(summary, 'Since inception')
+        self.assertAlmostEqual(
+            inception['portfolio_pct'], (float(port[-1][1]) / float(port[0][1]) - 1) * 100
+        )
+        self.assertFalse(inception['annualised'])
+        self.assertEqual(inception['needs_days'], 0)
+
+    def test_year_to_date_is_empty_when_tracking_began_after_new_year(self):
+        summary = metrics.performance_summary(synthetic_series(8), benchmark_series(8))
+        ytd = self._row(summary, 'Year to date')
+        self.assertIsNone(ytd['portfolio_pct'])
+        self.assertIsNone(ytd['needs_days'])
+
+    def test_a_period_appears_exactly_when_history_reaches_it(self):
+        short = metrics.performance_summary(synthetic_series(29), benchmark_series(29))
+        exact = metrics.performance_summary(synthetic_series(30), benchmark_series(30))
+
+        self.assertIsNone(self._row(short, '1 month')['portfolio_pct'])
+        self.assertEqual(self._row(short, '1 month')['needs_days'], 1)
+        self.assertIsNotNone(self._row(exact, '1 month')['portfolio_pct'])
+        self.assertEqual(self._row(exact, '1 month')['needs_days'], 0)
+
+    def test_four_hundred_days_fills_one_year_but_not_the_annualised_periods(self):
+        summary = metrics.performance_summary(synthetic_series(400), benchmark_series(400))
+
+        one_year = self._row(summary, '1 year')
+        self.assertIsNotNone(one_year['portfolio_pct'])
+        self.assertIsNotNone(one_year['alpha_pct'])
+        self.assertFalse(one_year['annualised'])
+        self.assertIsNone(self._row(summary, '3 years (ann.)')['portfolio_pct'])
+        self.assertEqual(self._row(summary, '3 years (ann.)')['needs_days'], 695)
+        self.assertIsNone(self._row(summary, '5 years (ann.)')['portfolio_pct'])
+
+    def test_three_years_of_history_annualises_the_three_year_row(self):
+        port = synthetic_series(1095)
+        summary = metrics.performance_summary(port, benchmark_series(1095))
+
+        three_years = self._row(summary, '3 years (ann.)')
+        total = (float(port[-1][1]) / float(port[0][1]) - 1) * 100
+        self.assertTrue(three_years['annualised'])
+        self.assertAlmostEqual(three_years['portfolio_pct'], metrics.annualize(total, 3))
+
+    def test_a_longer_benchmark_is_compared_only_over_the_portfolios_own_window(self):
+        port = synthetic_series(40)
+        base = date(2024, 1, 1)
+        bench = [(base + timedelta(days=i), 1000 + i) for i in range(800)]
+
+        summary = metrics.performance_summary(port, bench)
+
+        def bench_at(day):
+            return 1000 + (day - base).days
+
+        start, end = port[0][0], port[-1][0]
+        inception = self._row(summary, 'Since inception')
+        self.assertAlmostEqual(inception['benchmark_pct'], (bench_at(end) / bench_at(start) - 1) * 100)
+        one_month = self._row(summary, '1 month')
+        month_start = end - timedelta(days=30)
+        self.assertAlmostEqual(one_month['benchmark_pct'], (bench_at(end) / bench_at(month_start) - 1) * 100)
+        self.assertAlmostEqual(
+            inception['alpha_pct'], inception['portfolio_pct'] - inception['benchmark_pct']
+        )
+
+    def test_a_benchmark_that_starts_after_the_portfolio_gives_no_alpha(self):
+        port = synthetic_series(40)
+        late_bench = benchmark_series(10, start=SERIES_START + timedelta(days=30))
+
+        summary = metrics.performance_summary(port, late_bench)
+
+        inception = self._row(summary, 'Since inception')
+        self.assertIsNotNone(inception['portfolio_pct'])
+        self.assertIsNone(inception['benchmark_pct'])
+        self.assertIsNone(inception['alpha_pct'])
+
+    def test_no_history_leaves_everything_empty(self):
+        summary = metrics.performance_summary([], [])
+        self.assertEqual(summary['history_days'], 0)
+        self.assertTrue(all(row['portfolio_pct'] is None for row in summary['periods']))
+        self.assertEqual(self._row(summary, 'Since inception')['needs_days'], 1)
 
 
 class RiskSummaryTest(TestCase):
@@ -453,6 +553,22 @@ class PerformanceViewTest(APITestCase):
         self._seed_snapshots()
         response = self.client.get('/api/analytics/performance/?benchmark=sp500')
         self.assertEqual(response.data['benchmark']['key'], 'sp500')
+
+    def test_a_week_of_history_reports_what_is_missing_instead_of_zeros(self):
+        for offset in range(5):
+            NetWorthSnapshot.objects.create(
+                date=date(2026, 1, 5) + timedelta(days=offset),
+                portfolio_value=100, saxo_account_value=100 + offset,
+                bank_total=0, net_worth=100,
+            )
+
+        response = self.client.get('/api/analytics/performance/')
+
+        self.assertEqual(response.data['history_days'], 4)
+        by_label = {row['label']: row for row in response.data['periods']}
+        self.assertIsNone(by_label['1 year']['portfolio_pct'])
+        self.assertEqual(by_label['1 year']['needs_days'], 361)
+        self.assertIsNotNone(by_label['Since inception']['portfolio_pct'])
 
 
 @override_settings(RISK_FREE_RATE_ANNUAL=0.02, CACHES=LOCMEM)

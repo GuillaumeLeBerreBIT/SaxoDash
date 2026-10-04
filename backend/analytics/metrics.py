@@ -7,7 +7,9 @@ AGENTS.md for why a benchmark used to be left out entirely.
 """
 import math
 import statistics
-from datetime import timedelta
+from datetime import date, timedelta
+
+from . import history
 
 TRADING_DAYS = 252
 MIN_DAILY_POINTS = 2
@@ -207,16 +209,29 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
     }
 
 
+def window_return(dated_values, start, end):
+    window = [(d, v) for d, v in dated_values if start <= d <= end]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
+
+
+def benchmark_window_return(dated_values, start, end):
+    window = [(d, v) for d, v in dated_values if start <= d <= end]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    tolerance = history.BENCHMARK_EDGE_TOLERANCE_DAYS
+    if (window[0][0] - start).days > tolerance or (end - window[-1][0]).days > tolerance:
+        return None
+    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
+
+
 def period_return(dated_values, days):
     """Compound % change over the trailing `days` calendar days, or None."""
     if len(dated_values) < MIN_DAILY_POINTS:
         return None
-    end_date, end_value = dated_values[-1]
-    cutoff = end_date - timedelta(days=days)
-    window = [(d, v) for d, v in dated_values if d >= cutoff]
-    if len(window) < MIN_DAILY_POINTS:
-        return None
-    return (float(end_value) / float(window[0][1]) - 1) * 100
+    end_date = dated_values[-1][0]
+    return window_return(dated_values, end_date - timedelta(days=days), end_date)
 
 
 def ytd_return(dated_values):
@@ -280,32 +295,45 @@ def performance_summary(port_dated_values, bench_dated_values):
     tracking error, a period total doesn't need day-by-day alignment, just
     enough points inside its own window.
     """
-    def row(label, port_pct, bench_pct, annualised=False):
+    days = history.history_days(port_dated_values)
+    has_window = len(port_dated_values) >= MIN_DAILY_POINTS
+    port_end = port_dated_values[-1][0] if has_window else None
+
+    def row(label, start, needs, years=None):
+        port_total = None
+        if has_window and needs == 0:
+            port_total = window_return(port_dated_values, start, port_end)
+        bench_total = None
+        if port_total is not None:
+            bench_total = benchmark_window_return(bench_dated_values, start, port_end)
+        if years:
+            port_pct, bench_pct = annualize(port_total, years), annualize(bench_total, years)
+        else:
+            port_pct, bench_pct = port_total, bench_total
         alpha = None if port_pct is None or bench_pct is None else port_pct - bench_pct
         return {
             'label': label, 'portfolio_pct': port_pct, 'benchmark_pct': bench_pct,
-            'alpha_pct': alpha, 'annualised': annualised,
+            'alpha_pct': alpha, 'annualised': bool(years), 'needs_days': needs,
         }
 
     rows = []
-    for label, days, years in PERFORMANCE_PERIODS:
-        port_total = period_return(port_dated_values, days)
-        bench_total = period_return(bench_dated_values, days)
-        if years:
-            rows.append(row(
-                f'{label} (ann.)', annualize(port_total, years), annualize(bench_total, years),
-                annualised=True,
-            ))
-        else:
-            rows.append(row(label, port_total, bench_total))
+    for label, period_days, years in PERFORMANCE_PERIODS:
+        start = port_end - timedelta(days=period_days) if has_window else None
+        shown = f'{label} (ann.)' if years else label
+        rows.append(row(shown, start, history.days_missing(days, period_days), years))
 
-    rows.insert(2, row('Year to date', ytd_return(port_dated_values), ytd_return(bench_dated_values)))
-    rows.append(row(
-        'Since inception',
-        since_inception_return(port_dated_values), since_inception_return(bench_dated_values),
-    ))
+    if not has_window:
+        ytd_start, ytd_needs = None, history.days_missing(days, 1)
+    else:
+        ytd_start = date(port_end.year, 1, 1)
+        ytd_needs = 0 if port_dated_values[0][0] <= ytd_start else None
+    rows.insert(2, row('Year to date', ytd_start, ytd_needs))
+
+    inception_start = port_dated_values[0][0] if has_window else None
+    rows.append(row('Since inception', inception_start, history.days_missing(days, 1) if not has_window else 0))
 
     return {
+        'history_days': days,
         'periods': rows,
         'calendar_years': calendar_year_returns(port_dated_values, bench_dated_values),
     }
