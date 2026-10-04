@@ -3,7 +3,7 @@ import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtEur, fmtQty } from '../lib/format'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Input, PageHeader, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
 
 const TYPES = ['All', 'BUY', 'SELL', 'DIVIDEND', 'DEPOSIT', 'FEE']
 const toneFor = (t) => ({ BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }[t] || 'zinc')
@@ -119,7 +119,17 @@ export default function Transactions() {
                     <Badge tone={toneFor(t.type)}>{t.type}</Badge>
                   </Td>
                   <Td className="text-zinc-100">{t.instrument}</Td>
-                  <Td className="text-zinc-400 font-medium">{t.ticker}</Td>
+                  <Td className="text-zinc-400 font-medium">
+                    <span className="flex items-center gap-2">
+                      <InstrumentLogo
+                        symbol={t.ticker}
+                        size={16}
+                        className="rounded-sm"
+                        fallback={<span className="w-4 h-4 shrink-0" />}
+                      />
+                      {t.ticker}
+                    </span>
+                  </Td>
                   <Td align="right" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
                   <Td align="right" className="num text-zinc-300">{fmtEur(t.price)}</Td>
                   <Td align="right" className="num text-zinc-100 font-medium">{signedTotal(t)}</Td>

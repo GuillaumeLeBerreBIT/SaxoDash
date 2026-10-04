@@ -17,6 +17,10 @@ describe('instrumentLogoUrl', () => {
     expect(instrumentLogoUrl('IWDA')).toBe('https://api.elbstream.com/logos/isin/IE00B4L5Y983')
   })
 
+  it('routes a stock Elbstream only indexes by ISIN to the isin endpoint', () => {
+    expect(instrumentLogoUrl('MRVL')).toBe('https://api.elbstream.com/logos/isin/US5738741041')
+  })
+
   it('matches the override case-insensitively', () => {
     expect(instrumentLogoUrl('iwda')).toBe('https://api.elbstream.com/logos/isin/IE00B4L5Y983')
   })
