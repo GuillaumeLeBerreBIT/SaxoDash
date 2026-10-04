@@ -507,23 +507,57 @@ class BenchmarkSummaryTest(TestCase):
         self.assertFalse(summary['has_data'])
         self.assertIsNone(summary['beta'])
 
-    def test_aligns_on_common_dates_only(self):
+    def test_aligns_on_common_dates_only_and_withholds_short_history(self):
         port = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
         bench = [(date(2026, 1, i), v) for i, v in enumerate([50, 50.5, 50.2, 51, 50.8], start=1)]
-        port.append((date(2026, 1, 6), 106))  # portfolio-only date, no matching benchmark row
+        port.append((date(2026, 1, 6), 106))
 
         summary = metrics.benchmark_summary(port, bench, 0.02)
 
         self.assertTrue(summary['has_data'])
-        self.assertIsNotNone(summary['beta'])
-        self.assertIsNotNone(summary['tracking_error'])
-        self.assertIsNotNone(summary['information_ratio'])
-        self.assertIsNotNone(summary['jensen_alpha'])
-        # Beta/tracking error/information ratio/Jensen alpha are the most
-        # estimation-noise-sensitive stats on the page - a regression-based
-        # fit over 5 aligned days is 'low' confidence, same tiering as
-        # risk_summary, based on the aligned (not raw) point count.
+        self.assertIsNone(summary['beta'])
+        self.assertIsNone(summary['tracking_error'])
+        self.assertIsNone(summary['information_ratio'])
+        self.assertIsNone(summary['jensen_alpha'])
         self.assertEqual(summary['data_quality'], 'low')
+        self.assertEqual(summary['history_days'], 4)
+
+    def test_thresholds_release_each_statistic_in_turn(self):
+        thirty = metrics.benchmark_summary(synthetic_series(30), benchmark_series(30), 0.02)
+        ninety = metrics.benchmark_summary(synthetic_series(90), benchmark_series(90), 0.02)
+
+        self.assertIsNotNone(thirty['tracking_error'])
+        self.assertIsNone(thirty['beta'])
+        self.assertEqual(thirty['needs_days']['beta'], 60)
+        self.assertIsNotNone(ninety['beta'])
+        self.assertIsNone(ninety['information_ratio'])
+        self.assertIsNone(ninety['jensen_alpha'])
+        self.assertIsNone(ninety['expected_return'])
+
+    def test_four_hundred_days_has_every_statistic(self):
+        summary = metrics.benchmark_summary(synthetic_series(400), benchmark_series(400), 0.02)
+
+        for key in ('expected_return', 'beta', 'tracking_error', 'information_ratio', 'jensen_alpha'):
+            self.assertIsNotNone(summary[key], key)
+        self.assertEqual(summary['history_days'], 400)
+        self.assertEqual(summary['needs_days'], {
+            'tracking_error': 0, 'beta': 0, 'information_ratio': 0, 'jensen_alpha': 0,
+        })
+
+    def test_a_longer_benchmark_does_not_lend_the_portfolio_history(self):
+        long_bench = benchmark_series(900, start=SERIES_START - timedelta(days=500))
+
+        summary = metrics.benchmark_summary(synthetic_series(40), long_bench, 0.02)
+
+        self.assertEqual(summary['history_days'], 40)
+        self.assertEqual(summary['sample_size'], 41)
+        self.assertIsNone(summary['jensen_alpha'])
+        self.assertIsNotNone(summary['tracking_error'])
+
+    def test_no_overlap_reports_no_history(self):
+        summary = metrics.benchmark_summary([], [], 0.02)
+        self.assertEqual(summary['history_days'], 0)
+        self.assertEqual(summary['needs_days']['beta'], 90)
 
 
 class BenchmarkEurClosesTest(TestCase):
@@ -822,6 +856,17 @@ class RiskReportTest(TestCase):
         self.assertFalse(out['has_data'])
         self.assertIsNone(out['benchmark']['reason'])
         mock_eur_closes.assert_not_called()
+
+    @patch('analytics.report.benchmarks.eur_closes')
+    def test_the_benchmark_block_carries_history_and_needs(self, mock_eur_closes):
+        mock_eur_closes.return_value = benchmark_series(400)
+
+        out = report.risk_report(synthetic_series(8), 'world')
+
+        self.assertEqual(out['history_days'], 8)
+        self.assertEqual(out['benchmark']['history_days'], 8)
+        self.assertEqual(out['benchmark']['needs_days']['jensen_alpha'], 357)
+        self.assertIsNone(out['benchmark']['beta'])
 
     def test_an_unknown_key_resolves_to_world(self):
         self.assertEqual(report.resolve_benchmark_key('bogus'), 'world')

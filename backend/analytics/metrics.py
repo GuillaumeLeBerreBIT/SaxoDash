@@ -163,12 +163,16 @@ def jensen_alpha(port_expected_return, bench_expected_return, beta_value, risk_f
     return port_expected_return - (risk_free_pct + beta_value * (bench_expected_return - risk_free_pct))
 
 
-def _aligned_values(dated_values_a, dated_values_b):
-    """Two date-ascending series -> same-length value lists over their common dates."""
+def _aligned(dated_values_a, dated_values_b):
+    """Two date-ascending series -> common dates plus same-length value lists over them."""
     by_date_a = dict(dated_values_a)
     by_date_b = dict(dated_values_b)
     common_dates = sorted(set(by_date_a) & set(by_date_b))
-    return [float(by_date_a[d]) for d in common_dates], [float(by_date_b[d]) for d in common_dates]
+    return (
+        common_dates,
+        [float(by_date_a[d]) for d in common_dates],
+        [float(by_date_b[d]) for d in common_dates],
+    )
 
 
 def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
@@ -176,13 +180,20 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
 
     Aligned on dates present in both series - a portfolio snapshot with no
     matching benchmark bar (or vice versa) is excluded rather than guessed at.
+    History is measured on that shared window, so a benchmark with a longer
+    record never lends the portfolio extra days.
     """
-    port_values, bench_values = _aligned_values(port_dated_values, bench_dated_values)
+    common_dates, port_values, bench_values = _aligned(port_dated_values, bench_dated_values)
+    days = history.span_days(common_dates)
+    needs = history.needs_days(days, history.BENCHMARK_METRICS)
+
     if len(port_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
             'data_quality': None,
             'sample_size': len(port_values),
+            'history_days': days,
+            'needs_days': needs,
             'expected_return': None,
             'beta': None,
             'tracking_error': None,
@@ -201,11 +212,18 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
         'has_data': True,
         'data_quality': data_quality(len(port_values)),
         'sample_size': len(port_values),
-        'expected_return': bench_expected,
-        'beta': beta_value,
-        'tracking_error': te,
-        'information_ratio': information_ratio(port_expected, bench_expected, te),
-        'jensen_alpha': jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+        'history_days': days,
+        'needs_days': needs,
+        'expected_return': history.gate(bench_expected, days, 'expected_return'),
+        'beta': history.gate(beta_value, days, 'beta'),
+        'tracking_error': history.gate(te, days, 'tracking_error'),
+        'information_ratio': history.gate(
+            information_ratio(port_expected, bench_expected, te), days, 'information_ratio'
+        ),
+        'jensen_alpha': history.gate(
+            jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+            days, 'jensen_alpha',
+        ),
     }
 
 
