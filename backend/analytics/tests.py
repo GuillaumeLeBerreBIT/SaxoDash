@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
 
-from . import benchmarks, metrics, report, views
+from . import benchmarks, history, metrics, report, views
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -657,3 +657,55 @@ class PortfolioDatedValuesTest(TestCase):
         dates = [d for d, _ in views._portfolio_dated_values()]
 
         self.assertEqual(dates, [date(2026, 9, 18), date(2026, 9, 21)])
+
+
+SERIES_START = date(2025, 3, 3)
+
+
+def synthetic_series(days, start=SERIES_START):
+    return [
+        (start + timedelta(days=i), 100 + i * 0.2 + (3 if i % 3 == 0 else 0))
+        for i in range(days + 1)
+    ]
+
+
+def benchmark_series(days, start=SERIES_START):
+    return [
+        (start + timedelta(days=i), 50 + i * 0.1 + (1 if i % 4 == 0 else 0))
+        for i in range(days + 1)
+    ]
+
+
+class HistoryTest(TestCase):
+    def test_history_days_is_the_calendar_span_of_the_series(self):
+        self.assertEqual(history.history_days(synthetic_series(8)), 8)
+
+    def test_fewer_than_two_points_is_zero_days(self):
+        self.assertEqual(history.history_days([]), 0)
+        self.assertEqual(history.history_days([(SERIES_START, 100)]), 0)
+
+    def test_a_figure_appears_exactly_at_its_threshold(self):
+        self.assertIsNone(history.gate(1.5, 29, 'volatility'))
+        self.assertEqual(history.gate(1.5, 30, 'volatility'), 1.5)
+
+    def test_gating_passes_none_through(self):
+        self.assertIsNone(history.gate(None, 400, 'sharpe'))
+
+    def test_days_missing_is_never_negative(self):
+        self.assertEqual(history.days_missing(8, 30), 22)
+        self.assertEqual(history.days_missing(400, 30), 0)
+
+    def test_needs_days_names_every_requested_metric(self):
+        self.assertEqual(
+            history.needs_days(8, history.RISK_METRICS),
+            {'expected_return': 357, 'volatility': 22, 'sharpe': 357, 'sortino': 357},
+        )
+
+    def test_projection_inputs_are_reliable_from_a_year(self):
+        self.assertFalse(history.inputs_reliable(364))
+        self.assertTrue(history.inputs_reliable(365))
+
+    def test_a_month_is_complete_once_its_last_trading_day_has_passed(self):
+        self.assertTrue(history.latest_month_is_complete(date(2026, 3, 31)))
+        self.assertTrue(history.latest_month_is_complete(date(2026, 1, 30)))
+        self.assertFalse(history.latest_month_is_complete(date(2026, 3, 20)))
