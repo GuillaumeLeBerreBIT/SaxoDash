@@ -10,6 +10,7 @@ const shelf = {
   subtitle: 'ROE ≥ 15% · Net margin ≥ 10%',
   order: 'Ordered by market cap, highest first',
   total: 1,
+  as_of: '2026-10-04T07:00:00Z',
   items: [{
     ticker: 'FICO', name: 'Fair Isaac', uic: 42, asset_type: 'Stock', last_close: 1200, change_1d: -0.5,
     reasons: [
@@ -36,9 +37,30 @@ const renderPage = () =>
   )
 
 describe('DiscoverShelf', () => {
-  it('states the criteria and the order', () => {
+  it('states the count, the criteria and the order', () => {
     renderPage()
-    expect(screen.getByText('ROE ≥ 15% · Net margin ≥ 10% · Ordered by market cap, highest first')).toBeInTheDocument()
+    expect(screen.getByText('1 stock · ROE ≥ 15% · Net margin ≥ 10% · Ordered by market cap, highest first')).toBeInTheDocument()
+  })
+
+  it('leads back to Discover above the title', () => {
+    renderPage()
+    expect(screen.getByRole('link', { name: '← Discover' })).toHaveAttribute('href', '/discover')
+  })
+
+  it('says how many stocks match and how fresh the data is', () => {
+    renderPage()
+    expect(screen.getByText(/1 stock/)).toBeInTheDocument()
+    expect(screen.getByText(/^Updated /)).toBeInTheDocument()
+  })
+
+  it('reads why a stock is here from the left', () => {
+    renderPage()
+    expect(screen.getByRole('columnheader', { name: 'Why it is here' })).not.toHaveClass('text-right')
+  })
+
+  it('gives the row actions a finger-sized target on phones', () => {
+    renderPage()
+    expect(screen.getByRole('link', { name: 'Open FICO chart' })).toHaveClass('w-10', 'h-10')
   })
 
   it('shows every reason for each stock', () => {
