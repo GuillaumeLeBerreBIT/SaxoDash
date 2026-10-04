@@ -6,7 +6,7 @@ import { useDiscover, useStartDiscoverScan } from '../api/queries'
 import DiscoverHealth from '../components/discover/DiscoverHealth'
 import ScanProgress from '../components/discover/ScanProgress'
 import ShelfRow from '../components/discover/ShelfRow'
-import { REFRESH_HINT, SCANNING_POLL_MS, updatedLabel } from '../lib/discover'
+import { REFRESH_HINT, groupShelves, SCANNING_POLL_MS, updatedLabel } from '../lib/discover'
 import { useNow } from '../lib/useNow'
 import { Alert, Button, PageHeader, Skeleton } from '../components/ui'
 
@@ -15,6 +15,15 @@ const SHELVES_HIDDEN = new Set(['never', 'scanning'])
 
 const exactTime = (iso) =>
   new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+
+function ShelfGroup({ group, children }) {
+  return (
+    <section aria-labelledby={`group-${group.key}`} className="space-y-6">
+      <h2 id={`group-${group.key}`} className="text-[var(--fig-xs)] font-semibold uppercase tracking-wider text-zinc-500">{group.title}</h2>
+      {children}
+    </section>
+  )
+}
 
 function ShelfSkeleton() {
   return (
@@ -66,6 +75,7 @@ export default function Discover() {
   const { data, isLoading, error } = useDiscover()
   const startScan = useFirstScanOnOpen(data?.health)
   const now = useNow(data?.health?.progress ? SCANNING_POLL_MS : 60_000)
+  const showShelves = data && !SHELVES_HIDDEN.has(data.health?.state)
   const firstScan = data?.health?.state === 'never'
 
   return (
@@ -82,7 +92,13 @@ export default function Discover() {
       {data ? <ScanProgress progress={data.health?.progress} now={now} /> : null}
       {data ? <DiscoverHealth health={data.health} asOf={data.as_of} /> : null}
       {isLoading ? Array.from({ length: SKELETON_SHELVES }, (_, i) => <ShelfSkeleton key={i} />) : null}
-      {data && !SHELVES_HIDDEN.has(data.health?.state) ? data.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />) : null}
+      {showShelves
+        ? groupShelves(data.groups, data.shelves).map((group) => (
+            <ShelfGroup key={group.key} group={group}>
+              {group.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />)}
+            </ShelfGroup>
+          ))
+        : null}
     </div>
   )
 }

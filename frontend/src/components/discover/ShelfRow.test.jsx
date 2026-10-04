@@ -24,6 +24,11 @@ describe('ShelfRow', () => {
     expect(screen.getAllByRole('link', { name: /^T\d+/ })).toHaveLength(3)
   })
 
+  it('titles the lens as a third-level heading a jump link can land on', () => {
+    renderRow(shelf(20, 20))
+    expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
+  })
+
   it('does not pad a short shelf', () => {
     renderRow(shelf(2, 2))
     expect(screen.getAllByRole('link', { name: /^T\d+/ })).toHaveLength(2)
