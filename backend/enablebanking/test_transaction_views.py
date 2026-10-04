@@ -122,6 +122,7 @@ class SpendingSummaryViewTest(APITestCase):
         response = self.client.get('/api/enablebanking/spending/summary/?date_from=2026-01-01&date_to=2026-01-31')
         self.assertEqual(response.data['transaction_count'], 1)
         self.assertEqual(response.data['previous_period']['total'], Decimal('0'))
+        self.assertEqual(response.data['comparison_label'], 'previous month')
 
 
 class SubscriptionViewsTest(APITestCase):

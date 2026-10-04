@@ -24,11 +24,29 @@ def _spend_by_category(nets):
     return {category: -net for category, net in nets if net < 0}
 
 
+def _last_day_of_month(day):
+    return _shift_month(day, 1) - timedelta(days=1)
+
+
 def _previous_period(date_from, date_to):
+    if date_from.day == 1:
+        months = (date_to.year - date_from.year) * 12 + date_to.month - date_from.month + 1
+        prev_from = _shift_month(date_from, -months)
+        prev_month_start = _shift_month(date_to, -months)
+        prev_month_end = _last_day_of_month(prev_month_start)
+        whole = date_to == _last_day_of_month(date_to)
+        if whole:
+            prev_to = prev_month_end
+            label = 'previous month' if months == 1 else f'previous {months} months'
+        else:
+            prev_to = prev_month_start.replace(day=min(date_to.day, prev_month_end.day))
+            label = 'same days last month' if months == 1 else f'same days {months} months earlier'
+        return prev_from, prev_to, label
+
     length_days = (date_to - date_from).days + 1
     prev_to = date_from - timedelta(days=1)
     prev_from = prev_to - timedelta(days=length_days - 1)
-    return prev_from, prev_to
+    return prev_from, prev_to, f'previous {length_days} days'
 
 
 def spending_summary(date_from=None, date_to=None, _include_previous=True):
@@ -64,8 +82,9 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
     )
 
     previous_period = None
+    comparison_label = None
     if _include_previous and date_from and date_to:
-        prev_from, prev_to = _previous_period(
+        prev_from, prev_to, comparison_label = _previous_period(
             date.fromisoformat(date_from), date.fromisoformat(date_to),
         )
         prev = spending_summary(
@@ -83,6 +102,7 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
         'transfers': transfers_total,
         'transaction_count': transaction_count,
         'previous_period': previous_period,
+        'comparison_label': comparison_label,
     }
 
 

@@ -94,19 +94,65 @@ class SpendingSummaryTest(TestCase):
 
         self.assertEqual(summary['transaction_count'], 2)
 
-    def test_previous_period_is_computed_for_an_explicit_date_range(self):
+    def test_a_whole_month_is_compared_with_the_whole_previous_month(self):
         self._tx(Decimal('-40'), 'GROCERIES', date(2026, 2, 5), 't1')
-        self._tx(Decimal('-100'), 'GROCERIES', date(2026, 1, 5), 't2')
+        self._tx(Decimal('-100'), 'GROCERIES', date(2026, 1, 3), 't2')
+        self._tx(Decimal('-100'), 'GROCERIES', date(2026, 1, 30), 't3')
 
         summary = spending_summary(date_from='2026-02-01', date_to='2026-02-28')
 
-        self.assertEqual(summary['previous_period']['total'], Decimal('100'))
-        self.assertEqual(summary['previous_period']['date_from'], '2026-01-04')
+        self.assertEqual(summary['previous_period']['total'], Decimal('200'))
+        self.assertEqual(summary['previous_period']['date_from'], '2026-01-01')
         self.assertEqual(summary['previous_period']['date_to'], '2026-01-31')
+        self.assertEqual(summary['comparison_label'], 'previous month')
 
-    def test_previous_period_is_none_when_unscoped(self):
+    def test_a_month_to_date_is_compared_with_the_same_days_of_the_previous_month(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 9, 3), 't1')
+        self._tx(Decimal('-60'), 'GROCERIES', date(2026, 8, 2), 't2')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 8, 20), 't3')
+
+        summary = spending_summary(date_from='2026-09-01', date_to='2026-09-04')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2026-08-01')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-08-04')
+        self.assertEqual(summary['previous_period']['total'], Decimal('60'))
+        self.assertEqual(summary['comparison_label'], 'same days last month')
+
+    def test_the_same_day_is_clamped_to_a_shorter_previous_month(self):
+        summary = spending_summary(date_from='2026-03-01', date_to='2026-03-30')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2026-02-01')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-02-28')
+
+    def test_a_multi_month_span_is_compared_with_the_same_span_earlier(self):
+        self._tx(Decimal('-30'), 'GROCERIES', date(2026, 5, 10), 't1')
+        self._tx(Decimal('-70'), 'GROCERIES', date(2026, 6, 10), 't2')
+        self._tx(Decimal('-500'), 'GROCERIES', date(2026, 6, 25), 't3')
+
+        summary = spending_summary(date_from='2026-07-01', date_to='2026-09-15')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2026-04-01')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-06-15')
+        self.assertEqual(summary['previous_period']['total'], Decimal('100'))
+        self.assertEqual(summary['comparison_label'], 'same days 3 months earlier')
+
+    def test_a_range_not_starting_on_the_first_falls_back_to_the_preceding_equal_window(self):
+        summary = spending_summary(date_from='2026-01-10', date_to='2026-01-19')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2025-12-31')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-01-09')
+        self.assertEqual(summary['comparison_label'], 'previous 10 days')
+
+    def test_a_previous_window_crossing_a_year_boundary(self):
+        summary = spending_summary(date_from='2026-01-01', date_to='2026-01-31')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2025-12-01')
+        self.assertEqual(summary['previous_period']['date_to'], '2025-12-31')
+
+    def test_previous_period_and_label_are_none_when_unscoped(self):
         summary = spending_summary()
         self.assertIsNone(summary['previous_period'])
+        self.assertIsNone(summary['comparison_label'])
 
 
 class SpendingTrendTest(TestCase):
