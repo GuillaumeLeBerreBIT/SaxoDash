@@ -447,7 +447,7 @@ def industry(symbol):
     return cache.get_or_set(_industry_cache_key(symbol), produce, INDUSTRY_TTL)
 
 
-_TAG = re.compile(r'<[^>]*>')
+_TAG = re.compile(r'</?[A-Za-z!][^>]*>')
 
 
 def _clean_text(value):
@@ -478,8 +478,10 @@ def news(symbol):
 
     def produce():
         rows = get_company_news(symbol, start.isoformat(), today.isoformat()) or []
-        items = [_to_news_item(r) for r in rows if r.get('headline') and r.get('url')]
-        items = [item for item in items if item['datetime']]
+        items = [
+            item for item in map(_to_news_item, rows)
+            if item['headline'] and item['url'] and item['datetime']
+        ]
         items.sort(key=lambda item: item['datetime'], reverse=True)
         return items[:NEWS_MAX_ITEMS]
 

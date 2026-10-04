@@ -42,6 +42,15 @@ class CleanTextTest(TestCase):
     def test_plain_text_is_untouched(self):
         self.assertEqual(finnhub._clean_text('Apple ships a thing'), 'Apple ships a thing')
 
+    def test_literal_angle_brackets_that_are_not_tags_survive(self):
+        self.assertEqual(finnhub._clean_text('Revenue <5% and EPS >3'), 'Revenue <5% and EPS >3')
+
+    def test_nested_tags_are_stripped(self):
+        self.assertEqual(finnhub._clean_text('<p><b>x</b></p>'), 'x')
+
+    def test_an_escaped_entity_is_decoded_once(self):
+        self.assertEqual(finnhub._clean_text('&amp;lt;b&amp;gt;'), '&lt;b&gt;')
+
 
 class NewsItemShapingTest(TestCase):
     def test_headline_and_summary_are_cleaned(self):
@@ -86,3 +95,11 @@ class NewsCapTest(TestCase):
     def test_entities_are_decoded_end_to_end(self, mock_news):
         mock_news.return_value = [RAW_ROW]
         self.assertEqual(finnhub.news('SPY')['items'][0]['headline'], 'Is the SPDR S&P 500 ETF a buy?')
+
+    @patch('research.finnhub.get_company_news')
+    def test_a_headline_that_is_only_markup_is_dropped(self, mock_news):
+        mock_news.return_value = [{**RAW_ROW, 'headline': '<b></b>'}, {**RAW_ROW, 'id': 8}]
+
+        items = finnhub.news('SPY')['items']
+
+        self.assertEqual([item['id'] for item in items], [8])
