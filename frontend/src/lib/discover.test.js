@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   SCANNING_POLL_MS,
+  cardsThatFit,
   discoverPollInterval,
   formatFieldValue,
   healthNotice,
+  reasonParts,
   reasonsLine,
+  scanEtaLabel,
   scanProgressLabel,
   updatedLabel,
 } from './discover'
@@ -105,5 +108,50 @@ describe('healthNotice', () => {
       tone: 'info',
       text: 'First scan in progress. Shelves appear when it finishes.',
     })
+  })
+})
+
+describe('scanEtaLabel', () => {
+  const now = new Date('2026-10-04T07:33:45Z')
+  const started_at = '2026-10-04T07:23:45Z'
+
+  it('extrapolates the time left from the pace so far', () => {
+    expect(scanEtaLabel({ done: 100, total: 518, started_at }, now)).toBe('About 42 min left')
+  })
+
+  it('says less than a minute near the end', () => {
+    expect(scanEtaLabel({ done: 517, total: 518, started_at }, now)).toBe('Less than a minute left')
+  })
+
+  it('has no estimate before there is a pace to measure', () => {
+    expect(scanEtaLabel({ done: 0, total: 518, started_at }, now)).toBeNull()
+    expect(scanEtaLabel({ done: 0, total: null }, now)).toBeNull()
+  })
+
+  it('has no estimate for progress reported without a start time', () => {
+    expect(scanEtaLabel({ done: 100, total: 518 }, now)).toBeNull()
+  })
+})
+
+describe('cardsThatFit', () => {
+  it('leaves narrow rows to the scroller', () => {
+    expect(cardsThatFit(390)).toBeNull()
+  })
+
+  it('counts whole cards with their gaps', () => {
+    expect(cardsThatFit(944)).toBe(4)
+    expect(cardsThatFit(1100)).toBe(4)
+    expect(cardsThatFit(1168)).toBe(5)
+  })
+
+  it('treats an unmeasured row as narrow rather than empty', () => {
+    expect(cardsThatFit(0)).toBeNull()
+    expect(cardsThatFit(undefined)).toBeNull()
+  })
+})
+
+describe('reasonParts', () => {
+  it('splits a reason into its label and formatted value', () => {
+    expect(reasonParts({ label: 'vs 200D', value: -6.4, format: 'signed_pct' })).toEqual({ label: 'vs 200D', value: '-6.4%' })
   })
 })

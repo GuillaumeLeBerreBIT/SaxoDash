@@ -37,6 +37,31 @@ const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 
+export const reasonParts = ({ label, value, format }) => ({ label, value: formatFieldValue(format, value) })
+
+export const SPARKLINE_PERIOD = '3M'
+
+export const REFRESH_HINT = 'Rescans every stock in the S&P 500 and Nasdaq-100. Takes several minutes.'
+
+export function scanEtaLabel(progress, now = new Date()) {
+  const { done, total, started_at: startedAt } = progress ?? {}
+  if (!startedAt || !done || total == null) return null
+  const perStock = (now - new Date(startedAt)) / done
+  const remaining = perStock * (total - done)
+  if (!Number.isFinite(remaining)) return null
+  if (remaining < MINUTE_MS) return 'Less than a minute left'
+  return `About ${Math.ceil(remaining / MINUTE_MS)} min left`
+}
+
+const CARD_WIDTH = 224
+const CARD_GAP = 12
+export const GRID_MIN_WIDTH = 640
+
+export function cardsThatFit(width) {
+  if (!width || width < GRID_MIN_WIDTH) return null
+  return Math.max(1, Math.floor((width + CARD_GAP) / (CARD_WIDTH + CARD_GAP)))
+}
+
 export function updatedLabel(iso, now = new Date()) {
   if (!iso) return 'Not scanned yet'
   const elapsed = now - new Date(iso)
