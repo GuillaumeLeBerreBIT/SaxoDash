@@ -56,7 +56,7 @@ Depends on Phase 1 payloads.
 |---|---|---|
 | 2.1 | Price in instrument currency, total per Phase 1; BUY shown as `−`, inflows `POSITIVE`; type chips derived from types present in the data | `Transactions.jsx`, `Dashboard.jsx` recent transactions |
 | 2.2 | Portfolio Total row from `summary`, no Qty total; value chart uses a padded domain and the series that matches `total_value`, or is relabelled | `Portfolio.jsx`, `HistoryAreaChart` |
-| 2.3 | Dashboard: "+6.41% since purchase" label, hero deltas labelled "net worth", Currency card retitled "Portfolio currency", empty Losers hidden, net-worth chart default and legend fixed | `Dashboard.jsx` |
+| 2.3 | Dashboard: Saxo cash counted on the portfolio side of the bank/invested split (and the Portfolio page's "Bank balance" row), "+6.41% since purchase" label, hero deltas labelled "net worth", Currency card retitled "Portfolio currency", empty Losers hidden, net-worth chart default and legend fixed | `Dashboard.jsx` |
 | 2.4 | Analytics renders `null` as `—` with a "needs N more days" note, no `−0.0%`, Best/Worst/Positive months `—` when one month, drawdown axis minimum span, calendar-year empty state, projection x-axis ticks one per year, mismatched-window alpha gone | `Analytics.jsx` and its tab components |
 | 2.5 | Accounts: one sync badge per bank with reason and last-synced time; bank-only chart; spending-delta wording | `Accounts.jsx` |
 | 2.6 | Account detail: not-found state, pagination, search and category filter, amounts signed and coloured, description shown | `AccountTransactions.jsx` |
