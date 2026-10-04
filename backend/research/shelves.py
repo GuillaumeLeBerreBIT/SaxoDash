@@ -1,6 +1,8 @@
 from dataclasses import asdict, dataclass
+from datetime import timedelta
 
 from django.db.models import F, Q
+from django.utils import timezone
 
 from .models import ScreenerRow
 from .screener_fields import FIELDS
@@ -11,6 +13,7 @@ EMPTY = 'No stocks match these criteria in the last session.'
 GROUPS = (
     ('price', 'Price action'),
     ('fundamentals', 'Fundamentals'),
+    ('events', 'Events'),
 )
 
 SYMBOLS = {'gt': '>', 'gte': '≥', 'lt': '<', 'lte': '≤'}
@@ -29,6 +32,9 @@ class Criterion:
         return (self.field, self.ref) if self.ref else (self.field,)
 
     def q(self):
+        if self.op == 'within_days':
+            today = timezone.localdate()
+            return Q(**{f'{self.field}__gte': today, f'{self.field}__lte': today + timedelta(days=self.value)})
         return Q(**{f'{self.field}__{self.op}': F(self.ref) if self.ref else self.value})
 
 
@@ -87,6 +93,25 @@ SHELVES = (
         criteria=(Criterion('pe', 'gt', 0), Criterion('pe', 'lt', 15)),
         sort='pe', descending=False, card_fields=('pe',),
     ),
+    Shelf(
+        key='dividend-yield', title='Dividend yield 3% or more', short='Yield 3%+', group='fundamentals',
+        criteria=(Criterion('dividend_yield', 'gte', 3),),
+        sort='dividend_yield', descending=True, card_fields=('dividend_yield', 'payout_ratio', 'debt_to_equity'),
+    ),
+    Shelf(
+        key='eps-growth', title='5-year EPS growth 15% or more', short='EPS growth', group='fundamentals',
+        criteria=(
+            Criterion('eps_growth_5y', 'gte', 15),
+            Criterion('revenue_growth_5y', 'gte', 10),
+            Criterion('net_margin', 'gt', 0),
+        ),
+        sort='eps_growth_5y', descending=True, card_fields=('eps_growth_5y', 'revenue_growth_5y', 'net_margin'),
+    ),
+    Shelf(
+        key='reporting-soon', title='Reporting in the next 7 days', short='Reports soon', group='events',
+        criteria=(Criterion('next_earnings_date', 'within_days', 7),),
+        sort='next_earnings_date', descending=False, card_fields=('next_earnings_date',),
+    ),
 )
 
 _BY_KEY = {shelf.key: shelf for shelf in SHELVES}
@@ -122,6 +147,8 @@ def _threshold(criterion):
 
 
 def _phrase(criterion):
+    if criterion.op == 'within_days':
+        return f'{FIELDS[criterion.field].label} within {_number(criterion.value)} days'
     target = FIELDS[criterion.ref].label if criterion.ref else _threshold(criterion)
     return f'{FIELDS[criterion.field].label} {SYMBOLS[criterion.op]} {target}'
 
@@ -130,6 +157,7 @@ def _bounds(first, second):
     return (
         first.field == second.field
         and not first.ref and not second.ref
+        and first.op in SYMBOLS and second.op in SYMBOLS
         and (first.op in LOWER_BOUNDS) != (second.op in LOWER_BOUNDS)
     )
 
@@ -161,7 +189,8 @@ def _in_sentence(label):
 
 
 def order(shelf):
-    direction = 'highest' if shelf.descending else 'lowest'
+    words = ('latest', 'soonest') if FIELDS[shelf.sort].format == 'date' else ('highest', 'lowest')
+    direction = words[0] if shelf.descending else words[1]
     return f'Ordered by {_in_sentence(FIELDS[shelf.sort].label)}, {direction} first'
 
 

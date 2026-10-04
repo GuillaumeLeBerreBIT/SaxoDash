@@ -1,4 +1,7 @@
+from datetime import timedelta
+
 from django.test import TestCase
+from django.utils import timezone
 
 from research import shelves
 from research.models import ScreenerRow
@@ -124,7 +127,7 @@ class CatalogueTest(TestCase):
         keys = [shelf.key for shelf in shelves.SHELVES]
         self.assertEqual(keys, [
             'oversold', 'overbought', 'above-moving-averages', 'unusual-volume',
-            'profitable-below-200d', 'pe-under-15',
+            'profitable-below-200d', 'pe-under-15', 'dividend-yield', 'eps-growth', 'reporting-soon',
         ])
         for retired in ('quality-on-sale', 'cheap-pe', 'strong-trend', 'near-high', 'nope'):
             self.assertIsNone(shelves.by_key(retired))
@@ -144,3 +147,47 @@ class CatalogueTest(TestCase):
             for criterion in shelf.criteria:
                 used.update(criterion.fields)
             self.assertLessEqual(used, set(FIELDS), shelf.key)
+
+
+class NewLensesTest(TestCase):
+    def test_dividend_yield_needs_three_percent_and_ignores_debt(self):
+        row('HIGH', dividend_yield=6.2, debt_to_equity=4.0)
+        row('EDGE', dividend_yield=3.0)
+        row('LOW', dividend_yield=2.9)
+        row('NONE')
+        self.assertEqual(tickers('dividend-yield'), ['HIGH', 'EDGE'])
+
+    def test_a_dividend_payer_without_payout_ratio_still_matches_and_shows_a_gap(self):
+        payer = row('KO', dividend_yield=3.1)
+        reasons = shelves.reasons(payer, shelves.by_key('dividend-yield'))
+        self.assertEqual([r['field'] for r in reasons], ['dividend_yield', 'payout_ratio', 'debt_to_equity'])
+        self.assertIsNone(reasons[1]['value'])
+
+    def test_eps_growth_needs_revenue_growth_and_a_profit(self):
+        row('REAL', eps_growth_5y=20.0, revenue_growth_5y=12.0, net_margin=8.0)
+        row('BUYBACK', eps_growth_5y=25.0, revenue_growth_5y=2.0, net_margin=8.0)
+        row('LOSS', eps_growth_5y=30.0, revenue_growth_5y=15.0, net_margin=-1.0)
+        row('FAST', eps_growth_5y=40.0, revenue_growth_5y=30.0, net_margin=20.0)
+        self.assertEqual(tickers('eps-growth'), ['FAST', 'REAL'])
+
+    def test_reporting_soon_is_today_through_seven_days_soonest_first(self):
+        today = timezone.localdate()
+        row('LATER', next_earnings_date=today + timedelta(days=7))
+        row('TODAY', next_earnings_date=today)
+        row('PAST', next_earnings_date=today - timedelta(days=1))
+        row('FAR', next_earnings_date=today + timedelta(days=8))
+        self.assertEqual(tickers('reporting-soon'), ['TODAY', 'LATER'])
+
+
+class NewLensTextTest(TestCase):
+    def test_within_days_reads_as_a_window(self):
+        self.assertEqual(shelves.subtitle(shelves.by_key('reporting-soon')), 'Next earnings within 7 days')
+
+    def test_a_date_order_reads_soonest_first(self):
+        self.assertEqual(shelves.order(shelves.by_key('reporting-soon')), 'Ordered by next earnings, soonest first')
+
+    def test_eps_growth_lists_every_test(self):
+        self.assertEqual(
+            shelves.subtitle(shelves.by_key('eps-growth')),
+            '5-year EPS growth ≥ 15% · 5-year revenue growth ≥ 10% · Net margin > 0%',
+        )

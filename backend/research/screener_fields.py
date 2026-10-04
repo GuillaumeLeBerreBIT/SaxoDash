@@ -22,4 +22,9 @@ FIELDS = {
     'eps_growth_5y': Field('5-year EPS growth', 'EPS 5Y', '%', 'signed_pct'),
     'pe': Field('P/E', 'P/E', '', 'ratio'),
     'market_cap': Field('Market cap', 'Mkt cap', '', 'cap'),
+    'dividend_yield': Field('Dividend yield', 'Yield', '%', 'pct_1'),
+    'payout_ratio': Field('Payout ratio', 'Payout', '%', 'pct'),
+    'debt_to_equity': Field('Debt/equity', 'D/E', '', 'ratio'),
+    'revenue_growth_5y': Field('5-year revenue growth', 'Rev 5Y', '%', 'signed_pct'),
+    'next_earnings_date': Field('Next earnings', 'Reports', '', 'date'),
 }

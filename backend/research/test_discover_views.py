@@ -47,7 +47,7 @@ class DiscoverViewTest(APITestCase):
         response = self.client.get(reverse('research-discover'))
         self.assertEqual(response.status_code, 200)
         shelves = {s['key']: s for s in response.data['shelves']}
-        self.assertEqual(len(shelves), 6)
+        self.assertEqual(len(shelves), 9)
         self.assertEqual(shelves['overbought']['total'], 25)
         self.assertEqual(len(shelves['overbought']['items']), 20)
         self.assertEqual(shelves['overbought']['items'][0]['ticker'], 'T24')
@@ -57,6 +57,12 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(response.data['health']['state'], 'ok')
         self.assertIsNotNone(response.data['as_of'])
 
+    def test_events_is_a_group_of_its_own(self):
+        response = self.client.get(reverse('research-discover'))
+        self.assertEqual([g['key'] for g in response.data['groups']], ['price', 'fundamentals', 'events'])
+        soon = next(s for s in response.data['shelves'] if s['key'] == 'reporting-soon')
+        self.assertEqual(soon['group'], 'events')
+
     def test_each_shelf_describes_its_rule_and_order(self):
         self.run_at('ok', 1)
         self.stock('AAA', rsi14=80.0)
@@ -64,6 +70,7 @@ class DiscoverViewTest(APITestCase):
         self.assertEqual(response.data['groups'], [
             {'key': 'price', 'title': 'Price action'},
             {'key': 'fundamentals', 'title': 'Fundamentals'},
+            {'key': 'events', 'title': 'Events'},
         ])
         shelf = next(s for s in response.data['shelves'] if s['key'] == 'overbought')
         self.assertEqual({k: shelf[k] for k in ('title', 'short', 'group', 'subtitle', 'order', 'sort', 'criteria')}, {
