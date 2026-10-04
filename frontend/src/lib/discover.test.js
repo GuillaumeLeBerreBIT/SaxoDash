@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   SCANNING_POLL_MS,
@@ -11,6 +11,12 @@ import {
   scanEtaLabel,
   scanProgressLabel,
   updatedLabel,
+  groupShelves,
+  leadReason,
+  COMPACT_ROWS,
+  DISCOVER_VIEWS,
+  readDiscoverView,
+  writeDiscoverView,
 } from './discover'
 
 describe('discoverPollInterval', () => {
@@ -157,5 +163,73 @@ describe('cardsThatFit', () => {
 describe('reasonParts', () => {
   it('splits a reason into its label and formatted value', () => {
     expect(reasonParts({ label: 'vs 200D', value: -6.4, format: 'signed_pct' })).toEqual({ label: 'vs 200D', value: '-6.4%' })
+  })
+})
+
+describe('groupShelves', () => {
+  const groups = [{ key: 'price', title: 'Price action' }, { key: 'fundamentals', title: 'Fundamentals' }]
+
+  it('puts each shelf under its group in the API order', () => {
+    const shelves = [{ key: 'pe', group: 'fundamentals' }, { key: 'oversold', group: 'price' }, { key: 'overbought', group: 'price' }]
+    expect(groupShelves(groups, shelves)).toEqual([
+      { key: 'price', title: 'Price action', shelves: [shelves[1], shelves[2]] },
+      { key: 'fundamentals', title: 'Fundamentals', shelves: [shelves[0]] },
+    ])
+  })
+
+  it('leaves out a group with no shelves', () => {
+    expect(groupShelves(groups, [{ key: 'oversold', group: 'price' }]).map((g) => g.key)).toEqual(['price'])
+  })
+
+  it('never drops a shelf whose group is unknown', () => {
+    const stray = { key: 'yield', group: 'events' }
+    expect(groupShelves(groups, [stray])).toEqual([{ key: 'other', title: 'Other', shelves: [stray] }])
+  })
+
+  it('copes with a payload that has no groups', () => {
+    const shelf = { key: 'oversold', group: 'price' }
+    expect(groupShelves(undefined, [shelf])).toEqual([{ key: 'other', title: 'Other', shelves: [shelf] }])
+  })
+})
+
+describe('leadReason', () => {
+  const rsi = { field: 'rsi14', label: 'RSI', value: 6, format: 'number' }
+  const roe = { field: 'roe', label: 'ROE', value: 31, format: 'pct' }
+
+  it('prefers the reason the lens is ordered by', () => {
+    expect(leadReason({ reasons: [roe, rsi] }, { field: 'rsi14' })).toBe(rsi)
+  })
+
+  it('falls back to the first reason', () => {
+    expect(leadReason({ reasons: [roe, rsi] }, { field: 'market_cap' })).toBe(roe)
+  })
+
+  it('is empty when the stock has no reasons', () => {
+    expect(leadReason({ reasons: [] }, { field: 'rsi14' })).toBeNull()
+    expect(leadReason({}, undefined)).toBeNull()
+  })
+})
+
+describe('discover view preference', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('defaults to cards', () => {
+    expect(readDiscoverView()).toBe('cards')
+  })
+
+  it('remembers compact', () => {
+    expect(writeDiscoverView('compact')).toBe(true)
+    expect(readDiscoverView()).toBe('compact')
+  })
+
+  it('ignores a value it does not know', () => {
+    localStorage.setItem('saxodash:discover-view', 'grid')
+    expect(readDiscoverView()).toBe('cards')
+  })
+
+  it('falls back to cards when storage throws', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('denied') })
+    expect(readDiscoverView()).toBe('cards')
+    spy.mockRestore()
   })
 })

@@ -93,3 +93,42 @@ export function healthNotice(health, asOf) {
   }
   return null
 }
+
+const OTHER_GROUP = { key: 'other', title: 'Other' }
+
+export function groupShelves(groups, shelves) {
+  const known = (groups ?? []).map((group) => ({ ...group, shelves: shelves.filter((shelf) => shelf.group === group.key) }))
+  const keys = new Set(known.map((group) => group.key))
+  const strays = shelves.filter((shelf) => !keys.has(shelf.group))
+  const all = strays.length ? [...known, { ...OTHER_GROUP, shelves: strays }] : known
+  return all.filter((group) => group.shelves.length > 0)
+}
+
+export function leadReason(item, sort) {
+  const reasons = item.reasons ?? []
+  return reasons.find((reason) => reason.field === sort?.field) ?? reasons[0] ?? null
+}
+
+export const COMPACT_ROWS = 5
+
+export const DISCOVER_VIEWS = ['cards', 'compact']
+
+const VIEW_KEY = 'saxodash:discover-view'
+
+export function readDiscoverView() {
+  try {
+    const stored = localStorage.getItem(VIEW_KEY)
+    return DISCOVER_VIEWS.includes(stored) ? stored : 'cards'
+  } catch {
+    return 'cards'
+  }
+}
+
+export function writeDiscoverView(view) {
+  try {
+    localStorage.setItem(VIEW_KEY, view)
+    return true
+  } catch {
+    return false
+  }
+}
