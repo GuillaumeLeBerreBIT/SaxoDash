@@ -201,6 +201,16 @@ class SpendingTrendViewTest(APITestCase):
         response = self.client.get('/api/enablebanking/spending/trend/?months=1')
         self.assertEqual(len(response.data), 1)
 
+    def test_a_huge_months_value_is_clamped_to_120(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=100000')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 120)
+
+    def test_a_zero_months_value_returns_one_row(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=0')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 1)
+
 
 class BudgetListViewTest(APITestCase):
     def setUp(self):
