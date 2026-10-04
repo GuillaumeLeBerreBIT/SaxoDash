@@ -31,6 +31,15 @@ describe('LensColumn', () => {
     expect(screen.getByRole('listitem')).not.toHaveTextContent('vs 200D')
   })
 
+  it('drops the price and keeps ticker, day change and lead reason', () => {
+    renderColumn(shelf(1, 1))
+    const row = screen.getByRole('listitem')
+    expect(row).not.toHaveTextContent('US$')
+    expect(row).toHaveTextContent('T0')
+    expect(row).toHaveTextContent('1')
+    expect(row).toHaveTextContent('RSI 81')
+  })
+
   it('opens Research for the exact instrument', () => {
     renderColumn(shelf(1, 1))
     expect(screen.getByRole('link', { name: /T0/ })).toHaveAttribute('href', '/research?symbol=T0&tab=overview&uic=1&assetType=Stock')

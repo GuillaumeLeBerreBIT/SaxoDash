@@ -118,7 +118,7 @@ export default function Discover() {
         ? groupShelves(data.groups, data.shelves).map((group) => (
             <ShelfGroup key={group.key} group={group}>
               {view === 'compact' ? (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {group.shelves.map((shelf) => <LensColumn key={shelf.key} shelf={shelf} />)}
                 </div>
               ) : (
