@@ -250,6 +250,15 @@ class TransactionCurrencyMappingTest(TestCase):
         self.assertEqual(fields['currency'], 'USD')
         self.assertIsNone(fields['fx_rate'])
 
+    def test_a_zero_conversion_rate_is_absent_not_a_rate(self):
+        position = {
+            **UNENTITLED_POSITION,
+            'PositionView': {'CurrentPrice': 1.0, 'ConversionRateCurrent': 0},
+        }
+        fields = mapping.to_transaction_fields(position)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertIsNone(fields['fx_rate'])
+
     def test_missing_currency_is_unknown_not_eur(self):
         position = {
             **SAMPLE_POSITION,

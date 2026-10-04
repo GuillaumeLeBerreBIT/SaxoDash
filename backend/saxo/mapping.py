@@ -86,7 +86,7 @@ def to_position_fields(saxo_position):
 
 def _currency_and_rate(display, rate):
     currency = display.get('Currency')
-    if rate is not None:
+    if rate:
         return currency, _decimal(rate)
     if currency == settings.REPORTING_CURRENCY:
         return currency, Decimal('1')
