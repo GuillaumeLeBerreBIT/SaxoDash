@@ -33,7 +33,7 @@ describe('Discover page', () => {
     expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
     expect(screen.getByText('RSI 14 ≥ 70')).toBeInTheDocument()
     expect(screen.getByText('7 stocks')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/discover/overbought')
+    expect(screen.getByRole('link', { name: 'See all 7' })).toHaveAttribute('href', '/discover/overbought')
   })
 
   it('explains the order and that a lens is not a recommendation', async () => {
