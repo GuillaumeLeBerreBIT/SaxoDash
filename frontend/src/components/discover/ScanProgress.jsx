@@ -1,14 +1,18 @@
-import { scanProgressLabel } from '../../lib/discover'
+import { scanEtaLabel, scanProgressLabel } from '../../lib/discover'
 
-export default function ScanProgress({ progress }) {
+export default function ScanProgress({ progress, now }) {
   if (!progress) return null
   const label = scanProgressLabel(progress)
+  const eta = scanEtaLabel(progress, now)
   const known = progress.total != null && progress.total > 0
   const width = known ? `${Math.round((progress.done / progress.total) * 100)}%` : '30%'
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[var(--fig-xs)] text-zinc-400 num">{label}</div>
+      <div className="flex flex-wrap justify-between gap-x-3 text-[var(--fig-xs)] text-zinc-400 num">
+        <span>{label}</span>
+        {eta ? <span className="text-zinc-500">{eta}</span> : null}
+      </div>
       <div
         role="progressbar"
         aria-label={label}

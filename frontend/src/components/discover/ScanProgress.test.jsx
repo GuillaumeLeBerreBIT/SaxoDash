@@ -18,6 +18,11 @@ describe('ScanProgress', () => {
     expect(bar).not.toHaveAttribute('aria-valuenow')
   })
 
+  it('estimates the time left from the pace so far', () => {
+    render(<ScanProgress progress={{ done: 100, total: 518, started_at: '2026-10-04T07:23:45Z' }} now={new Date('2026-10-04T07:33:45Z')} />)
+    expect(screen.getByText('About 42 min left')).toBeInTheDocument()
+  })
+
   it('renders nothing when no scan is running', () => {
     const { container } = render(<ScanProgress progress={null} />)
     expect(container).toBeEmptyDOMElement()

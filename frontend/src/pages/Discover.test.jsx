@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Discover from './Discover'
@@ -25,6 +25,31 @@ describe('Discover page', () => {
   beforeEach(() => {
     startScan.mutate.mockClear()
     startScan.error = null
+  })
+
+  it('keeps the updated label current while the page stays open', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-04T08:00:30Z') })
+    try {
+      useDiscover.mockReturnValue({ data: { as_of: '2026-10-04T08:00:00Z', health: { state: 'ok', last_ok_at: '2026-10-04T08:00:00Z', progress: null }, shelves: [] } })
+      renderPage()
+      expect(screen.getByText('Updated just now')).toBeInTheDocument()
+      act(() => vi.advanceTimersByTime(5 * 60_000))
+      expect(screen.getByText('Updated 5 min ago')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('says what a refresh does before it is started', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-10-04T08:00:00Z', health: { state: 'ok', progress: null }, shelves: [] } })
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('title', expect.stringMatching(/several minutes/))
+  })
+
+  it('loads with shelf-shaped placeholders', () => {
+    useDiscover.mockReturnValue({ data: undefined, isLoading: true })
+    renderPage()
+    expect(screen.getAllByTestId('shelf-skeleton')).toHaveLength(3)
   })
 
   it('renders each shelf with its criteria, count and a See all link', () => {
