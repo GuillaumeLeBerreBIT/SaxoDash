@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from itertools import count
 from importlib import import_module
 
 from django.apps import apps
@@ -21,7 +22,11 @@ def make_position(ticker, currency, fx_rate):
     )
 
 
+_trade_ids = count(1)
+
+
 def make_transaction(ticker, type='BUY', **extra):
+    extra.setdefault('saxo_trade_id', f'trade-{next(_trade_ids)}')
     return Transaction.objects.create(
         date=date(2026, 8, 26), type=type, instrument=ticker, ticker=ticker,
         qty=Decimal('2'), price=Decimal('100.00'), account='Saxo', **extra,
@@ -58,6 +63,16 @@ class BackfillFromPositionsTest(TestCase):
     def test_an_unmatched_row_stays_null_and_is_never_guessed_as_eur(self):
         make_position('NVDA', 'USD', Decimal('0.86008950'))
         tx = make_transaction('META')
+
+        backfill(apps, None)
+
+        tx.refresh_from_db()
+        self.assertIsNone(tx.currency)
+        self.assertIsNone(tx.fx_rate)
+
+    def test_a_hand_entered_trade_with_a_clashing_ticker_is_left_alone(self):
+        make_position('NVDA', 'USD', Decimal('0.86008950'))
+        tx = make_transaction('NVDA', saxo_trade_id=None)
 
         backfill(apps, None)
 

@@ -9,6 +9,7 @@ def backfill_from_positions(apps, schema_editor):
 
     for position in Position.objects.all():
         Transaction.objects.filter(
+            saxo_trade_id__isnull=False,
             ticker=position.ticker,
             type__in=TRADE_TYPES,
             currency__isnull=True,
