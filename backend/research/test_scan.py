@@ -78,6 +78,14 @@ class ScanUniverseTest(TestCase):
         self.assertIsNotNone(apple.fundamentals_at)
         chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.CHART_BARS)
 
+    def test_stores_revenue_growth_and_payout_from_the_same_metrics_call(self, search, chart, financials):
+        financials.return_value = {'metric': {'peNormalizedAnnual': 20.0, 'revenueGrowth5Y': 12.5, 'payoutRatioTTM': 40.0}}
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        aapl = ScreenerRow.objects.get(ticker='AAPL')
+        self.assertEqual((aapl.revenue_growth_5y, aapl.payout_ratio), (12.5, 40.0))
+        self.assertEqual(financials.call_count, 2)
+
     def test_unmatched_ticker_is_marked_and_skipped(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211})
         self.assertEqual(self.run_scan(), 1)

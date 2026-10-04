@@ -356,12 +356,18 @@ class ScreenerFundamentalsTest(SimpleTestCase):
             'netProfitMarginTTM': 18.4, 'epsGrowth5Y': 12.0,
             'totalDebt/totalEquityAnnual': 0.8, 'dividendYieldIndicatedAnnual': 1.1,
             'marketCapitalization': 250000.0,
+            'revenueGrowth5Y': 7.75, 'payoutRatioTTM': 77.24,
         }}
         self.assertEqual(finnhub.to_screener_fundamentals(financials), {
             'pe': 24.5, 'forward_pe': 21.0, 'roe': 31.2, 'net_margin': 18.4,
             'eps_growth_5y': 12.0, 'debt_to_equity': 0.8, 'dividend_yield': 1.1,
-            'market_cap': 250000.0,
+            'market_cap': 250000.0, 'revenue_growth_5y': 7.75, 'payout_ratio': 77.24,
         })
+
+    def test_screener_fundamentals_carry_revenue_growth_and_payout(self):
+        shaped = finnhub.to_screener_fundamentals({'metric': {'revenueGrowth5Y': 7.75, 'payoutRatioTTM': 77.24}})
+        self.assertEqual(shaped['revenue_growth_5y'], 7.75)
+        self.assertEqual(shaped['payout_ratio'], 77.24)
 
     def test_missing_metrics_are_null_not_zero(self):
         shaped = finnhub.to_screener_fundamentals({'metric': {'peNormalizedAnnual': 10.0}})
