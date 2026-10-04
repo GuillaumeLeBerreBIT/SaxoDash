@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import DiscoverCard from './DiscoverCard'
@@ -42,5 +42,22 @@ describe('DiscoverCard', () => {
       'href',
       '/research?symbol=AAPL&tab=overview&uic=211&assetType=Stock',
     )
+  })
+
+  it('styles the reasons as data, not as links', () => {
+    renderCard()
+    const reasons = screen.getByRole('list', { name: 'Why AAPL is here' })
+    expect(reasons.className).not.toMatch(/text-blue/)
+  })
+
+  it('falls back to the ticker initial when the logo cannot load', () => {
+    const { container } = renderCard()
+    fireEvent.error(container.querySelector('img'))
+    expect(screen.getByText('A')).toBeInTheDocument()
+  })
+
+  it('names the period its sparkline covers', () => {
+    renderCard()
+    expect(screen.getByText('3M')).toBeInTheDocument()
   })
 })
