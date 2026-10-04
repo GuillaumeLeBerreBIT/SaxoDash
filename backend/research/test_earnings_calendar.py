@@ -157,6 +157,20 @@ class WindowEarningsTest(TestCase):
             earnings.window_earnings('all', 3)
             self.assertEqual(spy.call_args.args[2], finnhub.EARNINGS_CAL_TTL)
 
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_duplicate_rows_for_one_symbol_date_quarter_collapse_to_the_reported_one(self, mock_cal):
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [
+            self._row('AAPL', mon),
+            self._row('AAPL', mon, actual=1.2),
+        ]}
+
+        result = earnings.window_earnings('all', 0)
+
+        self.assertEqual(len(result['events']), 1)
+        self.assertEqual(result['events'][0]['eps_actual'], 1.2)
+        self.assertEqual(result['stats']['total'], 1)
+
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class SymbolEarningsTest(TestCase):
