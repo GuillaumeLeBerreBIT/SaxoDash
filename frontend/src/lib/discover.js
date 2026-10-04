@@ -6,6 +6,11 @@ const FIELD_FORMATS = {
   signed_pct: (v) => fmtPct(v, { decimals: 1 }),
   ratio: (v) => fmtNum(v, 1),
   multiple: (v) => `${fmtNum(v, 1)}×`,
+  pct_1: (v) => fmtPct(v, { sign: false, decimals: 1 }),
+  date: (v) => {
+    const [year, month, day] = String(v).split('-').map(Number)
+    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  },
 }
 
 export function formatFieldValue(format, value) {

@@ -82,6 +82,19 @@ describe('Discover page', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
   })
 
+  it('shows an earnings date in the Events group', () => {
+    const reporting = { ...card, reasons: [{ field: 'next_earnings_date', label: 'Reports', value: '2026-10-08', format: 'date' }] }
+    useDiscover.mockReturnValue({ data: {
+      as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' },
+      groups: [...groups, { key: 'events', title: 'Events' }],
+      shelves: [shelf('reporting-soon', 'Reporting soon', 1, [reporting], undefined, 'events')],
+    } })
+    renderPage()
+    expect(screen.getByRole('heading', { level: 2, name: 'Events' })).toBeInTheDocument()
+    expect(screen.getByText('Reports')).toBeInTheDocument()
+    expect(screen.getByText('8 Oct')).toBeInTheDocument()
+  })
+
   it('explains the order and that a lens is not a recommendation', async () => {
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()

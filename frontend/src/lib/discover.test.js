@@ -237,3 +237,19 @@ describe('discover view preference', () => {
     spy.mockRestore()
   })
 })
+
+describe('date and one-decimal percentage formats', () => {
+  it('shows a calendar date without shifting it across time zones', () => {
+    expect(formatFieldValue('date', '2026-10-08')).toBe('8 Oct')
+    expect(formatFieldValue('date', '2026-01-01')).toBe('1 Jan')
+  })
+
+  it('shows a yield to one decimal without a sign', () => {
+    expect(formatFieldValue('pct_1', 3.14154)).toBe('3.1%')
+  })
+
+  it('keeps the gap for a missing value', () => {
+    expect(formatFieldValue('date', null)).toBe('—')
+    expect(formatFieldValue('pct_1', null)).toBe('—')
+  })
+})
