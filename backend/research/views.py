@@ -292,4 +292,4 @@ class DiscoverShelfView(APIView):
         shelf = shelves.by_key(key)
         if shelf is None:
             raise Http404
-        return Response(shelves.payload(shelf))
+        return Response({**shelves.payload(shelf), 'as_of': discover.as_of()})

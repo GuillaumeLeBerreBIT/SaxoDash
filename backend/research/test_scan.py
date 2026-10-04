@@ -1,4 +1,5 @@
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest import mock
 
@@ -150,8 +151,16 @@ class ScanUniverseTest(TestCase):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         seen = []
         self.run_scan(pause=lambda _seconds: seen.append(scan_progress.current()))
-        self.assertEqual(seen, [{'done': 1, 'total': 2}, {'done': 2, 'total': 2}])
+        self.assertEqual([(p['done'], p['total']) for p in seen], [(1, 2), (2, 2)])
         self.assertIsNone(scan_progress.current())
+
+    def test_every_progress_report_carries_when_the_run_started(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        seen = []
+        self.run_scan(pause=lambda _seconds: seen.append(scan_progress.current()))
+        started = {p['started_at'] for p in seen}
+        self.assertEqual(len(started), 1)
+        self.assertIsNotNone(datetime.fromisoformat(started.pop()))
 
     def test_a_run_that_stops_early_clears_its_progress(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})

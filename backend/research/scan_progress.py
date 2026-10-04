@@ -13,8 +13,8 @@ def claim():
     return cache.add(PROGRESS_KEY, {'done': 0, 'total': None}, QUEUED_TTL)
 
 
-def report(done, total):
-    cache.set(PROGRESS_KEY, {'done': done, 'total': total}, RUNNING_TTL)
+def report(done, total, started_at):
+    cache.set(PROGRESS_KEY, {'done': done, 'total': total, 'started_at': started_at}, RUNNING_TTL)
 
 
 def clear():

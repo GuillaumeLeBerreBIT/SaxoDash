@@ -99,11 +99,12 @@ def scan_row(row, *, with_fundamentals):
 def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
     load_universe(universe)
     rows = list(ScreenerRow.objects.order_by('ticker'))
+    started_at = timezone.now().isoformat()
     with_fundamentals = True
     try:
         for done, row in enumerate(rows, start=1):
             with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
-            scan_progress.report(done, len(rows))
+            scan_progress.report(done, len(rows), started_at)
             pause(PAUSE_SECONDS)
     finally:
         scan_progress.clear()

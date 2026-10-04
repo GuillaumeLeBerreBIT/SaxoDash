@@ -23,11 +23,11 @@ class ScanProgressTest(TestCase):
         self.assertFalse(scan_progress.claim())
 
     def test_a_running_scan_cannot_be_claimed(self):
-        scan_progress.report(3, 10)
+        scan_progress.report(3, 10, '2026-10-04T07:23:45+00:00')
         self.assertFalse(scan_progress.claim())
-        self.assertEqual(scan_progress.current(), {'done': 3, 'total': 10})
+        self.assertEqual(scan_progress.current(), {'done': 3, 'total': 10, 'started_at': '2026-10-04T07:23:45+00:00'})
 
     def test_clear_ends_the_run(self):
-        scan_progress.report(3, 10)
+        scan_progress.report(3, 10, '2026-10-04T07:23:45+00:00')
         scan_progress.clear()
         self.assertIsNone(scan_progress.current())

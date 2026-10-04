@@ -85,19 +85,19 @@ class DiscoverViewTest(APITestCase):
         self.assertIsNone(response.data['as_of'])
 
     def test_health_is_scanning_while_a_first_scan_reports_progress(self):
-        scan_progress.report(144, 518)
+        scan_progress.report(144, 518, '2026-10-04T07:23:45+00:00')
         response = self.client.get(reverse('research-discover'))
         self.assertEqual(response.data['health']['state'], 'scanning')
-        self.assertEqual(response.data['health']['progress'], {'done': 144, 'total': 518})
+        self.assertEqual(response.data['health']['progress'], {'done': 144, 'total': 518, 'started_at': '2026-10-04T07:23:45+00:00'})
         self.assertIsNone(response.data['as_of'])
 
     def test_a_rescan_keeps_the_last_results_and_reports_its_progress(self):
         self.run_at('ok', 20)
         self.stock('AAA', rsi14=80.0)
-        scan_progress.report(10, 518)
+        scan_progress.report(10, 518, '2026-10-04T07:23:45+00:00')
         response = self.client.get(reverse('research-discover'))
         self.assertEqual(response.data['health']['state'], 'ok')
-        self.assertEqual(response.data['health']['progress'], {'done': 10, 'total': 518})
+        self.assertEqual(response.data['health']['progress'], {'done': 10, 'total': 518, 'started_at': '2026-10-04T07:23:45+00:00'})
         self.assertIsNotNone(response.data['as_of'])
 
     def test_no_progress_when_nothing_is_scanning(self):
@@ -158,6 +158,14 @@ class DiscoverViewTest(APITestCase):
         for key in ('nope', 'quality-on-sale', 'near-high'):
             self.assertEqual(self.client.get(reverse('research-discover-shelf', args=[key])).status_code, 404, key)
 
+    def test_shelf_detail_says_how_fresh_its_data_is(self):
+        self.run_at('ok', 1)
+        self.stock('AAA', rsi14=80.0)
+        detail = self.client.get(reverse('research-discover-shelf', args=['overbought'])).data
+        overview = self.client.get(reverse('research-discover')).data
+        self.assertIsNotNone(detail['as_of'])
+        self.assertEqual(detail['as_of'], overview['as_of'])
+
 
 CONNECTED = ConnectionState(object(), None, False)
 DISCONNECTED = ConnectionState(None, 'Saxo is not connected.', False)
@@ -192,7 +200,7 @@ class StartDiscoverScanTest(APITestCase):
         delay.assert_called_once_with(claimed=True)
 
     def test_does_not_start_while_a_scan_is_running(self, _state, delay):
-        scan_progress.report(144, 518)
+        scan_progress.report(144, 518, '2026-10-04T07:23:45+00:00')
         self.assertEqual(self.start().data, {'queued': False})
         delay.assert_not_called()
 
