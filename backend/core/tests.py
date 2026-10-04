@@ -393,3 +393,79 @@ class RepairNetWorthHistoryTest(TestCase):
         untouched = NetWorthSnapshot.objects.get(
             date=timezone.localdate() - timedelta(days=3))
         self.assertEqual(untouched.portfolio_value, Decimal('36714.55'))
+
+
+class SnapshotBankOnlyTotalTest(TestCase):
+    def setUp(self):
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
+            balance=Decimal('900.00'), available=Decimal('900.00'),
+        )
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+
+    def test_snapshot_records_bank_only_total_alongside_bank_total(self):
+        snap = ensure_todays_snapshot()
+
+        self.assertEqual(snap.bank_total, Decimal('3400.00'))
+        self.assertEqual(snap.bank_only_total, Decimal('2500.00'))
+
+    def test_net_worth_is_unchanged_by_the_new_field(self):
+        snap = ensure_todays_snapshot()
+
+        self.assertEqual(snap.net_worth, snap.portfolio_value + snap.bank_total)
+
+
+class NetWorthHistoryBankOnlyTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='bankonly', password='pw')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+
+    def test_history_rows_expose_bank_only_total_and_keep_bank_total(self):
+        NetWorthSnapshot.objects.create(
+            date=timezone.localdate() - timedelta(days=3),
+            portfolio_value=Decimal('1000.00'), bank_total=Decimal('971833.00'),
+            bank_only_total=Decimal('833.00'), net_worth=Decimal('972833.00'),
+        )
+
+        response = self.client.get('/api/core/net-worth-history/?range=ALL')
+
+        row = next(r for r in response.data if r['date'] == str(timezone.localdate() - timedelta(days=3)))
+        self.assertEqual(row['bank_only_total'], '833.00')
+        self.assertEqual(row['bank_total'], '971833.00')
+
+    def test_a_row_without_the_figure_serialises_null(self):
+        NetWorthSnapshot.objects.create(
+            date=timezone.localdate() - timedelta(days=5),
+            portfolio_value=Decimal('1.00'), bank_total=Decimal('1.00'), net_worth=Decimal('2.00'),
+        )
+
+        response = self.client.get('/api/core/net-worth-history/?range=ALL')
+
+        row = next(r for r in response.data if r['date'] == str(timezone.localdate() - timedelta(days=5)))
+        self.assertIsNone(row['bank_only_total'])
+
+
+class BankOnlyBackfillTest(TestCase):
+    def test_estimates_saxo_cash_from_the_broker_figure_and_subtracts_it(self):
+        import importlib
+        from django.apps import apps
+
+        migration = importlib.import_module('core.migrations.0007_networthsnapshot_bank_only_total')
+        estimated = NetWorthSnapshot.objects.create(
+            date=date(2026, 6, 1), portfolio_value=Decimal('1000.00'), bank_total=Decimal('1833.00'),
+            saxo_account_value=Decimal('2000.00'), net_worth=Decimal('2833.00'),
+        )
+        unknown = NetWorthSnapshot.objects.create(
+            date=date(2026, 6, 2), portfolio_value=Decimal('1000.00'), bank_total=Decimal('1833.00'),
+            net_worth=Decimal('2833.00'),
+        )
+
+        migration.backfill_bank_only_total(apps, None)
+
+        estimated.refresh_from_db()
+        unknown.refresh_from_db()
+        self.assertEqual(estimated.bank_only_total, Decimal('833.00'))
+        self.assertIsNone(unknown.bank_only_total)

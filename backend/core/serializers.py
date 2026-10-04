@@ -6,4 +6,4 @@ from .models import NetWorthSnapshot
 class NetWorthSnapshotSerializer(serializers.ModelSerializer):
     class Meta:
         model = NetWorthSnapshot
-        fields = ['date', 'portfolio_value', 'bank_total', 'saxo_account_value', 'net_worth']
+        fields = ['date', 'portfolio_value', 'bank_total', 'bank_only_total', 'saxo_account_value', 'net_worth']
