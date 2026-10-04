@@ -143,20 +143,13 @@ def _first_of_month(d):
     return d.replace(day=1)
 
 
-def _first_of_next_month(d):
-    if d.month == 12:
-        return date(d.year + 1, 1, 1)
-    return date(d.year, d.month + 1, 1)
-
-
 def budget_progress():
-    today = timezone.localdate()
+    today = _today()
     start = _first_of_month(today)
-    end = _first_of_next_month(today)
 
     spent_by_category = dict(
         BankTransaction.objects
-        .filter(booking_date__gte=start, booking_date__lt=end)
+        .filter(booking_date__gte=start, booking_date__lte=today)
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .values('effective_category')
         .annotate(total=Sum('amount'))
