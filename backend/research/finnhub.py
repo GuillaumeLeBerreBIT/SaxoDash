@@ -139,6 +139,8 @@ SCREENER_METRICS = {
     'debt_to_equity': 'totalDebt/totalEquityAnnual',
     'dividend_yield': 'dividendYieldIndicatedAnnual',
     'market_cap': 'marketCapitalization',
+    'revenue_growth_5y': 'revenueGrowth5Y',
+    'payout_ratio': 'payoutRatioTTM',
 }
 
 

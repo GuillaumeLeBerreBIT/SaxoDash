@@ -122,7 +122,7 @@ TECHNICAL_FIELDS = (
 )
 FUNDAMENTAL_FIELDS = (
     'pe', 'forward_pe', 'roe', 'net_margin', 'eps_growth_5y',
-    'debt_to_equity', 'dividend_yield', 'market_cap',
+    'debt_to_equity', 'dividend_yield', 'market_cap', 'revenue_growth_5y', 'payout_ratio',
 )
 
 
@@ -160,6 +160,9 @@ class ScreenerRow(models.Model):
     debt_to_equity = models.FloatField(null=True, blank=True)
     dividend_yield = models.FloatField(null=True, blank=True)
     market_cap = models.FloatField(null=True, blank=True)
+    revenue_growth_5y = models.FloatField(null=True, blank=True)
+    payout_ratio = models.FloatField(null=True, blank=True)
+    next_earnings_date = models.DateField(null=True, blank=True)
 
     technicals_at = models.DateTimeField(null=True, blank=True)
     fundamentals_at = models.DateTimeField(null=True, blank=True)

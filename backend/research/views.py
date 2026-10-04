@@ -3,6 +3,7 @@ import re
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import (
     CreateAPIView,
@@ -15,8 +16,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from saxo import client
+from saxo.credentials import connection_state
 
-from . import discover, earnings, finnhub, market, shelves
+from . import discover, earnings, finnhub, market, scan_progress, shelves, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -264,27 +266,25 @@ class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
     queryset = TextAnnotation.objects.all()
 
 
-def _shelf_payload(shelf, limit=None):
-    rows = shelves.matching(shelf)
-    selected = rows[:limit] if limit else rows
-    return {
-        'key': shelf.key,
-        'title': shelf.title,
-        'subtitle': shelf.subtitle,
-        'empty': shelf.empty,
-        'metric': shelf.metric,
-        'total': rows.count(),
-        'items': [shelves.card(row, shelf) for row in selected],
-    }
-
-
 class DiscoverView(APIView):
     def get(self, request):
         return Response({
             'as_of': discover.as_of(),
             'health': discover.health(),
-            'shelves': [_shelf_payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
+            'groups': [{'key': key, 'title': title} for key, title in shelves.GROUPS],
+            'shelves': [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
         })
+
+
+class StartDiscoverScanView(APIView):
+    def post(self, request):
+        saxo = connection_state()
+        if not saxo.usable:
+            return Response({'detail': saxo.reason}, status=status.HTTP_409_CONFLICT)
+        if not scan_progress.claim():
+            return Response({'queued': False})
+        tasks.scan_universe.delay(claimed=True)
+        return Response({'queued': True}, status=status.HTTP_202_ACCEPTED)
 
 
 class DiscoverShelfView(APIView):
@@ -292,4 +292,4 @@ class DiscoverShelfView(APIView):
         shelf = shelves.by_key(key)
         if shelf is None:
             raise Http404
-        return Response(_shelf_payload(shelf))
+        return Response({**shelves.payload(shelf), 'as_of': discover.as_of()})

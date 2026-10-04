@@ -19,12 +19,12 @@ AIG,American International Group,Financials,SP500
 AIZ,Assurant,Financials,SP500
 AJG,Arthur J. Gallagher & Co.,Financials,SP500
 AKAM,Akamai Technologies,Information Technology,SP500
-ALAB,Astera Labs,,NDX
+ALAB,Astera Labs,Information Technology,NDX
 ALB,Albemarle Corporation,Materials,SP500
 ALGN,Align Technology,Health Care,SP500
 ALL,Allstate,Financials,SP500
 ALLE,Allegion,Industrials,SP500
-ALNY,Alnylam Pharmaceuticals,,NDX
+ALNY,Alnylam Pharmaceuticals,Health Care,NDX
 AMAT,Applied Materials,Information Technology,SP500|NDX
 AMCR,Amcor,Materials,SP500
 AMD,Advanced Micro Devices,Information Technology,SP500|NDX
@@ -44,8 +44,8 @@ APP,AppLovin,Communication Services,SP500|NDX
 APTV,Aptiv,Consumer Discretionary,SP500
 ARE,Alexandria Real Estate Equities,Real Estate,SP500
 ARES,Ares Management,Financials,SP500
-ARM,Arm Holdings,,NDX
-ASML,ASML Holding,,NDX
+ARM,Arm Holdings,Information Technology,NDX
+ASML,ASML Holding,Information Technology,NDX
 ATO,Atmos Energy,Utilities,SP500
 AVGO,Broadcom,Information Technology,SP500|NDX
 AVY,Avery Dennison,Materials,SP500
@@ -83,7 +83,7 @@ CAT,Caterpillar Inc.,Industrials,SP500
 CB,Chubb Limited,Financials,SP500
 CBOE,Cboe Global Markets,Financials,SP500
 CBRE,CBRE Group,Real Estate,SP500
-CCEP,Coca-Cola Europacific Partners,,NDX
+CCEP,Coca-Cola Europacific Partners,Consumer Staples,NDX
 CCI,Crown Castle,Real Estate,SP500
 CCL,Carnival Corporation,Consumer Discretionary,SP500
 CDNS,Cadence Design Systems,Information Technology,SP500|NDX
@@ -120,7 +120,7 @@ CRH,CRH plc,Materials,SP500
 CRL,Charles River Laboratories,Health Care,SP500
 CRM,Salesforce,Information Technology,SP500
 CRWD,CrowdStrike,Information Technology,SP500|NDX
-CRWV,CoreWeave,,NDX
+CRWV,CoreWeave,Information Technology,NDX
 CSCO,Cisco,Information Technology,SP500|NDX
 CSGP,CoStar Group,Real Estate,SP500
 CSX,CSX Corporation,Industrials,SP500|NDX
@@ -189,7 +189,7 @@ FDS,FactSet,Financials,SP500
 FDX,FedEx,Industrials,SP500
 FDXF,FedEx Freight,Industrials,SP500
 FE,FirstEnergy,Utilities,SP500
-FER,Ferrovial,,NDX
+FER,Ferrovial,Industrials,NDX
 FERG,Ferguson Enterprises,Industrials,SP500
 FFIV,"F5, Inc.",Information Technology,SP500
 FICO,Fair Isaac,Information Technology,SP500
@@ -309,7 +309,7 @@ MCK,McKesson Corporation,Health Care,SP500
 MCO,Moody's Corporation,Financials,SP500
 MDLZ,Mondelez International,Consumer Staples,SP500|NDX
 MDT,Medtronic,Health Care,SP500
-MELI,Mercado Libre,,NDX
+MELI,Mercado Libre,Consumer Discretionary,NDX
 MET,MetLife,Financials,SP500
 META,Meta Platforms,Communication Services,SP500|NDX
 MGM,MGM Resorts,Consumer Discretionary,SP500
@@ -329,11 +329,11 @@ MS,Morgan Stanley,Financials,SP500
 MSCI,MSCI,Financials,SP500
 MSFT,Microsoft,Information Technology,SP500|NDX
 MSI,Motorola Solutions,Information Technology,SP500
-MSTR,MicroStrategy,,NDX
+MSTR,MicroStrategy,Information Technology,NDX
 MTB,M&T Bank,Financials,SP500
 MTD,Mettler Toledo,Health Care,SP500
 MU,Micron Technology,Information Technology,SP500|NDX
-NBIS,Nebius Group,,NDX
+NBIS,Nebius Group,Information Technology,NDX
 NCLH,Norwegian Cruise Line Holdings,Consumer Discretionary,SP500
 NDAQ,"Nasdaq, Inc.",Financials,SP500
 NDSN,Nordson Corporation,Industrials,SP500
@@ -368,7 +368,7 @@ PANW,Palo Alto Networks,Information Technology,SP500|NDX
 PAYX,Paychex,Industrials,SP500|NDX
 PCAR,Paccar,Industrials,SP500|NDX
 PCG,PG&E Corporation,Utilities,SP500
-PDD,PDD Holdings,,NDX
+PDD,PDD Holdings,Consumer Discretionary,NDX
 PEG,Public Service Enterprise Group,Utilities,SP500
 PEP,PepsiCo,Consumer Staples,SP500|NDX
 PFE,Pfizer,Health Care,SP500
@@ -402,7 +402,7 @@ REG,Regency Centers,Real Estate,SP500
 REGN,Regeneron Pharmaceuticals,Health Care,SP500|NDX
 RF,Regions Financial Corporation,Financials,SP500
 RJF,Raymond James Financial,Financials,SP500
-RKLB,Rocket Lab,,NDX
+RKLB,Rocket Lab,Industrials,NDX
 RL,Ralph Lauren Corporation,Consumer Discretionary,SP500
 RMD,ResMed|,Health Care,SP500
 ROK,Rockwell Automation,Industrials,SP500
@@ -415,7 +415,7 @@ RVTY,Revvity,Health Care,SP500
 SBAC,SBA Communications,Real Estate,SP500
 SBUX,Starbucks,Consumer Discretionary,SP500|NDX
 SCHW,Charles Schwab Corporation,Financials,SP500
-SHOP,Shopify,,NDX
+SHOP,Shopify,Information Technology,NDX
 SHW,Sherwin-Williams,Materials,SP500
 SJM,J.M. Smucker Company (The),Consumer Staples,SP500
 SLB,Schlumberger,Energy,SP500
@@ -425,7 +425,7 @@ SNDK,Sandisk,Information Technology,SP500|NDX
 SNPS,Synopsys,Information Technology,SP500|NDX
 SO,Southern Company,Utilities,SP500
 SOLV,Solventum,Health Care,SP500
-SPCX,SpaceX,,NDX
+SPCX,SpaceX,Industrials,NDX
 SPG,Simon Property Group,Real Estate,SP500
 SPGI,S&P Global,Financials,SP500
 SRE,Sempra,Utilities,SP500
@@ -455,7 +455,7 @@ TMUS,T-Mobile US,Communication Services,SP500|NDX
 TPL,Texas Pacific Land Corporation,Energy,SP500
 TPR,"Tapestry, Inc.",Consumer Discretionary,SP500
 TRGP,Targa Resources,Energy,SP500
-TRI,Thomson Reuters,,NDX
+TRI,Thomson Reuters,Industrials,NDX
 TRMB,Trimble Inc.,Information Technology,SP500
 TROW,T. Rowe Price,Financials,SP500
 TRV,Travelers Companies (The),Financials,SP500

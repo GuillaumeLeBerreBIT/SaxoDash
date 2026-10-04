@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { discoverPollInterval } from '../../lib/discover'
 import { ALL_ASSET_TYPES, instrumentKey, quotesByUic, uicsByAssetType } from '../../lib/research'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
@@ -31,6 +32,7 @@ import {
   getWatchlists,
   removeWatchlistItem,
   searchInstruments,
+  startDiscoverScan,
   updatePriceLine,
   updateSymbolNote,
   updateTextAnnotation,
@@ -415,7 +417,20 @@ export function useWatchlistMutations() {
 }
 
 export function useDiscover() {
-  return useQuery({ queryKey: researchKeys.discover, queryFn: getDiscover, staleTime: 5 * 60_000 })
+  return useQuery({
+    queryKey: researchKeys.discover,
+    queryFn: getDiscover,
+    staleTime: 5 * 60_000,
+    refetchInterval: (query) => discoverPollInterval(query.state.data),
+  })
+}
+
+export function useStartDiscoverScan() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: startDiscoverScan,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: researchKeys.discover }),
+  })
 }
 
 export function useDiscoverShelf(key) {

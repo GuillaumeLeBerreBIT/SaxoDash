@@ -1,9 +1,11 @@
 import logging
 import time
+from datetime import date, timedelta
 
+from django.db import transaction
 from django.utils import timezone
 
-from . import finnhub, market, technicals
+from . import finnhub, market, scan_progress, technicals
 from .models import ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -15,6 +17,7 @@ DAILY_HORIZON = 1440
 CHART_BARS = 260
 PAUSE_SECONDS = 1.2
 US_EXCHANGES = ('NASDAQ', 'NYSE')
+EARNINGS_WINDOW_DAYS = 14
 
 
 def resolve(ticker):
@@ -96,10 +99,66 @@ def scan_row(row, *, with_fundamentals):
     return with_fundamentals
 
 
+def _earliest_dates(events, today, until):
+    earliest = {}
+    for event in events:
+        try:
+            symbol = event.get('symbol')
+            raw = event.get('date')
+            if not symbol or not raw:
+                continue
+            when = date.fromisoformat(raw)
+        except (AttributeError, ValueError, TypeError):
+            continue
+        if today <= when <= until and (symbol not in earliest or when < earliest[symbol]):
+            earliest[symbol] = when
+    return earliest
+
+
+def _read_calendar(today, until):
+    payload = finnhub.get_earnings_calendar(None, today.isoformat(), until.isoformat())
+    events = payload.get('earningsCalendar')
+    if not isinstance(events, list):
+        raise ValueError('earningsCalendar is not a list')
+    return _earliest_dates(events, today, until)
+
+
+def _store_earnings_dates(earliest):
+    known = set(ScreenerRow.objects.values_list('ticker', flat=True))
+    matched = {ticker: when for ticker, when in earliest.items() if ticker in known}
+    by_date = {}
+    for ticker, when in matched.items():
+        by_date.setdefault(when, []).append(ticker)
+    with transaction.atomic():
+        ScreenerRow.objects.exclude(ticker__in=matched).update(next_earnings_date=None)
+        for when, tickers in by_date.items():
+            ScreenerRow.objects.filter(ticker__in=tickers).update(next_earnings_date=when)
+
+
+def refresh_earnings_dates(today):
+    until = today + timedelta(days=EARNINGS_WINDOW_DAYS)
+    try:
+        earliest = _read_calendar(today, until)
+    except Exception:
+        logger.warning('Earnings calendar refresh failed; keeping stored dates', exc_info=True)
+        return
+    try:
+        _store_earnings_dates(earliest)
+    except Exception:
+        logger.warning('Earnings dates could not be stored; keeping stored dates', exc_info=True)
+
+
 def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
     load_universe(universe)
+    rows = list(ScreenerRow.objects.order_by('ticker'))
+    started_at = timezone.now().isoformat()
     with_fundamentals = True
-    for row in ScreenerRow.objects.order_by('ticker'):
-        with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
-        pause(PAUSE_SECONDS)
+    try:
+        for done, row in enumerate(rows, start=1):
+            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
+            scan_progress.report(done, len(rows), started_at)
+            pause(PAUSE_SECONDS)
+        refresh_earnings_dates(timezone.localdate())
+    finally:
+        scan_progress.clear()
     return ScreenerRow.objects.filter(status=ScreenerRow.OK).count()

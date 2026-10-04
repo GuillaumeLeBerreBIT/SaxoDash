@@ -66,7 +66,7 @@ export default function WatchlistStar({ ticker, name, uic, assetType }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className={`w-6 h-6 flex items-center justify-center rounded hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${
+        className={`w-10 h-10 sm:w-6 sm:h-6 flex items-center justify-center rounded hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${
           listed ? 'text-blue-400' : 'text-zinc-500 hover:text-zinc-200'
         }`}
       >

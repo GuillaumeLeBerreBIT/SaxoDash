@@ -1,29 +1,37 @@
-import { Link } from 'react-router-dom'
-
+import { useWidth } from '../../lib/chartGeometry'
+import { cardsThatFit } from '../../lib/discover'
+import { EmptyState } from '../ui'
 import DiscoverCard from './DiscoverCard'
+import ShelfHeader from './ShelfHeader'
+
+const cardKey = (item) => `${item.uic}:${item.asset_type}`
+
+function Cards({ items, fit }) {
+  if (fit == null) {
+    return (
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0">
+        {items.map((item) => <DiscoverCard key={cardKey(item)} item={item} className="w-56 shrink-0 snap-start" />)}
+      </div>
+    )
+  }
+  return (
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))` }}>
+      {items.slice(0, fit).map((item) => <DiscoverCard key={cardKey(item)} item={item} />)}
+    </div>
+  )
+}
 
 export default function ShelfRow({ shelf }) {
+  const [ref, width] = useWidth()
+  const fit = cardsThatFit(width)
+  const shown = fit == null ? shelf.items.length : Math.min(fit, shelf.items.length)
   return (
-    <section aria-labelledby={`shelf-${shelf.key}`} className="space-y-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="min-w-0">
-          <h2 id={`shelf-${shelf.key}`} className="text-[var(--fig-md)] font-semibold text-zinc-100">{shelf.title}</h2>
-          <p className="text-[var(--fig-xs)] text-zinc-500">{shelf.subtitle}</p>
-        </div>
-        {shelf.total > 0 ? (
-          <Link to={`/discover/${shelf.key}`} className="shrink-0 text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">
-            See all ({shelf.total})
-          </Link>
-        ) : null}
-      </div>
+    <section ref={ref} aria-labelledby={`shelf-${shelf.key}`} className="space-y-2">
+      <ShelfHeader shelf={shelf} shown={shown} />
       {shelf.total === 0 ? (
-        <p className="text-[var(--fig-xs)] text-zinc-600">{shelf.empty}</p>
+        <EmptyState title={shelf.empty} className="py-4" />
       ) : (
-        <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0">
-          {shelf.items.map((item) => (
-            <DiscoverCard key={`${item.uic}:${item.asset_type}`} item={item} metric={shelf.metric} />
-          ))}
-        </div>
+        <Cards items={shelf.items} fit={fit} />
       )}
     </section>
   )
