@@ -253,14 +253,40 @@ class SpendingTrendTest(TestCase):
         )
         self.assertEqual(
             [row['total'] for row in trend],
-            [Decimal('0'), Decimal('0'), Decimal('0'), Decimal('40'), Decimal('0'), Decimal('25')],
+            [None, None, None, Decimal('40'), Decimal('0'), Decimal('25')],
         )
 
-    def test_empty_database_still_returns_the_requested_months(self):
+    def test_months_before_the_first_transaction_are_absent_not_zero(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 8, 20), 't1')
+
+        trend = spending_trend(months=6)
+
+        self.assertEqual(
+            [row['total'] for row in trend],
+            [None, None, None, Decimal('40'), Decimal('0'), Decimal('0')],
+        )
+
+    def test_the_month_holding_the_first_transaction_is_partial(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 8, 20), 't1')
+
+        trend = spending_trend(months=6)
+
+        self.assertEqual([row['partial'] for row in trend], [False, False, False, True, False, True])
+
+    def test_covered_months_still_agree_with_the_summary(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 8, 20), 't1')
+        self._tx(Decimal('-30'), 'GROCERIES', date(2026, 9, 3), 't2')
+
+        trend = self._by_month(spending_trend(months=6))
+        summary = spending_summary(date_from='2026-09-01', date_to='2026-09-30')
+
+        self.assertEqual(trend['2026-09'], summary['total'])
+
+    def test_empty_database_returns_the_requested_months_all_absent(self):
         trend = spending_trend(months=6)
 
         self.assertEqual(len(trend), 6)
-        self.assertTrue(all(row['total'] == Decimal('0') for row in trend))
+        self.assertTrue(all(row['total'] is None for row in trend))
 
     def test_only_the_current_month_is_partial(self):
         trend = spending_trend(months=6)

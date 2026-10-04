@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Min, Sum
 from django.db.models.functions import Abs, Coalesce, TruncMonth
 from django.utils import timezone
 
@@ -122,11 +122,18 @@ def spending_trend(months=6):
     for row in rows:
         nets_by_month[row['month']].append((row['effective_category'], row['total']))
 
+    first = BankTransaction.objects.aggregate(first=Min('booking_date'))['first']
+    first_month = first.replace(day=1) if first else None
+
     return [
         {
             'month': start.strftime('%Y-%m'),
-            'total': sum(_spend_by_category(nets_by_month[start]).values(), Decimal('0')),
-            'partial': start == current,
+            'total': (
+                None
+                if first_month is None or start < first_month
+                else sum(_spend_by_category(nets_by_month[start]).values(), Decimal('0'))
+            ),
+            'partial': start == current or start == first_month,
         }
         for start in starts
     ]
