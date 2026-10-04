@@ -339,13 +339,36 @@ def performance_summary(port_dated_values, bench_dated_values):
     }
 
 
+def _month_end(year, month):
+    return date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+
+
+def monthly_stats_needs_days(dated_values):
+    if not dated_values:
+        return None
+    first, last = dated_values[0][0], dated_values[-1][0]
+    year = first.year + (first.month + 1) // 12
+    month = (first.month + 1) % 12 + 1
+    return max(0, (_month_end(year, month) - last).days)
+
+
 def risk_summary(dated_values, risk_free_annual):
     """The benchmark-free Risk tab, computed from a date-ascending value series."""
+    days = history.history_days(dated_values)
+    needs = {
+        **history.needs_days(days, history.RISK_METRICS),
+        'monthly_stats': monthly_stats_needs_days(dated_values),
+    }
+
     if len(dated_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
             'data_quality': None,
             'sample_size': len(dated_values),
+            'history_days': days,
+            'inputs_reliable': False,
+            'needs_days': needs,
+            'projection_inputs': {'expected_return': None, 'volatility': None},
             'risk_free_annual': risk_free_annual,
             'expected_return': None,
             'volatility': None,
@@ -365,20 +388,31 @@ def risk_summary(dated_values, risk_free_annual):
     returns = daily_returns(values)
     dd = drawdown_series(values)
     monthly = monthly_returns(dated_values)
-    best, worst = best_worst_month(monthly)
+    complete = monthly if history.latest_month_is_complete(dates[-1]) else monthly[:-1]
+    enough_months = len(complete) >= history.MIN_COMPLETE_MONTHS
+    best, worst = best_worst_month(complete) if enough_months else (None, None)
+    if enough_months:
+        needs['monthly_stats'] = 0
+
+    raw_expected = expected_annual_return(returns)
+    raw_volatility = annualized_volatility(returns)
 
     return {
         'has_data': True,
         'data_quality': data_quality(len(dated_values)),
         'sample_size': len(dated_values),
+        'history_days': days,
+        'inputs_reliable': history.inputs_reliable(days),
+        'needs_days': needs,
+        'projection_inputs': {'expected_return': raw_expected, 'volatility': raw_volatility},
         'risk_free_annual': risk_free_annual,
-        'expected_return': expected_annual_return(returns),
-        'volatility': annualized_volatility(returns),
-        'sharpe': sharpe_ratio(returns, risk_free_annual),
-        'sortino': sortino_ratio(returns, risk_free_annual),
+        'expected_return': history.gate(raw_expected, days, 'expected_return'),
+        'volatility': history.gate(raw_volatility, days, 'volatility'),
+        'sharpe': history.gate(sharpe_ratio(returns, risk_free_annual), days, 'sharpe'),
+        'sortino': history.gate(sortino_ratio(returns, risk_free_annual), days, 'sortino'),
         'max_drawdown': min(dd),
         'current_drawdown': dd[-1],
-        'positive_months_pct': positive_months_pct(monthly),
+        'positive_months_pct': positive_months_pct(complete) if enough_months else None,
         'best_month': best,
         'worst_month': worst,
         'drawdown_series': [{'date': d.isoformat(), 'dd': v} for d, v in zip(dates, dd)],

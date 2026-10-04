@@ -352,15 +352,93 @@ class RiskSummaryTest(TestCase):
         self.assertIsNone(summary['data_quality'])
 
     def test_enough_history_produces_real_numbers(self):
-        dated = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
-        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+        summary = metrics.risk_summary(synthetic_series(40), risk_free_annual=0.02)
 
         self.assertTrue(summary['has_data'])
         self.assertIsNotNone(summary['volatility'])
-        self.assertIsNotNone(summary['expected_return'])
-        self.assertEqual(len(summary['drawdown_series']), 5)
-        self.assertEqual(summary['drawdown_series'][0]['date'], '2026-01-01')
+        self.assertEqual(len(summary['drawdown_series']), 41)
+        self.assertEqual(summary['drawdown_series'][0]['date'], '2025-03-03')
         self.assertEqual(summary['risk_free_annual'], 0.02)
+
+    def test_eight_days_withholds_every_annualised_statistic(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertTrue(summary['has_data'])
+        self.assertEqual(summary['history_days'], 8)
+        for key in ('expected_return', 'volatility', 'sharpe', 'sortino'):
+            self.assertIsNone(summary[key], key)
+        self.assertEqual(summary['needs_days']['volatility'], 22)
+        self.assertEqual(summary['needs_days']['sharpe'], 357)
+        self.assertIsNotNone(summary['max_drawdown'])
+        self.assertEqual(len(summary['drawdown_series']), 9)
+
+    def test_eight_days_withholds_the_monthly_statistics(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertIsNone(summary['best_month'])
+        self.assertIsNone(summary['worst_month'])
+        self.assertIsNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 81)
+
+    def test_eight_days_keeps_the_projection_inputs_but_marks_them_unreliable(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertFalse(summary['inputs_reliable'])
+        self.assertIsNotNone(summary['projection_inputs']['expected_return'])
+        self.assertIsNotNone(summary['projection_inputs']['volatility'])
+
+    def test_volatility_appears_exactly_at_thirty_days_but_sharpe_does_not(self):
+        short = metrics.risk_summary(synthetic_series(29), risk_free_annual=0.02)
+        exact = metrics.risk_summary(synthetic_series(30), risk_free_annual=0.02)
+
+        self.assertIsNone(short['volatility'])
+        self.assertIsNotNone(exact['volatility'])
+        self.assertEqual(exact['needs_days']['volatility'], 0)
+        self.assertIsNone(exact['sharpe'])
+
+    def test_a_full_year_fills_every_statistic_and_trusts_the_projection(self):
+        summary = metrics.risk_summary(synthetic_series(365), risk_free_annual=0.02)
+
+        for key in ('expected_return', 'volatility', 'sharpe', 'sortino'):
+            self.assertIsNotNone(summary[key], key)
+        self.assertTrue(all(missing == 0 for key, missing in summary['needs_days'].items() if key != 'monthly_stats'))
+        self.assertTrue(summary['inputs_reliable'])
+        self.assertEqual(summary['projection_inputs']['expected_return'], summary['expected_return'])
+
+    def test_four_hundred_days_has_monthly_statistics(self):
+        summary = metrics.risk_summary(synthetic_series(400), risk_free_annual=0.02)
+
+        self.assertIsNotNone(summary['best_month'])
+        self.assertIsNotNone(summary['worst_month'])
+        self.assertIsNotNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 0)
+
+    def test_two_complete_months_are_enough_for_the_monthly_statistics(self):
+        dated = [(date(2026, 1, 31), 100), (date(2026, 2, 27), 110), (date(2026, 3, 31), 99)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+
+        self.assertAlmostEqual(summary['best_month']['pct'], 10.0)
+        self.assertAlmostEqual(summary['worst_month']['pct'], -10.0)
+        self.assertAlmostEqual(summary['positive_months_pct'], 50.0)
+
+    def test_a_partial_latest_month_does_not_count_as_a_complete_one(self):
+        dated = [(date(2026, 1, 31), 100), (date(2026, 2, 27), 110), (date(2026, 3, 20), 99)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+
+        self.assertEqual(len(summary['monthly_returns']), 2)
+        self.assertIsNone(summary['best_month'])
+        self.assertIsNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 11)
+
+    def test_no_data_branch_carries_the_new_keys(self):
+        summary = metrics.risk_summary([], risk_free_annual=0.02)
+
+        self.assertFalse(summary['has_data'])
+        self.assertEqual(summary['history_days'], 0)
+        self.assertFalse(summary['inputs_reliable'])
+        self.assertEqual(summary['projection_inputs'], {'expected_return': None, 'volatility': None})
+        self.assertIsNone(summary['needs_days']['monthly_stats'])
+        self.assertEqual(summary['needs_days']['volatility'], 30)
 
     def test_data_quality_is_low_below_twenty_points(self):
         # 5 points: has_data (>=2) but far short of a statistically stable
@@ -600,7 +678,10 @@ class RiskMetricsViewTest(APITestCase):
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['has_data'])
-        self.assertIsNotNone(response.data['volatility'])
+        self.assertEqual(response.data['history_days'], 4)
+        self.assertIsNone(response.data['volatility'])
+        self.assertIsNotNone(response.data['projection_inputs']['volatility'])
+        self.assertFalse(response.data['inputs_reliable'])
         self.assertEqual(len(response.data['drawdown_series']), 5)
 
     def test_a_sale_moving_value_from_positions_to_cash_is_not_a_drawdown(self):
