@@ -110,6 +110,27 @@ class SpendingSummaryViewTest(APITestCase):
             bank='kbc', bank_account=account, external_id='t1', amount=-40,
             currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
         )
+        self.account = account
+        patcher = patch('enablebanking.services._today', return_value=date(2026, 10, 4))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_date_from_only_excludes_tomorrows_rows_like_the_spending_page_does(self):
+        for external_id, booking_date, amount in [
+            ('today', date(2026, 10, 4), -15), ('tomorrow', date(2026, 10, 5), -900),
+        ]:
+            BankTransaction.objects.create(
+                bank='kbc', bank_account=self.account, external_id=external_id, amount=amount,
+                currency='EUR', booking_date=booking_date, category='GROCERIES',
+            )
+
+        mtd_only_from = self.client.get('/api/enablebanking/spending/summary/?date_from=2026-10-01')
+        mtd_with_to = self.client.get(
+            '/api/enablebanking/spending/summary/?date_from=2026-10-01&date_to=2026-10-04'
+        )
+
+        self.assertEqual(mtd_only_from.data['total'], Decimal('15'))
+        self.assertEqual(mtd_only_from.data['total'], mtd_with_to.data['total'])
 
     def test_returns_the_summary_shape(self):
         response = self.client.get('/api/enablebanking/spending/summary/')

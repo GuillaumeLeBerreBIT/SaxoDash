@@ -50,11 +50,11 @@ def _previous_period(date_from, date_to):
 
 
 def spending_summary(date_from=None, date_to=None, _include_previous=True):
-    qs = BankTransaction.objects.all()
+    today = _today()
+    end = min(date.fromisoformat(date_to), today) if date_to else today
+    qs = BankTransaction.objects.filter(booking_date__lte=end)
     if date_from:
         qs = qs.filter(booking_date__gte=date_from)
-    if date_to:
-        qs = qs.filter(booking_date__lte=date_to)
     qs = qs.annotate(effective_category=Coalesce('category_override', 'category'))
 
     spending_rows = (
@@ -83,10 +83,8 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
 
     previous_period = None
     comparison_label = None
-    if _include_previous and date_from and date_to:
-        prev_from, prev_to, comparison_label = _previous_period(
-            date.fromisoformat(date_from), date.fromisoformat(date_to),
-        )
+    if _include_previous and date_from and date.fromisoformat(date_from) <= end:
+        prev_from, prev_to, comparison_label = _previous_period(date.fromisoformat(date_from), end)
         prev = spending_summary(
             date_from=prev_from.isoformat(), date_to=prev_to.isoformat(), _include_previous=False,
         )
@@ -113,7 +111,7 @@ def spending_trend(months=6):
 
     rows = (
         BankTransaction.objects
-        .filter(booking_date__gte=starts[0])
+        .filter(booking_date__gte=starts[0], booking_date__lte=_today())
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .exclude(effective_category__in=TRANSFER_CATEGORIES)
         .annotate(month=TruncMonth('booking_date'))

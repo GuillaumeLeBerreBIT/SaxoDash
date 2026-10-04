@@ -16,6 +16,9 @@ class SpendingSummaryTest(TestCase):
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
+        patcher = patch('enablebanking.services._today', return_value=date(2026, 10, 4))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def _tx(self, amount, category, booking_date, external_id, category_override=None):
         BankTransaction.objects.create(
@@ -154,6 +157,59 @@ class SpendingSummaryTest(TestCase):
         self.assertIsNone(summary['previous_period'])
         self.assertIsNone(summary['comparison_label'])
 
+    def test_a_missing_date_to_means_today_and_excludes_future_dated_rows(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 10, 3), 't1')
+        self._tx(Decimal('-15'), 'DINING', date(2026, 10, 4), 't2')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 10, 5), 't3')
+
+        summary = spending_summary(date_from='2026-10-01')
+
+        self.assertEqual(summary['total'], Decimal('55'))
+        self.assertEqual(summary['transaction_count'], 2)
+
+    def test_no_dates_at_all_still_excludes_future_dated_rows(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 10, 3), 't1')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 10, 5), 't2')
+
+        self.assertEqual(spending_summary()['total'], Decimal('40'))
+
+    def test_a_date_to_in_the_future_is_capped_at_today(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 10, 3), 't1')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 10, 20), 't2')
+
+        summary = spending_summary(date_from='2026-10-01', date_to='2026-10-31')
+
+        self.assertEqual(summary['total'], Decimal('40'))
+        self.assertEqual(summary['comparison_label'], 'same days last month')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-09-04')
+
+    def test_a_past_date_to_is_respected(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 9, 10), 't1')
+        self._tx(Decimal('-60'), 'GROCERIES', date(2026, 9, 25), 't2')
+
+        summary = spending_summary(date_from='2026-09-01', date_to='2026-09-15')
+
+        self.assertEqual(summary['total'], Decimal('40'))
+
+    def test_a_date_from_only_call_gets_a_month_to_date_comparison(self):
+        self._tx(Decimal('-70'), 'GROCERIES', date(2026, 9, 2), 't1')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 9, 20), 't2')
+
+        summary = spending_summary(date_from='2026-10-01')
+
+        self.assertEqual(summary['previous_period']['date_from'], '2026-09-01')
+        self.assertEqual(summary['previous_period']['date_to'], '2026-09-04')
+        self.assertEqual(summary['previous_period']['total'], Decimal('70'))
+
+    def test_a_date_from_after_today_is_empty_and_has_no_comparison(self):
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 10, 3), 't1')
+
+        summary = spending_summary(date_from='2026-11-01')
+
+        self.assertEqual(summary['total'], Decimal('0'))
+        self.assertIsNone(summary['previous_period'])
+        self.assertIsNone(summary['comparison_label'])
+
 
 class SpendingTrendTest(TestCase):
     def setUp(self):
@@ -279,3 +335,9 @@ class SpendingTrendTest(TestCase):
 
         self.assertEqual(summary['total'], Decimal('120'))
         self.assertEqual(trend['2026-09'], summary['total'])
+
+    def test_future_dated_rows_are_not_counted_in_the_current_month(self):
+        self._tx(Decimal('-25'), 'GROCERIES', date(2026, 10, 2), 't1')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 10, 5), 't2')
+
+        self.assertEqual(self._by_month(spending_trend(months=6))['2026-10'], Decimal('25'))
