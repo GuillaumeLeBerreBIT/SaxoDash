@@ -188,6 +188,15 @@ class SeedDemoDataSnapshotsTest(TestCase):
         self.assertEqual(latest.portfolio_value, get_portfolio_value().amount)
         self.assertEqual(latest.bank_total, get_total_bank_balance().amount)
 
+    def test_seeded_snapshots_carry_the_bank_only_total(self):
+        call_command('seed_demo_data')
+
+        mismatched = [
+            snap for snap in NetWorthSnapshot.objects.all()
+            if snap.bank_only_total != snap.bank_total
+        ]
+        self.assertEqual(mismatched, [])
+
     def test_seed_is_idempotent(self):
         call_command('seed_demo_data')
         call_command('seed_demo_data')
