@@ -13,7 +13,6 @@ import {
   updatedLabel,
   groupShelves,
   leadReason,
-  COMPACT_ROWS,
   DISCOVER_VIEWS,
   readDiscoverView,
   writeDiscoverView,
@@ -215,6 +214,11 @@ describe('discover view preference', () => {
 
   it('defaults to cards', () => {
     expect(readDiscoverView()).toBe('cards')
+  })
+
+  it('offers cards and compact, and reads back only one of them', () => {
+    expect(DISCOVER_VIEWS).toEqual(['cards', 'compact'])
+    expect(DISCOVER_VIEWS).toContain(readDiscoverView())
   })
 
   it('remembers compact', () => {
