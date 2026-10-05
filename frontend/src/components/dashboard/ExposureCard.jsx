@@ -30,7 +30,7 @@ export default function ExposureCard({ currency, concentration }) {
 
   return (
     <Card>
-      <CardHeader title="Currency & concentration" subtitle="By value" />
+      <CardHeader title="Portfolio currency" subtitle="By value" />
       <div className="mt-3">
         {currency.length > 1 ? (
           <Legend rows={currency} nameKey="currency" />

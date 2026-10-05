@@ -15,7 +15,7 @@ describe('ExposureCard', () => {
         ]}
       />,
     )
-    expect(screen.getByRole('heading', { name: 'Currency & concentration' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Portfolio currency' })).toBeInTheDocument()
     expect(screen.getByText('USD')).toBeInTheDocument()
     expect(screen.getByText(/Top 3: 100%/)).toBeInTheDocument()
     expect(screen.getByText(/HHI 0\.46/)).toBeInTheDocument()

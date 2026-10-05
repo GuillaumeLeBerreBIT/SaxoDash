@@ -16,6 +16,28 @@ const VIEWS = [
   { key: 'BANK', label: 'Bank' },
 ]
 
+const SERIES = [
+  { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: SERIES_INVESTMENTS },
+  { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: SERIES_BANK },
+  { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: SERIES_TOTAL },
+]
+
+function SeriesLegend({ series, dimmed }) {
+  return (
+    <ul aria-label="Chart series" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+      {series.map((s) => (
+        <li key={s.key} className="flex items-center gap-1.5 text-[var(--fig-xs)] text-zinc-400">
+          <span
+            className="w-4 border-t-2"
+            style={{ borderColor: s.color, borderStyle: dimmed && s.key !== 'TOTAL' ? 'dashed' : 'solid' }}
+          />
+          {s.name}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export default function NetWorthChart() {
   const [range, setRange] = useState('6M')
   const [view, setView] = useState('ALL')
@@ -27,6 +49,7 @@ export default function NetWorthChart() {
   const showInvestments = view === 'ALL' || view === 'INVESTMENTS'
   const showBank = view === 'ALL' || view === 'BANK'
   const showTotal = view === 'ALL'
+  const visible = SERIES.filter((s) => (view === 'ALL' ? true : s.key === view))
 
   return (
     <Card>
@@ -58,7 +81,7 @@ export default function NetWorthChart() {
               <Line
                 type="monotone"
                 dataKey="portfolio_value"
-                name="Investments"
+                name="Positions"
                 stroke={SERIES_INVESTMENTS}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
@@ -71,7 +94,7 @@ export default function NetWorthChart() {
               <Line
                 type="monotone"
                 dataKey="bank_total"
-                name="Bank"
+                name="Cash (bank + Saxo)"
                 stroke={SERIES_BANK}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
@@ -95,6 +118,7 @@ export default function NetWorthChart() {
         </ResponsiveContainer>
         )}
       </div>
+      <SeriesLegend series={visible} dimmed={view === 'ALL'} />
     </Card>
   )
 }
