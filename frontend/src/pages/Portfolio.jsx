@@ -97,7 +97,7 @@ export default function Portfolio() {
           <StatRow
             label="Bank balance"
             value={fmtEur(netWorth.bank_only_total)}
-            note={`${fmtEur(netWorth.broker_cash)} cash at Saxo, counted with the portfolio`}
+            note={`+ ${fmtEur(netWorth.broker_cash)} cash at Saxo, included in net worth`}
           />
         </StatStrip>
 

@@ -77,7 +77,7 @@ describe('Portfolio holdings table', () => {
 
     const bank = screen.getByText('Bank balance').closest('div')
     expect(within(bank.parentElement).getByText('€1,435.55')).toBeInTheDocument()
-    expect(screen.getByText(/€967,000\.00 cash at Saxo/)).toBeInTheDocument()
+    expect(screen.getByText(/\+ €967,000\.00 cash at Saxo, included in net worth/)).toBeInTheDocument()
   })
 
   it('says the percentage is since purchase', () => {
@@ -218,6 +218,19 @@ describe('Portfolio total row', () => {
     renderWithProviders(<Portfolio />)
 
     expect(within(totalRow()).queryByText('20')).toBeNull()
+  })
+
+  it('renders a dash, not null or 0.00%, when the percentage is absent', () => {
+    queries.usePortfolioSummary.mockReturnValue({
+      ...idle,
+      data: { total_value: '31567.81', total_cost: '31573.70', total_pnl: '-5.89', total_pnl_pct: null, allocation: [] },
+    })
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Investment portfolio').closest('div').parentElement
+    expect(within(row).getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText(/since purchase/)).toBeNull()
+    expect(screen.queryByText(/null|0\.00%/)).toBeNull()
   })
 
   it('shows a dash for P&L when the summary has none', () => {

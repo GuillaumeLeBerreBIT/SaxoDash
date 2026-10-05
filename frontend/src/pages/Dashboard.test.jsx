@@ -104,6 +104,19 @@ describe('Dashboard', () => {
     expect(screen.getByText(/since purchase/, { selector: 'span.text-emerald-400, span.text-red-400, span.text-zinc-500' })).toBeInTheDocument()
   })
 
+  it('renders a dash, not null or 0.00%, when the portfolio percentage is absent', () => {
+    queries.usePortfolioSummary.mockReturnValue({
+      ...idle,
+      data: { total_value: '13131.00', total_pnl_pct: null, allocation: [] },
+    })
+    renderWithProviders(<Dashboard />)
+
+    const row = screen.getByText('Portfolio value').closest('div').parentElement
+    expect(within(row).getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText(/since purchase/)).toBeNull()
+    expect(screen.queryByText(/null|0\.00%/)).toBeNull()
+  })
+
   it('no longer renders a Contributors chart (superseded by Analytics\' Attribution)', () => {
     renderWithProviders(<Dashboard />)
     expect(screen.queryByText('Contributors')).not.toBeInTheDocument()
