@@ -21,6 +21,7 @@ This is sub-project 1 of a wider "famous investors and politicians" idea. Politi
   - Each `<infoTable>` row has `nameOfIssuer`, `titleOfClass`, `cusip`, `value`, `shrsOrPrnAmt/sshPrnamt` with `sshPrnamtType` (`SH`/`PRN`), optional `putCall`, `investmentDiscretion`, `otherManager` and `votingAuthority`.
   - The XML may be namespaced, so the parser matches local names.
   - Berkshire's Q2 2026 table has 89 rows. The same CUSIP repeats once per `otherManager`.
+  - The amendment type is `amendmentInfo/amendmentType` in the filing's `primary_doc.xml`, so a filing costs three requests (index, primary doc, table).
   - SEC fair-access rules require a descriptive `User-Agent` with a contact email (`SEC_USER_AGENT` setting) and no more than 10 requests per second.
 - **OpenFIGI (free; key optional):** `POST https://api.openfigi.com/v3/mapping` with `[{idType: 'ID_CUSIP', idValue}]`. It returns listings, and we take `exchCode == 'US'` (verified: `02005N100` → ALLY, `037833100` → AAPL).
   - Keyless: 25 requests a minute, 10 jobs per request.
@@ -72,7 +73,7 @@ The modules are small and match the `research/finnhub.py` style: call → shape 
   - `information_table(cik, accession)` → raw XML text.
 - **`investors/parse.py`:** `parse_information_table(xml)` → a list of row dicts.
   - It matches by local name, so namespaces don't matter.
-  - **Value normalization:** for filings with `quarter_end < 2023-01-01`, `value × 1000`, because SEC changed the unit from thousands to dollars in January 2023.
+  - **Value normalization:** for filings **filed** before 2023-01-03, `value × 1000`. SEC switched from thousands to dollars for filings made from that date, so a Q4 2022 report (filed Feb 2023) is already in dollars — verified on Berkshire's Q3 vs Q4 2022 totals.
   - Malformed XML raises `FilingUnreadable`.
 - **`investors/figi.py`:** `resolve(cusips)` → `{cusip: {ticker, name, figi, security_type}}`. It batches and paces requests to the keyless or keyed limits and prefers the `exchCode == 'US'` listing.
 - **`investors/importer.py`:**
