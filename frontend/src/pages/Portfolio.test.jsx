@@ -147,7 +147,7 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
     expect(screen.queryByText('Overview')).not.toBeInTheDocument()
     expect(screen.getByText('Total P&L')).toBeInTheDocument()
-    expect(screen.getByText('-€5.89')).toBeInTheDocument()
+    expect(screen.getAllByText('-€5.89')).toHaveLength(2)
     expect(screen.getByText('€31,573.70 invested')).toBeInTheDocument()
   })
 
@@ -196,5 +196,37 @@ describe('Portfolio holdings table', () => {
       expect(screen.getByText('Allocation needs a value per holding to chart.')).toBeInTheDocument()
       expect(screen.getByText('Sector weight needs a value per holding to chart.')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Portfolio total row', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub()
+  })
+
+  const totalRow = () => screen.getByText(/^Total \(\d+ holdings?\)/).closest('tr')
+
+  it('takes value and P&L from the summary, not from summing rows', () => {
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).getByText('€31,567.81')).toBeInTheDocument()
+    expect(within(totalRow()).getByText('-€5.89')).toBeInTheDocument()
+  })
+
+  it('does not add up quantities across different instruments', () => {
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).queryByText('20')).toBeNull()
+  })
+
+  it('shows a dash for P&L when the summary has none', () => {
+    queries.usePortfolioSummary.mockReturnValue({
+      ...idle,
+      data: { total_value: '31567.81', total_cost: null, total_pnl: null, total_pnl_pct: null, allocation: [] },
+    })
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).getByText('—')).toBeInTheDocument()
   })
 })

@@ -32,18 +32,11 @@ export default function Portfolio() {
   const netWorth = netWorthQuery.data
   const positions = positionsQuery.data ?? []
 
-  const totals = positions.reduce(
-    (s, p) => ({
-      qty: s.qty + Number(p.qty),
-      value: s.value + Number(p.value),
-      pnl: s.pnl + Number(p.pnl),
-    }),
-    { qty: 0, value: 0, pnl: 0 }
-  )
+  const positionsValue = positions.reduce((sum, p) => sum + Number(p.value), 0)
 
   const topHoldings = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
   const topHoldingsValue = topHoldings.reduce((sum, p) => sum + Number(p.value), 0)
-  const otherHoldingsValue = Math.max(totals.value - topHoldingsValue, 0)
+  const otherHoldingsValue = Math.max(positionsValue - topHoldingsValue, 0)
   const allocationItems = [
     ...topHoldings.map((p) => ({ name: p.ticker, value: Number(p.value), color: colorForTicker(p.ticker) })),
     ...(otherHoldingsValue > 0 ? [{ name: 'Other', value: otherHoldingsValue, color: OTHER_SLICE, logo: false }] : []),
@@ -181,14 +174,14 @@ export default function Portfolio() {
                 ))}
                 <tr className="bg-zinc-800/20">
                   <Td edge className="font-medium text-zinc-300">
-                    Total ({positions.length} holdings)
+                    Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
                   </Td>
-                  <Td align="right" className="num text-zinc-300">{fmtQty(totals.qty)}</Td>
                   <Td />
                   <Td />
                   <Td />
-                  <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(totals.value)}</Td>
-                  <Td align="right" className={`num font-medium ${totals.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{fmtEur(totals.pnl, { sign: true })}</Td>
+                  <Td />
+                  <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(summary.total_value)}</Td>
+                  <Td align="right" className={`num font-medium ${pnlTone}`}>{fmtEur(summary.total_pnl, { sign: true })}</Td>
                   <Td edge align="right" className="num text-zinc-300">100.0%</Td>
                 </tr>
               </tbody>
@@ -199,7 +192,7 @@ export default function Portfolio() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-[1800px]:flex min-[1800px]:flex-col min-[1800px]:col-start-2 min-[1800px]:row-start-1 min-[1800px]:row-span-2">
           <Card>
             <CardHeader title="Holdings allocation" subtitle="Top 5 by value" />
-            {totals.value > 0 ? (
+            {positionsValue > 0 ? (
               <AllocationDonut items={allocationItems} formatValue={fmtEur} showIcons />
             ) : (
               <EmptyState title="No priced holdings yet" hint="Allocation needs a value per holding to chart." />
@@ -208,7 +201,7 @@ export default function Portfolio() {
 
           <Card className="flex-1 flex flex-col">
             <CardHeader title="Sector breakdown" subtitle="By value" />
-            {totals.value > 0 ? (
+            {positionsValue > 0 ? (
               <AllocationDonut items={sectorAllocationItems} formatValue={fmtEur} />
             ) : (
               <EmptyState title="No priced holdings yet" hint="Sector weight needs a value per holding to chart." />
