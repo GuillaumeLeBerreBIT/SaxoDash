@@ -512,3 +512,20 @@ class NetWorthEndpointSplitsSaxoCashTest(APITestCase):
 
         self.assertEqual(Decimal(body['broker_cash']), Decimal('0.00'))
         self.assertEqual(Decimal(body['bank_only_total']), Decimal('2500.00'))
+
+
+class NetWorthEndpointCurrencyMismatchTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user('u', password='p')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+
+    def test_a_foreign_bank_account_answers_409_not_500(self):
+        BankAccount.objects.create(
+            bank='Wise', type='Checking', iban_masked='-',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+            currency='USD',
+        )
+
+        response = self.client.get('/api/accounts/net-worth/')
+
+        self.assertEqual(response.status_code, 409)

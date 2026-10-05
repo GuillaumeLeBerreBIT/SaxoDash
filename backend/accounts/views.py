@@ -25,6 +25,8 @@ class NetWorthView(APIView):
         # instead of a 500 they cannot act on.
         try:
             net_worth = current_net_worth()
+            bank_only = get_bank_only_balance()
+            broker_cash = get_broker_cash_balance()
         except CurrencyMismatch as exc:
             return Response(
                 {'detail': f'Cannot total your accounts: {exc}'},
@@ -34,7 +36,7 @@ class NetWorthView(APIView):
         return Response({
             'portfolio_value': net_worth.portfolio.rounded().amount,
             'bank_total': net_worth.bank.rounded().amount,
-            'bank_only_total': get_bank_only_balance().rounded().amount,
-            'broker_cash': get_broker_cash_balance().rounded().amount,
+            'bank_only_total': bank_only.rounded().amount,
+            'broker_cash': broker_cash.rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
         })
