@@ -478,3 +478,37 @@ class BankOnlyBackfillTest(TestCase):
         unknown.refresh_from_db()
         self.assertEqual(estimated.bank_only_total, Decimal('833.00'))
         self.assertIsNone(unknown.bank_only_total)
+
+
+class NetWorthEndpointSplitsSaxoCashTest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user('u', password='p')
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+
+    def _accounts(self, with_saxo=True):
+        if with_saxo:
+            BankAccount.objects.create(
+                bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
+                balance=Decimal('900.00'), available=Decimal('900.00'),
+            )
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+
+    def test_bank_total_still_includes_saxo_cash_and_the_split_is_exposed(self):
+        self._accounts()
+
+        body = self.client.get('/api/accounts/net-worth/').json()
+
+        self.assertEqual(Decimal(body['bank_total']), Decimal('3400.00'))
+        self.assertEqual(Decimal(body['bank_only_total']), Decimal('2500.00'))
+        self.assertEqual(Decimal(body['broker_cash']), Decimal('900.00'))
+
+    def test_without_a_saxo_cash_row_the_broker_cash_is_zero(self):
+        self._accounts(with_saxo=False)
+
+        body = self.client.get('/api/accounts/net-worth/').json()
+
+        self.assertEqual(Decimal(body['broker_cash']), Decimal('0.00'))
+        self.assertEqual(Decimal(body['bank_only_total']), Decimal('2500.00'))

@@ -649,6 +649,20 @@ class BuildInsightsTest(TestCase):
         payload = insights.build_insights()
         self.assertGreater(payload['change']['day']['pct'], -1.0)
 
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_value_splits_saxo_cash_from_external_banks(self, _mock):
+        BankAccount.objects.create(
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
+            balance=Decimal('900.00'), available=Decimal('900.00'),
+        )
+        BankAccount.objects.create(
+            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+        )
+        value = insights.build_insights()['value']
+        self.assertEqual(Decimal(value['broker_cash']), Decimal('900.00'))
+        self.assertEqual(Decimal(value['bank_only']), Decimal('2500.00'))
+
 
 class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
     """insights.value.net_worth and insights.change.* must describe the same

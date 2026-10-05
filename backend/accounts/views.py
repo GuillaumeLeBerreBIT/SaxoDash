@@ -8,6 +8,7 @@ from core.services import current_net_worth
 
 from .models import BankAccount
 from .serializers import BankAccountSerializer
+from .services import get_bank_only_balance, get_broker_cash_balance
 
 
 class BankAccountListView(ListAPIView):
@@ -33,5 +34,7 @@ class NetWorthView(APIView):
         return Response({
             'portfolio_value': net_worth.portfolio.rounded().amount,
             'bank_total': net_worth.bank.rounded().amount,
+            'bank_only_total': get_bank_only_balance().rounded().amount,
+            'broker_cash': get_broker_cash_balance().rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
         })
