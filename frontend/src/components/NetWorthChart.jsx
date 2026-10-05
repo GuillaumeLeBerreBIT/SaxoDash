@@ -53,9 +53,10 @@ export default function NetWorthChart() {
       <CardHeader
         title="Net worth history"
         subtitle="Portfolio and bank accounts over time"
+        className="flex-wrap"
         right={
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 bg-zinc-900/60 rounded-md p-0.5 border border-white/[0.06]">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-zinc-900/60 rounded-md p-0.5 border border-white/[0.06]">
               {VIEWS.map((v) => (
                 <Pill key={v.key} active={view === v.key} onClick={() => setView(v.key)}>
                   {v.name}

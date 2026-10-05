@@ -20,7 +20,8 @@ export function txTotal(t) {
   return fmtEur(magnitude)
 }
 
-export const txTotalClass = (t) => (INFLOWS.has(t.type) ? 'text-emerald-400' : 'text-zinc-100')
+export const txTotalClass = (t) =>
+  t.total_eur != null && INFLOWS.has(t.type) ? 'text-emerald-400' : 'text-zinc-100'
 
 export function txTypes(rows) {
   const present = new Set(rows.map((r) => r.type))

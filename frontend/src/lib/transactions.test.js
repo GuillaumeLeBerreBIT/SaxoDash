@@ -53,6 +53,10 @@ describe('txTotalClass', () => {
     expect(txTotalClass(tx({ type: 'BUY' }))).toBe('text-zinc-100')
     expect(txTotalClass(tx({ type: 'INTEREST' }))).toBe('text-zinc-100')
   })
+
+  it('stays neutral for an inflow whose EUR total is unknown', () => {
+    expect(txTotalClass(tx({ type: 'SELL', total_eur: null }))).toBe('text-zinc-100')
+  })
 })
 
 describe('txTone', () => {

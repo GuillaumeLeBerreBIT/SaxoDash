@@ -27,6 +27,11 @@ describe('NetWorthChart legend', () => {
     expect(legend).toHaveTextContent('Total')
   })
 
+  it('keeps view pill labels on one line', () => {
+    renderWithProviders(<NetWorthChart />)
+    expect(screen.getByRole('button', { name: 'Cash (bank + Saxo)' })).toHaveClass('whitespace-nowrap')
+  })
+
   it('lists only the selected series when a view is chosen', () => {
     renderWithProviders(<NetWorthChart />)
     fireEvent.click(screen.getByRole('button', { name: 'Positions' }))
