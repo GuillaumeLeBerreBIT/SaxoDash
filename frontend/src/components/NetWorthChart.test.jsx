@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import NetWorthChart from './NetWorthChart'
@@ -29,10 +29,27 @@ describe('NetWorthChart legend', () => {
 
   it('lists only the selected series when a view is chosen', () => {
     renderWithProviders(<NetWorthChart />)
-    fireEvent.click(screen.getByRole('button', { name: 'Investments' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Positions' }))
     const legend = screen.getByRole('list', { name: 'Chart series' })
 
     expect(legend).toHaveTextContent('Positions')
     expect(legend).not.toHaveTextContent('Total')
+  })
+
+  it('draws a dashed swatch for a dimmed series in the All view', () => {
+    renderWithProviders(<NetWorthChart />)
+    const legend = screen.getByRole('list', { name: 'Chart series' })
+
+    const positions = within(legend).getByText('Positions').querySelector('span')
+    const total = within(legend).getByText('Total').querySelector('span')
+    expect(positions).toHaveStyle({ borderStyle: 'dashed' })
+    expect(total).toHaveStyle({ borderStyle: 'solid' })
+  })
+
+  it('omits the legend while the chart shows a placeholder', () => {
+    queries.useNetWorthHistory.mockReturnValue({ data: [history[0]], isLoading: false, error: null })
+    renderWithProviders(<NetWorthChart />)
+
+    expect(screen.queryByRole('list', { name: 'Chart series' })).toBeNull()
   })
 })

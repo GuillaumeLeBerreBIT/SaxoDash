@@ -10,17 +10,13 @@ import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
-const VIEWS = [
-  { key: 'ALL', label: 'All' },
-  { key: 'INVESTMENTS', label: 'Investments' },
-  { key: 'BANK', label: 'Bank' },
-]
-
 const SERIES = [
   { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: SERIES_INVESTMENTS },
   { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: SERIES_BANK },
   { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: SERIES_TOTAL },
 ]
+
+const VIEWS = [{ key: 'ALL', name: 'All' }, ...SERIES]
 
 function SeriesLegend({ series, dimmed }) {
   return (
@@ -46,10 +42,11 @@ export default function NetWorthChart() {
   // Lines need two points; a single snapshot with dot={false} draws nothing.
   const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
 
-  const showInvestments = view === 'ALL' || view === 'INVESTMENTS'
-  const showBank = view === 'ALL' || view === 'BANK'
-  const showTotal = view === 'ALL'
-  const visible = SERIES.filter((s) => (view === 'ALL' ? true : s.key === view))
+  const visible = SERIES.filter((s) => view === 'ALL' || s.key === view)
+  const isVisible = (key) => visible.some((s) => s.key === key)
+  const showInvestments = isVisible('INVESTMENTS')
+  const showBank = isVisible('BANK')
+  const showTotal = isVisible('TOTAL')
 
   return (
     <Card>
@@ -61,7 +58,7 @@ export default function NetWorthChart() {
             <div className="flex items-center gap-1 bg-zinc-900/60 rounded-md p-0.5 border border-white/[0.06]">
               {VIEWS.map((v) => (
                 <Pill key={v.key} active={view === v.key} onClick={() => setView(v.key)}>
-                  {v.label}
+                  {v.name}
                 </Pill>
               ))}
             </div>
@@ -80,8 +77,8 @@ export default function NetWorthChart() {
             {showInvestments && (
               <Line
                 type="monotone"
-                dataKey="portfolio_value"
-                name="Positions"
+                dataKey={SERIES[0].dataKey}
+                name={SERIES[0].name}
                 stroke={SERIES_INVESTMENTS}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
@@ -93,8 +90,8 @@ export default function NetWorthChart() {
             {showBank && (
               <Line
                 type="monotone"
-                dataKey="bank_total"
-                name="Cash (bank + Saxo)"
+                dataKey={SERIES[1].dataKey}
+                name={SERIES[1].name}
                 stroke={SERIES_BANK}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
@@ -106,8 +103,8 @@ export default function NetWorthChart() {
             {showTotal && (
               <Line
                 type="monotone"
-                dataKey="net_worth"
-                name="Total"
+                dataKey={SERIES[2].dataKey}
+                name={SERIES[2].name}
                 stroke={SERIES_TOTAL}
                 strokeWidth={2}
                 dot={false}
@@ -118,7 +115,7 @@ export default function NetWorthChart() {
         </ResponsiveContainer>
         )}
       </div>
-      <SeriesLegend series={visible} dimmed={view === 'ALL'} />
+      {!placeholder && <SeriesLegend series={visible} dimmed={view === 'ALL'} />}
     </Card>
   )
 }

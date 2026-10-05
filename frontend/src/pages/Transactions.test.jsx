@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Transactions from './Transactions'
 
@@ -48,5 +50,22 @@ describe('Transactions', () => {
     expect(screen.getByRole('button', { name: 'BUY' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'INTEREST' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'DIVIDEND' })).toBeNull()
+  })
+
+  it('falls back to All when the selected type vanishes from the data', () => {
+    stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'INTEREST', ticker: '', instrument: 'Interest' })])
+    const { rerender } = renderWithProviders(<Transactions />)
+    fireEvent.click(screen.getByRole('button', { name: 'INTEREST' }))
+
+    stub([row({ id: 1, type: 'BUY' })])
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <Transactions />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(within(screen.getByRole('table')).getByText('NVDA')).toBeInTheDocument()
   })
 })

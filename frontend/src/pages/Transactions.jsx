@@ -17,14 +17,16 @@ export default function Transactions() {
   const allTx = useMemo(() => data ?? [], [data])
   const types = useMemo(() => txTypes(allTx), [allTx])
 
+  const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
+
   const filtered = useMemo(
     () =>
       allTx.filter(
         (t) =>
-          (typeFilter === 'All' || t.type === typeFilter) &&
+          (effectiveFilter === 'All' || t.type === effectiveFilter) &&
           (search === '' || (t.instrument + t.ticker).toLowerCase().includes(search.toLowerCase()))
       ),
-    [allTx, typeFilter, search]
+    [allTx, effectiveFilter, search]
   )
 
   const perPage = 10
@@ -81,7 +83,7 @@ export default function Transactions() {
                   setPage(1)
                 }}
                 className={`px-2.5 h-8 text-[var(--fig-xs)] font-medium rounded ${
-                  typeFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
+                  effectiveFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
                 }`}
               >
                 {t}

@@ -73,4 +73,16 @@ describe('paddedDomain', () => {
     const [low, high] = paddedDomain([0, 0])
     expect(high).toBeGreaterThan(low)
   })
+
+  it('never pads a non-negative series below zero', () => {
+    const [low, high] = paddedDomain([0, 1000])
+    expect(low).toBe(0)
+    expect(high).toBeGreaterThan(1000)
+  })
+
+  it('keeps an all-zero series at a zero floor with a non-zero span', () => {
+    const [low, high] = paddedDomain([0, 0])
+    expect(low).toBe(0)
+    expect(high).toBeGreaterThan(0)
+  })
 })
