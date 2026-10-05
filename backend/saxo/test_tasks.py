@@ -9,6 +9,7 @@ from transactions.models import Transaction
 from accounts.models import BankAccount
 from .models import SaxoCredential, SyncRun
 from . import client, mapping, tasks
+from .tasks import SyncReport, synced
 
 SAMPLE_POSITION = {
     'PositionId': '5027270864',
@@ -555,3 +556,49 @@ class TransactionCurrencySyncTest(TestCase):
         txn = Transaction.objects.get(ticker='META')
         self.assertEqual(txn.currency, 'USD')
         self.assertIsNone(txn.fx_rate)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
+class SyncedWithoutCredentialTest(TestCase):
+    def test_runs_when_saxo_is_not_connected(self):
+        @synced(reports_health=False, task='keyless_job', needs_credential=False)
+        def job():
+            return 3
+
+        self.assertEqual(job(), 3)
+        run = SyncRun.objects.get(task='keyless_job')
+        self.assertEqual((run.outcome, run.rows), ('ok', 3))
+
+    def test_a_sync_report_carries_its_detail_to_the_run(self):
+        @synced(reports_health=False, task='keyless_job', needs_credential=False)
+        def job():
+            return SyncReport(rows=2, detail='skipped 1 unreadable filing')
+
+        self.assertEqual(job(), 2)
+        run = SyncRun.objects.get(task='keyless_job')
+        self.assertEqual((run.rows, run.detail), (2, 'skipped 1 unreadable filing'))
+
+    def test_a_long_detail_is_cut_to_the_column(self):
+        @synced(reports_health=False, task='keyless_job', needs_credential=False)
+        def job():
+            return SyncReport(rows=0, detail='x' * 500)
+
+        job()
+        self.assertEqual(len(SyncRun.objects.get(task='keyless_job').detail), 200)
+
+    def test_reports_the_wrapped_functions_own_arguments(self):
+        @synced(reports_health=False, task='keyless_job', needs_credential=False)
+        def job(slug=None):
+            return 0
+
+        self.assertEqual(list(inspect.signature(job).parameters), ['slug'])
+
+    def test_a_failure_is_recorded_and_raised(self):
+        @synced(reports_health=False, task='keyless_job', needs_credential=False)
+        def job():
+            raise RuntimeError('edgar down')
+
+        with self.assertRaises(RuntimeError):
+            job()
+        run = SyncRun.objects.get(task='keyless_job')
+        self.assertEqual((run.outcome, run.detail), ('failed', 'edgar down'))

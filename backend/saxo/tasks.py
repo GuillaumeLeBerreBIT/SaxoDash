@@ -2,6 +2,7 @@ import functools
 import inspect
 import logging
 from datetime import timedelta
+from typing import NamedTuple
 
 from celery import shared_task
 from django.db import transaction
@@ -19,6 +20,11 @@ logger = logging.getLogger(__name__)
 
 REFRESH_MARGIN = timedelta(minutes=5)
 CREATE_ONLY_FIELDS = frozenset({'sector'})
+
+
+class SyncReport(NamedTuple):
+    rows: int
+    detail: str = ''
 
 
 def _upsert_transaction(fields):
@@ -46,7 +52,7 @@ class SyncRefused(Exception):
     """Raised when a sync would corrupt what it is meant to keep current."""
 
 
-def synced(fn=None, *, reports_health=True, task=None):
+def synced(fn=None, *, reports_health=True, task=None, needs_credential=True):
     """Give `fn` a usable credential and record what the run actually did.
 
     Every sync shared the same preamble - get a credential or bail - and bailed
@@ -55,37 +61,43 @@ def synced(fn=None, *, reports_health=True, task=None):
     completion. `fn` returns the number of rows it wrote.
     """
     if fn is None:
-        return functools.partial(synced, reports_health=reports_health, task=task)
+        return functools.partial(
+            synced, reports_health=reports_health, task=task, needs_credential=needs_credential,
+        )
     name = task or fn.__name__
     if reports_health and name not in SYNC_TASKS:
         raise ValueError(f'{name} is not declared in saxo.credentials.SYNC_TASKS')
 
     @functools.wraps(fn)
     def run(*args, **kwargs):
-        try:
-            credential = active_credential()
-        except SaxoNotConnected as exc:
-            SyncRun.objects.create(task=name, outcome='skipped', detail=str(exc))
-            logger.info('Skipping %s: %s', name, exc)
-            return
+        leading = ()
+        if needs_credential:
+            try:
+                leading = (active_credential(),)
+            except SaxoNotConnected as exc:
+                SyncRun.objects.create(task=name, outcome='skipped', detail=str(exc))
+                logger.info('Skipping %s: %s', name, exc)
+                return
 
         try:
-            rows = fn(credential, *args, **kwargs)
+            result = fn(*leading, *args, **kwargs)
         except Exception as exc:
             SyncRun.objects.create(
                 task=name, outcome='failed', detail=str(exc)[:200]
             )
             raise
 
-        SyncRun.objects.create(task=name, outcome='ok', rows=rows)
-        return rows
+        report = result if isinstance(result, SyncReport) else SyncReport(result)
+        SyncRun.objects.create(task=name, outcome='ok', rows=report.rows, detail=report.detail[:200])
+        return report.rows
 
     # functools.wraps sets __wrapped__ and inspect.signature follows it, so
     # Celery validated calls against fn's own signature - credential included -
     # and rejected beat's argument-less call. Report what callers actually pass.
-    run.__signature__ = inspect.Signature(
-        list(inspect.signature(fn).parameters.values())[1:]
-    )
+    if needs_credential:
+        run.__signature__ = inspect.Signature(
+            list(inspect.signature(fn).parameters.values())[1:]
+        )
     return run
 
 
