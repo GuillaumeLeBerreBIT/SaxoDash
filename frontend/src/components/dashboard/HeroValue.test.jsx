@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import HeroValue from './HeroValue'
 
 const base = {
-  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00' },
+  value: { net_worth: '10000.00', portfolio: '8000.00', bank: '2000.00', bank_only: '1000.00', broker_cash: '1000.00' },
   change: {
     day: { abs: '50.00', pct: 0.56 },
     week: { abs: '-120.00', pct: -1.3 },
@@ -41,5 +41,15 @@ describe('HeroValue', () => {
   it('omits the spent-this-month figure when not provided', () => {
     render(<HeroValue {...base} />)
     expect(screen.queryByText('Spent MTD')).not.toBeInTheDocument()
+  })
+
+  it('counts Saxo cash with the Saxo side, not the bank side', () => {
+    render(<HeroValue {...base} />)
+    expect(screen.getByText(/€9,000\.00 at Saxo · €1,000\.00 bank/)).toBeInTheDocument()
+  })
+
+  it('labels the change figures as net worth', () => {
+    render(<HeroValue {...base} />)
+    expect(screen.getByText('Net worth change')).toBeInTheDocument()
   })
 })

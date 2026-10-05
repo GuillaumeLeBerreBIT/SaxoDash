@@ -42,7 +42,7 @@ function stub(positions = [msft]) {
   })
   queries.useNetWorth.mockReturnValue({
     ...idle,
-    data: { portfolio_value: '31567.81', bank_total: '968435.55', net_worth: '1000003.36' },
+    data: { portfolio_value: '31567.81', bank_total: '968435.55', bank_only_total: '1435.55', broker_cash: '967000.00', net_worth: '1000003.36' },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
@@ -70,6 +70,19 @@ describe('Portfolio holdings table', () => {
 
     expect(within(row).getByText('€8,773.32')).toBeInTheDocument()
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
+  })
+
+  it('shows only external banks as the bank balance and notes the Saxo cash separately', () => {
+    renderWithProviders(<Portfolio />)
+
+    const bank = screen.getByText('Bank balance').closest('div')
+    expect(within(bank.parentElement).getByText('€1,435.55')).toBeInTheDocument()
+    expect(screen.getByText(/€967,000\.00 cash at Saxo/)).toBeInTheDocument()
+  })
+
+  it('says the percentage is since purchase', () => {
+    renderWithProviders(<Portfolio />)
+    expect(screen.getAllByText(/since purchase/).length).toBeGreaterThan(0)
   })
 
   it('discloses that the mark is not a live price', () => {

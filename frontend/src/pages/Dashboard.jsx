@@ -100,7 +100,11 @@ export default function Dashboard() {
           <StatRow
             label="Portfolio value"
             value={fmtEur(summary.total_value)}
-            note={<span className={pnlTone}>{fmtPct(pnlPct)}</span>}
+            note={
+              <span className={pnlTone}>
+                {pnlPct == null ? '—' : `${fmtPct(pnlPct)} since purchase`}
+              </span>
+            }
             lead
           />
           <StatRow

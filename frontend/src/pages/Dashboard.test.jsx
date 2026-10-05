@@ -11,7 +11,7 @@ const idle = { data: undefined, isLoading: false, error: null }
 
 const insights = {
   as_of: '2026-09-09', stale: false,
-  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00' },
+  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00', bank_only: '1000.00', broker_cash: '0.00' },
   change: {
     day: { abs: '50.00', pct: 0.56 }, week: null, month: null,
     ytd: { abs: '800.00', pct: 9 }, all_time: { abs: '2000.00', pct: 25 },
@@ -97,6 +97,11 @@ describe('Dashboard', () => {
     // The old top-5 holdings table and allocation donut are gone - Portfolio owns that view now.
     expect(screen.queryByText('Largest 5 by value')).not.toBeInTheDocument()
     expect(screen.queryByText('Allocation')).not.toBeInTheDocument()
+  })
+
+  it('says the percentage beside Portfolio value is since purchase', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText(/since purchase/, { selector: 'span.text-emerald-400, span.text-red-400, span.text-zinc-500' })).toBeInTheDocument()
   })
 
   it('no longer renders a Contributors chart (superseded by Analytics\' Attribution)', () => {

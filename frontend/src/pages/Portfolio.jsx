@@ -90,14 +90,22 @@ export default function Portfolio() {
           <StatRow
             label="Investment portfolio"
             value={fmtEur(summary.total_value)}
-            note={<span className={pnlTone}>{fmtPct(summary.total_pnl_pct)}</span>}
+            note={
+              <span className={pnlTone}>
+                {summary.total_pnl_pct == null ? '—' : `${fmtPct(summary.total_pnl_pct)} since purchase`}
+              </span>
+            }
           />
           <StatRow
             label="Total P&L"
             value={<span className={pnlTone}>{fmtEur(summary.total_pnl, { sign: true })}</span>}
             note={`${fmtEur(summary.total_cost)} invested`}
           />
-          <StatRow label="Bank balance" value={fmtEur(netWorth.bank_total)} note="All connected accounts" />
+          <StatRow
+            label="Bank balance"
+            value={fmtEur(netWorth.bank_only_total)}
+            note={`${fmtEur(netWorth.broker_cash)} cash at Saxo, counted with the portfolio`}
+          />
         </StatStrip>
 
         <HistoryAreaChart
