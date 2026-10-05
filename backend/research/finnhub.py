@@ -3,7 +3,9 @@ way market.py does for Saxo - call, shape, cache. Finnhub needs a static API
 key, not a per-user OAuth token, so there is no credential lookup here.
 """
 
+import html
 import logging
+import re
 import statistics
 from datetime import date, datetime, timedelta, timezone
 
@@ -113,7 +115,7 @@ EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
 NEWS_TTL = 7200           # 2h — headlines move through the day, not by the second
 NEWS_WINDOW_DAYS = 14
-NEWS_MAX_ITEMS = 40
+NEWS_MAX_ITEMS = 30
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
@@ -447,14 +449,23 @@ def industry(symbol):
     return cache.get_or_set(_industry_cache_key(symbol), produce, INDUSTRY_TTL)
 
 
+_TAG = re.compile(r'</?[A-Za-z!][^>]*>')
+
+
+def _clean_text(value):
+    if not isinstance(value, str):
+        return ''
+    return ' '.join(html.unescape(_TAG.sub(' ', value)).split())
+
+
 def _to_news_item(row):
     ts = row.get('datetime')
     return {
         'id': row.get('id'),
         'datetime': datetime.fromtimestamp(ts, tz=timezone.utc).isoformat() if ts else None,
-        'headline': row.get('headline', ''),
+        'headline': _clean_text(row.get('headline', '')),
         'source': row.get('source', ''),
-        'summary': row.get('summary', ''),
+        'summary': _clean_text(row.get('summary', '')),
         'url': row.get('url', ''),
     }
 
@@ -465,12 +476,14 @@ def news(symbol):
     url or timestamp."""
     today = date.today()
     start = today - timedelta(days=NEWS_WINDOW_DAYS)
-    key = f'research:news:v1:{symbol}:{today.isoformat()}'
+    key = f'research:news:v2:{symbol}:{today.isoformat()}'
 
     def produce():
         rows = get_company_news(symbol, start.isoformat(), today.isoformat()) or []
-        items = [_to_news_item(r) for r in rows if r.get('headline') and r.get('url')]
-        items = [item for item in items if item['datetime']]
+        items = [
+            item for item in map(_to_news_item, rows)
+            if item['headline'] and item['url'] and item['datetime']
+        ]
         items.sort(key=lambda item: item['datetime'], reverse=True)
         return items[:NEWS_MAX_ITEMS]
 

@@ -5,6 +5,9 @@ class NetWorthSnapshot(models.Model):
     date = models.DateField(unique=True)
     portfolio_value = models.DecimalField(max_digits=14, decimal_places=2)
     bank_total = models.DecimalField(max_digits=14, decimal_places=2)
+    bank_only_total = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True, default=None,
+    )
     net_worth = models.DecimalField(max_digits=14, decimal_places=2)
     # Saxo's reconciled cash+positions total (portfolio.services.
     # get_saxo_account_value) - the *investment-performance* series

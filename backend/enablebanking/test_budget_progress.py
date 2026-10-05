@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -89,3 +90,22 @@ class BudgetProgressTest(TestCase):
 
         self.assertEqual(row['spent'], Decimal('0'))
         self.assertEqual(row['pct'], 0.0)
+
+    def test_a_future_dated_row_in_the_month_is_not_counted(self):
+        Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 10, 2), 't1')
+        self._tx(Decimal('-900'), 'GROCERIES', date(2026, 10, 20), 't2')
+
+        with patch('enablebanking.services._today', return_value=date(2026, 10, 4)):
+            row = next(r for r in budget_progress() if r['category'] == 'GROCERIES')
+
+        self.assertEqual(row['spent'], Decimal('40'))
+
+    def test_patching_the_shared_clock_moves_the_month(self):
+        Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
+        self._tx(Decimal('-40'), 'GROCERIES', date(2026, 8, 5), 't1')
+
+        with patch('enablebanking.services._today', return_value=date(2026, 8, 31)):
+            row = next(r for r in budget_progress() if r['category'] == 'GROCERIES')
+
+        self.assertEqual(row['spent'], Decimal('40'))

@@ -20,6 +20,18 @@ logger = logging.getLogger(__name__)
 REFRESH_MARGIN = timedelta(minutes=5)
 CREATE_ONLY_FIELDS = frozenset({'sector'})
 
+
+def _upsert_transaction(fields):
+    transaction_row, created = Transaction.objects.update_or_create(
+        saxo_trade_id=fields['saxo_trade_id'],
+        defaults={key: value for key, value in fields.items() if key != 'fx_rate'},
+        create_defaults=fields,
+    )
+    if not created and transaction_row.fx_rate is None and fields['fx_rate'] is not None:
+        transaction_row.fx_rate = fields['fx_rate']
+        transaction_row.save(update_fields=['fx_rate'])
+    return transaction_row
+
 SYNC_TASK = {
     # Only transient failures retry - a permanent 4xx/malformed-body error
     # (client.SaxoPermanentError) needs a code fix or user action, not three
@@ -149,9 +161,7 @@ def sync_positions(credential):
         Position.objects.exclude(ticker__in=seen_tickers).delete()
 
         for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
-            Transaction.objects.update_or_create(
-                saxo_trade_id=fields['saxo_trade_id'], defaults=fields
-            )
+            _upsert_transaction(fields)
 
     return len(seen_tickers)
 
@@ -166,9 +176,7 @@ def sync_closed_positions(credential):
     rows = 0
     with transaction.atomic():
         for fields in _mapped_rows(saxo_closed_positions, mapping.to_closed_transaction_fields):
-            Transaction.objects.update_or_create(
-                saxo_trade_id=fields['saxo_trade_id'], defaults=fields
-            )
+            _upsert_transaction(fields)
             rows += 1
 
     return rows

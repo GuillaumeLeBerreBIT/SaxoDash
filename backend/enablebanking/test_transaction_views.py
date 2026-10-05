@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
@@ -109,6 +110,27 @@ class SpendingSummaryViewTest(APITestCase):
             bank='kbc', bank_account=account, external_id='t1', amount=-40,
             currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
         )
+        self.account = account
+        patcher = patch('enablebanking.services._today', return_value=date(2026, 10, 4))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_date_from_only_excludes_tomorrows_rows_like_the_spending_page_does(self):
+        for external_id, booking_date, amount in [
+            ('today', date(2026, 10, 4), -15), ('tomorrow', date(2026, 10, 5), -900),
+        ]:
+            BankTransaction.objects.create(
+                bank='kbc', bank_account=self.account, external_id=external_id, amount=amount,
+                currency='EUR', booking_date=booking_date, category='GROCERIES',
+            )
+
+        mtd_only_from = self.client.get('/api/enablebanking/spending/summary/?date_from=2026-10-01')
+        mtd_with_to = self.client.get(
+            '/api/enablebanking/spending/summary/?date_from=2026-10-01&date_to=2026-10-04'
+        )
+
+        self.assertEqual(mtd_only_from.data['total'], Decimal('15'))
+        self.assertEqual(mtd_only_from.data['total'], mtd_with_to.data['total'])
 
     def test_returns_the_summary_shape(self):
         response = self.client.get('/api/enablebanking/spending/summary/')
@@ -121,6 +143,7 @@ class SpendingSummaryViewTest(APITestCase):
         response = self.client.get('/api/enablebanking/spending/summary/?date_from=2026-01-01&date_to=2026-01-31')
         self.assertEqual(response.data['transaction_count'], 1)
         self.assertEqual(response.data['previous_period']['total'], Decimal('0'))
+        self.assertEqual(response.data['comparison_label'], 'previous month')
 
 
 class SubscriptionViewsTest(APITestCase):
@@ -161,14 +184,31 @@ class SpendingTrendViewTest(APITestCase):
             bank='kbc', bank_account=account, external_id='t1', amount=-40,
             currency='EUR', booking_date=date(2026, 1, 5), category='GROCERIES',
         )
+        patcher = patch('enablebanking.services._today', return_value=date(2026, 1, 20))
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
-    def test_returns_monthly_totals(self):
+    def test_returns_monthly_totals_with_the_partial_flag(self):
         response = self.client.get('/api/enablebanking/spending/trend/')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data[0]['month'], '2026-01')
+        self.assertEqual(len(response.data), 6)
+        self.assertEqual(response.data[-1]['month'], '2026-01')
+        self.assertEqual(response.data[-1]['total'], Decimal('40'))
+        self.assertTrue(response.data[-1]['partial'])
+        self.assertFalse(response.data[0]['partial'])
 
     def test_respects_months_query_param(self):
         response = self.client.get('/api/enablebanking/spending/trend/?months=1')
+        self.assertEqual(len(response.data), 1)
+
+    def test_a_huge_months_value_is_clamped_to_120(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=100000')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 120)
+
+    def test_a_zero_months_value_returns_one_row(self):
+        response = self.client.get('/api/enablebanking/spending/trend/?months=0')
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data), 1)
 
 

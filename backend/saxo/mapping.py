@@ -84,6 +84,15 @@ def to_position_fields(saxo_position):
     }
 
 
+def _currency_and_rate(display, rate):
+    currency = display.get('Currency')
+    if rate:
+        return currency, _decimal(rate)
+    if currency == settings.REPORTING_CURRENCY:
+        return currency, Decimal('1')
+    return currency, None
+
+
 def to_transaction_fields(saxo_position):
     """Map one Saxo *open position* to an entry-trade ledger row.
 
@@ -101,6 +110,9 @@ def to_transaction_fields(saxo_position):
     base = saxo_position['PositionBase']
     display = saxo_position.get('DisplayAndFormat', {})
     amount = base['Amount']
+    currency, fx_rate = _currency_and_rate(
+        display, saxo_position.get('PositionView', {}).get('ConversionRateCurrent')
+    )
 
     return {
         'saxo_trade_id': str(saxo_position['PositionId']),
@@ -111,6 +123,8 @@ def to_transaction_fields(saxo_position):
         'qty': _decimal(abs(amount)),
         'price': _decimal(base['OpenPrice']),
         'account': 'Saxo',
+        'currency': currency,
+        'fx_rate': fx_rate,
     }
 
 
@@ -125,6 +139,7 @@ def to_closed_transaction_fields(saxo_closed_position):
     """
     base = saxo_closed_position['ClosedPosition']
     display = saxo_closed_position.get('DisplayAndFormat', {})
+    currency, fx_rate = _currency_and_rate(display, base.get('ConversionRateClose'))
 
     return {
         'saxo_trade_id': saxo_closed_position['ClosedPositionUniqueId'],
@@ -135,6 +150,8 @@ def to_closed_transaction_fields(saxo_closed_position):
         'qty': _decimal(abs(base['Amount'])),
         'price': _decimal(base['ClosingPrice']),
         'account': 'Saxo',
+        'currency': currency,
+        'fx_rate': fx_rate,
     }
 
 

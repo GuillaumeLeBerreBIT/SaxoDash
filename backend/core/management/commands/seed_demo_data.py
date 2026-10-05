@@ -104,7 +104,8 @@ def build_networth_snapshots(portfolio_target, bank_target, days=365):
         pv = portfolio_values[i].quantize(Decimal('0.01'))
         bv = bank_values[i].quantize(Decimal('0.01'))
         snapshots.append(NetWorthSnapshot(
-            date=d, portfolio_value=pv, bank_total=bv, net_worth=pv + bv))
+            date=d, portfolio_value=pv, bank_total=bv, bank_only_total=bv,
+            net_worth=pv + bv))
     return snapshots
 
 

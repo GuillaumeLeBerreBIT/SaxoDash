@@ -165,7 +165,7 @@ class SpendingSummaryView(APIView):
 class SpendingTrendView(APIView):
 
     def get(self, request):
-        months = int(request.query_params.get('months', 6))
+        months = min(max(int(request.query_params.get('months', 6)), 1), 120)
         return Response(spending_trend(months=months))
 
 
