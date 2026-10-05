@@ -2,7 +2,7 @@ from typing import NamedTuple
 
 from django.utils import timezone
 
-from accounts.services import get_total_bank_balance
+from accounts.services import get_bank_only_balance, get_total_bank_balance
 from portfolio.services import get_portfolio_value, get_saxo_account_value
 
 from .models import NetWorthSnapshot
@@ -59,6 +59,7 @@ def ensure_todays_snapshot():
         defaults={
             'portfolio_value': net_worth.portfolio.rounded().amount,
             'bank_total': net_worth.bank.rounded().amount,
+            'bank_only_total': get_bank_only_balance().rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
             'saxo_account_value': saxo_account_value,
         },

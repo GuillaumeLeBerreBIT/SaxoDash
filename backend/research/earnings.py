@@ -23,7 +23,7 @@ HISTORY_AHEAD = timedelta(days=120)
 # Bump when a cached payload's SHAPE changes, so a deploy never hands new code
 # an entry an old build wrote (a shape mismatch here was a 500, not just
 # staleness). Old entries expire on their own TTL.
-CACHE_V = 'v3'
+CACHE_V = 'v4'
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
@@ -33,22 +33,35 @@ MIN_WEEK, MAX_WEEK = -8, 12
 CURRENT_WEEK_TTL = 3600
 
 
+SESSIONS = frozenset({'bmo', 'amc', 'dmh'})
+
+MIN_SURPRISE_BASE = 0.01
+
+
 def _surprise(estimate, actual):
-    if estimate in (None, 0) or actual is None:
+    if estimate is None or actual is None or abs(estimate) < MIN_SURPRISE_BASE:
         return None
     return round((actual - estimate) / abs(estimate) * 100, 2)
+
+
+def _session(raw):
+    session = (raw or '').strip().lower()
+    return session if session in SESSIONS else None
+
+
+def _revenue_actual(value):
+    return None if value is not None and value < 0 else value
 
 
 def _shape(row):
     estimate = row.get('epsEstimate')
     actual = row.get('epsActual')
     rev_estimate = row.get('revenueEstimate')
-    rev_actual = row.get('revenueActual')
-    session = (row.get('hour') or '').strip().lower()
+    rev_actual = _revenue_actual(row.get('revenueActual'))
     return {
         'symbol': row.get('symbol'),
         'date': row.get('date'),
-        'session': session or None,
+        'session': _session(row.get('hour')),
         'quarter': row.get('quarter'),
         'year': row.get('year'),
         'eps_estimate': estimate,
@@ -60,11 +73,25 @@ def _shape(row):
     }
 
 
+def _completeness(event):
+    return (event['eps_actual'] is not None, sum(value is not None for value in event.values()))
+
+
+def _dedupe(events):
+    best = {}
+    for event in events:
+        key = (event['symbol'], event['date'], event['quarter'])
+        held = best.get(key)
+        if held is None or _completeness(event) > _completeness(held):
+            best[key] = event
+    return list(best.values())
+
+
 def _fetch_calendar(symbol, date_from, date_to):
     rows = finnhub.get_earnings_calendar(
         symbol, date_from.isoformat(), date_to.isoformat(),
     ).get('earningsCalendar', [])
-    shaped = (_shape(row) for row in rows)
+    shaped = _dedupe([_shape(row) for row in rows])
     # Drop dateless rows so neither layer has to bucket a null date.
     return sorted((event for event in shaped if event['date']), key=lambda event: event['date'])
 
@@ -83,7 +110,7 @@ def _market_week(start, end):
     rows = finnhub.get_earnings_calendar(
         None, start.isoformat(), end.isoformat(),
     ).get('earningsCalendar', [])
-    shaped = (_shape(row) for row in rows)
+    shaped = _dedupe([_shape(row) for row in rows])
     return sorted(
         (event for event in shaped if event['date']),
         key=lambda event: (event['date'], event['symbol'] or ''),

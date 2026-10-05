@@ -228,3 +228,58 @@ class ToClosedTransactionFieldsTest(TestCase):
         }
         fields = mapping.to_closed_transaction_fields(covered_short)
         self.assertEqual(fields['type'], 'BUY')
+
+
+class TransactionCurrencyMappingTest(TestCase):
+    def test_open_position_carries_currency_and_conversion_rate(self):
+        fields = mapping.to_transaction_fields(UNENTITLED_POSITION)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertEqual(fields['fx_rate'], Decimal('0.8600895'))
+
+    def test_reporting_currency_without_a_rate_is_exactly_one(self):
+        fields = mapping.to_transaction_fields(SAMPLE_POSITION)
+        self.assertEqual(fields['currency'], 'EUR')
+        self.assertEqual(fields['fx_rate'], Decimal('1'))
+
+    def test_foreign_currency_without_a_rate_is_unknown_not_one(self):
+        position = {
+            **UNENTITLED_POSITION,
+            'PositionView': {'CurrentPrice': 1.0},
+        }
+        fields = mapping.to_transaction_fields(position)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertIsNone(fields['fx_rate'])
+
+    def test_a_zero_conversion_rate_is_absent_not_a_rate(self):
+        position = {
+            **UNENTITLED_POSITION,
+            'PositionView': {'CurrentPrice': 1.0, 'ConversionRateCurrent': 0},
+        }
+        fields = mapping.to_transaction_fields(position)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertIsNone(fields['fx_rate'])
+
+    def test_missing_currency_is_unknown_not_eur(self):
+        position = {
+            **SAMPLE_POSITION,
+            'DisplayAndFormat': {'Symbol': 'NVDA:xnas', 'Description': 'NVIDIA'},
+        }
+        fields = mapping.to_transaction_fields(position)
+        self.assertIsNone(fields['currency'])
+        self.assertIsNone(fields['fx_rate'])
+
+    def test_closed_position_without_a_rate_has_unknown_fx(self):
+        fields = mapping.to_closed_transaction_fields(SAMPLE_CLOSED_POSITION)
+        self.assertEqual(fields['currency'], 'USD')
+        self.assertIsNone(fields['fx_rate'])
+
+    def test_closed_position_uses_the_closing_conversion_rate(self):
+        closed = {
+            **SAMPLE_CLOSED_POSITION,
+            'ClosedPosition': {
+                **SAMPLE_CLOSED_POSITION['ClosedPosition'],
+                'ConversionRateClose': 0.85,
+            },
+        }
+        fields = mapping.to_closed_transaction_fields(closed)
+        self.assertEqual(fields['fx_rate'], Decimal('0.85'))

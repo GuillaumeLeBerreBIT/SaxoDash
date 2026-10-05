@@ -11,7 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
 
-from . import benchmarks, metrics, report, views
+from . import benchmarks, history, metrics, report, views
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -217,6 +217,9 @@ class CalendarYearReturnsTest(TestCase):
 
 
 class PerformanceSummaryTest(TestCase):
+    def _row(self, summary, label):
+        return next(row for row in summary['periods'] if row['label'] == label)
+
     def test_includes_alpha_as_the_difference_between_portfolio_and_benchmark(self):
         port = [(date(2026, 1, i), 100 + i) for i in range(1, 32)]
         bench = [(date(2026, 1, i), 50 + i * 0.4) for i in range(1, 32)]
@@ -242,6 +245,103 @@ class PerformanceSummaryTest(TestCase):
         self.assertIsNone(one_month['benchmark_pct'])
         self.assertIsNone(one_month['alpha_pct'])
 
+    def test_eight_days_of_history_leaves_every_trailing_period_empty(self):
+        summary = metrics.performance_summary(synthetic_series(8), benchmark_series(8))
+
+        self.assertEqual(summary['history_days'], 8)
+        for label, missing in [
+            ('1 month', 22), ('3 months', 83), ('1 year', 357),
+            ('3 years (ann.)', 1087), ('5 years (ann.)', 1817),
+        ]:
+            row = self._row(summary, label)
+            self.assertIsNone(row['portfolio_pct'], label)
+            self.assertIsNone(row['benchmark_pct'], label)
+            self.assertIsNone(row['alpha_pct'], label)
+            self.assertEqual(row['needs_days'], missing, label)
+
+    def test_eight_days_of_history_still_reports_since_inception_unannualised(self):
+        port = synthetic_series(8)
+        summary = metrics.performance_summary(port, benchmark_series(8))
+
+        inception = self._row(summary, 'Since inception')
+        self.assertAlmostEqual(
+            inception['portfolio_pct'], (float(port[-1][1]) / float(port[0][1]) - 1) * 100
+        )
+        self.assertFalse(inception['annualised'])
+        self.assertEqual(inception['needs_days'], 0)
+
+    def test_year_to_date_is_empty_when_tracking_began_after_new_year(self):
+        summary = metrics.performance_summary(synthetic_series(8), benchmark_series(8))
+        ytd = self._row(summary, 'Year to date')
+        self.assertIsNone(ytd['portfolio_pct'])
+        self.assertIsNone(ytd['needs_days'])
+
+    def test_a_period_appears_exactly_when_history_reaches_it(self):
+        short = metrics.performance_summary(synthetic_series(29), benchmark_series(29))
+        exact = metrics.performance_summary(synthetic_series(30), benchmark_series(30))
+
+        self.assertIsNone(self._row(short, '1 month')['portfolio_pct'])
+        self.assertEqual(self._row(short, '1 month')['needs_days'], 1)
+        self.assertIsNotNone(self._row(exact, '1 month')['portfolio_pct'])
+        self.assertEqual(self._row(exact, '1 month')['needs_days'], 0)
+
+    def test_four_hundred_days_fills_one_year_but_not_the_annualised_periods(self):
+        summary = metrics.performance_summary(synthetic_series(400), benchmark_series(400))
+
+        one_year = self._row(summary, '1 year')
+        self.assertIsNotNone(one_year['portfolio_pct'])
+        self.assertIsNotNone(one_year['alpha_pct'])
+        self.assertFalse(one_year['annualised'])
+        self.assertIsNone(self._row(summary, '3 years (ann.)')['portfolio_pct'])
+        self.assertEqual(self._row(summary, '3 years (ann.)')['needs_days'], 695)
+        self.assertIsNone(self._row(summary, '5 years (ann.)')['portfolio_pct'])
+
+    def test_three_years_of_history_annualises_the_three_year_row(self):
+        port = synthetic_series(1095)
+        summary = metrics.performance_summary(port, benchmark_series(1095))
+
+        three_years = self._row(summary, '3 years (ann.)')
+        total = (float(port[-1][1]) / float(port[0][1]) - 1) * 100
+        self.assertTrue(three_years['annualised'])
+        self.assertAlmostEqual(three_years['portfolio_pct'], metrics.annualize(total, 3))
+
+    def test_a_longer_benchmark_is_compared_only_over_the_portfolios_own_window(self):
+        port = synthetic_series(40)
+        base = date(2024, 1, 1)
+        bench = [(base + timedelta(days=i), 1000 + i) for i in range(800)]
+
+        summary = metrics.performance_summary(port, bench)
+
+        def bench_at(day):
+            return 1000 + (day - base).days
+
+        start, end = port[0][0], port[-1][0]
+        inception = self._row(summary, 'Since inception')
+        self.assertAlmostEqual(inception['benchmark_pct'], (bench_at(end) / bench_at(start) - 1) * 100)
+        one_month = self._row(summary, '1 month')
+        month_start = end - timedelta(days=30)
+        self.assertAlmostEqual(one_month['benchmark_pct'], (bench_at(end) / bench_at(month_start) - 1) * 100)
+        self.assertAlmostEqual(
+            inception['alpha_pct'], inception['portfolio_pct'] - inception['benchmark_pct']
+        )
+
+    def test_a_benchmark_that_starts_after_the_portfolio_gives_no_alpha(self):
+        port = synthetic_series(40)
+        late_bench = benchmark_series(10, start=SERIES_START + timedelta(days=30))
+
+        summary = metrics.performance_summary(port, late_bench)
+
+        inception = self._row(summary, 'Since inception')
+        self.assertIsNotNone(inception['portfolio_pct'])
+        self.assertIsNone(inception['benchmark_pct'])
+        self.assertIsNone(inception['alpha_pct'])
+
+    def test_no_history_leaves_everything_empty(self):
+        summary = metrics.performance_summary([], [])
+        self.assertEqual(summary['history_days'], 0)
+        self.assertTrue(all(row['portfolio_pct'] is None for row in summary['periods']))
+        self.assertEqual(self._row(summary, 'Since inception')['needs_days'], 1)
+
 
 class RiskSummaryTest(TestCase):
     def test_insufficient_history_reports_no_data_rather_than_zeros(self):
@@ -252,15 +352,93 @@ class RiskSummaryTest(TestCase):
         self.assertIsNone(summary['data_quality'])
 
     def test_enough_history_produces_real_numbers(self):
-        dated = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
-        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+        summary = metrics.risk_summary(synthetic_series(40), risk_free_annual=0.02)
 
         self.assertTrue(summary['has_data'])
         self.assertIsNotNone(summary['volatility'])
-        self.assertIsNotNone(summary['expected_return'])
-        self.assertEqual(len(summary['drawdown_series']), 5)
-        self.assertEqual(summary['drawdown_series'][0]['date'], '2026-01-01')
+        self.assertEqual(len(summary['drawdown_series']), 41)
+        self.assertEqual(summary['drawdown_series'][0]['date'], '2025-03-03')
         self.assertEqual(summary['risk_free_annual'], 0.02)
+
+    def test_eight_days_withholds_every_annualised_statistic(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertTrue(summary['has_data'])
+        self.assertEqual(summary['history_days'], 8)
+        for key in ('expected_return', 'volatility', 'sharpe', 'sortino'):
+            self.assertIsNone(summary[key], key)
+        self.assertEqual(summary['needs_days']['volatility'], 22)
+        self.assertEqual(summary['needs_days']['sharpe'], 357)
+        self.assertIsNotNone(summary['max_drawdown'])
+        self.assertEqual(len(summary['drawdown_series']), 9)
+
+    def test_eight_days_withholds_the_monthly_statistics(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertIsNone(summary['best_month'])
+        self.assertIsNone(summary['worst_month'])
+        self.assertIsNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 81)
+
+    def test_eight_days_keeps_the_projection_inputs_but_marks_them_unreliable(self):
+        summary = metrics.risk_summary(synthetic_series(8), risk_free_annual=0.02)
+
+        self.assertFalse(summary['inputs_reliable'])
+        self.assertIsNotNone(summary['projection_inputs']['expected_return'])
+        self.assertIsNotNone(summary['projection_inputs']['volatility'])
+
+    def test_volatility_appears_exactly_at_thirty_days_but_sharpe_does_not(self):
+        short = metrics.risk_summary(synthetic_series(29), risk_free_annual=0.02)
+        exact = metrics.risk_summary(synthetic_series(30), risk_free_annual=0.02)
+
+        self.assertIsNone(short['volatility'])
+        self.assertIsNotNone(exact['volatility'])
+        self.assertEqual(exact['needs_days']['volatility'], 0)
+        self.assertIsNone(exact['sharpe'])
+
+    def test_a_full_year_fills_every_statistic_and_trusts_the_projection(self):
+        summary = metrics.risk_summary(synthetic_series(365), risk_free_annual=0.02)
+
+        for key in ('expected_return', 'volatility', 'sharpe', 'sortino'):
+            self.assertIsNotNone(summary[key], key)
+        self.assertTrue(all(missing == 0 for key, missing in summary['needs_days'].items() if key != 'monthly_stats'))
+        self.assertTrue(summary['inputs_reliable'])
+        self.assertEqual(summary['projection_inputs']['expected_return'], summary['expected_return'])
+
+    def test_four_hundred_days_has_monthly_statistics(self):
+        summary = metrics.risk_summary(synthetic_series(400), risk_free_annual=0.02)
+
+        self.assertIsNotNone(summary['best_month'])
+        self.assertIsNotNone(summary['worst_month'])
+        self.assertIsNotNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 0)
+
+    def test_two_complete_months_are_enough_for_the_monthly_statistics(self):
+        dated = [(date(2026, 1, 31), 100), (date(2026, 2, 27), 110), (date(2026, 3, 31), 99)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+
+        self.assertAlmostEqual(summary['best_month']['pct'], 10.0)
+        self.assertAlmostEqual(summary['worst_month']['pct'], -10.0)
+        self.assertAlmostEqual(summary['positive_months_pct'], 50.0)
+
+    def test_a_partial_latest_month_does_not_count_as_a_complete_one(self):
+        dated = [(date(2026, 1, 31), 100), (date(2026, 2, 27), 110), (date(2026, 3, 20), 99)]
+        summary = metrics.risk_summary(dated, risk_free_annual=0.02)
+
+        self.assertEqual(len(summary['monthly_returns']), 2)
+        self.assertIsNone(summary['best_month'])
+        self.assertIsNone(summary['positive_months_pct'])
+        self.assertEqual(summary['needs_days']['monthly_stats'], 11)
+
+    def test_no_data_branch_carries_the_new_keys(self):
+        summary = metrics.risk_summary([], risk_free_annual=0.02)
+
+        self.assertFalse(summary['has_data'])
+        self.assertEqual(summary['history_days'], 0)
+        self.assertFalse(summary['inputs_reliable'])
+        self.assertEqual(summary['projection_inputs'], {'expected_return': None, 'volatility': None})
+        self.assertIsNone(summary['needs_days']['monthly_stats'])
+        self.assertEqual(summary['needs_days']['volatility'], 30)
 
     def test_data_quality_is_low_below_twenty_points(self):
         # 5 points: has_data (>=2) but far short of a statistically stable
@@ -329,23 +507,57 @@ class BenchmarkSummaryTest(TestCase):
         self.assertFalse(summary['has_data'])
         self.assertIsNone(summary['beta'])
 
-    def test_aligns_on_common_dates_only(self):
+    def test_aligns_on_common_dates_only_and_withholds_short_history(self):
         port = [(date(2026, 1, i), v) for i, v in enumerate([100, 102, 101, 105, 103], start=1)]
         bench = [(date(2026, 1, i), v) for i, v in enumerate([50, 50.5, 50.2, 51, 50.8], start=1)]
-        port.append((date(2026, 1, 6), 106))  # portfolio-only date, no matching benchmark row
+        port.append((date(2026, 1, 6), 106))
 
         summary = metrics.benchmark_summary(port, bench, 0.02)
 
         self.assertTrue(summary['has_data'])
-        self.assertIsNotNone(summary['beta'])
-        self.assertIsNotNone(summary['tracking_error'])
-        self.assertIsNotNone(summary['information_ratio'])
-        self.assertIsNotNone(summary['jensen_alpha'])
-        # Beta/tracking error/information ratio/Jensen alpha are the most
-        # estimation-noise-sensitive stats on the page - a regression-based
-        # fit over 5 aligned days is 'low' confidence, same tiering as
-        # risk_summary, based on the aligned (not raw) point count.
+        self.assertIsNone(summary['beta'])
+        self.assertIsNone(summary['tracking_error'])
+        self.assertIsNone(summary['information_ratio'])
+        self.assertIsNone(summary['jensen_alpha'])
         self.assertEqual(summary['data_quality'], 'low')
+        self.assertEqual(summary['history_days'], 4)
+
+    def test_thresholds_release_each_statistic_in_turn(self):
+        thirty = metrics.benchmark_summary(synthetic_series(30), benchmark_series(30), 0.02)
+        ninety = metrics.benchmark_summary(synthetic_series(90), benchmark_series(90), 0.02)
+
+        self.assertIsNotNone(thirty['tracking_error'])
+        self.assertIsNone(thirty['beta'])
+        self.assertEqual(thirty['needs_days']['beta'], 60)
+        self.assertIsNotNone(ninety['beta'])
+        self.assertIsNone(ninety['information_ratio'])
+        self.assertIsNone(ninety['jensen_alpha'])
+        self.assertIsNone(ninety['expected_return'])
+
+    def test_four_hundred_days_has_every_statistic(self):
+        summary = metrics.benchmark_summary(synthetic_series(400), benchmark_series(400), 0.02)
+
+        for key in ('expected_return', 'beta', 'tracking_error', 'information_ratio', 'jensen_alpha'):
+            self.assertIsNotNone(summary[key], key)
+        self.assertEqual(summary['history_days'], 400)
+        self.assertEqual(summary['needs_days'], {
+            'tracking_error': 0, 'beta': 0, 'information_ratio': 0, 'jensen_alpha': 0,
+        })
+
+    def test_a_longer_benchmark_does_not_lend_the_portfolio_history(self):
+        long_bench = benchmark_series(900, start=SERIES_START - timedelta(days=500))
+
+        summary = metrics.benchmark_summary(synthetic_series(40), long_bench, 0.02)
+
+        self.assertEqual(summary['history_days'], 40)
+        self.assertEqual(summary['sample_size'], 41)
+        self.assertIsNone(summary['jensen_alpha'])
+        self.assertIsNotNone(summary['tracking_error'])
+
+    def test_no_overlap_reports_no_history(self):
+        summary = metrics.benchmark_summary([], [], 0.02)
+        self.assertEqual(summary['history_days'], 0)
+        self.assertEqual(summary['needs_days']['beta'], 90)
 
 
 class BenchmarkEurClosesTest(TestCase):
@@ -454,6 +666,22 @@ class PerformanceViewTest(APITestCase):
         response = self.client.get('/api/analytics/performance/?benchmark=sp500')
         self.assertEqual(response.data['benchmark']['key'], 'sp500')
 
+    def test_a_week_of_history_reports_what_is_missing_instead_of_zeros(self):
+        for offset in range(5):
+            NetWorthSnapshot.objects.create(
+                date=date(2026, 1, 5) + timedelta(days=offset),
+                portfolio_value=100, saxo_account_value=100 + offset,
+                bank_total=0, net_worth=100,
+            )
+
+        response = self.client.get('/api/analytics/performance/')
+
+        self.assertEqual(response.data['history_days'], 4)
+        by_label = {row['label']: row for row in response.data['periods']}
+        self.assertIsNone(by_label['1 year']['portfolio_pct'])
+        self.assertEqual(by_label['1 year']['needs_days'], 361)
+        self.assertIsNotNone(by_label['Since inception']['portfolio_pct'])
+
 
 @override_settings(RISK_FREE_RATE_ANNUAL=0.02, CACHES=LOCMEM)
 class RiskMetricsViewTest(APITestCase):
@@ -484,7 +712,10 @@ class RiskMetricsViewTest(APITestCase):
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['has_data'])
-        self.assertIsNotNone(response.data['volatility'])
+        self.assertEqual(response.data['history_days'], 4)
+        self.assertIsNone(response.data['volatility'])
+        self.assertIsNotNone(response.data['projection_inputs']['volatility'])
+        self.assertFalse(response.data['inputs_reliable'])
         self.assertEqual(len(response.data['drawdown_series']), 5)
 
     def test_a_sale_moving_value_from_positions_to_cash_is_not_a_drawdown(self):
@@ -626,6 +857,17 @@ class RiskReportTest(TestCase):
         self.assertIsNone(out['benchmark']['reason'])
         mock_eur_closes.assert_not_called()
 
+    @patch('analytics.report.benchmarks.eur_closes')
+    def test_the_benchmark_block_carries_history_and_needs(self, mock_eur_closes):
+        mock_eur_closes.return_value = benchmark_series(400)
+
+        out = report.risk_report(synthetic_series(8), 'world')
+
+        self.assertEqual(out['history_days'], 8)
+        self.assertEqual(out['benchmark']['history_days'], 8)
+        self.assertEqual(out['benchmark']['needs_days']['jensen_alpha'], 357)
+        self.assertIsNone(out['benchmark']['beta'])
+
     def test_an_unknown_key_resolves_to_world(self):
         self.assertEqual(report.resolve_benchmark_key('bogus'), 'world')
         self.assertEqual(report.resolve_benchmark_key('sp500'), 'sp500')
@@ -657,3 +899,55 @@ class PortfolioDatedValuesTest(TestCase):
         dates = [d for d, _ in views._portfolio_dated_values()]
 
         self.assertEqual(dates, [date(2026, 9, 18), date(2026, 9, 21)])
+
+
+SERIES_START = date(2025, 3, 3)
+
+
+def synthetic_series(days, start=SERIES_START):
+    return [
+        (start + timedelta(days=i), 100 + i * 0.2 + (3 if i % 3 == 0 else 0))
+        for i in range(days + 1)
+    ]
+
+
+def benchmark_series(days, start=SERIES_START):
+    return [
+        (start + timedelta(days=i), 50 + i * 0.1 + (1 if i % 4 == 0 else 0))
+        for i in range(days + 1)
+    ]
+
+
+class HistoryTest(TestCase):
+    def test_history_days_is_the_calendar_span_of_the_series(self):
+        self.assertEqual(history.history_days(synthetic_series(8)), 8)
+
+    def test_fewer_than_two_points_is_zero_days(self):
+        self.assertEqual(history.history_days([]), 0)
+        self.assertEqual(history.history_days([(SERIES_START, 100)]), 0)
+
+    def test_a_figure_appears_exactly_at_its_threshold(self):
+        self.assertIsNone(history.gate(1.5, 29, 'volatility'))
+        self.assertEqual(history.gate(1.5, 30, 'volatility'), 1.5)
+
+    def test_gating_passes_none_through(self):
+        self.assertIsNone(history.gate(None, 400, 'sharpe'))
+
+    def test_days_missing_is_never_negative(self):
+        self.assertEqual(history.days_missing(8, 30), 22)
+        self.assertEqual(history.days_missing(400, 30), 0)
+
+    def test_needs_days_names_every_requested_metric(self):
+        self.assertEqual(
+            history.needs_days(8, history.RISK_METRICS),
+            {'expected_return': 357, 'volatility': 22, 'sharpe': 357, 'sortino': 357},
+        )
+
+    def test_projection_inputs_are_reliable_from_a_year(self):
+        self.assertFalse(history.inputs_reliable(364))
+        self.assertTrue(history.inputs_reliable(365))
+
+    def test_a_month_is_complete_once_its_last_trading_day_has_passed(self):
+        self.assertTrue(history.latest_month_is_complete(date(2026, 3, 31)))
+        self.assertTrue(history.latest_month_is_complete(date(2026, 1, 30)))
+        self.assertFalse(history.latest_month_is_complete(date(2026, 3, 20)))

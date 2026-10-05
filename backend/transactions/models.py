@@ -21,6 +21,9 @@ class Transaction(models.Model):
     account = models.CharField(max_length=50, default='Saxo')
     saxo_trade_id = models.CharField(max_length=64, null=True,
                                      blank=True, default=None, unique=True)
+    currency = models.CharField(max_length=3, null=True, blank=True, default=None)
+    fx_rate = models.DecimalField(max_digits=18, decimal_places=8,
+                                  null=True, blank=True, default=None)
 
     class Meta:
         ordering = ['-date', '-id']

@@ -14,6 +14,9 @@ const summary = {
   sharpe: 1.2,
   sortino: 1.8,
   expected_return: 9.5,
+  history_days: 400,
+  inputs_reliable: true,
+  projection_inputs: { expected_return: 9.5, volatility: 12.345 },
   max_drawdown: -8.5,
   current_drawdown: -1.2,
   positive_months_pct: 66.7,
@@ -237,5 +240,35 @@ describe('Analytics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
 
     expect(screen.getByText(/loading portfolio value/i)).toBeInTheDocument()
+  })
+
+  it('says so on the Projection tab when its inputs come from under a year of history', async () => {
+    const thin = {
+      ...summary,
+      expected_return: null,
+      volatility: null,
+      history_days: 8,
+      inputs_reliable: false,
+      projection_inputs: { expected_return: 9.5, volatility: 12.345 },
+    }
+    queries.useRiskMetrics.mockReturnValue({ data: thin, isLoading: false, error: null })
+    queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+    queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+
+    expect(screen.getByText(/only 8 days of history/i)).toBeInTheDocument()
+    expect(screen.getByText('Median outcome')).toBeInTheDocument()
+  })
+
+  it('does not caveat the Projection tab once the inputs are reliable', async () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+
+    expect(screen.queryByText(/of history, so the range/i)).not.toBeInTheDocument()
   })
 })

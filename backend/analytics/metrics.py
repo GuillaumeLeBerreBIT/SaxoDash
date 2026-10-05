@@ -7,7 +7,9 @@ AGENTS.md for why a benchmark used to be left out entirely.
 """
 import math
 import statistics
-from datetime import timedelta
+from datetime import date, timedelta
+
+from . import history
 
 TRADING_DAYS = 252
 MIN_DAILY_POINTS = 2
@@ -161,12 +163,15 @@ def jensen_alpha(port_expected_return, bench_expected_return, beta_value, risk_f
     return port_expected_return - (risk_free_pct + beta_value * (bench_expected_return - risk_free_pct))
 
 
-def _aligned_values(dated_values_a, dated_values_b):
-    """Two date-ascending series -> same-length value lists over their common dates."""
+def _aligned(dated_values_a, dated_values_b):
     by_date_a = dict(dated_values_a)
     by_date_b = dict(dated_values_b)
     common_dates = sorted(set(by_date_a) & set(by_date_b))
-    return [float(by_date_a[d]) for d in common_dates], [float(by_date_b[d]) for d in common_dates]
+    return (
+        common_dates,
+        [float(by_date_a[d]) for d in common_dates],
+        [float(by_date_b[d]) for d in common_dates],
+    )
 
 
 def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
@@ -175,12 +180,17 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
     Aligned on dates present in both series - a portfolio snapshot with no
     matching benchmark bar (or vice versa) is excluded rather than guessed at.
     """
-    port_values, bench_values = _aligned_values(port_dated_values, bench_dated_values)
+    common_dates, port_values, bench_values = _aligned(port_dated_values, bench_dated_values)
+    days = history.span_days(common_dates)
+    needs = history.needs_days(days, history.BENCHMARK_METRICS)
+
     if len(port_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
             'data_quality': None,
             'sample_size': len(port_values),
+            'history_days': days,
+            'needs_days': needs,
             'expected_return': None,
             'beta': None,
             'tracking_error': None,
@@ -199,24 +209,44 @@ def benchmark_summary(port_dated_values, bench_dated_values, risk_free_annual):
         'has_data': True,
         'data_quality': data_quality(len(port_values)),
         'sample_size': len(port_values),
-        'expected_return': bench_expected,
-        'beta': beta_value,
-        'tracking_error': te,
-        'information_ratio': information_ratio(port_expected, bench_expected, te),
-        'jensen_alpha': jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+        'history_days': days,
+        'needs_days': needs,
+        'expected_return': history.gate(bench_expected, days, 'expected_return'),
+        'beta': history.gate(beta_value, days, 'beta'),
+        'tracking_error': history.gate(te, days, 'tracking_error'),
+        'information_ratio': history.gate(
+            information_ratio(port_expected, bench_expected, te), days, 'information_ratio'
+        ),
+        'jensen_alpha': history.gate(
+            jensen_alpha(port_expected, bench_expected, beta_value, risk_free_annual),
+            days, 'jensen_alpha',
+        ),
     }
+
+
+def window_return(dated_values, start, end):
+    window = [(d, v) for d, v in dated_values if start <= d <= end]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
+
+
+def benchmark_window_return(dated_values, start, end):
+    window = [(d, v) for d, v in dated_values if start <= d <= end]
+    if len(window) < MIN_DAILY_POINTS:
+        return None
+    tolerance = history.BENCHMARK_EDGE_TOLERANCE_DAYS
+    if (window[0][0] - start).days > tolerance or (end - window[-1][0]).days > tolerance:
+        return None
+    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
 
 
 def period_return(dated_values, days):
     """Compound % change over the trailing `days` calendar days, or None."""
     if len(dated_values) < MIN_DAILY_POINTS:
         return None
-    end_date, end_value = dated_values[-1]
-    cutoff = end_date - timedelta(days=days)
-    window = [(d, v) for d, v in dated_values if d >= cutoff]
-    if len(window) < MIN_DAILY_POINTS:
-        return None
-    return (float(end_value) / float(window[0][1]) - 1) * 100
+    end_date = dated_values[-1][0]
+    return window_return(dated_values, end_date - timedelta(days=days), end_date)
 
 
 def ytd_return(dated_values):
@@ -280,44 +310,80 @@ def performance_summary(port_dated_values, bench_dated_values):
     tracking error, a period total doesn't need day-by-day alignment, just
     enough points inside its own window.
     """
-    def row(label, port_pct, bench_pct, annualised=False):
+    days = history.history_days(port_dated_values)
+    has_window = len(port_dated_values) >= MIN_DAILY_POINTS
+    port_end = port_dated_values[-1][0] if has_window else None
+
+    def row(label, start, needs, years=None):
+        port_total = None
+        if has_window and needs == 0:
+            port_total = window_return(port_dated_values, start, port_end)
+        bench_total = None
+        if port_total is not None:
+            bench_total = benchmark_window_return(bench_dated_values, start, port_end)
+        if years:
+            port_pct, bench_pct = annualize(port_total, years), annualize(bench_total, years)
+        else:
+            port_pct, bench_pct = port_total, bench_total
         alpha = None if port_pct is None or bench_pct is None else port_pct - bench_pct
         return {
             'label': label, 'portfolio_pct': port_pct, 'benchmark_pct': bench_pct,
-            'alpha_pct': alpha, 'annualised': annualised,
+            'alpha_pct': alpha, 'annualised': bool(years), 'needs_days': needs,
         }
 
     rows = []
-    for label, days, years in PERFORMANCE_PERIODS:
-        port_total = period_return(port_dated_values, days)
-        bench_total = period_return(bench_dated_values, days)
-        if years:
-            rows.append(row(
-                f'{label} (ann.)', annualize(port_total, years), annualize(bench_total, years),
-                annualised=True,
-            ))
-        else:
-            rows.append(row(label, port_total, bench_total))
+    for label, period_days, years in PERFORMANCE_PERIODS:
+        start = port_end - timedelta(days=period_days) if has_window else None
+        shown = f'{label} (ann.)' if years else label
+        rows.append(row(shown, start, history.days_missing(days, period_days), years))
 
-    rows.insert(2, row('Year to date', ytd_return(port_dated_values), ytd_return(bench_dated_values)))
-    rows.append(row(
-        'Since inception',
-        since_inception_return(port_dated_values), since_inception_return(bench_dated_values),
-    ))
+    if not has_window:
+        ytd_start, ytd_needs = None, history.days_missing(days, 1)
+    else:
+        ytd_start = date(port_end.year, 1, 1)
+        ytd_needs = 0 if port_dated_values[0][0] <= ytd_start else None
+    rows.insert(2, row('Year to date', ytd_start, ytd_needs))
+
+    inception_start = port_dated_values[0][0] if has_window else None
+    rows.append(row('Since inception', inception_start, history.days_missing(days, 1) if not has_window else 0))
 
     return {
+        'history_days': days,
         'periods': rows,
         'calendar_years': calendar_year_returns(port_dated_values, bench_dated_values),
     }
 
 
+def _month_end(year, month):
+    return date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)
+
+
+def monthly_stats_needs_days(dated_values):
+    if not dated_values:
+        return None
+    first, last = dated_values[0][0], dated_values[-1][0]
+    year = first.year + (first.month + 1) // 12
+    month = (first.month + 1) % 12 + 1
+    return max(0, (_month_end(year, month) - last).days)
+
+
 def risk_summary(dated_values, risk_free_annual):
     """The benchmark-free Risk tab, computed from a date-ascending value series."""
+    days = history.history_days(dated_values)
+    needs = {
+        **history.needs_days(days, history.RISK_METRICS),
+        'monthly_stats': monthly_stats_needs_days(dated_values),
+    }
+
     if len(dated_values) < MIN_DAILY_POINTS:
         return {
             'has_data': False,
             'data_quality': None,
             'sample_size': len(dated_values),
+            'history_days': days,
+            'inputs_reliable': False,
+            'needs_days': needs,
+            'projection_inputs': {'expected_return': None, 'volatility': None},
             'risk_free_annual': risk_free_annual,
             'expected_return': None,
             'volatility': None,
@@ -337,20 +403,31 @@ def risk_summary(dated_values, risk_free_annual):
     returns = daily_returns(values)
     dd = drawdown_series(values)
     monthly = monthly_returns(dated_values)
-    best, worst = best_worst_month(monthly)
+    complete = monthly if history.latest_month_is_complete(dates[-1]) else monthly[:-1]
+    enough_months = len(complete) >= history.MIN_COMPLETE_MONTHS
+    best, worst = best_worst_month(complete) if enough_months else (None, None)
+    if enough_months:
+        needs['monthly_stats'] = 0
+
+    raw_expected = expected_annual_return(returns)
+    raw_volatility = annualized_volatility(returns)
 
     return {
         'has_data': True,
         'data_quality': data_quality(len(dated_values)),
         'sample_size': len(dated_values),
+        'history_days': days,
+        'inputs_reliable': history.inputs_reliable(days),
+        'needs_days': needs,
+        'projection_inputs': {'expected_return': raw_expected, 'volatility': raw_volatility},
         'risk_free_annual': risk_free_annual,
-        'expected_return': expected_annual_return(returns),
-        'volatility': annualized_volatility(returns),
-        'sharpe': sharpe_ratio(returns, risk_free_annual),
-        'sortino': sortino_ratio(returns, risk_free_annual),
+        'expected_return': history.gate(raw_expected, days, 'expected_return'),
+        'volatility': history.gate(raw_volatility, days, 'volatility'),
+        'sharpe': history.gate(sharpe_ratio(returns, risk_free_annual), days, 'sharpe'),
+        'sortino': history.gate(sortino_ratio(returns, risk_free_annual), days, 'sortino'),
         'max_drawdown': min(dd),
         'current_drawdown': dd[-1],
-        'positive_months_pct': positive_months_pct(monthly),
+        'positive_months_pct': positive_months_pct(complete) if enough_months else None,
         'best_month': best,
         'worst_month': worst,
         'drawdown_series': [{'date': d.isoformat(), 'dd': v} for d, v in zip(dates, dd)],

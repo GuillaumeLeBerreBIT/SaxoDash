@@ -94,3 +94,53 @@ class TransactionSaxoTradeIdTest(TestCase):
                 qty=Decimal('5'), price=Decimal('860.00'), account='Saxo',
                 saxo_trade_id='abc123',
             )
+
+class TransactionCurrencyAPITest(APITestCase):
+    def setUp(self):
+        user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def row(self, **extra):
+        Transaction.objects.create(
+            date=date(2026, 8, 26), type='BUY', instrument='NVIDIA', ticker='NVDA',
+            qty=Decimal('5'), price=Decimal('100.00'), account='Saxo', **extra,
+        )
+        return self.client.get('/api/transactions/').data['results'][0]
+
+    def test_total_eur_converts_the_instrument_total_with_fx_rate(self):
+        row = self.row(currency='USD', fx_rate=Decimal('0.86000000'))
+        self.assertEqual(row['currency'], 'USD')
+        self.assertEqual(Decimal(row['fx_rate']), Decimal('0.86'))
+        self.assertEqual(row['total'], Decimal('500.00'))
+        self.assertEqual(Decimal(str(row['total_eur'])), Decimal('430.00'))
+
+    def test_total_eur_is_rounded_to_cents(self):
+        row = self.row(currency='USD', fx_rate=Decimal('0.86008950'))
+        self.assertEqual(Decimal(str(row['total_eur'])), Decimal('430.04'))
+
+    def test_total_eur_is_null_without_fx_rate(self):
+        row = self.row(currency='USD')
+        self.assertEqual(row['currency'], 'USD')
+        self.assertIsNone(row['fx_rate'])
+        self.assertIsNone(row['total_eur'])
+
+    def test_total_eur_is_null_without_currency(self):
+        row = self.row(fx_rate=Decimal('0.86000000'))
+        self.assertIsNone(row['currency'])
+        self.assertIsNone(row['total_eur'])
+
+    def test_total_eur_is_null_with_a_zero_fx_rate(self):
+        row = self.row(currency='USD', fx_rate=Decimal('0'))
+        self.assertIsNone(row['total_eur'])
+
+    def test_total_eur_is_null_with_a_blank_currency(self):
+        row = self.row(currency='', fx_rate=Decimal('0.86000000'))
+        self.assertIsNone(row['total_eur'])
+
+    def test_a_row_with_neither_reports_nulls_never_eur(self):
+        row = self.row()
+        self.assertIsNone(row['currency'])
+        self.assertIsNone(row['fx_rate'])
+        self.assertIsNone(row['total_eur'])
+        self.assertEqual(row['total'], Decimal('500.00'))

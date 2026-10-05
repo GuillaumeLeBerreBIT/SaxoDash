@@ -1,7 +1,8 @@
+from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Min, Sum
 from django.db.models.functions import Abs, Coalesce, TruncMonth
 from django.utils import timezone
 
@@ -10,19 +11,50 @@ from .models import BankTransaction, Budget, ManualIbanLabel
 TRANSFER_CATEGORIES = ('TRANSFER', 'SAVINGS')
 
 
+def _today():
+    return timezone.localdate()
+
+
+def _shift_month(day, delta):
+    index = day.year * 12 + day.month - 1 + delta
+    return date(index // 12, index % 12 + 1, 1)
+
+
+def _spend_by_category(nets):
+    return {category: -net for category, net in nets if net < 0}
+
+
+def _last_day_of_month(day):
+    return _shift_month(day, 1) - timedelta(days=1)
+
+
 def _previous_period(date_from, date_to):
+    if date_from.day == 1:
+        months = (date_to.year - date_from.year) * 12 + date_to.month - date_from.month + 1
+        prev_from = _shift_month(date_from, -months)
+        prev_month_start = _shift_month(date_to, -months)
+        prev_month_end = _last_day_of_month(prev_month_start)
+        whole = date_to == _last_day_of_month(date_to)
+        if whole:
+            prev_to = prev_month_end
+            label = 'previous month' if months == 1 else f'previous {months} months'
+        else:
+            prev_to = prev_month_start.replace(day=min(date_to.day, prev_month_end.day))
+            label = 'same days last month' if months == 1 else f'same days {months} months earlier'
+        return prev_from, prev_to, label
+
     length_days = (date_to - date_from).days + 1
     prev_to = date_from - timedelta(days=1)
     prev_from = prev_to - timedelta(days=length_days - 1)
-    return prev_from, prev_to
+    return prev_from, prev_to, f'previous {length_days} days'
 
 
 def spending_summary(date_from=None, date_to=None, _include_previous=True):
-    qs = BankTransaction.objects.all()
+    today = _today()
+    end = min(date.fromisoformat(date_to), today) if date_to else today
+    qs = BankTransaction.objects.filter(booking_date__lte=end)
     if date_from:
         qs = qs.filter(booking_date__gte=date_from)
-    if date_to:
-        qs = qs.filter(booking_date__lte=date_to)
     qs = qs.annotate(effective_category=Coalesce('category_override', 'category'))
 
     spending_rows = (
@@ -31,12 +63,10 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
         .annotate(total=Sum('amount'))
         .order_by('effective_category')
     )
-    # A category whose signed total is >= 0 (fully refunded, or nothing but
-    # an unmatched credit) is dropped, not shown as negative spending.
-    categories = [
-        {'category': row['effective_category'], 'amount': -row['total']}
-        for row in spending_rows if row['total'] < 0
-    ]
+    spend = _spend_by_category(
+        (row['effective_category'], row['total']) for row in spending_rows
+    )
+    categories = [{'category': category, 'amount': amount} for category, amount in spend.items()]
 
     transfers_total = -(
         qs.filter(effective_category__in=TRANSFER_CATEGORIES, amount__lt=0)
@@ -52,10 +82,9 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
     )
 
     previous_period = None
-    if _include_previous and date_from and date_to:
-        prev_from, prev_to = _previous_period(
-            date.fromisoformat(date_from), date.fromisoformat(date_to),
-        )
+    comparison_label = None
+    if _include_previous and date_from and date.fromisoformat(date_from) <= end:
+        prev_from, prev_to, comparison_label = _previous_period(date.fromisoformat(date_from), end)
         prev = spending_summary(
             date_from=prev_from.isoformat(), date_to=prev_to.isoformat(), _include_previous=False,
         )
@@ -71,44 +100,56 @@ def spending_summary(date_from=None, date_to=None, _include_previous=True):
         'transfers': transfers_total,
         'transaction_count': transaction_count,
         'previous_period': previous_period,
+        'comparison_label': comparison_label,
     }
 
 
 def spending_trend(months=6):
-    qs = (
+    months = max(1, months)
+    current = _today().replace(day=1)
+    starts = [_shift_month(current, offset) for offset in range(1 - months, 1)]
+
+    rows = (
         BankTransaction.objects
+        .filter(booking_date__gte=starts[0], booking_date__lte=_today())
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .exclude(effective_category__in=TRANSFER_CATEGORIES)
         .annotate(month=TruncMonth('booking_date'))
-        .values('month')
+        .values('month', 'effective_category')
         .annotate(total=Sum('amount'))
-        .order_by('month')
     )
-    rows = [
-        {'month': row['month'].strftime('%Y-%m'), 'total': -row['total']}
-        for row in qs if row['total'] < 0
+    nets_by_month = defaultdict(list)
+    for row in rows:
+        nets_by_month[row['month']].append((row['effective_category'], row['total']))
+
+    first = BankTransaction.objects.aggregate(first=Min('booking_date'))['first']
+    first_month = first.replace(day=1) if first else None
+
+    return [
+        {
+            'month': start.strftime('%Y-%m'),
+            'total': (
+                None
+                if first_month is None or start < first_month
+                else sum(_spend_by_category(nets_by_month[start]).values(), Decimal('0'))
+            ),
+            'partial': start == current or start == first_month,
+        }
+        for start in starts
     ]
-    return rows[-months:]
 
 
 def _first_of_month(d):
     return d.replace(day=1)
 
 
-def _first_of_next_month(d):
-    if d.month == 12:
-        return date(d.year + 1, 1, 1)
-    return date(d.year, d.month + 1, 1)
-
-
 def budget_progress():
-    today = timezone.localdate()
+    today = _today()
     start = _first_of_month(today)
-    end = _first_of_next_month(today)
 
     spent_by_category = dict(
         BankTransaction.objects
-        .filter(booking_date__gte=start, booking_date__lt=end)
+        .filter(booking_date__gte=start, booking_date__lte=today)
         .annotate(effective_category=Coalesce('category_override', 'category'))
         .values('effective_category')
         .annotate(total=Sum('amount'))

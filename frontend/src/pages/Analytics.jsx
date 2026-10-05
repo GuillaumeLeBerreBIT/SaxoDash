@@ -264,7 +264,19 @@ export default function Analytics() {
       {tab === 'risk' && <RiskTab data={data} />}
       {tab === 'projection' && (
         summary?.total_value != null ? (
-          <Projection start={summary.total_value} expectedReturnPct={data.expected_return} volatilityPct={data.volatility} />
+          <div className="space-y-4">
+            {data.inputs_reliable === false && (
+              <Alert tone="info">
+                Projection inputs come from only {data.history_days} days of history, so the range
+                below is illustrative, not a forecast.
+              </Alert>
+            )}
+            <Projection
+              start={summary.total_value}
+              expectedReturnPct={data.projection_inputs?.expected_return}
+              volatilityPct={data.projection_inputs?.volatility}
+            />
+          </div>
         ) : (
           <ChartPlaceholder>Loading portfolio value…</ChartPlaceholder>
         )

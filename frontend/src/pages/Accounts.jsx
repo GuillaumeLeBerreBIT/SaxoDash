@@ -66,8 +66,8 @@ export default function Accounts() {
 
       <HistoryAreaChart
         title="Bank balance"
-        subtitle="Total across accounts over time"
-        dataKey="bank_total"
+        subtitle="Your connected bank accounts over time"
+        dataKey="bank_only_total"
         name="Bank"
         color={SERIES_BANK}
       />
