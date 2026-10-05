@@ -44,6 +44,7 @@ A new Django app, `investors`, independent of `research`, `saxo` and `analytics`
   - `name` (person, e.g. "Warren Buffett"), `firm` ("Berkshire Hathaway"), `cik` (unique), `slug` (unique), `blurb`
   - `curated` (bool), `added_at`
   - `last_checked_at`, `last_filing_at`
+  - `quarters_expected` (null when no backfill is running): what the import progress counts against
 - **`Filing`:**
   - `investor`, `quarter_end` (date), `filed_on`, `accession` (unique), `form` (`13F-HR` / `13F-HR/A`)
   - `amendment_type` (`''` / `RESTATEMENT` / `NEW HOLDINGS`)
@@ -76,6 +77,7 @@ The modules are small and match the `research/finnhub.py` style: call → shape 
 - **`investors/figi.py`:** `resolve(cusips)` → `{cusip: {ticker, name, figi, security_type}}`. It batches and paces requests to the keyless or keyed limits and prefers the `exchCode == 'US'` listing.
 - **`investors/importer.py`:**
   - `sync_investor(investor, since)`: lists the filings, skips accessions already stored, parses, aggregates, stores the `Filing` and its `Holding`s inside one transaction per filing, then resolves new CUSIPs.
+  - Filings import **newest quarter first**, so a newly added investor's snapshot is usable within a minute while older quarters fill in behind it.
   - `backfill(investor)`: `since = today − 5 years`.
 - **Tasks (`investors/tasks.py`):** `sync_investors`, under `@synced(reports_health=False)`, records a `SyncRun` without touching the Saxo health badge.
   - It runs daily in Feb/May/Aug/Nov, the 13F deadline months, and weekly otherwise.
@@ -125,6 +127,7 @@ Greenlight (Einhorn) is excluded: its last 13F under CIK 1079114 is from 2023.
   - top 3 holdings (ticker, weight)
   - new and exited counts vs. the previous quarter
   - `last_filing_at`, and a stale flag when there has been no filing for over 2 quarters
+  - `curated`, and `import` progress while a backfill runs: quarters imported of quarters found, CUSIPs resolved of CUSIPs seen
 - **`GET /api/investors/<slug>/?quarter=YYYY-MM-DD`:** header facts plus holdings for that quarter (latest by default). Each holding has:
   - `cusip`, `ticker`, `issuer`, `class`, `put_call`
   - `shares`, `value`, `weight`
@@ -139,7 +142,9 @@ Greenlight (Einhorn) is excluded: its last 13F under CIK 1079114 is from 2023.
   - **Shared holdings:** tickers held by N of the tracked investors, with combined value. It is a count, never a score.
   - **Most added:** tickers that are `new` in several portfolios.
   - **Overlap with you.**
-- **`GET /api/investors/search/?q=`:** EDGAR filer-name search for "Add investor". `POST /api/investors/` with `{cik}` creates the investor and queues a backfill.
+- **`GET /api/investors/search/?q=`:** EDGAR filer-name search for "Add investor". `POST /api/investors/` with `{cik, name?}` creates the investor (name defaults to the firm) and queues a backfill.
+  - Each search result carries its latest 13F quarter, positions and value, or says it has no 13F filings (not selectable), or is already tracked.
+- **`DELETE /api/investors/<slug>/`:** stops tracking an investor the user added, deleting its filings and holdings. Curated investors answer 403; `Security` rows stay, being a shared cache.
 - **`GET /api/research/held-by/<ticker>/`:** for the Research "Held by" card: tracked investors holding it in their latest quarter, with weights.
 
 Comparing quarters uses one rule throughout, in `investors/changes.py`, with one unit-tested home:
@@ -152,17 +157,35 @@ Comparing quarters uses one rule throughout, in `investors/changes.py`, with one
 
 Built with the design system's `Card`, `PageHeader`, `Th`/`Td`/`Tr`, `InstrumentLogo`, `AllocationDonut` and `TBtn`. There is a sidebar entry **Investors**.
 
+The agreed layout is the clickable mockup at https://claude.ai/artifact/PVYiFZfym6oN76ENLKbwT4 (example data). It is a starting point that later phases may extend.
+
 1. **`/investors` (overview):**
-   - a header subtitle stating the quarter and the filing lag
-   - investor cards: firm, value, positions, top 3 logos, "+N new · −N exited", and a stale note when relevant
+   - a header subtitle stating the quarter and the filing lag, and an **Add investor** button
+   - **Investor list toolbar:** filter chips *All / Curated / Added by you / Stopped filing*; a search box matching investor, firm or held ticker; a sort (largest value, most changes, most positions, name); a **Cards / Table** switch
+     - **Cards:** firm, value, positions, top 3 logos, "+N new · −N exited", latest quarter and filed date, or "No 13F since …" when stale. The first 8 show, then "Show all N". A search shows every match.
+     - **Table:** one row per investor with value, positions, top 3 logos, top-10 share, changes and latest quarter.
+     - A search with no tracked match offers "Search EDGAR for it", opening Add investor with the query filled in.
+   - **Snapshot panel** for the picked investor (card or row click; Berkshire by default):
+     - a stats strip: total value, positions, top-10 share, new · sold out vs. the previous quarter, turnover and filed date
+     - the top 10 holdings with a **Grid / Donut / List** switch, remembered per browser:
+       - **Grid:** 10 tiles (5 × 2, 2 columns on mobile) with logo, ticker, name, weight, a weight bar scaled to the largest, value, change badge and You own / Watchlist badge
+       - **Donut:** top 10 plus an "Other" slice for the remaining positions (omitted when there are ≤ 10). The centre shows total value, or the hovered slice's weight and value; a legend lists ticker, name, weight and value.
+       - **List:** the Holdings table limited to 10 rows
+     - beneath it, the remaining positions' share and value, and **Open full portfolio →**
    - panels for **Shared holdings**, **Most added** and **Overlap with you**
-   - an **Add investor** button (search → pick → "importing 5 years…" progress)
-2. **`/investors/:slug`:** a header with name, firm, quarter picker, value, positions, filed date and turnover, plus four tabs:
-   - **Holdings:** logo, ticker, name, % of portfolio, value, shares, change badge, quarters held, You own / Watchlist badge. The row opens Research; unresolved CUSIPs show the issuer name with no link.
+   - the 13F limits line (longs and listed options only, quarter-end values)
+2. **Add investor** (dialog):
+   - Searching for a firm name queries EDGAR filers. The empty state explains that 13Fs are filed under the fund's name, not the manager's.
+   - Each result shows its latest 13F, positions and value. "Already tracked" and "No 13F filings" results are disabled. A filer whose last 13F is old is marked so, and will show as stopped filing.
+   - Picking a result asks for an optional person's name ("Shown as"), describes the 5-year import (newest quarter first; a warning about slower ticker resolution when the filer has over 500 positions), and offers **Track**.
+   - The new investor gets an "Added by you" badge. Its card shows "Queued", then "Importing history · N of M quarters · tickers X/Y" with a progress bar. Its snapshot explains the wait until the newest quarter lands, then fills in as usual while older quarters continue.
+3. **`/investors/:slug`:** a back link, a header with name, firm and quarter picker, the same stats strip, plus four tabs. A user-added investor also has **Stop tracking**, confirmed in-page.
+   - **Holdings:** logo, ticker, name, % of portfolio with a weight bar, value, shares, change badge, quarters held, You own / Watchlist badge; Put/Call badges on options rows. Sorted by weight. Filter chips *All / New / Added / Trimmed / Options / Yours* and a ticker/name search; 15 rows, then "Show 25 more" with "Showing N of M". The row opens Research; unresolved CUSIPs show the issuer name with no link.
    - **Changes:** grouped New / Added / Trimmed / Sold out, each with the value delta.
-   - **Allocation:** sector donut, top-10 concentration, turnover.
-   - **History:** portfolio value and position-count chart over the stored quarters. Picking a holding shows its weight and shares over time.
-3. **Research Overview:** a small **"Held by"** card listing tracked investors and their weights in their latest quarter.
+   - **Allocation:** sector bar list (not a donut), largest first, with **Unclassified** (tickers outside `research/universe.csv`) always last in a neutral colour, so a portfolio like ARK's doesn't read as one grey wedge. Top-10 concentration and turnover.
+   - **History:** portfolio value and position count as two small charts sharing one quarter axis (no dual axis). Clicking a holding shows its weight and shares over time.
+4. **Change badges** describe without judging: *New* in the accent blue, *Sold out* in amber, *Added ▲ n%* and *Trimmed ▼ n%* neutral with arrow and text. No gain/loss green or red.
+5. **Research Overview:** a small **"Held by"** card listing tracked investors and their weights in their latest quarter.
 
 The copy follows Discover's rule: describe, never recommend. "Held by 7 of 19" is a count. There are no rank numbers, scores or "smart money buys".
 
@@ -190,9 +213,9 @@ The copy follows Discover's rule: describe, never recommend. "Held by 7 of 19" i
    - curated CSV plus `load_investors` / `backfill_investors`
    - scheduled task
    - the `/api/investors/` list and detail endpoints, enough to inspect the import
-2. **Core pages:** sidebar entry, `/investors` cards, the investor page with quarter picker and the Holdings and Changes tabs.
+2. **Core pages:** sidebar entry, `/investors` with the list toolbar (Cards / Table, filters, search, sort) and the snapshot panel (Grid / Donut / List), the investor page with quarter picker and the Holdings and Changes tabs.
 3. **Depth:** the Allocation and History tabs, and the per-holding history.
-4. **Connections:** Add investor (search and backfill progress), the Research "Held by" card, Overlap with you, Shared holdings, Most added.
+4. **Connections:** Add investor (search, import progress) and Stop tracking, the Research "Held by" card, Overlap with you, Shared holdings, Most added.
 
 ## Out of scope
 
