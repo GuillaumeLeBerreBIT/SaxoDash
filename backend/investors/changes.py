@@ -12,9 +12,9 @@ def position_change(shares, previous_shares):
     if previous_shares == 0:
         return (ADDED, None) if shares > 0 else (UNCHANGED, None)
     pct = round((shares - previous_shares) / previous_shares * 100, 2)
-    if pct >= THRESHOLD_PCT:
+    if (shares - previous_shares) * 100 >= previous_shares * THRESHOLD_PCT:
         return ADDED, pct
-    if pct <= -THRESHOLD_PCT:
+    if (previous_shares - shares) * 100 >= previous_shares * THRESHOLD_PCT:
         return TRIMMED, pct
     return UNCHANGED, pct
 

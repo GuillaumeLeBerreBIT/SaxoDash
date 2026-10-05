@@ -29,6 +29,16 @@ class PositionChangeTest(SimpleTestCase):
     def test_the_percentage_is_rounded_to_two_places(self):
         self.assertEqual(changes.position_change(200, 300), (changes.TRIMMED, -33.33))
 
+    def test_a_move_just_under_one_percent_is_unchanged(self):
+        self.assertEqual(changes.position_change(100996, 100000), (changes.UNCHANGED, 1.0))
+        self.assertEqual(changes.position_change(99004, 100000), (changes.UNCHANGED, -1.0))
+
+    def test_selling_everything_is_trimmed_by_a_hundred_percent(self):
+        self.assertEqual(changes.position_change(0, 100), (changes.TRIMMED, -100.0))
+
+    def test_zero_before_and_after_is_unchanged(self):
+        self.assertEqual(changes.position_change(0, 0), (changes.UNCHANGED, None))
+
 
 class CompareTest(SimpleTestCase):
     def test_a_first_quarter_has_no_change_column_and_nothing_sold(self):
