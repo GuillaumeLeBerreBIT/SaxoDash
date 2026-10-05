@@ -9,7 +9,8 @@ import {
   useSpendingSummary,
   useTransactions,
 } from '../api/queries'
-import { fmtEur, fmtNum, fmtPct } from '../lib/format'
+import { fmtEur, fmtNum, fmtPct, fmtQty } from '../lib/format'
+import { txPrice, txTone, txTotal, txTotalClass } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton, StatRow, StatStrip, Th, Td } from '../components/ui'
 import NetWorthChart from '../components/NetWorthChart'
@@ -19,8 +20,6 @@ import MoversCard from '../components/dashboard/MoversCard'
 import UpcomingEarnings from '../components/dashboard/UpcomingEarnings'
 import ExposureCard from '../components/dashboard/ExposureCard'
 import PortfolioHeatmap from '../components/dashboard/PortfolioHeatmap'
-
-const txTone = { BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }
 
 const NO_POSITIONS = []
 
@@ -154,15 +153,15 @@ export default function Dashboard() {
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
                   <Td edge className="text-zinc-300 num font-mono">{t.date}</Td>
                   <Td>
-                    <Badge tone={txTone[t.type] || 'zinc'}>{t.type}</Badge>
+                    <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
                   <Td>
                     <span className="font-medium text-zinc-100">{t.ticker}</span>
                     <span className="text-zinc-500 ml-2">{t.instrument}</span>
                   </Td>
-                  <Td align="right" className="num font-mono text-zinc-300">{fmtNum(t.qty, 0)}</Td>
-                  <Td align="right" className="num font-mono text-zinc-300">{fmtEur(t.price)}</Td>
-                  <Td edge align="right" className="num font-mono text-zinc-100 font-medium">{fmtEur(t.total)}</Td>
+                  <Td align="right" className="num font-mono text-zinc-300">{fmtQty(t.qty)}</Td>
+                  <Td align="right" className="num font-mono text-zinc-300">{txPrice(t)}</Td>
+                  <Td edge align="right" className={`num font-mono font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
                 </tr>
               ))}
             </tbody>

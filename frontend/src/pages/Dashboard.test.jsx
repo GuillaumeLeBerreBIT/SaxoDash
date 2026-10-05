@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import Dashboard from './Dashboard'
@@ -129,5 +129,22 @@ describe('Dashboard', () => {
   it('maps where the capital sits and what is moving it', () => {
     renderWithProviders(<Dashboard />)
     expect(screen.getByText('Allocation & movement')).toBeInTheDocument()
+  })
+
+  it('shows recent trades with instrument-currency price, signed euro total and fractional qty', () => {
+    queries.useTransactions.mockReturnValue({
+      ...idle,
+      data: [{
+        id: 1, date: '2026-09-01', type: 'BUY', instrument: 'Advanced Micro Devices', ticker: 'AMD',
+        qty: '2.5000', price: '150.00', total: '375.00', account: 'Saxo',
+        currency: 'USD', fx_rate: '0.86', total_eur: '322.50',
+      }],
+    })
+    renderWithProviders(<Dashboard />)
+
+    const line = screen.getByText('AMD', { selector: 'span.font-medium' }).closest('tr')
+    expect(within(line).getByText('2.5')).toBeInTheDocument()
+    expect(within(line).getByText('US$150.00')).toBeInTheDocument()
+    expect(within(line).getByText('-€322.50')).toBeInTheDocument()
   })
 })
