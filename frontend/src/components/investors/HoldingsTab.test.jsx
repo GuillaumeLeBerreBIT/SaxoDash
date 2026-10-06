@@ -27,6 +27,13 @@ describe('HoldingsTab', () => {
 
   it('filters by chip and by search, starting the paging over', () => {
     renderTab()
+    fireEvent.click(screen.getByRole('button', { name: 'Show 25 more' }))
+    expect(bodyRows()).toBe(40)
+    fireEvent.click(screen.getByRole('button', { name: 'Yours' }))
+    expect(bodyRows()).toBe(1)
+    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+    expect(bodyRows()).toBe(15)
+    fireEvent.click(screen.getByRole('button', { name: 'Show 25 more' }))
     fireEvent.click(screen.getByRole('button', { name: 'New' }))
     expect(bodyRows()).toBe(3)
     fireEvent.click(screen.getByRole('button', { name: 'Options' }))
@@ -42,5 +49,17 @@ describe('HoldingsTab', () => {
     renderTab()
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search holdings' }), { target: { value: 'zzz' } })
     expect(screen.getByText('No holding matches this filter.')).toBeInTheDocument()
+  })
+
+  it('shows an unresolved holding by issuer without a link', () => {
+    const unresolved = { ...holdings[0], cusip: 'U', ticker: null, issuer: 'LIBERTY LATIN AMERICA LTD' }
+    render(<MemoryRouter><HoldingsTab detail={{ previous_quarter: '2026-03-31', holdings: [unresolved] }} /></MemoryRouter>)
+    expect(screen.getByText('LIBERTY LATIN AMERICA LTD')).toBeInTheDocument()
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  it('hides the Change column without a previous quarter', () => {
+    render(<MemoryRouter><HoldingsTab detail={{ previous_quarter: null, holdings }} /></MemoryRouter>)
+    expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull()
   })
 })

@@ -34,7 +34,7 @@ export default function Investor() {
   if (isLoading || !data) return <div className="flex flex-col gap-3">{back}<Skeleton className="h-64" /></div>
 
   const subtitle = data.stale && data.quarter
-    ? <>{data.firm} · <span className="text-amber-400">{`No 13F since ${quarterLabel(data.quarter)}`}</span></>
+    ? <>{data.firm} · <span className="text-amber-400">{`No 13F since ${quarterLabel(data.quarters[0])}`}</span></>
     : data.firm
 
   return (
