@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { axisProps, gridProps, chartTooltipProps } from '../../lib/charts'
+import { fmtAxisDollars } from '../../lib/axisFormat'
 import { fmtCompact } from '../../lib/format'
 import { Card, CardHeader, InfoTip } from '../ui'
 
@@ -9,7 +10,7 @@ import { Card, CardHeader, InfoTip } from '../ui'
 // millions) - fmtCompact expects millions, so every value here is divided
 // down first.
 const toMillions = (v) => (v == null ? null : v / 1e6)
-const axisFormat = (v) => fmtCompact(toMillions(v))
+const tooltipFormat = (v) => `$${fmtCompact(toMillions(v))}`
 
 /** Annual free cash flow, total debt and cash, from SEC 10-K filings -
  *  the one place on the page with real dollar figures rather than ratios.
@@ -35,11 +36,11 @@ export default function CashFlowTrendChart({ trend }) {
           <BarChart data={trend} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis {...axisProps} dataKey="period" tickFormatter={(v) => v.slice(0, 4)} />
-            <YAxis {...axisProps} width={48} tickFormatter={axisFormat} />
+            <YAxis {...axisProps} width={56} tickFormatter={fmtAxisDollars} />
             <Tooltip
               {...chartTooltipProps}
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              formatter={(value, name) => [axisFormat(value), name]}
+              formatter={(value, name) => [tooltipFormat(value), name]}
             />
             <Bar dataKey="fcf" name="Free cash flow" fill="#34d399" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
             <Bar dataKey="cash" name="Cash" fill="#60a5fa" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
