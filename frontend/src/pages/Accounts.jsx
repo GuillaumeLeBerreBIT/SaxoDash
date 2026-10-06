@@ -1,5 +1,6 @@
 import { useBankAccounts, useBankTransactions, useSpendingSummary } from '../api/queries'
-import { fmtEur, fmtPct } from '../lib/format'
+import { fmtEur } from '../lib/format'
+import { spendingDelta } from '../lib/spendingDelta'
 import { resolvePeriod } from '../lib/periods'
 import { PageHeader, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -29,7 +30,7 @@ export default function Accounts() {
 
   const spendTotal = Number(summary?.total ?? 0)
   const prevTotal = summary?.previous_period ? Number(summary.previous_period.total) : null
-  const deltaPct = prevTotal ? ((spendTotal - prevTotal) / prevTotal) * 100 : null
+  const delta = spendingDelta({ total: spendTotal, previousTotal: prevTotal, comparisonLabel: summary?.comparison_label })
 
   const recentAcrossAll = transactions
     .slice(0, 5)
@@ -48,9 +49,9 @@ export default function Accounts() {
         <StatRow
           label="This month's spending"
           value={fmtEur(spendTotal)}
-          badge={deltaPct != null ? `${deltaPct >= 0 ? '▲' : '▼'} ${fmtPct(Math.abs(deltaPct), { sign: false })}` : undefined}
-          badgeTone={deltaPct == null ? 'zinc' : deltaPct >= 0 ? 'red' : 'emerald'}
-          note={prevTotal != null ? `vs ${fmtEur(prevTotal)} last month` : undefined}
+          badge={delta.badge}
+          badgeTone={delta.tone}
+          note={delta.note}
         />
         <StatRow label="Transfers this month" value={fmtEur(summary?.transfers ?? 0)} note="Between your own accounts" />
       </StatStrip>

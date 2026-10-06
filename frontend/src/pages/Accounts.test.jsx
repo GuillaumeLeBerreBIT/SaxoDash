@@ -78,4 +78,24 @@ describe('Accounts', () => {
     expect(screen.getAllByText('NMBS').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/KBC/).length).toBeGreaterThan(0)
   })
+
+  it('names the baseline the spending is compared with', () => {
+    mockDefaults({
+      summary: {
+        data: { total: '175.33', transfers: '200.00', previous_period: { total: '187.50' }, comparison_label: 'same days last month' },
+        isLoading: false,
+        error: null,
+      },
+    })
+    renderWithProviders(<Accounts />)
+    expect(screen.getByText('vs €187.50 same days last month')).toBeInTheDocument()
+  })
+
+  it('shows no comparison without a previous period', () => {
+    mockDefaults({
+      summary: { data: { total: '175.33', transfers: '200.00' }, isLoading: false, error: null },
+    })
+    renderWithProviders(<Accounts />)
+    expect(screen.queryByText(/^vs /)).not.toBeInTheDocument()
+  })
 })
