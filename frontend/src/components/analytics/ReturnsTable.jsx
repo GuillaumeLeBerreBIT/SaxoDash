@@ -1,5 +1,6 @@
 import { Card, CardHeader } from '../ui'
 import { fmtPct } from '../../lib/format'
+import { needsDaysNote } from '../../lib/analytics'
 
 const pctTone = (v) => (v >= 0 ? 'text-emerald-400' : 'text-red-400')
 
@@ -24,6 +25,9 @@ export default function ReturnsTable({ periods, benchmarkName }) {
               <td className="px-5 py-2.5 text-zinc-300">{row.label}</td>
               <td className={`px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctTone(row.portfolio_pct) : 'text-zinc-600'}`}>
                 {fmtPct(row.portfolio_pct, { decimals: 1 })}
+                {row.portfolio_pct == null && needsDaysNote(row.needs_days) && (
+                  <div className="text-[var(--fig-2xs)] text-zinc-600">{needsDaysNote(row.needs_days)}</div>
+                )}
               </td>
               <td className="px-3 py-2.5 text-right num text-zinc-400">{fmtPct(row.benchmark_pct, { decimals: 1 })}</td>
               <td className="px-5 py-2.5 text-right num">

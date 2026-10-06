@@ -23,4 +23,10 @@ describe('ReturnsTable', () => {
     const row = screen.getByText('Since inception').closest('tr')
     expect(row).toHaveTextContent('—')
   })
+
+  it('explains why a period is blank', () => {
+    render(<ReturnsTable periods={[{ label: '1 year', portfolio_pct: null, benchmark_pct: null, alpha_pct: null, annualised: false, needs_days: 340 }]} benchmarkName="World" />)
+
+    expect(screen.getByText('needs 340 more days')).toBeInTheDocument()
+  })
 })
