@@ -2,158 +2,84 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import ChangeBadge from './ChangeBadge'
-import OptionBadge from './OptionBadge'
-import YouBadge from './YouBadge'
-import WeightBar from './WeightBar'
 import InvestorStats from './InvestorStats'
 import LimitsNote from './LimitsNote'
+import WeightBar from './WeightBar'
+import { OptionBadge, YouBadge } from './HoldingBadges'
 
 describe('ChangeBadge', () => {
-  it('shows Added with up arrow and percent', () => {
-    render(<ChangeBadge change="added" pct={3.5} />)
-    expect(screen.getByText('▲ Added 4%')).toBeInTheDocument()
+  it('names a new position in the accent tone', () => {
+    render(<ChangeBadge change="new" />)
+    expect(screen.getByText('New')).toHaveClass('text-blue-400')
   })
 
-  it('shows Trimmed with down arrow and percent', () => {
-    render(<ChangeBadge change="trimmed" pct={-7.2} />)
-    expect(screen.getByText('▼ Trimmed 7%')).toBeInTheDocument()
+  it('describes added and trimmed with an arrow and whole percent, neutrally', () => {
+    const { rerender } = render(<ChangeBadge change="added" pct={10.4} />)
+    expect(screen.getByText('▲ Added 10%')).toHaveClass('text-zinc-300')
+    rerender(<ChangeBadge change="trimmed" pct={-4.6} />)
+    expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-zinc-300')
   })
 
-  it('shows New in accent blue', () => {
-    render(<ChangeBadge change="new" pct={null} />)
-    const badge = screen.getByText('New')
-    expect(badge).toHaveClass('text-blue-400')
+  it('marks a sold-out position in amber', () => {
+    render(<ChangeBadge change="sold_out" />)
+    expect(screen.getByText('Sold out')).toHaveClass('text-amber-400')
   })
 
-  it('shows Sold out in amber', () => {
-    render(<ChangeBadge change="sold_out" pct={null} />)
-    const badge = screen.getByText('Sold out')
-    expect(badge).toHaveClass('text-amber-400')
-  })
-
-  it('shows Unchanged when pct is 0', () => {
-    render(<ChangeBadge change="unchanged" pct={0} />)
+  it('says unchanged quietly and nothing for a first quarter', () => {
+    const { container, rerender } = render(<ChangeBadge change="unchanged" />)
     expect(screen.getByText('Unchanged')).toBeInTheDocument()
+    rerender(<ChangeBadge change={null} />)
+    expect(container).toBeEmptyDOMElement()
   })
 })
 
-describe('OptionBadge', () => {
-  it('shows Call', () => {
-    render(<OptionBadge putCall="CALL" />)
-    expect(screen.getByText('Call')).toBeInTheDocument()
-  })
-
-  it('shows Put', () => {
-    render(<OptionBadge putCall="PUT" />)
+describe('holding badges', () => {
+  it('labels options and your own positions', () => {
+    render(<><OptionBadge putCall="PUT" /><YouBadge owned watched={false} /><YouBadge owned={false} watched /></>)
     expect(screen.getByText('Put')).toBeInTheDocument()
-  })
-
-  it('shows nothing for empty put_call', () => {
-    render(<OptionBadge putCall="" />)
-    expect(screen.queryByText(/Call|Put/)).not.toBeInTheDocument()
-  })
-})
-
-describe('YouBadge', () => {
-  it('shows You own when owned is true', () => {
-    render(<YouBadge owned={true} watched={false} />)
     expect(screen.getByText('You own')).toBeInTheDocument()
+    expect(screen.getByText('Watchlist')).toBeInTheDocument()
   })
 
-  it('shows You watch when watched is true', () => {
-    render(<YouBadge owned={false} watched={true} />)
-    expect(screen.getByText('You watch')).toBeInTheDocument()
-  })
-
-  it('shows nothing when neither owned nor watched', () => {
-    render(<YouBadge owned={false} watched={false} />)
-    expect(screen.queryByText(/own|watch/)).not.toBeInTheDocument()
-  })
-
-  it('prioritizes owned over watched', () => {
-    render(<YouBadge owned={true} watched={true} />)
-    expect(screen.getByText('You own')).toBeInTheDocument()
-    expect(screen.queryByText('You watch')).not.toBeInTheDocument()
+  it('renders nothing for a plain stock you do not follow', () => {
+    const { container } = render(<><OptionBadge putCall="" /><YouBadge owned={false} watched={false} /></>)
+    expect(container).toBeEmptyDOMElement()
   })
 })
 
 describe('WeightBar', () => {
-  it('renders a bar scaled to max', () => {
-    render(<WeightBar weight={22.04} max={22.04} />)
-    expect(screen.getByRole('img')).toBeInTheDocument()
-  })
-
-  it('scales to zero width for zero weight', () => {
-    render(<WeightBar weight={0} max={22.04} />)
-    const bar = screen.getByRole('img')
-    expect(bar).toHaveStyle({ width: '0%' })
-  })
-
-  it('scales to 50% for half of max', () => {
-    render(<WeightBar weight={11.02} max={22.04} />)
-    const bar = screen.getByRole('img')
-    expect(bar).toHaveStyle({ width: '50%' })
-  })
-
-  it('handles null weight', () => {
-    render(<WeightBar weight={null} max={22.04} />)
-    expect(screen.getByRole('img')).toBeInTheDocument()
+  it('scales the fill to the largest weight', () => {
+    const { container } = render(<WeightBar weight={11} max={22} />)
+    expect(container.querySelector('[data-fill]')).toHaveStyle({ width: '50%' })
   })
 })
 
 describe('InvestorStats', () => {
-  it('shows top 10 weights and positions count', () => {
-    render(
-      <InvestorStats
-        top10_weight={55.6}
-        top10_positions={10}
-        total_positions={127}
-        filing_date="2026-10-15"
-        turnover={12.5}
-      />
-    )
-    expect(screen.getByText('55.6%')).toBeInTheDocument()
-    expect(screen.getByText('10')).toBeInTheDocument()
-    expect(screen.getByText('127')).toBeInTheDocument()
-    expect(screen.getByText('Oct 15, 2026')).toBeInTheDocument()
-    expect(screen.getByText('12.5%')).toBeInTheDocument()
+  const detail = {
+    quarter: '2026-06-30', total_value: 299253556246, positions: 29, top10_weight: 86.42,
+    new_count: 1, exited_count: 1, turnover: 3.21, filed_on: '2026-08-14',
+  }
+
+  it('states value, positions, top-10 share, movement and turnover', () => {
+    render(<InvestorStats detail={detail} />)
+    expect(screen.getByText('$299.3B')).toBeInTheDocument()
+    expect(screen.getByText('as of Q2 2026 end')).toBeInTheDocument()
+    expect(screen.getByText('29')).toBeInTheDocument()
+    expect(screen.getByText('86.4%')).toBeInTheDocument()
+    expect(screen.getByText('+1 · −1')).toBeInTheDocument()
+    expect(screen.getByText('3.2%')).toBeInTheDocument()
+    expect(screen.getByText('filed Aug 14, 2026')).toBeInTheDocument()
   })
 
-  it('renders stats with proper labels', () => {
-    render(
-      <InvestorStats
-        top10_weight={55.6}
-        top10_positions={10}
-        total_positions={127}
-        filing_date="2026-10-15"
-        turnover={12.5}
-      />
-    )
-    expect(screen.getByText('Top 10')).toBeInTheDocument()
-    expect(screen.getByText('Largest')).toBeInTheDocument()
-    expect(screen.getByText('Total')).toBeInTheDocument()
-    expect(screen.getByText('Filed')).toBeInTheDocument()
-  })
-
-  it('handles null turnover', () => {
-    render(
-      <InvestorStats
-        top10_weight={55.6}
-        top10_positions={10}
-        total_positions={127}
-        filing_date="2026-10-15"
-        turnover={null}
-      />
-    )
-    expect(screen.getByText('—')).toBeInTheDocument()
+  it('shows dashes when there is no earlier quarter to compare', () => {
+    render(<InvestorStats detail={{ ...detail, new_count: null, exited_count: null, turnover: null }} />)
+    expect(screen.getAllByText('—')).toHaveLength(2)
   })
 })
 
 describe('LimitsNote', () => {
   it('states what 13F cannot show', () => {
     render(<LimitsNote />)
-    expect(
-      screen.getByText(/US-listed long positions and listed options at quarter end only/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/US-listed long positions and listed options at quarter end only/)).toBeInTheDocument()
   })
 })

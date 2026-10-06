@@ -1,42 +1,29 @@
-import { StatStrip, StatRow, InfoTip } from '../ui'
-import { fmtPct, fmtNum } from '../../lib/format'
-import { fmtFiledDate } from '../../lib/investors'
+import { InfoTip, StatRow, StatStrip } from '../ui'
+import { UNKNOWN, fmtNum, fmtPct } from '../../lib/format'
+import { fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
 
-export default function InvestorStats({
-  top10_weight,
-  top10_positions,
-  total_positions,
-  filing_date,
-  turnover,
-}) {
+const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
+
+export default function InvestorStats({ detail }) {
+  const moved = detail.new_count == null ? UNKNOWN : `+${detail.new_count} · −${detail.exited_count}`
   return (
     <StatStrip>
-      <StatRow
-        label="Top 10"
-        value={fmtPct(top10_weight, { sign: false, decimals: 1 })}
-      />
-      <StatRow
-        label="Largest"
-        value={fmtNum(top10_positions)}
-      />
-      <StatRow
-        label="Total"
-        value={fmtNum(total_positions)}
-      />
-      <StatRow
-        label="Filed"
-        value={fmtFiledDate(filing_date)}
-      />
+      <StatRow label="Total value" value={fmtUsdCompact(detail.total_value)} note={`as of ${quarterLabel(detail.quarter)} end`} />
+      <StatRow label="Positions" value={fmtNum(detail.positions)} note="US-listed longs + options" />
+      <StatRow label="Top 10 share" value={share(detail.top10_weight)} note="of reported value" />
+      <StatRow label="vs previous quarter" value={moved} note="new · sold out" />
       <StatRow
         label={
           <span className="inline-flex items-center gap-1">
             Turnover
-            <InfoTip label="Turnover">
-              Value of positions opened this quarter plus value of positions closed (at last quarter's value), divided by both quarters' combined value.
+            <InfoTip label="What turnover means">
+              Value of positions opened this quarter plus value of positions closed, as a share of both quarters
+              combined. Size changes inside kept positions are not counted.
             </InfoTip>
           </span>
         }
-        value={fmtPct(turnover, { sign: false, decimals: 1 })}
+        value={share(detail.turnover)}
+        note={`filed ${fmtFiledDate(detail.filed_on)}`}
       />
     </StatStrip>
   )
