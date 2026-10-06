@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtEur, fmtMoney, fmtQty } from './format'
+import { fmtEur, fmtMoney, fmtQty, fmtPct } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -26,5 +26,13 @@ describe('fmtQty', () => {
 
   it('keeps the decimals on a fractional holding', () => {
     expect(fmtQty('2.5000')).toBe('2.5')
+  })
+})
+
+describe('fmtPct', () => {
+  it('renders a value that rounds to zero without a sign', () => {
+    expect(fmtPct(-0.04, { decimals: 1 })).toBe('0.0%')
+    expect(fmtPct(0.04, { decimals: 1 })).toBe('0.0%')
+    expect(fmtPct(-0.04, { decimals: 1, sign: false })).toBe('0.0%')
   })
 })

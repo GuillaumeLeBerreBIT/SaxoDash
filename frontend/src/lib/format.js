@@ -33,8 +33,10 @@ export function fmtQty(value) {
 export function fmtPct(value, { sign = true, decimals = 2 } = {}) {
     if (value == null || Number.isNaN(Number(value))) return UNKNOWN
     const n = Number(value)
+    const text = n.toFixed(decimals)
+    if (Number(text) === 0) return `${(0).toFixed(decimals)}%`
     const prefix = n < 0 ? '' : sign ? '+' : ''
-    return `${prefix}${n.toFixed(decimals)}%`
+    return `${prefix}${text}%`
 }
 
 export function fmtNum(value, decimals = 0) {
