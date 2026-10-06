@@ -51,4 +51,6 @@ def resolve(cusips):
             json=[{'idType': 'ID_CUSIP', 'idValue': cusip} for cusip in batch],
             headers=_headers(),
         )
+        if not isinstance(results, list) or len(results) != len(batch):
+            raise FigiError('OpenFIGI mapping returned an unexpected body')
         yield {cusip: _shape(result) for cusip, result in zip(batch, results)}

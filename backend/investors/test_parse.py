@@ -74,6 +74,21 @@ class ParseInformationTableTest(SimpleTestCase):
         with self.assertRaises(parse.FilingUnreadable):
             parse.parse_information_table(xml, DOLLARS_ERA)
 
+    def test_a_nan_value_is_unreadable(self):
+        xml = fixture('thousands-2022q3.xml').replace(b'<value>1234</value>', b'<value>NaN</value>')
+        with self.assertRaises(parse.FilingUnreadable):
+            parse.parse_information_table(xml, DOLLARS_ERA)
+
+    def test_an_infinite_value_is_unreadable(self):
+        xml = fixture('thousands-2022q3.xml').replace(b'<value>1234</value>', b'<value>Infinity</value>')
+        with self.assertRaises(parse.FilingUnreadable):
+            parse.parse_information_table(xml, DOLLARS_ERA)
+
+    def test_a_document_with_no_info_table_rows_is_unreadable(self):
+        xml = b'<informationTable xmlns="http://www.sec.gov/edgar/document/thirteenf/informationtable"/>'
+        with self.assertRaises(parse.FilingUnreadable):
+            parse.parse_information_table(xml, date(2026, 8, 14))
+
 
 PRIMARY = (
     '<edgarSubmission xmlns="http://www.sec.gov/edgar/thirteenffiler">'

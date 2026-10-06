@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -11,6 +12,13 @@ Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
 
 
+class FixedToday(date):
+    @classmethod
+    def today(cls):
+        return date(2026, 10, 5)
+
+
+@patch('investors.views.date', FixedToday)
 class InvestorListApiTest(APITestCase):
     def setUp(self):
         self.client.force_authenticate(User.objects.create_user('me', password='x'))

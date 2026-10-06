@@ -101,6 +101,41 @@ class SyncInvestorTest(TestCase):
         self.assertEqual(result.skipped, ['A-2'])
         self.assertEqual(list(Filing.objects.values_list('accession', flat=True)), ['A-1'])
 
+    def test_a_document_with_no_rows_is_skipped_and_never_stored(self, filings, documents, resolve):
+        filings.return_value = [NEWEST]
+        documents.side_effect = [(primary(), table())]
+
+        result = importer.sync_investor(self.investor, date(2021, 10, 5))
+
+        self.assertEqual((result.imported, result.skipped), (0, ['A-2']))
+        self.assertFalse(Filing.objects.exists())
+
+    def test_a_filing_stored_meanwhile_by_another_run_is_not_counted(self, filings, documents, resolve):
+        filings.return_value = [NEWEST]
+
+        def stored_by_a_concurrent_run(cik, accession):
+            Filing.objects.create(
+                investor=self.investor, quarter_end=Q2, filed_on=date(2026, 8, 14),
+                accession=accession, form='13F-HR', total_value=0, positions=0,
+            )
+            return primary(), table(APPLE)
+
+        documents.side_effect = stored_by_a_concurrent_run
+
+        result = importer.sync_investor(self.investor, date(2021, 10, 5))
+
+        self.assertEqual((result.imported, result.skipped), (0, []))
+        self.assertEqual(Filing.objects.count(), 1)
+        self.assertFalse(Holding.objects.exists())
+
+    def test_resolution_can_be_deferred_to_the_caller(self, filings, documents, resolve):
+        filings.return_value = []
+        with patch('investors.importer.resolve_securities') as resolve_securities:
+            importer.sync_investor(self.investor, date(2021, 10, 5), resolve=False)
+            resolve_securities.assert_not_called()
+            importer.sync_investor(self.investor, date(2021, 10, 5))
+            resolve_securities.assert_called_once_with()
+
     def test_a_filing_with_no_table_is_skipped(self, filings, documents, resolve):
         filings.return_value = [NEWEST]
         documents.side_effect = edgar.FilingIncomplete('no table')
@@ -222,9 +257,17 @@ class HistoryStartTest(TestCase):
 
 class BackfillTest(TestCase):
     @patch('investors.importer.sync_investor')
+    def test_passes_resolve_through(self, sync_investor):
+        investor = make_investor()
+
+        importer.backfill(investor, today=date(2026, 10, 5), resolve=False)
+
+        sync_investor.assert_called_once_with(investor, date(2021, 10, 5), track_progress=True, resolve=False)
+
+    @patch('investors.importer.sync_investor')
     def test_backfills_five_years_with_progress(self, sync_investor):
         investor = make_investor()
 
         importer.backfill(investor, today=date(2026, 10, 5))
 
-        sync_investor.assert_called_once_with(investor, date(2021, 10, 5), track_progress=True)
+        sync_investor.assert_called_once_with(investor, date(2021, 10, 5), track_progress=True, resolve=True)

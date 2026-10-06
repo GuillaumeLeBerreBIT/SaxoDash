@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 DOLLAR_VALUES_SINCE = date(2023, 1, 3)
 AMENDMENT_TYPES = ('RESTATEMENT', 'NEW HOLDINGS')
@@ -41,17 +41,16 @@ def _row(fields, scale):
             'put_call': fields.get('putCall', '').upper(),
             'discretion': fields.get('investmentDiscretion', ''),
         }
-    except (KeyError, InvalidOperation) as exc:
+    except (KeyError, ValueError, ArithmeticError) as exc:
         raise FilingUnreadable(f'information table row is missing or garbles {exc}') from exc
 
 
 def parse_information_table(xml, filed_on):
     scale = 1 if filed_on >= DOLLAR_VALUES_SINCE else 1000
-    return [
-        _row(_fields(node), scale)
-        for node in _root(xml, 'information table').iter()
-        if _local(node.tag) == 'infoTable'
-    ]
+    nodes = [node for node in _root(xml, 'information table').iter() if _local(node.tag) == 'infoTable']
+    if not nodes:
+        raise FilingUnreadable('information table has no infoTable rows')
+    return [_row(_fields(node), scale) for node in nodes]
 
 
 def aggregate(rows):

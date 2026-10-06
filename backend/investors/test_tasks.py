@@ -25,6 +25,16 @@ class SyncInvestorsTaskTest(TestCase):
         run = SyncRun.objects.get(task=tasks.SYNC_TASK)
         self.assertEqual((run.outcome, run.rows, run.detail), ('ok', 4, ''))
 
+    @patch('investors.tasks.importer.resolve_securities')
+    def test_tickers_resolve_once_after_every_investor_even_when_one_failed(self, resolve_securities, sync_investor):
+        sync_investor.side_effect = [edgar.EdgarError('503 busy'), SyncResult()]
+
+        with self.assertRaises(edgar.EdgarError):
+            tasks.sync_investors()
+
+        resolve_securities.assert_called_once_with()
+        self.assertTrue(all(call.kwargs == {'resolve': False} for call in sync_investor.call_args_list))
+
     def test_skipped_filings_are_named_in_the_run(self, sync_investor):
         sync_investor.side_effect = [SyncResult(imported=1, skipped=['A-9']), SyncResult()]
 

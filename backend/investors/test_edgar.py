@@ -74,6 +74,18 @@ class FilingsTest(SimpleTestCase):
         with self.assertRaises(edgar.EdgarError):
             edgar.filings(1, date(2021, 10, 5))
 
+    def test_a_payload_without_filings_is_an_edgar_error(self, get, sleep):
+        get.return_value = ok_json({'name': 'x'})
+        with self.assertRaises(edgar.EdgarError):
+            edgar.filings(1, date(2021, 10, 5))
+
+    def test_a_malformed_report_date_is_an_edgar_error(self, get, sleep):
+        get.return_value = ok_json({'filings': {'recent': columns(
+            ('A-1', '2026-08-14', 'not-a-date', '13F-HR'),
+        )}})
+        with self.assertRaises(edgar.EdgarError):
+            edgar.filings(1, date(2021, 10, 5))
+
 
 @override_settings(SEC_USER_AGENT='')
 class NotConfiguredTest(SimpleTestCase):
@@ -106,6 +118,11 @@ class FilingDocumentsTest(SimpleTestCase):
     def test_a_filing_without_an_information_table_is_incomplete(self, get, sleep):
         get.side_effect = [self.index('primary_doc.xml', 'x-index.html')]
         with self.assertRaises(edgar.FilingIncomplete):
+            edgar.filing_documents(1, '0001-26-1')
+
+    def test_an_index_without_a_directory_is_an_edgar_error(self, get, sleep):
+        get.side_effect = [ok_json({'name': 'x'})]
+        with self.assertRaises(edgar.EdgarError):
             edgar.filing_documents(1, '0001-26-1')
 
     def test_a_failed_document_download_is_an_edgar_error(self, get, sleep):

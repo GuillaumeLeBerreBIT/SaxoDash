@@ -2,11 +2,12 @@ import csv
 from io import StringIO
 from unittest.mock import patch
 
-from django.core.management import call_command
+from django.core.management import CommandError, call_command
 from django.test import TestCase
 
 from .curated import CURATED_CSV, load_curated
 from .factories import make_investor
+from . import edgar
 from .importer import SyncResult
 from .models import Investor
 
@@ -78,3 +79,31 @@ class CommandsTest(TestCase):
         call_command('backfill_investors', stdout=StringIO())
 
         self.assertEqual(backfill.call_count, 2)
+
+    @patch('investors.management.commands.backfill_investors.resolve_securities')
+    @patch('investors.management.commands.backfill_investors.backfill')
+    def test_one_failing_investor_does_not_stop_the_rest(self, backfill, resolve_securities):
+        make_investor()
+        make_investor(name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square')
+        backfill.side_effect = [edgar.EdgarError('read timed out'), SyncResult(imported=1)]
+        out, err = StringIO(), StringIO()
+
+        with self.assertRaises(CommandError) as raised:
+            call_command('backfill_investors', stdout=out, stderr=err)
+
+        self.assertEqual(backfill.call_count, 2)
+        self.assertIn('berkshire-hathaway: imported 1, skipped 0', out.getvalue())
+        self.assertIn('pershing-square: failed (read timed out)', err.getvalue())
+        self.assertIn('pershing-square', str(raised.exception))
+        self.assertNotIn('berkshire-hathaway', str(raised.exception))
+        resolve_securities.assert_called_once_with()
+
+    @patch('investors.management.commands.backfill_investors.resolve_securities')
+    @patch('investors.management.commands.backfill_investors.backfill', return_value=SyncResult())
+    def test_tickers_are_resolved_once_after_all_investors(self, backfill, resolve_securities):
+        investor = make_investor()
+
+        call_command('backfill_investors', stdout=StringIO())
+
+        backfill.assert_called_once_with(investor, resolve=False)
+        resolve_securities.assert_called_once_with()

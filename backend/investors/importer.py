@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import F, Max
 from django.utils import timezone
 
@@ -28,21 +28,25 @@ def _import_filing(investor, entry):
     primary, table = edgar.filing_documents(investor.cik, entry['accession'])
     amendment_type = parse.parse_amendment_type(primary) if entry['form'] == '13F-HR/A' else Filing.ORIGINAL
     rows = parse.aggregate(parse.parse_information_table(table, entry['filed_on']))
-    with transaction.atomic():
-        filing = Filing.objects.create(
-            investor=investor,
-            quarter_end=entry['quarter_end'],
-            filed_on=entry['filed_on'],
-            accession=entry['accession'],
-            form=entry['form'],
-            amendment_type=amendment_type,
-            total_value=sum(row['value'] for row in rows),
-            positions=len(rows),
-        )
-        Holding.objects.bulk_create(Holding(filing=filing, **row) for row in rows)
-        Security.objects.bulk_create(
-            [Security(cusip=cusip) for cusip in {row['cusip'] for row in rows}], ignore_conflicts=True,
-        )
+    try:
+        with transaction.atomic():
+            filing = Filing.objects.create(
+                investor=investor,
+                quarter_end=entry['quarter_end'],
+                filed_on=entry['filed_on'],
+                accession=entry['accession'],
+                form=entry['form'],
+                amendment_type=amendment_type,
+                total_value=sum(row['value'] for row in rows),
+                positions=len(rows),
+            )
+            Holding.objects.bulk_create(Holding(filing=filing, **row) for row in rows)
+            Security.objects.bulk_create(
+                [Security(cusip=cusip) for cusip in {row['cusip'] for row in rows}], ignore_conflicts=True,
+            )
+    except IntegrityError:
+        return False
+    return True
 
 
 def _set_expected(investor, quarters):
@@ -50,7 +54,7 @@ def _set_expected(investor, quarters):
     investor.quarters_expected = quarters
 
 
-def sync_investor(investor, since, *, track_progress=False):
+def sync_investor(investor, since, *, track_progress=False, resolve=True):
     entries = edgar.filings(investor.cik, since)
     stored = set(
         Filing.objects.filter(accession__in=[e['accession'] for e in entries]).values_list('accession', flat=True)
@@ -63,12 +67,13 @@ def sync_investor(investor, since, *, track_progress=False):
             if entry['accession'] in stored:
                 continue
             try:
-                _import_filing(investor, entry)
+                stored_now = _import_filing(investor, entry)
             except (parse.FilingUnreadable, edgar.FilingIncomplete) as exc:
                 logger.warning('Skipping %s filing %s: %s', investor.slug, entry['accession'], exc)
                 result.skipped.append(entry['accession'])
                 continue
-            result.imported += 1
+            if stored_now:
+                result.imported += 1
     finally:
         if track_progress:
             _set_expected(investor, None)
@@ -76,12 +81,13 @@ def sync_investor(investor, since, *, track_progress=False):
             last_checked_at=timezone.now(),
             last_filing_at=investor.filings.aggregate(latest=Max('filed_on'))['latest'],
         )
-    resolve_securities()
+    if resolve:
+        resolve_securities()
     return result
 
 
-def backfill(investor, today=None):
-    return sync_investor(investor, history_start(today), track_progress=True)
+def backfill(investor, today=None, resolve=True):
+    return sync_investor(investor, history_start(today), track_progress=True, resolve=resolve)
 
 
 def _store_batch(batch):

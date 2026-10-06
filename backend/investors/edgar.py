@@ -78,7 +78,7 @@ def _thirteen_f(entry, since):
     }
 
 
-def filings(cik, since):
+def _filings(cik, since):
     submissions = _json(SUBMISSIONS_URL.format(cik=cik))['filings']
     blocks = [submissions['recent']]
     for page in submissions.get('files', []):
@@ -97,10 +97,24 @@ def filings(cik, since):
     )
 
 
+def filings(cik, since):
+    try:
+        return _filings(cik, since)
+    except (KeyError, ValueError, TypeError) as exc:
+        raise EdgarError(f'unexpected submissions payload for CIK {cik}: {exc!r}') from exc
+
+
+def _item_names(index, accession):
+    try:
+        return [item['name'] for item in index['directory']['item']]
+    except (KeyError, TypeError) as exc:
+        raise EdgarError(f'unexpected index for {accession}: {exc!r}') from exc
+
+
 def filing_documents(cik, accession):
     folder = accession.replace('-', '')
     index = _json(ARCHIVE_URL.format(cik=cik, folder=folder, name='index.json'))
-    names = [item['name'] for item in index['directory']['item']]
+    names = _item_names(index, accession)
     xml_names = [name for name in names if name.lower().endswith('.xml')]
     tables = [name for name in xml_names if name.lower() != PRIMARY_DOCUMENT]
     if PRIMARY_DOCUMENT not in [name.lower() for name in xml_names] or not tables:

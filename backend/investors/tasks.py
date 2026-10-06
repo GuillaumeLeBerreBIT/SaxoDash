@@ -22,12 +22,13 @@ def _sync_all():
     failures = []
     for investor in Investor.objects.all():
         try:
-            result = importer.sync_investor(investor, since)
+            result = importer.sync_investor(investor, since, resolve=False)
         except edgar.EdgarError as exc:
             failures.append(f'{investor.slug}: {exc}')
             continue
         imported += result.imported
         skipped += result.skipped
+    importer.resolve_securities()
     if failures:
         raise edgar.EdgarError('; '.join(failures))
     return SyncReport(rows=imported, detail=_detail(skipped))

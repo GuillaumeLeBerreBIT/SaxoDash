@@ -32,6 +32,16 @@ class ResolveTest(SimpleTestCase):
         )
         self.assertNotIn('X-OPENFIGI-APIKEY', post.call_args.kwargs['headers'])
 
+    def test_a_body_that_is_not_a_list_is_a_figi_error(self, post, sleep):
+        post.return_value = ok({'error': 'nope'})
+        with self.assertRaises(figi.FigiError):
+            list(figi.resolve(['037833100']))
+
+    def test_a_list_shorter_than_the_batch_is_a_figi_error(self, post, sleep):
+        post.return_value = ok([APPLE])
+        with self.assertRaises(figi.FigiError):
+            list(figi.resolve(['037833100', '02005N100']))
+
     def test_a_cusip_with_no_us_listing_or_no_match_is_none(self, post, sleep):
         foreign = {'data': [{'figi': 'F', 'name': 'X', 'ticker': 'X', 'exchCode': 'LN', 'securityType': 'Common Stock'}]}
         post.return_value = ok([foreign, MISSING])
