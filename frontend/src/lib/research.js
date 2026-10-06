@@ -102,18 +102,24 @@ export function saxoAssetType(position) {
 // what this app's portfolio and searches are almost always about.
 const PRIMARY_EXCHANGES = new Set(['NYSE', 'NASDAQ', 'XNYS', 'XNAS', 'ARCX', 'BATS'])
 
-/** Search results for `symbol`, an exact ticker match first and, among
- *  those, a primary US exchange first - stable otherwise, so ties keep
- *  Saxo's own order. Exported so a results dropdown can show items in the
- *  same order `resolveInstrument` would pick from. */
+const LEVERAGED_PRODUCT = /\b\d(?:\.\d+)?x\b|\b(?:leveraged|ultra|ultrapro|bull|bear|inverse)\b/i
+
 export function rankInstrumentResults(results = [], symbol) {
   const query = (symbol || '').toUpperCase()
+  const key = (result) => [
+    result.symbol === query,
+    !LEVERAGED_PRODUCT.test(result.description || ''),
+    (result.symbol || '').startsWith(query),
+    PRIMARY_EXCHANGES.has((result.exchange || '').toUpperCase()),
+  ]
   return [...results].sort((a, b) => {
-    const exactDiff = (b.symbol === query) - (a.symbol === query)
-    if (exactDiff) return exactDiff
-    const aPrimary = PRIMARY_EXCHANGES.has((a.exchange || '').toUpperCase())
-    const bPrimary = PRIMARY_EXCHANGES.has((b.exchange || '').toUpperCase())
-    return (bPrimary ? 1 : 0) - (aPrimary ? 1 : 0)
+    const ka = key(a)
+    const kb = key(b)
+    for (let i = 0; i < ka.length; i++) {
+      const diff = Number(kb[i]) - Number(ka[i])
+      if (diff) return diff
+    }
+    return 0
   })
 }
 
@@ -199,10 +205,16 @@ export function barChange(bars = [], index) {
   return ((bar.close - previous.close) / previous.close) * 100
 }
 
-export function moveCaption(quote, bars) {
-  const quoted = quote?.change_pct ?? null
-  if (quoted != null) return { change: quoted, suffix: moveLabel([quote]).toLowerCase() }
-  return { change: barChange(bars), suffix: null }
+const localIsoDate = (date) => date.toLocaleDateString('en-CA')
+
+export function moveCaption(quote, bars, now = new Date()) {
+  const newest = bars[bars.length - 1]?.date
+  const stale = Boolean(newest) && newest.slice(0, 10) !== localIsoDate(now)
+  const latest = stale || moveLabel([quote]) === 'Latest session'
+  return {
+    change: quote?.change_pct ?? barChange(bars),
+    suffix: latest ? 'latest session' : 'today',
+  }
 }
 
 function pinInstrument(params, instrument) {

@@ -23,6 +23,12 @@ beforeEach(() => {
 afterEach(() => localStorage.clear())
 
 describe('CommandPalette', () => {
+  it.each([['spend', /Spending/], ['disc', /Discover/]])('offers the %s page', async (query, name) => {
+    renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
+    await userEvent.type(screen.getByRole('combobox'), query)
+    expect(screen.getByRole('option', { name })).toBeInTheDocument()
+  })
+
   it('renders nothing when closed', () => {
     renderWithProviders(<CommandPalette open={false} onClose={() => {}} />)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

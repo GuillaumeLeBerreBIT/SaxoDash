@@ -212,7 +212,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
       ) : null}
 
       {showGrid ? null : (
-        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
           <span>Symbol</span>
           <span className="text-right">Last</span>
           <span className="text-right w-14">Chg%</span>
@@ -258,7 +258,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
                 }}
-                className={`grid grid-cols-[1fr_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
+                className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
                   symbol === item.symbol
                     ? 'bg-blue-500/[0.07] border-l-blue-500'
                     : 'border-l-transparent hover:bg-white/[0.04]'
@@ -271,11 +271,11 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                     className="rounded-sm"
                     fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
                   />
-                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{item.symbol}</span>
+                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100 shrink-0">{item.symbol}</span>
                   {heldSymbols.has(item.symbol) ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                   ) : null}
-                  <span className="text-[var(--fig-2xs)] text-zinc-600 truncate">{item.exchange}</span>
+                  <span className="text-[var(--fig-2xs)] text-zinc-600 min-w-0 truncate">{item.exchange}</span>
                   {sinceLastLook != null ? (
                     <span title="Since you last looked" className="shrink-0">
                       <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />

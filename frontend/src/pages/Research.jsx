@@ -191,7 +191,7 @@ export default function Research() {
             {tab === 'earnings' ? (
               <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
             ) : null}
-            {tab === 'news' ? <NewsTab symbol={symbol} /> : null}
+            {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
             {tab === 'guide' ? <GuideTab /> : null}
           </div>
 

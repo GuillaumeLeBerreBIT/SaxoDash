@@ -1,5 +1,9 @@
+import { useState } from 'react'
+
 import { useCompanyNews } from '../../api/queries'
 import { Card, CardHeader, Skeleton } from '../ui'
+
+const NEWS_PAGE = 10
 
 const dayLabel = (iso) =>
   new Date(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
@@ -20,6 +24,7 @@ function groupByDay(items) {
 }
 
 export default function NewsTab({ symbol }) {
+  const [shown, setShown] = useState(NEWS_PAGE)
   const { data, isLoading } = useCompanyNews(symbol)
 
   if (isLoading) {
@@ -61,7 +66,7 @@ export default function NewsTab({ symbol }) {
         <CardHeader title="News" subtitle="Company headlines, last 14 days · Finnhub" />
       </div>
       <div className="divide-y divide-white/[0.04]">
-        {groupByDay(data.items).map((group) => (
+        {groupByDay(data.items.slice(0, shown)).map((group) => (
           <div key={group.key} className="px-4 py-2.5">
             <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1.5">{group.label}</div>
             <ul className="space-y-2">
@@ -87,6 +92,17 @@ export default function NewsTab({ symbol }) {
           </div>
         ))}
       </div>
+      {data.items.length > shown ? (
+        <div className="px-4 py-2.5 border-t border-white/[0.04]">
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + NEWS_PAGE)}
+            className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300"
+          >
+            Show more ({data.items.length - shown})
+          </button>
+        </div>
+      ) : null}
     </Card>
   )
 }
