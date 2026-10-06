@@ -11,8 +11,8 @@ describe('toCsv', () => {
     const csv = toCsv(TRANSACTION_COLUMNS, [tx()])
     const [header, line] = csv.split('\n')
 
-    expect(header).toBe('Date,Type,Instrument,Ticker,Qty,Price,Total,Account')
-    expect(line).toBe('2026-08-01,BUY,NVIDIA,NVDA,10,150,1500,Saxo')
+    expect(header).toBe('Date,Type,Instrument,Ticker,Qty,Price,Currency,Total,Total (EUR),Account')
+    expect(line).toBe('2026-08-01,BUY,NVIDIA,NVDA,10,150,,1500,,Saxo')
   })
 
   it('quotes cells containing a comma so columns do not shift', () => {
@@ -20,7 +20,7 @@ describe('toCsv', () => {
     const line = csv.split('\n')[1]
 
     expect(line).toContain('"Alphabet Inc, Class A"')
-    expect(line.split(',')).toHaveLength(9)
+    expect(line.split(',')).toHaveLength(11)
   })
 
   it('doubles embedded quotes', () => {
@@ -38,6 +38,20 @@ describe('toCsv', () => {
   it('renders null and undefined as empty cells', () => {
     const csv = toCsv(TRANSACTION_COLUMNS, [tx({ ticker: null, account: undefined })])
 
-    expect(csv.split('\n')[1]).toBe('2026-08-01,BUY,NVIDIA,,10,150,1500,')
+    expect(csv.split('\n')[1]).toBe('2026-08-01,BUY,NVIDIA,,10,150,,1500,,')
+  })
+})
+
+describe('TRANSACTION_COLUMNS currency', () => {
+  it('exports the instrument currency and the EUR total, empty when unknown', () => {
+    const csv = toCsv(TRANSACTION_COLUMNS, [
+      tx({ currency: 'USD', total_eur: '1290.13' }),
+      tx({ currency: null, total_eur: null }),
+    ])
+    const [header, known, unknown] = csv.split('\n')
+
+    expect(header).toBe('Date,Type,Instrument,Ticker,Qty,Price,Currency,Total,Total (EUR),Account')
+    expect(known).toBe('2026-08-01,BUY,NVIDIA,NVDA,10,150,USD,1500,1290.13,Saxo')
+    expect(unknown).toBe('2026-08-01,BUY,NVIDIA,NVDA,10,150,,1500,,Saxo')
   })
 })

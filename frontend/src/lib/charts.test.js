@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FLAT_FILL, NEGATIVE, PERFORMANCE_CAPS, POSITIVE, colorForCategory, performanceFill, withAlpha } from './charts'
+import { FLAT_FILL, NEGATIVE, PERFORMANCE_CAPS, POSITIVE, colorForCategory, paddedDomain, performanceFill, withAlpha } from './charts'
 
 describe('colorForCategory', () => {
   it('gives TRANSFER and SAVINGS a distinct neutral color, not a budgetable category color', () => {
@@ -50,5 +50,39 @@ describe('performanceFill', () => {
 
   it('keeps the monthly scale unchanged when the flat band is off', () => {
     expect(performanceFill(0, { cap: PERFORMANCE_CAPS.month, flat: 0 })).toBe(withAlpha(POSITIVE, 0.12))
+  })
+})
+
+describe('paddedDomain', () => {
+  it('leaves headroom around the data instead of starting at zero', () => {
+    const [low, high] = paddedDomain([31000, 32000])
+    expect(low).toBeLessThan(31000)
+    expect(low).toBeGreaterThan(30000)
+    expect(high).toBeGreaterThan(32000)
+    expect(high).toBeLessThan(33000)
+  })
+
+  it('gives a flat series a visible span', () => {
+    const [low, high] = paddedDomain([5000, 5000])
+    expect(high - low).toBeGreaterThan(0)
+    expect(low).toBeLessThan(5000)
+    expect(high).toBeGreaterThan(5000)
+  })
+
+  it('handles a series of zeros', () => {
+    const [low, high] = paddedDomain([0, 0])
+    expect(high).toBeGreaterThan(low)
+  })
+
+  it('never pads a non-negative series below zero', () => {
+    const [low, high] = paddedDomain([0, 1000])
+    expect(low).toBe(0)
+    expect(high).toBeGreaterThan(1000)
+  })
+
+  it('keeps an all-zero series at a zero floor with a non-zero span', () => {
+    const [low, high] = paddedDomain([0, 0])
+    expect(low).toBe(0)
+    expect(high).toBeGreaterThan(0)
   })
 })

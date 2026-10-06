@@ -15,6 +15,8 @@ export const TRANSACTION_COLUMNS = [
   { header: 'Ticker', get: (t) => t.ticker },
   { header: 'Qty', get: (t) => t.qty },
   { header: 'Price', get: (t) => t.price },
+  { header: 'Currency', get: (t) => t.currency },
   { header: 'Total', get: (t) => t.total },
+  { header: 'Total (EUR)', get: (t) => t.total_eur },
   { header: 'Account', get: (t) => t.account },
 ]

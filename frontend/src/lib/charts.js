@@ -146,3 +146,10 @@ export const moneyAxisProps = {
   width: 70,
   tickFormatter: (value) => fmtEur(value, { decimals: 0 }),
 }
+
+export function paddedDomain([min, max]) {
+  const span = max - min
+  const pad = span > 0 ? span * 0.1 : Math.abs(max) * 0.01 || 1
+  const low = min >= 0 ? Math.max(0, min - pad) : min - pad
+  return [low, max + pad]
+}
