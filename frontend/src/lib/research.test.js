@@ -418,3 +418,33 @@ describe('moveCaption', () => {
     expect(moveCaption(null, bars)).toEqual({ change: barChange(bars), suffix: null })
   })
 })
+
+describe('rankInstrumentResults ticker ranking', () => {
+  const hit = (symbol, description, exchange = 'NASDAQ', asset_type = 'Stock') => ({
+    symbol, description, exchange, asset_type, uic: symbol.length * 100 + symbol.charCodeAt(0),
+  })
+
+  it('ranks a ticker-prefix match above a leveraged ETF', () => {
+    const results = [
+      hit('TSLL', 'Direxion Daily TSLA Bull 2X Shares', 'NYSE ARCA', 'Etf'),
+      hit('TSLA', 'Tesla Inc'),
+    ]
+    expect(rankInstrumentResults(results, 'TSL').map((r) => r.symbol)).toEqual(['TSLA', 'TSLL'])
+  })
+
+  it('keeps an exact match first even against a leveraged product', () => {
+    const results = [
+      hit('TQQQ', 'ProShares UltraPro QQQ 3x Shares', 'NASDAQ', 'Etf'),
+      hit('QQQ', 'Invesco QQQ Trust', 'NASDAQ', 'Etf'),
+    ]
+    expect(rankInstrumentResults(results, 'QQQ').map((r) => r.symbol)).toEqual(['QQQ', 'TQQQ'])
+  })
+
+  it('ranks a non-leveraged non-prefix match above a leveraged prefix match', () => {
+    const results = [
+      hit('TSLL', 'Direxion Daily TSLA Bull 2X Shares', 'NYSE ARCA', 'Etf'),
+      hit('TL0', 'Tesla Ltd', 'XETR'),
+    ]
+    expect(rankInstrumentResults(results, 'TSL').map((r) => r.symbol)).toEqual(['TL0', 'TSLL'])
+  })
+})

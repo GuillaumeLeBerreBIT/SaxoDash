@@ -102,18 +102,28 @@ export function saxoAssetType(position) {
 // what this app's portfolio and searches are almost always about.
 const PRIMARY_EXCHANGES = new Set(['NYSE', 'NASDAQ', 'XNYS', 'XNAS', 'ARCX', 'BATS'])
 
+const LEVERAGED_PRODUCT = /\b\d(?:\.\d+)?x\b|\b(?:leveraged|ultra|ultrapro|bull|bear|inverse)\b/i
+
 /** Search results for `symbol`, an exact ticker match first and, among
  *  those, a primary US exchange first - stable otherwise, so ties keep
  *  Saxo's own order. Exported so a results dropdown can show items in the
  *  same order `resolveInstrument` would pick from. */
 export function rankInstrumentResults(results = [], symbol) {
   const query = (symbol || '').toUpperCase()
+  const key = (result) => [
+    result.symbol === query,
+    !LEVERAGED_PRODUCT.test(result.description || ''),
+    (result.symbol || '').startsWith(query),
+    PRIMARY_EXCHANGES.has((result.exchange || '').toUpperCase()),
+  ]
   return [...results].sort((a, b) => {
-    const exactDiff = (b.symbol === query) - (a.symbol === query)
-    if (exactDiff) return exactDiff
-    const aPrimary = PRIMARY_EXCHANGES.has((a.exchange || '').toUpperCase())
-    const bPrimary = PRIMARY_EXCHANGES.has((b.exchange || '').toUpperCase())
-    return (bPrimary ? 1 : 0) - (aPrimary ? 1 : 0)
+    const ka = key(a)
+    const kb = key(b)
+    for (let i = 0; i < ka.length; i++) {
+      const diff = Number(kb[i]) - Number(ka[i])
+      if (diff) return diff
+    }
+    return 0
   })
 }
 
