@@ -107,3 +107,26 @@ class InvestorDetailApiTest(APITestCase):
 
         self.assertEqual((data['quarter'], data['quarters'], data['holdings']), (None, [], []))
         self.assertEqual((data['total_value'], data['positions'], data['top10_weight']), (None, None, None))
+
+    def test_the_stats_strip_facts_compare_against_the_previous_quarter(self):
+        data = self.client.get(self.url()).data
+
+        self.assertEqual((data['new_count'], data['exited_count']), (2, 1))
+        self.assertEqual(data['turnover'], 30.95)
+        self.assertEqual(data['filed_on'], '2026-08-14')
+
+    def test_a_first_quarter_has_no_comparison_facts(self):
+        data = self.client.get(self.url(), {'quarter': '2026-03-31'}).data
+
+        self.assertEqual((data['new_count'], data['exited_count'], data['turnover']), (None, None, None))
+        self.assertEqual(data['filed_on'], '2026-05-15')
+
+    def test_an_empty_investor_has_no_stats_strip_facts(self):
+        make_investor(name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square')
+
+        data = self.client.get(self.url('pershing-square')).data
+
+        self.assertEqual(
+            (data['filed_on'], data['new_count'], data['exited_count'], data['turnover']),
+            (None, None, None, None),
+        )

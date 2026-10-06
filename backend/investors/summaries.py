@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from django.db.models import Max
+
 from portfolio.models import Position
 from research.models import WatchlistItem
 
@@ -36,6 +38,14 @@ def _shares(snap):
     return {key: row['shares'] for key, row in snap.items()}
 
 
+def _values(snap):
+    return {key: row['value'] for key, row in snap.items()}
+
+
+def _top10(rows):
+    return round(sum(row['weight'] for row in rows[:TOP_TEN]), 2)
+
+
 class QuarterNotFound(Exception):
     pass
 
@@ -59,6 +69,47 @@ def _yours():
     return owned, watched
 
 
+def _resolve_quarter(ends, quarter_end):
+    quarter_end = quarter_end or ends[0]
+    if quarter_end not in ends:
+        raise QuarterNotFound(quarter_end)
+    position = ends.index(quarter_end)
+    previous = ends[position + 1] if position + 1 < len(ends) else None
+    return quarter_end, previous
+
+
+def _comparison(investor, quarter_end, previous):
+    snap = quarters.snapshot(investor, quarter_end)
+    previous_snap = quarters.snapshot(investor, previous) if previous else None
+    previous_shares = _shares(previous_snap) if previous_snap is not None else None
+    per_key, sold_out = changes.compare(_shares(snap), previous_shares)
+    return snap, previous_snap, per_key, sold_out
+
+
+def _movement(snap, previous_snap, per_key, sold_out):
+    if previous_snap is None:
+        return {'new_count': None, 'exited_count': None, 'turnover': None}
+    new_keys = [key for key, change in per_key.items() if change[0] == changes.NEW]
+    return {
+        'new_count': len(new_keys),
+        'exited_count': len(sold_out),
+        'turnover': changes.turnover(_values(snap), _values(previous_snap), new_keys, sold_out),
+    }
+
+
+def _filed_on(investor, quarter_end):
+    latest = investor.filings.filter(quarter_end=quarter_end).aggregate(latest=Max('filed_on'))['latest']
+    return latest.isoformat() if latest else None
+
+
+def holds_ticker(investor, ticker):
+    ends = quarters.quarter_ends(investor)
+    if not ends:
+        return False
+    cusips = {row['cusip'] for row in quarters.snapshot(investor, ends[0]).values()}
+    return Security.objects.filter(cusip__in=cusips, ticker__iexact=ticker).exists()
+
+
 def card(investor, today):
     ends = quarters.quarter_ends(investor)
     base = {
@@ -66,6 +117,7 @@ def card(investor, today):
         'latest_quarter': None,
         'total_value': None,
         'positions': None,
+        'top10_weight': None,
         'top_holdings': [],
         'new_count': None,
         'exited_count': None,
@@ -73,21 +125,22 @@ def card(investor, today):
     if not ends:
         return base
 
-    snap = quarters.snapshot(investor, ends[0])
+    quarter_end, previous = _resolve_quarter(ends, None)
+    snap, previous_snap, per_key, sold_out = _comparison(investor, quarter_end, previous)
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
+    movement = _movement(snap, previous_snap, per_key, sold_out)
     base.update({
-        'latest_quarter': ends[0].isoformat(),
+        'latest_quarter': quarter_end.isoformat(),
         'total_value': sum(row['value'] for row in rows),
         'positions': len(rows),
+        'top10_weight': _top10(rows),
         'top_holdings': [
             {'cusip': row['cusip'], 'ticker': row['ticker'], 'issuer': row['issuer'], 'weight': row['weight']}
             for row in rows[:TOP_HOLDINGS]
         ],
+        'new_count': movement['new_count'],
+        'exited_count': movement['exited_count'],
     })
-    if len(ends) > 1:
-        per_key, sold_out = changes.compare(_shares(snap), _shares(quarters.snapshot(investor, ends[1])))
-        base['new_count'] = sum(1 for change in per_key.values() if change[0] == changes.NEW)
-        base['exited_count'] = len(sold_out)
     return base
 
 
@@ -98,23 +151,20 @@ def detail(investor, quarter_end, today):
         'quarters': [end.isoformat() for end in ends],
         'quarter': None,
         'previous_quarter': None,
+        'filed_on': None,
         'total_value': None,
         'positions': None,
         'top10_weight': None,
+        'new_count': None,
+        'exited_count': None,
+        'turnover': None,
         'holdings': [],
     }
     if not ends:
         return base
-    quarter_end = quarter_end or ends[0]
-    if quarter_end not in ends:
-        raise QuarterNotFound(quarter_end)
-    position = ends.index(quarter_end)
-    previous = ends[position + 1] if position + 1 < len(ends) else None
-
-    snap = quarters.snapshot(investor, quarter_end)
+    quarter_end, previous = _resolve_quarter(ends, quarter_end)
+    snap, previous_snap, per_key, sold_out = _comparison(investor, quarter_end, previous)
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
-    previous_shares = _shares(quarters.snapshot(investor, previous)) if previous else None
-    per_key, _ = changes.compare(_shares(snap), previous_shares)
     held = quarters.quarters_held(quarters.held_keys_by_quarter(investor), quarter_end)
     owned, watched = _yours()
 
@@ -144,9 +194,11 @@ def detail(investor, quarter_end, today):
     base.update({
         'quarter': quarter_end.isoformat(),
         'previous_quarter': previous.isoformat() if previous else None,
+        'filed_on': _filed_on(investor, quarter_end),
         'total_value': sum(row['value'] for row in rows),
         'positions': len(rows),
-        'top10_weight': round(sum(row['weight'] for row in rows[:TOP_TEN]), 2),
+        'top10_weight': _top10(rows),
+        **_movement(snap, previous_snap, per_key, sold_out),
         'holdings': holdings,
     })
     return base

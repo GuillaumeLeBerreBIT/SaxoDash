@@ -106,3 +106,25 @@ class InvestorListApiTest(APITestCase):
         names = [card['name'] for card in self.client.get(self.url).data]
 
         self.assertEqual(names, ['Bill Ackman', 'Warren Buffett'])
+
+    def test_a_card_carries_the_top_ten_share(self):
+        investor = make_investor(last_filing_at=date(2026, 8, 14))
+        store_quarter(investor, Q2, [('037833100', 'APPLE INC', 10, 600), ('02005N100', 'ALLY', 5, 400)])
+
+        self.assertEqual(self.card('berkshire-hathaway')['top10_weight'], 100.0)
+
+    def test_an_empty_investor_has_no_top_ten_share(self):
+        make_investor()
+        self.assertIsNone(self.card('berkshire-hathaway')['top10_weight'])
+
+    def test_holds_lists_only_investors_whose_latest_quarter_has_the_ticker(self):
+        berkshire = make_investor()
+        pershing = make_investor(name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square')
+        store_quarter(berkshire, Q2, [('037833100', 'APPLE INC', 10, 500)])
+        store_quarter(pershing, Q1, [('037833100', 'APPLE INC', 10, 500)])
+        store_quarter(pershing, Q2, [('02005N100', 'ALLY', 5, 400)])
+        Security.objects.create(cusip='037833100', ticker='AAPL')
+
+        slugs = [card['slug'] for card in self.client.get(self.url, {'holds': 'aapl'}).data]
+
+        self.assertEqual(slugs, ['berkshire-hathaway'])
