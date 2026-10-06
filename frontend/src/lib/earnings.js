@@ -1,3 +1,5 @@
+import { fmtCompact } from './format'
+
 export const WEEKDAYS = [
   ['mon', 'Mon'],
   ['tue', 'Tue'],
@@ -65,4 +67,45 @@ export function weekLabel(window) {
   const left = `${short(from)} ${from.getDate()}`
   const right = from.getMonth() === to.getMonth() ? `${to.getDate()}` : `${short(to)} ${to.getDate()}`
   return `${left} – ${right} · ${monthYear}`
+}
+
+export const SESSIONS = [
+  ['bmo', 'Before open'],
+  ['dmh', 'During hours'],
+  ['amc', 'After close'],
+]
+
+export function splitBySession(events) {
+  const known = new Set(SESSIONS.map(([key]) => key))
+  const sections = SESSIONS.map(([key, label]) => ({
+    key,
+    label,
+    rows: events.filter((event) => event.session === key),
+  }))
+  sections.push({
+    key: 'unset',
+    label: 'Session not set',
+    rows: events.filter((event) => !known.has(event.session)),
+  })
+  return sections.filter((section) => section.rows.length > 0)
+}
+
+export function eventKey(event) {
+  return [event.symbol, event.date, event.year ?? '', event.quarter ?? ''].join('-')
+}
+
+export function fmtRevenue(dollars) {
+  if (dollars == null) return '—'
+  const millions = dollars / 1e6
+  if (millions > 0 && millions < 1) return '<1M'
+  if (Math.abs(millions) < 10 && millions !== 0) return `${millions.toFixed(1)}M`
+  return fmtCompact(millions)
+}
+
+export function dayDate(windowFrom, key) {
+  const offset = WEEKDAYS.findIndex(([k]) => k === key)
+  if (!windowFrom || offset < 0) return null
+  const date = new Date(windowFrom + 'T00:00:00')
+  date.setDate(date.getDate() + offset)
+  return date.getDate()
 }
