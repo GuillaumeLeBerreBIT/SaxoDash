@@ -10,8 +10,10 @@ import ReturnsTable from '../components/analytics/ReturnsTable'
 import CalendarYears from '../components/analytics/CalendarYears'
 import Attribution from '../components/analytics/Attribution'
 import { fmtNum, fmtPct } from '../lib/format'
+import { needsDaysNote, pctOrDash } from '../lib/analytics'
 
 const SUBTITLE = 'Performance, risk and projection, computed from your own portfolio-value history'
+const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'
 const TABS = [
   ['performance', 'Performance'],
   ['risk', 'Risk'],
@@ -119,6 +121,11 @@ function RiskTab({ data }) {
     risk_free_annual: riskFreeAnnual, drawdown_series: drawdownSeries, monthly_returns: monthlyReturns,
   } = data
   const bench = data.benchmark
+  const needsDays = data.needs_days ?? {}
+  const benchNeedsDays = bench.needs_days ?? {}
+  const hintWhenNull = (value, metric) => (value == null ? needsDaysNote(needsDays[metric]) : undefined)
+  const benchValue = (value) => (bench.has_data && value != null)
+  const benchHint = (value, metric) => (bench.has_data && value == null ? needsDaysNote(benchNeedsDays[metric]) : undefined)
 
   return (
     <div className="space-y-4">
@@ -132,45 +139,47 @@ function RiskTab({ data }) {
           <RiskDefinitions />
           <div className="mt-4 space-y-4">
             <MetricGroup label="Return & risk">
-              <MetricTile label="Volatility (ann.)" value={`${fmtNum(volatility, 1)}%`} />
-              <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} />
-              <MetricTile label="Max drawdown" value={`${fmtNum(maxDrawdown, 1)}%`} />
-              <MetricTile label="Current drawdown" value={`${fmtNum(currentDrawdown, 1)}%`} hint="From all-time high" />
+              <MetricTile label="Volatility (ann.)" value={pctOrDash(volatility)} hint={hintWhenNull(volatility, 'volatility')} />
+              <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} hint={hintWhenNull(sharpe, 'sharpe')} />
+              <MetricTile label="Max drawdown" value={pctOrDash(maxDrawdown)} />
+              <MetricTile label="Current drawdown" value={pctOrDash(currentDrawdown)} hint="From all-time high" />
             </MetricGroup>
 
             <MetricGroup label="Consistency">
-              <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint="Downside-adjusted" />
-              <MetricTile label="Positive months" value={`${fmtNum(positiveMonthsPct, 0)}%`} />
+              <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint={sortino == null ? needsDaysNote(needsDays.sortino) : "Downside-adjusted"} />
+              <MetricTile label="Positive months" value={pctOrDash(positiveMonthsPct, 0)} hint={hintWhenNull(positiveMonthsPct, 'monthly_stats')} />
               <MetricTile
                 label="Best month"
                 value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
-                hint={monthLabel(bestMonth)}
+                hint={bestMonth ? monthLabel(bestMonth) : needsDaysNote(needsDays.monthly_stats)}
               />
               <MetricTile
                 label="Worst month"
                 value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
-                hint={monthLabel(worstMonth)}
+                hint={worstMonth ? monthLabel(worstMonth) : needsDaysNote(needsDays.monthly_stats)}
               />
             </MetricGroup>
 
             <MetricGroup label={bench.has_data ? `Vs. benchmark (${bench.name})` : 'Vs. benchmark'}>
               <MetricTile
                 label="Beta"
-                value={bench.has_data ? fmtNum(bench.beta, 2) : '—'}
-                hint={bench.has_data ? undefined : bench.reason}
+                value={benchValue(bench.beta) ? fmtNum(bench.beta, 2) : '—'}
+                hint={bench.has_data ? benchHint(bench.beta, 'beta') : bench.reason}
               />
               <MetricTile
                 label="Tracking error"
-                value={bench.has_data ? `${fmtNum(bench.tracking_error, 1)}%` : '—'}
+                value={benchValue(bench.tracking_error) ? pctOrDash(bench.tracking_error) : '—'}
+                hint={benchHint(bench.tracking_error, 'tracking_error')}
               />
               <MetricTile
                 label="Information ratio"
-                value={bench.has_data ? fmtNum(bench.information_ratio, 2) : '—'}
+                value={benchValue(bench.information_ratio) ? fmtNum(bench.information_ratio, 2) : '—'}
+                hint={benchHint(bench.information_ratio, 'information_ratio')}
               />
               <MetricTile
                 label="Jensen alpha"
-                value={bench.has_data ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
-                hint="Risk-adjusted excess"
+                value={benchValue(bench.jensen_alpha) ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
+                hint={bench.has_data && bench.jensen_alpha != null ? 'Risk-adjusted excess' : benchHint(bench.jensen_alpha, 'jensen_alpha')}
               />
             </MetricGroup>
           </div>
@@ -217,7 +226,7 @@ export default function Analytics() {
         <ChartPlaceholder tone={error ? 'red' : 'zinc'}>
           {isLoading && 'Loading…'}
           {!isLoading && error && 'Failed to load risk metrics'}
-          {!isLoading && !error && 'Not enough history yet — risk metrics need at least two days of portfolio value.'}
+          {!isLoading && !error && `Not enough history yet — risk metrics need at least two days of portfolio value (${data?.history_days ?? 0} so far).`}
         </ChartPlaceholder>
       </div>
     )
@@ -237,18 +246,22 @@ export default function Analytics() {
         <StatRow
           label="Avg. return (ann.)"
           value={fmtPct(data.expected_return, { decimals: 1 })}
-          note="Mean daily change of your Saxo account; deposits count as gains"
+          note={
+            data.expected_return == null
+              ? needsDaysNote(data.needs_days?.expected_return) ?? AVG_RETURN_NOTE
+              : AVG_RETURN_NOTE
+          }
         />
         <StatRow
           label="Volatility"
-          value={`${fmtNum(data.volatility, 1)}%`}
-          badge={`Sharpe ${fmtNum(data.sharpe, 2)}`}
+          value={pctOrDash(data.volatility)}
+          badge={data.sharpe == null ? undefined : `Sharpe ${fmtNum(data.sharpe, 2)}`}
           badgeTone="zinc"
         />
         <StatRow
           label="Max drawdown"
-          value={`${fmtNum(data.max_drawdown, 1)}%`}
-          note={`Current ${fmtNum(data.current_drawdown, 1)}%`}
+          value={pctOrDash(data.max_drawdown)}
+          note={`Current ${pctOrDash(data.current_drawdown)}`}
         />
       </StatStrip>
 
