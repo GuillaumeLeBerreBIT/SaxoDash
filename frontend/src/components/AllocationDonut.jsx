@@ -132,8 +132,8 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
             return (
               <div key={i} className="flex items-center gap-2 text-[var(--fig-xs)]">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
-                <span className="text-zinc-300 font-medium truncate">{d.name}</span>
-                {d.note && <span className="text-zinc-500 truncate">{d.note}</span>}
+                <span className="text-zinc-300 font-medium truncate shrink-0 max-w-[60%]">{d.name}</span>
+                {d.note && <span className="text-zinc-500 truncate min-w-0">{d.note}</span>}
                 <span className="ml-auto text-zinc-500 num font-mono">{formatValue(d.value)}</span>
                 <span className="text-zinc-600 num font-mono w-12 text-right">{pct.toFixed(1)}%</span>
               </div>
