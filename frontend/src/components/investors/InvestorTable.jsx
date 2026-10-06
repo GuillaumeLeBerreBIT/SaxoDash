@@ -23,8 +23,15 @@ export default function InvestorTable({ investors, selected, onSelect }) {
             {investors.map((c) => (
               <Tr key={c.slug} selected={c.slug === selected} className="cursor-pointer" onClick={() => onSelect(c.slug)}>
                 <Td edge>
-                  <div className="font-medium text-zinc-100">{c.name}</div>
-                  <div className="text-[var(--fig-xs)] text-zinc-500">{c.firm}</div>
+                  <button
+                    type="button"
+                    aria-pressed={c.slug === selected}
+                    onClick={() => onSelect(c.slug)}
+                    className="text-left rounded focus-visible:outline-2 focus-visible:outline-blue-500"
+                  >
+                    <div className="font-medium text-zinc-100">{c.name}</div>
+                    <div className="text-[var(--fig-xs)] text-zinc-500">{c.firm}</div>
+                  </button>
                 </Td>
                 <Td align="right" className="num font-mono text-zinc-200">{fmtUsdCompact(c.total_value)}</Td>
                 <Td align="right" className="num font-mono text-zinc-400">{c.positions == null ? UNKNOWN : fmtNum(c.positions)}</Td>

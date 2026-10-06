@@ -59,8 +59,10 @@ export default function Investors() {
       />
       {isLoading ? (
         <Skeleton className="h-40" />
-      ) : visible.length === 0 ? (
+      ) : visible.length === 0 && searching ? (
         <EmptyState title={`No tracked investor matches “${query}”.`} hint="Try a manager, a firm or a ticker they hold." />
+      ) : visible.length === 0 ? (
+        <EmptyState title="No investors in this group." />
       ) : layout === 'table' ? (
         <InvestorTable investors={visible} selected={selected} onSelect={select} />
       ) : (

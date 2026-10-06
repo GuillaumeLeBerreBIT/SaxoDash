@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import Investors from './Investors'
@@ -16,9 +16,9 @@ const cards = [
 ]
 
 let holders
-vi.mock('../api/queries', () => ({
-  useInvestors: ({ holds } = {}) => (holds ? { data: holders, isLoading: false } : { data: cards, isLoading: false, error: null }),
-}))
+let listed
+const useInvestors = vi.hoisted(() => vi.fn())
+vi.mock('../api/queries', () => ({ useInvestors }))
 vi.mock('../components/investors/SnapshotPanel', () => ({
   default: ({ slug }) => <p>Snapshot of {slug}</p>,
   ImportProgress: () => null,
@@ -32,7 +32,12 @@ const renderPage = (route = '/investors') =>
   )
 
 describe('Investors', () => {
-  beforeEach(() => { holders = [] })
+  beforeEach(() => {
+    holders = []
+    listed = cards
+    useInvestors.mockReset()
+    useInvestors.mockImplementation(({ holds } = {}) => (holds ? { data: holders, isLoading: false } : { data: listed, isLoading: false, error: null }))
+  })
 
   it('states how many managers are tracked, the latest quarter and the lag', () => {
     renderPage()
@@ -85,6 +90,34 @@ describe('Investors', () => {
     renderPage()
     fireEvent.change(screen.getByRole('combobox', { name: 'Sort investors' }), { target: { value: 'name' } })
     expect(within(screen.getAllByTestId('investor-card')[0]).getByText('Manager 0')).toBeInTheDocument()
+  })
+
+  it('picks an investor from the table with the keyboard-reachable button', () => {
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }))
+    fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: /Manager 7/ }))
+    expect(screen.getByText('Snapshot of fund-7')).toBeInTheDocument()
+  })
+
+  it('includes investors holding a searched ticker', () => {
+    vi.useFakeTimers()
+    try {
+      holders = [{ slug: 'scion-asset-management' }]
+      renderPage()
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search investors' }), { target: { value: 'aapl' } })
+      act(() => { vi.advanceTimersByTime(400) })
+      expect(useInvestors).toHaveBeenCalledWith({ holds: 'AAPL' })
+      expect(screen.getByText('Michael Burry')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('says the group is empty when a filter, not a search, matches nobody', () => {
+    listed = cards.map((c) => ({ ...c, stale: false }))
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Stopped filing' }))
+    expect(screen.getByText('No investors in this group.')).toBeInTheDocument()
   })
 
   it('states the 13F limits', () => {
