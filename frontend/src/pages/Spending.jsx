@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useSpendingSummary, useSubscriptions, useDismissSubscription } from '../api/queries'
-import { fmtEur, fmtNum, fmtPct } from '../lib/format'
+import { fmtEur, fmtNum } from '../lib/format'
+import { spendingDelta } from '../lib/spendingDelta'
+import { topCategory } from '../lib/spending'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { resolvePeriod } from '../lib/periods'
-import { PageHeader, StatStrip, StatRow } from '../components/ui'
+import { PageHeader, StatStrip, StatRow, InfoTip } from '../components/ui'
 import PeriodSelector from '../components/PeriodSelector'
 import SpendingCategoryChart from '../components/SpendingCategoryChart'
 import BudgetSection from '../components/BudgetSection'
@@ -20,10 +22,8 @@ export default function Spending() {
 
   const total = Number(summary?.total ?? 0)
   const prevTotal = summary?.previous_period ? Number(summary.previous_period.total) : null
-  const deltaPct = prevTotal ? ((total - prevTotal) / prevTotal) * 100 : null
-  const topCategory = (summary?.categories ?? [])
-    .slice()
-    .sort((a, b) => Number(b.amount) - Number(a.amount))[0]
+  const delta = spendingDelta({ total, previousTotal: prevTotal, comparisonLabel: summary?.comparison_label })
+  const top = topCategory(summary?.categories)
 
   return (
     <div className="space-y-4">
@@ -38,22 +38,25 @@ export default function Spending() {
           label={`Total spending — ${period.label}`}
           value={fmtEur(summary?.total ?? 0)}
           lead
-          badge={
-            deltaPct != null
-              ? `${deltaPct >= 0 ? '▲' : '▼'} ${fmtPct(Math.abs(deltaPct), { sign: false })}`
-              : undefined
-          }
-          badgeTone={deltaPct == null ? 'zinc' : deltaPct >= 0 ? 'red' : 'emerald'}
-          note={prevTotal != null ? `vs ${fmtEur(prevTotal)} last period` : undefined}
+          badge={delta.badge}
+          badgeTone={delta.tone}
+          note={delta.note}
         />
         <StatRow label="Transactions" value={fmtNum(summary?.transaction_count ?? 0)} />
         <StatRow
           label="Top category"
-          value={topCategory ? (CATEGORY_LABELS[topCategory.category] ?? topCategory.category) : '—'}
-          note={topCategory ? fmtEur(topCategory.amount) : undefined}
+          value={top ? (CATEGORY_LABELS[top.category] ?? top.category) : '—'}
+          note={top ? fmtEur(top.amount) : undefined}
         />
         <StatRow
-          label="Transfers (not counted above)"
+          label={
+            <span className="inline-flex items-center gap-1.5">
+              Transfers
+              <InfoTip label="About transfers">
+                Money moved between your own accounts. It is left out of the totals above.
+              </InfoTip>
+            </span>
+          }
           value={fmtEur(summary?.transfers ?? 0)}
           note="Moved between your own accounts"
         />

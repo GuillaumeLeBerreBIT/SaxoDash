@@ -118,4 +118,56 @@ describe('Spending', () => {
     const calledQueries = queries.useSpendingSummary.mock.calls.map((args) => args[0])
     expect(calledQueries.some((q) => typeof q === 'string' && q.includes('date_from'))).toBe(true)
   })
+
+  it('never names Other as the top category', () => {
+    mockDefaults({
+      summary: {
+        data: {
+          categories: [
+            { category: 'OTHER', amount: '900.00' },
+            { category: 'GROCERIES', amount: '120.00' },
+            { category: 'DINING', amount: '80.00' },
+          ],
+          total: '1100.00', transfers: '0.00', transaction_count: 9, previous_period: null,
+        },
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    renderWithProviders(<Spending />)
+
+    expect(screen.getByText('Top category').parentElement).toHaveTextContent('Groceries')
+    expect(screen.getByText('Top category').parentElement).not.toHaveTextContent('Other')
+  })
+
+  it('words the comparison with the label the API gives', () => {
+    mockDefaults({
+      summary: {
+        data: {
+          categories: [{ category: 'GROCERIES', amount: '50.00' }],
+          total: '50.00', transfers: '0.00', transaction_count: 3,
+          comparison_label: 'same days last month',
+          previous_period: { date_from: '2026-08-01', date_to: '2026-08-15', total: '187.50' },
+        },
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    renderWithProviders(<Spending />)
+
+    expect(screen.getByText('vs €187.50 same days last month')).toBeInTheDocument()
+  })
+
+  it('explains Transfers through an info tip', () => {
+    mockDefaults()
+    renderWithProviders(<Spending />)
+
+    fireEvent.focus(screen.getByRole('button', { name: 'About transfers' }))
+
+    expect(
+      screen.getByRole('tooltip'),
+    ).toHaveTextContent('Money moved between your own accounts. It is left out of the totals above.')
+  })
 })

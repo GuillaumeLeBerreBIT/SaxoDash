@@ -30,4 +30,24 @@ describe('SpendingCategoryChart', () => {
 
     expect(screen.getByText('No data yet')).toBeInTheDocument()
   })
+
+  it('folds slices under three percent into a single Other row', () => {
+    renderWithProviders(
+      <SpendingCategoryChart
+        categories={[
+          { category: 'GROCERIES', amount: '960.00' },
+          { category: 'DINING', amount: '20.00' },
+          { category: 'FUEL', amount: '20.00' },
+        ]}
+        isLoading={false}
+        error={null}
+        periodLabel="September 2026"
+      />,
+    )
+
+    expect(screen.getByText('Groceries')).toBeInTheDocument()
+    expect(screen.queryByText('Dining')).not.toBeInTheDocument()
+    expect(screen.getByText('Other')).toBeInTheDocument()
+    expect(screen.getByText('€40.00')).toBeInTheDocument()
+  })
 })
