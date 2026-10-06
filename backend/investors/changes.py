@@ -25,3 +25,13 @@ def compare(current, previous):
     per_key = {key: position_change(shares, previous.get(key)) for key, shares in current.items()}
     sold_out = [key for key in previous if key not in current]
     return per_key, sold_out
+
+
+def turnover(current_values, previous_values, new_keys, sold_out_keys):
+    if previous_values is None:
+        return None
+    combined = sum(current_values.values()) + sum(previous_values.values())
+    if not combined:
+        return None
+    replaced = sum(current_values[key] for key in new_keys) + sum(previous_values[key] for key in sold_out_keys)
+    return round(replaced / combined * 100, 2)

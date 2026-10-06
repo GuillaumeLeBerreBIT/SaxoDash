@@ -59,3 +59,19 @@ class CompareTest(SimpleTestCase):
         per_key, sold_out = changes.compare({AAPL: 1}, {})
         self.assertEqual(per_key, {AAPL: (changes.NEW, None)})
         self.assertEqual(sold_out, [])
+
+
+class TurnoverTest(SimpleTestCase):
+    def test_a_first_quarter_has_no_turnover(self):
+        self.assertIsNone(changes.turnover({AAPL: 100}, None, [], []))
+
+    def test_counts_opened_and_closed_value_against_both_quarters(self):
+        current = {AAPL: 700, AAPL_CALL: 300}
+        previous = {AAPL: 600, ALLY: 400}
+        self.assertEqual(changes.turnover(current, previous, [AAPL_CALL], [ALLY]), 35.0)
+
+    def test_a_portfolio_kept_whole_has_zero_turnover(self):
+        self.assertEqual(changes.turnover({AAPL: 700}, {AAPL: 600}, [], []), 0.0)
+
+    def test_an_empty_pair_of_quarters_has_no_turnover(self):
+        self.assertIsNone(changes.turnover({}, {}, [], []))
