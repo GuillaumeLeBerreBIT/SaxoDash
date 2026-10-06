@@ -33,10 +33,16 @@ describe('SymbolBar', () => {
     expect(screen.queryByText(/today/)).not.toBeInTheDocument()
   })
 
-  it('prints the bar-derived move with no time suffix when there is no quote', () => {
+  it('captions the bar-derived move today when the newest bar is undated', () => {
     renderBar({ quote: null })
-    expect(screen.getByText('+1.01%')).toBeInTheDocument()
-    expect(screen.queryByText(/today/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/session/)).not.toBeInTheDocument()
+    expect(screen.getByText('+1.01% today')).toBeInTheDocument()
+  })
+
+  it('captions the bar-derived move as the latest session when the newest bar is old', () => {
+    renderBar({
+      quote: null,
+      bars: [{ date: '2020-01-01', close: 99 }, { date: '2020-01-02', close: 100 }],
+    })
+    expect(screen.getByText('+1.01% latest session')).toBeInTheDocument()
   })
 })

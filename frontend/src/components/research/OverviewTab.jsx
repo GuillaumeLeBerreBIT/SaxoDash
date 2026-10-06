@@ -14,12 +14,26 @@ function Fact({ label, value }) {
   )
 }
 
+function EtfNote() {
+  return (
+    <Card>
+      <CardHeader title="Fund" subtitle="Company fundamentals don't apply" />
+      <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        This is an ETF, so there are no earnings, margins or valuation ratios to show. Price, range
+        statistics and your notes are below.
+      </p>
+    </Card>
+  )
+}
+
 function PositionCard({ position }) {
   const gain = Number(position.pnl) >= 0
+  const basis =
+    position.price_source && position.price_source !== 'live' ? priceBasis(position.price_source).note : undefined
 
   return (
     <Card>
-      <CardHeader title="Your position" subtitle={priceBasis(position.price_source).note} />
+      <CardHeader title="Your position" subtitle={basis} />
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Metric label="Quantity" value={fmtQty(position.qty)} />
         <Metric label="Avg buy" value={fmtMoney(position.avg_cost, position.currency)} />
@@ -109,7 +123,7 @@ export default function OverviewTab({
 
       {/* An ETF never gets Finnhub fundamentals - the gate's "unavailable
           for this symbol" fallback would wrongly imply that's temporary. */}
-      {isEtf ? null : <SnapshotSection fundamentals={fundamentals} />}
+      {isEtf ? <EtfNote /> : <SnapshotSection fundamentals={fundamentals} />}
       <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
       <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />

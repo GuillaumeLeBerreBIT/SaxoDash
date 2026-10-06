@@ -273,8 +273,8 @@ describe('Research', () => {
   })
 
   it('records the viewed symbol as recent', () => {
-    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
-    expect(JSON.parse(localStorage.getItem('saxodash:recent-symbols'))).toContain('AAPL')
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(JSON.parse(localStorage.getItem('saxodash:recent-symbols'))).toContain('NVDA')
   })
 
   it('offers recent symbols as quick chips, excluding the current one', async () => {

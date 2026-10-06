@@ -45,6 +45,17 @@ describe('lastLook', () => {
     expect(changeSinceLastLook('AAPL', null)).toBeNull()
   })
 
+  it('reports nothing for a move too small to show as anything but 0.00%', () => {
+    recordLook('NVDA', 100)
+    expect(changeSinceLastLook('NVDA', 100.004)).toBeNull()
+    expect(changeSinceLastLook('NVDA', 100)).toBeNull()
+  })
+
+  it('reports a move that rounds to a visible figure', () => {
+    recordLook('NVDA', 100)
+    expect(changeSinceLastLook('NVDA', 100.01)).toBeCloseTo(0.01, 5)
+  })
+
   it('returns null when reading throws', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('denied')

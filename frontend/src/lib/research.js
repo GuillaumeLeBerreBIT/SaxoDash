@@ -209,10 +209,16 @@ export function barChange(bars = [], index) {
   return ((bar.close - previous.close) / previous.close) * 100
 }
 
-export function moveCaption(quote, bars) {
-  const quoted = quote?.change_pct ?? null
-  if (quoted != null) return { change: quoted, suffix: moveLabel([quote]).toLowerCase() }
-  return { change: barChange(bars), suffix: null }
+const localIsoDate = (date) => date.toLocaleDateString('en-CA')
+
+export function moveCaption(quote, bars, now = new Date()) {
+  const newest = bars[bars.length - 1]?.date
+  const stale = Boolean(newest) && newest.slice(0, 10) !== localIsoDate(now)
+  const latest = stale || moveLabel([quote]) === 'Latest session'
+  return {
+    change: quote?.change_pct ?? barChange(bars),
+    suffix: latest ? 'latest session' : 'today',
+  }
 }
 
 function pinInstrument(params, instrument) {

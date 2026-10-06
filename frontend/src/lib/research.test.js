@@ -414,8 +414,39 @@ describe('moveCaption', () => {
     expect(moveCaption({ change_pct: 0, change_basis: 'live' }, bars).change).toBe(0)
   })
 
-  it('falls back to the latest bar with no suffix', () => {
-    expect(moveCaption(null, bars)).toEqual({ change: barChange(bars), suffix: null })
+  it('falls back to the latest bar change', () => {
+    expect(moveCaption(null, bars)).toEqual({ change: barChange(bars), suffix: 'today' })
+  })
+
+  describe('against the newest bar date', () => {
+    const NOW = new Date('2026-10-06T12:00:00')
+    const dated = (date, close) => ({ date, close })
+
+    it('calls a move from today\'s bar "today"', () => {
+      const dailyBars = [dated('2026-10-05', 100), dated('2026-10-06', 102)]
+      expect(moveCaption(null, dailyBars, NOW)).toEqual({ change: 2, suffix: 'today' })
+    })
+
+    it('calls it the latest session when the newest bar is older than today', () => {
+      const dailyBars = [dated('2026-10-01', 100), dated('2026-10-02', 102)]
+      expect(moveCaption(null, dailyBars, NOW).suffix).toBe('latest session')
+    })
+
+    it('keeps a live quote on a stale-bar day as the latest session', () => {
+      const dailyBars = [dated('2026-10-01', 100), dated('2026-10-02', 102)]
+      const quote = { change_pct: 1.2, change_basis: 'live' }
+      expect(moveCaption(quote, dailyBars, NOW)).toEqual({ change: 1.2, suffix: 'latest session' })
+    })
+
+    it('keeps a last_close quote as the latest session even with a bar from today', () => {
+      const dailyBars = [dated('2026-10-05', 100), dated('2026-10-06', 102)]
+      const quote = { change_pct: 1.2, change_basis: 'last_close' }
+      expect(moveCaption(quote, dailyBars, NOW).suffix).toBe('latest session')
+    })
+
+    it('has no change and no crash without bars or a quote', () => {
+      expect(moveCaption(null, [], NOW).change).toBeNull()
+    })
   })
 })
 
