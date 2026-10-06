@@ -1,6 +1,6 @@
 import { Star } from 'lucide-react'
 
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { isEtf, moveCaption } from '../../lib/research'
 import { Badge, Card, InstrumentLogo } from '../ui'
 import { Menu, MenuRow } from './menu'
@@ -74,7 +74,7 @@ export default function SymbolBar({
           {change == null ? null : (
             <span
               className={`num font-mono text-[var(--fig-xs)] font-medium ${
-                change >= 0 ? 'text-emerald-400' : 'text-red-400'
+                pctToneClass(change)
               }`}
             >
               {fmtPct(change)}{changeSuffix ? ` ${changeSuffix}` : ''}

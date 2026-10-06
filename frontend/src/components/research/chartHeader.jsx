@@ -1,4 +1,4 @@
-import { fmtPct } from '../../lib/format'
+import { fmtPct, pctToneClass } from '../../lib/format'
 import { INTERVALS, periodChange } from '../../lib/research'
 import { TBtn } from '../ui'
 
@@ -30,7 +30,7 @@ export function PeriodChange({ bars }) {
   return (
     <span className="text-[var(--fig-2xs)] text-zinc-500">
       Period{' '}
-      <span className={`num font-mono ${period >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+      <span className={`num font-mono ${pctToneClass(period)}`}>
         {fmtPct(period)}
       </span>
     </span>

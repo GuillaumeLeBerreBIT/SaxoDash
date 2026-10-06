@@ -1,8 +1,12 @@
 import { Card, CardHeader } from '../ui'
-import { fmtPct } from '../../lib/format'
+import { fmtPct, pctTone, pctToneClass } from '../../lib/format'
 import { needsDaysNote } from '../../lib/analytics'
 
-const pctTone = (v) => (v >= 0 ? 'text-emerald-400' : 'text-red-400')
+const ALPHA_BADGE = {
+  positive: 'bg-emerald-500/10 text-emerald-400',
+  negative: 'bg-red-500/10 text-red-400',
+  neutral: 'bg-white/[0.05] text-zinc-500',
+}
 
 export default function ReturnsTable({ periods, benchmarkName }) {
   return (
@@ -23,7 +27,7 @@ export default function ReturnsTable({ periods, benchmarkName }) {
           {periods.map((row) => (
             <tr key={row.label} className="border-b border-white/[0.05] last:border-0">
               <td className="px-5 py-2.5 text-zinc-300">{row.label}</td>
-              <td className={`px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctTone(row.portfolio_pct) : 'text-zinc-600'}`}>
+              <td className={`px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctToneClass(row.portfolio_pct, 1) : 'text-zinc-600'}`}>
                 {fmtPct(row.portfolio_pct, { decimals: 1 })}
                 {row.portfolio_pct == null && needsDaysNote(row.needs_days) && (
                   <div className="text-[var(--fig-2xs)] text-zinc-600">{needsDaysNote(row.needs_days)}</div>
@@ -33,9 +37,7 @@ export default function ReturnsTable({ periods, benchmarkName }) {
               <td className="px-5 py-2.5 text-right num">
                 {row.alpha_pct != null ? (
                   <span
-                    className={`px-1.5 py-0.5 rounded ${
-                      row.alpha_pct >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
-                    }`}
+                    className={`px-1.5 py-0.5 rounded ${ALPHA_BADGE[pctTone(row.alpha_pct, 1)]}`}
                   >
                     {fmtPct(row.alpha_pct, { decimals: 1 })}
                   </span>

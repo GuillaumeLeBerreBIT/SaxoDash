@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtEur, fmtMoney, fmtQty, fmtPct } from './format'
+import { fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -34,5 +34,30 @@ describe('fmtPct', () => {
     expect(fmtPct(-0.04, { decimals: 1 })).toBe('0.0%')
     expect(fmtPct(0.04, { decimals: 1 })).toBe('0.0%')
     expect(fmtPct(-0.04, { decimals: 1, sign: false })).toBe('0.0%')
+  })
+})
+
+describe('pctTone', () => {
+  it('is neutral for absent and zero-rounding values', () => {
+    expect(pctTone(null)).toBe('neutral')
+    expect(pctTone(NaN)).toBe('neutral')
+    expect(pctTone(-0.003)).toBe('neutral')
+    expect(pctTone(0)).toBe('neutral')
+  })
+
+  it('splits the rest by sign', () => {
+    expect(pctTone(0.4)).toBe('positive')
+    expect(pctTone(-2)).toBe('negative')
+    expect(pctTone(-0.04, 1)).toBe('neutral')
+    expect(pctTone(-0.06, 1)).toBe('negative')
+  })
+})
+
+describe('pctToneClass', () => {
+  it('maps tones to text classes', () => {
+    expect(pctToneClass(1)).toBe('text-emerald-400')
+    expect(pctToneClass(-1)).toBe('text-red-400')
+    expect(pctToneClass(0)).toBe('text-zinc-500')
+    expect(pctToneClass(null, 2, 'text-zinc-600')).toBe('text-zinc-600')
   })
 })

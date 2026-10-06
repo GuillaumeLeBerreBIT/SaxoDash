@@ -9,7 +9,7 @@ import {
   useSpendingSummary,
   useTransactions,
 } from '../api/queries'
-import { fmtEur, fmtNum, fmtPct, fmtQty } from '../lib/format'
+import { fmtEur, fmtNum, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton, StatRow, StatStrip, Th, Td } from '../components/ui'
@@ -76,7 +76,7 @@ export default function Dashboard() {
       text: `${CATEGORY_LABELS[row.category] ?? row.category} is over budget (${fmtEur(row.spent)} of ${fmtEur(row.limit)})`,
     }))
   const pnlPct = summary.total_pnl_pct
-  const pnlTone = pnlPct == null ? 'text-zinc-500' : Number(pnlPct) >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const pnlTone = pctToneClass(pnlPct)
 
   return (
     <div className="space-y-4">

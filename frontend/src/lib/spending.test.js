@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { foldSmallSlices, monthLabel, topCategory, trendBars } from './spending'
+import { foldSmallSlices, monthLabel, topCategory, trendBars, trendTooltipLabel, trendTooltipRow } from './spending'
 
 describe('monthLabel', () => {
   it('formats a year-month', () => {
@@ -36,6 +36,10 @@ describe('foldSmallSlices', () => {
     expect(out.filter((i) => i.name === 'Other')).toHaveLength(1)
     expect(out.at(-1).value).toBe(10)
   })
+  it('does not append an Other worth nothing', () => {
+    const out = foldSmallSlices([item('A', 100), item('B', 0)])
+    expect(out.map((i) => i.name)).toEqual(['A'])
+  })
   it('leaves a zero total alone', () => {
     expect(foldSmallSlices([item('A', 0)])).toHaveLength(1)
   })
@@ -45,8 +49,36 @@ describe('trendBars', () => {
   it('labels months and keeps null totals null', () => {
     expect(trendBars([{ month: '2026-05', total: null, partial: false }, { month: '2026-06', total: '120.00', partial: true }]))
       .toEqual([
-        { month: '2026-05', label: "May '26", total: null, partial: false },
-        { month: '2026-06', label: "Jun '26", total: 120, partial: true },
+        { month: '2026-05', label: "May '26", total: null, partial: false, current: false },
+        { month: '2026-06', label: "Jun '26", total: 120, partial: true, current: true },
       ])
+  })
+
+  it('marks only the final partial bar as the current month', () => {
+    const bars = trendBars([
+      { month: '2026-04', total: '10', partial: true },
+      { month: '2026-05', total: '20', partial: false },
+      { month: '2026-06', total: '30', partial: true },
+    ])
+    expect(bars.map((b) => b.current)).toEqual([false, false, true])
+    expect(bars[0].partial).toBe(true)
+  })
+})
+
+describe('trendTooltipRow', () => {
+  it('says No data for a month without a total', () => {
+    expect(trendTooltipRow(null)).toBe('No data')
+    expect(trendTooltipRow(undefined)).toBe('No data')
+  })
+  it('formats a total in euros', () => {
+    expect(trendTooltipRow(120)).toContain('120.00')
+  })
+})
+
+describe('trendTooltipLabel', () => {
+  it('adds so far only for the current month', () => {
+    expect(trendTooltipLabel("Jun '26", { current: true })).toBe("Jun '26 (so far)")
+    expect(trendTooltipLabel("Apr '26", { current: false, partial: true })).toBe("Apr '26")
+    expect(trendTooltipLabel("Apr '26", undefined)).toBe("Apr '26")
   })
 })

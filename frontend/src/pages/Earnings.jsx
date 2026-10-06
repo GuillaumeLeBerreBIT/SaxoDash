@@ -9,7 +9,7 @@ import SurpriseBars from '../components/research/SurpriseBars'
 import { Card, InfoTip, PageHeader } from '../components/ui'
 import { BEAT, MISS, PENDING, REPORTED, surpriseSign, withAlpha } from '../lib/charts'
 import { WEEKDAYS, groupByWeekday, reportStatus, weekLabel, weekdayKey } from '../lib/earnings'
-import { fmtCompact, fmtNum, fmtPct } from '../lib/format'
+import { fmtCompact, fmtNum, fmtPct, pctToneClass } from '../lib/format'
 
 const SESSION = { bmo: 'BMO', amc: 'AMC', dmh: 'DMH' }
 const MIN_WEEK = -8
@@ -56,7 +56,7 @@ function WeekSummary({ stats, scope }) {
   if (!stats) return null
   const { total, reported, beat, missed, inline, mine, avg_surprise: avg, by_day: byDay } = stats
   const mineScope = scope === 'mine'
-  const avgTone = avg == null ? 'text-zinc-500' : avg >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const avgTone = pctToneClass(avg, 1)
   const bars = (byDay || []).map((d) => ({ label: shortWeekday(d.date), value: d.beat - d.missed }))
 
   return (

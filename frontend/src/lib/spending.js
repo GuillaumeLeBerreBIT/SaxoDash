@@ -1,4 +1,5 @@
 import { OTHER_SLICE } from './charts'
+import { fmtEur } from './format'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -25,19 +26,29 @@ export function foldSmallSlices(items, { threshold = 0.03, otherName = 'Other', 
   for (const item of items) {
     if (item.name === otherName || item.value / total < threshold) {
       folded += item.value
-      foldedAny = true
+      foldedAny = foldedAny || item.value > 0
     } else {
       kept.push(item)
     }
   }
-  return foldedAny ? [...kept, { name: otherName, value: folded, color: otherColor }] : kept
+  return foldedAny && folded > 0 ? [...kept, { name: otherName, value: folded, color: otherColor }] : kept
+}
+
+export function trendTooltipRow(value) {
+  return value == null ? 'No data' : fmtEur(value)
+}
+
+export function trendTooltipLabel(label, bar) {
+  return bar?.current ? `${label} (so far)` : label
 }
 
 export function trendBars(rows) {
-  return (rows ?? []).map((row) => ({
+  const list = rows ?? []
+  return list.map((row, index) => ({
     month: row.month,
     label: monthLabel(row.month),
     total: row.total == null ? null : Number(row.total),
     partial: Boolean(row.partial),
+    current: Boolean(row.partial) && index === list.length - 1,
   }))
 }

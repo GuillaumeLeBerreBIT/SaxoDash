@@ -1,4 +1,4 @@
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
@@ -46,7 +46,7 @@ function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) 
         </span>
       ))}
       {change == null ? null : (
-        <span className={change >= 0 ? 'text-emerald-400' : 'text-red-400'}>{fmtPct(change)}</span>
+        <span className={pctToneClass(change)}>{fmtPct(change)}</span>
       )}
       <span className="text-zinc-500">
         Vol <span className="text-zinc-300">{fmtNum(bar.volume / 1e6, 1)}M</span>

@@ -39,6 +39,19 @@ export function fmtPct(value, { sign = true, decimals = 2 } = {}) {
     return `${prefix}${text}%`
 }
 
+export function pctTone(value, decimals = 2) {
+    if (value == null || Number.isNaN(Number(value))) return 'neutral'
+    const n = Number(value)
+    if (Number(n.toFixed(decimals)) === 0) return 'neutral'
+    return n > 0 ? 'positive' : 'negative'
+}
+
+const TONE_CLASS = { positive: 'text-emerald-400', negative: 'text-red-400' }
+
+export function pctToneClass(value, decimals = 2, neutral = 'text-zinc-500') {
+    return TONE_CLASS[pctTone(value, decimals)] ?? neutral
+}
+
 export function fmtNum(value, decimals = 0) {
   if (value == null) return UNKNOWN
   return new Intl.NumberFormat('en-IE', {

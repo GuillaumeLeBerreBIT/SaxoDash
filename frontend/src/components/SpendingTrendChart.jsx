@@ -1,17 +1,16 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSpendingTrend } from '../api/queries'
-import { fmtEur } from '../lib/format'
 import { axisProps, chartTooltipProps, gridProps, moneyAxisProps, NEGATIVE } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
-import { trendBars } from '../lib/spending'
+import { trendBars, trendTooltipLabel, trendTooltipRow } from '../lib/spending'
 
 export default function SpendingTrendChart() {
   const { data, isLoading, error } = useSpendingTrend()
 
   const bars = trendBars(data)
   const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220 })
-  const subtitle = bars.at(-1)?.partial
+  const subtitle = bars.at(-1)?.current
     ? 'Monthly total, last 6 months · current month to date'
     : 'Monthly total, last 6 months'
 
@@ -27,8 +26,9 @@ export default function SpendingTrendChart() {
               <YAxis {...moneyAxisProps} />
               <Tooltip
                 {...chartTooltipProps}
-                formatter={(v) => (v == null ? 'No data' : fmtEur(v))}
-                labelFormatter={(label, payload) => (payload?.[0]?.payload?.partial ? `${label} (so far)` : label)}
+                filterNull={false}
+                formatter={trendTooltipRow}
+                labelFormatter={(label, payload) => trendTooltipLabel(label, payload?.[0]?.payload)}
               />
               <Bar dataKey="total" name="Spending" fill={NEGATIVE} radius={[3, 3, 0, 0]} isAnimationActive={false}>
                 {bars.map((bar) => (

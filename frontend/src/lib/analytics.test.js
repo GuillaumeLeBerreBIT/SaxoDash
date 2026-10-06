@@ -18,6 +18,9 @@ describe('pctOrDash', () => {
     expect(pctOrDash(null)).toBe('—')
     expect(pctOrDash(12.34)).toBe('12.3%')
     expect(pctOrDash(12.34, 0)).toBe('12%')
+    expect(pctOrDash(-0.04)).toBe('0.0%')
+    expect(pctOrDash(-0)).toBe('0.0%')
+    expect(pctOrDash(NaN)).toBe('—')
   })
 })
 
@@ -36,6 +39,21 @@ describe('drawdownDomain', () => {
 describe('yearTicks', () => {
   it('keeps one tick per whole year', () => {
     expect(yearTicks([{ month: 0 }, { month: 6 }, { month: 12 }, { month: 24 }])).toEqual([0, 12, 24])
+  })
+  it('thins a long horizon to at most maxLabels, keeping month 0', () => {
+    const rows = Array.from({ length: 361 }, (_, month) => ({ month }))
+    const ticks = yearTicks(rows)
+    expect(ticks.length).toBeLessThanOrEqual(11)
+    expect(ticks[0]).toBe(0)
+    expect(ticks).toEqual([0, 60, 120, 180, 240, 300, 360])
+  })
+  it('keeps every year at ten years or fewer', () => {
+    const rows = Array.from({ length: 121 }, (_, month) => ({ month }))
+    expect(yearTicks(rows)).toHaveLength(11)
+  })
+  it('steps by two when that is enough', () => {
+    const rows = Array.from({ length: 217 }, (_, month) => ({ month }))
+    expect(yearTicks(rows, 11)).toEqual([0, 24, 48, 72, 96, 120, 144, 168, 192, 216])
   })
   it('is empty with no rows', () => {
     expect(yearTicks([])).toEqual([])
