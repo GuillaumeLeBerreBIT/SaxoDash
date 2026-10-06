@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { fmtAxisDollars, fmtAxisPct } from './axisFormat'
+import { fmtAxisDollars, fmtAxisPct, fmtTooltipDollars } from './axisFormat'
 
 describe('fmtAxisPct', () => {
   it.each([
@@ -26,5 +26,16 @@ describe('fmtAxisDollars', () => {
     [null, ''],
   ])('%s -> %s', (input, expected) => {
     expect(fmtAxisDollars(input)).toBe(expected)
+  })
+})
+
+describe('fmtTooltipDollars', () => {
+  it.each([
+    [2_100_000_000, '$2.10B'],
+    [-2_100_000_000, '-$2.10B'],
+    [-450_000_000, '-$450M'],
+    [null, '—'],
+  ])('formats %s as %s', (input, expected) => {
+    expect(fmtTooltipDollars(input)).toBe(expected)
   })
 })

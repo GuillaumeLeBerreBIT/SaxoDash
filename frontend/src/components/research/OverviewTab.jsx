@@ -19,8 +19,8 @@ function EtfNote() {
     <Card>
       <CardHeader title="Fund" subtitle="Company fundamentals don't apply" />
       <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
-        This is an ETF, so there are no earnings, margins or valuation ratios to show. Price, range
-        statistics and your notes are below.
+        This is an ETF, so there are no earnings, margins or valuation ratios to show. Range statistics
+        and your notes are below.
       </p>
     </Card>
   )

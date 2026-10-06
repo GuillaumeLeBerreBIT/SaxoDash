@@ -455,6 +455,14 @@ describe('rankInstrumentResults ticker ranking', () => {
     symbol, description, exchange, asset_type, uic: symbol.length * 100 + symbol.charCodeAt(0),
   })
 
+  it('ranks a ticker-prefix match above a primary-exchange non-prefix match', () => {
+    const results = [
+      hit('XTSL', 'Texas Silver Ltd', 'NASDAQ'),
+      hit('TSLX', 'Tesla Exploration', 'LSE'),
+    ]
+    expect(rankInstrumentResults(results, 'TSL').map((r) => r.symbol)).toEqual(['TSLX', 'XTSL'])
+  })
+
   it('ranks a ticker-prefix match above a leveraged ETF', () => {
     const results = [
       hit('TSLL', 'Direxion Daily TSLA Bull 2X Shares', 'NYSE ARCA', 'Etf'),

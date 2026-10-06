@@ -104,10 +104,6 @@ const PRIMARY_EXCHANGES = new Set(['NYSE', 'NASDAQ', 'XNYS', 'XNAS', 'ARCX', 'BA
 
 const LEVERAGED_PRODUCT = /\b\d(?:\.\d+)?x\b|\b(?:leveraged|ultra|ultrapro|bull|bear|inverse)\b/i
 
-/** Search results for `symbol`, an exact ticker match first and, among
- *  those, a primary US exchange first - stable otherwise, so ties keep
- *  Saxo's own order. Exported so a results dropdown can show items in the
- *  same order `resolveInstrument` would pick from. */
 export function rankInstrumentResults(results = [], symbol) {
   const query = (symbol || '').toUpperCase()
   const key = (result) => [

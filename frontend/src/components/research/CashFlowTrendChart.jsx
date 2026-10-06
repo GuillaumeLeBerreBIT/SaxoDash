@@ -1,16 +1,8 @@
 import { Bar, BarChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { axisProps, gridProps, chartTooltipProps } from '../../lib/charts'
-import { fmtAxisDollars } from '../../lib/axisFormat'
-import { fmtCompact } from '../../lib/format'
+import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { Card, CardHeader, InfoTip } from '../ui'
-
-// cash_flow_trend values are raw dollars from Finnhub's reported-financials
-// endpoint, unlike the rest of the fundamentals payload (already in
-// millions) - fmtCompact expects millions, so every value here is divided
-// down first.
-const toMillions = (v) => (v == null ? null : v / 1e6)
-const tooltipFormat = (v) => `$${fmtCompact(toMillions(v))}`
 
 /** Annual free cash flow, total debt and cash, from SEC 10-K filings -
  *  the one place on the page with real dollar figures rather than ratios.
@@ -40,7 +32,7 @@ export default function CashFlowTrendChart({ trend }) {
             <Tooltip
               {...chartTooltipProps}
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              formatter={(value, name) => [tooltipFormat(value), name]}
+              formatter={(value, name) => [fmtTooltipDollars(value), name]}
             />
             <Bar dataKey="fcf" name="Free cash flow" fill="#34d399" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
             <Bar dataKey="cash" name="Cash" fill="#60a5fa" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
