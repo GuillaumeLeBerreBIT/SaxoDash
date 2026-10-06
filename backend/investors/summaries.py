@@ -202,3 +202,53 @@ def detail(investor, quarter_end, today):
         'holdings': holdings,
     })
     return base
+
+
+CHANGE_GROUPS = (changes.NEW, changes.ADDED, changes.TRIMMED, changes.SOLD_OUT)
+
+
+def _side(row, total):
+    if row is None:
+        return None, None, None
+    return row['shares'], row['value'], _weight(row['value'], total)
+
+
+def _change_item(key, now, before, totals, tickers, pct):
+    shares, value, weight = _side(now, totals[0])
+    previous_shares, previous_value, previous_weight = _side(before, totals[1])
+    return {
+        'cusip': key[0],
+        'put_call': key[1],
+        'ticker': tickers.get(key[0]),
+        'issuer': (now or before)['issuer'],
+        'shares': shares,
+        'previous_shares': previous_shares,
+        'shares_change_pct': pct,
+        'value': value,
+        'previous_value': previous_value,
+        'value_change': (value or 0) - (previous_value or 0),
+        'weight': weight,
+        'previous_weight': previous_weight,
+    }
+
+
+def changes_payload(investor, quarter_end):
+    groups = {group: [] for group in CHANGE_GROUPS}
+    ends = quarters.quarter_ends(investor)
+    if not ends:
+        return {'quarter': None, 'previous_quarter': None, **groups}
+    quarter_end, previous = _resolve_quarter(ends, quarter_end)
+    if previous is None:
+        return {'quarter': quarter_end.isoformat(), 'previous_quarter': None, **groups}
+
+    snap, previous_snap, per_key, sold_out = _comparison(investor, quarter_end, previous)
+    tickers = tickers_for({key[0] for key in [*snap, *previous_snap]})
+    totals = (sum(_values(snap).values()), sum(_values(previous_snap).values()))
+    for key, (kind, pct) in per_key.items():
+        if kind in groups:
+            groups[kind].append(_change_item(key, snap[key], previous_snap.get(key), totals, tickers, pct))
+    for key in sold_out:
+        groups[changes.SOLD_OUT].append(_change_item(key, None, previous_snap[key], totals, tickers, -100.0))
+    for items in groups.values():
+        items.sort(key=lambda item: (-abs(item['value_change']), item['cusip'], item['put_call']))
+    return {'quarter': quarter_end.isoformat(), 'previous_quarter': previous.isoformat(), **groups}

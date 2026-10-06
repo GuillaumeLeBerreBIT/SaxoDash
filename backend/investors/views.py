@@ -36,3 +36,12 @@ class InvestorDetailView(APIView):
             return Response(summaries.detail(investor, _quarter_param(request), date.today()))
         except summaries.QuarterNotFound:
             raise NotFound('No filing is stored for that quarter.')
+
+
+class InvestorChangesView(APIView):
+    def get(self, request, slug):
+        investor = get_object_or_404(Investor, slug=slug)
+        try:
+            return Response(summaries.changes_payload(investor, _quarter_param(request)))
+        except summaries.QuarterNotFound:
+            raise NotFound('No filing is stored for that quarter.')
