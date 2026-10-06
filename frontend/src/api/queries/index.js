@@ -11,11 +11,13 @@ export * from './analytics'
 export * from './saxo'
 export * from './enablebanking'
 export * from './research'
+export * from './investors'
 
 import { accountsKeys } from './accounts'
 import { analyticsKeys } from './analytics'
 import { coreKeys } from './core'
 import { enableBankingKeys } from './enablebanking'
+import { investorsKeys } from './investors'
 import { portfolioKeys } from './portfolio'
 import { researchKeys } from './research'
 import { saxoKeys } from './saxo'
@@ -33,4 +35,5 @@ export const queryKeys = {
   ...saxoKeys,
   ...enableBankingKeys,
   ...researchKeys,
+  ...investorsKeys,
 }
