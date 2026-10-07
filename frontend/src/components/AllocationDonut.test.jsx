@@ -30,4 +30,17 @@ describe('AllocationDonut', () => {
     render(<AllocationDonut items={items} formatValue={(v) => `$${v}`} />)
     expect(screen.queryByTestId('donut-center')).toBeNull()
   })
+
+  it('keeps plain truncation for a legend name without a note', () => {
+    const name = 'Saxo Bank - Trading account with a very long name'
+    render(<AllocationDonut items={[{ name, value: 100, color: '#60a5fa' }]} formatValue={(v) => `$${v}`} />)
+    const label = screen.getByText(name)
+    expect(label).toHaveClass('truncate')
+    expect(label).not.toHaveClass('shrink-0')
+  })
+
+  it('pins the legend name when a note follows it', () => {
+    render(<AllocationDonut items={items} formatValue={(v) => `$${v}`} />)
+    expect(screen.getByText('AAPL')).toHaveClass('shrink-0')
+  })
 })
