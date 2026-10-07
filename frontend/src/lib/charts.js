@@ -157,6 +157,11 @@ export function paddedDomain([min, max]) {
   return [low, max + pad]
 }
 
-export function seriesAxis(rows, keys, options) {
-  return niceAxis(rows.flatMap((row) => keys.map((key) => row[key])), options)
+export function seriesAxis(rows, keys, options = {}) {
+  const values = rows.flatMap((row) => keys.map((key) => row[key])).filter((value) => Number.isFinite(value))
+  if (options.includeZero) values.push(0)
+  if (values.length === 0) return {}
+  const axis = niceAxis(values, options)
+  if (axis.ticks) return axis
+  return { domain: paddedDomain([Math.min(...values), Math.max(...values)]) }
 }

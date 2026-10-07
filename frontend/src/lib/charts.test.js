@@ -115,7 +115,25 @@ describe('seriesAxis', () => {
     expect(ticks).toEqual([-10, 0, 10, 20, 30])
   })
 
-  it('skips null values and gives no props when nothing is plottable', () => {
+  it('gives no props when nothing is plottable', () => {
     expect(seriesAxis([{ a: null }], ['a'])).toEqual({})
+  })
+
+  it('falls back to the padded domain for a flat series', () => {
+    const axis = seriesAxis([{ a: 100 }, { a: 100 }], ['a'])
+    expect(axis).not.toHaveProperty('ticks')
+    expect(axis.domain).toEqual(paddedDomain([100, 100]))
+  })
+
+  it('falls back to the padded domain for a single point', () => {
+    const axis = seriesAxis([{ a: 250 }], ['a'])
+    expect(axis).not.toHaveProperty('ticks')
+    expect(axis.domain).toEqual(paddedDomain([250, 250]))
+  })
+
+  it('falls back to the padded domain for an all-zero drawdown', () => {
+    const axis = seriesAxis([{ dd: 0 }, { dd: 0 }], ['dd'], { includeZero: true })
+    expect(axis).not.toHaveProperty('ticks')
+    expect(axis.domain).toEqual(paddedDomain([0, 0]))
   })
 })

@@ -22,6 +22,31 @@ describe('niceTicks', () => {
     expect(niceTicks(0, 0.7, 7)).toEqual([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
   })
 
+  it('handles negative-only ranges', () => {
+    const ticks = niceTicks(-97, -13, 4)
+    expect(ticks[0]).toBeLessThanOrEqual(-97)
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(-13)
+    expect(ticks.every((t) => t <= 0)).toBe(true)
+  })
+
+  it('handles a tiny range', () => {
+    expect(niceTicks(0, 0.001, 5)).toEqual([0, 0.0002, 0.0004, 0.0006, 0.0008, 0.001])
+  })
+
+  it('returns nothing for a count below one', () => {
+    expect(niceTicks(0, 10, 0)).toEqual([])
+  })
+
+  it('still covers the range with a count of one', () => {
+    const ticks = niceTicks(3, 97, 1)
+    expect(ticks[0]).toBeLessThanOrEqual(3)
+    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(97)
+  })
+
+  it('swaps reversed bounds', () => {
+    expect(niceTicks(97, 0, 5)).toEqual(niceTicks(0, 97, 5))
+  })
+
   it('returns a single tick for equal bounds', () => {
     expect(niceTicks(5, 5, 5)).toEqual([5])
   })

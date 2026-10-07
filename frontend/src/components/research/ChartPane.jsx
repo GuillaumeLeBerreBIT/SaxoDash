@@ -8,12 +8,14 @@ import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
 import { useChartData } from './useChartData'
 
+const HEADER_CLASS = 'flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0'
+
 function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, showIdentity }) {
   const last = rangeBars[rangeBars.length - 1]
   const price = quote?.price ?? last?.close ?? null
   const { change, suffix } = moveCaption(quote, rangeBars)
   return (
-    <div className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0">
+    <div className={HEADER_CLASS}>
       {showIdentity ? (
         <>
           <InstrumentLogo
@@ -48,7 +50,7 @@ function EmptyPaneHeader({ index }) {
     <div
       role="region"
       aria-label={index == null ? 'Empty pane' : `Empty pane ${index + 1}`}
-      className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0"
+      className={HEADER_CLASS}
     >
       <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />
       <span className="text-[var(--fig-xs)] font-medium text-zinc-400">Empty pane</span>
