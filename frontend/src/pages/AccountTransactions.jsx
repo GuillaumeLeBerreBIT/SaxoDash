@@ -125,10 +125,10 @@ export default function AccountTransactions() {
               {paged.rows.map((tx) => (
                 <tr key={tx.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
                   <Td edge className="num text-zinc-300">{tx.booking_date}</Td>
-                  <Td className="text-zinc-100">
-                    {tx.counterparty_name}
+                  <Td className="w-full max-w-0 text-zinc-100">
+                    <div className="truncate">{tx.counterparty_name}</div>
                     {tx.description && tx.description !== tx.counterparty_name && (
-                      <div className="text-[var(--fig-2xs)] text-zinc-500">{tx.description}</div>
+                      <div title={tx.description} className="truncate text-[var(--fig-2xs)] text-zinc-500">{tx.description}</div>
                     )}
                   </Td>
                   <Td><CategoryCell tx={tx} onChange={updateCategory.mutate} /></Td>

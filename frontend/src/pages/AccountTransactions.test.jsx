@@ -118,6 +118,21 @@ describe('AccountTransactions', () => {
     expect(screen.getByText('Salary January')).toBeInTheDocument()
   })
 
+  it('truncates a long description to one line and keeps the full text in the title', () => {
+    const raw = 'NYX*CandySnackService|.|02-10-2026|.|11:07|.|Meule|.|BE|.|524784XXXXXX0999 |.| |.|'
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'NYX', description: raw, amount: '-3.00', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+
+    const description = screen.getByText(raw)
+    expect(description).toHaveAttribute('title', raw)
+    expect(description).toHaveClass('truncate')
+    expect(screen.getByText('NYX')).toHaveClass('truncate')
+  })
+
   it('pages through long lists and resets to page 1 when filtering', () => {
     const data = Array.from({ length: 30 }, (_, i) => ({
       id: i + 1, booking_date: '2026-01-05', counterparty_name: `SHOP ${i + 1}`, description: '', amount: '-1.00', effective_category: 'GROCERIES',
