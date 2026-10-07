@@ -197,6 +197,93 @@ describe('Transactions', () => {
   })
 })
 
+describe('Transactions sorting', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  const bodyTickers = () =>
+    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate').textContent)
+  const header = (name) => screen.getByRole('columnheader', { name })
+  const sortBy = (name) => fireEvent.click(within(header(name)).getByRole('button'))
+
+  const sample = () => [
+    row({ id: 1, date: '2026-09-02', instrument: 'Bravo', total_eur: '200.00' }),
+    row({ id: 2, date: '2026-09-01', instrument: 'Alpha', total_eur: null }),
+    row({ id: 3, date: '2026-09-03', instrument: 'Charlie', total_eur: '1000.00' }),
+  ]
+
+  it('keeps API order with no sort and marks sortable headers aria-sort none', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    expect(bodyTickers()).toEqual(['Bravo', 'Alpha', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'none')
+    expect(screen.getByRole('columnheader', { name: 'Type' })).not.toHaveAttribute('aria-sort')
+  })
+
+  it('sorts Date ascending, descending, then back to API order', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'ascending')
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'descending')
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Bravo', 'Alpha', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'none')
+  })
+
+  it('sorts Instrument by its text', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Instrument/)
+    expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    sortBy(/^Instrument/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+  })
+
+  it('sorts Total numerically on the euro figure with a missing total last both ways', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Bravo', 'Charlie', 'Alpha'])
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+  })
+
+  it('returns to page 1 when the sort changes', () => {
+    stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1, instrument: `Name ${i}` })))
+    renderWithProviders(<Transactions />)
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    sortBy(/^Instrument/)
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    sortBy(/^Instrument/)
+    sortBy(/^Instrument/)
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('exports the filtered rows in the displayed sort order', async () => {
+    stub(sample())
+    let blob
+    URL.createObjectURL = vi.fn((b) => {
+      blob = b
+      return 'blob:x'
+    })
+    URL.revokeObjectURL = vi.fn()
+    renderWithProviders(<Transactions />)
+    sortBy(/^Instrument/)
+    fireEvent.click(screen.getByRole('button', { name: /Export CSV/ }))
+    const text = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.readAsText(blob)
+    })
+    const names = text.trim().split('\n').slice(1).map((line) => line.split(',')[2])
+    expect(names).toEqual(['Alpha', 'Bravo', 'Charlie'])
+  })
+})
+
 describe('Transactions on mobile', () => {
   beforeEach(() => vi.resetAllMocks())
 

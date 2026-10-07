@@ -3,14 +3,24 @@ import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
+import { nextSort, sortRows } from '../lib/sort'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, SortableTh, Td } from '../components/ui'
+
+const finite = (raw) => (raw === null || raw === undefined ? null : Number(raw))
+
+const TRANSACTION_ACCESSORS = {
+  date: (t) => t.date,
+  instrument: (t) => t.instrument,
+  total: (t) => finite(t.total_eur),
+}
 
 export default function Transactions() {
   const { data, isLoading, error, refetch } = useTransactions('?page_size=1000')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [page, setPage] = useState(1)
+  const [sort, setSort] = useState(null)
 
   // Stable identity so the filter memo below doesn't rerun on every render
   // while the query is still resolving.
@@ -34,9 +44,16 @@ export default function Transactions() {
     [allTx, effectiveFilter, search]
   )
 
+  const sorted = useMemo(() => sortRows(filtered, sort, TRANSACTION_ACCESSORS), [filtered, sort])
+
+  function onSort(key) {
+    setSort((current) => nextSort(current, key))
+    setPage(1)
+  }
+
   const perPage = 10
   const pageCount = Math.max(1, Math.ceil(filtered.length / perPage))
-  const visible = filtered.slice((page - 1) * perPage, page * perPage)
+  const visible = sorted.slice((page - 1) * perPage, page * perPage)
 
   function clearFilters() {
     setSearch('')
@@ -45,7 +62,7 @@ export default function Transactions() {
   }
 
   function handleExport() {
-    const blob = new Blob([toCsv(TRANSACTION_COLUMNS, filtered)], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob([toCsv(TRANSACTION_COLUMNS, sorted)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -111,13 +128,13 @@ export default function Transactions() {
           <table className="w-full text-[var(--fig-sm)]">
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
-                <Th edge>Date</Th>
+                <SortableTh edge sortKey="date" sort={sort} onSort={onSort}>Date</SortableTh>
                 <Th hideBelow="md">Type</Th>
-                <Th>Instrument</Th>
+                <SortableTh sortKey="instrument" sort={sort} onSort={onSort}>Instrument</SortableTh>
                 <Th hideBelow="md">Ticker</Th>
                 <Th align="right" hideBelow="md">Qty</Th>
                 <Th align="right" hideBelow="md">Price</Th>
-                <Th align="right">Total</Th>
+                <SortableTh align="right" sortKey="total" sort={sort} onSort={onSort}>Total</SortableTh>
                 <Th edge hideBelow="md">Account</Th>
               </tr>
             </thead>
