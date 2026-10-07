@@ -1,7 +1,7 @@
 import { useId } from 'react'
 
 import { useInvestorChanges } from '../../api/queries'
-import { Alert, Card, EmptyState, InstrumentLogo, Skeleton } from '../ui'
+import { Card, EmptyState, InstrumentLogo, QueryState, Skeleton } from '../ui'
 import TickerInitial from '../discover/TickerInitial'
 import { fmtPct } from '../../lib/format'
 import { fmtUsdCompact, holdingLabel } from '../../lib/investors'
@@ -48,9 +48,9 @@ function Group({ kind, title, items }) {
 }
 
 export default function ChangesTab({ slug, quarter }) {
-  const { data, isLoading, error } = useInvestorChanges(slug, quarter)
+  const { data, isLoading, error, refetch } = useInvestorChanges(slug, quarter)
 
-  if (error) return <Alert>Could not load the changes. {error.message}</Alert>
+  if (error) return <QueryState error={error} onRetry={refetch} label="the changes" />
   if (isLoading || !data) return <Skeleton className="h-40" />
   if (!data.previous_quarter) {
     return <EmptyState title="First stored quarter — there is no earlier filing to compare against." />

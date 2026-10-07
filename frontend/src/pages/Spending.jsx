@@ -14,7 +14,7 @@ import SubscriptionsList from '../components/SubscriptionsList'
 
 export default function Spending() {
   const [period, setPeriod] = useState(() => ({ key: 'this_month', ...resolvePeriod('this_month') }))
-  const { data: summary, isLoading, error } = useSpendingSummary(
+  const { data: summary, isLoading, error, refetch } = useSpendingSummary(
     `?date_from=${period.date_from}&date_to=${period.date_to}`,
   )
   const { data: subscriptions } = useSubscriptions()
@@ -67,6 +67,7 @@ export default function Spending() {
           categories={summary?.categories}
           isLoading={isLoading}
           error={error}
+          onRetry={refetch}
           periodLabel={period.label}
         />
         <SpendingTrendChart />

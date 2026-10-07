@@ -6,10 +6,10 @@ import { chartPlaceholderFor } from '../lib/chartState'
 import { trendBars, trendTooltipLabel, trendTooltipRow } from '../lib/spending'
 
 export default function SpendingTrendChart() {
-  const { data, isLoading, error } = useSpendingTrend()
+  const { data, isLoading, error, refetch } = useSpendingTrend()
 
   const bars = trendBars(data)
-  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220, onRetry: refetch })
   const subtitle = bars.at(-1)?.current
     ? 'Monthly total, last 6 months · current month to date'
     : 'Monthly total, last 6 months'

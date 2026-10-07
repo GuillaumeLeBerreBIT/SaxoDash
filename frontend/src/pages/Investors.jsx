@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useInvestors } from '../api/queries'
-import { Alert, Button, EmptyState, PageHeader, Skeleton } from '../components/ui'
+import { Button, EmptyState, PageHeader, QueryState, Skeleton } from '../components/ui'
 import InvestorCards from '../components/investors/InvestorCards'
 import InvestorTable from '../components/investors/InvestorTable'
 import InvestorToolbar from '../components/investors/InvestorToolbar'
@@ -21,7 +21,7 @@ export default function Investors() {
   const [layout, setLayout] = useState('cards')
   const [showAll, setShowAll] = useState(false)
 
-  const { data: cards = [], isLoading, error } = useInvestors()
+  const { data: cards = [], isLoading, error, refetch } = useInvestors()
   const debounced = useDebouncedValue(query.trim())
   const holds = looksLikeTicker(debounced) ? debounced.toUpperCase() : ''
   const { data: holders = [], isFetching: holdersFetching } = useInvestors({ holds })
@@ -40,7 +40,14 @@ export default function Investors() {
   const shown = showAll || searching ? visible : visible.slice(0, CARD_LIMIT)
   const latest = latestQuarter(cards)
 
-  if (error) return <Alert>Could not load investors. {error.message}</Alert>
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <PageHeader title="Investors" />
+        <QueryState error={error} onRetry={refetch} label="investors" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">

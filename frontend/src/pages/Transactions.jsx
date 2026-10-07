@@ -4,10 +4,10 @@ import { useTransactions } from '../api/queries'
 import { fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, PageHeader, QueryState, Th, Td } from '../components/ui'
 
 export default function Transactions() {
-  const { data, isLoading, error } = useTransactions('?page_size=1000')
+  const { data, isLoading, error, refetch } = useTransactions('?page_size=1000')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [page, setPage] = useState(1)
@@ -56,8 +56,14 @@ export default function Transactions() {
     URL.revokeObjectURL(url)
   }
 
-  if (error) return <div className="text-red-400 text-sm">Failed to load transactions</div>
-  if (isLoading) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (error || isLoading) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Transactions" subtitle="All account activity" />
+        <QueryState isLoading={!error} error={error} onRetry={refetch} label="transactions" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

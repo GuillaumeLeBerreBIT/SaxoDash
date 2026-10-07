@@ -142,4 +142,13 @@ describe('Investors', () => {
     renderPage()
     expect(screen.getByText(/US-listed long positions and listed options/)).toBeInTheDocument()
   })
+
+  it('offers Retry when the investors fail to load', () => {
+    const refetch = vi.fn()
+    useInvestors.mockImplementation(() => ({ data: undefined, isLoading: false, error: new Error('boom'), refetch }))
+    renderPage()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
+  })
 })

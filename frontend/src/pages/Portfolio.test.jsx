@@ -284,4 +284,26 @@ describe('Portfolio holdings on mobile', () => {
     expect(within(row).getByText('27.8%').closest('td')).toHaveClass('hidden', 'md:table-cell')
     expect(within(row).getByText('€8,773.32').closest('td')).not.toHaveClass('hidden')
   })
+
+  it('retries only the failed queries and keeps the heading', () => {
+    stub()
+    const summaryRefetch = vi.fn()
+    const positionsRefetch = vi.fn()
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: summaryRefetch })
+    queries.usePositions.mockReturnValue({ ...idle, data: [msft], refetch: positionsRefetch })
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Portfolio' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(summaryRefetch).toHaveBeenCalled()
+    expect(positionsRefetch).not.toHaveBeenCalled()
+  })
+
+  it('shows a skeleton card, not bare Loading text, while loading', () => {
+    stub()
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, isLoading: true })
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('status', { name: 'Loading portfolio' })).toBeInTheDocument()
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+  })
 })

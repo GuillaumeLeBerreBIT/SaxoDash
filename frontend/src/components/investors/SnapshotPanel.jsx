@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { useInvestor } from '../../api/queries'
-import { Alert, Card, EmptyState, Skeleton } from '../ui'
+import { Card, EmptyState, QueryState, Skeleton } from '../ui'
 import InvestorStats from './InvestorStats'
 import TopHoldings from './TopHoldings'
 import { quarterLabel } from '../../lib/investors'
@@ -22,9 +22,9 @@ export function ImportProgress({ progress }) {
 }
 
 export default function SnapshotPanel({ slug }) {
-  const { data, isLoading, error } = useInvestor(slug)
+  const { data, isLoading, error, refetch } = useInvestor(slug)
 
-  if (error) return <Alert>Could not load this investor. {error.message}</Alert>
+  if (error) return <QueryState error={error} onRetry={refetch} label="this investor" />
   if (isLoading || !data) return <Card><Skeleton className="h-64" /></Card>
 
   return (

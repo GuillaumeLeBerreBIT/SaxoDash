@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 import ChangesTab from './ChangesTab'
 
@@ -38,5 +38,14 @@ describe('ChangesTab', () => {
     state = { isLoading: false, error: null, data: { quarter: '2021-12-31', previous_quarter: null, new: [], added: [], trimmed: [], sold_out: [] } }
     render(<ChangesTab slug="berkshire-hathaway" />)
     expect(screen.getByText('First stored quarter — there is no earlier filing to compare against.')).toBeInTheDocument()
+  })
+
+  it('offers Retry on a failed load', () => {
+    const refetch = vi.fn()
+    state = { data: undefined, isLoading: false, error: new Error('boom'), refetch }
+    render(<ChangesTab slug="s" quarter="2026-06-30" />)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import SnapshotPanel from './SnapshotPanel'
@@ -45,5 +45,14 @@ describe('SnapshotPanel', () => {
     state = { data: undefined, isLoading: false, error: new Error('boom') }
     renderPanel()
     expect(screen.getByText(/Could not load this investor/)).toBeInTheDocument()
+  })
+
+  it('offers Retry on a failed load', () => {
+    const refetch = vi.fn()
+    state = { data: undefined, isLoading: false, error: new Error('boom'), refetch }
+    renderPanel()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
   })
 })

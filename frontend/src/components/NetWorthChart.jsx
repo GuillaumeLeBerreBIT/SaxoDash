@@ -37,10 +37,10 @@ function SeriesLegend({ series, dimmed }) {
 export default function NetWorthChart() {
   const [range, setRange] = useState('6M')
   const [view, setView] = useState('ALL')
-  const { data, isLoading, error } = useNetWorthHistory(range)
+  const { data, isLoading, error, refetch } = useNetWorthHistory(range)
 
   // Lines need two points; a single snapshot with dot={false} draws nothing.
-  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2, onRetry: refetch })
 
   const visible = SERIES.filter((s) => view === 'ALL' || s.key === view)
   const isVisible = (key) => visible.some((s) => s.key === key)

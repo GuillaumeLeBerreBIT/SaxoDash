@@ -198,4 +198,20 @@ describe('Transactions on mobile', () => {
     expect(screen.getByRole('textbox').parentElement).toHaveClass('w-full', 'md:w-auto')
   })
 
+  it('keeps the heading and offers Retry when transactions fail', () => {
+    const refetch = vi.fn()
+    queries.useTransactions.mockReturnValue({ data: undefined, isLoading: false, error: new Error('x'), refetch })
+    renderWithProviders(<Transactions />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Transactions' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
+  })
+
+  it('shows a skeleton card, not bare Loading text, while loading', () => {
+    queries.useTransactions.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    renderWithProviders(<Transactions />)
+    expect(screen.getByRole('status', { name: 'Loading transactions' })).toBeInTheDocument()
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+  })
 })

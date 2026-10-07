@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Accounts from './Accounts'
 
@@ -97,5 +97,23 @@ describe('Accounts', () => {
     })
     renderWithProviders(<Accounts />)
     expect(screen.queryByText(/^vs /)).not.toBeInTheDocument()
+  })
+
+  it('keeps the heading and offers Retry when accounts fail to load', () => {
+    const refetch = vi.fn()
+    mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch } })
+    renderWithProviders(<Accounts />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
+  })
+
+  it('shows a skeleton card, not bare Loading text, while accounts load', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
+    renderWithProviders(<Accounts />)
+    expect(screen.getByRole('status', { name: 'Loading accounts' })).toBeInTheDocument()
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
   })
 })

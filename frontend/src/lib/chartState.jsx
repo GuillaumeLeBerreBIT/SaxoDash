@@ -1,5 +1,5 @@
 import { isNotConnected } from '../api/client'
-import { ChartPlaceholder } from '../components/ui'
+import { Button, ChartPlaceholder } from '../components/ui'
 
 /** Decides what a chart should show before it shows a plot.
  *
@@ -18,6 +18,7 @@ export function chartPlaceholderFor({
   height = 260,
   symbol,
   unresolved,
+  onRetry,
 }) {
   if (isLoading) return <ChartPlaceholder height={height}>Loading…</ChartPlaceholder>
   // A missing Saxo connection is a prompt to reconnect, not a failure. Handled
@@ -31,7 +32,10 @@ export function chartPlaceholderFor({
   if (error)
     return (
       <ChartPlaceholder height={height} tone="red">
-        Failed to load chart data
+        <div className="flex flex-col items-center gap-3">
+          <span role="alert">Failed to load chart data</span>
+          {onRetry && <Button onClick={onRetry}>Retry</Button>}
+        </div>
       </ChartPlaceholder>
     )
 
