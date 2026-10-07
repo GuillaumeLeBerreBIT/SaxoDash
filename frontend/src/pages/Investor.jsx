@@ -6,7 +6,7 @@ import ChangesTab from '../components/investors/ChangesTab'
 import HoldingsTab from '../components/investors/HoldingsTab'
 import InvestorStats from '../components/investors/InvestorStats'
 import LimitsNote from '../components/investors/LimitsNote'
-import { ImportProgress } from '../components/investors/SnapshotPanel'
+import ImportProgress from '../components/investors/ImportProgress'
 import { quarterLabel } from '../lib/investors'
 
 const TABS = [['holdings', 'Holdings'], ['changes', 'Changes']]
