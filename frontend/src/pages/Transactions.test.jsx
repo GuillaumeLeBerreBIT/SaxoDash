@@ -34,6 +34,26 @@ describe('Transactions', () => {
     expect(within(sell).getByText('+€1,290.00')).toBeInTheDocument()
   })
 
+  it('titles the truncated instrument cell with its full name and ticker', () => {
+    stub([row({ instrument: 'NVIDIA Corporation', ticker: 'NVDA' })])
+    renderWithProviders(<Transactions />)
+    expect(screen.getByTitle('NVIDIA Corporation (NVDA)')).toHaveClass('truncate')
+  })
+
+  it('carries ticker and account in the below-md subline', () => {
+    stub([row({ type: 'BUY', ticker: 'NVDA', account: 'Saxo Main' })])
+    renderWithProviders(<Transactions />)
+    const subline = screen.getByText(/BUY · NVDA · Saxo Main/)
+    expect(subline).toHaveClass('md:hidden')
+    expect(subline.closest('td')).toHaveTextContent('NVIDIA')
+  })
+
+  it('skips an empty subline part without a stray separator', () => {
+    stub([row({ type: 'BUY', ticker: 'NVDA', account: '' })])
+    renderWithProviders(<Transactions />)
+    expect(screen.getByText('BUY · NVDA', { selector: '.md\\:hidden' })).toBeInTheDocument()
+  })
+
   it('shows a dash for the total when the currency was never recorded', () => {
     stub([row({ currency: null, fx_rate: null, total_eur: null })])
     renderWithProviders(<Transactions />)
@@ -68,4 +88,34 @@ describe('Transactions', () => {
 
     expect(within(screen.getByRole('table')).getByText('NVDA')).toBeInTheDocument()
   })
+})
+
+describe('Transactions on mobile', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it('keeps date, instrument and total visible below md and hides the rest', () => {
+    stub([row({ id: 1, type: 'BUY' })])
+    renderWithProviders(<Transactions />)
+    const table = screen.getByRole('table')
+    for (const name of ['Date', 'Instrument', 'Total']) {
+      expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    for (const name of ['Type', 'Ticker', 'Qty', 'Price', 'Account']) {
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
+    }
+    const line = within(table).getByText('NVIDIA').closest('tr')
+    expect(within(line).getByText('Saxo').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('US$150.00').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('BUY · NVDA · Saxo', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
+  })
+  it('wraps the toolbar and its type chips and gives the search the full row on mobile', () => {
+    stub([row({ id: 1, type: 'BUY' })])
+    renderWithProviders(<Transactions />)
+
+    const chips = screen.getByRole('button', { name: 'BUY' }).parentElement
+    expect(chips).toHaveClass('flex-wrap')
+    expect(chips.parentElement).toHaveClass('flex-wrap', 'gap-2', 'md:gap-3')
+    expect(screen.getByRole('textbox').parentElement).toHaveClass('w-full', 'md:w-auto')
+  })
+
 })

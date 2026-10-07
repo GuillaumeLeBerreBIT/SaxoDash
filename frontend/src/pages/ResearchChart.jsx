@@ -66,7 +66,7 @@ export default function ResearchChart() {
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
 
   return (
-    <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
+    <div className="h-dvh overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
       <ChartToolRail
         controls={rangeControls}
         tool={tool}
@@ -90,7 +90,7 @@ export default function ResearchChart() {
           onToggleList={toggleList}
         />
 
-        <div className="flex items-center gap-1 px-1">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1 px-1">
           <RangeButtons controls={rangeControls} />
           <div className="ml-auto">
             <SaxoConnectionStatus />

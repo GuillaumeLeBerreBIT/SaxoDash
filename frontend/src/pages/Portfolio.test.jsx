@@ -92,6 +92,20 @@ describe('Portfolio holdings table', () => {
     expect(screen.getAllByTitle(/no live price feed/i).length).toBeGreaterThan(0)
   })
 
+  it('flags an estimated price in the below-md name cell', () => {
+    renderWithProviders(<Portfolio />)
+    const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
+    const cue = within(row).getByText('est.')
+    expect(cue).toHaveClass('md:hidden')
+    expect(cue).toHaveAttribute('title', expect.stringMatching(/no live price feed/i))
+  })
+
+  it('shows no estimate cue for a live price', () => {
+    stub([{ ...msft, price_source: 'live' }])
+    renderWithProviders(<Portfolio />)
+    expect(screen.queryByText('est.')).not.toBeInTheDocument()
+  })
+
   it('says nothing about provenance when every price is live', () => {
     stub([{ ...msft, price_source: 'live' }])
     renderWithProviders(<Portfolio />)
@@ -118,6 +132,12 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
     expect(screen.getByRole('columnheader', { name: 'Latest session %' })).toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Day %' })).not.toBeInTheDocument()
+  })
+
+  it('titles the truncated holding name with its full text', () => {
+    stub()
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByTitle('Microsoft Corp.')).toHaveClass('truncate')
   })
 
   it('links each holding name to its research page', () => {
@@ -241,5 +261,27 @@ describe('Portfolio total row', () => {
     renderWithProviders(<Portfolio />)
 
     expect(within(totalRow()).getByText('—')).toBeInTheDocument()
+  })
+})
+
+describe('Portfolio holdings on mobile', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub()
+  })
+
+  it('keeps name, value and P&L visible below md and hides the rest', () => {
+    renderWithProviders(<Portfolio />)
+    const table = screen.getByRole('table')
+    for (const name of ['Name', 'Value', 'P&L']) {
+      expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    for (const name of ['Qty', 'Avg', 'Price', /^(Day|Latest session) %$/, 'Weight']) {
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
+    }
+    const row = within(table).getByText('MSFT').closest('tr')
+    expect(within(row).getByText('US$494.36').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(row).getByText('27.8%').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(row).getByText('€8,773.32').closest('td')).not.toHaveClass('hidden')
   })
 })

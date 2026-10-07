@@ -363,4 +363,19 @@ describe('Research panning', () => {
     expect(screen.getByText('Last close').parentElement).toHaveTextContent('141.00')
     expect(screen.getByText('1W high').parentElement).toHaveTextContent('143.00')
   })
+
+  it('keeps the tab row inside its own scroller instead of widening the page', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const row = screen.getByRole('button', { name: 'Overview' }).parentElement
+    expect(row).toHaveClass('overflow-x-auto', 'whitespace-nowrap')
+    expect(screen.getByRole('button', { name: 'Guide' })).toHaveClass('shrink-0')
+  })
+
+  it('stacks the watchlist rail under the chart until xl', () => {
+    const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const grid = container.querySelector('[class*="xl:grid-cols-"]')
+    expect(grid).toHaveClass('grid-cols-1')
+  })
 })

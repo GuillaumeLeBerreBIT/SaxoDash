@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
 import { NAV_ITEMS } from '../lib/navigation'
+import SaxoConnectionStatus from './SaxoConnectionStatus'
 
 export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
   const navigate = useNavigate()
@@ -19,7 +20,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen border-r border-white/[0.06] bg-gradient-to-b from-zinc-950 to-[#0b0b0e] flex flex-col z-30 transition-[width] duration-300 ease-out"
+      className="fixed left-0 top-0 h-screen border-r border-white/[0.06] bg-gradient-to-b from-zinc-950 to-[#0b0b0e] hidden md:flex flex-col z-30 transition-[width] duration-300 ease-out"
       style={{ width }}
     >
       <div className={`h-12 flex items-center border-b border-white/[0.06] ${collapsed ? 'justify-center' : 'px-4'}`}>
@@ -97,7 +98,8 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
       </nav>
 
       <div className={`border-t border-white/[0.06] ${collapsed ? 'p-2' : 'p-3'}`}>
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'}`}>
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'gap-2.5'}`}>
+          <SaxoConnectionStatus compact />
           <div
             title={collapsed ? username : undefined}
             className="w-8 h-8 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 text-[var(--fig-2xs)] font-medium flex items-center justify-center shrink-0"

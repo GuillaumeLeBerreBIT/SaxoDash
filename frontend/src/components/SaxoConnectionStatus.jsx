@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
+import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
+import { Link } from 'react-router-dom'
 import { Badge } from './ui'
 
-export default function SaxoConnectionStatus() {
+export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
+  const derived = deriveSaxoStatus(status)
   const [error] = useState(
-    () => new URLSearchParams(window.location.search).get('saxo') === 'error'
+    () => !compact && new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
 
   useEffect(() => {
@@ -16,9 +19,22 @@ export default function SaxoConnectionStatus() {
     }
   }, [error])
 
-  if (!status) return null
+  if (!derived) return null
 
-  if (!status.connected) {
+  if (compact) {
+    const dot = <StatusDot label={derived.sentence} dot={SAXO_DOT_CLASS[derived.tone]} />
+    if (!ACTIONABLE_KINDS.has(derived.kind)) return dot
+    return (
+      <Link
+        to="/portfolio"
+        className="inline-flex min-h-10 min-w-10 items-center justify-center md:min-h-0 md:min-w-0"
+      >
+        {dot}
+      </Link>
+    )
+  }
+
+  if (derived.kind === 'not_connected') {
     return (
       <div className="flex items-center gap-2">
         {error && <Badge tone="red">Connection failed</Badge>}
@@ -32,7 +48,7 @@ export default function SaxoConnectionStatus() {
     )
   }
 
-  if (status.needs_reauth) {
+  if (derived.kind === 'needs_reauth') {
     return (
       <button
         onClick={connectSaxo}
@@ -45,7 +61,7 @@ export default function SaxoConnectionStatus() {
 
   // Expired but still inside the reauth grace: calls are already being
   // refused, so saying "connected" here would contradict the panel below.
-  if (!status.usable) {
+  if (derived.kind === 'reconnecting') {
     return (
       <Badge tone="amber">
         <span title={status.unusable_reason ?? undefined}>Reconnecting…</span>
@@ -55,7 +71,7 @@ export default function SaxoConnectionStatus() {
 
   return (
     <span className="flex items-center gap-2">
-      {status.last_sync_outcome && status.last_sync_outcome !== 'ok' && (
+      {derived.kind === 'sync_degraded' && (
         <Badge tone="amber">
           <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
             Sync {status.last_sync_outcome}
@@ -76,4 +92,15 @@ export default function SaxoConnectionStatus() {
 const SYNC_OUTCOME_NOTE = {
   skipped: 'The last sync could not run, so this data may be stale',
   failed: 'The last sync failed, so this data may be stale',
+}
+
+const ACTIONABLE_KINDS = new Set(['needs_reauth', 'not_connected', 'reconnecting'])
+
+function StatusDot({ label, dot }) {
+  return (
+    <span role="status" aria-label={label} title={label} className="inline-flex items-center justify-center w-4 h-4 shrink-0">
+      <span aria-hidden="true" className={`w-2 h-2 rounded-full ${dot}`} />
+      <span className="sr-only">{label}</span>
+    </span>
+  )
 }

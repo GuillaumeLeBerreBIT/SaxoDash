@@ -152,14 +152,14 @@ export default function Research() {
               expandHref={chartHref(symbol, instrument)}
             />
 
-            <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px">
+            <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
               {visibleTabs.map(([key, label]) => (
                 <button
                   key={key}
                   type="button"
                   onClick={() => setTab(key)}
                   aria-current={tab === key}
-                  className={`h-8 px-3 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
+                  className={`h-8 px-3 shrink-0 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
                     tab === key
                       ? 'text-zinc-100 border-blue-500'
                       : 'text-zinc-500 border-transparent hover:text-zinc-300'

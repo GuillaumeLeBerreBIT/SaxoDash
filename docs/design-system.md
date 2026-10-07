@@ -201,6 +201,8 @@ The pattern used across the full 2026-09 redesign pass:
    `localStorage` (`access`/`refresh`/`username` keys). See the
    `saxodash-design-system` skill for the exact harness recipe, or the
    general `control-ui` skill for the underlying pattern.
+   For a mobile overflow gate across every route, see
+   [`mobile-overflow-check.md`](mobile-overflow-check.md).
 5. **Fix** whatever the screenshot reveals, re-verify, then report back with
    a concise per-item summary (what changed, what was verified).
 

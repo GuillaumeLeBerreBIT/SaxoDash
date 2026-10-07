@@ -69,7 +69,7 @@ export default function EnableBankingConnectionStatus() {
   if (!status) return null
 
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex flex-wrap items-center justify-end gap-2">
       {Object.entries(status).map(([bank, state]) => (
         <OneBank key={bank} bank={bank} state={state} failed={bank === failedBank} />
       ))}

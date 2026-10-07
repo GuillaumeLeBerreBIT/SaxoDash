@@ -97,4 +97,14 @@ describe('EnableBankingConnectionStatus', () => {
     renderWithProviders(<EnableBankingConnectionStatus />)
     expect(screen.queryByText('KBC sync failed')).not.toBeInTheDocument()
   })
+
+  it('wraps its badges instead of overflowing a narrow header', () => {
+    queries.useEnableBankingStatus.mockReturnValue({
+      data: { kbc: { connected: false }, argenta: { connected: false } },
+    })
+    renderWithProviders(<EnableBankingConnectionStatus />)
+
+    expect(screen.getByText('Connect KBC').closest('span.flex')).toHaveClass('flex-wrap', 'justify-end')
+  })
+
 })

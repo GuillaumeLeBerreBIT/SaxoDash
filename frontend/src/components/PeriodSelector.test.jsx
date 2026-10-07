@@ -55,4 +55,17 @@ describe('PeriodSelector', () => {
 
     expect(onChange).not.toHaveBeenCalled()
   })
+
+  it('stays within its container and lets the select shrink', () => {
+    const { container } = renderWithProviders(
+      <PeriodSelector
+        value={{ key: 'this_month', date_from: '2026-09-01', date_to: '2026-09-19', label: 'September 2026' }}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(container.firstChild).toHaveClass('max-w-full', 'flex-wrap')
+    expect(screen.getByLabelText('Select period')).toHaveClass('min-w-0')
+  })
+
 })

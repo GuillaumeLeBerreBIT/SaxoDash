@@ -51,4 +51,12 @@ describe('BudgetProgressBar', () => {
     const bar = container.querySelector('.rounded-full > div')
     expect(bar.style.background).toBe(hexToRgb(POSITIVE))
   })
+  it('stacks the limit input under the label and amount on mobile', () => {
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
+    renderWithProviders(<BudgetProgressBar category="GROCERIES" spent="40.00" limit="100.00" />)
+
+    const input = screen.getByPlaceholderText('Set limit')
+    expect(input.parentElement.parentElement).toHaveClass('flex-col', 'items-start', 'md:flex-row', 'md:items-center')
+    expect(input.parentElement).toHaveClass('w-full', 'justify-between', 'md:w-auto')
+  })
 })

@@ -218,4 +218,21 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
   expect(screen.getByText('<1M')).toBeInTheDocument()
   expect(screen.getByText('Q4 2026')).toHaveClass('whitespace-nowrap')
 })
+
+  it('wraps the week navigation instead of overflowing a phone', () => {
+    stub()
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    expect(screen.getByRole('button', { name: 'Previous week' }).parentElement).toHaveClass('flex-wrap')
+  })
+
+  it('collapses the docket rows to symbol, EPS and revenue on a phone', () => {
+    stub()
+    const { container } = renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    const row = container.querySelector('button[class*="md:grid-cols-"]')
+    expect(row).toHaveClass('grid-cols-[72px_minmax(0,1fr)_96px_14px]')
+    const hidden = [...row.children].filter((el) => el.classList.contains('hidden'))
+    expect(hidden).toHaveLength(3)
+  })
 })

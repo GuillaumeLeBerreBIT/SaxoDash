@@ -59,8 +59,8 @@ export default function Transactions() {
       />
 
       <Card padding={false}>
-        <div className="p-4 border-b border-zinc-800 flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="p-4 border-b border-zinc-800 flex items-center gap-2 md:gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[220px] w-full md:w-auto">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
               <Search size={14} />
             </span>
@@ -74,7 +74,7 @@ export default function Transactions() {
               className="w-full pl-9"
             />
           </div>
-          <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
+          <div className="flex flex-wrap items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
             {types.map((t) => (
               <button
                 key={t}
@@ -97,24 +97,29 @@ export default function Transactions() {
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                 <Th edge>Date</Th>
-                <Th>Type</Th>
+                <Th hideBelow="md">Type</Th>
                 <Th>Instrument</Th>
-                <Th>Ticker</Th>
-                <Th align="right">Qty</Th>
-                <Th align="right">Price</Th>
+                <Th hideBelow="md">Ticker</Th>
+                <Th align="right" hideBelow="md">Qty</Th>
+                <Th align="right" hideBelow="md">Price</Th>
                 <Th align="right">Total</Th>
-                <Th edge>Account</Th>
+                <Th edge hideBelow="md">Account</Th>
               </tr>
             </thead>
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
                   <Td edge className="num text-zinc-300">{t.date}</Td>
-                  <Td>
+                  <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
-                  <Td className="text-zinc-100">{t.instrument}</Td>
-                  <Td className="text-zinc-400 font-medium">
+                  <Td className="w-full max-w-0 md:w-auto md:max-w-none text-zinc-100">
+                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>{t.instrument}</div>
+                    <span className="md:hidden block truncate text-[var(--fig-2xs)] text-zinc-500">
+                      {[t.type, t.ticker, t.account].filter(Boolean).join(' · ')}
+                    </span>
+                  </Td>
+                  <Td hideBelow="md" className="text-zinc-400 font-medium">
                     <span className="flex items-center gap-2">
                       <InstrumentLogo
                         symbol={t.ticker}
@@ -125,10 +130,10 @@ export default function Transactions() {
                       {t.ticker}
                     </span>
                   </Td>
-                  <Td align="right" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
-                  <Td align="right" className="num text-zinc-300">{txPrice(t)}</Td>
+                  <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
+                  <Td align="right" hideBelow="md" className="num text-zinc-300">{txPrice(t)}</Td>
                   <Td align="right" className={`num font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
-                  <Td edge className="text-zinc-400">{t.account}</Td>
+                  <Td edge hideBelow="md" className="text-zinc-400">{t.account}</Td>
                 </tr>
               ))}
               {visible.length === 0 && (

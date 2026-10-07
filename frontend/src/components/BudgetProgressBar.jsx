@@ -20,9 +20,9 @@ export default function BudgetProgressBar({ category, spent, limit }) {
 
   return (
     <div className="py-2 border-b border-zinc-800/60 last:border-0">
-      <div className="flex items-center justify-between text-[var(--fig-sm)]">
+      <div className="flex flex-col items-start gap-1 text-[var(--fig-sm)] md:flex-row md:items-center md:justify-between md:gap-0">
         <span className="text-zinc-100">{CATEGORY_LABELS[category] ?? category}</span>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center justify-between gap-2 md:w-auto md:justify-start">
           <span className="text-zinc-400 num font-mono">
             {fmtEur(spent)}{hasBudget ? ` / ${fmtEur(limit)}` : ''}
           </span>

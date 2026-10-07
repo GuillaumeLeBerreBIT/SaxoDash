@@ -30,24 +30,24 @@ export function Card({ children, className = '', padding = true, interactive = f
  *  `as="h3"` only for a heading genuinely nested under another CardHeader. */
 export function CardHeader({ title, subtitle, right, className = '', as: Heading = 'h2' }) {
   return (
-    <div className={`flex items-start justify-between gap-3 2xl:gap-4 ${className}`}>
-      <div>
+    <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-3 2xl:gap-4 ${className}`}>
+      <div className="min-w-0">
         <Heading className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</Heading>
         {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5 2xl:mt-1">{subtitle}</p>}
       </div>
-      {right}
+      {right && <div className="flex min-w-0 max-w-full">{right}</div>}
     </div>
   )
 }
 
 export function PageHeader({ title, subtitle, right }) {
   return (
-    <div className="flex items-end justify-between mb-5 2xl:mb-6">
-      <div>
+    <div className="flex flex-wrap md:flex-nowrap items-end justify-between gap-x-4 gap-y-3 md:gap-x-0 md:gap-y-0 mb-5 2xl:mb-6">
+      <div className="min-w-0">
         <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
         {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1 2xl:mt-1.5">{subtitle}</p>}
       </div>
-      {right}
+      {right && <div className="flex min-w-0 max-w-full">{right}</div>}
     </div>
   )
 }
@@ -447,12 +447,13 @@ export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right })
  *  get more horizontal room than interior ones. Used by every data table
  *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
  *  governed from one place instead of copied per table. */
-export function Th({ children, align = 'left', edge = false, className = '' }) {
+export function Th({ children, align = 'left', edge = false, hideBelow, className = '' }) {
+  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
   return (
     <th
       className={`font-medium ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-1.5 2xl:py-2 ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${className}`}
+      } ${hideClass} ${className}`}
     >
       {children}
     </th>
@@ -465,12 +466,13 @@ export function Th({ children, align = 'left', edge = false, className = '' }) {
  *  design system's table philosophy), so nowrap costs nothing it wasn't
  *  already the intended behavior. A cell that genuinely needs to wrap can
  *  still override via `className`. */
-export function Td({ children, align = 'left', edge = false, className = '' }) {
+export function Td({ children, align = 'left', edge = false, hideBelow, className = '' }) {
+  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
   return (
     <td
       className={`whitespace-nowrap ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${className}`}
+      } ${hideClass} ${className}`}
     >
       {children}
     </td>

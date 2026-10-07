@@ -29,4 +29,14 @@ describe('ReturnsTable', () => {
 
     expect(screen.getByText('needs 340 more days')).toBeInTheDocument()
   })
+
+  it('keeps period, portfolio and alpha visible below md and hides the benchmark', () => {
+    render(<ReturnsTable periods={periods} benchmarkName="World Index" />)
+
+    for (const name of ['Period', 'Portfolio', 'Alpha']) {
+      expect(screen.getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    expect(screen.getByRole('columnheader', { name: 'World Index' })).toHaveClass('hidden', 'md:table-cell')
+    expect(screen.getByText('+3.2%').closest('td')).toHaveClass('hidden', 'md:table-cell')
+  })
 })

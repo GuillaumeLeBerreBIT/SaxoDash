@@ -14,6 +14,9 @@ import {
   Skeleton,
   Metric,
   DayChange,
+  PageHeader,
+  Th,
+  Td,
 } from './ui'
 
 describe('ui primitives', () => {
@@ -179,5 +182,36 @@ describe('DayChange', () => {
   it('keeps colour for real moves', () => {
     render(<DayChange value={1.2} />)
     expect(screen.getByText('+1.20%').className).toContain('text-emerald-400')
+  })
+})
+
+describe('header right slots', () => {
+  it('PageHeader lets a wide right slot wrap below the title', () => {
+    const { container } = render(<PageHeader title="Analytics" subtitle="s" right={<button>Right</button>} />)
+    expect(container.firstChild).toHaveClass('flex-wrap', 'md:flex-nowrap', 'md:gap-x-0', 'md:gap-y-0')
+    expect(screen.getByRole('button', { name: 'Right' }).parentElement).toHaveClass('flex', 'min-w-0', 'max-w-full')
+    expect(screen.getByRole('heading', { level: 1, name: 'Analytics' })).toBeInTheDocument()
+  })
+
+  it('CardHeader lets its right slot wrap and keeps the h2 heading', () => {
+    const { container } = render(<CardHeader title="Chart" right={<span>Tools</span>} />)
+    expect(container.firstChild).toHaveClass('flex-wrap', 'md:flex-nowrap')
+    expect(screen.getByText('Tools').parentElement).toHaveClass('flex', 'min-w-0', 'max-w-full')
+    expect(screen.getByRole('heading', { level: 2, name: 'Chart' })).toBeInTheDocument()
+  })
+})
+
+describe('Th / Td hideBelow', () => {
+  it('hides a cell below md and shows it from md up', () => {
+    render(
+      <table><thead><tr><Th hideBelow="md">Qty</Th></tr></thead><tbody><tr><Td hideBelow="md">10</Td></tr></tbody></table>,
+    )
+    expect(screen.getByText('Qty')).toHaveClass('hidden', 'md:table-cell')
+    expect(screen.getByText('10')).toHaveClass('hidden', 'md:table-cell')
+  })
+
+  it('leaves a cell without hideBelow visible', () => {
+    render(<table><tbody><tr><Td>Name</Td></tr></tbody></table>)
+    expect(screen.getByText('Name')).not.toHaveClass('hidden')
   })
 })
