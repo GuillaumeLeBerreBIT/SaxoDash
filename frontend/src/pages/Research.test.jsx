@@ -125,7 +125,7 @@ describe('Research', () => {
     fireEvent.error(container.querySelector('img'))
 
     expect(container.querySelector('img')).not.toBeInTheDocument()
-    expect(screen.getAllByText('NV').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('N').length).toBeGreaterThan(0)
   })
 
   it('falls back to the first held position when no symbol is given', () => {

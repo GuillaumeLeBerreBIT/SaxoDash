@@ -5,9 +5,8 @@ import { useDiscoverShelf } from '../api/queries'
 import { reasonsLine, stockCount, updatedLabel } from '../lib/discover'
 import { fmtMoney } from '../lib/format'
 import { chartHref, researchHref } from '../lib/research'
-import TickerInitial from '../components/discover/TickerInitial'
 import WatchlistStar from '../components/discover/WatchlistStar'
-import { Alert, Card, DayChange, InstrumentLogo, PageHeader, Skeleton, Td, Th, Tr } from '../components/ui'
+import { Alert, Card, DayChange, InstrumentLogo, LetterAvatar, PageHeader, Skeleton, Td, Th, Tr } from '../components/ui'
 
 export default function DiscoverShelf() {
   const { key } = useParams()
@@ -43,7 +42,7 @@ export default function DiscoverShelf() {
                     <Tr key={`${item.uic}:${item.asset_type}`}>
                       <Td edge>
                         <Link to={researchHref(item.ticker, 'overview', instrument)} className="flex items-center gap-2 text-zinc-100 hover:text-blue-300">
-                          <InstrumentLogo symbol={item.ticker} size={20} className="rounded" fallback={<TickerInitial ticker={item.ticker} size={20} />} />
+                          <InstrumentLogo symbol={item.ticker} size={20} className="rounded" fallback={<LetterAvatar symbol={item.ticker} size={20} />} />
                           <span className="font-semibold">{item.ticker}</span>
                           <span className="text-zinc-500 truncate hidden sm:inline">{item.name}</span>
                         </Link>

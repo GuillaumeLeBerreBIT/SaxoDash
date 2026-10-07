@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { SPARKLINE_PERIOD, reasonParts } from '../../lib/discover'
 import { fmtMoney } from '../../lib/format'
 import { researchHref } from '../../lib/research'
-import { Card, DayChange, InstrumentLogo } from '../ui'
+import { Card, DayChange, InstrumentLogo, LetterAvatar } from '../ui'
 import Sparkline from './Sparkline'
-import TickerInitial from './TickerInitial'
 import WatchlistStar from './WatchlistStar'
 
 export default function DiscoverCard({ item, className = '' }) {
@@ -16,7 +15,7 @@ export default function DiscoverCard({ item, className = '' }) {
         className="block p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 rounded-lg"
       >
         <div className="flex items-center gap-2 pr-11 sm:pr-7">
-          <InstrumentLogo symbol={item.ticker} size={24} className="rounded" fallback={<TickerInitial ticker={item.ticker} size={24} />} />
+          <InstrumentLogo symbol={item.ticker} size={24} className="rounded" fallback={<LetterAvatar symbol={item.ticker} size={24} />} />
           <div className="min-w-0">
             <div className="text-[var(--fig-sm)] font-semibold text-zinc-100">{item.ticker}</div>
             <div className="text-[var(--fig-2xs)] text-zinc-500 truncate">{item.name}</div>

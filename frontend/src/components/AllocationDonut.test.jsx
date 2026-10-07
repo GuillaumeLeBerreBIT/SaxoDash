@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
-import AllocationDonut from './AllocationDonut'
+import AllocationDonut, { SliceLabel } from './AllocationDonut'
 
 const items = [
   { name: 'AAPL', note: 'APPLE INC', value: 70, color: '#60a5fa' },
@@ -42,5 +42,16 @@ describe('AllocationDonut', () => {
   it('pins the legend name when a note follows it', () => {
     render(<AllocationDonut items={items} formatValue={(v) => `$${v}`} />)
     expect(screen.getByText('AAPL')).toHaveClass('shrink-0')
+  })
+
+  it('swaps a failed slice logo for the symbol initial', () => {
+    const { container } = render(
+      <svg>
+        <SliceLabel cx={100} cy={100} midAngle={45} innerRadius={50} outerRadius={80} percent={0.5} payload={{ name: 'msft' }} />
+      </svg>,
+    )
+    fireEvent.error(container.querySelector('image'))
+    expect(container.querySelector('image')).toBeNull()
+    expect(screen.getByText('M')).toBeInTheDocument()
   })
 })

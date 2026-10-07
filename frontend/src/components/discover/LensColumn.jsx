@@ -2,9 +2,8 @@ import { Link } from 'react-router-dom'
 
 import { COMPACT_ROWS, leadReason, reasonParts } from '../../lib/discover'
 import { researchHref } from '../../lib/research'
-import { Card, DayChange, EmptyState, InstrumentLogo } from '../ui'
+import { Card, DayChange, EmptyState, InstrumentLogo, LetterAvatar } from '../ui'
 import ShelfHeader from './ShelfHeader'
-import TickerInitial from './TickerInitial'
 
 function LeadReason({ reason }) {
   if (!reason) return null
@@ -32,7 +31,7 @@ export default function LensColumn({ shelf }) {
                 to={researchHref(item.ticker, 'overview', { uic: item.uic, assetType: item.asset_type })}
                 className="flex min-w-0 items-center gap-2 py-2 rounded hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
               >
-                <InstrumentLogo symbol={item.ticker} size={16} className="rounded" fallback={<TickerInitial ticker={item.ticker} size={16} />} />
+                <InstrumentLogo symbol={item.ticker} size={16} className="rounded" fallback={<LetterAvatar symbol={item.ticker} size={16} />} />
                 <span className="w-14 shrink-0 text-[var(--fig-sm)] font-semibold text-zinc-100">{item.ticker}</span>
                 <DayChange value={item.change_1d} className="shrink-0 text-[var(--fig-xs)]" />
                 <LeadReason reason={leadReason(item, shelf.sort)} />

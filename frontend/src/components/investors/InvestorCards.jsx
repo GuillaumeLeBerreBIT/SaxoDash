@@ -1,5 +1,4 @@
-import { Card, InstrumentLogo } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { Card, InstrumentLogo, LetterAvatar } from '../ui'
 import { ImportProgress } from './SnapshotPanel'
 import { UNKNOWN, fmtNum } from '../../lib/format'
 import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
@@ -13,7 +12,7 @@ export function TopLogos({ holdings }) {
           symbol={h.ticker}
           size={22}
           className="rounded-full ring-2 ring-zinc-900"
-          fallback={<TickerInitial ticker={h.ticker ?? h.issuer} size={22} />}
+          fallback={<LetterAvatar symbol={h.ticker ?? h.issuer} size={22} />}
         />
       ))}
     </span>

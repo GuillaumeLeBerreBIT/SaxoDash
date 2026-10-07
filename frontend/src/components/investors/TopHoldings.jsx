@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import AllocationDonut from '../AllocationDonut'
-import { InstrumentLogo, TBtn } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { InstrumentLogo, LetterAvatar, TBtn } from '../ui'
 import ChangeBadge from './ChangeBadge'
 import HoldingsTable from './HoldingsTable'
 import WeightBar from './WeightBar'
@@ -23,7 +22,7 @@ function HoldingTile({ holding, max }) {
           symbol={holding.ticker}
           size={28}
           className="rounded"
-          fallback={<TickerInitial ticker={holdingLabel(holding)} size={28} />}
+          fallback={<LetterAvatar symbol={holdingLabel(holding)} size={28} />}
         />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">

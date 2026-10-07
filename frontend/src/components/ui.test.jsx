@@ -8,6 +8,7 @@ import {
   CardHeader,
   EmptyState,
   InstrumentLogo,
+  LetterAvatar,
   MetricTile,
   Modal,
   StatStrip,
@@ -293,5 +294,25 @@ describe('QueryState', () => {
   it('renders children otherwise', () => {
     render(<QueryState label="holdings"><p>body</p></QueryState>)
     expect(screen.getByText('body')).toBeInTheDocument()
+  })
+
+  it('LetterAvatar shows the symbol initial in capitals, hidden from assistive tech', () => {
+    const { container } = render(<LetterAvatar symbol="brk.b" size={24} />)
+    expect(container).toHaveTextContent('B')
+    expect(container.firstChild).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('LetterAvatar renders an empty tile for a missing symbol', () => {
+    const { container } = render(<LetterAvatar symbol="" size={24} />)
+    expect(container.firstChild).toBeEmptyDOMElement()
+  })
+
+  it('InstrumentLogo shows the letter avatar once the image fails', () => {
+    const { container } = render(
+      <InstrumentLogo symbol="AAPL" size={40} fallback={<LetterAvatar symbol="AAPL" size={40} />} />,
+    )
+    fireEvent.error(container.querySelector('img'))
+    expect(container.querySelector('img')).toBeNull()
+    expect(container).toHaveTextContent('A')
   })
 })

@@ -1,8 +1,7 @@
 import { useId } from 'react'
 
 import { useInvestorChanges } from '../../api/queries'
-import { Card, EmptyState, InstrumentLogo, QueryState, Skeleton } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { Card, EmptyState, InstrumentLogo, LetterAvatar, QueryState, Skeleton } from '../ui'
 import { fmtPct } from '../../lib/format'
 import { fmtUsdCompact, holdingLabel } from '../../lib/investors'
 
@@ -32,7 +31,7 @@ function Group({ kind, title, items }) {
           {items.map((i) => (
             <li key={`${i.cusip}-${i.put_call}`} className="py-2 flex items-center justify-between gap-3">
               <span className="flex items-center gap-2 min-w-0">
-                <InstrumentLogo symbol={i.ticker} size={20} className="rounded" fallback={<TickerInitial ticker={holdingLabel(i)} size={20} />} />
+                <InstrumentLogo symbol={i.ticker} size={20} className="rounded" fallback={<LetterAvatar symbol={holdingLabel(i)} size={20} />} />
                 <span className={`truncate ${i.ticker ? 'font-mono font-semibold text-zinc-100' : 'text-zinc-200'}`}>{holdingLabel(i)}</span>
               </span>
               <span className="flex flex-col items-end shrink-0">

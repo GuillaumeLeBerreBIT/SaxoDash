@@ -4,7 +4,7 @@ import { useTransactions } from '../api/queries'
 import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, PageHeader, QueryState, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, Td } from '../components/ui'
 
 export default function Transactions() {
   const { data, isLoading, error, refetch } = useTransactions('?page_size=1000')
@@ -140,7 +140,7 @@ export default function Transactions() {
                         symbol={t.ticker}
                         size={16}
                         className="rounded-sm"
-                        fallback={<span className="w-4 h-4 shrink-0" />}
+                        fallback={<LetterAvatar symbol={t.ticker} size={16} className="rounded-sm" />}
                       />
                       {t.ticker}
                     </span>

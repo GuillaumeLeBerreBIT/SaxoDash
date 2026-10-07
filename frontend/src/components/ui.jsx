@@ -384,6 +384,18 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
 }
 
+export function LetterAvatar({ symbol, size, className = 'rounded' }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: size, height: size }}
+      className={`shrink-0 bg-zinc-800 flex items-center justify-center text-[var(--fig-2xs)] font-semibold text-zinc-400 ${className}`}
+    >
+      {symbol ? symbol[0].toUpperCase() : null}
+    </span>
+  )
+}
+
 /** A logo for `symbol` (elbstream.com - see lib/logos.js), rendering
  *  `fallback` instead when there's no symbol or the image fails to load.
  *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both

@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 
-import { InstrumentLogo, Td, Th, Tr } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { InstrumentLogo, LetterAvatar, Td, Th, Tr } from '../ui'
 import ChangeBadge from './ChangeBadge'
 import WeightBar from './WeightBar'
 import { OptionBadge, YouBadge } from './HoldingBadges'
@@ -42,7 +41,7 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
                       symbol={h.ticker}
                       size={24}
                       className="rounded"
-                      fallback={<TickerInitial ticker={h.ticker ?? h.issuer} size={24} />}
+                      fallback={<LetterAvatar symbol={h.ticker ?? h.issuer} size={24} />}
                     />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
