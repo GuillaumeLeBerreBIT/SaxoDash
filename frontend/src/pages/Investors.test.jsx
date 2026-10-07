@@ -39,6 +39,13 @@ describe('Investors', () => {
     useInvestors.mockReset()
     useInvestors.mockImplementation(({ holds } = {}) => (holds ? { data: holders, isLoading: false } : { data: listed, isLoading: false, error: null }))
   })
+  it('leaves the header margin as the only gap under the title', () => {
+    renderPage()
+    const wrapper = screen.getByRole('heading', { level: 1, name: 'Investors' }).closest('.mb-5').parentElement
+    expect(wrapper).toHaveClass('space-y-4')
+    expect(wrapper).not.toHaveClass('gap-4')
+  })
+
 
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderPage()

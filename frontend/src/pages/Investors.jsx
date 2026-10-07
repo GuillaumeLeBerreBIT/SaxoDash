@@ -42,7 +42,7 @@ export default function Investors() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="space-y-4">
         <PageHeader title="Investors" />
         <QueryState error={error} onRetry={refetch} label="investors" />
       </div>
@@ -50,7 +50,7 @@ export default function Investors() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="space-y-4">
       <PageHeader
         title="Investors"
         subtitle={`13F holdings of ${cards.length} tracked managers · latest quarter ${quarterLabel(latest)} · filings arrive up to 45 days after quarter end`}
