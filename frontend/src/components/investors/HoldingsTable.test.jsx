@@ -48,6 +48,11 @@ describe('HoldingsTable', () => {
     expect(screen.getByText('Call')).toBeInTheDocument()
   })
 
+  it('scales weight bars to the given maximum', () => {
+    const { container } = renderTable({ holdings: [holdings[2]], maxWeight: 22.04 })
+    expect(container.querySelector('[data-fill]').style.width).toBe(`${(0.1 / 22.04) * 100}%`)
+  })
+
   it('drops the change column for a first stored quarter', () => {
     renderTable({ showChange: false })
     expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull()

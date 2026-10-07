@@ -27,6 +27,13 @@ describe('labels and formatting', () => {
     expect(fmtUsdCompact(null)).toBe('—')
   })
 
+  it('steps up a scale when rounding reaches 1000', () => {
+    expect(fmtUsdCompact(999_950_000)).toBe('$1.0B')
+    expect(fmtUsdCompact(999_600)).toBe('$1M')
+    expect(fmtUsdCompact(999.6)).toBe('$1K')
+    expect(fmtUsdCompact(999_400)).toBe('$999K')
+  })
+
   it('signs a dollar change on request', () => {
     expect(fmtUsdCompact(1_200_000_000, { sign: true })).toBe('+$1.2B')
     expect(fmtUsdCompact(-400_000, { sign: true })).toBe('-$400K')

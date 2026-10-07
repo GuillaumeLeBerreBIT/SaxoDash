@@ -44,6 +44,11 @@ describe('Investors', () => {
     expect(screen.getByText('13F holdings of 10 tracked managers · latest quarter Q2 2026 · filings arrive up to 45 days after quarter end')).toBeInTheDocument()
   })
 
+  it('writes a zero exit count without a sign', () => {
+    renderPage()
+    expect(screen.getAllByText('+1 new · 0 exited').length).toBeGreaterThan(0)
+  })
+
   it('shows the first 8 cards by value, then offers the rest', () => {
     renderPage()
     expect(screen.getAllByTestId('investor-card')).toHaveLength(8)
@@ -76,6 +81,19 @@ describe('Investors', () => {
     renderPage()
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search investors' }), { target: { value: 'zzzz zzzz' } })
     expect(screen.getByText('No tracked investor matches “zzzz zzzz”.')).toBeInTheDocument()
+  })
+
+  it('holds the empty state back while a ticker search is still resolving', () => {
+    vi.useFakeTimers()
+    try {
+      renderPage()
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search investors' }), { target: { value: 'zzz' } })
+      expect(screen.queryByText(/No tracked investor matches/)).toBeNull()
+      act(() => { vi.advanceTimersByTime(400) })
+      expect(screen.getByText('No tracked investor matches “zzz”.')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('switches to a table with the top-10 share column', () => {

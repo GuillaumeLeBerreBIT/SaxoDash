@@ -12,8 +12,9 @@ const detail = {
 }
 let lastQuarter
 let detailState
+let loading = false
 vi.mock('../api/queries', () => ({
-  useInvestor: (slug, quarter) => { lastQuarter = quarter; return { data: detailState, isLoading: false, error: null } },
+  useInvestor: (slug, quarter) => { lastQuarter = quarter; return { data: detailState, isLoading: loading, error: null } },
   useInvestorChanges: () => ({ data: { quarter: '2026-06-30', previous_quarter: '2026-03-31', new: [], added: [], trimmed: [], sold_out: [] }, isLoading: false, error: null }),
 }))
 
@@ -30,7 +31,7 @@ const renderPage = (route = '/investors/berkshire-hathaway') =>
   )
 
 describe('Investor', () => {
-  beforeEach(() => { detailState = detail })
+  beforeEach(() => { detailState = detail; loading = false })
 
   it('heads the page with a back link, the name and the firm', () => {
     renderPage()
@@ -44,6 +45,12 @@ describe('Investor', () => {
     fireEvent.change(screen.getByRole('combobox', { name: 'Quarter' }), { target: { value: '2026-03-31' } })
     expect(screen.getByTestId('where')).toHaveTextContent('quarter=2026-03-31')
     expect(lastQuarter).toBe('2026-03-31')
+  })
+
+  it('keeps the quarter picker while the next quarter loads', () => {
+    loading = true
+    renderPage()
+    expect(screen.getByRole('combobox', { name: 'Quarter' })).toBeInTheDocument()
   })
 
   it('opens on Holdings and switches to Changes', () => {

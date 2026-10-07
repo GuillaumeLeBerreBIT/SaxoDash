@@ -2,7 +2,7 @@ import { Card, InstrumentLogo } from '../ui'
 import TickerInitial from '../discover/TickerInitial'
 import { ImportProgress } from './SnapshotPanel'
 import { UNKNOWN, fmtNum } from '../../lib/format'
-import { fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
+import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
 
 export function TopLogos({ holdings }) {
   return (
@@ -20,7 +20,7 @@ export function TopLogos({ holdings }) {
   )
 }
 
-const movement = (c) => (c.new_count == null ? UNKNOWN : `+${c.new_count} new · −${c.exited_count} exited`)
+const movement = (c) => (c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count, '+')} new · ${fmtCount(c.exited_count, '−')} exited`)
 
 export function LatestLine({ investor }) {
   if (!investor.latest_quarter) return <span className="text-zinc-500">No filings imported yet</span>

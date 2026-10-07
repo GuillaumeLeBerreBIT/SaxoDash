@@ -16,7 +16,7 @@ export default function Investor() {
   const [params, setParams] = useSearchParams()
   const quarter = params.get('quarter') ?? undefined
   const tab = params.get('tab') === 'changes' ? 'changes' : 'holdings'
-  const { data, isLoading, error } = useInvestor(slug, quarter)
+  const { data, error } = useInvestor(slug, quarter)
 
   const update = (patch) => {
     const next = new URLSearchParams(params)
@@ -31,7 +31,7 @@ export default function Investor() {
   )
 
   if (error) return <div className="flex flex-col gap-3">{back}<Alert>Could not load this investor. {error.message}</Alert></div>
-  if (isLoading || !data) return <div className="flex flex-col gap-3">{back}<Skeleton className="h-64" /></div>
+  if (!data) return <div className="flex flex-col gap-3">{back}<Skeleton className="h-64" /></div>
 
   const subtitle = data.stale && data.quarter
     ? <>{data.firm} · <span className="text-amber-400">{`No 13F since ${quarterLabel(data.quarters[0])}`}</span></>

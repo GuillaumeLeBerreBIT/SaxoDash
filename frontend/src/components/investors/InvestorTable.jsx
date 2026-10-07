@@ -1,7 +1,7 @@
 import { Card, Td, Th, Tr } from '../ui'
 import { LatestLine, TopLogos } from './InvestorCards'
 import { UNKNOWN, fmtNum, fmtPct } from '../../lib/format'
-import { fmtUsdCompact } from '../../lib/investors'
+import { fmtCount, fmtUsdCompact } from '../../lib/investors'
 
 export default function InvestorTable({ investors, selected, onSelect }) {
   return (
@@ -26,7 +26,7 @@ export default function InvestorTable({ investors, selected, onSelect }) {
                   <button
                     type="button"
                     aria-pressed={c.slug === selected}
-                    onClick={() => onSelect(c.slug)}
+                    onClick={(e) => { e.stopPropagation(); onSelect(c.slug) }}
                     className="text-left rounded focus-visible:outline-2 focus-visible:outline-blue-500"
                   >
                     <div className="font-medium text-zinc-100">{c.name}</div>
@@ -37,7 +37,7 @@ export default function InvestorTable({ investors, selected, onSelect }) {
                 <Td align="right" className="num font-mono text-zinc-400">{c.positions == null ? UNKNOWN : fmtNum(c.positions)}</Td>
                 <Td><TopLogos holdings={c.top_holdings} /></Td>
                 <Td align="right" className="num font-mono text-zinc-400">{fmtPct(c.top10_weight, { sign: false, decimals: 1 })}</Td>
-                <Td className="num font-mono text-zinc-400">{c.new_count == null ? UNKNOWN : `+${c.new_count} · −${c.exited_count}`}</Td>
+                <Td className="num font-mono text-zinc-400">{c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count, '+')} · ${fmtCount(c.exited_count, '−')}`}</Td>
                 <Td edge className="text-[var(--fig-xs)]"><LatestLine investor={c} /></Td>
               </Tr>
             ))}

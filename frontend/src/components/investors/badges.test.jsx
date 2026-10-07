@@ -71,6 +71,11 @@ describe('InvestorStats', () => {
     expect(screen.getByText('filed Aug 14, 2026')).toBeInTheDocument()
   })
 
+  it('writes a zero count without a sign', () => {
+    render(<InvestorStats detail={{ ...detail, new_count: 0, exited_count: 0 }} />)
+    expect(screen.getByText('0 · 0')).toBeInTheDocument()
+  })
+
   it('shows dashes when there is no earlier quarter to compare', () => {
     render(<InvestorStats detail={{ ...detail, new_count: null, exited_count: null, turnover: null }} />)
     expect(screen.getAllByText('—')).toHaveLength(2)

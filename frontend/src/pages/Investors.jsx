@@ -24,7 +24,7 @@ export default function Investors() {
   const { data: cards = [], isLoading, error } = useInvestors()
   const debounced = useDebouncedValue(query.trim())
   const holds = looksLikeTicker(debounced) ? debounced.toUpperCase() : ''
-  const { data: holders = [] } = useInvestors({ holds })
+  const { data: holders = [], isFetching: holdersFetching } = useInvestors({ holds })
 
   const visible = useMemo(
     () => visibleInvestors(cards, { group, query, sort, holderSlugs: new Set(holds ? holders.map((h) => h.slug) : []) }),
@@ -36,6 +36,7 @@ export default function Investors() {
   const select = (slug) => setParams({ investor: slug }, { replace: true })
 
   const searching = query.trim() !== ''
+  const resolving = looksLikeTicker(query) && (debounced !== query.trim() || (holds !== '' && holdersFetching))
   const shown = showAll || searching ? visible : visible.slice(0, CARD_LIMIT)
   const latest = latestQuarter(cards)
 
@@ -57,7 +58,7 @@ export default function Investors() {
         layout={layout}
         onLayout={setLayout}
       />
-      {isLoading ? (
+      {isLoading || (visible.length === 0 && resolving) ? (
         <Skeleton className="h-40" />
       ) : visible.length === 0 && searching ? (
         <EmptyState title={`No tracked investor matches “${query}”.`} hint="Try a manager, a firm or a ticker they hold." />

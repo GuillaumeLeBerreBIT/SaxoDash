@@ -61,7 +61,7 @@ export default function ChangesTab({ slug, quarter }) {
       <p className="text-[var(--fig-xs)] text-zinc-500">
         Value changes are quarter-end values as filed, so they include price moves; the share change shows what was bought or sold.
       </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-start gap-3">
         {GROUPS.map(([kind, title]) => <Group key={kind} kind={kind} title={title} items={data[kind]} />)}
       </div>
     </div>

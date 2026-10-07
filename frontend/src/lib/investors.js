@@ -9,6 +9,7 @@ export const PAGE_STEP = 25
 export const TOP10_VIEWS = [['grid', 'Grid'], ['donut', 'Donut'], ['list', 'List']]
 export const INVESTOR_GROUPS = [['all', 'All'], ['curated', 'Curated'], ['stale', 'Stopped filing']]
 export const INVESTOR_SORTS = [['value', 'Largest value'], ['changes', 'Most changes'], ['positions', 'Most positions'], ['name', 'Name']]
+export const COMPARING_FILTERS = new Set(['new', 'added', 'trimmed'])
 export const HOLDING_FILTERS = [['all', 'All'], ['new', 'New'], ['added', 'Added'], ['trimmed', 'Trimmed'], ['options', 'Options'], ['yours', 'Yours']]
 
 export function quarterLabel(iso) {
@@ -19,12 +20,17 @@ export function quarterLabel(iso) {
 
 const SCALES = [[1e12, 'T', 2], [1e9, 'B', 1], [1e6, 'M', 0], [1e3, 'K', 0]]
 
+export const fmtCount = (n, symbol) => (n === 0 ? '0' : `${symbol}${n}`)
+
 export function fmtUsdCompact(value, { sign = false } = {}) {
   if (value == null || Number.isNaN(Number(value))) return UNKNOWN
   const n = Number(value)
   const abs = Math.abs(n)
-  const scale = SCALES.find(([size]) => abs >= size)
-  const body = scale ? `${(abs / scale[0]).toFixed(scale[2])}${scale[1]}` : `${Math.round(abs)}`
+  const found = SCALES.findIndex(([size]) => abs >= size)
+  const bodyAt = (i) => (i === SCALES.length ? `${Math.round(abs)}` : (abs / SCALES[i][0]).toFixed(SCALES[i][2]))
+  const start = found === -1 ? SCALES.length : found
+  const index = Number(bodyAt(start)) >= 1000 && start > 0 ? start - 1 : start
+  const body = `${bodyAt(index)}${index === SCALES.length ? '' : SCALES[index][1]}`
   const prefix = n < 0 ? '-' : sign && n > 0 ? '+' : ''
   return `${prefix}$${body}`
 }

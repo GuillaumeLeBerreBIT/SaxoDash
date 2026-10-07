@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { getInvestor, getInvestorChanges, getInvestors } from '../client'
 
@@ -17,6 +17,7 @@ export function useInvestor(slug, quarter) {
     queryKey: investorsKeys.detail(slug, quarter),
     queryFn: () => getInvestor(slug, quarter),
     enabled: Boolean(slug),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -25,5 +26,6 @@ export function useInvestorChanges(slug, quarter) {
     queryKey: investorsKeys.changes(slug, quarter),
     queryFn: () => getInvestorChanges(slug, quarter),
     enabled: Boolean(slug),
+    placeholderData: keepPreviousData,
   })
 }

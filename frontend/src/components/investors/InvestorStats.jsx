@@ -1,11 +1,11 @@
 import { InfoTip, StatRow, StatStrip } from '../ui'
 import { UNKNOWN, fmtNum, fmtPct } from '../../lib/format'
-import { fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
+import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
 
 const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
 
 export default function InvestorStats({ detail }) {
-  const moved = detail.new_count == null ? UNKNOWN : `+${detail.new_count} · −${detail.exited_count}`
+  const moved = detail.new_count == null ? UNKNOWN : `${fmtCount(detail.new_count, '+')} · ${fmtCount(detail.exited_count, '−')}`
   return (
     <StatStrip>
       <StatRow label="Total value" value={fmtUsdCompact(detail.total_value)} note={`as of ${quarterLabel(detail.quarter)} end`} />

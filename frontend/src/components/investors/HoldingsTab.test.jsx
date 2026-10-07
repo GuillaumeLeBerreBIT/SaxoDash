@@ -58,6 +58,25 @@ describe('HoldingsTab', () => {
     expect(screen.queryByRole('link')).toBeNull()
   })
 
+  it('offers the change chips only when there is a previous quarter', () => {
+    render(<MemoryRouter><HoldingsTab detail={{ previous_quarter: null, holdings }} /></MemoryRouter>)
+    ;['All', 'Options', 'Yours'].forEach((name) => expect(screen.getByRole('button', { name })).toBeInTheDocument())
+    ;['New', 'Added', 'Trimmed'].forEach((name) => expect(screen.queryByRole('button', { name })).toBeNull())
+  })
+
+  it('keeps a filtered holding bar relative to the whole portfolio', () => {
+    const rows = [{ ...holdings[0], weight: 40 }, { ...holdings[1], weight: 4, owned: true }]
+    const { container } = render(<MemoryRouter><HoldingsTab detail={{ previous_quarter: '2026-03-31', holdings: rows }} /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Yours' }))
+    expect(container.querySelector('[data-fill]').style.width).toBe('10%')
+  })
+
+  it('drops the footer when nothing matches', () => {
+    renderTab()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search holdings' }), { target: { value: 'zzz' } })
+    expect(screen.queryByText(/Showing/)).toBeNull()
+  })
+
   it('hides the Change column without a previous quarter', () => {
     render(<MemoryRouter><HoldingsTab detail={{ previous_quarter: null, holdings }} /></MemoryRouter>)
     expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull()

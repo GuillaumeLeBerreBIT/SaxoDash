@@ -9,9 +9,9 @@ import { fmtNum, fmtPct } from '../../lib/format'
 import { fmtUsdCompact, holdingLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 
-export default function HoldingsTable({ holdings, showChange = true }) {
+export default function HoldingsTable({ holdings, showChange = true, maxWeight }) {
   const navigate = useNavigate()
-  const max = Math.max(0, ...holdings.map((h) => h.weight))
+  const max = maxWeight ?? Math.max(0, ...holdings.map((h) => h.weight))
 
   return (
     <div className="overflow-x-auto">
