@@ -4,9 +4,8 @@
 It loads every shell route in headless Chromium at phone width and fails when
 the page scrolls sideways: `documentElement.scrollWidth > innerWidth`.
 
-It covers each route in `ROUTES` (`frontend/src/lib/mobileOverflow.js`), plus
-`/accounts/<id>`, `/investors/<slug>` and the Analytics Risk and Projection
-tabs, which only render after a click.
+It covers `ROUTES` (`frontend/src/lib/mobileOverflow.js`), `/accounts/<id>`,
+`/investors/<slug>` and the Analytics Risk and Projection tabs.
 
 ## Running it
 
@@ -21,8 +20,7 @@ cd backend && CORS_ALLOWED_ORIGINS=http://localhost:5273 \
 cd frontend && VITE_API_BASE_URL=http://localhost:8100 \
   npx vite --port 5273 --strictPort
 ```
-
-Both copies are gitignored and must be deleted afterwards.
+Both copies are gitignored; delete them afterwards.
 
 The app has two users, so a bare `get()` fails. Mint tokens for `demo`, using
 the shell snippet from the `saxodash-design-system` skill with the lookup
@@ -58,6 +56,5 @@ forces exit `1`, as does a step that throws, such as a renamed tab button.
 up to four offending elements as `tag.first.three.classes:right-edge`, the
 elements whose right edge sits past the viewport. Elements inside an
 `overflow-x-auto` or `overflow-x-scroll` container and `position: fixed`
-elements are ignored, since they cannot widen the page. The widest or
-outermost offender is usually the culprit; fix it (wrap, truncate, or move the
-table into a scroll container) and rerun.
+elements are ignored, since they cannot widen the page. Fix the outermost offender (wrap,
+truncate, or scroll container) and rerun.
