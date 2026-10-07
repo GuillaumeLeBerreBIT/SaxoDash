@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTooltipProps } from '../lib/charts'
 import { instrumentLogoUrl } from '../lib/logos'
@@ -76,16 +77,18 @@ function SliceLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, perce
  *  because it only makes sense where items are real instruments (not
  *  accounts), and only safe to enable now that callers cap slice count
  *  (see SliceLabel) instead of plotting every row. */
-export default function AllocationDonut({ items, formatValue, showIcons = false, height = '320px' }) {
+export default function AllocationDonut({ items, formatValue, showIcons = false, height = '320px', center }) {
   const [containerRef, width] = useWidth()
+  const [activeIndex, setActiveIndex] = useState(null)
   const total = items.reduce((sum, d) => sum + d.value, 0)
 
   const outerRadius = donutOuterRadius(width, showIcons ? LABEL_RESERVE : CHART_MARGIN)
   const innerRadius = outerRadius * RING_RATIO
+  const readout = center ? center(activeIndex == null ? null : items[activeIndex]) : null
 
   return (
     <>
-      <div ref={containerRef} className="mt-3" style={{ height }}>
+      <div ref={containerRef} className="mt-3 relative" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: CHART_MARGIN, right: CHART_MARGIN, bottom: CHART_MARGIN, left: CHART_MARGIN }}>
             <Pie
@@ -98,6 +101,8 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
               stroke="#18181b"
               strokeWidth={2}
               isAnimationActive={false}
+              onMouseEnter={(_, index) => setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
               label={showIcons ? SliceLabel : false}
               labelLine={false}
             >
@@ -108,6 +113,13 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
             <Tooltip {...chartTooltipProps} formatter={(v, n) => [formatValue(v), n]} />
           </PieChart>
         </ResponsiveContainer>
+        {readout && (
+          <div data-testid="donut-center" className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[var(--fig-xs)] text-zinc-500">{readout.label}</span>
+            <span className="text-[var(--fig-lg)] num font-mono text-zinc-50">{readout.value}</span>
+            {readout.hint && <span className="text-[var(--fig-2xs)] num font-mono text-zinc-500">{readout.hint}</span>}
+          </div>
+        )}
       </div>
       {/* showIcons already labels every slice (logo + % on its own leader
           line) and carries a hover tooltip, so a legend would just repeat
@@ -120,7 +132,8 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
             return (
               <div key={i} className="flex items-center gap-2 text-[var(--fig-xs)]">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
-                <span className="text-zinc-300 font-medium truncate">{d.name}</span>
+                <span className={`text-zinc-300 font-medium truncate${d.note ? ' shrink-0 max-w-[60%]' : ''}`}>{d.name}</span>
+                {d.note && <span className="text-zinc-500 truncate min-w-0">{d.note}</span>}
                 <span className="ml-auto text-zinc-500 num font-mono">{formatValue(d.value)}</span>
                 <span className="text-zinc-600 num font-mono w-12 text-right">{pct.toFixed(1)}%</span>
               </div>

@@ -9,9 +9,10 @@ describe('navigation', () => {
     expect(PAGE_COMMANDS.map((c) => c.label)).toEqual(NAV_ITEMS.map((i) => i.label))
   })
 
-  it('includes Discover and Spending', () => {
+  it('includes Discover, Investors and Spending', () => {
     const labels = PAGE_COMMANDS.map((c) => c.label)
     expect(labels).toContain('Discover')
+    expect(labels).toContain('Investors')
     expect(labels).toContain('Spending')
   })
 })

@@ -342,3 +342,20 @@ navigating, unchanged. `useChartWorkspace` copies each navigation into the activ
 slot, keyed on `location.key`, so re-picking the symbol already in the URL still
 fills an empty pane. The other panes render from their stored uic + asset type
 and never re-resolve.
+
+**13F data is imported, not fetched.** `investors` stores EDGAR 13F filings and
+its endpoints read only its own tables; nothing calls EDGAR at request time.
+Amendments are applied at read time (`quarters.effective_filings`), never by
+rewriting stored filings. The `value` unit is decided by filing date, not
+quarter: the SEC moved it from thousands to dollars for filings from 2023-01-03,
+so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
+quarter). OpenFIGI tickers are normalised `/` to `.`. `sync_investors` is
+`@synced(reports_health=False, needs_credential=False)`, so it never touches the
+header's Saxo health badge and runs without a Saxo credential.
+
+**Investors pages read only `/api/investors/…`.** `/investors` and
+`/investors/:slug` never touch Saxo or Finnhub. Turnover is opened + closed value
+over both quarters' value (no prices), and change value deltas include price
+moves, so they always sit next to the share change that says what was actually
+bought or sold. Phase 4 features (Add investor, Stop tracking, cross-investor
+panels) are deliberately absent until their backend exists.

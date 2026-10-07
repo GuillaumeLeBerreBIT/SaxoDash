@@ -93,7 +93,7 @@ export const OTHER_SLICE = '#52525b'
 // slices, logo-fallback dots). Deliberately excludes green/red - those are
 // reserved for P&L sign everywhere else in the app, so reusing them here
 // would read as a gain/loss signal instead of "this is ticker X".
-const HOLDINGS_PALETTE = [
+export const HOLDINGS_PALETTE = [
   '#60a5fa', '#fbbf24', '#a78bfa', '#22d3ee', '#fb923c',
   '#f472b6', '#2dd4bf', '#818cf8', '#facc15', '#c084fc',
 ]
@@ -105,6 +105,10 @@ export function colorForTicker(ticker) {
   let hash = 0
   for (let i = 0; i < (ticker || '').length; i++) hash = (hash * 31 + ticker.charCodeAt(i)) >>> 0
   return HOLDINGS_PALETTE[hash % HOLDINGS_PALETTE.length]
+}
+
+export function colorForRank(index) {
+  return HOLDINGS_PALETTE[index % HOLDINGS_PALETTE.length]
 }
 
 // Fixed order (not hashed) so the same category always gets the same color

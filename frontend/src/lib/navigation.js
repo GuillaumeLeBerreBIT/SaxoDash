@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   List,
   PiggyBank,
+  Users,
 } from 'lucide-react'
 
 export const NAV_ITEMS = [
@@ -17,6 +18,7 @@ export const NAV_ITEMS = [
   { to: '/research', label: 'Research', icon: CandlestickChart },
   { to: '/discover', label: 'Discover', icon: Compass },
   { to: '/earnings', label: 'Earnings', icon: CalendarClock },
+  { to: '/investors', label: 'Investors', icon: Users },
   { to: '/transactions', label: 'Transactions', icon: List },
   { to: '/accounts', label: 'Accounts', icon: Landmark },
   { to: '/spending', label: 'Spending', icon: PiggyBank },

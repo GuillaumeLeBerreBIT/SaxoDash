@@ -64,6 +64,14 @@ PERIODIC_TASKS = {
         'task': 'research.tasks.scan_universe',
         'crontab': {'minute': '30', 'hour': '22'},
     },
+    'Sync investors (13F deadline months)': {
+        'task': 'investors.tasks.sync_investors',
+        'crontab': {'minute': '15', 'hour': '6', 'month_of_year': '2,5,8,11'},
+    },
+    'Sync investors (weekly)': {
+        'task': 'investors.tasks.sync_investors',
+        'crontab': {'minute': '15', 'hour': '6', 'day_of_week': '1', 'month_of_year': '1,3,4,6,7,9,10,12'},
+    },
 }
 
 # Celery/django-celery-beat's own built-in tasks - never declared above,
@@ -100,7 +108,9 @@ def sync_periodic_tasks(stdout=None, apps=global_apps):
             crontab = spec['crontab']
             schedule, _ = crontab_model.objects.get_or_create(
                 minute=crontab['minute'], hour=crontab['hour'],
-                day_of_week='*', day_of_month='*', month_of_year='*',
+                day_of_week=crontab.get('day_of_week', '*'),
+                day_of_month=crontab.get('day_of_month', '*'),
+                month_of_year=crontab.get('month_of_year', '*'),
             )
             defaults['crontab'] = schedule
             defaults['interval'] = None

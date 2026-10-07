@@ -13,6 +13,8 @@ import ResearchChart from './pages/ResearchChart'
 import Discover from './pages/Discover'
 import DiscoverShelf from './pages/DiscoverShelf'
 import Earnings from './pages/Earnings'
+import Investors from './pages/Investors'
+import Investor from './pages/Investor'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
@@ -35,6 +37,8 @@ function App() {
           <Route path='discover' element={<Discover />} />
           <Route path='discover/:key' element={<DiscoverShelf />} />
           <Route path='earnings' element={<Earnings />} />
+          <Route path='investors' element={<Investors />} />
+          <Route path='investors/:slug' element={<Investor />} />
         </Route>
       </Route>
       <Route path='*' element={<NotFound />} />
