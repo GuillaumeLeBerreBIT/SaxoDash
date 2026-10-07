@@ -33,4 +33,5 @@ urlpatterns = [
     path('api/saxo/', include('saxo.urls')),
     path('api/enablebanking/', include('enablebanking.urls')),
     path('api/analytics/', include('analytics.urls')),
+    path('api/investors/', include('investors.urls')),
 ]

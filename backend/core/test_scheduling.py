@@ -99,3 +99,20 @@ class SyncPeriodicTasksTest(TestCase):
 
         sync_periodic_tasks(stdout=Stdout())
         self.assertFalse(any('backend_cleanup' in w for w in warnings))
+
+    def test_investors_sync_daily_in_13f_deadline_months(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Sync investors (13F deadline months)')
+        self.assertEqual(task.task, 'investors.tasks.sync_investors')
+        self.assertEqual(
+            (task.crontab.minute, task.crontab.hour, task.crontab.day_of_week, task.crontab.month_of_year),
+            ('15', '6', '*', '2,5,8,11'),
+        )
+
+    def test_investors_sync_weekly_in_the_other_months(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Sync investors (weekly)')
+        self.assertEqual(
+            (task.crontab.day_of_week, task.crontab.month_of_year),
+            ('1', '1,3,4,6,7,9,10,12'),
+        )

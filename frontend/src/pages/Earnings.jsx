@@ -8,8 +8,8 @@ import { Pill } from '../components/RangePills'
 import SurpriseBars from '../components/research/SurpriseBars'
 import { Card, InfoTip, PageHeader } from '../components/ui'
 import { BEAT, MISS, PENDING, REPORTED, surpriseSign, withAlpha } from '../lib/charts'
-import { WEEKDAYS, groupByWeekday, reportStatus, weekLabel, weekdayKey } from '../lib/earnings'
-import { fmtCompact, fmtNum, fmtPct, pctToneClass } from '../lib/format'
+import { WEEKDAYS, dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, weekdayKey } from '../lib/earnings'
+import { fmtNum, fmtPct, pctToneClass } from '../lib/format'
 
 const SESSION = { bmo: 'BMO', amc: 'AMC', dmh: 'DMH' }
 const MIN_WEEK = -8
@@ -102,7 +102,7 @@ function countTint(count) {
   return `rgba(59,130,246,${Math.min(0.3, 0.04 + count * 0.02).toFixed(3)})`
 }
 
-function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSelect }) {
+function DayCard({ dayKey, label, date, events, beat = 0, missed = 0, selected, onSelect }) {
   return (
     <button
       type="button"
@@ -112,7 +112,7 @@ function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSele
       } ${events.length ? '' : 'opacity-40'}`}
     >
       <div className="flex items-baseline justify-between">
-        <span className="text-[var(--fig-sm)] font-medium text-zinc-200">{label}</span>
+        <span className="text-[var(--fig-sm)] font-medium text-zinc-200">{date == null ? label : `${label} ${date}`}</span>
         <span
           className="text-[var(--fig-2xs)] num font-mono font-semibold text-indigo-200 rounded-full px-1.5 min-w-[20px] text-center"
           style={{ background: countTint(events.length) }}
@@ -123,7 +123,7 @@ function DayCard({ dayKey, label, events, beat = 0, missed = 0, selected, onSele
       <SplitBar beat={beat} missed={missed} className="mt-2" />
       <div className="mt-1.5 flex flex-wrap gap-1 min-h-[16px]">
         {events.slice(0, 3).map((e) => (
-          <span key={e.symbol} className="text-[var(--fig-2xs)] num font-mono text-zinc-400 bg-white/[0.04] rounded-[3px] px-1.5">
+          <span key={eventKey(e)} className="text-[var(--fig-2xs)] num font-mono text-zinc-400 bg-white/[0.04] rounded-[3px] px-1.5">
             {e.symbol}
           </span>
         ))}
@@ -176,20 +176,20 @@ function RevenueCell({ event }) {
   if (act == null) {
     return (
       <span className="text-[var(--fig-2xs)] num font-mono text-zinc-500">
-        {fmtCompact(est / 1e6)}
+        {fmtRevenue(est)}
         <span className="text-zinc-600">e</span>
       </span>
     )
   }
   return (
     <span className="flex items-baseline gap-1.5 justify-end">
-      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-300">{fmtCompact(act / 1e6)}</span>
+      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-300">{fmtRevenue(act)}</span>
       {surprise != null && <Chip sign={surpriseSign(surprise)}>{absPct(surprise)}</Chip>}
     </span>
   )
 }
 
-const ROW_GRID = '92px 40px 64px 64px minmax(0,1fr) 120px 14px'
+const ROW_GRID = '92px 40px 72px 64px minmax(0,1fr) 120px 14px'
 
 const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
   const status = reportStatus(event)
@@ -228,7 +228,7 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
       <span className="text-[var(--fig-2xs)] text-zinc-500 bg-white/[0.04] rounded-[3px] py-0.5 text-center">
         {SESSION[event.session] || '—'}
       </span>
-      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
+      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap">
         {event.quarter ? `Q${event.quarter} ${event.year ?? ''}`.trim() : ''}
       </span>
       <span className="flex justify-center">
@@ -272,7 +272,7 @@ function ColumnHeader() {
 
 function Section({ label, rows, onOpen, divided }) {
   return (
-    <>
+    <div role="group" aria-label={label}>
       <div
         className={`px-3.5 pt-2.5 pb-1 text-[var(--fig-2xs)] uppercase tracking-[0.09em] text-zinc-600 ${
           divided ? 'border-t border-white/[0.04]' : ''
@@ -281,9 +281,9 @@ function Section({ label, rows, onOpen, divided }) {
         {label}
       </div>
       {rows.map((e) => (
-        <EarningsRow key={`${e.symbol}-${e.date}`} event={e} onOpen={onOpen} />
+        <EarningsRow key={eventKey(e)} event={e} onOpen={onOpen} />
       ))}
-    </>
+    </div>
   )
 }
 
@@ -317,12 +317,7 @@ export default function Earnings() {
   const day = pickedDay ?? autoDay
 
   const rows = useMemo(() => [...(groups[day] || [])].sort(bySize), [groups, day])
-  const { bmo, afterClose } = useMemo(() => {
-    const b = []
-    const a = []
-    for (const e of rows) (e.session === 'bmo' ? b : a).push(e)
-    return { bmo: b, afterClose: a }
-  }, [rows])
+  const sections = useMemo(() => splitBySession(rows), [rows])
 
   const openSymbol = useCallback(
     (symbol) => navigate(`/research?symbol=${symbol}&tab=earnings`),
@@ -330,6 +325,10 @@ export default function Earnings() {
   )
   const shiftWeek = (delta) => {
     setWeek((w) => Math.max(MIN_WEEK, Math.min(MAX_WEEK, w + delta)))
+    setPickedDay(null)
+  }
+  const resetWeek = () => {
+    setWeek(0)
     setPickedDay(null)
   }
 
@@ -368,6 +367,15 @@ export default function Earnings() {
         >
           <ChevronRight size={13} />
         </button>
+        {week !== 0 && (
+          <button
+            type="button"
+            onClick={resetWeek}
+            className="h-6 px-2 rounded border border-white/[0.08] bg-[#0e0e11] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100"
+          >
+            This week
+          </button>
+        )}
       </div>
 
       {isLoading && (
@@ -398,6 +406,7 @@ export default function Earnings() {
                     key={k}
                     dayKey={k}
                     label={label}
+                    date={dayDate(data.window?.from, k)}
                     events={groups[k] || []}
                     beat={split?.beat ?? 0}
                     missed={split?.missed ?? 0}
@@ -423,8 +432,12 @@ export default function Earnings() {
                 </InfoTip>
               </span>
               <span className="text-[var(--fig-2xs)] text-zinc-500">
-                Before open <span className="num font-mono text-zinc-400">{bmo.length}</span> · After close{' '}
-                <span className="num font-mono text-zinc-400">{afterClose.length}</span>
+                {sections.map(({ key, label, rows: sectionRows }, i) => (
+                  <span key={key}>
+                    {i > 0 ? ' · ' : ''}
+                    {label} <span className="num font-mono text-zinc-400">{sectionRows.length}</span>
+                  </span>
+                ))}
               </span>
             </div>
 
@@ -444,10 +457,9 @@ export default function Earnings() {
             ) : (
               <>
                 <ColumnHeader />
-                {bmo.length > 0 && <Section label="Before open" rows={bmo} onOpen={openSymbol} />}
-                {afterClose.length > 0 && (
-                  <Section label="After close" rows={afterClose} onOpen={openSymbol} divided={bmo.length > 0} />
-                )}
+                {sections.map((section, i) => (
+                  <Section key={section.key} label={section.label} rows={section.rows} onOpen={openSymbol} divided={i > 0} />
+                ))}
               </>
             )}
           </Card>

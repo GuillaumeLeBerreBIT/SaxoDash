@@ -107,4 +107,21 @@ describe('OverviewTab fundamentals', () => {
     expect(screen.getByText('Thesis & risks')).toBeInTheDocument()
     expect(screen.getByText('Business')).toBeInTheDocument()
   })
+
+  it('discloses the price basis only when the mark is not live', () => {
+    const position = { qty: 1, avg_cost: 100, currency: 'USD', value: 100, pnl: 0, pnl_pct: 0 }
+    const props = { symbol: 'AAPL', details: null, detailsLoading: false, bars, range: '1M', fundamentals: { data: null, isLoading: false } }
+    const { rerender } = render(<OverviewTab {...props} position={{ ...position, price_source: 'live' }} />)
+    expect(screen.queryByText(/Live price from Saxo/)).not.toBeInTheDocument()
+
+    rerender(<OverviewTab {...props} position={{ ...position, price_source: 'derived' }} />)
+    expect(screen.getByText(/Marked from Saxo's profit\/loss/)).toBeInTheDocument()
+  })
+
+  it('explains why an ETF has no fundamentals snapshot', () => {
+    render(
+      <OverviewTab symbol="SPY" position={null} details={null} detailsLoading={false} bars={bars} range="1M" isEtf />
+    )
+    expect(screen.getByText(/This is an ETF/)).toBeInTheDocument()
+  })
 })

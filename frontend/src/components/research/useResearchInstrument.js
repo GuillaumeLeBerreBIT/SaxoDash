@@ -13,10 +13,6 @@ export function useResearchInstrument() {
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
   const position = positions.find((p) => p.ticker === symbol) ?? null
 
-  useEffect(() => {
-    pushRecentSymbol(symbol)
-  }, [symbol])
-
   // Only searched for when the portfolio cannot answer: a held instrument
   // already knows its own uic.
   const { data: searchResults = [] } = useInstrumentSearch(
@@ -31,6 +27,11 @@ export function useResearchInstrument() {
     const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
     return resolveInstrument({ symbol, positions, results: searchResults, pinned })
   }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
+
+  const resolved = Boolean(instrument)
+  useEffect(() => {
+    if (resolved) pushRecentSymbol(symbol)
+  }, [symbol, resolved])
 
   // `instrument`, when the caller already has it (a watchlist row, a search
   // pick), pins the exact uic so an ambiguous ticker like "NOW" can't

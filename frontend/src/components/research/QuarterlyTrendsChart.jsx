@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { fmtAxisPct } from '../../lib/axisFormat'
 import { fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
 
@@ -24,7 +25,13 @@ export default function QuarterlyTrendsChart({ trends }) {
           <LineChart data={trends} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis {...axisProps} dataKey="period" />
-            <YAxis {...axisProps} width={44} tickFormatter={(v) => fmtPct(v, { sign: false, decimals: 0 })} />
+            <YAxis
+              {...axisProps}
+              width={44}
+              allowDecimals={false}
+              domain={[(min) => Math.floor(min), (max) => Math.ceil(max)]}
+              tickFormatter={fmtAxisPct}
+            />
             <Tooltip
               {...chartTooltipProps}
               formatter={(value, name) => [fmtPct(value, { sign: false, decimals: 1 }), name]}
