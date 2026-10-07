@@ -36,6 +36,15 @@ class InvestorDetailView(APIView):
         except summaries.QuarterNotFound:
             raise NotFound('No filing is stored for that quarter.')
 
+    def patch(self, request, slug):
+        investor = get_object_or_404(Investor, slug=slug)
+        followed = request.data.get('followed')
+        if not isinstance(followed, bool):
+            raise ValidationError({'followed': 'Send true or false.'})
+        Investor.objects.filter(pk=investor.pk).update(followed=followed)
+        investor.followed = followed
+        return Response(summaries.card(investor, date.today()))
+
 
 class InvestorChangesView(APIView):
     def get(self, request, slug):

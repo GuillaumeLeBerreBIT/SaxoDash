@@ -12,6 +12,9 @@ from .models import PositionMove, Security
 STALE_AFTER = timedelta(days=183)
 TOP_HOLDINGS = 3
 TOP_TEN = 10
+TOP_FIVE = 5
+OTHER_SECTOR = 'Other'
+MOVE_ORDER = {changes.NEW: 0, changes.ADDED: 1, changes.TRIMMED: 2, changes.SOLD_OUT: 3}
 
 
 def tickers_for(cusips):
@@ -182,6 +185,37 @@ def holder_ids(ticker):
     return {investor_id for investor_id, quarter_end in rows if latest.get(investor_id) == quarter_end}
 
 
+def _sectors(holdings):
+    weights = defaultdict(float)
+    for holding in holdings:
+        weights[holding['sector'] or OTHER_SECTOR] += holding['weight']
+    ranked = sorted(weights.items(), key=lambda pair: (-pair[1], pair[0]))
+    return [{'sector': sector, 'weight': round(weight, 2)} for sector, weight in ranked]
+
+
+def _story_moves(investor, quarter_end):
+    rows = list(investor.moves.filter(quarter_end=quarter_end, kind__in=MOVE_ORDER))
+    tickers = tickers_for({row.cusip for row in rows})
+    rows.sort(key=lambda row: (
+        MOVE_ORDER[row.kind], -max(row.weight_pct, row.previous_weight_pct or 0.0), row.cusip, row.put_call,
+    ))
+    return [
+        {
+            'cusip': row.cusip,
+            'put_call': row.put_call,
+            'ticker': tickers.get(row.cusip),
+            'issuer': row.issuer,
+            'kind': row.kind,
+            'weight': row.weight_pct,
+            'previous_weight': row.previous_weight_pct,
+            'shares_change_pct': row.change_pct,
+            'value': row.value,
+            'previous_value': row.previous_value,
+        }
+        for row in rows
+    ]
+
+
 def detail(investor, quarter_end, today):
     ends = quarters.quarter_ends(investor)
     base = {
@@ -197,6 +231,9 @@ def detail(investor, quarter_end, today):
         'exited_count': None,
         'turnover': None,
         'holdings': [],
+        'top5_weight': None,
+        'sectors': [],
+        'moves': [],
     }
     if not ends:
         return base
@@ -238,6 +275,9 @@ def detail(investor, quarter_end, today):
         'top10_weight': _top10(rows),
         **_movement(snap, previous_snap, per_key, sold_out),
         'holdings': holdings,
+        'top5_weight': round(sum(row['weight'] for row in rows[:TOP_FIVE]), 2),
+        'sectors': _sectors(holdings),
+        'moves': _story_moves(investor, quarter_end),
     })
     return base
 
