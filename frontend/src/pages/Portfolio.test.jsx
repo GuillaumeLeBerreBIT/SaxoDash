@@ -368,10 +368,25 @@ describe('Portfolio sortable holdings', () => {
     expect(order()).toEqual(['AAA', 'CCC', 'BBB'])
   })
 
-  it('sorts Name by text', () => {
+  it('sorts Name by the displayed ticker, not the company name', () => {
+    stub([
+      make('CCC', 'Alpha Inc', '100.00', '1.00'),
+      make('AAA', 'Zeta Corp', '200.00', '2.00'),
+      make('BBB', 'Mid Ltd', '300.00', '3.00'),
+    ])
     renderWithProviders(<Portfolio />)
     click('Name')
-    expect(order()).toEqual(['BBB', 'CCC', 'AAA'])
+    expect(order()).toEqual(['AAA', 'BBB', 'CCC'])
+    click('Name')
+    expect(order()).toEqual(['CCC', 'BBB', 'AAA'])
+  })
+
+  it('leaves the total row unchanged by a sort', () => {
+    renderWithProviders(<Portfolio />)
+    const totalText = () => screen.getByText(/^Total \(/).closest('tr').textContent
+    const before = totalText()
+    click('Value')
+    expect(totalText()).toBe(before)
   })
 
   it('sorts Qty and Weight numerically', () => {

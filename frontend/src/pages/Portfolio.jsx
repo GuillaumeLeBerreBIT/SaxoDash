@@ -19,7 +19,7 @@ import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from 
 const finite = (raw) => (raw === null || raw === undefined ? null : Number(raw))
 
 const HOLDING_ACCESSORS = {
-  name: (p) => p.name,
+  name: (p) => p.ticker,
   qty: (p) => finite(p.qty),
   value: (p) => finite(p.value),
   pnl: (p) => finite(p.pnl),
