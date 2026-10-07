@@ -100,6 +100,55 @@ describe('Transactions', () => {
 
     expect(within(screen.getByRole('table')).getByText('NVDA')).toBeInTheDocument()
   })
+
+  it('names the pagination controls and marks the current page', () => {
+    stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1 })))
+    renderWithProviders(<Transactions />)
+
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Page 2' })).not.toHaveAttribute('aria-current')
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+  })
+
+  it('clears an unmatched search and filter from the empty state', () => {
+    stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL' })])
+    renderWithProviders(<Transactions />)
+    fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'zzz' } })
+
+    expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+
+    expect(screen.getByRole('textbox')).toHaveValue('')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('returns to page 1 when the selected type vanishes', () => {
+    const interest = Array.from({ length: 12 }, (_, i) =>
+      row({ id: 100 + i, type: 'INTEREST', ticker: '', instrument: 'Interest' }))
+    const buys = Array.from({ length: 12 }, (_, i) => row({ id: i + 1, type: 'BUY' }))
+    stub([...buys, ...interest])
+    const { rerender } = renderWithProviders(<Transactions />)
+    fireEvent.click(screen.getByRole('button', { name: 'INTEREST' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    stub(buys)
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <Transactions />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+  })
 })
 
 describe('Transactions on mobile', () => {

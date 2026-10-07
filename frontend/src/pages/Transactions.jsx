@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Chip, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
 
 export default function Transactions() {
   const { data, isLoading, error } = useTransactions('?page_size=1000')
@@ -19,6 +19,13 @@ export default function Transactions() {
 
   const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
 
+  useEffect(() => {
+    if (effectiveFilter !== typeFilter) {
+      setTypeFilter('All')
+      setPage(1)
+    }
+  }, [effectiveFilter, typeFilter])
+
   const filtered = useMemo(
     () =>
       allTx.filter(
@@ -32,6 +39,12 @@ export default function Transactions() {
   const perPage = 10
   const pageCount = Math.max(1, Math.ceil(filtered.length / perPage))
   const visible = filtered.slice((page - 1) * perPage, page * perPage)
+
+  function clearFilters() {
+    setSearch('')
+    setTypeFilter('All')
+    setPage(1)
+  }
 
   function handleExport() {
     const blob = new Blob([toCsv(TRANSACTION_COLUMNS, filtered)], { type: 'text/csv;charset=utf-8' })
@@ -136,8 +149,11 @@ export default function Transactions() {
               ))}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-zinc-500 py-8">
-                    No transactions match your filters.
+                  <td colSpan={8}>
+                    <EmptyState title="No transactions match your filters." />
+                    <div className="pb-6 text-center">
+                      <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -153,7 +169,8 @@ export default function Transactions() {
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="w-8 h-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              aria-label="Previous page"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronLeft size={14} />
             </button>
@@ -161,7 +178,9 @@ export default function Transactions() {
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                className={`w-8 h-8 text-[var(--fig-xs)] rounded font-medium ${
+                aria-label={`Page ${n}`}
+                aria-current={n === page ? 'page' : undefined}
+                className={`h-11 w-11 md:h-8 md:w-8 text-[var(--fig-xs)] rounded font-medium ${
                   n === page ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'
                 }`}
               >
@@ -171,7 +190,8 @@ export default function Transactions() {
             <button
               onClick={() => setPage(Math.min(pageCount, page + 1))}
               disabled={page === pageCount}
-              className="w-8 h-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              aria-label="Next page"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronRight size={14} />
             </button>

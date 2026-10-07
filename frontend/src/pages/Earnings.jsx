@@ -352,7 +352,7 @@ export default function Earnings() {
           onClick={() => shiftWeek(-1)}
           disabled={week <= MIN_WEEK}
           aria-label="Previous week"
-          className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
+          className="w-11 h-11 md:w-6 md:h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronLeft size={13} />
         </button>
@@ -364,7 +364,7 @@ export default function Earnings() {
           onClick={() => shiftWeek(1)}
           disabled={week >= MAX_WEEK}
           aria-label="Next week"
-          className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
+          className="w-11 h-11 md:w-6 md:h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronRight size={13} />
         </button>
