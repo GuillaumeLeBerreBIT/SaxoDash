@@ -29,6 +29,18 @@ describe('Transactions', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    queries.useTransactions.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    const { container } = renderWithProviders(<Transactions />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    queries.useTransactions.mockReturnValue({ data: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() })
+    const { container } = renderWithProviders(<Transactions />)
+    expectValidHeadingOutline(container)
+  })
+
   it('prices a trade in its own currency and totals it in euro with the right sign', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL', ticker: 'AMD', instrument: 'AMD' })])
     renderWithProviders(<Transactions />)

@@ -39,6 +39,12 @@ describe('Investor', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    detailState = undefined
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
+  })
+
   it('heads the page with a back link, the name and the firm', () => {
     renderPage()
     expect(screen.getByRole('link', { name: '← Investors' })).toHaveAttribute('href', '/investors?investor=berkshire-hathaway')

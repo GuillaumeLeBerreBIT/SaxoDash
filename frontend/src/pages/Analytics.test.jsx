@@ -112,6 +112,20 @@ describe('Analytics', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    stubPortfolioSummary()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level without enough history', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: { has_data: false }, isLoading: false, error: null })
+    stubPortfolioSummary()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
   it('shows a loading state while the summary is in flight', () => {
     queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
     stubPortfolioSummary()

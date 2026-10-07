@@ -61,6 +61,18 @@ describe('Portfolio holdings table', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, isLoading: true })
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: vi.fn() })
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
+  })
+
   it('prices the instrument in its own currency, not the reporting one', () => {
     renderWithProviders(<Portfolio />)
     const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')

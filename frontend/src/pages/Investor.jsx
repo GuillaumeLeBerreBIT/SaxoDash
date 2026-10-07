@@ -30,8 +30,8 @@ export default function Investor() {
     </Link>
   )
 
-  if (error) return <div className="flex flex-col gap-3">{back}<Alert>Could not load this investor. {error.message}</Alert></div>
-  if (!data) return <div className="flex flex-col gap-3">{back}<Skeleton className="h-64" /></div>
+  if (error) return <div className="flex flex-col gap-3">{back}<h1 className="sr-only">Investor</h1><Alert>Could not load this investor. {error.message}</Alert></div>
+  if (!data) return <div className="flex flex-col gap-3">{back}<h1 className="sr-only">Investor</h1><Skeleton className="h-64" /></div>
 
   const subtitle = data.stale && data.quarter
     ? <>{data.firm} · <span className="text-amber-400">{`No 13F since ${quarterLabel(data.quarters[0])}`}</span></>

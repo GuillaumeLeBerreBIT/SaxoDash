@@ -58,6 +58,18 @@ describe('Accounts', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() } })
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
+
   it('shows the total balance across accounts', () => {
     mockDefaults()
     renderWithProviders(<Accounts />)

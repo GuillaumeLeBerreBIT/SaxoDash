@@ -45,6 +45,18 @@ describe('Investors', () => {
     expectValidHeadingOutline(container)
   })
 
+  it('keeps one h1 and no skipped level while loading', () => {
+    useInvestors.mockImplementation(() => ({ data: undefined, isLoading: true, error: null }))
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    useInvestors.mockImplementation(() => ({ data: undefined, isLoading: false, error: new Error('boom'), refetch: vi.fn() }))
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
+  })
+
   it('states how many managers are tracked, the latest quarter and the lag', () => {
     renderPage()
     expect(screen.getByText('13F holdings of 10 tracked managers · latest quarter Q2 2026 · filings arrive up to 45 days after quarter end')).toBeInTheDocument()
