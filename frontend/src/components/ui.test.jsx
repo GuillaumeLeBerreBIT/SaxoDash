@@ -14,6 +14,9 @@ import {
   Skeleton,
   Metric,
   DayChange,
+  PageHeader,
+  Th,
+  Td,
 } from './ui'
 
 describe('ui primitives', () => {
@@ -179,5 +182,20 @@ describe('DayChange', () => {
   it('keeps colour for real moves', () => {
     render(<DayChange value={1.2} />)
     expect(screen.getByText('+1.20%').className).toContain('text-emerald-400')
+  })
+})
+
+describe('header right slots', () => {
+  it('PageHeader lets a wide right slot wrap below the title', () => {
+    const { container } = render(<PageHeader title="Analytics" subtitle="s" right={<button>Right</button>} />)
+    expect(container.firstChild).toHaveClass('flex-wrap')
+    expect(screen.getByRole('button', { name: 'Right' }).parentElement).toHaveClass('max-w-full')
+    expect(screen.getByRole('heading', { level: 1, name: 'Analytics' })).toBeInTheDocument()
+  })
+
+  it('CardHeader lets its right slot wrap and keeps the h2 heading', () => {
+    const { container } = render(<CardHeader title="Chart" right={<span>Tools</span>} />)
+    expect(container.firstChild).toHaveClass('flex-wrap')
+    expect(screen.getByRole('heading', { level: 2, name: 'Chart' })).toBeInTheDocument()
   })
 })
