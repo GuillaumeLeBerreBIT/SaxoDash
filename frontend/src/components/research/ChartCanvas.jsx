@@ -33,7 +33,7 @@ function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) 
   const up = bar.close >= bar.open
 
   return (
-    <div className={`flex items-center gap-x-3 gap-y-0.5 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap ${className}`} {...rest}>
+    <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap ${className}`} {...rest}>
       <span className="text-zinc-400">{bar.date}</span>
       {[
         ['O', bar.open],

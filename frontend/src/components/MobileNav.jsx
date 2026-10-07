@@ -75,14 +75,14 @@ export default function MobileNav({ onOpenPalette }) {
         aria-label="Primary"
         className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-white/[0.06] bg-zinc-950 pb-[env(safe-area-inset-bottom)]"
       >
-        <div className="h-14 flex items-stretch">
-          {primary.map(({ to, label, icon: ItemIcon, end }) => (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => tabCls(isActive)}>
+        <div className="h-14 px-1 flex items-stretch">
+          {primary.map(({ to, label, mobileLabel, icon: ItemIcon, end }) => (
+            <NavLink key={to} to={to} end={end} aria-label={label} className={({ isActive }) => tabCls(isActive)}>
               {({ isActive }) => (
                 <>
                   {isActive && <ActiveIndicator />}
                   <ItemIcon size={20} strokeWidth={1.75} />
-                  <span className="text-[var(--fig-2xs)] font-medium">{label}</span>
+                  <span className="text-[var(--fig-2xs)] font-medium leading-none max-w-full truncate px-0.5">{mobileLabel ?? label}</span>
                 </>
               )}
             </NavLink>

@@ -30,24 +30,24 @@ export function Card({ children, className = '', padding = true, interactive = f
  *  `as="h3"` only for a heading genuinely nested under another CardHeader. */
 export function CardHeader({ title, subtitle, right, className = '', as: Heading = 'h2' }) {
   return (
-    <div className={`flex flex-wrap items-start justify-between gap-3 2xl:gap-4 ${className}`}>
+    <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-3 2xl:gap-4 ${className}`}>
       <div className="min-w-0">
         <Heading className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</Heading>
         {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5 2xl:mt-1">{subtitle}</p>}
       </div>
-      {right && <div className="min-w-0 max-w-full">{right}</div>}
+      {right && <div className="flex min-w-0 max-w-full">{right}</div>}
     </div>
   )
 }
 
 export function PageHeader({ title, subtitle, right }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 mb-5 2xl:mb-6">
+    <div className="flex flex-wrap md:flex-nowrap items-end justify-between gap-x-4 gap-y-3 md:gap-x-0 md:gap-y-0 mb-5 2xl:mb-6">
       <div className="min-w-0">
         <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
         {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1 2xl:mt-1.5">{subtitle}</p>}
       </div>
-      {right && <div className="min-w-0 max-w-full">{right}</div>}
+      {right && <div className="flex min-w-0 max-w-full">{right}</div>}
     </div>
   )
 }

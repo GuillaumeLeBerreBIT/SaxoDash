@@ -150,7 +150,7 @@ export default function Portfolio() {
                             title="No thesis written yet — add one on the Research page"
                           />
                         )}
-                        <span className="text-zinc-500 truncate min-w-0 max-w-[160px]">{p.name}</span>
+                        <span className="text-zinc-500 truncate min-w-0 max-w-[160px]" title={p.name}>{p.name}</span>
                       </Link>
                     </Td>
                     <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(p.qty)}</Td>

@@ -20,6 +20,7 @@ cd backend && CORS_ALLOWED_ORIGINS=http://localhost:5273 \
 cd frontend && VITE_API_BASE_URL=http://localhost:8100 \
   npx vite --port 5273 --strictPort
 ```
+The backend and frontend commands each block, so run them in separate terminals.
 Both copies are gitignored; delete them afterwards.
 
 The app has two users, so a bare `get()` fails. Mint tokens for `demo`, using

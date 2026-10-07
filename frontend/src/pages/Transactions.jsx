@@ -114,7 +114,7 @@ export default function Transactions() {
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
                   <Td className="w-full max-w-0 md:w-auto md:max-w-none text-zinc-100">
-                    <div className="truncate">{t.instrument}</div>
+                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>{t.instrument}</div>
                     <span className="md:hidden block text-[var(--fig-2xs)] text-zinc-500">{t.type}</span>
                   </Td>
                   <Td hideBelow="md" className="text-zinc-400 font-medium">

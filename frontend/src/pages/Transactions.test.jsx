@@ -34,6 +34,12 @@ describe('Transactions', () => {
     expect(within(sell).getByText('+€1,290.00')).toBeInTheDocument()
   })
 
+  it('titles the truncated instrument cell with its full name and ticker', () => {
+    stub([row({ instrument: 'NVIDIA Corporation', ticker: 'NVDA' })])
+    renderWithProviders(<Transactions />)
+    expect(screen.getByTitle('NVIDIA Corporation (NVDA)')).toHaveClass('truncate')
+  })
+
   it('shows a dash for the total when the currency was never recorded', () => {
     stub([row({ currency: null, fx_rate: null, total_eur: null })])
     renderWithProviders(<Transactions />)

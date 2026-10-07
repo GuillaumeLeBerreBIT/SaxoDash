@@ -59,5 +59,4 @@ describe('BudgetProgressBar', () => {
     expect(input.parentElement.parentElement).toHaveClass('flex-col', 'items-start', 'md:flex-row', 'md:items-center')
     expect(input.parentElement).toHaveClass('w-full', 'justify-between', 'md:w-auto')
   })
-
 })

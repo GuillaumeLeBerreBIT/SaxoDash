@@ -181,6 +181,11 @@ describe('Dashboard recent transactions on mobile', () => {
     })
   })
 
+  it('titles the truncated instrument cell with its full name and ticker', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByTitle('Advanced Micro Devices (AMD)')).toHaveClass('truncate')
+  })
+
   it('keeps date, name and total visible below md and hides the rest', () => {
     renderWithProviders(<Dashboard />)
     const table = screen.getByRole('table')

@@ -120,6 +120,12 @@ describe('Portfolio holdings table', () => {
     expect(screen.queryByRole('columnheader', { name: 'Day %' })).not.toBeInTheDocument()
   })
 
+  it('titles the truncated holding name with its full text', () => {
+    stub()
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByTitle('Microsoft Corp.')).toHaveClass('truncate')
+  })
+
   it('links each holding name to its research page', () => {
     renderWithProviders(<Portfolio />)
     const link = screen.getByRole('link', { name: /MSFT/ })

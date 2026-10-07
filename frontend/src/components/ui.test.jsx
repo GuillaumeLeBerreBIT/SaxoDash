@@ -188,14 +188,15 @@ describe('DayChange', () => {
 describe('header right slots', () => {
   it('PageHeader lets a wide right slot wrap below the title', () => {
     const { container } = render(<PageHeader title="Analytics" subtitle="s" right={<button>Right</button>} />)
-    expect(container.firstChild).toHaveClass('flex-wrap')
-    expect(screen.getByRole('button', { name: 'Right' }).parentElement).toHaveClass('max-w-full')
+    expect(container.firstChild).toHaveClass('flex-wrap', 'md:flex-nowrap', 'md:gap-x-0', 'md:gap-y-0')
+    expect(screen.getByRole('button', { name: 'Right' }).parentElement).toHaveClass('flex', 'min-w-0', 'max-w-full')
     expect(screen.getByRole('heading', { level: 1, name: 'Analytics' })).toBeInTheDocument()
   })
 
   it('CardHeader lets its right slot wrap and keeps the h2 heading', () => {
     const { container } = render(<CardHeader title="Chart" right={<span>Tools</span>} />)
-    expect(container.firstChild).toHaveClass('flex-wrap')
+    expect(container.firstChild).toHaveClass('flex-wrap', 'md:flex-nowrap')
+    expect(screen.getByText('Tools').parentElement).toHaveClass('flex', 'min-w-0', 'max-w-full')
     expect(screen.getByRole('heading', { level: 2, name: 'Chart' })).toBeInTheDocument()
   })
 })

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 
 export const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/', label: 'Dashboard', mobileLabel: 'Home', icon: LayoutDashboard, end: true },
   { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { to: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
   { to: '/research', label: 'Research', icon: CandlestickChart },

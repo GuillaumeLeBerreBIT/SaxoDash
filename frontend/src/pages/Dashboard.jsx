@@ -160,7 +160,7 @@ export default function Dashboard() {
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
                   <Td className="w-full max-w-0 md:w-auto md:max-w-none">
-                    <div className="truncate">
+                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>
                       <span className="font-medium text-zinc-100">{t.ticker}</span>
                       <span className="text-zinc-500 ml-2">{t.instrument}</span>
                     </div>

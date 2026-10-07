@@ -59,3 +59,25 @@ describe('SaxoConnectionStatus full badge', () => {
     expect(screen.getByRole('button', { name: 'Connect Saxo' })).toBeInTheDocument()
   })
 })
+
+describe('SaxoConnectionStatus failed-connect param', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.history.replaceState({}, '', '/portfolio?saxo=error')
+    mockStatus({ connected: false })
+  })
+
+  it('is left in the URL by compact dots so the full badge can still report it', () => {
+    render(<><SaxoConnectionStatus compact /><SaxoConnectionStatus compact /></>)
+    expect(window.location.search).toBe('?saxo=error')
+    expect(screen.queryByText('Connection failed')).not.toBeInTheDocument()
+  })
+
+  it('is read and stripped by the full badge mounting after the dots', () => {
+    const dots = render(<SaxoConnectionStatus compact />)
+    dots.unmount()
+    render(<SaxoConnectionStatus />)
+    expect(screen.getByText('Connection failed')).toBeInTheDocument()
+    expect(window.location.search).toBe('')
+  })
+})

@@ -52,7 +52,7 @@ describe('Projection', () => {
     expect(grid).toHaveClass('grid-cols-2', 'md:grid-cols-4')
   })
 
-  it('lets the header controls wrap and the amount control scroll inside itself', () => {
+  it('lets the header controls wrap and the amount control wrap', () => {
     renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
 
     const amounts = screen.getByRole('button', { name: '€2500' }).parentElement
@@ -68,6 +68,7 @@ describe('Projection', () => {
     const note = screen.getByText(/Simulation, not advice/)
     expect(note.parentElement).toHaveClass('flex-wrap')
     expect(note).toHaveClass('w-full', 'md:ml-auto', 'md:w-auto')
+    expect(note.parentElement).toHaveClass('gap-y-1', 'md:gap-y-0')
   })
 
 })

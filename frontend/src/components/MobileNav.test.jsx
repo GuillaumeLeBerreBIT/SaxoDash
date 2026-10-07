@@ -14,8 +14,10 @@ describe('MobileNav', () => {
     renderWithProviders(<MobileNav onOpenPalette={() => {}} />)
     const nav = screen.getByRole('navigation', { name: 'Primary' })
     expect(nav).toHaveClass('md:hidden')
-    const names = within(nav).getAllByRole('link').map((link) => link.textContent)
-    expect(names).toEqual(['Dashboard', 'Portfolio', 'Research', 'Spending'])
+    const links = within(nav).getAllByRole('link')
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual(['Dashboard', 'Portfolio', 'Research', 'Spending'])
+    expect(links.map((link) => link.textContent)).toEqual(['Home', 'Portfolio', 'Research', 'Spending'])
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Analytics' })).not.toBeInTheDocument()
   })
 

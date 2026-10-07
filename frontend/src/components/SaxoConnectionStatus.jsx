@@ -9,7 +9,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
   const derived = deriveSaxoStatus(status)
   const [error] = useState(
-    () => new URLSearchParams(window.location.search).get('saxo') === 'error'
+    () => !compact && new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
 
   useEffect(() => {
