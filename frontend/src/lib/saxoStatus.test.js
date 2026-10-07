@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 
 vi.mock('../api/queries')
@@ -28,7 +29,7 @@ describe('deriveSaxoStatus', () => {
   it.each(STATES)('%s', (_, data, kind, sentence, visible) => {
     expect(deriveSaxoStatus(data)).toMatchObject({ kind, sentence })
     queries.useSaxoStatus.mockReturnValue({ data })
-    const { unmount } = render(createElement(SaxoConnectionStatus, { compact: true }))
+    const { unmount } = render(createElement(MemoryRouter, null, createElement(SaxoConnectionStatus, { compact: true })))
     expect(screen.getByRole('status', { name: sentence })).toBeInTheDocument()
     unmount()
     const full = render(createElement(SaxoConnectionStatus))

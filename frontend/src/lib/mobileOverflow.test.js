@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROUTES, describeLoadFailure, formatLoadFailure, formatRow, parseArgs } from './mobileOverflow'
+import { ROUTES, describeLoadFailure, formatLoadFailure, formatRow, parseArgs, describeGateBlindness, formatGateBlind } from './mobileOverflow'
 
 describe('mobile overflow helpers', () => {
   it('lists every shell route once', () => {
@@ -24,5 +24,22 @@ describe('mobile overflow helpers', () => {
   })
   it('formats a load failure row', () => {
     expect(formatLoadFailure('/accounts/9', 'landed on /login')).toMatch(/\/accounts\/9\s+NOLOAD\s+landed on \/login/)
+  })
+  it('rejects a width that is not a positive number', () => {
+    for (const bad of ['abc', '0', '-5', '']) {
+      expect(() => parseArgs(['--width', bad])).toThrow(/--width/)
+    }
+  })
+  it('reports nothing when neither root hides sideways scroll', () => {
+    expect(describeGateBlindness('visible', 'auto')).toBeNull()
+    expect(describeGateBlindness('visible', 'visible')).toBeNull()
+  })
+  it('names the element that hides sideways scroll', () => {
+    expect(describeGateBlindness('hidden', 'visible')).toBe('html overflow-x is hidden')
+    expect(describeGateBlindness('visible', 'clip')).toBe('body overflow-x is clip')
+    expect(describeGateBlindness('hidden', 'hidden')).toBe('html overflow-x is hidden, body overflow-x is hidden')
+  })
+  it('formats a gate-blind row', () => {
+    expect(formatGateBlind('/spending', 'html overflow-x is hidden')).toMatch(/\/spending\s+GATE-BLIND\s+html overflow-x is hidden/)
   })
 })

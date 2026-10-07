@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render as rtlRender, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('../api/queries')
 vi.mock('../api/client', () => ({ connectSaxo: vi.fn() }))
 import * as queries from '../api/queries'
 import SaxoConnectionStatus from './SaxoConnectionStatus'
+
+const render = (ui) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 
 const healthy = { connected: true, needs_reauth: false, usable: true, last_sync_outcome: 'ok' }
 
@@ -30,6 +33,29 @@ describe('SaxoConnectionStatus compact', () => {
     expect(status).toHaveAttribute('title', sentence)
     expect(status.querySelector('.sr-only')).toHaveTextContent(sentence)
     expect(status.querySelector('.rounded-full')).toHaveClass(tone, 'w-2', 'h-2')
+  })
+
+  it.each([
+    ['needs reauth', { ...healthy, needs_reauth: true, usable: false }, 'Saxo needs reconnecting'],
+    ['not connected', { connected: false }, 'Saxo not connected'],
+    ['reconnecting', { ...healthy, usable: false }, 'Saxo reconnecting…'],
+  ])('links the %s dot to the portfolio with a touch-sized target', (_, data, sentence) => {
+    mockStatus(data)
+    render(<SaxoConnectionStatus compact />)
+    const link = screen.getByRole('link', { name: sentence })
+    expect(link).toHaveAttribute('href', '/portfolio')
+    expect(link).toHaveClass('inline-flex', 'min-h-10', 'min-w-10', 'items-center', 'justify-center', 'md:min-h-0', 'md:min-w-0')
+    expect(screen.getByRole('status', { name: sentence })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['connected', healthy],
+    ['a failed sync', { ...healthy, last_sync_outcome: 'failed' }],
+  ])('keeps the %s dot a plain status', (_, data) => {
+    mockStatus(data)
+    render(<SaxoConnectionStatus compact />)
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toBeInTheDocument()
   })
 
   it('renders nothing while the status is loading', () => {

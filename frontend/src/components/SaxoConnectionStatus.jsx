@@ -3,6 +3,7 @@ import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
 import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
+import { Link } from 'react-router-dom'
 import { Badge } from './ui'
 
 export default function SaxoConnectionStatus({ compact = false }) {
@@ -20,7 +21,18 @@ export default function SaxoConnectionStatus({ compact = false }) {
 
   if (!derived) return null
 
-  if (compact) return <StatusDot label={derived.sentence} dot={SAXO_DOT_CLASS[derived.tone]} />
+  if (compact) {
+    const dot = <StatusDot label={derived.sentence} dot={SAXO_DOT_CLASS[derived.tone]} />
+    if (!ACTIONABLE_KINDS.has(derived.kind)) return dot
+    return (
+      <Link
+        to="/portfolio"
+        className="inline-flex min-h-10 min-w-10 items-center justify-center md:min-h-0 md:min-w-0"
+      >
+        {dot}
+      </Link>
+    )
+  }
 
   if (derived.kind === 'not_connected') {
     return (
@@ -81,6 +93,8 @@ const SYNC_OUTCOME_NOTE = {
   skipped: 'The last sync could not run, so this data may be stale',
   failed: 'The last sync failed, so this data may be stale',
 }
+
+const ACTIONABLE_KINDS = new Set(['needs_reauth', 'not_connected', 'reconnecting'])
 
 function StatusDot({ label, dot }) {
   return (

@@ -71,7 +71,7 @@ describe('AccountTransactions', () => {
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate })
 
     renderAt(5)
-    fireEvent.change(screen.getByLabelText('Category for COLRUYT'), { target: { value: 'DINING' } })
+    fireEvent.change(screen.getAllByLabelText('Category for COLRUYT')[0], { target: { value: 'DINING' } })
 
     expect(mutate).toHaveBeenCalledWith({ id: 1, category: 'DINING' })
   })
@@ -198,9 +198,23 @@ describe('AccountTransactions on mobile', () => {
       expect(screen.getByRole('columnheader', { name })).not.toHaveClass('hidden')
     }
     expect(screen.getByRole('columnheader', { name: 'Category' })).toHaveClass('hidden', 'md:table-cell')
-    const select = screen.getByLabelText('Category for COLRUYT')
-    expect(select.closest('td')).toHaveClass('hidden', 'md:table-cell')
-    const subline = screen.getByText('Groceries', { selector: '.md\\:hidden' })
-    expect(subline.closest('tr')).toHaveTextContent('COLRUYT')
+    const desktopSelect = screen.getAllByLabelText('Category for COLRUYT').find((el) => !el.closest('.md\\:hidden'))
+    expect(desktopSelect.closest('td')).toHaveClass('hidden', 'md:table-cell')
+  })
+
+  it('lets a phone recategorise from the below-md subline', () => {
+    const mutate = vi.fn()
+    queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate })
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 7, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', amount: '-40.00', currency: 'EUR', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+    renderAt(5)
+    const selects = screen.getAllByLabelText('Category for COLRUYT')
+    expect(selects).toHaveLength(2)
+    const mobile = selects.find((el) => el.closest('.md\\:hidden'))
+    expect(mobile.closest('td')).not.toHaveClass('hidden')
+    fireEvent.change(mobile, { target: { value: 'DINING' } })
+    expect(mutate).toHaveBeenCalledWith({ id: 7, category: 'DINING' })
   })
 })

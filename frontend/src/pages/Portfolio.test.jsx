@@ -92,6 +92,20 @@ describe('Portfolio holdings table', () => {
     expect(screen.getAllByTitle(/no live price feed/i).length).toBeGreaterThan(0)
   })
 
+  it('flags an estimated price in the below-md name cell', () => {
+    renderWithProviders(<Portfolio />)
+    const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
+    const cue = within(row).getByText('est.')
+    expect(cue).toHaveClass('md:hidden')
+    expect(cue).toHaveAttribute('title', expect.stringMatching(/no live price feed/i))
+  })
+
+  it('shows no estimate cue for a live price', () => {
+    stub([{ ...msft, price_source: 'live' }])
+    renderWithProviders(<Portfolio />)
+    expect(screen.queryByText('est.')).not.toBeInTheDocument()
+  })
+
   it('says nothing about provenance when every price is live', () => {
     stub([{ ...msft, price_source: 'live' }])
     renderWithProviders(<Portfolio />)

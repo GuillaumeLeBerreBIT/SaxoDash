@@ -16,6 +16,11 @@ function ActiveIndicator() {
 export default function MobileNav({ onOpenPalette }) {
   const [openedAt, setOpenedAt] = useState(null)
   const { pathname } = useLocation()
+  const [seenPath, setSeenPath] = useState(pathname)
+  if (seenPath !== pathname) {
+    setSeenPath(pathname)
+    setOpenedAt(null)
+  }
   const open = openedAt === pathname
   const setOpen = (value) => setOpenedAt(value ? pathname : null)
   const navigate = useNavigate()

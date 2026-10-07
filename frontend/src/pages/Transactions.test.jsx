@@ -40,6 +40,20 @@ describe('Transactions', () => {
     expect(screen.getByTitle('NVIDIA Corporation (NVDA)')).toHaveClass('truncate')
   })
 
+  it('carries ticker and account in the below-md subline', () => {
+    stub([row({ type: 'BUY', ticker: 'NVDA', account: 'Saxo Main' })])
+    renderWithProviders(<Transactions />)
+    const subline = screen.getByText(/BUY · NVDA · Saxo Main/)
+    expect(subline).toHaveClass('md:hidden')
+    expect(subline.closest('td')).toHaveTextContent('NVIDIA')
+  })
+
+  it('skips an empty subline part without a stray separator', () => {
+    stub([row({ type: 'BUY', ticker: 'NVDA', account: '' })])
+    renderWithProviders(<Transactions />)
+    expect(screen.getByText('BUY · NVDA', { selector: '.md\\:hidden' })).toBeInTheDocument()
+  })
+
   it('shows a dash for the total when the currency was never recorded', () => {
     stub([row({ currency: null, fx_rate: null, total_eur: null })])
     renderWithProviders(<Transactions />)
@@ -92,7 +106,7 @@ describe('Transactions on mobile', () => {
     const line = within(table).getByText('NVIDIA').closest('tr')
     expect(within(line).getByText('Saxo').closest('td')).toHaveClass('hidden', 'md:table-cell')
     expect(within(line).getByText('US$150.00').closest('td')).toHaveClass('hidden', 'md:table-cell')
-    expect(within(line).getByText('BUY', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
+    expect(within(line).getByText('BUY · NVDA · Saxo', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
   })
   it('wraps the toolbar and its type chips and gives the search the full row on mobile', () => {
     stub([row({ id: 1, type: 'BUY' })])

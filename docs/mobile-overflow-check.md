@@ -40,11 +40,15 @@ node check-mobile-overflow.mjs --base http://localhost:5273 --auth auth.json \
 ```
 
 Exit codes: `0` every route passes, `1` at least one overflows or did not load,
-`2` setup problem (no Playwright, no `--auth`).
+`2` setup problem (no Playwright, no `--auth`, a `--width` that is not a positive number).
 
 A route that redirects (expired token, unknown account id or investor slug) or
 renders no `<main>` is not measured; it prints `NOLOAD <what was found>` and
 forces exit `1`, as does a step that throws, such as a renamed tab button.
+
+If `html` or `body` computes `overflow-x: hidden` or `clip`, `scrollWidth` can no
+longer show a sideways scroll, so the route prints `GATE-BLIND <what hides it>`
+and fails instead of passing vacuously.
 
 ## Reading a row
 
@@ -56,6 +60,7 @@ forces exit `1`, as does a step that throws, such as a renamed tab button.
 `over` is how many pixels the page is wider than the viewport. After FAIL come
 up to four offending elements as `tag.first.three.classes:right-edge`, the
 elements whose right edge sits past the viewport. Elements inside an
-`overflow-x-auto` or `overflow-x-scroll` container and `position: fixed`
+`overflow-x-auto`, `overflow-x-scroll`, `overflow-auto`, `overflow-scroll`,
+`overflow-x-hidden` or `overflow-hidden` container and `position: fixed`
 elements are ignored, since they cannot widen the page. Fix the outermost offender (wrap,
 truncate, or scroll container) and rerun.

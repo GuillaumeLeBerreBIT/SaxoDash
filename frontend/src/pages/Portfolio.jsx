@@ -151,6 +151,14 @@ export default function Portfolio() {
                           />
                         )}
                         <span className="text-zinc-500 truncate min-w-0 max-w-[160px]" title={p.name}>{p.name}</span>
+                        {p.price_source !== 'live' && (
+                          <span
+                            title={priceBasis(p.price_source).note}
+                            className="md:hidden shrink-0 text-[var(--fig-2xs)] text-amber-400/80"
+                          >
+                            est.
+                          </span>
+                        )}
                       </Link>
                     </Td>
                     <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(p.qty)}</Td>

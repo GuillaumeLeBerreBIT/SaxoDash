@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter, useNavigate } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import MobileNav from './MobileNav'
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -107,6 +108,30 @@ describe('MobileNav', () => {
     renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/accounts' })
     await userEvent.click(screen.getByRole('button', { name: 'More' }))
     await userEvent.click(screen.getByRole('link', { name: 'Accounts' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('stays closed when history returns to the path where it was opened', async () => {
+    function Jump() {
+      const navigate = useNavigate()
+      return (
+        <>
+          <button onClick={() => navigate('/')}>go-home</button>
+          <button onClick={() => navigate('/portfolio')}>go-portfolio</button>
+        </>
+      )
+    }
+    render(
+      <MemoryRouter initialEntries={['/portfolio']}>
+        <MobileNav onOpenPalette={() => {}} />
+        <Jump />
+      </MemoryRouter>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'go-home' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'go-portfolio' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })

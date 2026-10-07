@@ -35,6 +35,9 @@ export function parseArgs(argv) {
     const flag = FLAGS[argv[i]]
     if (flag && argv[i + 1] !== undefined) parsed[flag[0]] = flag[1](argv[i + 1])
   }
+  if (!Number.isFinite(parsed.width) || parsed.width <= 0) {
+    throw new Error(`--width must be a positive number, got ${JSON.stringify(parsed.width)}`)
+  }
   return parsed
 }
 
@@ -43,6 +46,19 @@ export function formatRow(route, over, offenders) {
   const amount = String(over).padStart(4)
   if (over <= 0) return `${label} over ${amount}  OK`
   return `${label} over ${amount}  FAIL  ${offenders.slice(0, 4).join(' | ')}`
+}
+
+const SCROLL_HIDING = new Set(['hidden', 'clip'])
+
+export function describeGateBlindness(htmlOverflowX, bodyOverflowX) {
+  const hiding = []
+  if (SCROLL_HIDING.has(htmlOverflowX)) hiding.push(`html overflow-x is ${htmlOverflowX}`)
+  if (SCROLL_HIDING.has(bodyOverflowX)) hiding.push(`body overflow-x is ${bodyOverflowX}`)
+  return hiding.length ? hiding.join(', ') : null
+}
+
+export function formatGateBlind(label, found) {
+  return `${label.padEnd(34)} GATE-BLIND  ${found}`
 }
 
 export function describeLoadFailure(expectedPath, actualPath, hasMain) {
@@ -62,7 +78,7 @@ export function measureOverflow() {
     .filter(
       (el) =>
         el.getBoundingClientRect().right > width + 1 &&
-        !el.closest('.overflow-x-auto, .overflow-x-scroll') &&
+        !el.closest('.overflow-x-auto, .overflow-x-scroll, .overflow-auto, .overflow-scroll, .overflow-x-hidden, .overflow-hidden') &&
         getComputedStyle(el).position !== 'fixed',
     )
     .slice(0, 4)
@@ -70,5 +86,10 @@ export function measureOverflow() {
       (el) =>
         `${el.tagName.toLowerCase()}.${(el.getAttribute('class') || '').split(' ').slice(0, 3).join('.')}:${Math.round(el.getBoundingClientRect().right)}`,
     )
-  return { over: document.documentElement.scrollWidth - width, offenders }
+  return {
+    over: document.documentElement.scrollWidth - width,
+    offenders,
+    htmlOverflowX: getComputedStyle(document.documentElement).overflowX,
+    bodyOverflowX: getComputedStyle(document.body).overflowX,
+  }
 }

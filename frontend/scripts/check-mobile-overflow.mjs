@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import {
   ROUTES,
+  describeGateBlindness,
   describeLoadFailure,
+  formatGateBlind,
   formatLoadFailure,
   formatRow,
   measureOverflow,
@@ -11,7 +13,13 @@ import {
 const SETTLE_MS = 800
 const NETWORK_IDLE_MS = 5000
 
-const args = parseArgs(process.argv.slice(2))
+let args
+try {
+  args = parseArgs(process.argv.slice(2))
+} catch (error) {
+  console.error(error.message)
+  process.exit(2)
+}
 if (!args.auth) {
   console.error('usage: node check-mobile-overflow.mjs --base <url> --auth <auth.json> [--width 390] [--account-id 1] [--investor-slug berkshire-hathaway]')
   process.exit(2)
@@ -44,7 +52,13 @@ const measure = async (page, label, expectedPath) => {
     console.log(formatLoadFailure(label, loadFailure))
     return
   }
-  const { over, offenders } = await page.evaluate(measureOverflow)
+  const { over, offenders, htmlOverflowX, bodyOverflowX } = await page.evaluate(measureOverflow)
+  const blind = describeGateBlindness(htmlOverflowX, bodyOverflowX)
+  if (blind) {
+    failed = true
+    console.log(formatGateBlind(label, `${blind} - sideways scroll is hidden, so the width check proves nothing`))
+    return
+  }
   if (over > 0) failed = true
   console.log(formatRow(label, over, offenders))
 }

@@ -33,4 +33,12 @@ describe('MobileTopBar', () => {
     renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
     expect(screen.getByRole('status', { name: 'Saxo not connected' })).toBeInTheDocument()
   })
+
+  it('pads below the notch while keeping a 48px bar', () => {
+    const { container } = renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
+    const header = container.firstChild
+    expect(header).toHaveClass('md:hidden', 'sticky', 'top-0', 'pt-[env(safe-area-inset-top)]')
+    expect(header).not.toHaveClass('h-12')
+    expect(header.firstChild).toHaveClass('h-12')
+  })
 })

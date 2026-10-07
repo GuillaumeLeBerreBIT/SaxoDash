@@ -115,7 +115,9 @@ export default function Transactions() {
                   </Td>
                   <Td className="w-full max-w-0 md:w-auto md:max-w-none text-zinc-100">
                     <div className="truncate" title={`${t.instrument} (${t.ticker})`}>{t.instrument}</div>
-                    <span className="md:hidden block text-[var(--fig-2xs)] text-zinc-500">{t.type}</span>
+                    <span className="md:hidden block truncate text-[var(--fig-2xs)] text-zinc-500">
+                      {[t.type, t.ticker, t.account].filter(Boolean).join(' · ')}
+                    </span>
                   </Td>
                   <Td hideBelow="md" className="text-zinc-400 font-medium">
                     <span className="flex items-center gap-2">

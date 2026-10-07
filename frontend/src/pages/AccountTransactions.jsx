@@ -130,8 +130,8 @@ export default function AccountTransactions() {
                     {tx.description && tx.description !== tx.counterparty_name && (
                       <div title={tx.description} className="truncate text-[var(--fig-2xs)] text-zinc-500">{tx.description}</div>
                     )}
-                    <div className="md:hidden truncate text-[var(--fig-2xs)] text-zinc-500">
-                      {CATEGORY_LABELS[tx.effective_category] ?? tx.effective_category}
+                    <div className="md:hidden">
+                      <CategoryCell tx={tx} onChange={updateCategory.mutate} />
                     </div>
                   </Td>
                   <Td hideBelow="md"><CategoryCell tx={tx} onChange={updateCategory.mutate} /></Td>

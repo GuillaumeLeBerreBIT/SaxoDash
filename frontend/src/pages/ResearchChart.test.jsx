@@ -353,6 +353,12 @@ describe('ResearchChart time-axis zoom', () => {
     expect(screen.getByRole('button', { name: '1W' }).parentElement.parentElement).toHaveClass('flex-wrap')
   })
 
+  it('fills the dynamic viewport so the phone toolbar does not clip it', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expect(container.firstChild).toHaveClass('h-dvh')
+    expect(container.firstChild).not.toHaveClass('h-screen')
+  })
+
   it('has a way back to Research on every viewport', () => {
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 
