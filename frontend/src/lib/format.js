@@ -90,6 +90,11 @@ export function fmtDayMonth(value) {
   return parts ? `${pad2(parts.day)} ${MONTHS[parts.month]}` : UNKNOWN
 }
 
+export function fmtMonthYear(value) {
+  const parts = dateParts(value)
+  return parts ? `${MONTHS[parts.month]} ${pad2(parts.year % 100)}` : UNKNOWN
+}
+
 export function fmtDate(value) {
   const parts = dateParts(value)
   return parts ? `${pad2(parts.day)} ${MONTHS[parts.month]} ${parts.year}` : UNKNOWN

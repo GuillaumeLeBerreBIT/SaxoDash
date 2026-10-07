@@ -35,6 +35,24 @@ describe('NewsTab', () => {
     expect(document.querySelector('img')).toBeNull()
   })
 
+  it('heads each local day once with the same day its items fall on', () => {
+    const at = (day, hour) => new Date(2026, 8, day, hour).toISOString()
+    queries.useCompanyNews.mockReturnValue({
+      data: {
+        available: true,
+        items: [
+          item({ id: 1, datetime: at(9, 22), headline: 'Late', url: 'https://x/1' }),
+          item({ id: 2, datetime: at(9, 1), headline: 'Early', url: 'https://x/2' }),
+          item({ id: 3, datetime: at(8, 12), headline: 'Yesterday', url: 'https://x/3' }),
+        ],
+      },
+      isLoading: false,
+    })
+    render(<NewsTab symbol="AAPL" />)
+    expect(screen.getAllByText('09 Sep')).toHaveLength(1)
+    expect(screen.getAllByText('08 Sep')).toHaveLength(1)
+  })
+
   it('shows an empty state when there are no items', () => {
     queries.useCompanyNews.mockReturnValue({ data: { available: true, items: [] }, isLoading: false })
     render(<NewsTab symbol="AAPL" />)

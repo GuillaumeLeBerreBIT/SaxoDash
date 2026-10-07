@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
 import { NEGATIVE, POSITIVE } from './charts'
-import { fmtDayMonth } from './format'
+import { fmtDayMonth, fmtMonthYear } from './format'
 
 /** Geometry and colours for the hand-drawn Research chart.
  *
@@ -65,8 +65,7 @@ export function timeLabelStyle(bars, now = new Date()) {
 }
 
 export function formatTimeLabel(date, style) {
-  if (style !== 'month') return fmtDayMonth(date)
-  return new Date(date).toLocaleDateString('en-GB', { month: 'short', year: '2-digit' })
+  return style === 'month' ? fmtMonthYear(date) : fmtDayMonth(date)
 }
 
 export function svgY(event) {

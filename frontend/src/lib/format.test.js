@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { fmtDate, fmtDayMonth, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -63,6 +63,8 @@ describe('pctToneClass', () => {
 })
 
 describe('fmtDate', () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it('writes a date-only ISO string as day, short month and year', () => {
     expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
     expect(fmtDate('2026-09-01')).toBe('01 Sep 2026')
@@ -75,17 +77,20 @@ describe('fmtDate', () => {
     expect(fmtDate('not a date')).toBe('—')
   })
 
-  it('does not shift a date-only string with the process time zone', () => {
-    const original = globalThis.process.env.TZ
-    try {
-      for (const tz of ['Pacific/Honolulu', 'UTC', 'Pacific/Kiritimati']) {
-        globalThis.process.env.TZ = tz
-        expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
-        expect(fmtDayMonth('2026-01-01')).toBe('01 Jan')
-      }
-    } finally {
-      globalThis.process.env.TZ = original
+  it('does not shift a date-only string in a zone behind UTC', () => {
+    const behind = (read) => function () {
+      return read(new Date(this.getTime() - 5 * 3_600_000))
     }
+    vi.spyOn(Date.prototype, 'getDate').mockImplementation(behind((d) => d.getUTCDate()))
+    vi.spyOn(Date.prototype, 'getMonth').mockImplementation(behind((d) => d.getUTCMonth()))
+    vi.spyOn(Date.prototype, 'getFullYear').mockImplementation(behind((d) => d.getUTCFullYear()))
+    expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
+    expect(fmtDayMonth('2026-01-01')).toBe('01 Jan')
+    expect(fmtMonthYear('2026-01-01')).toBe('Jan 26')
+  })
+
+  it('formats a local datetime on its own day', () => {
+    expect(fmtDate('2026-10-04T12:00:00')).toBe('04 Oct 2026')
   })
 
   it('takes the date part of a full datetime', () => {
@@ -104,5 +109,12 @@ describe('fmtDateTime', () => {
   it('keeps the day, month, year order and adds the time', () => {
     expect(fmtDateTime('2026-10-04T12:30:00Z')).toMatch(/^04 Oct 2026, \d{2}:\d{2}$/)
     expect(fmtDateTime(null)).toBe('—')
+  })
+})
+
+describe('fmtMonthYear', () => {
+  it('writes short month and two-digit year', () => {
+    expect(fmtMonthYear('2024-03-12')).toBe('Mar 24')
+    expect(fmtMonthYear(null)).toBe('—')
   })
 })

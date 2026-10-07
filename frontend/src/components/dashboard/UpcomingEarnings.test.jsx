@@ -24,5 +24,6 @@ describe('UpcomingEarnings', () => {
       'href', '/research?symbol=MSFT&tab=earnings',
     )
     expect(screen.getByText(/in 3 days/)).toBeInTheDocument()
+    expect(screen.getByText('13 Sep 2026')).toBeInTheDocument()
   })
 })

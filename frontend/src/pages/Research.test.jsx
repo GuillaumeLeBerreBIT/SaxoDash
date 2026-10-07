@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
+import { fmtDate } from '../lib/format'
 import { WIDEST_RANGE_COUNT } from '../lib/research'
 import Research from './Research'
 
@@ -169,8 +170,8 @@ describe('Research', () => {
     // 1W is seven bars, so the legend lands on the last of the forty stubbed.
     await userEvent.click(screen.getByRole('button', { name: '1W' }))
 
-    expect(screen.getByText(bars[bars.length - 1].date)).toBeInTheDocument()
-    expect(screen.queryByText(bars[0].date)).not.toBeInTheDocument()
+    expect(screen.getByText(fmtDate(bars[bars.length - 1].date))).toBeInTheDocument()
+    expect(screen.queryByText(fmtDate(bars[0].date))).not.toBeInTheDocument()
   })
 
   it('shows the live position card on the overview tab', () => {

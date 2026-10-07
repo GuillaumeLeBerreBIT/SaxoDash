@@ -164,6 +164,7 @@ describe('Dashboard', () => {
     expect(within(line).getByText('2.5')).toBeInTheDocument()
     expect(within(line).getByText('US$150.00')).toBeInTheDocument()
     expect(within(line).getByText('-€322.50')).toBeInTheDocument()
+    expect(within(line).getByText('01 Sep 2026')).toBeInTheDocument()
   })
 })
 

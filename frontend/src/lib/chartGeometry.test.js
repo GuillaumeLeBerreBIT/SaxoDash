@@ -296,6 +296,7 @@ describe('time labels', () => {
   it('formats each style', () => {
     expect(formatTimeLabel('2024-03-12', 'day')).toBe('12 Mar')
     expect(formatTimeLabel('2024-03-12', 'month')).toBe('Mar 24')
+    expect(formatTimeLabel('2024-04-01', 'month')).toBe('Apr 24')
   })
 })
 
