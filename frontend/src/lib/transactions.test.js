@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { txPrice, txTone, txTotal, txTotalClass, txTypes } from './transactions'
+import { txPrice, txTone, txSignedTotal, txTotal, txTotalClass, txTypes } from './transactions'
 
 const tx = (overrides) => ({
   type: 'BUY', price: '150.00', currency: 'USD', total: '1500.00', total_eur: '1290.13', ...overrides,
@@ -75,5 +75,19 @@ describe('txTypes', () => {
 
   it('is just All for no rows', () => {
     expect(txTypes([])).toEqual(['All'])
+  })
+})
+
+describe('txSignedTotal', () => {
+  it('is negative for outflows, positive for inflows and unsigned otherwise', () => {
+    expect(txSignedTotal(tx({ type: 'BUY', total_eur: '500.00' }))).toBe(-500)
+    expect(txSignedTotal(tx({ type: 'FEE', total_eur: '5.00' }))).toBe(-5)
+    expect(txSignedTotal(tx({ type: 'SELL', total_eur: '300.00' }))).toBe(300)
+    expect(txSignedTotal(tx({ type: 'DEPOSIT', total_eur: '10.00' }))).toBe(10)
+    expect(txSignedTotal(tx({ type: 'INTEREST', total_eur: '2.00' }))).toBe(2)
+  })
+
+  it('is null when the euro total is missing', () => {
+    expect(txSignedTotal(tx({ total_eur: null }))).toBeNull()
   })
 })

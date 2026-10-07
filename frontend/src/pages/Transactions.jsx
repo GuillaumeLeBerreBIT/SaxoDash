@@ -2,17 +2,15 @@ import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtDate, fmtQty } from '../lib/format'
-import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
+import { txPrice, txSignedTotal, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { nextSort, sortRows } from '../lib/sort'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, SortableTh, Td } from '../components/ui'
 
-const finite = (raw) => (raw === null || raw === undefined ? null : Number(raw))
-
 const TRANSACTION_ACCESSORS = {
   date: (t) => t.date,
   instrument: (t) => t.instrument,
-  total: (t) => finite(t.total_eur),
+  total: (t) => txSignedTotal(t),
 }
 
 export default function Transactions() {

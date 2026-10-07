@@ -12,12 +12,19 @@ export function txPrice(t) {
   return t.currency ? fmtMoney(t.price, t.currency) : fmtNum(t.price, 2)
 }
 
-export function txTotal(t) {
-  if (t.total_eur == null) return UNKNOWN
+export function txSignedTotal(t) {
+  if (t.total_eur == null) return null
   const magnitude = Math.abs(Number(t.total_eur))
-  if (INFLOWS.has(t.type)) return fmtEur(magnitude, { sign: true })
-  if (OUTFLOWS.has(t.type)) return fmtEur(-magnitude)
-  return fmtEur(magnitude)
+  if (INFLOWS.has(t.type)) return magnitude
+  if (OUTFLOWS.has(t.type)) return -magnitude
+  return magnitude
+}
+
+export function txTotal(t) {
+  const signed = txSignedTotal(t)
+  if (signed === null) return UNKNOWN
+  if (INFLOWS.has(t.type)) return fmtEur(signed, { sign: true })
+  return fmtEur(signed)
 }
 
 export const txTotalClass = (t) =>

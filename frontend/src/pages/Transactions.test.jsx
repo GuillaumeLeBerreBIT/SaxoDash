@@ -246,9 +246,22 @@ describe('Transactions sorting', () => {
     stub(sample())
     renderWithProviders(<Transactions />)
     sortBy(/^Total/)
-    expect(bodyTickers()).toEqual(['Bravo', 'Charlie', 'Alpha'])
-    sortBy(/^Total/)
     expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Bravo', 'Charlie', 'Alpha'])
+  })
+
+  it('sorts Total by the signed figure shown, not the magnitude', () => {
+    stub([
+      row({ id: 1, type: 'SELL', instrument: 'Sold', total_eur: '300.00' }),
+      row({ id: 2, type: 'BUY', instrument: 'Bought', total_eur: '500.00' }),
+      row({ id: 3, type: 'DIVIDEND', instrument: 'Paid', total_eur: '50.00' }),
+    ])
+    renderWithProviders(<Transactions />)
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Bought', 'Paid', 'Sold'])
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Sold', 'Paid', 'Bought'])
   })
 
   it('returns to page 1 when the sort changes', () => {
