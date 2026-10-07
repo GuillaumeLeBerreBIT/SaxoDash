@@ -5,7 +5,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import summaries
+from . import signals, summaries
 from .models import Investor
 
 
@@ -53,3 +53,17 @@ class InvestorChangesView(APIView):
             return Response(summaries.changes_payload(investor, _quarter_param(request)))
         except summaries.QuarterNotFound:
             raise NotFound('No filing is stored for that quarter.')
+
+
+class InvestorHubView(APIView):
+    def get(self, request):
+        return Response(signals.hub(date.today()))
+
+
+class InvestorStocksView(APIView):
+    def get(self, request):
+        view = request.query_params.get('view') or 'bought'
+        try:
+            return Response(signals.stock_activity(view, _quarter_param(request)))
+        except signals.UnknownView:
+            raise ValidationError({'view': f'Use one of {", ".join(signals.VIEWS)}.'})
