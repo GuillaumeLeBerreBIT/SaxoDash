@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
 import { chartHref, isEtf } from '../lib/research'
-import { PageHeader } from '../components/ui'
+import { PageHeader, TabButton, TabList } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { readRecentSymbols } from '../lib/recentSymbols'
@@ -152,24 +152,22 @@ export default function Research() {
               expandHref={chartHref(symbol, instrument)}
             />
 
-            <div className="flex items-center gap-1 border-b border-white/[0.06] pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
+            <TabList label="Instrument sections" className="overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
               {visibleTabs.map(([key, label]) => (
-                <button
+                <TabButton
                   key={key}
-                  type="button"
+                  id={`research-tab-${key}`}
+                  controls={`research-panel-${key}`}
+                  active={tab === key}
                   onClick={() => setTab(key)}
-                  aria-current={tab === key}
-                  className={`h-8 px-3 shrink-0 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
-                    tab === key
-                      ? 'text-zinc-100 border-blue-500'
-                      : 'text-zinc-500 border-transparent hover:text-zinc-300'
-                  }`}
+                  className="shrink-0 md:h-8!"
                 >
                   {label}
-                </button>
+                </TabButton>
               ))}
-            </div>
+            </TabList>
 
+            <div role="tabpanel" id={`research-panel-${tab}`} aria-labelledby={`research-tab-${tab}`}>
             {tab === 'overview' ? (
               <OverviewTab
                 symbol={symbol}
@@ -193,6 +191,7 @@ export default function Research() {
             ) : null}
             {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
             {tab === 'guide' ? <GuideTab /> : null}
+            </div>
           </div>
 
           <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />

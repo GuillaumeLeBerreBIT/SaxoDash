@@ -182,7 +182,7 @@ describe('Research', () => {
   it('shows the valuation tab, using the fundamentals already fetched for overview', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Valuation' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Valuation' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })
@@ -190,33 +190,33 @@ describe('Research', () => {
   it('shows the peers tab, gated the same way as valuation on unconfigured fundamentals', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Peers' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Peers' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })
 
   it('opens on the Earnings tab when ?tab=earnings is in the URL', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=AAPL&tab=earnings' })
-    expect(screen.getByRole('button', { name: 'Earnings' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('tab', { name: 'Earnings' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('hides the Valuation, Peers and Earnings tabs for an ETF', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
 
-    expect(screen.queryByRole('button', { name: 'Valuation' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Peers' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Earnings' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'News' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Valuation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Peers' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Earnings' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Guide' })).toBeInTheDocument()
   })
 
   it('falls back to Overview when a stale ?tab does not apply to an ETF', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=valuation' })
 
-    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('badges an ETF instrument in the symbol bar', () => {
@@ -257,13 +257,13 @@ describe('Research', () => {
 
   it('offers a News tab, not a Market context tab', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
-    expect(screen.getByRole('button', { name: 'News' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Market context' })).not.toBeInTheDocument()
   })
 
   it('shows the news feed on the News tab', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
-    await userEvent.click(screen.getByRole('button', { name: 'News' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'News' }))
     expect(screen.getByText(/No recent news for NVDA/)).toBeInTheDocument()
   })
 
@@ -367,9 +367,21 @@ describe('Research panning', () => {
   it('keeps the tab row inside its own scroller instead of widening the page', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const row = screen.getByRole('button', { name: 'Overview' }).parentElement
+    const row = screen.getByRole('tab', { name: 'Overview' }).parentElement
     expect(row).toHaveClass('overflow-x-auto', 'whitespace-nowrap')
-    expect(screen.getByRole('button', { name: 'Guide' })).toHaveClass('shrink-0')
+    expect(screen.getByRole('tab', { name: 'Guide' })).toHaveClass('shrink-0')
+  })
+
+  it('exposes the tabs as a tablist whose active tab owns a labelled tabpanel', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
+    const valuation = screen.getByRole('tab', { name: 'Valuation' })
+    expect(valuation).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    const panel = screen.getByRole('tabpanel')
+    expect(panel).toHaveAttribute('aria-labelledby', screen.getByRole('tab', { name: 'Overview' }).id)
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-controls', panel.id)
   })
 
   it('stacks the watchlist rail under the chart until xl', () => {

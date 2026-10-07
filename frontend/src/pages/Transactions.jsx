@@ -4,7 +4,7 @@ import { useTransactions } from '../api/queries'
 import { fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
 
 export default function Transactions() {
   const { data, isLoading, error } = useTransactions('?page_size=1000')
@@ -76,18 +76,16 @@ export default function Transactions() {
           </div>
           <div className="flex flex-wrap items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
             {types.map((t) => (
-              <button
+              <Chip
                 key={t}
+                active={effectiveFilter === t}
                 onClick={() => {
                   setTypeFilter(t)
                   setPage(1)
                 }}
-                className={`px-2.5 h-8 text-[var(--fig-xs)] font-medium rounded ${
-                  effectiveFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
-                }`}
               >
                 {t}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>

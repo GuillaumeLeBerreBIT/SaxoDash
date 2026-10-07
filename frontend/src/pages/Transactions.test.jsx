@@ -34,6 +34,18 @@ describe('Transactions', () => {
     expect(within(sell).getByText('+€1,290.00')).toBeInTheDocument()
   })
 
+  it('marks the active type filter as pressed', () => {
+    stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL' })])
+    renderWithProviders(<Transactions />)
+
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    const sell = screen.getByRole('button', { name: 'SELL' })
+    expect(sell).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(sell)
+    expect(screen.getByRole('button', { name: 'SELL' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('titles the truncated instrument cell with its full name and ticker', () => {
     stub([row({ instrument: 'NVIDIA Corporation', ticker: 'NVDA' })])
     renderWithProviders(<Transactions />)
