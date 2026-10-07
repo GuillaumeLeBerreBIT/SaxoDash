@@ -10,7 +10,7 @@ import StyleChips from './StyleChips'
 import { UNKNOWN, fmtNum } from '../../lib/format'
 import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
 
-const movement = (c) => (c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count, '+')} new · ${fmtCount(c.exited_count, '−')} exited`)
+const movement = (c) => (c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count, '+')}\u00a0new · ${fmtCount(c.exited_count, '−')}\u00a0exited`)
 
 export function TopLogos({ holdings }) {
   return (
@@ -63,7 +63,7 @@ export default function InvestorCard({ investor, className = '' }) {
         </div>
         <div className="flex items-center justify-between gap-2 text-[var(--fig-xs)]">
           <TopLogos holdings={investor.top_holdings} />
-          <span className="num font-mono text-zinc-400">{movement(investor)}</span>
+          <span className="num font-mono text-zinc-400 text-right">{movement(investor)}</span>
         </div>
         <div className="mt-auto text-[var(--fig-xs)]"><LatestLine investor={investor} /></div>
       </div>

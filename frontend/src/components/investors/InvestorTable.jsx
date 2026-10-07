@@ -10,7 +10,7 @@ import { fmtCount, fmtUsdCompact } from '../../lib/investors'
 export default function InvestorTable({ investors }) {
   return (
     <Card padding={false}>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[860px] text-[var(--fig-sm)]">
           <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
             <tr>

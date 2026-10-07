@@ -29,7 +29,7 @@ export default function InvestorHero({ detail, onQuarter }) {
     <header className="flex flex-col gap-3">
       <div className="flex items-start gap-3 flex-wrap">
         <InvestorAvatar name={detail.name} size={52} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[11rem] flex-1">
           <h1 className="text-[var(--fig-xl)] font-semibold text-zinc-50">{detail.name}</h1>
           <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p>
           {detail.stale && detail.quarter ? (

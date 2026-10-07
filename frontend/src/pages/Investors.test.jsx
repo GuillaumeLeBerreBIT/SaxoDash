@@ -113,6 +113,12 @@ describe('Investors hub', () => {
     expect(within(ackmanCard).getByText('+1 new · 0 exited')).toBeInTheDocument()
   })
 
+  it('keeps each count on one line with its label so a narrow card breaks at the separator', () => {
+    renderPage()
+    const ackmanCard = within(directory()).getAllByTestId('investor-card')[1]
+    expect(within(ackmanCard).getByText('+1 new · 0 exited').textContent).toBe('+1\u00a0new · 0\u00a0exited')
+  })
+
   it('follows from the card without navigating', () => {
     renderPage()
     fireEvent.click(within(directory()).getByRole('button', { name: 'Follow Bill Ackman' }))

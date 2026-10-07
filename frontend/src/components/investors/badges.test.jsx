@@ -19,6 +19,13 @@ describe('ChangeBadge', () => {
     expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-zinc-300')
   })
 
+  it('keeps the arrow beside its word when a narrow tile wraps the badge', () => {
+    const { rerender } = render(<ChangeBadge change="added" pct={10.4} />)
+    expect(screen.getByText('▲ Added 10%').textContent).toBe('▲\u00a0Added 10%')
+    rerender(<ChangeBadge change="trimmed" pct={-4.6} />)
+    expect(screen.getByText('▼ Trimmed 5%').textContent).toBe('▼\u00a0Trimmed 5%')
+  })
+
   it('marks a sold-out position in amber', () => {
     render(<ChangeBadge change="sold_out" />)
     expect(screen.getByText('Sold out')).toHaveClass('text-amber-400')

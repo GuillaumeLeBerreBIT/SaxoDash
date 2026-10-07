@@ -30,10 +30,20 @@ describe('TopHoldings', () => {
     expect(screen.getByText(/Remaining 19 positions/)).toBeInTheDocument()
   })
 
+  it('states a single remaining position in the singular', () => {
+    renderTop(detail(11))
+    expect(screen.getByText(/Remaining 1 position:/)).toBeInTheDocument()
+  })
+
   it('says a small portfolio is shown whole', () => {
     renderTop(detail(4))
     expect(screen.getAllByTestId('holding-tile')).toHaveLength(4)
     expect(screen.getByText("That's the whole portfolio: 4 positions.")).toBeInTheDocument()
+  })
+
+  it('says a one-position portfolio in the singular', () => {
+    renderTop(detail(1))
+    expect(screen.getByText("That's the whole portfolio: 1 position.")).toBeInTheDocument()
   })
 
   it('switches to the list and remembers the choice', () => {

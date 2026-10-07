@@ -22,6 +22,10 @@ const SCALES = [[1e12, 'T', 2], [1e9, 'B', 1], [1e6, 'M', 0], [1e3, 'K', 0]]
 
 export const fmtCount = (n, symbol) => (n === 0 ? '0' : `${symbol}${n}`)
 
+const positionWord = (n) => (n === 1 ? 'position' : 'positions')
+
+export const positionCount = (n) => `${n} ${positionWord(n)}`
+
 export function fmtUsdCompact(value, { sign = false } = {}) {
   if (value == null || Number.isNaN(Number(value))) return UNKNOWN
   const n = Number(value)
@@ -111,7 +115,7 @@ export function donutSlices(detail) {
   }))
   const rest = remainder(detail)
   return rest
-    ? [...slices, { name: 'Other', note: `${rest.count} smaller positions`, value: rest.value, weight: rest.weight, color: OTHER_SLICE, logo: false }]
+    ? [...slices, { name: 'Other', note: `${rest.count} smaller ${positionWord(rest.count)}`, value: rest.value, weight: rest.weight, color: OTHER_SLICE, logo: false }]
     : slices
 }
 
