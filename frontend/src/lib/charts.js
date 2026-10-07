@@ -1,4 +1,4 @@
-import { fmtEur } from './format'
+import { fmtDayMonth, fmtEur } from './format'
 
 // This file is the ONLY source of chart color in the app - a component that
 // needs a gain/loss/warning/neutral hex for an SVG, canvas, or recharts prop
@@ -139,9 +139,7 @@ export const axisProps = {
   tickLine: false,
 }
 
-export function formatAxisDate(value) {
-  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-}
+export const formatAxisDate = fmtDayMonth
 
 export const dateAxisProps = { ...axisProps, dataKey: 'date', tickFormatter: formatAxisDate }
 

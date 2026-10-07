@@ -34,6 +34,14 @@ describe('Transactions', () => {
     expect(within(sell).getByText('+€1,290.00')).toBeInTheDocument()
   })
 
+  it('shows the date as day, month and year, not ISO', () => {
+    stub([row({ id: 1, date: '2026-10-04' })])
+    renderWithProviders(<Transactions />)
+    const cells = within(screen.getByRole('table'))
+    expect(cells.getByText('04 Oct 2026')).toBeInTheDocument()
+    expect(cells.queryByText('2026-10-04')).not.toBeInTheDocument()
+  })
+
   it('marks the active type filter as pressed', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL' })])
     renderWithProviders(<Transactions />)

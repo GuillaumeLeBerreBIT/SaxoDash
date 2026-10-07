@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
-import { fmtQty } from '../lib/format'
+import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, PageHeader, QueryState, Th, Td } from '../components/ui'
@@ -124,7 +124,7 @@ export default function Transactions() {
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="num text-zinc-300">{t.date}</Td>
+                  <Td edge className="num text-zinc-300">{fmtDate(t.date)}</Td>
                   <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>

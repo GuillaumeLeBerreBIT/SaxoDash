@@ -14,7 +14,7 @@ describe('RecentTransactionsPanel', () => {
       />,
     )
     expect(screen.getByText('NMBS')).toBeInTheDocument()
-    expect(screen.getByText(/2026-09-19.*Transport.*KBC/)).toBeInTheDocument()
+    expect(screen.getByText(/19 Sep 2026.*Transport.*KBC/)).toBeInTheDocument()
     expect(screen.getByText('-€65.00')).toBeInTheDocument()
     expect(screen.getByText('+€200.00')).toBeInTheDocument()
   })

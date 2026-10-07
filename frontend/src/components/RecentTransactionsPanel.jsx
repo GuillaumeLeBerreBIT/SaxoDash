@@ -1,4 +1,4 @@
-import { fmtEur } from '../lib/format'
+import { fmtDate, fmtEur } from '../lib/format'
 import { colorForCategory } from '../lib/charts'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { Card, CardHeader } from './ui'
@@ -25,7 +25,7 @@ export default function RecentTransactionsPanel({ transactions }) {
               <div className="min-w-0 flex-1">
                 <div className="text-[var(--fig-sm)] font-medium text-zinc-100 truncate">{label}</div>
                 <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5">
-                  {tx.booking_date} · {CATEGORY_LABELS[tx.effective_category] ?? tx.effective_category} · {tx.bank_name}
+                  {fmtDate(tx.booking_date)} · {CATEGORY_LABELS[tx.effective_category] ?? tx.effective_category} · {tx.bank_name}
                 </div>
               </div>
               <div className={`text-[var(--fig-sm)] font-medium num font-mono shrink-0 ${isCredit ? 'text-emerald-400' : 'text-zinc-100'}`}>

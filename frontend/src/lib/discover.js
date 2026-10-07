@@ -1,4 +1,4 @@
-import { UNKNOWN, fmtNum, fmtPct } from './format'
+import { UNKNOWN, fmtDayMonth, fmtNum, fmtPct } from './format'
 
 const FIELD_FORMATS = {
   number: (v) => fmtNum(v, 0),
@@ -7,10 +7,7 @@ const FIELD_FORMATS = {
   ratio: (v) => fmtNum(v, 1),
   multiple: (v) => `${fmtNum(v, 1)}×`,
   pct_1: (v) => fmtPct(v, { sign: false, decimals: 1 }),
-  date: (v) => {
-    const [year, month, day] = String(v).split('-').map(Number)
-    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
-  },
+  date: fmtDayMonth,
 }
 
 export function formatFieldValue(format, value) {
@@ -36,7 +33,7 @@ export const discoverPollInterval = (data) => (data?.health?.progress ? SCANNING
 export const scanProgressLabel = ({ done, total }) =>
   total == null ? 'Starting scan…' : `Scanning stocks · ${done} of ${total}`
 
-const asDate = (iso) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+const asDate = fmtDayMonth
 
 const MINUTE_MS = 60_000
 const HOUR_MS = 60 * MINUTE_MS

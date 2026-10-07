@@ -69,3 +69,36 @@ export function fmtCompact(millions) {
   if (abs >= 1_000) return `${(millions / 1_000).toFixed(2)}B`
   return `${millions.toFixed(0)}M`
 }
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/
+
+function dateParts(value) {
+  if (value == null || value === '') return null
+  const text = String(value)
+  const match = DATE_ONLY.exec(text)
+  if (match) return { year: Number(match[1]), month: Number(match[2]) - 1, day: Number(match[3]) }
+  const parsed = new Date(text)
+  if (Number.isNaN(parsed.getTime())) return null
+  return { year: parsed.getFullYear(), month: parsed.getMonth(), day: parsed.getDate() }
+}
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+export function fmtDayMonth(value) {
+  const parts = dateParts(value)
+  return parts ? `${pad2(parts.day)} ${MONTHS[parts.month]}` : UNKNOWN
+}
+
+export function fmtDate(value) {
+  const parts = dateParts(value)
+  return parts ? `${pad2(parts.day)} ${MONTHS[parts.month]} ${parts.year}` : UNKNOWN
+}
+
+export function fmtDateTime(value) {
+  const parts = dateParts(value)
+  if (!parts) return UNKNOWN
+  const at = new Date(value)
+  const time = DATE_ONLY.test(String(value)) ? '' : `, ${pad2(at.getHours())}:${pad2(at.getMinutes())}`
+  return `${fmtDate(value)}${time}`
+}

@@ -9,14 +9,14 @@ import LensColumn from '../components/discover/LensColumn'
 import ScanProgress from '../components/discover/ScanProgress'
 import ShelfRow from '../components/discover/ShelfRow'
 import { REFRESH_HINT, groupShelves, readDiscoverView, SCANNING_POLL_MS, updatedLabel, writeDiscoverView } from '../lib/discover'
+import { fmtDateTime } from '../lib/format'
 import { useNow } from '../lib/useNow'
 import { Alert, Button, PageHeader, Skeleton, TBtn } from '../components/ui'
 
 const SKELETON_SHELVES = 3
 const SHELVES_HIDDEN = new Set(['never', 'scanning'])
 
-const exactTime = (iso) =>
-  new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+const exactTime = fmtDateTime
 
 function ShelfGroup({ group, children }) {
   return (

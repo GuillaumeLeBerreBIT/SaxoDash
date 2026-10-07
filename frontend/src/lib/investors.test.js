@@ -40,7 +40,7 @@ describe('labels and formatting', () => {
   })
 
   it('formats a filing date', () => {
-    expect(fmtFiledDate('2026-08-14')).toBe('Aug 14, 2026')
+    expect(fmtFiledDate('2026-08-14')).toBe('14 Aug 2026')
     expect(fmtFiledDate(null)).toBe('—')
   })
 

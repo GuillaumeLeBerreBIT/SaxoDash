@@ -68,7 +68,7 @@ describe('InvestorStats', () => {
     expect(screen.getByText('86.4%')).toBeInTheDocument()
     expect(screen.getByText('+1 · −1')).toBeInTheDocument()
     expect(screen.getByText('3.2%')).toBeInTheDocument()
-    expect(screen.getByText('filed Aug 14, 2026')).toBeInTheDocument()
+    expect(screen.getByText('filed 14 Aug 2026')).toBeInTheDocument()
   })
 
   it('writes a zero count without a sign', () => {

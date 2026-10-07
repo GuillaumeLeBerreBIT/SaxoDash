@@ -92,7 +92,7 @@ describe('Discover page', () => {
     renderPage()
     expect(screen.getByRole('heading', { level: 2, name: 'Events' })).toBeInTheDocument()
     expect(screen.getByText('Reports')).toBeInTheDocument()
-    expect(screen.getByText('8 Oct')).toBeInTheDocument()
+    expect(screen.getByText('08 Oct')).toBeInTheDocument()
   })
 
   it('explains the order and that a lens is not a recommendation', async () => {

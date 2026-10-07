@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
+import { fmtDate, fmtDayMonth, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -59,5 +59,50 @@ describe('pctToneClass', () => {
     expect(pctToneClass(-1)).toBe('text-red-400')
     expect(pctToneClass(0)).toBe('text-zinc-500')
     expect(pctToneClass(null, 2, 'text-zinc-600')).toBe('text-zinc-600')
+  })
+})
+
+describe('fmtDate', () => {
+  it('writes a date-only ISO string as day, short month and year', () => {
+    expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
+    expect(fmtDate('2026-09-01')).toBe('01 Sep 2026')
+  })
+
+  it('shows a dash for a missing or invalid date', () => {
+    expect(fmtDate(null)).toBe('—')
+    expect(fmtDate(undefined)).toBe('—')
+    expect(fmtDate('')).toBe('—')
+    expect(fmtDate('not a date')).toBe('—')
+  })
+
+  it('does not shift a date-only string with the process time zone', () => {
+    const original = globalThis.process.env.TZ
+    try {
+      for (const tz of ['Pacific/Honolulu', 'UTC', 'Pacific/Kiritimati']) {
+        globalThis.process.env.TZ = tz
+        expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
+        expect(fmtDayMonth('2026-01-01')).toBe('01 Jan')
+      }
+    } finally {
+      globalThis.process.env.TZ = original
+    }
+  })
+
+  it('takes the date part of a full datetime', () => {
+    expect(fmtDate('2026-10-04T12:00:00Z')).toBe('04 Oct 2026')
+  })
+})
+
+describe('fmtDayMonth', () => {
+  it('writes day and short month', () => {
+    expect(fmtDayMonth('2026-10-04')).toBe('04 Oct')
+    expect(fmtDayMonth(null)).toBe('—')
+  })
+})
+
+describe('fmtDateTime', () => {
+  it('keeps the day, month, year order and adds the time', () => {
+    expect(fmtDateTime('2026-10-04T12:30:00Z')).toMatch(/^04 Oct 2026, \d{2}:\d{2}$/)
+    expect(fmtDateTime(null)).toBe('—')
   })
 })
