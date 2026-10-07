@@ -59,8 +59,8 @@ export default function Transactions() {
       />
 
       <Card padding={false}>
-        <div className="p-4 border-b border-zinc-800 flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="p-4 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[220px] w-full md:w-auto">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
               <Search size={14} />
             </span>
@@ -74,7 +74,7 @@ export default function Transactions() {
               className="w-full pl-9"
             />
           </div>
-          <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
+          <div className="flex flex-wrap items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
             {types.map((t) => (
               <button
                 key={t}

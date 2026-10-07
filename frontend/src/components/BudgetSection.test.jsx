@@ -98,4 +98,14 @@ describe('BudgetSection', () => {
       monthlyLimit: 50,
     })
   })
+
+  it('wraps the add-a-budget controls', () => {
+    queries.useBudgetProgress.mockReturnValue({ data: [], isLoading: false, error: null })
+    queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
+
+    renderWithProviders(<BudgetSection />)
+
+    expect(screen.getByRole('button', { name: 'Add a budget' }).parentElement).toHaveClass('flex-wrap')
+  })
+
 })

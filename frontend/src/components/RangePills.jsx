@@ -17,7 +17,7 @@ export function Pill({ active, onClick, children }) {
 
 export function RangePills({ value, onChange }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {RANGES.map((r) => (
         <Pill key={r} active={value === r} onClick={() => onChange(r)}>
           {r}

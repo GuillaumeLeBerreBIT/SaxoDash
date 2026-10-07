@@ -8,7 +8,7 @@ export default function PeriodSelector({ value, onChange }) {
   const isCustom = value.key === 'custom'
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
       <Select
         aria-label="Select period"
         value={isCustom ? 'custom' : value.key}
@@ -20,7 +20,7 @@ export default function PeriodSelector({ value, onChange }) {
             onChange({ key, ...resolvePeriod(key) })
           }
         }}
-        className="h-8"
+        className="h-8 min-w-0"
       >
         {PERIOD_PRESETS.map((p) => (
           <option key={p.key} value={p.key}>{p.label}</option>

@@ -28,7 +28,7 @@ function monthLabel(month) {
 
 function BenchmarkSelector({ options, value, onChange }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center gap-1">
       {options.map(({ key, name }) => (
         <Pill key={key} active={value === key} onClick={() => onChange(key)}>
           {name}

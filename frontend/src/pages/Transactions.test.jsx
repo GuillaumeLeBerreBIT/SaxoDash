@@ -88,4 +88,14 @@ describe('Transactions on mobile', () => {
     expect(within(line).getByText('US$150.00').closest('td')).toHaveClass('hidden', 'md:table-cell')
     expect(within(line).getByText('BUY', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
   })
+  it('wraps the toolbar and its type chips and gives the search the full row on mobile', () => {
+    stub([row({ id: 1, type: 'BUY' })])
+    renderWithProviders(<Transactions />)
+
+    const chips = screen.getByRole('button', { name: 'BUY' }).parentElement
+    expect(chips).toHaveClass('flex-wrap')
+    expect(chips.parentElement).toHaveClass('flex-wrap', 'gap-2')
+    expect(screen.getByRole('textbox').parentElement).toHaveClass('w-full', 'md:w-auto')
+  })
+
 })

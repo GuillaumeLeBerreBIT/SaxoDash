@@ -44,4 +44,29 @@ describe('Projection', () => {
 
     expect(screen.getByText('Invested by then')).toBeInTheDocument()
   })
+
+  it('lays the four outcome tiles out two across on mobile and four on desktop', () => {
+    renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
+
+    const grid = screen.getByText('Invested by then').closest('.grid')
+    expect(grid).toHaveClass('grid-cols-2', 'md:grid-cols-4')
+  })
+
+  it('lets the header controls wrap and the amount control scroll inside itself', () => {
+    renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
+
+    const amounts = screen.getByRole('button', { name: '€2500' }).parentElement
+    expect(amounts).toHaveClass('max-w-full', 'overflow-x-auto')
+    expect(amounts.parentElement).toHaveClass('flex-wrap', 'gap-2')
+    expect(screen.getByRole('button', { name: '30Y' }).parentElement).toHaveClass('flex-wrap')
+  })
+
+  it('lets the legend wrap and puts the disclaimer on its own line on mobile', () => {
+    renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
+
+    const note = screen.getByText(/Simulation, not advice/)
+    expect(note.parentElement).toHaveClass('flex-wrap')
+    expect(note).toHaveClass('w-full', 'md:ml-auto', 'md:w-auto')
+  })
+
 })

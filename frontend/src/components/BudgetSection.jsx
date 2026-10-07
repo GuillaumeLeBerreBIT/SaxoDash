@@ -21,7 +21,7 @@ function AddBudgetControl({ options }) {
   }
 
   return (
-    <div className="flex items-center gap-2 pt-2">
+    <div className="flex flex-wrap items-center gap-2 pt-2">
       <Select value={category} onChange={(e) => setSelected(e.target.value)} className="h-8">
         {options.map((c) => (
           <option key={c} value={c}>{CATEGORY_LABELS[c] ?? c}</option>

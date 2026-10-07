@@ -46,8 +46,8 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
         }
         subtitle={`600 simulated paths · ${fmtNum(expectedReturnPct, 1)}% expected return, ${fmtNum(volatilityPct, 1)}% volatility, drawn from your own return distribution`}
         right={
-          <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-0.5 p-0.5 rounded-md bg-zinc-950/60 border border-white/[0.06]">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex max-w-full items-center gap-0.5 overflow-x-auto p-0.5 rounded-md bg-zinc-950/60 border border-white/[0.06]">
               {MONTHLY_OPTIONS.map((m) => (
                 <button
                   key={m}
@@ -60,7 +60,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               {YEAR_OPTIONS.map((y) => (
                 <Pill key={y} active={years === y} onClick={() => setYears(y)}>
                   {y}Y
@@ -71,7 +71,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
         }
       />
 
-      <div className="mt-4 grid grid-cols-4 gap-3">
+      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricTile label="Invested by then" value={fmtEur(end.invested, { decimals: 0 })} hint={`€${monthly}/mo for ${years} years`} />
         <MetricTile
           label="Median outcome"
@@ -106,11 +106,11 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex items-center gap-4 text-[var(--fig-2xs)] text-zinc-500">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-blue-500/25" /> P10–P90 range</span>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[var(--fig-2xs)] text-zinc-500">
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2 shrink-0 rounded-sm bg-blue-500/25" /> P10–P90 range</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-400" /> Median path</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-zinc-400" /> Money contributed</span>
-        <span className="ml-auto">Simulation, not advice. Past distribution ≠ future returns.</span>
+        <span className="w-full md:ml-auto md:w-auto">Simulation, not advice. Past distribution ≠ future returns.</span>
       </div>
     </Card>
   )

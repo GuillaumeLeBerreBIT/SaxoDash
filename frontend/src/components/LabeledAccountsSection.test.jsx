@@ -113,4 +113,17 @@ describe('LabeledAccountsSection', () => {
       expect(screen.getByText('Provide an IBAN or a counterparty name to match on.')).toBeInTheDocument(),
     )
   })
+
+  it('stacks the Label this button under the suggestion text on mobile', () => {
+    stub({ candidates: [{ counterparty_name: 'HANNE MISSIAEN', counterparty_iban: 'BE01', count: 5, total: '750.00' }] })
+    renderWithProviders(<LabeledAccountsSection />)
+
+    expect(screen.getByRole('button', { name: 'Label this' }).closest('li')).toHaveClass(
+      'flex-col',
+      'items-start',
+      'md:flex-row',
+      'md:items-center',
+    )
+  })
+
 })

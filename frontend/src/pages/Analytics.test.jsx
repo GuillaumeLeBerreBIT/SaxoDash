@@ -325,4 +325,12 @@ describe('Analytics', () => {
     renderWithProviders(<Analytics />)
     expect(screen.getByText(/at least two days of portfolio value \(1 so far\)/)).toBeInTheDocument()
   })
+
+  it('lets the benchmark selector wrap', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+
+    expect(screen.getByRole('button', { name: 'S&P 500' }).parentElement).toHaveClass('flex-wrap')
+  })
+
 })
