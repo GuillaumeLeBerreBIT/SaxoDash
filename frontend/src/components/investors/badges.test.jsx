@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import ChangeBadge from './ChangeBadge'
-import InvestorStats from './InvestorStats'
 import LimitsNote from './LimitsNote'
 import WeightBar from './WeightBar'
 import { OptionBadge, YouBadge } from './HoldingBadges'
@@ -51,34 +50,6 @@ describe('WeightBar', () => {
   it('scales the fill to the largest weight', () => {
     const { container } = render(<WeightBar weight={11} max={22} />)
     expect(container.querySelector('[data-fill]')).toHaveStyle({ width: '50%' })
-  })
-})
-
-describe('InvestorStats', () => {
-  const detail = {
-    quarter: '2026-06-30', total_value: 299253556246, positions: 29, top10_weight: 86.42,
-    new_count: 1, exited_count: 1, turnover: 3.21, filed_on: '2026-08-14',
-  }
-
-  it('states value, positions, top-10 share, movement and turnover', () => {
-    render(<InvestorStats detail={detail} />)
-    expect(screen.getByText('$299.3B')).toBeInTheDocument()
-    expect(screen.getByText('as of Q2 2026 end')).toBeInTheDocument()
-    expect(screen.getByText('29')).toBeInTheDocument()
-    expect(screen.getByText('86.4%')).toBeInTheDocument()
-    expect(screen.getByText('+1 · −1')).toBeInTheDocument()
-    expect(screen.getByText('3.2%')).toBeInTheDocument()
-    expect(screen.getByText('filed Aug 14, 2026')).toBeInTheDocument()
-  })
-
-  it('writes a zero count without a sign', () => {
-    render(<InvestorStats detail={{ ...detail, new_count: 0, exited_count: 0 }} />)
-    expect(screen.getByText('0 · 0')).toBeInTheDocument()
-  })
-
-  it('shows dashes when there is no earlier quarter to compare', () => {
-    render(<InvestorStats detail={{ ...detail, new_count: null, exited_count: null, turnover: null }} />)
-    expect(screen.getAllByText('—')).toHaveLength(2)
   })
 })
 

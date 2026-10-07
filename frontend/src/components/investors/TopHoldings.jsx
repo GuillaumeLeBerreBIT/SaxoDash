@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
 import AllocationDonut from '../AllocationDonut'
 import { InstrumentLogo, TBtn } from '../ui'
@@ -62,7 +61,7 @@ function Donut({ detail }) {
   return <AllocationDonut items={slices} formatValue={(v) => fmtUsdCompact(v)} center={center} height="300px" />
 }
 
-export default function TopHoldings({ detail, slug }) {
+export default function TopHoldings({ detail }) {
   const [view, setView] = useState(readTop10View)
   const holdings = topTen(detail.holdings)
   const rest = remainder(detail)
@@ -91,7 +90,6 @@ export default function TopHoldings({ detail, slug }) {
             ? `Remaining ${rest.count} positions: ${share(rest.weight)} · ${fmtUsdCompact(rest.value)}`
             : `That's the whole portfolio: ${detail.positions} positions.`}
         </span>
-        <Link to={`/investors/${slug}`} className="text-blue-400 hover:text-blue-300">Open full portfolio →</Link>
       </div>
     </div>
   )

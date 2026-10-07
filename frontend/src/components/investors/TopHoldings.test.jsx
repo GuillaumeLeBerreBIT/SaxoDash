@@ -13,7 +13,7 @@ const detail = (count) => ({
   holdings: Array.from({ length: count }, (_, i) => holding(i, i === 0 ? { owned: true, change: 'new' } : {})),
 })
 
-const renderTop = (d) => render(<MemoryRouter><TopHoldings detail={d} slug="berkshire-hathaway" /></MemoryRouter>)
+const renderTop = (d) => render(<MemoryRouter><TopHoldings detail={d} /></MemoryRouter>)
 
 describe('TopHoldings', () => {
   beforeEach(() => localStorage.clear())
@@ -25,10 +25,9 @@ describe('TopHoldings', () => {
     expect(screen.getByText('You own')).toBeInTheDocument()
   })
 
-  it('states the remaining positions and links to the full portfolio', () => {
+  it('states the remaining positions', () => {
     renderTop(detail(29))
     expect(screen.getByText(/Remaining 19 positions/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open full portfolio →' })).toHaveAttribute('href', '/investors/berkshire-hathaway')
   })
 
   it('says a small portfolio is shown whole', () => {
