@@ -384,14 +384,20 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
 }
 
-export function LetterAvatar({ symbol, size, className = 'rounded' }) {
+const LETTER_AVATAR_TEXT = [
+  [28, 'text-[var(--fig-2xs)]'],
+  [Infinity, 'text-[var(--fig-xs)]'],
+]
+
+export function LetterAvatar({ symbol, size, chars = 1, className = 'rounded' }) {
+  const textSize = LETTER_AVATAR_TEXT.find(([max]) => size <= max)[1]
   return (
     <span
       aria-hidden="true"
       style={{ width: size, height: size }}
-      className={`shrink-0 bg-zinc-800 flex items-center justify-center text-[var(--fig-2xs)] font-semibold text-zinc-400 ${className}`}
+      className={`shrink-0 bg-zinc-800 flex items-center justify-center ${textSize} font-semibold text-zinc-400 ${className}`}
     >
-      {symbol ? symbol[0].toUpperCase() : null}
+      {symbol ? symbol.slice(0, chars).toUpperCase() : null}
     </span>
   )
 }

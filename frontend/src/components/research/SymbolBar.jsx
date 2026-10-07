@@ -49,7 +49,7 @@ export default function SymbolBar({
             symbol={symbol}
             size={32}
             className="rounded-lg border border-white/10"
-            fallback={<LetterAvatar symbol={symbol} size={32} className="rounded-lg border border-white/10" />}
+            fallback={<LetterAvatar symbol={symbol} size={32} chars={2} className="rounded-lg border border-white/10" />}
           />
           <div>
             <div className="flex items-center gap-2">

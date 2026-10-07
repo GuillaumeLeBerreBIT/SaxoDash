@@ -295,19 +295,28 @@ describe('QueryState', () => {
     render(<QueryState label="holdings"><p>body</p></QueryState>)
     expect(screen.getByText('body')).toBeInTheDocument()
   })
+})
 
-  it('LetterAvatar shows the symbol initial in capitals, hidden from assistive tech', () => {
+describe('LetterAvatar', () => {
+  it('shows the symbol initial in capitals, hidden from assistive tech', () => {
     const { container } = render(<LetterAvatar symbol="brk.b" size={24} />)
     expect(container).toHaveTextContent('B')
     expect(container.firstChild).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('LetterAvatar renders an empty tile for a missing symbol', () => {
+  it('renders an empty tile for a missing symbol', () => {
     const { container } = render(<LetterAvatar symbol="" size={24} />)
     expect(container.firstChild).toBeEmptyDOMElement()
   })
 
-  it('InstrumentLogo shows the letter avatar once the image fails', () => {
+  it('shows as many characters as asked for', () => {
+    const { container } = render(<LetterAvatar symbol="nvda" size={32} chars={2} />)
+    expect(container).toHaveTextContent('NV')
+  })
+})
+
+describe('InstrumentLogo fallback', () => {
+  it('shows the letter avatar once the image fails', () => {
     const { container } = render(
       <InstrumentLogo symbol="AAPL" size={40} fallback={<LetterAvatar symbol="AAPL" size={40} />} />,
     )
