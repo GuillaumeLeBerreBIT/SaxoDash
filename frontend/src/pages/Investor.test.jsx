@@ -56,7 +56,7 @@ describe('Investor', () => {
   it('opens on Holdings and switches to Changes', () => {
     renderPage()
     expect(screen.getByRole('link', { name: 'AAPL' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Changes' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Changes' }))
     expect(screen.getByTestId('where')).toHaveTextContent('tab=changes')
     expect(screen.getByRole('region', { name: 'New' })).toBeInTheDocument()
   })
@@ -77,8 +77,8 @@ describe('Investor', () => {
     renderPage()
     expect(screen.getByText('Nothing imported for Warren Buffett yet')).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: 'Quarter' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Holdings' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Changes' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Holdings' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Changes' })).toBeNull()
     expect(screen.getByText(/US-listed long positions and listed options/)).toBeInTheDocument()
   })
 

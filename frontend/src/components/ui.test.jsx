@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
@@ -17,6 +18,10 @@ import {
   PageHeader,
   Th,
   Td,
+  TabList,
+  TabButton,
+  Chip,
+  QueryState,
 } from './ui'
 
 describe('ui primitives', () => {
@@ -213,5 +218,79 @@ describe('Th / Td hideBelow', () => {
   it('leaves a cell without hideBelow visible', () => {
     render(<table><tbody><tr><Td>Name</Td></tr></tbody></table>)
     expect(screen.getByText('Name')).not.toHaveClass('hidden')
+  })
+})
+
+describe('TabList and TabButton', () => {
+  function Tabs({ onB = () => {} }) {
+    const [on, setOn] = useState('a')
+    return (
+      <TabList label="Sections">
+        <TabButton active={on === 'a'} onClick={() => setOn('a')}>A</TabButton>
+        <TabButton active={on === 'b'} onClick={() => { setOn('b'); onB() }}>B</TabButton>
+        <TabButton active={on === 'c'} onClick={() => setOn('c')}>C</TabButton>
+      </TabList>
+    )
+  }
+
+  it('exposes a labelled tablist with selected state and roving tabindex', () => {
+    render(<Tabs />)
+    expect(screen.getByRole('tablist', { name: 'Sections' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('aria-selected', 'false')
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveAttribute('tabindex', '0')
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('tabindex', '-1')
+  })
+
+  it('moves focus and selection with the arrow, Home and End keys', () => {
+    const onB = vi.fn()
+    render(<Tabs onB={onB} />)
+    const a = screen.getByRole('tab', { name: 'A' })
+    a.focus()
+    fireEvent.keyDown(a, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveFocus()
+    expect(onB).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('tab', { name: 'B' })).toHaveAttribute('aria-selected', 'true')
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'B' }), { key: 'End' })
+    expect(screen.getByRole('tab', { name: 'C' })).toHaveFocus()
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'C' }), { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveFocus()
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'A' }), { key: 'ArrowLeft' })
+    expect(screen.getByRole('tab', { name: 'C' })).toHaveFocus()
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'C' }), { key: 'Home' })
+    expect(screen.getByRole('tab', { name: 'A' })).toHaveFocus()
+  })
+})
+
+describe('Chip', () => {
+  it('exposes its pressed state and fires onClick', () => {
+    const onClick = vi.fn()
+    render(<Chip active onClick={onClick}>Stocks</Chip>)
+    const chip = screen.getByRole('button', { name: 'Stocks' })
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(chip)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('QueryState', () => {
+  it('shows a loading skeleton instead of children', () => {
+    render(<QueryState isLoading label="holdings"><p>body</p></QueryState>)
+    expect(screen.queryByText('body')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Loading holdings')).toBeInTheDocument()
+  })
+
+  it('shows an alert with Retry on error', () => {
+    const onRetry = vi.fn()
+    render(<QueryState error={new Error('boom')} onRetry={onRetry} label="holdings"><p>body</p></QueryState>)
+    expect(screen.getByRole('alert')).toHaveTextContent(/holdings/i)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('body')).not.toBeInTheDocument()
+  })
+
+  it('renders children otherwise', () => {
+    render(<QueryState label="holdings"><p>body</p></QueryState>)
+    expect(screen.getByText('body')).toBeInTheDocument()
   })
 })

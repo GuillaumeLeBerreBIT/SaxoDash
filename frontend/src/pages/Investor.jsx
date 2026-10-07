@@ -59,7 +59,7 @@ export default function Investor() {
         <Card>
           <div className="flex flex-col gap-4">
             <InvestorStats detail={data} />
-            <TabList>
+            <TabList label="Investor sections">
               {TABS.map(([key, label]) => (
                 <TabButton key={key} active={tab === key} onClick={() => update({ tab: key === 'holdings' ? null : key })}>{label}</TabButton>
               ))}

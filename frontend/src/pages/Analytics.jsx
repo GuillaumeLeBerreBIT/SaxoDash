@@ -265,7 +265,7 @@ export default function Analytics() {
         />
       </StatStrip>
 
-      <TabList>
+      <TabList label="Analytics sections">
         {TABS.map(([key, label]) => (
           <TabButton key={key} active={tab === key} onClick={() => setTab(key)}>
             {label}
