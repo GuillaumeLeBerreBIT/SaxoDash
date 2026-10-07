@@ -35,7 +35,10 @@ quarter?" without a click, and any of ~80 funds is two clicks away.
 - Hub layout: **Discover-style shelves**, directory last. The Stocks table is the "see all" of the
   signal shelves.
 - Profile layout: **single-scroll portfolio story**, not tabs.
-- Coverage: **curated ~80 with style tags, plus Add investor** by EDGAR search.
+- Coverage: **88 curated funds with style tags, plus Add investor** by EDGAR search. Funds
+  holding thousands of positions (Citadel, Millennium, Point72, Two Sigma, D. E. Shaw, AQR,
+  Renaissance, Tudor, GMO, Gotham) are left out: they buy nearly everything and would drown the
+  convergent-buy signal.
 - Cross-fund data: a **materialized `PositionMove` table rebuilt on import**.
 - Follow ships here (one boolean; the app is single-user). Alerts do not.
 - Avatars are initials. No headshots.
@@ -61,10 +64,12 @@ New `PositionMove`:
 | `investor` | FK, cascade |
 | `quarter_end` | date |
 | `cusip`, `put_call` | same identity as `Holding` |
+| `issuer` | as filed, so an unresolved CUSIP still has a name |
 | `kind` | `new`, `added`, `trimmed`, `unchanged`, `sold_out` (constants from `changes.py`) |
 | `shares`, `previous_shares` | `previous_shares` null for `new`; `shares` 0 for `sold_out` |
 | `value`, `previous_value` | dollars, as normalised by the importer |
 | `weight_pct` | share of that investor's quarter total; 0 for `sold_out` |
+| `previous_weight_pct` | share of the previous quarter's total; null for `new` |
 | `change_pct` | share change %, null when not computable |
 
 Unique on `(investor, quarter_end, cusip, put_call)`. Indexes on `(quarter_end, kind)` and `cusip`.
@@ -97,7 +102,7 @@ resolution can complete after the import.
 |---|---|---|
 | `following` | investors | `followed=True`, newest filing first |
 | `convergent-buys` | stocks | ≥3 distinct investors with `new` or `added` on a cusip in the signal quarter; ranked by investor count, then summed value increase |
-| `most-sold` | stocks | `trimmed` or `sold_out`, ranked by investor count, then summed value decrease |
+| `most-sold` | stocks | ≥3 distinct investors with `trimmed` or `sold_out`; ranked by investor count, then summed value decrease |
 | `new-bets` | stocks | `new` rows ranked by `weight_pct` in that investor's portfolio; each item names the investor |
 | `just-filed` | investors | latest `filed_on`, newest first |
 
@@ -114,17 +119,19 @@ issuer when unresolved), issuer, counts, and up to five investor slugs/names for
 - `detail()` adds `styles`, `followed`, `blurb`, `top5_weight`, `sectors` (existing
   `sectors.sector_for`, weight per sector, unknown grouped as "Other") and `moves`: the quarter's
   non-`unchanged` moves ordered new → added → trimmed → sold out, each by weight or previous weight.
-- `changes_payload()` reads the same rows, so card, profile and changes cannot disagree.
+- `changes_payload()` and its endpoint are left as they are; the UI no longer calls them.
 
 ### Coverage
 
-- `curated.csv` gains a `styles` column (`|`-separated) and filled `blurb`s, and grows to ~80
-  managers (Dataroma-style superinvestor list; every CIK verified against EDGAR when added).
+- `curated.csv` gains a `styles` column (`|`-separated) and filled `blurb`s, and grows to 88
+  managers (every CIK resolved against EDGAR on 2026-10-07 with a 13F-HR filed in 2026).
 - `load_investors` upserts name, firm, blurb and styles by CIK; existing history is untouched.
   New rows go through the existing `backfill_investors`.
 - `edgar.search_filers(query)`: EDGAR company search restricted to 13F filers
-  (`/cgi-bin/browse-edgar?action=getcompany&company=…&type=13F-HR&output=atom`, verified live
-  2026-10-07: returns matching names and CIKs). Paced by the existing `_pace()`.
+  (`/cgi-bin/browse-edgar?action=getcompany&company=…&type=13F-HR&output=atom`). Verified live
+  2026-10-07: it returns the right CIKs, but multi-result entries carry `ARRAY(0x…)` instead of
+  names, so each name and last-13F date is read from that CIK's submissions JSON (at most 8).
+  Paced by the existing `_pace()`.
 - Add: creates the `Investor` (`curated=False`, slug from firm name, never one of the reserved
   slugs `hub`, `stocks`, `search`) and queues the existing backfill; progress uses the existing
   import-progress payload.
@@ -136,12 +143,12 @@ issuer when unresolved), issuer, counts, and up to five investor slugs/names for
 | Endpoint | Answer |
 |---|---|
 | `GET hub/` | `{quarter, filed, tracked, shelves: [{key, title, kind, total, items[≤12]}]}`; empty shelves omitted |
-| `GET stocks/?view=&quarter=` | `{quarter, quarters, view, rows}`; 400 on an unknown view |
-| `GET /?holds=&style=` | directory cards |
+| `GET stocks/?view=&quarter=` | `{quarter, signal_quarter, quarters, view, rows}`; 400 on an unknown view |
+| `GET /?holds=` | directory cards (style filtering is client-side) |
 | `GET <slug>/?quarter=` | detail as above |
 | `PATCH <slug>/` | `{followed: bool}` → updated card |
-| `GET search/?q=` | `[{name, cik, tracked}]`; throttle scope `investors.search` (10/min); EDGAR failure → 502 with a message |
-| `POST /` | `{cik}` → 201 card; 409 if already tracked |
+| `GET search/?q=` | `[{name, cik, last_13f, tracked, slug}]`; throttle scope `investors.search` (10/min); EDGAR failure → 502 with a message |
+| `POST /` | `{cik}` → 201 card; 409 if already tracked; 400 if it never filed a 13F |
 | `DELETE <slug>/` | 204; 409 for curated |
 | `GET <slug>/changes/` | unchanged contract |
 
@@ -232,7 +239,7 @@ into its own file.
 - Amendment arriving later: importer triggers `moves.rebuild`, so signals follow.
 - EDGAR search failure: inline message in the dialog; the page is unaffected.
 - Adding an already-tracked CIK: 409, the dialog links to that investor.
-- Follow failing: star rolls back, toast with the error.
+- Follow failing: star rolls back (the app has no toast system; the rollback is the signal).
 
 ## Testing
 
