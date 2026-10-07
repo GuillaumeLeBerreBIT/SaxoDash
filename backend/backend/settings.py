@@ -102,6 +102,7 @@ REST_FRAMEWORK = {
         'research.peers': '30/min',
         'research.earnings': '30/min',
         'research.news': '30/min',
+        'investors.search': '10/min',
         # The one plausible brute-force target - everything else sits behind
         # JWTAuthentication already.
         'login': '10/min',

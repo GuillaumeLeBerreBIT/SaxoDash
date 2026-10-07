@@ -1,5 +1,7 @@
+import re
 import time
 from datetime import date
+from urllib.parse import urlencode
 
 import requests
 from django.conf import settings
@@ -12,6 +14,10 @@ ARCHIVE_URL = 'https://www.sec.gov/Archives/edgar/data/{cik}/{folder}/{name}'
 PRIMARY_DOCUMENT = 'primary_doc.xml'
 FORMS = ('13F-HR', '13F-HR/A')
 MIN_SPACING = 0.12
+COMPANY_SEARCH_URL = 'https://www.sec.gov/cgi-bin/browse-edgar'
+SEARCH_LIMIT = 8
+ORIGINAL_FORM = '13F-HR'
+_CIK = re.compile(rb'<cik>(\d+)</cik>')
 
 _last_request = 0.0
 
@@ -122,3 +128,23 @@ def filing_documents(cik, accession):
     primary = _document(ARCHIVE_URL.format(cik=cik, folder=folder, name=PRIMARY_DOCUMENT))
     table = _document(ARCHIVE_URL.format(cik=cik, folder=folder, name=tables[0]))
     return primary, table
+
+
+def filer(cik):
+    payload = _json(SUBMISSIONS_URL.format(cik=cik))
+    try:
+        recent = payload['filings']['recent']
+        dates = [filed for form, filed in zip(recent['form'], recent['filingDate']) if form == ORIGINAL_FORM]
+        return {'cik': cik, 'name': payload['name'], 'last_13f': max(dates) if dates else None}
+    except (KeyError, TypeError) as exc:
+        raise EdgarError(f'unexpected submissions payload for CIK {cik}: {exc!r}') from exc
+
+
+def search_filers(query):
+    params = urlencode({
+        'action': 'getcompany', 'company': query, 'type': ORIGINAL_FORM,
+        'dateb': '', 'owner': 'include', 'count': 40, 'output': 'atom',
+    })
+    feed = _document(f'{COMPANY_SEARCH_URL}?{params}')
+    ciks = list(dict.fromkeys(int(match) for match in _CIK.findall(feed)))
+    return [filer(cik) for cik in ciks[:SEARCH_LIMIT]]

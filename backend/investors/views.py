@@ -1,12 +1,27 @@
 from datetime import date
 
 from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import signals, summaries
+from . import edgar, signals, summaries, tracking
 from .models import Investor
+
+MIN_QUERY = 3
+EDGAR_DOWN = 'EDGAR did not answer. Try again in a moment.'
+
+
+class Conflict(APIException):
+    status_code = 409
+
+
+class Refused(APIException):
+    status_code = 400
+
+
+class BadGateway(APIException):
+    status_code = 502
 
 
 class InvestorListView(APIView):
@@ -16,6 +31,20 @@ class InvestorListView(APIView):
         if holds:
             investors = investors.filter(pk__in=summaries.holder_ids(holds))
         return Response(summaries.cards(investors, date.today()))
+
+    def post(self, request):
+        cik = request.data.get('cik')
+        if isinstance(cik, bool) or not isinstance(cik, int) or cik <= 0:
+            raise Refused('Send the filer\'s CIK as a positive integer.')
+        try:
+            investor = tracking.add(cik)
+        except tracking.AlreadyTracked as exc:
+            raise Conflict(f'{exc.investor.name} is already tracked.')
+        except tracking.NotA13FFiler as exc:
+            raise Refused(f'{exc} has never filed a 13F.')
+        except edgar.EdgarError:
+            raise BadGateway(EDGAR_DOWN)
+        return Response(summaries.card(investor, date.today()), status=201)
 
 
 def _quarter_param(request):
@@ -29,6 +58,14 @@ def _quarter_param(request):
 
 
 class InvestorDetailView(APIView):
+    def delete(self, request, slug):
+        investor = get_object_or_404(Investor, slug=slug)
+        try:
+            tracking.stop(investor)
+        except tracking.CuratedInvestor:
+            raise Conflict('Curated investors cannot be removed; unfollow instead.')
+        return Response(status=204)
+
     def get(self, request, slug):
         investor = get_object_or_404(Investor, slug=slug)
         try:
@@ -67,3 +104,16 @@ class InvestorStocksView(APIView):
             return Response(signals.stock_activity(view, _quarter_param(request)))
         except signals.UnknownView:
             raise ValidationError({'view': f'Use one of {", ".join(signals.VIEWS)}.'})
+
+
+class InvestorSearchView(APIView):
+    throttle_scope = 'investors.search'
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        if len(query) < MIN_QUERY:
+            return Response([])
+        try:
+            return Response(tracking.search(query))
+        except edgar.EdgarError:
+            raise BadGateway(EDGAR_DOWN)

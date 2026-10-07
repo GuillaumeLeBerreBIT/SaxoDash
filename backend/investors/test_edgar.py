@@ -148,3 +148,72 @@ class PacingTest(SimpleTestCase):
 
         sleep.assert_called_once()
         self.assertAlmostEqual(sleep.call_args.args[0], 0.07, places=2)
+
+
+MULTI_FEED = b'''<?xml version="1.0" encoding="ISO-8859-1" ?><feed>
+<entry title="ARRAY(0x1)"><content><company-info name="ARRAY(0x2)"><cik>0001336528</cik></company-info></content></entry>
+<entry title="ARRAY(0x3)"><content><company-info name="ARRAY(0x4)"><cik>0002026053</cik></company-info></content></entry>
+<entry title="ARRAY(0x1)"><content><company-info name="ARRAY(0x2)"><cik>0001336528</cik></company-info></content></entry>
+</feed>'''
+
+SUBMISSIONS = {
+    1336528: {'name': 'Pershing Square Capital Management, L.P.', 'filings': {'recent': {
+        'form': ['13F-HR', '4', '13F-HR'], 'filingDate': ['2026-08-14', '2026-07-01', '2026-05-15'],
+    }}},
+    2026053: {'name': 'PERSHING SQUARE INC.', 'filings': {'recent': {'form': ['10-K'], 'filingDate': ['2026-03-01']}}},
+}
+
+
+def edgar_get(url, **kwargs):
+    if 'browse-edgar' in url:
+        return Mock(ok=True, status_code=200, content=MULTI_FEED)
+    cik = int(url.rsplit('CIK', 1)[1].split('.')[0])
+    return ok_json(SUBMISSIONS[cik])
+
+
+@override_settings(SEC_USER_AGENT=UA)
+@patch('investors.edgar.time.sleep')
+@patch('investors.edgar.requests.get')
+class SearchFilersTest(SimpleTestCase):
+    def test_names_and_last_13f_come_from_each_ciks_submissions(self, get, sleep):
+        get.side_effect = edgar_get
+
+        found = edgar.search_filers('pershing square')
+
+        self.assertEqual(found, [
+            {'cik': 1336528, 'name': 'Pershing Square Capital Management, L.P.', 'last_13f': '2026-08-14'},
+            {'cik': 2026053, 'name': 'PERSHING SQUARE INC.', 'last_13f': None},
+        ])
+
+    def test_the_query_is_url_encoded_and_restricted_to_13f_filers(self, get, sleep):
+        get.side_effect = edgar_get
+
+        edgar.search_filers('dodge & cox')
+
+        url = get.call_args_list[0].args[0]
+        self.assertIn('company=dodge+%26+cox', url)
+        self.assertIn('type=13F-HR', url)
+        self.assertIn('output=atom', url)
+
+    def test_no_match_is_an_empty_list(self, get, sleep):
+        get.return_value = Mock(ok=True, status_code=200, content=b'<feed></feed>')
+        self.assertEqual(edgar.search_filers('zzzz'), [])
+
+    def test_at_most_eight_filers_are_looked_up(self, get, sleep):
+        feed = b'<feed>' + b''.join(b'<cik>%010d</cik>' % cik for cik in range(1, 20)) + b'</feed>'
+        get.side_effect = lambda url, **kwargs: (
+            Mock(ok=True, status_code=200, content=feed) if 'browse-edgar' in url
+            else ok_json({'name': 'X', 'filings': {'recent': {'form': [], 'filingDate': []}}})
+        )
+
+        self.assertEqual(len(edgar.search_filers('x')), 8)
+
+    def test_a_failing_search_is_an_edgar_error(self, get, sleep):
+        get.return_value = Mock(ok=False, status_code=503, content=b'')
+        with self.assertRaises(edgar.EdgarError):
+            edgar.search_filers('pershing')
+
+    def test_a_malformed_submissions_payload_is_an_edgar_error(self, get, sleep):
+        get.return_value = ok_json({'filings': {}})
+        with self.assertRaises(edgar.EdgarError):
+            edgar.filer(1336528)
