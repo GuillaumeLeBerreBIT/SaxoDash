@@ -128,3 +128,34 @@ class InvestorListApiTest(APITestCase):
         slugs = [card['slug'] for card in self.client.get(self.url, {'holds': 'aapl'}).data]
 
         self.assertEqual(slugs, ['berkshire-hathaway'])
+
+    def test_a_card_carries_styles_and_followed(self):
+        make_investor(styles=['Value', 'Concentrated'], followed=True)
+        card = self.card('berkshire-hathaway')
+        self.assertEqual((card['styles'], card['followed']), (['Value', 'Concentrated'], True))
+
+    def test_cards_cost_the_same_number_of_queries_for_one_or_many_investors(self):
+        for index in range(6):
+            investor = make_investor(name=f'M{index}', firm=f'F{index}', cik=index + 1, slug=f'f{index}')
+            store_quarter(investor, Q1, [('037833100', 'APPLE INC', 10, 600)])
+            store_quarter(investor, Q2, [('037833100', 'APPLE INC', 12, 700)])
+        with self.assertNumQueries(4):
+            self.client.get(self.url)
+
+    def test_an_investor_still_importing_has_an_empty_card(self):
+        make_investor(quarters_expected=0)
+        card = self.card('berkshire-hathaway')
+        self.assertEqual((card['latest_quarter'], card['total_value'], card['new_count']), (None, None, None))
+        self.assertEqual(card['import']['quarters_expected'], 0)
+
+    def test_holds_matches_only_the_latest_quarter(self):
+        seller = make_investor()
+        store_quarter(seller, Q1, [('037833100', 'APPLE INC', 10, 600)])
+        store_quarter(seller, Q2, [('67066G104', 'NVIDIA CORP', 1, 300)])
+        holder = make_investor(name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square')
+        store_quarter(holder, Q2, [('037833100', 'APPLE INC', 10, 600)])
+        Security.objects.create(cusip='037833100', ticker='AAPL')
+
+        response = self.client.get(self.url, {'holds': 'aapl'})
+
+        self.assertEqual([card['slug'] for card in response.data], ['pershing-square'])

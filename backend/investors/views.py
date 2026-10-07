@@ -11,12 +11,11 @@ from .models import Investor
 
 class InvestorListView(APIView):
     def get(self, request):
-        today = date.today()
         investors = Investor.objects.all()
         holds = request.query_params.get('holds', '').strip()
         if holds:
-            investors = [investor for investor in investors if summaries.holds_ticker(investor, holds)]
-        return Response([summaries.card(investor, today) for investor in investors])
+            investors = investors.filter(pk__in=summaries.holder_ids(holds))
+        return Response(summaries.cards(investors, date.today()))
 
 
 def _quarter_param(request):
