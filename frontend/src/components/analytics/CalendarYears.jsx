@@ -1,16 +1,25 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, EmptyState } from '../ui'
 import { chartTooltipProps, gridProps, axisProps, OTHER_SLICE, REPORTED } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 
 const SERIES_LABEL = { portfolio_pct: 'Portfolio', benchmark_pct: 'benchmark' }
 
 export default function CalendarYears({ years, benchmarkName }) {
+  const partialYears = new Set(years.filter((y) => y.partial).map((y) => y.year))
+  if (years.length === 0) {
+    return (
+      <Card>
+        <CardHeader title="Calendar-year returns" subtitle="A year appears once it has at least two data points" />
+        <EmptyState title="No full calendar year yet" hint="A year appears once it has at least two data points." />
+      </Card>
+    )
+  }
   return (
     <Card>
       <CardHeader
         title="Calendar-year returns"
-        subtitle="A year appears once it has at least two data points"
+        subtitle={`A year appears once it has at least two data points${partialYears.size ? ' · * year to date' : ''}`}
         right={
           <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
             <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-blue-500" /> You</span>
@@ -22,7 +31,7 @@ export default function CalendarYears({ years, benchmarkName }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={years} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="year" />
+            <XAxis {...axisProps} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
             <YAxis {...axisProps} width={54} tickFormatter={(v) => `${v}%`} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
             <Tooltip

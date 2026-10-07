@@ -13,6 +13,7 @@ import {
   StatRow,
   Skeleton,
   Metric,
+  DayChange,
 } from './ui'
 
 describe('ui primitives', () => {
@@ -161,5 +162,22 @@ describe('ui primitives', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('DayChange', () => {
+  it('shows a zero-rounding move unsigned and neutral, whatever its raw sign', () => {
+    render(<DayChange value={-0.003} />)
+    render(<DayChange value={0} />)
+    const [negative, zero] = screen.getAllByText('0.00%')
+    expect(negative.className).toContain('text-zinc-500')
+    expect(negative.className).not.toContain('text-red-400')
+    expect(zero.className).toContain('text-zinc-500')
+    expect(zero.className).not.toContain('text-emerald-400')
+  })
+
+  it('keeps colour for real moves', () => {
+    render(<DayChange value={1.2} />)
+    expect(screen.getByText('+1.20%').className).toContain('text-emerald-400')
   })
 })

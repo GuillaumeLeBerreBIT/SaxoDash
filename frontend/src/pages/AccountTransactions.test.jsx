@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen, render } from '@testing-library/react'
+import { screen, render, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import AccountTransactions from './AccountTransactions'
@@ -71,9 +71,113 @@ describe('AccountTransactions', () => {
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate })
 
     renderAt(5)
-    const { fireEvent } = await import('@testing-library/react')
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'DINING' } })
+    fireEvent.change(screen.getByLabelText('Category for COLRUYT'), { target: { value: 'DINING' } })
 
     expect(mutate).toHaveBeenCalledWith({ id: 1, category: 'DINING' })
+  })
+
+  it('says so when the account id matches nothing', () => {
+    queries.useBankTransactions.mockReturnValue({ data: [], isLoading: false, error: null })
+
+    renderAt(99)
+
+    expect(screen.getByRole('heading', { name: 'Account not found' })).toBeInTheDocument()
+    expect(screen.getByText('No account with this id')).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+
+  it('narrows the rows as you type in the search box', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [
+        { id: 1, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', description: '', amount: '-40.00', effective_category: 'GROCERIES' },
+        { id: 2, booking_date: '2026-01-06', counterparty_name: 'NMBS', description: '', amount: '-9.00', effective_category: 'TRANSPORT' },
+      ],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+    fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'nmbs' } })
+
+    expect(screen.queryByText('COLRUYT')).not.toBeInTheDocument()
+    expect(screen.getByText('NMBS')).toBeInTheDocument()
+  })
+
+  it('signs amounts and shows a differing description under the name', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [
+        { id: 1, booking_date: '2026-01-05', counterparty_name: 'ACME', description: 'Salary January', amount: '2500.00', effective_category: 'INCOME' },
+        { id: 2, booking_date: '2026-01-06', counterparty_name: 'NMBS', description: '', amount: '-9.00', effective_category: 'TRANSPORT' },
+      ],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+
+    expect(screen.getByText('+€2,500.00')).toBeInTheDocument()
+    expect(screen.getByText('-€9.00')).toBeInTheDocument()
+    expect(screen.getByText('Salary January')).toBeInTheDocument()
+  })
+
+  it('truncates a long description to one line and keeps the full text in the title', () => {
+    const raw = 'NYX*CandySnackService|.|02-10-2026|.|11:07|.|Meule|.|BE|.|524784XXXXXX0999 |.| |.|'
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'NYX', description: raw, amount: '-3.00', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+
+    const description = screen.getByText(raw)
+    expect(description).toHaveAttribute('title', raw)
+    expect(description).toHaveClass('truncate')
+    expect(screen.getByText('NYX')).toHaveClass('truncate')
+  })
+
+  it('pages through long lists and resets to page 1 when filtering', () => {
+    const data = Array.from({ length: 30 }, (_, i) => ({
+      id: i + 1, booking_date: '2026-01-05', counterparty_name: `SHOP ${i + 1}`, description: '', amount: '-1.00', effective_category: 'GROCERIES',
+    }))
+    queries.useBankTransactions.mockReturnValue({ data, isLoading: false, error: null })
+
+    renderAt(5)
+    expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument()
+    expect(screen.getByLabelText('Previous page')).toBeDisabled()
+
+    fireEvent.click(screen.getByLabelText('Next page'))
+    expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument()
+    expect(screen.getByLabelText('Next page')).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'shop' } })
+    expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument()
+  })
+
+  it('offers to clear filters that match nothing', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', description: '', amount: '-40.00', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+    fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'zzz' } })
+    expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByText('COLRUYT')).toBeInTheDocument()
+  })
+
+  it('filters by category', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [
+        { id: 1, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', description: '', amount: '-40.00', effective_category: 'GROCERIES' },
+        { id: 2, booking_date: '2026-01-06', counterparty_name: 'NMBS', description: '', amount: '-9.00', effective_category: 'TRANSPORT' },
+      ],
+      isLoading: false, error: null,
+    })
+
+    renderAt(5)
+    fireEvent.change(screen.getByLabelText('Filter by category'), { target: { value: 'TRANSPORT' } })
+
+    expect(screen.queryByText('COLRUYT')).not.toBeInTheDocument()
+    expect(screen.getByText('NMBS')).toBeInTheDocument()
   })
 })

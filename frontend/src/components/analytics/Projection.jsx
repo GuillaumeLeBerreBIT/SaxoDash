@@ -4,6 +4,7 @@ import { Card, CardHeader, InfoTip, MetricTile } from '../ui'
 import { Pill } from '../RangePills'
 import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
+import { yearTicks } from '../../lib/analytics'
 import { CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, axisProps, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 
 const MONTHLY_OPTIONS = [500, 1000, 1500, 2000, 2500]
@@ -85,7 +86,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={bands} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="month" tickFormatter={(m) => `${Math.round(m / 12)}y`} />
+            <XAxis {...axisProps} dataKey="month" ticks={yearTicks(rows)} interval={0} tickFormatter={(m) => `${Math.round(m / 12)}y`} />
             <YAxis {...axisProps} width={52} tickFormatter={fmtK} />
             <Tooltip
               {...chartTooltipProps}

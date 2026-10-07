@@ -1,7 +1,8 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, EmptyState } from '../ui'
 import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, NEGATIVE } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
+import { drawdownDomain } from '../../lib/analytics'
 
 /** Decline from the running peak of the portfolio's own value - no benchmark. */
 export default function DrawdownChart({ series, maxDrawdown }) {
@@ -12,6 +13,9 @@ export default function DrawdownChart({ series, maxDrawdown }) {
         subtitle="Decline from the running peak"
         right={maxDrawdown != null && <span className="text-[var(--fig-2xs)] num text-red-400">Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}</span>}
       />
+      {series.length === 0 ? (
+        <EmptyState title="No drawdown yet" hint="It appears once the portfolio has a recorded history." />
+      ) : (
       <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -23,7 +27,7 @@ export default function DrawdownChart({ series, maxDrawdown }) {
             </defs>
             <CartesianGrid {...gridProps} />
             <XAxis {...dateAxisProps} />
-            <YAxis {...axisProps} width={54} tickFormatter={(v) => `${v}%`} />
+            <YAxis {...axisProps} width={54} domain={drawdownDomain(series)} tickFormatter={(v) => `${v}%`} />
             <Tooltip
               {...chartTooltipProps}
               labelFormatter={formatAxisDate}
@@ -41,6 +45,7 @@ export default function DrawdownChart({ series, maxDrawdown }) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      )}
     </Card>
   )
 }

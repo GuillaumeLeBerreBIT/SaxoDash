@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { Card, CardHeader } from '../ui'
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { researchHref } from '../../lib/research'
 
 /** Each holding's share of the total gain - computed here from positions
@@ -53,7 +53,7 @@ export default function Attribution({ positions }) {
                 }
               />
             </div>
-            <span className={`text-[var(--fig-xs)] num text-right ${r.contribution >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            <span className={`text-[var(--fig-xs)] num text-right ${pctToneClass(r.contribution, 1)}`}>
               {fmtPct(r.contribution, { decimals: 1 })} pp
             </span>
             <span className="text-[var(--fig-xs)] num text-zinc-500 text-right">{fmtNum(r.shareOfGain, 0)}%</span>

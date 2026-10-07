@@ -38,4 +38,10 @@ describe('Projection', () => {
     await userEvent.tab()
     expect(screen.getByRole('tooltip')).toHaveTextContent(/Monte Carlo simulation/)
   })
+
+  it('renders with yearly ticks for a given return and volatility', () => {
+    renderWithProviders(<Projection start={10000} expectedReturnPct={6} volatilityPct={12} />)
+
+    expect(screen.getByText('Invested by then')).toBeInTheDocument()
+  })
 })

@@ -72,6 +72,38 @@ function stubHappyPath() {
   stubPortfolioSummary()
 }
 
+const shortHistory = {
+  has_data: true,
+  history_days: 8,
+  data_quality: 'low',
+  sample_size: 8,
+  volatility: null,
+  sharpe: null,
+  sortino: null,
+  expected_return: null,
+  max_drawdown: -1.2,
+  current_drawdown: -0.4,
+  positive_months_pct: null,
+  best_month: null,
+  worst_month: null,
+  needs_days: { expected_return: 357, volatility: 22, sharpe: 357, sortino: 357, monthly_stats: 23 },
+  benchmark: {
+    has_data: true, name: 'World', beta: null, tracking_error: null, information_ratio: null, jensen_alpha: null,
+    needs_days: { tracking_error: 22, beta: 82, information_ratio: 357, jensen_alpha: 357 },
+  },
+  drawdown_series: [],
+  monthly_returns: [],
+  risk_free_annual: 0.03,
+  available_benchmarks: [{ key: 'world', name: 'World' }],
+}
+
+function mockRisk(data) {
+  queries.useRiskMetrics.mockReturnValue({ data, isLoading: false, error: null })
+  queries.usePerformance.mockReturnValue({ data: performance, isLoading: false, error: null })
+  queries.usePositions.mockReturnValue({ data: positions, isLoading: false, error: null })
+  stubPortfolioSummary()
+}
+
 describe('Analytics', () => {
   it('shows a loading state while the summary is in flight', () => {
     queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
@@ -270,5 +302,27 @@ describe('Analytics', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
 
     expect(screen.queryByText(/of history, so the range/i)).not.toBeInTheDocument()
+  })
+
+  it('shows dashes and a needs-days hint instead of a bare unit when history is short', async () => {
+    mockRisk(shortHistory)
+    renderWithProviders(<Analytics />)
+    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    expect(screen.queryByText('—%')).not.toBeInTheDocument()
+    expect(screen.getAllByText('needs 22 more days').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('needs 23 more days')).toHaveLength(3)
+  })
+
+  it('shows no Sharpe badge and a dash for average return when they are null', () => {
+    mockRisk(shortHistory)
+    renderWithProviders(<Analytics />)
+    expect(screen.queryByText(/Sharpe —/)).not.toBeInTheDocument()
+    expect(screen.getByText('needs 357 more days')).toBeInTheDocument()
+  })
+
+  it('names the history length in the placeholder', () => {
+    mockRisk({ has_data: false, history_days: 1 })
+    renderWithProviders(<Analytics />)
+    expect(screen.getByText(/at least two days of portfolio value \(1 so far\)/)).toBeInTheDocument()
   })
 })

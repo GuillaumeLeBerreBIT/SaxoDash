@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 
 import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
-import { fmtEur, fmtMoney, fmtPct, fmtQty } from '../lib/format'
+import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { moveLabel, priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import { Card, CardHeader, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
@@ -59,8 +59,7 @@ export default function Portfolio() {
     ...(otherSectorsValue > 0 ? [{ name: 'Other', value: otherSectorsValue, color: OTHER_SLICE, logo: false }] : []),
   ]
 
-  const pnlTone =
-    summary.total_pnl_pct == null ? 'text-zinc-500' : Number(summary.total_pnl_pct) >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const pnlTone = pctToneClass(summary.total_pnl_pct)
   const dayColumnLabel = moveLabel(quotes.values()) === 'Today' ? 'Day %' : 'Latest session %'
 
   return (

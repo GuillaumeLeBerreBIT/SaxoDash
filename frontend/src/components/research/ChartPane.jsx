@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 import { useSize } from '../../lib/chartGeometry'
-import { fmtNum, fmtPct } from '../../lib/format'
+import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { moveCaption } from '../../lib/research'
 import { Card, InstrumentLogo } from '../ui'
 import ChartCanvas from './ChartCanvas'
@@ -27,7 +27,7 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
           {change == null ? null : (
             <span
               className={`text-[var(--fig-2xs)] num font-mono whitespace-nowrap ${
-                change >= 0 ? 'text-emerald-400' : 'text-red-400'
+                pctToneClass(change)
               }`}
             >
               {fmtPct(change)}{suffix ? ` ${suffix}` : ''}

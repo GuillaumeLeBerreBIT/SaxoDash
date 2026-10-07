@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react'
 import { Info, X } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
-import { fmtPct } from '../lib/format'
+import { fmtPct, pctToneClass } from '../lib/format'
 
 /** The one container primitive for a bounded, self-contained unit of page
  *  content - reach for it when grouping information that's meaningfully
@@ -387,7 +387,7 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
  *  next to a ticker, TradingView-style. `null` (no live quote) reads as a
  *  dash rather than a false flat 0%. */
 export function DayChange({ value, className = '' }) {
-  const tone = value == null ? 'text-zinc-600' : Number(value) >= 0 ? 'text-emerald-400' : 'text-red-400'
+  const tone = value == null ? 'text-zinc-600' : pctToneClass(value)
   return <span className={`num font-mono ${tone} ${className}`}>{fmtPct(value)}</span>
 }
 

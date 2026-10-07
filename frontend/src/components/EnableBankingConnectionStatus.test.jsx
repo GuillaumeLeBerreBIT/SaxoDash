@@ -69,7 +69,7 @@ describe('EnableBankingConnectionStatus', () => {
     expect(window.location.search).toBe('')
   })
 
-  it('shows a sync-failed badge when a bank is connected but its last sync failed', () => {
+  it('shows a single sync-failed badge when a bank is connected but its last sync failed', () => {
     queries.useEnableBankingStatus.mockReturnValue({
       data: {
         kbc: {
@@ -81,7 +81,7 @@ describe('EnableBankingConnectionStatus', () => {
     })
     renderWithProviders(<EnableBankingConnectionStatus />)
     expect(screen.getByText('KBC sync failed')).toBeInTheDocument()
-    expect(screen.getByText('KBC connected')).toBeInTheDocument()
+    expect(screen.queryByText('KBC connected')).not.toBeInTheDocument()
   })
 
   it('omits the sync-failed badge when the last sync succeeded', () => {
