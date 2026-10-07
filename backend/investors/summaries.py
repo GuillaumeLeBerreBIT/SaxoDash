@@ -175,7 +175,7 @@ def card(investor, today):
 def holder_ids(ticker):
     cusips = list(Security.objects.filter(ticker__iexact=ticker).values_list('cusip', flat=True))
     rows = list(
-        PositionMove.objects.filter(cusip__in=cusips).exclude(kind=changes.SOLD_OUT)
+        PositionMove.objects.filter(cusip__in=cusips, put_call='').exclude(kind=changes.SOLD_OUT)
         .values_list('investor_id', 'quarter_end')
     )
     latest = _latest_quarters({investor_id for investor_id, _ in rows})

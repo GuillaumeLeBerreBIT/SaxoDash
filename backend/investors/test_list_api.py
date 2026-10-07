@@ -159,3 +159,14 @@ class InvestorListApiTest(APITestCase):
         response = self.client.get(self.url, {'holds': 'aapl'})
 
         self.assertEqual([card['slug'] for card in response.data], ['pershing-square'])
+
+    def test_holds_ignores_an_investor_whose_only_position_is_an_option(self):
+        options_only = make_investor()
+        store_quarter(options_only, Q2, [('037833100', 'APPLE INC', 10, 600, 'PUT')])
+        holder = make_investor(name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square')
+        store_quarter(holder, Q2, [('037833100', 'APPLE INC', 10, 600)])
+        Security.objects.create(cusip='037833100', ticker='AAPL')
+
+        response = self.client.get(self.url, {'holds': 'AAPL'})
+
+        self.assertEqual([card['slug'] for card in response.data], ['pershing-square'])
