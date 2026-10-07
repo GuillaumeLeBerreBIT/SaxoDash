@@ -60,7 +60,7 @@ describe('Earnings page', () => {
     stub({ events: [ev({ symbol: 'MSFT', held: true, mine: true })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('Oct 26 – 30 · October 2026')).toBeInTheDocument()
+    expect(screen.getByText('26 – 30 Oct 2026')).toBeInTheDocument()
     // MSFT shows in both the week-strip preview and the docket row.
     expect(screen.getAllByText('MSFT').length).toBeGreaterThan(0)
     expect(screen.getByText('Held')).toBeInTheDocument()
@@ -198,6 +198,15 @@ it('does not warn about duplicate keys for the same symbol and date in two quart
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(error.mock.calls.flat().join(' ')).not.toMatch(/same key/)
   error.mockRestore()
+})
+
+it('sizes the This week button like the week arrows', async () => {
+  stub()
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
+
+  const button = screen.getByRole('button', { name: 'This week' })
+  expect(button).toHaveClass('h-11', 'md:h-6')
 })
 
 it('offers a This week button only away from the current week, and it resets the week', async () => {

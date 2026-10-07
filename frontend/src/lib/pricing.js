@@ -1,3 +1,5 @@
+import { fmtDayMonth } from './format'
+
 /** How a position's price was arrived at, in the words the UI shows.
  *
  *  The backend records which rung of the price ladder answered. A mark that
@@ -51,14 +53,14 @@ export function fmtClock(iso, now = new Date()) {
   const at = new Date(iso)
   if (Number.isNaN(at.getTime())) return null
 
-  const time = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const time = at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   if (at.toDateString() === now.toDateString()) return time
 
   const days = Math.floor((now - at) / 86_400_000)
   if (days <= 6) {
-    return `${at.toLocaleDateString([], { weekday: 'short' })} ${time}`
+    return `${at.toLocaleDateString('en-GB', { weekday: 'short' })} ${time}`
   }
-  return `${at.toLocaleDateString([], { day: 'numeric', month: 'short' })} ${time}`
+  return `${fmtDayMonth(iso)} ${time}`
 }
 
 export const LAST_SESSION_NOTE = 'No live quotes on this account — moves are from the latest daily bars'
