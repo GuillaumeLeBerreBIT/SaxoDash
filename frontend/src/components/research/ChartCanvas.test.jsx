@@ -191,4 +191,14 @@ describe('ChartCanvas legend height', () => {
     probe.unmount()
     expect(priceHeightAt(0)).toBe(priceHeightAt(1))
   })
+
+  it('wraps the readout and keeps only the date and close on a phone', () => {
+    const { container } = render(canvas())
+
+    const legend = container.querySelector('.num.font-mono.flex-wrap:not(.invisible)')
+    expect(legend).toHaveClass('flex-wrap', 'gap-x-3')
+    const cell = (key) => [...legend.children].find((el) => el.textContent.startsWith(`${key} `))
+    for (const key of ['O', 'H', 'L']) expect(cell(key)).toHaveClass('hidden', 'md:inline')
+    expect(cell('C')).not.toHaveClass('hidden')
+  })
 })

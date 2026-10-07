@@ -189,7 +189,9 @@ function RevenueCell({ event }) {
   )
 }
 
-const ROW_GRID = '92px 40px 72px 64px minmax(0,1fr) 120px 14px'
+const ROW_GRID_CLASS =
+  'grid-cols-[72px_minmax(0,1fr)_96px_14px] md:grid-cols-[92px_40px_72px_64px_minmax(0,1fr)_120px_14px]'
+const PHONE_HIDDEN = 'hidden md:block'
 
 const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
   const status = reportStatus(event)
@@ -197,9 +199,8 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(event.symbol)}
-      className="w-full grid items-center gap-2.5 2xl:gap-3 h-11 2xl:h-12 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 text-left hover:bg-white/[0.045] transition-colors"
+      className={`w-full grid items-center ${ROW_GRID_CLASS} gap-2.5 2xl:gap-3 h-11 2xl:h-12 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 text-left hover:bg-white/[0.045] transition-colors`}
       style={{
-        gridTemplateColumns: ROW_GRID,
         borderLeft: `2px solid ${
           event.held ? REPORTED : event.watched ? withAlpha(REPORTED, 0.4) : 'transparent'
         }`,
@@ -225,13 +226,13 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
           </span>
         )}
       </span>
-      <span className="text-[var(--fig-2xs)] text-zinc-500 bg-white/[0.04] rounded-[3px] py-0.5 text-center">
+      <span className={`${PHONE_HIDDEN} text-[var(--fig-2xs)] text-zinc-500 bg-white/[0.04] rounded-[3px] py-0.5 text-center`}>
         {SESSION[event.session] || '—'}
       </span>
-      <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap">
+      <span className={`${PHONE_HIDDEN} text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap`}>
         {event.quarter ? `Q${event.quarter} ${event.year ?? ''}`.trim() : ''}
       </span>
-      <span className="flex justify-center">
+      <span className="hidden md:flex justify-center">
         <BulletBar actual={event.eps_actual} estimate={event.eps_estimate} />
       </span>
       <span className="text-right">
@@ -250,13 +251,13 @@ const EarningsRow = memo(function EarningsRow({ event, onOpen }) {
 function ColumnHeader() {
   return (
     <div
-      className="grid items-center gap-2.5 2xl:gap-3 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 py-1.5 2xl:py-2 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600"
-      style={{ gridTemplateColumns: ROW_GRID, borderLeft: '2px solid transparent' }}
+      className={`grid items-center ${ROW_GRID_CLASS} gap-2.5 2xl:gap-3 pl-3 2xl:pl-4 pr-3.5 2xl:pr-5 py-1.5 2xl:py-2 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600`}
+      style={{ borderLeft: '2px solid transparent' }}
     >
       <span>Symbol</span>
-      <span>Sess</span>
-      <span>Qtr</span>
-      <span className="flex justify-center items-center gap-1">
+      <span className={PHONE_HIDDEN}>Sess</span>
+      <span className={PHONE_HIDDEN}>Qtr</span>
+      <span className="hidden md:flex justify-center items-center gap-1">
         vs est
         <InfoTip>
           The reported figure as a bar against the consensus estimate (the pale tick). Green beat, red
@@ -345,7 +346,7 @@ export default function Earnings() {
         }
       />
 
-      <div className="flex items-center gap-2.5 mb-3">
+      <div className="flex flex-wrap items-center gap-2.5 mb-3">
         <button
           type="button"
           onClick={() => shiftWeek(-1)}
@@ -355,7 +356,7 @@ export default function Earnings() {
         >
           <ChevronLeft size={13} />
         </button>
-        <span className="text-[var(--fig-sm)] num font-mono font-semibold text-zinc-200 min-w-[200px]">
+        <span className="text-[var(--fig-sm)] num font-mono font-semibold text-zinc-200 md:min-w-[200px]">
           {weekLabel(data?.window)}
         </span>
         <button

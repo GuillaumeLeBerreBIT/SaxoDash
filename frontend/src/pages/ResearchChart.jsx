@@ -90,7 +90,7 @@ export default function ResearchChart() {
           onToggleList={toggleList}
         />
 
-        <div className="flex items-center gap-1 px-1">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-1 px-1">
           <RangeButtons controls={rangeControls} />
           <div className="ml-auto">
             <SaxoConnectionStatus />

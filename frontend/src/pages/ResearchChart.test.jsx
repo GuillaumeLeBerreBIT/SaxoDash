@@ -346,4 +346,16 @@ describe('ResearchChart time-axis zoom', () => {
     await userEvent.click(screen.getByRole('button', { name: '1M' }))
     expect(screen.getByRole('button', { name: '1M' })).toHaveAttribute('aria-pressed', 'true')
   })
+
+  it('lets the range buttons and the connection status wrap instead of clipping', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(screen.getByRole('button', { name: '1W' }).parentElement.parentElement).toHaveClass('flex-wrap')
+  })
+
+  it('has a way back to Research on every viewport', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(backLink()).toBeVisible()
+  })
 })
