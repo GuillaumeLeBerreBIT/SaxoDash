@@ -128,6 +128,25 @@ describe('Transactions', () => {
     expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
   })
 
+  it('lets the pager wrap and renders every page button', () => {
+    stub(Array.from({ length: 250 }, (_, i) => row({ id: i + 1 })))
+    renderWithProviders(<Transactions />)
+
+    const pager = screen.getByRole('button', { name: 'Page 1' }).parentElement
+    expect(pager).toHaveClass('flex-wrap')
+    for (let n = 1; n <= 25; n++) {
+      expect(screen.getByRole('button', { name: `Page ${n}` })).toBeInTheDocument()
+    }
+  })
+
+  it('offers no Clear filters when nothing is filtered', () => {
+    stub([])
+    renderWithProviders(<Transactions />)
+
+    expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
   it('returns to page 1 when the selected type vanishes', () => {
     const interest = Array.from({ length: 12 }, (_, i) =>
       row({ id: 100 + i, type: 'INTEREST', ticker: '', instrument: 'Interest' }))

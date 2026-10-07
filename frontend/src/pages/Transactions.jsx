@@ -151,9 +151,11 @@ export default function Transactions() {
                 <tr>
                   <td colSpan={8}>
                     <EmptyState title="No transactions match your filters." />
-                    <div className="pb-6 text-center">
-                      <Button size="sm" onClick={clearFilters}>Clear filters</Button>
-                    </div>
+                    {(search !== '' || effectiveFilter !== 'All') && (
+                      <div className="pb-6 text-center">
+                        <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
@@ -165,7 +167,7 @@ export default function Transactions() {
           <div className="text-[var(--fig-xs)] text-zinc-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
