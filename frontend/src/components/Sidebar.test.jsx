@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Sidebar from './Sidebar'
 import { NAV_ITEMS } from '../lib/navigation'
+
+vi.mock('../api/queries')
+import * as queries from '../api/queries'
+
+beforeEach(() => {
+  queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+})
 
 vi.mock('../api/client', () => ({
   getUsername: () => 'Test User',
@@ -39,5 +46,14 @@ describe('Sidebar', () => {
     for (const { label } of NAV_ITEMS) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
+  })
+
+  it.each([[false], [true]])('shows the compact Saxo status (collapsed: %s)', (collapsed) => {
+    render(
+      <MemoryRouter>
+        <Sidebar collapsed={collapsed} setCollapsed={() => {}} onOpenPalette={() => {}} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('status', { name: 'Saxo not connected' })).toBeInTheDocument()
   })
 })

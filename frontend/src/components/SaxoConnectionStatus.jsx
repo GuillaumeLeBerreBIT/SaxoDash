@@ -4,7 +4,7 @@ import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
 import { Badge } from './ui'
 
-export default function SaxoConnectionStatus() {
+export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
   const [error] = useState(
     () => new URLSearchParams(window.location.search).get('saxo') === 'error'
@@ -17,6 +17,8 @@ export default function SaxoConnectionStatus() {
   }, [error])
 
   if (!status) return null
+
+  if (compact) return <StatusDot {...compactState(status)} />
 
   if (!status.connected) {
     return (
@@ -76,4 +78,23 @@ export default function SaxoConnectionStatus() {
 const SYNC_OUTCOME_NOTE = {
   skipped: 'The last sync could not run, so this data may be stale',
   failed: 'The last sync failed, so this data may be stale',
+}
+
+function compactState(status) {
+  if (!status.connected) return { label: 'Saxo not connected', dot: 'bg-zinc-500' }
+  if (status.needs_reauth) return { label: 'Saxo needs reconnecting', dot: 'bg-red-400' }
+  if (!status.usable) return { label: 'Saxo reconnecting…', dot: 'bg-amber-400' }
+  if (status.last_sync_outcome && status.last_sync_outcome !== 'ok') {
+    return { label: `Saxo connected, sync ${status.last_sync_outcome}`, dot: 'bg-amber-400' }
+  }
+  return { label: 'Saxo connected', dot: 'bg-emerald-400' }
+}
+
+function StatusDot({ label, dot }) {
+  return (
+    <span role="status" aria-label={label} title={label} className="inline-flex items-center justify-center w-4 h-4 shrink-0">
+      <span aria-hidden="true" className={`w-2 h-2 rounded-full ${dot}`} />
+      <span className="sr-only">{label}</span>
+    </span>
+  )
 }

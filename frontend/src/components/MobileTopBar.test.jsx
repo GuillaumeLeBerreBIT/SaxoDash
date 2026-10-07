@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MobileTopBar from './MobileTopBar'
 import { renderWithProviders } from '../test/renderWithProviders'
+
+vi.mock('../api/queries')
+import * as queries from '../api/queries'
+
+beforeEach(() => {
+  queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+})
 
 describe('MobileTopBar', () => {
   it('opens the palette from the search button', async () => {
@@ -20,5 +27,10 @@ describe('MobileTopBar', () => {
   it('shows the wordmark', () => {
     renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
     expect(screen.getByText('SaxoDash')).toBeInTheDocument()
+  })
+
+  it('shows the compact Saxo status', () => {
+    renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
+    expect(screen.getByRole('status', { name: 'Saxo not connected' })).toBeInTheDocument()
   })
 })

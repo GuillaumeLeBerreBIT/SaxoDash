@@ -1,4 +1,5 @@
 import { LineChart, Search } from 'lucide-react'
+import SaxoConnectionStatus from './SaxoConnectionStatus'
 
 export default function MobileTopBar({ onOpenPalette }) {
   return (
@@ -10,6 +11,7 @@ export default function MobileTopBar({ onOpenPalette }) {
         <span className="text-[var(--fig-md)] font-medium tracking-tight text-zinc-50">SaxoDash</span>
       </div>
       <div className="flex items-center gap-1">
+        <SaxoConnectionStatus compact />
         <button
           type="button"
           onClick={onOpenPalette}

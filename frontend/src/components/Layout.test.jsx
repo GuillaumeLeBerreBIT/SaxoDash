@@ -5,6 +5,7 @@ import Layout from './Layout'
 vi.mock('../api/client', () => ({
   getUsername: () => 'Test User',
   logout: vi.fn(),
+  getSaxoStatus: vi.fn(() => new Promise(() => {})),
 }))
 vi.mock('./CommandPalette', () => ({ default: () => null }))
 
