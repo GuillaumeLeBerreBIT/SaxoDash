@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import Earnings from './Earnings'
@@ -167,4 +167,55 @@ describe('Earnings page', () => {
     await userEvent.click(screen.getByRole('button', { name: /View all/ }))
     expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('all', 0)
   })
+
+it('files an event with no session under its own heading, not After close', () => {
+  stub({
+    events: [
+      ev({ symbol: 'BMOCO', session: 'bmo' }),
+      ev({ symbol: 'AMCCO', session: 'amc' }),
+      ev({ symbol: 'NOSESS', session: null }),
+    ],
+  })
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+
+  const unset = screen.getByRole('group', { name: 'Session not set' })
+  expect(within(unset).getByText('NOSESS')).toBeInTheDocument()
+  const after = screen.getByRole('group', { name: 'After close' })
+  expect(within(after).queryByText('NOSESS')).not.toBeInTheDocument()
+  expect(within(after).getByText('AMCCO')).toBeInTheDocument()
+})
+
+it('does not warn about duplicate keys for the same symbol and date in two quarters', () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+  stub({ events: [ev({ symbol: 'DUP', quarter: 3 }), ev({ symbol: 'DUP', quarter: 4 })] })
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  expect(error.mock.calls.flat().join(' ')).not.toMatch(/same key/)
+  error.mockRestore()
+})
+
+it('offers a This week button only away from the current week, and it resets the week', async () => {
+  stub()
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
+
+  await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
+  await userEvent.click(screen.getByRole('button', { name: 'This week' }))
+
+  expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('all', 0)
+  expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
+})
+
+it('shows the day of the month on each day card', () => {
+  stub()
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  expect(screen.getByRole('button', { name: /^Mon 26/ })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /^Fri 30/ })).toBeInTheDocument()
+})
+
+it('formats a sub-million revenue estimate as <1M and keeps the quarter on one line', () => {
+  stub({ events: [ev({ revenue_estimate: 4.2e5 })] })
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  expect(screen.getByText('<1M')).toBeInTheDocument()
+  expect(screen.getByText('Q4 2026')).toHaveClass('whitespace-nowrap')
+})
 })

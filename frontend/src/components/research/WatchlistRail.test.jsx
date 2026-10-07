@@ -64,6 +64,18 @@ describe('WatchlistRail', () => {
     expect(screen.getByTitle('Since you last looked')).toHaveTextContent('+16.72%')
   })
 
+  it('lets the symbol keep its width and the exchange take the squeeze', () => {
+    stub({
+      watchlists: [
+        { ...list, items: [{ id: 7, symbol: 'NVDA', uic: 211, asset_type: 'Stock', exchange: 'NASDAQ_VERY_LONG_EXCHANGE_NAME' }] },
+      ],
+    })
+    render()
+
+    expect(screen.getByText('NVDA')).toHaveClass('shrink-0')
+    expect(screen.getByText('NASDAQ_VERY_LONG_EXCHANGE_NAME')).toHaveClass('truncate', 'min-w-0')
+  })
+
   it('lists the active watchlist rows with their quotes', () => {
     render()
 

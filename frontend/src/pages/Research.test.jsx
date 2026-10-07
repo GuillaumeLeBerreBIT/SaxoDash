@@ -267,14 +267,35 @@ describe('Research', () => {
     expect(screen.getByText(/No recent news for NVDA/)).toBeInTheDocument()
   })
 
+  it('collapses the news feed back to ten items when the symbol changes', async () => {
+    const items = Array.from({ length: 25 }, (_, i) => ({
+      id: i,
+      headline: `Headline ${i}`,
+      url: `https://example.com/${i}`,
+      source: 'Wire',
+      datetime: 1_760_000_000 - i * 60,
+    }))
+    queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items } })
+    localStorage.setItem('saxodash:recent-symbols', JSON.stringify(['AAPL']))
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
+    const links = () => screen.getAllByRole('link', { name: /^Headline/ })
+
+    expect(links()).toHaveLength(10)
+    await userEvent.click(screen.getByRole('button', { name: /Show more/ }))
+    expect(links()).toHaveLength(20)
+
+    await userEvent.click(screen.getByRole('button', { name: 'AAPL' }))
+    expect(links()).toHaveLength(10)
+  })
+
   it('falls back to Overview for the retired ?tab=market link', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=market' })
     expect(screen.getByText('Your position')).toBeInTheDocument()
   })
 
   it('records the viewed symbol as recent', () => {
-    renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
-    expect(JSON.parse(localStorage.getItem('saxodash:recent-symbols'))).toContain('AAPL')
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(JSON.parse(localStorage.getItem('saxodash:recent-symbols'))).toContain('NVDA')
   })
 
   it('offers recent symbols as quick chips, excluding the current one', async () => {

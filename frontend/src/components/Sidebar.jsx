@@ -1,19 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Briefcase, ChartNoAxesCombined, CandlestickChart, Compass, CalendarClock, List, Landmark, LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search, PiggyBank, Users } from 'lucide-react'
+import { LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
-
-const items = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/portfolio', label: 'Portfolio', icon: Briefcase },
-  { to: '/analytics', label: 'Analytics', icon: ChartNoAxesCombined },
-  { to: '/research', label: 'Research', icon: CandlestickChart },
-  { to: '/discover', label: 'Discover', icon: Compass },
-  { to: '/earnings', label: 'Earnings', icon: CalendarClock },
-  { to: '/investors', label: 'Investors', icon: Users },
-  { to: '/transactions', label: 'Transactions', icon: List },
-  { to: '/accounts', label: 'Accounts', icon: Landmark },
-  { to: '/spending', label: 'Spending', icon: PiggyBank },
-]
+import { NAV_ITEMS } from '../lib/navigation'
 
 export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
   const navigate = useNavigate()
@@ -79,7 +67,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
       </button>
 
       <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} py-3 space-y-0.5`}>
-        {items.map(({ to, label, icon: ItemIcon, end }) => (
+        {NAV_ITEMS.map(({ to, label, icon: ItemIcon, end }) => (
           <NavLink
             key={to}
             to={to}

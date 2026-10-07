@@ -25,3 +25,11 @@ def get_bank_only_balance():
          for account in BankAccount.objects.exclude(external_id=SAXO_CASH_ACCOUNT_ID)),
         settings.REPORTING_CURRENCY,
     )
+
+
+def get_broker_cash_balance():
+    return Money.total(
+        (Money(account.balance, account.currency)
+         for account in BankAccount.objects.filter(external_id=SAXO_CASH_ACCOUNT_ID)),
+        settings.REPORTING_CURRENCY,
+    )

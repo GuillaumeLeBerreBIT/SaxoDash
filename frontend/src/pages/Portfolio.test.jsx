@@ -42,7 +42,7 @@ function stub(positions = [msft]) {
   })
   queries.useNetWorth.mockReturnValue({
     ...idle,
-    data: { portfolio_value: '31567.81', bank_total: '968435.55', net_worth: '1000003.36' },
+    data: { portfolio_value: '31567.81', bank_total: '968435.55', bank_only_total: '1435.55', broker_cash: '967000.00', net_worth: '1000003.36' },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
@@ -70,6 +70,19 @@ describe('Portfolio holdings table', () => {
 
     expect(within(row).getByText('€8,773.32')).toBeInTheDocument()
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
+  })
+
+  it('shows only external banks as the bank balance and notes the Saxo cash separately', () => {
+    renderWithProviders(<Portfolio />)
+
+    const bank = screen.getByText('Bank balance').closest('div')
+    expect(within(bank.parentElement).getByText('€1,435.55')).toBeInTheDocument()
+    expect(screen.getByText(/\+ €967,000\.00 cash at Saxo, included in net worth/)).toBeInTheDocument()
+  })
+
+  it('says the percentage is since purchase', () => {
+    renderWithProviders(<Portfolio />)
+    expect(screen.getAllByText(/since purchase/).length).toBeGreaterThan(0)
   })
 
   it('discloses that the mark is not a live price', () => {
@@ -134,7 +147,7 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
     expect(screen.queryByText('Overview')).not.toBeInTheDocument()
     expect(screen.getByText('Total P&L')).toBeInTheDocument()
-    expect(screen.getByText('-€5.89')).toBeInTheDocument()
+    expect(screen.getAllByText('-€5.89')).toHaveLength(2)
     expect(screen.getByText('€31,573.70 invested')).toBeInTheDocument()
   })
 
@@ -183,5 +196,50 @@ describe('Portfolio holdings table', () => {
       expect(screen.getByText('Allocation needs a value per holding to chart.')).toBeInTheDocument()
       expect(screen.getByText('Sector weight needs a value per holding to chart.')).toBeInTheDocument()
     })
+  })
+})
+
+describe('Portfolio total row', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub()
+  })
+
+  const totalRow = () => screen.getByText(/^Total \(\d+ holdings?\)/).closest('tr')
+
+  it('takes value and P&L from the summary, not from summing rows', () => {
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).getByText('€31,567.81')).toBeInTheDocument()
+    expect(within(totalRow()).getByText('-€5.89')).toBeInTheDocument()
+  })
+
+  it('does not add up quantities across different instruments', () => {
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).queryByText('20')).toBeNull()
+  })
+
+  it('renders a dash, not null or 0.00%, when the percentage is absent', () => {
+    queries.usePortfolioSummary.mockReturnValue({
+      ...idle,
+      data: { total_value: '31567.81', total_cost: '31573.70', total_pnl: '-5.89', total_pnl_pct: null, allocation: [] },
+    })
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Investment portfolio').closest('div').parentElement
+    expect(within(row).getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText(/since purchase/)).toBeNull()
+    expect(screen.queryByText(/null|0\.00%/)).toBeNull()
+  })
+
+  it('shows a dash for P&L when the summary has none', () => {
+    queries.usePortfolioSummary.mockReturnValue({
+      ...idle,
+      data: { total_value: '31567.81', total_cost: null, total_pnl: null, total_pnl_pct: null, allocation: [] },
+    })
+    renderWithProviders(<Portfolio />)
+
+    expect(within(totalRow()).getByText('—')).toBeInTheDocument()
   })
 })

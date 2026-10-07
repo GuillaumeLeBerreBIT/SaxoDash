@@ -22,6 +22,20 @@ describe('MoversCard', () => {
     expect(screen.getByText(/No holdings/)).toBeInTheDocument()
   })
 
+  it('hides the Losers column when nothing is down', () => {
+    const only = { best: [movers.best[0]], worst: [] }
+    renderWithProviders(<MoversCard movers={only} />)
+    expect(screen.getByText('Gainers')).toBeInTheDocument()
+    expect(screen.queryByText('Losers')).toBeNull()
+  })
+
+  it('hides the Gainers column when nothing is up', () => {
+    const only = { best: [], worst: [movers.worst[0]] }
+    renderWithProviders(<MoversCard movers={only} />)
+    expect(screen.queryByText('Gainers')).toBeNull()
+    expect(screen.getByText('Losers')).toBeInTheDocument()
+  })
+
   const positions = [
     { ticker: 'NVDA', value: '1020.00', uic: 211, asset_type: 'Stock' },
     { ticker: 'INTC', value: '990.00', uic: 212, asset_type: 'Stock' },

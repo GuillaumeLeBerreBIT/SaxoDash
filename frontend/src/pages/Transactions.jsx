@@ -1,18 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
-import { fmtEur, fmtQty } from '../lib/format'
+import { fmtQty } from '../lib/format'
+import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Badge, Button, Card, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
-
-const TYPES = ['All', 'BUY', 'SELL', 'DIVIDEND', 'DEPOSIT', 'FEE']
-const toneFor = (t) => ({ BUY: 'blue', SELL: 'zinc', DIVIDEND: 'amber', DEPOSIT: 'teal', FEE: 'red' }[t] || 'zinc')
-const signedTotal = (t) =>
-  t.type === 'SELL' || t.type === 'DEPOSIT' || t.type === 'DIVIDEND'
-    ? '+' + fmtEur(t.total)
-    : t.type === 'FEE'
-    ? '-' + fmtEur(t.total)
-    : fmtEur(t.total)
 
 export default function Transactions() {
   const { data, isLoading, error } = useTransactions('?page_size=1000')
@@ -23,15 +15,18 @@ export default function Transactions() {
   // Stable identity so the filter memo below doesn't rerun on every render
   // while the query is still resolving.
   const allTx = useMemo(() => data ?? [], [data])
+  const types = useMemo(() => txTypes(allTx), [allTx])
+
+  const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
 
   const filtered = useMemo(
     () =>
       allTx.filter(
         (t) =>
-          (typeFilter === 'All' || t.type === typeFilter) &&
+          (effectiveFilter === 'All' || t.type === effectiveFilter) &&
           (search === '' || (t.instrument + t.ticker).toLowerCase().includes(search.toLowerCase()))
       ),
-    [allTx, typeFilter, search]
+    [allTx, effectiveFilter, search]
   )
 
   const perPage = 10
@@ -80,7 +75,7 @@ export default function Transactions() {
             />
           </div>
           <div className="flex items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
-            {TYPES.map((t) => (
+            {types.map((t) => (
               <button
                 key={t}
                 onClick={() => {
@@ -88,7 +83,7 @@ export default function Transactions() {
                   setPage(1)
                 }}
                 className={`px-2.5 h-8 text-[var(--fig-xs)] font-medium rounded ${
-                  typeFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
+                  effectiveFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
                 }`}
               >
                 {t}
@@ -116,7 +111,7 @@ export default function Transactions() {
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
                   <Td edge className="num text-zinc-300">{t.date}</Td>
                   <Td>
-                    <Badge tone={toneFor(t.type)}>{t.type}</Badge>
+                    <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
                   <Td className="text-zinc-100">{t.instrument}</Td>
                   <Td className="text-zinc-400 font-medium">
@@ -131,8 +126,8 @@ export default function Transactions() {
                     </span>
                   </Td>
                   <Td align="right" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
-                  <Td align="right" className="num text-zinc-300">{fmtEur(t.price)}</Td>
-                  <Td align="right" className="num text-zinc-100 font-medium">{signedTotal(t)}</Td>
+                  <Td align="right" className="num text-zinc-300">{txPrice(t)}</Td>
+                  <Td align="right" className={`num font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
                   <Td edge className="text-zinc-400">{t.account}</Td>
                 </tr>
               ))}

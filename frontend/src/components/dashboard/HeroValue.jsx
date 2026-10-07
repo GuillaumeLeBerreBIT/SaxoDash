@@ -46,6 +46,7 @@ function FlatStat({ label, value }) {
 }
 
 export default function HeroValue({ value, change, spendingThisMonth }) {
+  const atSaxo = Number(value.portfolio) + Number(value.broker_cash)
   return (
     <Card className="h-full flex flex-col">
       <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
@@ -53,13 +54,16 @@ export default function HeroValue({ value, change, spendingThisMonth }) {
         {fmtEur(value.net_worth)}
       </div>
       <div className="mt-1 text-[var(--fig-xs)] text-zinc-500 num font-mono">
-        {fmtEur(value.portfolio)} invested · {fmtEur(value.bank)} bank
+        {fmtEur(atSaxo)} at Saxo · {fmtEur(value.bank_only)} bank
       </div>
-      <div className="mt-4 pt-4 border-t border-white/[0.06] grid grid-cols-2 gap-3">
-        {PERIODS.map(([key, label]) => (
-          <DeltaPill key={key} label={label} delta={change?.[key]} />
-        ))}
-        {spendingThisMonth != null && <FlatStat label="Spent MTD" value={fmtEur(spendingThisMonth)} />}
+      <div className="mt-4 pt-4 border-t border-white/[0.06]">
+        <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth change</div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          {PERIODS.map(([key, label]) => (
+            <DeltaPill key={key} label={label} delta={change?.[key]} />
+          ))}
+          {spendingThisMonth != null && <FlatStat label="Spent MTD" value={fmtEur(spendingThisMonth)} />}
+        </div>
       </div>
       <p className="mt-auto pt-3 text-[var(--fig-2xs)] text-zinc-600">
         Change is end-of-day, from the daily net-worth snapshot.

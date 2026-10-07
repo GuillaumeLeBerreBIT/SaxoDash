@@ -33,6 +33,7 @@ function Row({ ticker, pct, eur, instrument }) {
 }
 
 function Column({ title, rows }) {
+  if (rows.length === 0) return null
   return (
     <div>
       <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1">{title}</div>

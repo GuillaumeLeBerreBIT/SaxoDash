@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import Sidebar from './Sidebar'
+import { NAV_ITEMS } from '../lib/navigation'
 
 vi.mock('../api/client', () => ({
   getUsername: () => 'Test User',
@@ -27,5 +28,16 @@ describe('Sidebar', () => {
       </MemoryRouter>,
     )
     expect(screen.queryByRole('link', { name: 'elbstream.com' })).not.toBeInTheDocument()
+  })
+
+  it('links to every shared nav item', () => {
+    render(
+      <MemoryRouter>
+        <Sidebar collapsed={false} setCollapsed={() => {}} onOpenPalette={() => {}} />
+      </MemoryRouter>,
+    )
+    for (const { label } of NAV_ITEMS) {
+      expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
+    }
   })
 })

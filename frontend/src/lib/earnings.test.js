@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { groupByWeekday, reportStatus, weekLabel, WEEKDAYS } from './earnings'
+import { dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, WEEKDAYS } from './earnings'
 
 describe('groupByWeekday', () => {
   it('buckets events by weekday and keeps input order', () => {
@@ -53,5 +53,68 @@ describe('weekLabel', () => {
 
   it('is empty without a window', () => {
     expect(weekLabel(null)).toBe('')
+  })
+})
+
+describe('fmtRevenue', () => {
+  it.each([
+    [null, '—'],
+    [0, '0M'],
+    [4.2e5, '<1M'],
+    [4.2e6, '4.2M'],
+    [3.2e7, '32M'],
+    [1.5e9, '1.50B'],
+    [2.5e12, '2.50T'],
+  ])('%s -> %s', (input, expected) => {
+    expect(fmtRevenue(input)).toBe(expected)
+  })
+})
+
+describe('splitBySession', () => {
+  const e = (symbol, session) => ({ symbol, session })
+
+  it('files a missing session apart from before-open and after-close', () => {
+    const sections = splitBySession([e('A', 'bmo'), e('B', 'amc'), e('C', null), e('D', undefined)])
+    expect(sections.map((s) => [s.key, s.rows.map((r) => r.symbol)])).toEqual([
+      ['bmo', ['A']],
+      ['amc', ['B']],
+      ['unset', ['C', 'D']],
+    ])
+  })
+
+  it('keeps during-hours as its own section and omits empty ones', () => {
+    const sections = splitBySession([e('A', 'dmh')])
+    expect(sections.map((s) => s.label)).toEqual(['During hours'])
+  })
+
+  it('returns nothing for no events', () => {
+    expect(splitBySession([])).toEqual([])
+  })
+})
+
+describe('eventKey', () => {
+  it('separates quarters of the same symbol and date', () => {
+    const base = { symbol: 'X', date: '2026-10-26' }
+    expect(eventKey({ ...base, year: 2026, quarter: 3 })).not.toBe(eventKey({ ...base, year: 2026, quarter: 4 }))
+  })
+
+  it('tolerates a missing quarter and year', () => {
+    expect(eventKey({ symbol: 'X', date: '2026-10-26' })).toBe('X-2026-10-26--')
+  })
+})
+
+describe('dayDate', () => {
+  it('counts from the window Monday', () => {
+    expect(dayDate('2026-10-26', 'mon')).toBe(26)
+    expect(dayDate('2026-10-26', 'fri')).toBe(30)
+  })
+
+  it('rolls over a month boundary', () => {
+    expect(dayDate('2026-10-26', 'sun')).toBe(1)
+  })
+
+  it('answers null without a window or for an unknown key', () => {
+    expect(dayDate(undefined, 'mon')).toBeNull()
+    expect(dayDate('2026-10-26', 'xyz')).toBeNull()
   })
 })
