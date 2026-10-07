@@ -8,7 +8,7 @@ export const PAGE_SIZE = 15
 export const PAGE_STEP = 25
 export const TOP10_VIEWS = [['grid', 'Grid'], ['donut', 'Donut'], ['list', 'List']]
 export const INVESTOR_GROUPS = [['all', 'All'], ['curated', 'Curated'], ['stale', 'Stopped filing']]
-export const INVESTOR_SORTS = [['value', 'Largest value'], ['changes', 'Most changes'], ['positions', 'Most positions'], ['name', 'Name']]
+export const INVESTOR_SORTS = [['value', 'Largest value'], ['filed', 'Recently filed'], ['changes', 'Most changes'], ['positions', 'Most positions'], ['name', 'Name']]
 export const COMPARING_FILTERS = new Set(['new', 'added', 'trimmed'])
 export const HOLDING_FILTERS = [['all', 'All'], ['new', 'New'], ['added', 'Added'], ['trimmed', 'Trimmed'], ['options', 'Options'], ['yours', 'Yours']]
 
@@ -58,6 +58,7 @@ const GROUP_TESTS = {
 
 const SORT_KEYS = {
   value: (c) => -(c.total_value ?? -1),
+  filed: (c) => -(c.last_filing_at ? Date.parse(c.last_filing_at) : 0),
   changes: (c) => -((c.new_count ?? 0) + (c.exited_count ?? 0)),
   positions: (c) => -(c.positions ?? -1),
 }
