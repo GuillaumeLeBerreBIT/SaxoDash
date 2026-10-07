@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -86,6 +87,11 @@ describe('ResearchChart', () => {
     vi.clearAllMocks()
     localStorage.clear()
     stubQueries()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expectValidHeadingOutline(container)
   })
 
   it('lays out the tool rail, the chart, instrument search and the watchlist', () => {

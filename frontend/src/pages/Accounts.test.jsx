@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Accounts from './Accounts'
@@ -50,6 +51,12 @@ function mockDefaults(overrides = {}) {
 
 describe('Accounts', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    mockDefaults()
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
 
   it('shows the total balance across accounts', () => {
     mockDefaults()

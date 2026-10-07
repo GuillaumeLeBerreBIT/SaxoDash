@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -53,6 +54,11 @@ describe('Portfolio holdings table', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     stub()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
   })
 
   it('prices the instrument in its own currency, not the reporting one', () => {

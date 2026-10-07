@@ -67,6 +67,7 @@ export default function ResearchChart() {
 
   return (
     <div className="h-dvh overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
+      <h1 className="sr-only">Chart workspace</h1>
       <ChartToolRail
         controls={rangeControls}
         tool={tool}

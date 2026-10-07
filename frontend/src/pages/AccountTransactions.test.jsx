@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen, render, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -36,6 +37,15 @@ describe('AccountTransactions', () => {
   beforeEach(() => {
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
     queries.useBankAccounts.mockReturnValue({ data: [KBC] })
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', amount: '-40.00', currency: 'EUR', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+    const { container } = renderAt(5)
+    expectValidHeadingOutline(container)
   })
 
   it('renders the transactions for the account in the URL', () => {

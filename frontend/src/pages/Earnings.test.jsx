@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -49,6 +50,12 @@ afterEach(() => {
 })
 
 describe('Earnings page', () => {
+  it('has exactly one h1 and no skipped heading level', () => {
+    stub({ events: [ev({ symbol: 'MSFT', held: true, mine: true })] })
+    const { container } = renderWithProviders(<Earnings />, { route: '/earnings' })
+    expectValidHeadingOutline(container)
+  })
+
   it('shows the week label and the selected day docket', () => {
     stub({ events: [ev({ symbol: 'MSFT', held: true, mine: true })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })

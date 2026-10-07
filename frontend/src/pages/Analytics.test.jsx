@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -105,6 +106,12 @@ function mockRisk(data) {
 }
 
 describe('Analytics', () => {
+  it('has exactly one h1 and no skipped heading level', () => {
+    stubHappyPath()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
   it('shows a loading state while the summary is in flight', () => {
     queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
     stubPortfolioSummary()

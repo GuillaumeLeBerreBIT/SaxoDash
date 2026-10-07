@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Spending from './Spending'
@@ -23,6 +24,21 @@ function mockDefaults(overrides = {}) {
 
 describe('Spending', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    mockDefaults({
+      summary: {
+        data: {
+          categories: [{ category: 'GROCERIES', amount: '20.00' }],
+          total: '50.00', transfers: '0.00', transaction_count: 3, previous_period: null,
+        },
+        isLoading: false,
+        error: null,
+      },
+    })
+    const { container } = renderWithProviders(<Spending />)
+    expectValidHeadingOutline(container)
+  })
 
   it('shows the spending total for the selected period', () => {
     mockDefaults({

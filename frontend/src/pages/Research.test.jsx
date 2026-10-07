@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -98,6 +99,11 @@ describe('Research', () => {
     vi.clearAllMocks()
     localStorage.clear()
     stubQueries()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderWithProviders(<Research />, { route: '/research?symbol=AAPL' })
+    expectValidHeadingOutline(container)
   })
 
   it('shows the symbol from the query string', () => {

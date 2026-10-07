@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -37,6 +38,11 @@ describe('Investors', () => {
     listed = cards
     useInvestors.mockReset()
     useInvestors.mockImplementation(({ holds } = {}) => (holds ? { data: holders, isLoading: false } : { data: listed, isLoading: false, error: null }))
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
   })
 
   it('states how many managers are tracked, the latest quarter and the lag', () => {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
@@ -32,6 +33,11 @@ const renderPage = (route = '/investors/berkshire-hathaway') =>
 
 describe('Investor', () => {
   beforeEach(() => { detailState = detail; loading = false })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
+  })
 
   it('heads the page with a back link, the name and the firm', () => {
     renderPage()

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -21,6 +22,12 @@ function stub(rows) {
 
 describe('Transactions', () => {
   beforeEach(() => vi.resetAllMocks())
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    stub([row({ id: 1, type: 'BUY' })])
+    const { container } = renderWithProviders(<Transactions />)
+    expectValidHeadingOutline(container)
+  })
 
   it('prices a trade in its own currency and totals it in euro with the right sign', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL', ticker: 'AMD', instrument: 'AMD' })])
