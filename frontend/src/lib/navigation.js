@@ -23,3 +23,9 @@ export const NAV_ITEMS = [
   { to: '/accounts', label: 'Accounts', icon: Landmark },
   { to: '/spending', label: 'Spending', icon: PiggyBank },
 ]
+
+export const MOBILE_PRIMARY = ['/', '/portfolio', '/research', '/spending']
+
+export function mobileOverflow(items = NAV_ITEMS) {
+  return items.filter((item) => !MOBILE_PRIMARY.includes(item.to))
+}

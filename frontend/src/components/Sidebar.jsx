@@ -19,7 +19,7 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen border-r border-white/[0.06] bg-gradient-to-b from-zinc-950 to-[#0b0b0e] flex flex-col z-30 transition-[width] duration-300 ease-out"
+      className="fixed left-0 top-0 h-screen border-r border-white/[0.06] bg-gradient-to-b from-zinc-950 to-[#0b0b0e] hidden md:flex flex-col z-30 transition-[width] duration-300 ease-out"
       style={{ width }}
     >
       <div className={`h-12 flex items-center border-b border-white/[0.06] ${collapsed ? 'justify-center' : 'px-4'}`}>
