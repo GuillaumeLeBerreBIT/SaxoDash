@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
+import { useLocation } from 'react-router-dom'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -340,5 +341,170 @@ describe('Transactions on mobile', () => {
     renderWithProviders(<Transactions />)
     expect(screen.getByRole('status', { name: 'Loading transactions' })).toBeInTheDocument()
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+  })
+})
+
+describe('Transactions filters', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  const names = () =>
+    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate')?.textContent)
+
+  function Where() {
+    const location = useLocation()
+    return <output data-testid="where">{location.search}</output>
+  }
+  const renderAt = (route) => renderWithProviders(<><Transactions /><Where /></>, { route })
+  const where = () => screen.getByTestId('where').textContent
+
+  const sample = () => [
+    row({ id: 1, date: '2026-01-10', instrument: 'Alpha', type: 'BUY', account: 'Saxo' }),
+    row({ id: 2, date: '2026-03-10', instrument: 'Bravo', type: 'SELL', account: 'Bank' }),
+    row({ id: 3, date: '2026-06-10', instrument: 'Charlie', type: 'BUY', account: 'Saxo' }),
+  ]
+
+  it('narrows rows to the date range, inclusive', () => {
+    stub(sample())
+    renderAt('/')
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-03-10' } })
+    expect(names()).toEqual(['Bravo', 'Charlie'])
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-03-10' } })
+    expect(names()).toEqual(['Bravo'])
+  })
+
+  it('narrows rows with the account picker', () => {
+    stub(sample())
+    renderAt('/')
+    const picker = screen.getByLabelText('Account')
+    expect(within(picker).getByRole('option', { name: 'All accounts' })).toBeInTheDocument()
+    fireEvent.change(picker, { target: { value: 'Bank' } })
+    expect(names()).toEqual(['Bravo'])
+  })
+
+  it('hides the account picker when there is a single account', () => {
+    stub([row({ id: 1 }), row({ id: 2 })])
+    renderAt('/')
+    expect(screen.queryByLabelText('Account')).toBeNull()
+  })
+
+  it('reflects filters in the URL without pushing history', () => {
+    stub(sample())
+    renderAt('/')
+    fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'Bank' } })
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: 'bra' } })
+    const params = new URLSearchParams(where())
+    expect(Object.fromEntries(params)).toEqual({ type: 'SELL', account: 'Bank', from: '2026-01-01', q: 'bra' })
+  })
+
+  it('pre-applies filters from the URL', () => {
+    stub(sample())
+    renderAt('/?type=BUY&from=2026-02-01&account=Saxo')
+    expect(names()).toEqual(['Charlie'])
+    expect(screen.getByRole('button', { name: 'BUY' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('From')).toHaveValue('2026-02-01')
+    expect(screen.getByLabelText('Account')).toHaveValue('Saxo')
+  })
+
+  it('treats an unknown type or account in the URL as All', () => {
+    stub(sample())
+    renderAt('/?type=NOPE&account=Ghost')
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Account')).toHaveValue('')
+  })
+
+  it('ignores a bad date in the URL', () => {
+    stub(sample())
+    renderAt('/?from=banana&to=2026-02-30')
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(screen.getByLabelText('From')).toHaveValue('')
+  })
+
+  it('shows the empty state with Clear filters when from is after to', () => {
+    stub(sample())
+    renderAt('/?from=2026-06-01&to=2026-01-01')
+    expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+  })
+
+  it('applies a preset and marks it pressed only while the range equals it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-07T12:00:00'))
+    try {
+      stub(sample())
+      renderAt('/')
+      const ytd = screen.getByRole('button', { name: 'YTD' })
+      expect(ytd).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(ytd)
+      expect(screen.getByRole('button', { name: 'YTD' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByLabelText('From')).toHaveValue('2026-01-01')
+      expect(screen.getByLabelText('To')).toHaveValue('2026-10-07')
+      fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-02-01' } })
+      expect(screen.getByRole('button', { name: 'YTD' })).toHaveAttribute('aria-pressed', 'false')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('clears search, type, account and dates together from the toolbar', () => {
+    stub(sample())
+    renderAt('/?type=BUY&account=Saxo&from=2026-01-01&to=2026-12-31&q=alp')
+    expect(names()).toEqual(['Alpha'])
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(where()).toBe('')
+    expect(screen.getByLabelText('Account')).toHaveValue('')
+    expect(screen.getByLabelText('From')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('offers Clear filters when only a date range is active', () => {
+    stub(sample())
+    renderAt('/?from=2026-01-01')
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+  })
+
+  it('returns to page 1 when a date, account or search changes', () => {
+    stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1, account: i % 2 ? 'Bank' : 'Saxo' })))
+    renderAt('/')
+    const onPageOne = () => expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    onPageOne()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-12-31' } })
+    onPageOne()
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.click(screen.getByRole('button', { name: '30D' }))
+    expect(screen.queryByRole('button', { name: 'Page 2' })).toBeNull()
+  })
+
+  it('still sorts the filtered rows', () => {
+    stub(sample())
+    renderAt('/?type=BUY')
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /^Instrument/ })).getByRole('button'))
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /^Instrument/ })).getByRole('button'))
+    expect(names()).toEqual(['Charlie', 'Alpha'])
+  })
+
+  it('exports only the filtered rows', async () => {
+    stub(sample())
+    let blob
+    URL.createObjectURL = vi.fn((b) => {
+      blob = b
+      return 'blob:x'
+    })
+    URL.revokeObjectURL = vi.fn()
+    renderAt('/?account=Saxo')
+    fireEvent.click(screen.getByRole('button', { name: /Export CSV/ }))
+    const text = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.readAsText(blob)
+    })
+    expect(text.trim().split('\n').slice(1).map((l) => l.split(',')[2])).toEqual(['Alpha', 'Charlie'])
   })
 })
