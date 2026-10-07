@@ -243,6 +243,7 @@ describe('ResearchChart', () => {
     const empties = screen.getAllByRole('region', { name: /^Empty pane \d$/ })
     expect(empties).toHaveLength(3)
     expect(empties[0]).toHaveAttribute('aria-current', 'true')
+    for (const empty of empties) expect(within(empty).queryByText('Volume')).not.toBeInTheDocument()
   })
 
   it('loads a watchlist pick into the active pane and keeps the other', async () => {

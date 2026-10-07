@@ -694,7 +694,7 @@ export function TVChart({
 
 export function SubPane({ title, height, children }) {
   return (
-    <div className="border-t border-white/[0.06]">
+    <div className="relative border-t border-white/[0.06]">
       <div className="absolute z-10 px-3 pt-1.5 text-[var(--fig-2xs)] num text-zinc-500 pointer-events-none">{title}</div>
       <div style={{ height }} className="relative">
         {children}

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
 import { DOWN, UP, priceGeometry } from '../../lib/chartGeometry'
 import { roundPrice } from '../../lib/priceLines'
-import { TVChart } from './TVChart'
+import { SubPane, TVChart } from './TVChart'
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
   date: `2026-08-${String(i + 1).padStart(2, '0')}`,
@@ -1120,5 +1120,14 @@ describe('placing a text annotation', () => {
 
     expect(onCreateTextAnnotation).not.toHaveBeenCalled()
     expect(queryByLabelText('Annotation text')).toBeNull()
+  })
+})
+
+describe('SubPane', () => {
+  it('anchors its title inside its own box so a clipping card can contain it', () => {
+    render(<SubPane title="Volume" height={74}><i /></SubPane>)
+    const title = screen.getByText('Volume')
+    expect(title).toHaveClass('absolute')
+    expect(title.parentElement).toHaveClass('relative')
   })
 })
