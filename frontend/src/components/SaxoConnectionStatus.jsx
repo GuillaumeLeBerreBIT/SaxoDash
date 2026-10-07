@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
+import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
 import { Badge } from './ui'
 
 export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
+  const derived = deriveSaxoStatus(status)
   const [error] = useState(
     () => new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
@@ -16,11 +18,11 @@ export default function SaxoConnectionStatus({ compact = false }) {
     }
   }, [error])
 
-  if (!status) return null
+  if (!derived) return null
 
-  if (compact) return <StatusDot {...compactState(status)} />
+  if (compact) return <StatusDot label={derived.sentence} dot={SAXO_DOT_CLASS[derived.tone]} />
 
-  if (!status.connected) {
+  if (derived.kind === 'not_connected') {
     return (
       <div className="flex items-center gap-2">
         {error && <Badge tone="red">Connection failed</Badge>}
@@ -34,7 +36,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
     )
   }
 
-  if (status.needs_reauth) {
+  if (derived.kind === 'needs_reauth') {
     return (
       <button
         onClick={connectSaxo}
@@ -47,7 +49,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
 
   // Expired but still inside the reauth grace: calls are already being
   // refused, so saying "connected" here would contradict the panel below.
-  if (!status.usable) {
+  if (derived.kind === 'reconnecting') {
     return (
       <Badge tone="amber">
         <span title={status.unusable_reason ?? undefined}>Reconnecting…</span>
@@ -57,7 +59,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
 
   return (
     <span className="flex items-center gap-2">
-      {status.last_sync_outcome && status.last_sync_outcome !== 'ok' && (
+      {derived.kind === 'sync_degraded' && (
         <Badge tone="amber">
           <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
             Sync {status.last_sync_outcome}
@@ -78,16 +80,6 @@ export default function SaxoConnectionStatus({ compact = false }) {
 const SYNC_OUTCOME_NOTE = {
   skipped: 'The last sync could not run, so this data may be stale',
   failed: 'The last sync failed, so this data may be stale',
-}
-
-function compactState(status) {
-  if (!status.connected) return { label: 'Saxo not connected', dot: 'bg-zinc-500' }
-  if (status.needs_reauth) return { label: 'Saxo needs reconnecting', dot: 'bg-red-400' }
-  if (!status.usable) return { label: 'Saxo reconnecting…', dot: 'bg-amber-400' }
-  if (status.last_sync_outcome && status.last_sync_outcome !== 'ok') {
-    return { label: `Saxo connected, sync ${status.last_sync_outcome}`, dot: 'bg-amber-400' }
-  }
-  return { label: 'Saxo connected', dot: 'bg-emerald-400' }
 }
 
 function StatusDot({ label, dot }) {
