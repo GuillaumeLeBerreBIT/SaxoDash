@@ -43,6 +43,20 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
   )
 }
 
+function EmptyPaneHeader({ index }) {
+  return (
+    <div
+      role="region"
+      aria-label={index == null ? 'Empty pane' : `Empty pane ${index + 1}`}
+      className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0"
+    >
+      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />
+      <span className="text-[var(--fig-xs)] font-medium text-zinc-400">Empty pane</span>
+      <span className="text-[var(--fig-2xs)] text-zinc-500 truncate">Pick a symbol to start</span>
+    </div>
+  )
+}
+
 function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }) {
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
   const {
@@ -118,6 +132,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
 
 export default function ChartPane({
   slot,
+  index,
   active,
   outlined,
   controls,
@@ -151,9 +166,12 @@ export default function ChartPane({
             split={split}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
-            Pick a symbol from the watchlist
-          </div>
+          <>
+            <EmptyPaneHeader index={index} />
+            <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
+              Pick a symbol from the watchlist
+            </div>
+          </>
         )}
       </Card>
     </section>

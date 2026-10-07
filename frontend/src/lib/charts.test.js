@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FLAT_FILL, NEGATIVE, PERFORMANCE_CAPS, POSITIVE, colorForCategory, paddedDomain, performanceFill, withAlpha } from './charts'
+import { FLAT_FILL, NEGATIVE, PERFORMANCE_CAPS, POSITIVE, colorForCategory, paddedDomain, performanceFill, seriesAxis, withAlpha } from './charts'
 
 describe('colorForCategory', () => {
   it('gives TRANSFER and SAVINGS a distinct neutral color, not a budgetable category color', () => {
@@ -84,5 +84,38 @@ describe('paddedDomain', () => {
     const [low, high] = paddedDomain([0, 0])
     expect(low).toBe(0)
     expect(high).toBeGreaterThan(0)
+  })
+})
+
+describe('seriesAxis', () => {
+  it('rounds history-chart money ticks over the chosen series only', () => {
+    const rows = [
+      { net_worth: 48210.5, bank_total: 12340.2 },
+      { net_worth: 51873.9, bank_total: 9120.8 },
+    ]
+    const { ticks, domain } = seriesAxis(rows, ['net_worth'])
+    expect(ticks.every((t) => t % 1000 === 0)).toBe(true)
+    expect(domain).toEqual([ticks[0], ticks[ticks.length - 1]])
+    expect(domain[0]).toBeLessThanOrEqual(48210.5)
+    expect(domain[1]).toBeGreaterThanOrEqual(51873.9)
+  })
+
+  it('anchors spending bars at zero', () => {
+    const { domain } = seriesAxis([{ total: 412.7 }, { total: 389.1 }], ['total'], { includeZero: true })
+    expect(domain[0]).toBe(0)
+    expect(domain[1]).toBeGreaterThanOrEqual(412.7)
+  })
+
+  it('rounds percent ticks for return bars', () => {
+    const { ticks } = seriesAxis(
+      [{ portfolio_pct: -7.3, benchmark_pct: 14.82 }, { portfolio_pct: 21.4, benchmark_pct: 9.1 }],
+      ['portfolio_pct', 'benchmark_pct'],
+      { includeZero: true },
+    )
+    expect(ticks).toEqual([-10, 0, 10, 20, 30])
+  })
+
+  it('skips null values and gives no props when nothing is plottable', () => {
+    expect(seriesAxis([{ a: null }], ['a'])).toEqual({})
   })
 })

@@ -1,4 +1,5 @@
 import { fmtDayMonth, fmtEur } from './format'
+import { niceAxis } from './niceTicks'
 
 // This file is the ONLY source of chart color in the app - a component that
 // needs a gain/loss/warning/neutral hex for an SVG, canvas, or recharts prop
@@ -154,4 +155,8 @@ export function paddedDomain([min, max]) {
   const pad = span > 0 ? span * 0.1 : Math.abs(max) * 0.01 || 1
   const low = min >= 0 ? Math.max(0, min - pad) : min - pad
   return [low, max + pad]
+}
+
+export function seriesAxis(rows, keys, options) {
+  return niceAxis(rows.flatMap((row) => keys.map((key) => row[key])), options)
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, paddedDomain, formatAxisDate } from '../lib/charts'
+import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, seriesAxis, formatAxisDate } from '../lib/charts'
 import { RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
@@ -34,7 +34,7 @@ export default function HistoryAreaChart({ title, subtitle, dataKey, name, color
               </defs>
               <CartesianGrid {...gridProps} />
               <XAxis {...dateAxisProps} />
-              <YAxis {...moneyAxisProps} domain={paddedDomain} />
+              <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], [dataKey])} />
               <Tooltip
                 {...chartTooltipProps}
                 labelFormatter={formatAxisDate}

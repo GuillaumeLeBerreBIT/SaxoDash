@@ -1,6 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardHeader, EmptyState } from '../ui'
-import { chartTooltipProps, gridProps, axisProps, OTHER_SLICE, REPORTED } from '../../lib/charts'
+import { chartTooltipProps, gridProps, axisProps, seriesAxis, OTHER_SLICE, REPORTED } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 
 const SERIES_LABEL = { portfolio_pct: 'Portfolio', benchmark_pct: 'benchmark' }
@@ -32,7 +32,7 @@ export default function CalendarYears({ years, benchmarkName }) {
           <BarChart data={years} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis {...axisProps} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
-            <YAxis {...axisProps} width={54} tickFormatter={(v) => `${v}%`} />
+            <YAxis {...axisProps} width={54} {...seriesAxis(years, ['portfolio_pct', 'benchmark_pct'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
             <Tooltip
               {...chartTooltipProps}

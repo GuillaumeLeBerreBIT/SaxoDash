@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import {
-  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate,
+  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate, seriesAxis,
   SERIES_BANK, SERIES_INVESTMENTS, SERIES_TOTAL,
 } from '../lib/charts'
 import { Pill, RangePills } from './RangePills'
@@ -73,7 +73,7 @@ export default function NetWorthChart() {
           <LineChart data={data}>
             <CartesianGrid {...gridProps} />
             <XAxis {...dateAxisProps} />
-            <YAxis {...moneyAxisProps} />
+            <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], visible.map((s) => s.dataKey))} />
             <Tooltip {...chartTooltipProps} labelFormatter={formatAxisDate} formatter={(v, n) => [fmtEur(v), n]} />
             {showInvestments && (
               <Line

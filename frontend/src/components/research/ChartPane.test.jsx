@@ -90,6 +90,13 @@ describe('ChartPane', () => {
     expect(screen.queryByTestId('price-scale')).not.toBeInTheDocument()
   })
 
+  it('heads an empty pane with a named region and a hint', () => {
+    renderPane({ slot: null, index: 2 })
+    const header = screen.getByRole('region', { name: 'Empty pane 3' })
+    expect(within(header).getByText('Empty pane')).toBeInTheDocument()
+    expect(within(header).getByText(/pick a symbol/i)).toBeInTheDocument()
+  })
+
   it('heads a filled pane with its ticker, price and labelled move', () => {
     renderPane()
     const pane = screen.getByRole('region', { name: 'NVDA chart' })

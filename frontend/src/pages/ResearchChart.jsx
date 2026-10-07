@@ -104,6 +104,7 @@ export default function ResearchChart() {
               <ChartPane
                 key={index}
                 slot={slot}
+                index={index}
                 active={active}
                 outlined={split && active}
                 controls={controls}
