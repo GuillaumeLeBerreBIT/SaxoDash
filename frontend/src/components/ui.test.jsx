@@ -199,3 +199,18 @@ describe('header right slots', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Chart' })).toBeInTheDocument()
   })
 })
+
+describe('Th / Td hideBelow', () => {
+  it('hides a cell below md and shows it from md up', () => {
+    render(
+      <table><thead><tr><Th hideBelow="md">Qty</Th></tr></thead><tbody><tr><Td hideBelow="md">10</Td></tr></tbody></table>,
+    )
+    expect(screen.getByText('Qty')).toHaveClass('hidden', 'md:table-cell')
+    expect(screen.getByText('10')).toHaveClass('hidden', 'md:table-cell')
+  })
+
+  it('leaves a cell without hideBelow visible', () => {
+    render(<table><tbody><tr><Td>Name</Td></tr></tbody></table>)
+    expect(screen.getByText('Name')).not.toHaveClass('hidden')
+  })
+})

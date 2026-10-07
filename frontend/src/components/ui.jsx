@@ -447,12 +447,13 @@ export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right })
  *  get more horizontal room than interior ones. Used by every data table
  *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
  *  governed from one place instead of copied per table. */
-export function Th({ children, align = 'left', edge = false, className = '' }) {
+export function Th({ children, align = 'left', edge = false, hideBelow, className = '' }) {
+  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
   return (
     <th
       className={`font-medium ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-1.5 2xl:py-2 ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${className}`}
+      } ${hideClass} ${className}`}
     >
       {children}
     </th>
@@ -465,12 +466,13 @@ export function Th({ children, align = 'left', edge = false, className = '' }) {
  *  design system's table philosophy), so nowrap costs nothing it wasn't
  *  already the intended behavior. A cell that genuinely needs to wrap can
  *  still override via `className`. */
-export function Td({ children, align = 'left', edge = false, className = '' }) {
+export function Td({ children, align = 'left', edge = false, hideBelow, className = '' }) {
+  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
   return (
     <td
       className={`whitespace-nowrap ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
         align === 'right' ? 'text-right' : 'text-left'
-      } ${className}`}
+      } ${hideClass} ${className}`}
     >
       {children}
     </td>
