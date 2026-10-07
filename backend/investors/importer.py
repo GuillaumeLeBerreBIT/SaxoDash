@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F, Max
 from django.utils import timezone
 
-from . import edgar, figi, parse
+from . import edgar, figi, moves, parse
 from .models import Filing, Holding, Investor, Security
 
 logger = logging.getLogger(__name__)
@@ -81,6 +81,8 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
             last_checked_at=timezone.now(),
             last_filing_at=investor.filings.aggregate(latest=Max('filed_on'))['latest'],
         )
+    if result.imported:
+        moves.rebuild(investor)
     if resolve:
         resolve_securities()
     return result

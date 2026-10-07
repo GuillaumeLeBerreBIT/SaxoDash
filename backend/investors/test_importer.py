@@ -271,3 +271,25 @@ class BackfillTest(TestCase):
         importer.backfill(investor, today=date(2026, 10, 5))
 
         sync_investor.assert_called_once_with(investor, date(2021, 10, 5), track_progress=True, resolve=True)
+
+
+class SyncRebuildsMovesTest(TestCase):
+    ENTRY = {
+        'accession': 'A-1', 'form': '13F-HR', 'filed_on': date(2026, 8, 14), 'quarter_end': date(2026, 6, 30),
+    }
+
+    def run_sync(self, stored_now):
+        investor = make_investor()
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', return_value=stored_now), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        return investor, rebuild
+
+    def test_a_stored_filing_rebuilds_that_investors_moves(self):
+        investor, rebuild = self.run_sync(True)
+        rebuild.assert_called_once_with(investor)
+
+    def test_nothing_new_leaves_the_moves_alone(self):
+        _, rebuild = self.run_sync(False)
+        rebuild.assert_not_called()
