@@ -31,7 +31,6 @@ const FLAGS = {
 
 export function parseArgs(argv) {
   const parsed = { ...DEFAULTS }
-  if (argv.length === 0) return parsed
   for (let i = 0; i < argv.length; i += 2) {
     const flag = FLAGS[argv[i]]
     if (flag && argv[i + 1] !== undefined) parsed[flag[0]] = flag[1](argv[i + 1])
@@ -46,6 +45,17 @@ export function formatRow(route, over, offenders) {
   return `${label} over ${amount}  FAIL  ${offenders.slice(0, 4).join(' | ')}`
 }
 
+export function describeLoadFailure(expectedPath, actualPath, hasMain) {
+  const problems = []
+  if (actualPath !== expectedPath) problems.push(`landed on ${actualPath}`)
+  if (!hasMain) problems.push('no main element')
+  return problems.length ? problems.join(', ') : null
+}
+
+export function formatLoadFailure(label, found) {
+  return `${label.padEnd(34)} NOLOAD  ${found}`
+}
+
 export function measureOverflow() {
   const width = window.innerWidth
   const offenders = [...document.querySelectorAll('body *')]
@@ -58,7 +68,7 @@ export function measureOverflow() {
     .slice(0, 4)
     .map(
       (el) =>
-        `${el.tagName.toLowerCase()}.${String(el.className).split(' ').slice(0, 3).join('.')}:${Math.round(el.getBoundingClientRect().right)}`,
+        `${el.tagName.toLowerCase()}.${(el.getAttribute('class') || '').split(' ').slice(0, 3).join('.')}:${Math.round(el.getBoundingClientRect().right)}`,
     )
   return { over: document.documentElement.scrollWidth - width, offenders }
 }

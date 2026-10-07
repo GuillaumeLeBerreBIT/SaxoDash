@@ -10,13 +10,19 @@ tabs, which only render after a click.
 
 ## Running it
 
-Never point it at the real database. Start a throwaway stack on spare ports
-with a copy of the dev DB:
+Never point it at the real database. Run a throwaway stack on spare ports
+against copies, from the worktree:
 
 ```bash
-cp backend/db.sqlite3 /tmp/overflow.sqlite3
-# set the database path in a scratch env, then use WEB_PORT=8100 UI_PORT=5273
+cp ../SaxoDash/backend/db.sqlite3 backend/db.sqlite3
+cp ../SaxoDash/backend/.env backend/.env
+cd backend && CORS_ALLOWED_ORIGINS=http://localhost:5273 \
+  .venv/bin/python manage.py runserver 8100 --noreload
+cd frontend && VITE_API_BASE_URL=http://localhost:8100 \
+  npx vite --port 5273 --strictPort
 ```
+
+Both copies are gitignored and must be deleted afterwards.
 
 The app has two users, so a bare `get()` fails. Mint tokens for `demo`, using
 the shell snippet from the `saxodash-design-system` skill with the lookup
@@ -34,8 +40,12 @@ node check-mobile-overflow.mjs --base http://localhost:5273 --auth auth.json \
   [--width 390] [--account-id 1] [--investor-slug berkshire-hathaway]
 ```
 
-Exit codes: `0` every route passes, `1` at least one overflows, `2` setup
-problem (no Playwright, no `--auth`).
+Exit codes: `0` every route passes, `1` at least one overflows or did not load,
+`2` setup problem (no Playwright, no `--auth`).
+
+A route that redirects (expired token, unknown account id or investor slug) or
+renders no `<main>` is not measured; it prints `NOLOAD <what was found>` and
+forces exit `1`, as does a step that throws, such as a renamed tab button.
 
 ## Reading a row
 

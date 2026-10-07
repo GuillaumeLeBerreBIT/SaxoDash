@@ -1,7 +1,15 @@
 import fs from 'node:fs'
-import { ROUTES, formatRow, measureOverflow, parseArgs } from '../src/lib/mobileOverflow.js'
+import {
+  ROUTES,
+  describeLoadFailure,
+  formatLoadFailure,
+  formatRow,
+  measureOverflow,
+  parseArgs,
+} from '../src/lib/mobileOverflow.js'
 
-const SETTLE_MS = 1800
+const SETTLE_MS = 800
+const NETWORK_IDLE_MS = 5000
 
 const args = parseArgs(process.argv.slice(2))
 if (!args.auth) {
@@ -20,38 +28,70 @@ try {
 }
 
 const auth = JSON.parse(fs.readFileSync(args.auth, 'utf8'))
-const browser = await playwright.chromium.launch()
-const context = await browser.newContext({ viewport: { width: args.width, height: 844 } })
-const page = await context.newPage()
+let failed = false
 
-await page.goto(args.base + '/')
-await page.evaluate(([access, refresh, username]) => {
-  localStorage.setItem('access', access)
-  localStorage.setItem('refresh', refresh)
-  localStorage.setItem('username', username)
-}, [auth.a, auth.r, auth.u])
-
-const rows = []
-const record = async (label) => {
+const settle = async (page) => {
+  await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch(() => {})
   await page.waitForTimeout(SETTLE_MS)
+}
+
+const measure = async (page, label, expectedPath) => {
+  await settle(page)
+  const hasMain = (await page.locator('main').count()) > 0
+  const loadFailure = describeLoadFailure(expectedPath, new URL(page.url()).pathname, hasMain)
+  if (loadFailure) {
+    failed = true
+    console.log(formatLoadFailure(label, loadFailure))
+    return
+  }
   const { over, offenders } = await page.evaluate(measureOverflow)
-  rows.push({ over })
+  if (over > 0) failed = true
   console.log(formatRow(label, over, offenders))
 }
 
-const visit = async (route) => {
-  await page.goto(args.base + route)
-  await record(route)
+const attempt = async (label, step) => {
+  try {
+    await step()
+  } catch (error) {
+    failed = true
+    const reason = String(error.message).split('\n')[0]
+    console.log(formatLoadFailure(label, `error: ${reason}`))
+  }
 }
 
-const routes = [...ROUTES, `/accounts/${args.accountId}`, `/investors/${args.investorSlug}`]
-for (const route of routes) await visit(route)
+const browser = await playwright.chromium.launch()
+try {
+  const context = await browser.newContext({ viewport: { width: args.width, height: 844 } })
+  const page = await context.newPage()
 
-for (const tab of ['Risk', 'Projection']) {
-  await page.goto(args.base + '/analytics')
-  await page.getByRole('button', { name: tab, exact: true }).click()
-  await record(`/analytics [${tab}]`)
+  await page.goto(args.base + '/')
+  await page.evaluate(([access, refresh, username]) => {
+    localStorage.setItem('access', access)
+    localStorage.setItem('refresh', refresh)
+    localStorage.setItem('username', username)
+  }, [auth.a, auth.r, auth.u])
+
+  const routes = [...ROUTES, `/accounts/${args.accountId}`, `/investors/${args.investorSlug}`]
+  for (const route of routes) {
+    await attempt(route, async () => {
+      await page.goto(args.base + route)
+      await measure(page, route, route)
+    })
+  }
+
+  for (const tab of ['Risk', 'Projection']) {
+    const label = `/analytics [${tab}]`
+    await attempt(label, async () => {
+      await page.goto(args.base + '/analytics')
+      await page.getByRole('button', { name: tab, exact: true }).click({ timeout: 5000 })
+      await measure(page, label, '/analytics')
+    })
+  }
+} catch (error) {
+  failed = true
+  console.error(String(error.message).split('\n')[0])
+} finally {
+  await browser.close()
 }
 
-await browser.close()
-process.exit(rows.some((row) => row.over > 0) ? 1 : 0)
+process.exit(failed ? 1 : 0)
