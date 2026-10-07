@@ -152,7 +152,7 @@ export default function Research() {
               expandHref={chartHref(symbol, instrument)}
             />
 
-            <TabList label="Instrument sections" className="overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
+            <TabList label="Instrument sections" className="pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
               {visibleTabs.map(([key, label]) => (
                 <TabButton
                   key={key}
@@ -160,7 +160,7 @@ export default function Research() {
                   controls={`research-panel-${key}`}
                   active={tab === key}
                   onClick={() => setTab(key)}
-                  className="shrink-0 md:h-8!"
+                  className="shrink-0 px-3! md:h-8!"
                 >
                   {label}
                 </TabButton>
@@ -168,29 +168,29 @@ export default function Research() {
             </TabList>
 
             <div role="tabpanel" id={`research-panel-${tab}`} aria-labelledby={`research-tab-${tab}`}>
-            {tab === 'overview' ? (
-              <OverviewTab
-                symbol={symbol}
-                position={position}
-                details={details.data}
-                detailsLoading={details.isLoading}
-                bars={rangeBars}
-                range={controls.range}
-                fundamentals={fundamentals}
-                note={note}
-                onSaveNote={(patch) => noteMutation.mutate(patch)}
-                onMarkReviewed={() => reviewMutation.mutate()}
-                reviewing={reviewMutation.isPending}
-                isEtf={instrumentIsEtf}
-              />
-            ) : null}
-            {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
-            {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-            {tab === 'earnings' ? (
-              <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
-            ) : null}
-            {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
-            {tab === 'guide' ? <GuideTab /> : null}
+              {tab === 'overview' ? (
+                <OverviewTab
+                  symbol={symbol}
+                  position={position}
+                  details={details.data}
+                  detailsLoading={details.isLoading}
+                  bars={rangeBars}
+                  range={controls.range}
+                  fundamentals={fundamentals}
+                  note={note}
+                  onSaveNote={(patch) => noteMutation.mutate(patch)}
+                  onMarkReviewed={() => reviewMutation.mutate()}
+                  reviewing={reviewMutation.isPending}
+                  isEtf={instrumentIsEtf}
+                />
+              ) : null}
+              {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
+              {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {tab === 'earnings' ? (
+                <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+              ) : null}
+              {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
+              {tab === 'guide' ? <GuideTab /> : null}
             </div>
           </div>
 
