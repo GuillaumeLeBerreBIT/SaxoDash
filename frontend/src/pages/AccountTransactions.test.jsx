@@ -181,3 +181,26 @@ describe('AccountTransactions', () => {
     expect(screen.getByText('NMBS')).toBeInTheDocument()
   })
 })
+
+describe('AccountTransactions on mobile', () => {
+  beforeEach(() => {
+    queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
+    queries.useBankAccounts.mockReturnValue({ data: [KBC] })
+  })
+
+  it('keeps date, description and amount visible below md and shows the category as a subline', () => {
+    queries.useBankTransactions.mockReturnValue({
+      data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'COLRUYT', amount: '-40.00', currency: 'EUR', effective_category: 'GROCERIES' }],
+      isLoading: false, error: null,
+    })
+    renderAt(5)
+    for (const name of ['Date', 'Description', 'Amount']) {
+      expect(screen.getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    expect(screen.getByRole('columnheader', { name: 'Category' })).toHaveClass('hidden', 'md:table-cell')
+    const select = screen.getByLabelText('Category for COLRUYT')
+    expect(select.closest('td')).toHaveClass('hidden', 'md:table-cell')
+    const subline = screen.getByText('Groceries', { selector: '.md\\:hidden' })
+    expect(subline.closest('tr')).toHaveTextContent('COLRUYT')
+  })
+})

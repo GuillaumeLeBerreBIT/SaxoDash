@@ -117,7 +117,7 @@ export default function AccountTransactions() {
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
                 <Th edge>Date</Th>
                 <Th>Description</Th>
-                <Th>Category</Th>
+                <Th hideBelow="md">Category</Th>
                 <Th align="right" edge>Amount</Th>
               </tr>
             </thead>
@@ -130,8 +130,11 @@ export default function AccountTransactions() {
                     {tx.description && tx.description !== tx.counterparty_name && (
                       <div title={tx.description} className="truncate text-[var(--fig-2xs)] text-zinc-500">{tx.description}</div>
                     )}
+                    <div className="md:hidden truncate text-[var(--fig-2xs)] text-zinc-500">
+                      {CATEGORY_LABELS[tx.effective_category] ?? tx.effective_category}
+                    </div>
                   </Td>
-                  <Td><CategoryCell tx={tx} onChange={updateCategory.mutate} /></Td>
+                  <Td hideBelow="md"><CategoryCell tx={tx} onChange={updateCategory.mutate} /></Td>
                   <Td
                     align="right"
                     edge

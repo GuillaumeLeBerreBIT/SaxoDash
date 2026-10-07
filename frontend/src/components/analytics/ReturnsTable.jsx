@@ -17,24 +17,24 @@ export default function ReturnsTable({ periods, benchmarkName }) {
       <table className="w-full text-[var(--fig-sm)]">
         <thead>
           <tr className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 border-b border-white/[0.06]">
-            <th className="px-5 py-2 text-left font-medium">Period</th>
-            <th className="px-3 py-2 text-right font-medium">Portfolio</th>
-            <th className="px-3 py-2 text-right font-medium">{benchmarkName}</th>
-            <th className="px-5 py-2 text-right font-medium">Alpha</th>
+            <th className="px-3 md:px-5 py-2 text-left font-medium">Period</th>
+            <th className="px-2 md:px-3 py-2 text-right font-medium">Portfolio</th>
+            <th className="hidden md:table-cell px-2 md:px-3 py-2 text-right font-medium">{benchmarkName}</th>
+            <th className="px-3 md:px-5 py-2 text-right font-medium">Alpha</th>
           </tr>
         </thead>
         <tbody>
           {periods.map((row) => (
             <tr key={row.label} className="border-b border-white/[0.05] last:border-0">
-              <td className="px-5 py-2.5 text-zinc-300">{row.label}</td>
-              <td className={`px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctToneClass(row.portfolio_pct, 1) : 'text-zinc-600'}`}>
+              <td className="px-3 md:px-5 py-2.5 text-zinc-300">{row.label}</td>
+              <td className={`px-2 md:px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctToneClass(row.portfolio_pct, 1) : 'text-zinc-600'}`}>
                 {fmtPct(row.portfolio_pct, { decimals: 1 })}
                 {row.portfolio_pct == null && needsDaysNote(row.needs_days) && (
                   <div className="text-[var(--fig-2xs)] text-zinc-600">{needsDaysNote(row.needs_days)}</div>
                 )}
               </td>
-              <td className="px-3 py-2.5 text-right num text-zinc-400">{fmtPct(row.benchmark_pct, { decimals: 1 })}</td>
-              <td className="px-5 py-2.5 text-right num">
+              <td className="hidden md:table-cell px-2 md:px-3 py-2.5 text-right num text-zinc-400">{fmtPct(row.benchmark_pct, { decimals: 1 })}</td>
+              <td className="px-3 md:px-5 py-2.5 text-right num">
                 {row.alpha_pct != null ? (
                   <span
                     className={`px-1.5 py-0.5 rounded ${ALPHA_BADGE[pctTone(row.alpha_pct, 1)]}`}

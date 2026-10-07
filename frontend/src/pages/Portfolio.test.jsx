@@ -243,3 +243,25 @@ describe('Portfolio total row', () => {
     expect(within(totalRow()).getByText('—')).toBeInTheDocument()
   })
 })
+
+describe('Portfolio holdings on mobile', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub()
+  })
+
+  it('keeps name, value and P&L visible below md and hides the rest', () => {
+    renderWithProviders(<Portfolio />)
+    const table = screen.getByRole('table')
+    for (const name of ['Name', 'Value', 'P&L']) {
+      expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    for (const name of ['Qty', 'Avg', 'Price', /^(Day|Latest session) %$/, 'Weight']) {
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
+    }
+    const row = within(table).getByText('MSFT').closest('tr')
+    expect(within(row).getByText('US$494.36').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(row).getByText('27.8%').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(row).getByText('€8,773.32').closest('td')).not.toHaveClass('hidden')
+  })
+})

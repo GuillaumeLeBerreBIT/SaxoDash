@@ -69,3 +69,23 @@ describe('Transactions', () => {
     expect(within(screen.getByRole('table')).getByText('NVDA')).toBeInTheDocument()
   })
 })
+
+describe('Transactions on mobile', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it('keeps date, instrument and total visible below md and hides the rest', () => {
+    stub([row({ id: 1, type: 'BUY' })])
+    renderWithProviders(<Transactions />)
+    const table = screen.getByRole('table')
+    for (const name of ['Date', 'Instrument', 'Total']) {
+      expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    for (const name of ['Type', 'Ticker', 'Qty', 'Price', 'Account']) {
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
+    }
+    const line = within(table).getByText('NVIDIA').closest('tr')
+    expect(within(line).getByText('Saxo').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('US$150.00').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('BUY', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
+  })
+})

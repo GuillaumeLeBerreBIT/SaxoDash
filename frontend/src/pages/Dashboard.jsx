@@ -145,10 +145,10 @@ export default function Dashboard() {
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
                 <Th edge>Date</Th>
-                <Th>Type</Th>
+                <Th hideBelow="md">Type</Th>
                 <Th>Name</Th>
-                <Th align="right">Qty</Th>
-                <Th align="right">Price</Th>
+                <Th align="right" hideBelow="md">Qty</Th>
+                <Th align="right" hideBelow="md">Price</Th>
                 <Th edge align="right">Total</Th>
               </tr>
             </thead>
@@ -156,15 +156,18 @@ export default function Dashboard() {
               {recentTx.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
                   <Td edge className="text-zinc-300 num font-mono">{t.date}</Td>
-                  <Td>
+                  <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
-                  <Td>
-                    <span className="font-medium text-zinc-100">{t.ticker}</span>
-                    <span className="text-zinc-500 ml-2">{t.instrument}</span>
+                  <Td className="w-full max-w-0 md:w-auto md:max-w-none">
+                    <div className="truncate">
+                      <span className="font-medium text-zinc-100">{t.ticker}</span>
+                      <span className="text-zinc-500 ml-2">{t.instrument}</span>
+                    </div>
+                    <span className="md:hidden block text-[var(--fig-2xs)] text-zinc-500">{t.type}</span>
                   </Td>
-                  <Td align="right" className="num font-mono text-zinc-300">{fmtQty(t.qty)}</Td>
-                  <Td align="right" className="num font-mono text-zinc-300">{txPrice(t)}</Td>
+                  <Td align="right" hideBelow="md" className="num font-mono text-zinc-300">{fmtQty(t.qty)}</Td>
+                  <Td align="right" hideBelow="md" className="num font-mono text-zinc-300">{txPrice(t)}</Td>
                   <Td edge align="right" className={`num font-mono font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
                 </tr>
               ))}

@@ -166,3 +166,34 @@ describe('Dashboard', () => {
     expect(within(line).getByText('-€322.50')).toBeInTheDocument()
   })
 })
+
+describe('Dashboard recent transactions on mobile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    stub()
+    queries.useTransactions.mockReturnValue({
+      ...idle,
+      data: [{
+        id: 1, date: '2026-09-01', type: 'BUY', instrument: 'Advanced Micro Devices', ticker: 'AMD',
+        qty: '2.5000', price: '150.00', total: '375.00', account: 'Saxo',
+        currency: 'USD', fx_rate: '0.86', total_eur: '322.50',
+      }],
+    })
+  })
+
+  it('keeps date, name and total visible below md and hides the rest', () => {
+    renderWithProviders(<Dashboard />)
+    const table = screen.getByRole('table')
+    for (const name of ['Date', 'Name', 'Total']) {
+      expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
+    }
+    for (const name of ['Type', 'Qty', 'Price']) {
+      const header = within(table).getByRole('columnheader', { name })
+      expect(header).toHaveClass('hidden', 'md:table-cell')
+    }
+    const line = within(table).getByText('AMD', { selector: 'span.font-medium' }).closest('tr')
+    expect(within(line).getByText('2.5').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('US$150.00').closest('td')).toHaveClass('hidden', 'md:table-cell')
+    expect(within(line).getByText('BUY', { selector: 'span.md\\:hidden' })).toBeInTheDocument()
+  })
+})

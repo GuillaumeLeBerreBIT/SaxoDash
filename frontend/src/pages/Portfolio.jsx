@@ -121,20 +121,20 @@ export default function Portfolio() {
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-white/[0.06]">
                   <Th edge className="sticky top-0 z-10 bg-zinc-900">Name</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Qty</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Price</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
+                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Qty</Th>
+                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
+                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Price</Th>
+                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Value</Th>
                   <Th align="right" className="sticky top-0 z-10 bg-zinc-900">P&L</Th>
-                  <Th edge align="right" className="sticky top-0 z-10 bg-zinc-900">Weight</Th>
+                  <Th edge align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Weight</Th>
                 </tr>
               </thead>
               <tbody>
                 {positions.map((p) => (
                   <Tr key={p.ticker}>
-                    <Td edge>
-                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group">
+                    <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
+                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group min-w-0">
                         <InstrumentLogo
                           symbol={p.ticker}
                           size={16}
@@ -150,12 +150,12 @@ export default function Portfolio() {
                             title="No thesis written yet — add one on the Research page"
                           />
                         )}
-                        <span className="text-zinc-500 truncate max-w-[160px]">{p.name}</span>
+                        <span className="text-zinc-500 truncate min-w-0 max-w-[160px]">{p.name}</span>
                       </Link>
                     </Td>
-                    <Td align="right" className="num text-zinc-300">{fmtQty(p.qty)}</Td>
-                    <Td align="right" className="num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</Td>
-                    <Td align="right" className="num text-zinc-200">
+                    <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(p.qty)}</Td>
+                    <Td align="right" hideBelow="md" className="num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</Td>
+                    <Td align="right" hideBelow="md" className="num text-zinc-200">
                       <span
                         title={priceBasis(p.price_source).note}
                         className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
@@ -163,25 +163,25 @@ export default function Portfolio() {
                         {fmtMoney(p.current_price, p.currency)}
                       </span>
                     </Td>
-                    <Td align="right"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
+                    <Td align="right" hideBelow="md"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
                     <Td align="right" className="num text-zinc-100">{fmtEur(p.value)}</Td>
                     <Td align="right" className={`num ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
                     </Td>
-                    <Td edge align="right" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
+                    <Td edge align="right" hideBelow="md" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
                   </Tr>
                 ))}
                 <tr className="bg-zinc-800/20">
-                  <Td edge className="font-medium text-zinc-300">
+                  <Td edge className="!whitespace-normal md:!whitespace-nowrap font-medium text-zinc-300">
                     Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
                   </Td>
-                  <Td />
-                  <Td />
-                  <Td />
-                  <Td />
+                  <Td hideBelow="md" />
+                  <Td hideBelow="md" />
+                  <Td hideBelow="md" />
+                  <Td hideBelow="md" />
                   <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(summary.total_value)}</Td>
                   <Td align="right" className={`num font-medium ${pnlTone}`}>{fmtEur(summary.total_pnl, { sign: true })}</Td>
-                  <Td edge align="right" className="num text-zinc-300">100.0%</Td>
+                  <Td edge align="right" hideBelow="md" className="num text-zinc-300">100.0%</Td>
                 </tr>
               </tbody>
             </table>
