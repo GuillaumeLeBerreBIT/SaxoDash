@@ -18,6 +18,7 @@ import {
   DayChange,
   PageHeader,
   Th,
+  SortableTh,
   Td,
   TabList,
   TabButton,
@@ -336,5 +337,66 @@ describe('InstrumentLogo fallback', () => {
     fireEvent.error(container.querySelector('img'))
     expect(container.querySelector('img')).toBeNull()
     expect(container).toHaveTextContent('A')
+  })
+})
+
+describe('SortableTh', () => {
+  const renderTh = (props) =>
+    render(
+      <table>
+        <thead>
+          <tr>
+            <SortableTh sortKey="value" onSort={() => {}} {...props}>Value</SortableTh>
+          </tr>
+        </thead>
+      </table>,
+    )
+
+  it('reports none when another column or nothing is sorted', () => {
+    renderTh({ sort: null })
+    expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'none')
+    renderTh({ sort: { key: 'other', direction: 'asc' } })
+    expect(screen.getAllByRole('columnheader')[1]).toHaveAttribute('aria-sort', 'none')
+  })
+
+  it('reports ascending and descending with matching glyphs', () => {
+    const { container, rerender } = renderTh({ sort: { key: 'value', direction: 'asc' } })
+    expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'ascending')
+    expect(container.querySelector('.lucide-arrow-up')).not.toBeNull()
+    rerender(
+      <table>
+        <thead>
+          <tr>
+            <SortableTh sortKey="value" sort={{ key: 'value', direction: 'desc' }} onSort={() => {}}>Value</SortableTh>
+          </tr>
+        </thead>
+      </table>,
+    )
+    expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'descending')
+    expect(container.querySelector('.lucide-arrow-down')).not.toBeNull()
+  })
+
+  it('shows the neutral glyph when unsorted', () => {
+    const { container } = renderTh({ sort: null })
+    expect(container.querySelector('.lucide-chevrons-up-down')).not.toBeNull()
+  })
+
+  it('calls onSort with the key on click', () => {
+    const onSort = vi.fn()
+    renderTh({ sort: null, onSort })
+    fireEvent.click(screen.getByRole('button', { name: /value/i }))
+    expect(onSort).toHaveBeenCalledWith('value')
+  })
+
+  it('is a real button so Enter and Space activate it natively', () => {
+    renderTh({ sort: null })
+    const button = screen.getByRole('button', { name: /value/i })
+    expect(button.tagName).toBe('BUTTON')
+    expect(button).toHaveAttribute('type', 'button')
+  })
+
+  it('keeps Th alignment and hideBelow', () => {
+    renderTh({ sort: null, align: 'right', hideBelow: 'md' })
+    expect(screen.getByRole('columnheader', { hidden: true })).toHaveClass('text-right', 'hidden', 'md:table-cell')
   })
 })
