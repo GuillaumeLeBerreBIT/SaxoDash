@@ -71,4 +71,40 @@ describe('MobileNav', () => {
     expect(onOpenPalette).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
+
+  it('moves focus into the dialog on open', async () => {
+    renderWithProviders(<MobileNav onOpenPalette={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'More' }))
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement)
+  })
+
+  it('wraps Tab and Shift+Tab inside the dialog', async () => {
+    renderWithProviders(<MobileNav onOpenPalette={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'More' }))
+    const dialog = screen.getByRole('dialog')
+    const items = within(dialog).getAllByRole('link').concat(within(dialog).getAllByRole('button'))
+    const first = within(dialog).getAllByRole('link')[0]
+    const last = within(dialog).getByRole('button', { name: 'Log out' })
+    expect(items).toContain(last)
+    last.focus()
+    await userEvent.tab()
+    expect(first).toHaveFocus()
+    await userEvent.tab({ shift: true })
+    expect(last).toHaveFocus()
+  })
+
+  it('returns focus to More after Escape', async () => {
+    renderWithProviders(<MobileNav onOpenPalette={() => {}} />)
+    const more = screen.getByRole('button', { name: 'More' })
+    await userEvent.click(more)
+    await userEvent.keyboard('{Escape}')
+    expect(more).toHaveFocus()
+  })
+
+  it('closes when the link for the current route is tapped', async () => {
+    renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/accounts' })
+    await userEvent.click(screen.getByRole('button', { name: 'More' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Accounts' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })

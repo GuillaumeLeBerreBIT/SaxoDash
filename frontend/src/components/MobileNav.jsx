@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Ellipsis, LogOut, Search } from 'lucide-react'
 import { getUsername, logout } from '../api/client'
@@ -19,6 +19,8 @@ export default function MobileNav({ onOpenPalette }) {
   const open = openedAt === pathname
   const setOpen = (value) => setOpenedAt(value ? pathname : null)
   const navigate = useNavigate()
+  const moreRef = useRef(null)
+  const dialogRef = useRef(null)
   const username = getUsername() || 'Account'
   const overflow = mobileOverflow()
   const primary = MOBILE_PRIMARY.map((to) => NAV_ITEMS.find((item) => item.to === to)).filter(Boolean)
@@ -32,6 +34,29 @@ export default function MobileNav({ onOpenPalette }) {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const trigger = moreRef.current
+    dialogRef.current?.focus()
+    return () => trigger?.focus()
+  }, [open])
+
+  const trapTab = (event) => {
+    if (event.key !== 'Tab') return
+    const focusable = dialogRef.current.querySelectorAll('a[href], button:not([disabled])')
+    if (!focusable.length) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement
+    if (event.shiftKey && (active === first || active === dialogRef.current)) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
 
   const handleLogout = async () => {
     setOpen(false)
@@ -64,6 +89,7 @@ export default function MobileNav({ onOpenPalette }) {
           ))}
           <button
             type="button"
+            ref={moreRef}
             onClick={() => setOpen(!open)}
             aria-haspopup="dialog"
             aria-expanded={open}
@@ -88,7 +114,10 @@ export default function MobileNav({ onOpenPalette }) {
             role="dialog"
             aria-modal="true"
             aria-label="More"
-            className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-white/[0.08] bg-zinc-950 pb-[env(safe-area-inset-bottom)] max-h-[85vh] overflow-y-auto"
+            ref={dialogRef}
+            tabIndex={-1}
+            onKeyDown={trapTab}
+            className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-white/[0.08] bg-zinc-950 pb-[env(safe-area-inset-bottom)] max-h-[85vh] overflow-y-auto outline-none"
           >
             <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-zinc-700" />
             <ul className="px-3 py-2">
@@ -97,6 +126,7 @@ export default function MobileNav({ onOpenPalette }) {
                   <NavLink
                     to={to}
                     end={end}
+                    onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       `h-12 px-3 gap-3 flex items-center rounded-md text-[var(--fig-sm)] font-medium ${
                         isActive ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-300 hover:bg-zinc-900'
