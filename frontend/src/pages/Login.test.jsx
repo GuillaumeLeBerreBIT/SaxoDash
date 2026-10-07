@@ -48,4 +48,27 @@ describe('Login', () => {
 
     expect(screen.getByLabelText('Username')).not.toHaveAttribute('aria-invalid', 'true')
   })
+
+  it('styles both labels identically', () => {
+    renderLogin()
+
+    const user = screen.getByText('Username', { selector: 'label' })
+    const pass = screen.getByText('Password', { selector: 'label' })
+    expect(user.className).toBe(pass.className)
+    expect(pass).toHaveClass('text-zinc-400')
+  })
+
+  it('links the inputs to the error only while it is shown', async () => {
+    login.mockRejectedValue(new Error('nope'))
+    renderLogin()
+    expect(screen.getByLabelText('Username')).not.toHaveAttribute('aria-describedby')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    const alert = await screen.findByRole('alert')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Username')).toHaveAttribute('aria-describedby', alert.id)
+      expect(screen.getByLabelText('Password')).toHaveAttribute('aria-describedby', alert.id)
+    })
+  })
 })
