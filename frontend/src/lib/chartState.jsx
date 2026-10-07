@@ -34,7 +34,7 @@ export function chartPlaceholderFor({
       <ChartPlaceholder height={height} tone="red">
         <div className="flex flex-col items-center gap-3">
           <span role="alert">Failed to load chart data</span>
-          {onRetry && <Button onClick={onRetry}>Retry</Button>}
+          {onRetry && <Button onClick={() => onRetry()}>Retry</Button>}
         </div>
       </ChartPlaceholder>
     )

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtQty } from '../lib/format'
@@ -19,12 +19,10 @@ export default function Transactions() {
 
   const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
 
-  useEffect(() => {
-    if (effectiveFilter !== typeFilter) {
-      setTypeFilter('All')
-      setPage(1)
-    }
-  }, [effectiveFilter, typeFilter])
+  if (effectiveFilter !== typeFilter) {
+    setTypeFilter('All')
+    setPage(1)
+  }
 
   const filtered = useMemo(
     () =>

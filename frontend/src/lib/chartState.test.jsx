@@ -65,7 +65,7 @@ describe('chartPlaceholderFor', () => {
     const onRetry = vi.fn()
     renderPlaceholder({ error: new Error('boom'), data: undefined, onRetry })
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(onRetry).toHaveBeenCalled()
+    expect(onRetry).toHaveBeenCalledWith()
   })
 
   it('shows no Retry without onRetry', () => {

@@ -469,7 +469,7 @@ export function QueryState({ isLoading, error, onRetry, label, children }) {
       <Card>
         <div role="alert" className="flex flex-col gap-3 items-start">
           <Alert className="w-full">Could not load {label}.</Alert>
-          {onRetry && <Button onClick={onRetry}>Retry</Button>}
+          {onRetry && <Button onClick={() => onRetry()}>Retry</Button>}
         </div>
       </Card>
     )

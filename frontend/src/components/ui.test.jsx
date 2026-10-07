@@ -286,6 +286,7 @@ describe('QueryState', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/holdings/i)
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(onRetry).toHaveBeenCalledTimes(1)
+    expect(onRetry).toHaveBeenCalledWith()
     expect(screen.queryByText('body')).not.toBeInTheDocument()
   })
 
