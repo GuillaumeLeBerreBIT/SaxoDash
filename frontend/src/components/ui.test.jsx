@@ -21,6 +21,7 @@ import {
   Td,
   TabList,
   TabButton,
+  TBtn,
   Chip,
   QueryState,
 } from './ui'
@@ -274,11 +275,23 @@ describe('Chip', () => {
   })
 })
 
+describe('TBtn', () => {
+  it('keeps a 44px touch target in both directions below md only', () => {
+    render(<TBtn active={false} onClick={() => {}}>1M</TBtn>)
+    const classes = screen.getByRole('button', { name: '1M' }).className
+    expect(classes).toContain('after:h-11')
+    expect(classes).toContain('after:w-[max(100%,2.75rem)]')
+    expect(classes).toContain('after:-translate-x-1/2')
+    expect(classes).toContain('md:after:hidden')
+  })
+})
+
 describe('QueryState', () => {
   it('shows a loading skeleton instead of children', () => {
     render(<QueryState isLoading label="holdings"><p>body</p></QueryState>)
     expect(screen.queryByText('body')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Loading holdings')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading holdings…')
   })
 
   it('shows an alert with Retry on error', () => {

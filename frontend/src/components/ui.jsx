@@ -305,7 +305,7 @@ export function TabButton({ active, onClick, children, id, controls, className =
   function onKeyDown(event) {
     const target = TAB_KEY_TARGET[event.key]
     if (!target) return
-    const tabs = Array.from(event.currentTarget.parentElement.querySelectorAll('[role="tab"]'))
+    const tabs = Array.from(event.currentTarget.closest('[role="tablist"]').querySelectorAll('[role="tab"]'))
     const next = tabs[target(tabs.indexOf(event.currentTarget), tabs.length)]
     if (!next) return
     event.preventDefault()
@@ -445,7 +445,7 @@ export function TBtn({ active, onClick, children, title }) {
       title={title}
       onClick={onClick}
       aria-pressed={active}
-      className={`relative h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-[''] md:after:hidden ${
+      className={`relative h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-[max(100%,2.75rem)] after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] md:after:hidden ${
         active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
       }`}
     >
@@ -476,6 +476,7 @@ export function QueryState({ isLoading, error, onRetry, label, children }) {
     return (
       <Card>
         <div role="status" aria-label={`Loading ${label}`} className="flex flex-col gap-3">
+          <span className="sr-only">Loading {label}…</span>
           <Skeleton className="h-4 w-1/3" />
           <Skeleton className="h-24 w-full" />
         </div>

@@ -34,31 +34,31 @@ export default function Login() {
           <h1 className="text-[var(--fig-md)] font-medium tracking-tight text-zinc-50">Sign in to SaxoDash</h1>
         </div>
         <div className="flex flex-col gap-1">
-        <label htmlFor="login-username" className="text-[var(--fig-xs)] text-zinc-400">Username</label>
-        <input
-          id="login-username"
-          aria-describedby={error ? 'login-error' : undefined}
-          aria-invalid={error ? true : undefined}
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Username"
-          autoComplete="username"
-          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 h-11 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
-        />
+          <label htmlFor="login-username" className="text-[var(--fig-xs)] text-zinc-400">Username</label>
+          <input
+            id="login-username"
+            aria-describedby={error ? 'login-error' : undefined}
+            aria-invalid={error ? true : undefined}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Username"
+            autoComplete="username"
+            className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 h-11 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+          />
         </div>
         <div className="flex flex-col gap-1">
-        <label htmlFor="login-password" className="text-[var(--fig-xs)] text-zinc-400">Password</label>
-        <input
-          id="login-password"
-          aria-describedby={error ? 'login-error' : undefined}
-          aria-invalid={error ? true : undefined}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          autoComplete="current-password"
-          className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 h-11 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
-        />
+          <label htmlFor="login-password" className="text-[var(--fig-xs)] text-zinc-400">Password</label>
+          <input
+            id="login-password"
+            aria-describedby={error ? 'login-error' : undefined}
+            aria-invalid={error ? true : undefined}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Password"
+            autoComplete="current-password"
+            className="rounded-md border border-zinc-700/70 bg-zinc-900 px-3 h-11 text-[var(--fig-sm)] text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+          />
         </div>
         {error && <p id="login-error" role="alert" className="text-[var(--fig-xs)] text-red-400">{error}</p>}
         <button

@@ -45,16 +45,13 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
   )
 }
 
-function EmptyPaneHeader({ index }) {
+const emptyPaneName = (index) => (index == null ? 'Empty pane' : `Empty pane ${index + 1}`)
+
+function EmptyPaneHeader() {
   return (
-    <div
-      role="region"
-      aria-label={index == null ? 'Empty pane' : `Empty pane ${index + 1}`}
-      className={HEADER_CLASS}
-    >
+    <div className={HEADER_CLASS}>
       <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />
       <span className="text-[var(--fig-xs)] font-medium text-zinc-400">Empty pane</span>
-      <span className="text-[var(--fig-2xs)] text-zinc-500 truncate">Pick a symbol to start</span>
     </div>
   )
 }
@@ -149,7 +146,7 @@ export default function ChartPane({
 }) {
   return (
     <section
-      aria-label={slot ? `${slot.symbol} chart` : 'Empty chart'}
+      aria-label={slot ? `${slot.symbol} chart` : emptyPaneName(index)}
       aria-current={active || undefined}
       onMouseDown={onActivate}
       style={style}
@@ -169,7 +166,7 @@ export default function ChartPane({
           />
         ) : (
           <>
-            <EmptyPaneHeader index={index} />
+            <EmptyPaneHeader />
             <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
               Pick a symbol from the watchlist
             </div>

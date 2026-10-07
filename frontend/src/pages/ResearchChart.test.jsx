@@ -75,7 +75,7 @@ function stubQueries() {
 
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement
 const backLink = () => screen.getByRole('link', { name: 'Back to Research' })
-const panes = () => screen.getAllByRole('region', { name: /chart$/ })
+const panes = () => screen.getAllByRole('region', { name: /(chart|^Empty pane( \d)?)$/ })
 
 async function pickLayout(user, label) {
   await user.click(screen.getByRole('button', { name: 'Layout' }))
@@ -240,7 +240,7 @@ describe('ResearchChart', () => {
 
     expect(panes()).toHaveLength(4)
     expect(screen.getByRole('region', { name: 'NVDA chart' })).not.toHaveAttribute('aria-current')
-    const empties = screen.getAllByRole('region', { name: 'Empty chart' })
+    const empties = screen.getAllByRole('region', { name: /^Empty pane \d$/ })
     expect(empties).toHaveLength(3)
     expect(empties[0]).toHaveAttribute('aria-current', 'true')
   })
