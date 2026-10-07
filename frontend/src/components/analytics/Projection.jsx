@@ -47,7 +47,7 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
         subtitle={`600 simulated paths · ${fmtNum(expectedReturnPct, 1)}% expected return, ${fmtNum(volatilityPct, 1)}% volatility, drawn from your own return distribution`}
         right={
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex max-w-full items-center gap-0.5 overflow-x-auto p-0.5 rounded-md bg-zinc-950/60 border border-white/[0.06]">
+            <div className="inline-flex max-w-full flex-wrap items-center gap-0.5 p-0.5 rounded-md bg-zinc-950/60 border border-white/[0.06]">
               {MONTHLY_OPTIONS.map((m) => (
                 <button
                   key={m}

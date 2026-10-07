@@ -59,7 +59,7 @@ export default function Transactions() {
       />
 
       <Card padding={false}>
-        <div className="p-4 border-b border-zinc-800 flex items-center gap-2 flex-wrap">
+        <div className="p-4 border-b border-zinc-800 flex items-center gap-2 md:gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[220px] w-full md:w-auto">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
               <Search size={14} />

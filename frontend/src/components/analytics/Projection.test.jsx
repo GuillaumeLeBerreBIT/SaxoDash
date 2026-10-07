@@ -56,7 +56,8 @@ describe('Projection', () => {
     renderWithProviders(<Projection start={10000} expectedReturnPct={8} volatilityPct={15} />)
 
     const amounts = screen.getByRole('button', { name: '€2500' }).parentElement
-    expect(amounts).toHaveClass('max-w-full', 'overflow-x-auto')
+    expect(amounts).toHaveClass('flex-wrap')
+    expect(amounts).not.toHaveClass('overflow-x-auto')
     expect(amounts.parentElement).toHaveClass('flex-wrap', 'gap-2')
     expect(screen.getByRole('button', { name: '30Y' }).parentElement).toHaveClass('flex-wrap')
   })

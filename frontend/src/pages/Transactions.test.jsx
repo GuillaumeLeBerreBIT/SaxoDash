@@ -94,7 +94,7 @@ describe('Transactions on mobile', () => {
 
     const chips = screen.getByRole('button', { name: 'BUY' }).parentElement
     expect(chips).toHaveClass('flex-wrap')
-    expect(chips.parentElement).toHaveClass('flex-wrap', 'gap-2')
+    expect(chips.parentElement).toHaveClass('flex-wrap', 'gap-2', 'md:gap-3')
     expect(screen.getByRole('textbox').parentElement).toHaveClass('w-full', 'md:w-auto')
   })
 
