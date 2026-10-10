@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from . import edgar, figi, importer, parse
-from .factories import make_investor
+from .factories import make_investor, store_quarter
 from .models import Filing, Holding, Investor, Security
 
 NS = 'http://www.sec.gov/edgar/document/thirteenf/informationtable'
@@ -292,4 +292,30 @@ class SyncRebuildsMovesTest(TestCase):
 
     def test_nothing_new_leaves_the_moves_alone(self):
         _, rebuild = self.run_sync(False)
+        rebuild.assert_not_called()
+
+    def test_an_interrupted_import_still_rebuilds_and_re_raises(self):
+        investor = make_investor()
+        second = {**self.ENTRY, 'accession': 'A-2'}
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY, second]), \
+                patch('investors.importer._import_filing', side_effect=[True, edgar.EdgarError('timeout')]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            with self.assertRaises(edgar.EdgarError):
+                importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        rebuild.assert_called_once_with(investor)
+
+    def test_moves_behind_the_stored_filings_are_rebuilt_even_when_nothing_is_new(self):
+        investor = make_investor()
+        store_quarter(investor, Q2, [APPLE], rebuild=False)
+        with patch('investors.importer.edgar.filings', return_value=[]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        rebuild.assert_called_once_with(investor)
+
+    def test_moves_that_are_current_are_left_alone(self):
+        investor = make_investor()
+        store_quarter(investor, Q2, [APPLE])
+        with patch('investors.importer.edgar.filings', return_value=[]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
         rebuild.assert_not_called()

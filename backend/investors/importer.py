@@ -54,6 +54,12 @@ def _set_expected(investor, quarters):
     investor.quarters_expected = quarters
 
 
+def _moves_are_behind(investor):
+    newest_filing = investor.filings.aggregate(latest=Max('quarter_end'))['latest']
+    newest_move = investor.moves.aggregate(latest=Max('quarter_end'))['latest']
+    return newest_filing != newest_move
+
+
 def sync_investor(investor, since, *, track_progress=False, resolve=True):
     entries = edgar.filings(investor.cik, since)
     stored = set(
@@ -81,8 +87,8 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
             last_checked_at=timezone.now(),
             last_filing_at=investor.filings.aggregate(latest=Max('filed_on'))['latest'],
         )
-    if result.imported:
-        moves.rebuild(investor)
+        if result.imported or _moves_are_behind(investor):
+            moves.rebuild(investor)
     if resolve:
         resolve_securities()
     return result
