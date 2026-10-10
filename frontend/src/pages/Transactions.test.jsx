@@ -1,11 +1,26 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { useLocation } from 'react-router-dom'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Transactions from './Transactions'
+
+const lag = vi.hoisted(() => ({ on: false, search: '' }))
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useSearchParams: (...args) => {
+      const real = actual.useSearchParams(...args)
+      return lag.on ? [new URLSearchParams(lag.search), () => {}] : real
+    },
+  }
+})
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -197,6 +212,106 @@ describe('Transactions', () => {
   })
 })
 
+describe('Transactions sorting', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  const bodyTickers = () =>
+    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate').textContent)
+  const header = (name) => screen.getByRole('columnheader', { name })
+  const sortBy = (name) => fireEvent.click(within(header(name)).getByRole('button'))
+
+  const sample = () => [
+    row({ id: 1, date: '2026-09-02', instrument: 'Bravo', total_eur: '200.00' }),
+    row({ id: 2, date: '2026-09-01', instrument: 'Alpha', total_eur: null }),
+    row({ id: 3, date: '2026-09-03', instrument: 'Charlie', total_eur: '1000.00' }),
+  ]
+
+  it('keeps API order with no sort and marks sortable headers aria-sort none', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    expect(bodyTickers()).toEqual(['Bravo', 'Alpha', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'none')
+    expect(screen.getByRole('columnheader', { name: 'Type' })).not.toHaveAttribute('aria-sort')
+  })
+
+  it('sorts Date ascending, descending, then back to API order', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'ascending')
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'descending')
+    sortBy(/^Date/)
+    expect(bodyTickers()).toEqual(['Bravo', 'Alpha', 'Charlie'])
+    expect(header(/^Date/)).toHaveAttribute('aria-sort', 'none')
+  })
+
+  it('sorts Instrument by its text', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Instrument/)
+    expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    sortBy(/^Instrument/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+  })
+
+  it('sorts Total numerically on the euro figure with a missing total last both ways', () => {
+    stub(sample())
+    renderWithProviders(<Transactions />)
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Bravo', 'Charlie', 'Alpha'])
+  })
+
+  it('sorts Total by the signed figure shown, not the magnitude', () => {
+    stub([
+      row({ id: 1, type: 'SELL', instrument: 'Sold', total_eur: '300.00' }),
+      row({ id: 2, type: 'BUY', instrument: 'Bought', total_eur: '500.00' }),
+      row({ id: 3, type: 'DIVIDEND', instrument: 'Paid', total_eur: '50.00' }),
+    ])
+    renderWithProviders(<Transactions />)
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Bought', 'Paid', 'Sold'])
+    sortBy(/^Total/)
+    expect(bodyTickers()).toEqual(['Sold', 'Paid', 'Bought'])
+  })
+
+  it('returns to page 1 when the sort changes', () => {
+    stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1, instrument: `Name ${i}` })))
+    renderWithProviders(<Transactions />)
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    sortBy(/^Instrument/)
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    sortBy(/^Instrument/)
+    sortBy(/^Instrument/)
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('exports the filtered rows in the displayed sort order', async () => {
+    stub(sample())
+    let blob
+    URL.createObjectURL = vi.fn((b) => {
+      blob = b
+      return 'blob:x'
+    })
+    URL.revokeObjectURL = vi.fn()
+    renderWithProviders(<Transactions />)
+    sortBy(/^Instrument/)
+    fireEvent.click(screen.getByRole('button', { name: /Export CSV/ }))
+    const text = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.readAsText(blob)
+    })
+    const names = text.trim().split('\n').slice(1).map((line) => line.split(',')[2])
+    expect(names).toEqual(['Alpha', 'Bravo', 'Charlie'])
+  })
+})
+
 describe('Transactions on mobile', () => {
   beforeEach(() => vi.resetAllMocks())
 
@@ -240,5 +355,272 @@ describe('Transactions on mobile', () => {
     renderWithProviders(<Transactions />)
     expect(screen.getByRole('status', { name: 'Loading transactions' })).toBeInTheDocument()
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+  })
+})
+
+describe('Transactions filters', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  const names = () =>
+    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate')?.textContent)
+
+  function Where() {
+    const location = useLocation()
+    return <output data-testid="where">{location.search}</output>
+  }
+  const renderAt = (route) => renderWithProviders(<><Transactions /><Where /></>, { route })
+  const where = () => screen.getByTestId('where').textContent
+
+  const sample = () => [
+    row({ id: 1, date: '2026-01-10', instrument: 'Alpha', type: 'BUY', account: 'Saxo' }),
+    row({ id: 2, date: '2026-03-10', instrument: 'Bravo', type: 'SELL', account: 'Bank' }),
+    row({ id: 3, date: '2026-06-10', instrument: 'Charlie', type: 'BUY', account: 'Saxo' }),
+  ]
+
+  it('narrows rows to the date range, inclusive', () => {
+    stub(sample())
+    renderAt('/')
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-03-10' } })
+    expect(names()).toEqual(['Bravo', 'Charlie'])
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-03-10' } })
+    expect(names()).toEqual(['Bravo'])
+  })
+
+  it('narrows rows with the account picker', () => {
+    stub(sample())
+    renderAt('/')
+    const picker = screen.getByLabelText('Account')
+    expect(within(picker).getByRole('option', { name: 'All accounts' })).toBeInTheDocument()
+    fireEvent.change(picker, { target: { value: 'Bank' } })
+    expect(names()).toEqual(['Bravo'])
+  })
+
+  it('hides the account picker when there is a single account', () => {
+    stub([row({ id: 1 }), row({ id: 2 })])
+    renderAt('/')
+    expect(screen.queryByLabelText('Account')).toBeNull()
+  })
+
+  it('reflects filters in the URL without pushing history', () => {
+    stub(sample())
+    renderAt('/')
+    fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: 'Bank' } })
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: 'bra' } })
+    const params = new URLSearchParams(where())
+    expect(Object.fromEntries(params)).toEqual({ type: 'SELL', account: 'Bank', from: '2026-01-01', q: 'bra' })
+  })
+
+  it('pre-applies filters from the URL', () => {
+    stub(sample())
+    renderAt('/?type=BUY&from=2026-02-01&account=Saxo')
+    expect(names()).toEqual(['Charlie'])
+    expect(screen.getByRole('button', { name: 'BUY' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('From')).toHaveValue('2026-02-01')
+    expect(screen.getByLabelText('Account')).toHaveValue('Saxo')
+  })
+
+  it('treats an unknown type or account in the URL as All', () => {
+    stub(sample())
+    renderAt('/?type=NOPE&account=Ghost')
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Account')).toHaveValue('')
+  })
+
+  it('ignores a bad date in the URL', () => {
+    stub(sample())
+    renderAt('/?from=banana&to=2026-02-30')
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(screen.getByLabelText('From')).toHaveValue('')
+  })
+
+  it('shows the empty state with Clear filters when from is after to', () => {
+    stub(sample())
+    renderAt('/?from=2026-06-01&to=2026-01-01')
+    expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+  })
+
+  it('applies a preset and marks it pressed only while the range equals it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-07T12:00:00'))
+    try {
+      stub(sample())
+      renderAt('/')
+      const ytd = screen.getByRole('button', { name: 'YTD' })
+      expect(ytd).toHaveAttribute('aria-pressed', 'false')
+      fireEvent.click(ytd)
+      expect(screen.getByRole('button', { name: 'YTD' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByLabelText('From')).toHaveValue('2026-01-01')
+      expect(screen.getByLabelText('To')).toHaveValue('2026-10-07')
+      fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-02-01' } })
+      expect(screen.getByRole('button', { name: 'YTD' })).toHaveAttribute('aria-pressed', 'false')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('clears search, type, account and dates together from the toolbar', () => {
+    stub(sample())
+    renderAt('/?type=BUY&account=Saxo&from=2026-01-01&to=2026-12-31&q=alp')
+    expect(names()).toEqual(['Alpha'])
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(names()).toEqual(['Alpha', 'Bravo', 'Charlie'])
+    expect(where()).toBe('')
+    expect(screen.getByLabelText('Account')).toHaveValue('')
+    expect(screen.getByLabelText('From')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('edits the search text mid-word, mirrors it to the URL and empties both on Clear filters', async () => {
+    const user = userEvent.setup()
+    stub(sample())
+    renderAt('/')
+    const box = screen.getByRole('textbox', { name: /search/i })
+    await user.type(box, 'AAL')
+    await user.keyboard('{ArrowLeft}P')
+    expect(box).toHaveValue('AAPL')
+    expect(new URLSearchParams(where()).get('q')).toBe('AAPL')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('')
+    expect(where()).toBe('')
+  })
+
+  describe('with a router that commits URL changes late', () => {
+    afterEach(() => {
+      lag.on = false
+    })
+
+    it('keeps what was typed when an older URL value commits afterwards', async () => {
+      const user = userEvent.setup()
+      stub(sample())
+      lag.on = true
+      lag.search = ''
+      const client = new QueryClient()
+      const view = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      const box = screen.getByRole('textbox', { name: /search/i })
+      await user.type(box, 'AB')
+      lag.search = '?q=A'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('AB')
+      lag.search = '?q=AB'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('AB')
+    })
+
+    it('adopts a URL value this box never wrote', async () => {
+      const user = userEvent.setup()
+      stub(sample())
+      lag.on = true
+      lag.search = ''
+      const client = new QueryClient()
+      const view = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      await user.type(screen.getByRole('textbox', { name: /search/i }), 'AB')
+      lag.search = '?q=XYZ'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('XYZ')
+    })
+  })
+
+  it('follows the URL when it changes under the search box', () => {
+    stub(sample())
+    renderAt('/?q=alp')
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('alp')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('')
+  })
+
+  it('keeps both Clear filters buttons at a 44px touch target below md', () => {
+    stub(sample())
+    renderAt('/?from=2026-06-01&to=2026-01-01')
+    for (const button of screen.getAllByRole('button', { name: 'Clear filters' })) {
+      expect(button.className).toContain('h-11')
+      expect(button.className).toContain('md:h-8')
+    }
+  })
+
+  it('offers Clear filters when only a date range is active', () => {
+    stub(sample())
+    renderAt('/?from=2026-01-01')
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument()
+  })
+
+  it('returns to page 1 when a date, account or search changes', () => {
+    stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1, account: i % 2 ? 'Bank' : 'Saxo' })))
+    renderAt('/')
+    const onPageOne = () => expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-01-01' } })
+    onPageOne()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-12-31' } })
+    onPageOne()
+    fireEvent.change(screen.getByLabelText('Account'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    fireEvent.click(screen.getByRole('button', { name: '30D' }))
+    expect(screen.queryByRole('button', { name: 'Page 2' })).toBeNull()
+  })
+
+  it('still sorts the filtered rows', () => {
+    stub(sample())
+    renderAt('/?type=BUY')
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /^Instrument/ })).getByRole('button'))
+    fireEvent.click(within(screen.getByRole('columnheader', { name: /^Instrument/ })).getByRole('button'))
+    expect(names()).toEqual(['Charlie', 'Alpha'])
+  })
+
+  it('exports only the filtered rows', async () => {
+    stub(sample())
+    let blob
+    URL.createObjectURL = vi.fn((b) => {
+      blob = b
+      return 'blob:x'
+    })
+    URL.revokeObjectURL = vi.fn()
+    renderAt('/?account=Saxo')
+    fireEvent.click(screen.getByRole('button', { name: /Export CSV/ }))
+    const text = await new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.readAsText(blob)
+    })
+    expect(text.trim().split('\n').slice(1).map((l) => l.split(',')[2])).toEqual(['Alpha', 'Charlie'])
   })
 })

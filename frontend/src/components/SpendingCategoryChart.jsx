@@ -2,20 +2,30 @@ import { fmtEur } from '../lib/format'
 import { colorForCategory } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
-import { foldSmallSlices } from '../lib/spending'
+import { foldSmallSlices, spendingTransactionsPath } from '../lib/spending'
 import { CATEGORY_LABELS } from '../lib/categories'
 import AllocationDonut from './AllocationDonut'
 
-export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, onRetry }) {
-  const items = foldSmallSlices(
+export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, period, onRetry }) {
+  const folded = foldSmallSlices(
     (categories ?? [])
       .map((c) => ({
         name: CATEGORY_LABELS[c.category] ?? c.category,
+        category: c.category,
         value: Number(c.amount),
         color: colorForCategory(c.category),
+        to: period ? spendingTransactionsPath(c.category, period) : undefined,
       }))
       .sort((a, b) => b.value - a.value),
+    { otherName: 'Smaller categories' },
   )
+  const items = period
+    ? folded.map((item) =>
+        item.folded
+          ? { ...item, to: spendingTransactionsPath(item.categories.length === 1 ? item.categories[0] : null, period) }
+          : item,
+      )
+    : folded
 
   const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
 

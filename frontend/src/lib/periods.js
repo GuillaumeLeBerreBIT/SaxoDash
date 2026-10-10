@@ -6,6 +6,10 @@ function iso(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+export function localToday(now = new Date()) {
+  return iso(now)
+}
+
 function firstOfMonth(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
 }

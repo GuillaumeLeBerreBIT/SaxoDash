@@ -69,6 +69,7 @@ export default function Spending() {
           error={error}
           onRetry={refetch}
           periodLabel={period.label}
+          period={period}
         />
         <SpendingTrendChart />
       </div>

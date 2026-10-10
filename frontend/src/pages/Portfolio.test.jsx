@@ -325,3 +325,97 @@ describe('Portfolio holdings on mobile', () => {
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
   })
 })
+
+describe('Portfolio sortable holdings', () => {
+  const make = (ticker, name, value, pnl, qty = '1', weight = '10') => ({
+    ...msft, ticker, name, value, pnl, qty, weight, uic: ticker,
+  })
+  const rows = [
+    make('AAA', 'Zeta Corp', '300.00', '10.00', '5', '30'),
+    make('BBB', 'Alpha Inc', '100.00', null, '50', '10'),
+    make('CCC', 'Mid Ltd', '200.00', '-20.00', '1', '20'),
+  ]
+
+  const order = () =>
+    within(screen.getByRole('table'))
+      .getAllByRole('link')
+      .map((link) => link.textContent.slice(0, 3))
+      .filter((text) => ['AAA', 'BBB', 'CCC'].includes(text))
+  const header = (name) => within(screen.getByRole('table')).getByRole('columnheader', { name })
+  const click = (name) => fireEvent.click(within(header(name)).getByRole('button'))
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub(rows)
+  })
+
+  it('sorts Value ascending, then descending, then restores the default order', () => {
+    renderWithProviders(<Portfolio />)
+    expect(order()).toEqual(['AAA', 'BBB', 'CCC'])
+    click('Value')
+    expect(order()).toEqual(['BBB', 'CCC', 'AAA'])
+    click('Value')
+    expect(order()).toEqual(['AAA', 'CCC', 'BBB'])
+    click('Value')
+    expect(order()).toEqual(['AAA', 'BBB', 'CCC'])
+  })
+
+  it('keeps a row without P&L last in both directions', () => {
+    renderWithProviders(<Portfolio />)
+    click('P&L')
+    expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
+    click('P&L')
+    expect(order()).toEqual(['AAA', 'CCC', 'BBB'])
+  })
+
+  it('sorts Name by the displayed ticker, not the company name', () => {
+    stub([
+      make('CCC', 'Alpha Inc', '100.00', '1.00'),
+      make('AAA', 'Zeta Corp', '200.00', '2.00'),
+      make('BBB', 'Mid Ltd', '300.00', '3.00'),
+    ])
+    renderWithProviders(<Portfolio />)
+    click('Name')
+    expect(order()).toEqual(['AAA', 'BBB', 'CCC'])
+    click('Name')
+    expect(order()).toEqual(['CCC', 'BBB', 'AAA'])
+  })
+
+  it('leaves the total row unchanged by a sort', () => {
+    renderWithProviders(<Portfolio />)
+    const totalText = () => screen.getByText(/^Total \(/).closest('tr').textContent
+    const before = totalText()
+    click('Value')
+    expect(totalText()).toBe(before)
+  })
+
+  it('sorts Qty and Weight numerically', () => {
+    renderWithProviders(<Portfolio />)
+    click('Qty')
+    expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
+    click('Weight')
+    expect(order()).toEqual(['BBB', 'CCC', 'AAA'])
+  })
+
+  it('marks only the active header with aria-sort', () => {
+    renderWithProviders(<Portfolio />)
+    click('Value')
+    expect(header('Value')).toHaveAttribute('aria-sort', 'ascending')
+    expect(header('Name')).toHaveAttribute('aria-sort', 'none')
+    expect(header('P&L')).toHaveAttribute('aria-sort', 'none')
+    click('Value')
+    expect(header('Value')).toHaveAttribute('aria-sort', 'descending')
+  })
+
+  it('leaves Avg and Price unsortable', () => {
+    renderWithProviders(<Portfolio />)
+    expect(within(header('Avg')).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(header('Price')).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps the sticky header classes on sortable headers', () => {
+    renderWithProviders(<Portfolio />)
+    expect(header('Value')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-zinc-900')
+    expect(header('Name')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-zinc-900')
+  })
+})

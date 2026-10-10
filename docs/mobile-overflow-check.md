@@ -4,7 +4,10 @@
 It loads every shell route in headless Chromium at phone width and fails when
 the page scrolls sideways: `documentElement.scrollWidth > innerWidth`.
 
-It covers `ROUTES` (`frontend/src/lib/mobileOverflow.js`), `/accounts/<id>`,
+It covers `ROUTES` (`frontend/src/lib/mobileOverflow.js`, including the
+filtered `/transactions?type=BUY&from=...` and the
+`/spending/transactions?category=...` drill-down; the query is ignored when
+checking where the page landed), `/accounts/<id>`,
 `/investors/<slug>` and the Analytics Risk and Projection tabs.
 
 ## Running it

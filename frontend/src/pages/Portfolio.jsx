@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 
@@ -5,14 +6,25 @@ import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } fro
 import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { moveLabel, priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
-import { Card, CardHeader, QueryState, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
+import { Card, CardHeader, QueryState, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, SortableTh, Td, Tr } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import AllocationDonut from '../components/AllocationDonut'
+import { nextSort, sortRows } from '../lib/sort'
 import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from '../lib/charts'
+
+const finite = (raw) => (raw === null || raw === undefined ? null : Number(raw))
+
+const HOLDING_ACCESSORS = {
+  name: (p) => p.ticker,
+  qty: (p) => finite(p.qty),
+  value: (p) => finite(p.value),
+  pnl: (p) => finite(p.pnl),
+  weight: (p) => finite(p.weight),
+}
 
 export default function Portfolio() {
   const summaryQuery = usePortfolioSummary()
@@ -21,6 +33,11 @@ export default function Portfolio() {
   // Computed before the loading guard below so the hook it wraps runs on
   // every render - pricing an empty position list is a harmless no-op.
   const quotes = usePositionQuotes(positionsQuery.data ?? [])
+
+  const [sort, setSort] = useState(null)
+  const holdings = positionsQuery.data
+  const sortedHoldings = useMemo(() => sortRows(holdings ?? [], sort, HOLDING_ACCESSORS), [holdings, sort])
+  const onSort = (key) => setSort((current) => nextSort(current, key))
 
   const failed = summaryQuery.error || positionsQuery.error || netWorthQuery.error
 
@@ -127,18 +144,18 @@ export default function Portfolio() {
             <table className="w-full text-[var(--fig-sm)]">
               <thead>
                 <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-white/[0.06]">
-                  <Th edge className="sticky top-0 z-10 bg-zinc-900">Name</Th>
-                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Qty</Th>
+                  <SortableTh edge sortKey="name" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Name</SortableTh>
+                  <SortableTh align="right" hideBelow="md" sortKey="qty" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Qty</SortableTh>
                   <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
                   <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Price</Th>
                   <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">Value</Th>
-                  <Th align="right" className="sticky top-0 z-10 bg-zinc-900">P&L</Th>
-                  <Th edge align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Weight</Th>
+                  <SortableTh align="right" sortKey="value" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Value</SortableTh>
+                  <SortableTh align="right" sortKey="pnl" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">P&L</SortableTh>
+                  <SortableTh edge align="right" hideBelow="md" sortKey="weight" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Weight</SortableTh>
                 </tr>
               </thead>
               <tbody>
-                {positions.map((p) => (
+                {sortedHoldings.map((p) => (
                   <Tr key={p.ticker}>
                     <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
                       <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group min-w-0">

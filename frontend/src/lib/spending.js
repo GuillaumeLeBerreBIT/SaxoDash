@@ -23,15 +23,17 @@ export function foldSmallSlices(items, { threshold = 0.03, otherName = 'Other', 
   const kept = []
   let folded = 0
   let foldedAny = false
+  const absorbed = []
   for (const item of items) {
-    if (item.name === otherName || item.value / total < threshold) {
+    if ((item.name === otherName && !item.category) || item.value / total < threshold) {
       folded += item.value
       foldedAny = foldedAny || item.value > 0
+      if (item.category) absorbed.push(item.category)
     } else {
       kept.push(item)
     }
   }
-  return foldedAny && folded > 0 ? [...kept, { name: otherName, value: folded, color: otherColor }] : kept
+  return foldedAny && folded > 0 ? [...kept, { name: otherName, value: folded, color: otherColor, folded: true, categories: absorbed }] : kept
 }
 
 export function trendTooltipRow(value) {
@@ -51,4 +53,9 @@ export function trendBars(rows) {
     partial: Boolean(row.partial),
     current: Boolean(row.partial) && index === list.length - 1,
   }))
+}
+
+export function spendingTransactionsPath(category, { date_from: from, date_to: to }) {
+  const params = new URLSearchParams(category ? { category, from, to } : { from, to })
+  return `/spending/transactions?${params}`
 }

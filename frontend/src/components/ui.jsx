@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react'
-import { Info, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, X } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
 import { fmtPct, pctToneClass } from '../lib/format'
@@ -534,16 +534,38 @@ export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right })
  *  get more horizontal room than interior ones. Used by every data table
  *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
  *  governed from one place instead of copied per table. */
-export function Th({ children, align = 'left', edge = false, hideBelow, className = '' }) {
+export function Th({ children, align = 'left', edge = false, hideBelow, className = '', ariaSort }) {
   const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
   return (
     <th
+      aria-sort={ariaSort}
       className={`font-medium ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-1.5 2xl:py-2 ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${hideClass} ${className}`}
     >
       {children}
     </th>
+  )
+}
+
+const ARIA_SORT = { asc: 'ascending', desc: 'descending' }
+
+export function SortableTh({ children, sortKey, sort, onSort, align = 'left', edge = false, hideBelow, className = '' }) {
+  const active = sort && sort.key === sortKey ? sort.direction : null
+  const Glyph = active === 'asc' ? ArrowUp : active === 'desc' ? ArrowDown : ChevronsUpDown
+  return (
+    <Th align={align} edge={edge} hideBelow={hideBelow} className={className} ariaSort={ARIA_SORT[active] ?? 'none'}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex h-11 min-w-11 items-center gap-1 font-medium hover:text-zinc-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 md:h-auto md:min-w-0 ${
+          align === 'right' ? 'flex-row-reverse' : ''
+        }`}
+      >
+        {children}
+        <Glyph size={12} aria-hidden="true" className={active ? 'text-zinc-200' : 'opacity-50'} />
+      </button>
+    </Th>
   )
 }
 

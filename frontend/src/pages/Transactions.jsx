@@ -1,51 +1,97 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
 import { fmtDate, fmtQty } from '../lib/format'
-import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
+import { txPrice, txSignedTotal, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
+import { nextSort, sortRows } from '../lib/sort'
+import { accountsOf, DATE_PRESETS, filterByDateRange, rangeForPreset, readFilters, writeFilters } from '../lib/transactionFilters'
+import { localToday } from '../lib/periods'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Select, Th, SortableTh, Td } from '../components/ui'
+
+const TRANSACTION_ACCESSORS = {
+  date: (t) => t.date,
+  instrument: (t) => t.instrument,
+  total: (t) => txSignedTotal(t),
+}
 
 export default function Transactions() {
   const { data, isLoading, error, refetch } = useTransactions('?page_size=1000')
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState('All')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(1)
+  const [sort, setSort] = useState(null)
+  const [deadSelection, setDeadSelection] = useState('')
 
   // Stable identity so the filter memo below doesn't rerun on every render
   // while the query is still resolving.
   const allTx = useMemo(() => data ?? [], [data])
   const types = useMemo(() => txTypes(allTx), [allTx])
+  const accounts = useMemo(() => accountsOf(allTx), [allTx])
 
-  const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
+  const raw = readFilters(searchParams)
+  const effectiveFilter = types.includes(raw.type) ? raw.type : 'All'
+  const account = accounts.includes(raw.account) ? raw.account : ''
+  const filters = { ...raw, type: effectiveFilter, account }
+  const { from, to } = filters
+  const urlSearch = raw.search
+  const [searchText, setSearchText] = useState(urlSearch)
+  const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch)
+  const [written, setWritten] = useState([])
+  if (seenUrlSearch !== urlSearch) {
+    setSeenUrlSearch(urlSearch)
+    const index = written.indexOf(urlSearch)
+    if (index >= 0) {
+      setWritten(written.slice(index + 1))
+    } else {
+      setSearchText(urlSearch)
+      setWritten([])
+    }
+  }
+  const search = urlSearch
 
-  if (effectiveFilter !== typeFilter) {
-    setTypeFilter('All')
+  const dead = `${raw.type !== effectiveFilter ? raw.type : ''}|${raw.account !== account ? raw.account : ''}`
+  if (dead !== deadSelection) {
+    setDeadSelection(dead)
+    if (dead !== '|') setPage(1)
+  }
+
+  function applyFilters(patch) {
+    setSearchParams(writeFilters({ ...filters, ...patch }), { replace: true })
     setPage(1)
   }
 
   const filtered = useMemo(
     () =>
-      allTx.filter(
+      filterByDateRange(allTx, { from, to }).filter(
         (t) =>
           (effectiveFilter === 'All' || t.type === effectiveFilter) &&
+          (account === '' || t.account === account) &&
           (search === '' || (t.instrument + t.ticker).toLowerCase().includes(search.toLowerCase()))
       ),
-    [allTx, effectiveFilter, search]
+    [allTx, effectiveFilter, account, search, from, to]
   )
 
-  const perPage = 10
-  const pageCount = Math.max(1, Math.ceil(filtered.length / perPage))
-  const visible = filtered.slice((page - 1) * perPage, page * perPage)
+  const sorted = useMemo(() => sortRows(filtered, sort, TRANSACTION_ACCESSORS), [filtered, sort])
 
-  function clearFilters() {
-    setSearch('')
-    setTypeFilter('All')
+  function onSort(key) {
+    setSort((current) => nextSort(current, key))
     setPage(1)
   }
 
+  const perPage = 10
+  const pageCount = Math.max(1, Math.ceil(filtered.length / perPage))
+  const visible = sorted.slice((page - 1) * perPage, page * perPage)
+
+  const today = localToday()
+  const filtersActive = search !== '' || effectiveFilter !== 'All' || account !== '' || from !== '' || to !== ''
+
+  function clearFilters() {
+    applyFilters({ search: '', type: 'All', account: '', from: '', to: '' })
+  }
+
   function handleExport() {
-    const blob = new Blob([toCsv(TRANSACTION_COLUMNS, filtered)], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob([toCsv(TRANSACTION_COLUMNS, sorted)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -82,12 +128,14 @@ export default function Transactions() {
               <Search size={14} />
             </span>
             <Input
-              value={search}
+              value={searchText}
               onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
+                setSearchText(e.target.value)
+                setWritten([...written, e.target.value])
+                applyFilters({ search: e.target.value })
               }}
               placeholder="Search instrument or ticker"
+              aria-label="Search transactions"
               className="w-full pl-9"
             />
           </div>
@@ -96,28 +144,63 @@ export default function Transactions() {
               <Chip
                 key={t}
                 active={effectiveFilter === t}
-                onClick={() => {
-                  setTypeFilter(t)
-                  setPage(1)
-                }}
+                onClick={() => applyFilters({ type: t })}
               >
                 {t}
               </Chip>
             ))}
           </div>
+          {accounts.length > 1 && (
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+              Account
+              <Select
+                value={account}
+                onChange={(e) => applyFilters({ account: e.target.value })}
+                className="h-11 md:h-9"
+              >
+                <option value="">All accounts</option>
+                {accounts.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </Select>
+            </label>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+              From
+              <Input type="date" value={from} onChange={(e) => applyFilters({ from: e.target.value })} className="h-11 md:h-9" />
+            </label>
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+              To
+              <Input type="date" value={to} onChange={(e) => applyFilters({ to: e.target.value })} className="h-11 md:h-9" />
+            </label>
+            <div className="flex flex-wrap items-center gap-1">
+              {DATE_PRESETS.map((preset) => {
+                const range = rangeForPreset(preset, today)
+                return (
+                  <Chip key={preset} active={from === range.from && to === range.to} onClick={() => applyFilters(range)}>
+                    {preset}
+                  </Chip>
+                )
+              })}
+            </div>
+          </div>
+          {filtersActive && visible.length > 0 && (
+            <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-[var(--fig-sm)]">
             <thead>
               <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
-                <Th edge>Date</Th>
+                <SortableTh edge sortKey="date" sort={sort} onSort={onSort}>Date</SortableTh>
                 <Th hideBelow="md">Type</Th>
-                <Th>Instrument</Th>
+                <SortableTh sortKey="instrument" sort={sort} onSort={onSort}>Instrument</SortableTh>
                 <Th hideBelow="md">Ticker</Th>
                 <Th align="right" hideBelow="md">Qty</Th>
                 <Th align="right" hideBelow="md">Price</Th>
-                <Th align="right">Total</Th>
+                <SortableTh align="right" sortKey="total" sort={sort} onSort={onSort}>Total</SortableTh>
                 <Th edge hideBelow="md">Account</Th>
               </tr>
             </thead>
@@ -155,9 +238,9 @@ export default function Transactions() {
                 <tr>
                   <td colSpan={8}>
                     <EmptyState title="No transactions match your filters." />
-                    {(search !== '' || effectiveFilter !== 'All') && (
+                    {filtersActive && (
                       <div className="pb-6 text-center">
-                        <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+                        <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
                       </div>
                     )}
                   </td>
