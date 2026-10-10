@@ -60,6 +60,13 @@ describe('Investors hub', () => {
     follow.mockReset()
   })
 
+  it('shows a search-added investor\'s name once on its card', () => {
+    const added = card({ slug: 'acme', name: 'ACME CAPITAL LP', firm: 'ACME CAPITAL LP' })
+    listState = { data: [added], isLoading: false, error: null }
+    renderPage()
+    expect(within(directory()).getAllByText('ACME CAPITAL LP')).toHaveLength(1)
+  })
+
   it('says which quarter the signals describe', () => {
     renderPage()
     expect(screen.getByText('3 tracked · signals for Q2 2026 · 3 of 3 filed')).toBeInTheDocument()

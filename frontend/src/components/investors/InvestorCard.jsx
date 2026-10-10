@@ -51,7 +51,7 @@ export default function InvestorCard({ investor, className = '' }) {
             >
               {investor.name}
             </Link>
-            <div className="text-[var(--fig-xs)] text-zinc-500 truncate">{investor.firm}</div>
+            {investor.firm !== investor.name ? <div className="text-[var(--fig-xs)] text-zinc-500 truncate">{investor.firm}</div> : null}
           </div>
           <FollowButton investor={investor} />
         </div>

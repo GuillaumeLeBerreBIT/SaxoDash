@@ -31,7 +31,7 @@ export default function InvestorHero({ detail, onQuarter }) {
         <InvestorAvatar name={detail.name} size={52} />
         <div className="min-w-[11rem] flex-1">
           <h1 className="text-[var(--fig-xl)] font-semibold text-zinc-50">{detail.name}</h1>
-          <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p>
+          {detail.firm !== detail.name ? <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p> : null}
           {detail.stale && detail.quarter ? (
             <p className="text-[var(--fig-xs)] text-amber-400 mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
           ) : null}

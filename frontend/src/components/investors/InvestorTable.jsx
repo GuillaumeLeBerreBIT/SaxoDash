@@ -31,7 +31,7 @@ export default function InvestorTable({ investors }) {
                 <Td edge>
                   <Link to={`/investors/${c.slug}`} className="block rounded focus-visible:outline-2 focus-visible:outline-blue-500">
                     <div className="font-medium text-zinc-100">{c.name}</div>
-                    <div className="text-[var(--fig-xs)] text-zinc-500">{c.firm}</div>
+                    {c.firm !== c.name ? <div className="text-[var(--fig-xs)] text-zinc-500">{c.firm}</div> : null}
                   </Link>
                 </Td>
                 <Td><StyleChips styles={c.styles} /></Td>

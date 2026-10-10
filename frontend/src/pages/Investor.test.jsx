@@ -66,6 +66,12 @@ describe('Investor profile', () => {
     expect(screen.getByText('Activist')).toBeInTheDocument()
   })
 
+  it('shows a search-added investor\'s name once in the hero', () => {
+    state = { data: { ...detail, name: 'ACME CAPITAL LP', firm: 'ACME CAPITAL LP' }, isLoading: false, error: null }
+    renderPage()
+    expect(screen.getAllByText('ACME CAPITAL LP')).toHaveLength(1)
+  })
+
   it('follows from the hero', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'Follow Bill Ackman' }))
