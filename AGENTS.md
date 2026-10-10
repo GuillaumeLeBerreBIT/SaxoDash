@@ -355,8 +355,9 @@ header's Saxo health badge and runs without a Saxo credential.
 
 **Investors pages read only `/api/investors/…`.** `/investors` (hub), `/investors/stocks`
 and `/investors/:slug` never touch Saxo or Finnhub. The one place a request reaches EDGAR
-is the Add-investor search and the add itself — explicit user actions, throttled
-(`investors.search`), answering 502 rather than 500 when EDGAR is down. Turnover is opened +
+is the Add-investor search and the add itself — explicit user actions. Only the
+search is throttled (`investors.search`); both answer 502 rather than 500 when EDGAR is
+down, and the add answers 503 when the import cannot be queued. Turnover is opened +
 closed value over both quarters' value (no prices), and value deltas include price moves, so
 they always sit next to the share change that says what was actually bought or sold.
 
