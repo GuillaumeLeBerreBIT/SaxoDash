@@ -37,9 +37,16 @@ export default function Transactions() {
   const urlSearch = raw.search
   const [searchText, setSearchText] = useState(urlSearch)
   const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch)
+  const [written, setWritten] = useState([])
   if (seenUrlSearch !== urlSearch) {
     setSeenUrlSearch(urlSearch)
-    setSearchText(urlSearch)
+    const index = written.indexOf(urlSearch)
+    if (index >= 0) {
+      setWritten(written.slice(index + 1))
+    } else {
+      setSearchText(urlSearch)
+      setWritten([])
+    }
   }
   const search = urlSearch
 
@@ -124,6 +131,7 @@ export default function Transactions() {
               value={searchText}
               onChange={(e) => {
                 setSearchText(e.target.value)
+                setWritten([...written, e.target.value])
                 applyFilters({ search: e.target.value })
               }}
               placeholder="Search instrument or ticker"

@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
-import { fireEvent, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 
@@ -8,6 +8,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Transactions from './Transactions'
+
+const lag = vi.hoisted(() => ({ on: false, search: '' }))
+
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useSearchParams: (...args) => {
+      const real = actual.useSearchParams(...args)
+      return lag.on ? [new URLSearchParams(lag.search), () => {}] : real
+    },
+  }
+})
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -473,6 +486,77 @@ describe('Transactions filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('')
     expect(where()).toBe('')
+  })
+
+  describe('with a router that commits URL changes late', () => {
+    afterEach(() => {
+      lag.on = false
+    })
+
+    it('keeps what was typed when an older URL value commits afterwards', async () => {
+      const user = userEvent.setup()
+      stub(sample())
+      lag.on = true
+      lag.search = ''
+      const client = new QueryClient()
+      const view = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      const box = screen.getByRole('textbox', { name: /search/i })
+      await user.type(box, 'AB')
+      lag.search = '?q=A'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('AB')
+      lag.search = '?q=AB'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('AB')
+    })
+
+    it('adopts a URL value this box never wrote', async () => {
+      const user = userEvent.setup()
+      stub(sample())
+      lag.on = true
+      lag.search = ''
+      const client = new QueryClient()
+      const view = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      await user.type(screen.getByRole('textbox', { name: /search/i }), 'AB')
+      lag.search = '?q=XYZ'
+      view.rerender(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={['/']}>
+            <Transactions />
+            <Where />
+          </MemoryRouter>
+        </QueryClientProvider>,
+      )
+      expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('XYZ')
+    })
   })
 
   it('follows the URL when it changes under the search box', () => {
