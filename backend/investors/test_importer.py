@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 
 from . import edgar, figi, importer, parse
-from .factories import make_investor
+from .factories import make_investor, store_quarter
 from .models import Filing, Holding, Investor, Security
 
 NS = 'http://www.sec.gov/edgar/document/thirteenf/informationtable'
@@ -271,3 +271,93 @@ class BackfillTest(TestCase):
         importer.backfill(investor, today=date(2026, 10, 5))
 
         sync_investor.assert_called_once_with(investor, date(2021, 10, 5), track_progress=True, resolve=True)
+
+
+class SyncRebuildsMovesTest(TestCase):
+    ENTRY = {
+        'accession': 'A-1', 'form': '13F-HR', 'filed_on': date(2026, 8, 14), 'quarter_end': date(2026, 6, 30),
+    }
+
+    def run_sync(self, stored_now):
+        investor = make_investor()
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', return_value=stored_now), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        return investor, rebuild
+
+    def test_a_stored_filing_rebuilds_that_investors_moves(self):
+        investor, rebuild = self.run_sync(True)
+        rebuild.assert_called_once_with(investor)
+
+    def test_nothing_new_leaves_the_moves_alone(self):
+        _, rebuild = self.run_sync(False)
+        rebuild.assert_not_called()
+
+    def test_an_interrupted_import_still_rebuilds_and_re_raises(self):
+        investor = make_investor()
+        second = {**self.ENTRY, 'accession': 'A-2'}
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY, second]), \
+                patch('investors.importer._import_filing', side_effect=[True, edgar.EdgarError('timeout')]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            with self.assertRaises(edgar.EdgarError):
+                importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        rebuild.assert_called_once_with(investor)
+
+    def test_moves_behind_the_stored_filings_are_rebuilt_even_when_nothing_is_new(self):
+        investor = make_investor()
+        store_quarter(investor, Q2, [APPLE], rebuild=False)
+        with patch('investors.importer.edgar.filings', return_value=[]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        rebuild.assert_called_once_with(investor)
+
+    def test_moves_that_are_current_are_left_alone(self):
+        investor = make_investor()
+        store_quarter(investor, Q2, [APPLE])
+        with patch('investors.importer.edgar.filings', return_value=[]), \
+                patch('investors.importer.moves.rebuild') as rebuild:
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        rebuild.assert_not_called()
+
+
+class ProgressFlagTest(TestCase):
+    ENTRY = SyncRebuildsMovesTest.ENTRY
+
+    def expected(self, investor):
+        return Investor.objects.get(pk=investor.pk).quarters_expected
+
+    def test_the_flag_outlives_the_rebuild_and_the_ticker_lookup(self):
+        investor = make_investor()
+        seen = {}
+
+        def rebuild(_):
+            seen['rebuild'] = self.expected(investor)
+
+        def resolve():
+            seen['resolve'] = self.expected(investor)
+            return 0
+
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', return_value=True), \
+                patch('investors.importer.moves.rebuild', side_effect=rebuild), \
+                patch('investors.importer.resolve_securities', side_effect=resolve):
+            importer.sync_investor(investor, date(2021, 1, 1), track_progress=True)
+
+        self.assertEqual(seen, {'rebuild': 1, 'resolve': 1})
+        self.assertIsNone(self.expected(investor))
+
+    def test_the_flag_is_cleared_when_the_loop_raises(self):
+        investor = make_investor()
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', side_effect=edgar.EdgarError('timeout')):
+            with self.assertRaises(edgar.EdgarError):
+                importer.sync_investor(investor, date(2021, 1, 1), track_progress=True, resolve=False)
+        self.assertIsNone(self.expected(investor))
+        self.assertIsNone(investor.quarters_expected)
+
+    def test_a_leftover_flag_is_cleared_by_a_plain_sync(self):
+        investor = make_investor(quarters_expected=0)
+        with patch('investors.importer.edgar.filings', return_value=[]):
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        self.assertIsNone(self.expected(investor))

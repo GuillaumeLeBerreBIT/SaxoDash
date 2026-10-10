@@ -1,4 +1,5 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -130,3 +131,42 @@ class InvestorDetailApiTest(APITestCase):
             (data['filed_on'], data['new_count'], data['exited_count'], data['turnover']),
             (None, None, None, None),
         )
+
+    def detail(self, **params):
+        response = self.client.get(self.url(), params)
+        self.assertEqual(response.status_code, 200)
+        return response.data
+
+    def test_the_story_moves_are_ordered_new_added_trimmed_sold_out(self):
+        moves = self.detail()['moves']
+        self.assertEqual(
+            [(move['kind'], move['ticker'] or move['issuer'], move['put_call']) for move in moves],
+            [('new', 'NVDA', ''), ('new', 'NVDA', 'CALL'), ('added', 'AAPL', ''), ('sold_out', 'ALLY FINL INC', '')],
+        )
+        added = moves[2]
+        self.assertEqual((added['weight'], added['previous_weight'], added['shares_change_pct']), (70.0, 54.55, 10.0))
+        self.assertEqual((moves[3]['weight'], moves[3]['previous_weight']), (0.0, 36.36))
+
+    def test_unchanged_positions_are_not_moves(self):
+        self.assertNotIn('BERKSHIRE HATHAWAY INC', [move['issuer'] for move in self.detail()['moves']])
+
+    def test_the_first_stored_quarter_has_no_moves(self):
+        self.assertEqual(self.detail(quarter='2026-03-31')['moves'], [])
+
+    def test_concentration_is_the_top_five_weight(self):
+        self.assertEqual(self.detail()['top5_weight'], 100.0)
+
+    def test_sectors_sum_weights_and_group_the_unknown_as_other(self):
+        with patch('investors.summaries.sectors.sector_for', side_effect=lambda t: {'AAPL': 'Technology'}.get(t)):
+            sectors = self.detail()['sectors']
+        self.assertEqual(sectors, [{'sector': 'Technology', 'weight': 70.0}, {'sector': 'Other', 'weight': 30.0}])
+
+    def test_following_is_a_patch_that_answers_the_card(self):
+        response = self.client.patch(self.url(), {'followed': True}, format='json')
+
+        self.assertEqual((response.status_code, response.data['followed'], response.data['slug']), (200, True, 'berkshire-hathaway'))
+        self.investor.refresh_from_db()
+        self.assertTrue(self.investor.followed)
+
+    def test_following_needs_a_boolean(self):
+        self.assertEqual(self.client.patch(self.url(), {'followed': 'yes'}, format='json').status_code, 400)

@@ -16,7 +16,7 @@ class LoadCuratedTest(TestCase):
     def test_loads_the_shipped_list(self):
         result = load_curated()
 
-        self.assertEqual(result, {'created': 19, 'updated': 0})
+        self.assertEqual(result, {'created': 88, 'updated': 0})
         berkshire = Investor.objects.get(cik=1067983)
         self.assertEqual(
             (berkshire.name, berkshire.firm, berkshire.slug, berkshire.curated),
@@ -49,15 +49,54 @@ class LoadCuratedTest(TestCase):
     def test_the_shipped_list_has_unique_ciks(self):
         with open(CURATED_CSV, newline='') as handle:
             ciks = [row['cik'] for row in csv.DictReader(handle)]
-        self.assertEqual(len(ciks), 19)
-        self.assertEqual(len(set(ciks)), 19)
+        self.assertEqual(len(ciks), 88)
+        self.assertEqual(len(set(ciks)), 88)
+
+    def test_every_shipped_row_has_known_styles_and_a_blurb(self):
+        from .models import STYLES
+
+        load_curated()
+        for investor in Investor.objects.all():
+            self.assertTrue(investor.styles, investor.slug)
+            self.assertTrue(set(investor.styles) <= set(STYLES), investor.slug)
+            self.assertTrue(investor.blurb, investor.slug)
+
+    def test_shipped_slugs_are_unique_and_none_is_reserved(self):
+        load_curated()
+        slugs = list(Investor.objects.values_list('slug', flat=True))
+        self.assertEqual(len(slugs), len(set(slugs)))
+        self.assertFalse({'hub', 'stocks', 'search'} & set(slugs))
+
+    def test_styles_are_read_from_the_pipe_separated_column(self):
+        load_curated()
+        self.assertEqual(Investor.objects.get(cik=1336528).styles, ['Activist', 'Concentrated'])
+
+    def test_reloading_updates_styles_without_touching_history(self):
+        load_curated()
+        berkshire = Investor.objects.get(cik=1067983)
+        Investor.objects.filter(pk=berkshire.pk).update(styles=[], followed=True)
+
+        self.assertEqual(load_curated(), {'created': 0, 'updated': 1})
+
+        berkshire.refresh_from_db()
+        self.assertEqual((berkshire.styles, berkshire.followed), (['Value', 'Concentrated'], True))
+
+    def test_an_unknown_style_is_refused(self):
+        import tempfile
+
+        with tempfile.NamedTemporaryFile('w', suffix='.csv', newline='') as handle:
+            handle.write('name,firm,cik,styles,blurb\nA,B Fund,7,Momentum,x\n')
+            handle.flush()
+            with self.assertRaisesMessage(ValueError, 'Momentum'):
+                load_curated(handle.name)
+
 
 
 class CommandsTest(TestCase):
     def test_load_investors_reports_counts(self):
         out = StringIO()
         call_command('load_investors', stdout=out)
-        self.assertIn('created 19, updated 0', out.getvalue())
+        self.assertIn('created 88, updated 0', out.getvalue())
 
     @patch('investors.management.commands.backfill_investors.backfill', return_value=SyncResult(imported=3))
     def test_backfill_one_investor_by_slug(self, backfill):

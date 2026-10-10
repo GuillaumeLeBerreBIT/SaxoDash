@@ -4,9 +4,17 @@ from pathlib import Path
 from django.db import transaction
 from django.utils.text import slugify
 
-from .models import Investor
+from .models import STYLES, Investor
 
 CURATED_CSV = Path(__file__).resolve().parent / 'curated.csv'
+
+
+def _styles(raw):
+    styles = [style.strip() for style in (raw or '').split('|') if style.strip()]
+    unknown = [style for style in styles if style not in STYLES]
+    if unknown:
+        raise ValueError(f'Unknown style(s): {", ".join(unknown)}')
+    return styles
 
 
 @transaction.atomic
@@ -21,6 +29,7 @@ def load_curated(path=CURATED_CSV):
         values = {
             'name': entry['name'].strip(),
             'firm': entry['firm'].strip(),
+            'styles': _styles(entry.get('styles')),
             'blurb': (entry.get('blurb') or '').strip(),
             'curated': True,
         }

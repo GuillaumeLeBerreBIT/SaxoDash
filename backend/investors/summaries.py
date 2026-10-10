@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import timedelta
 
 from django.db.models import Max
@@ -6,11 +7,14 @@ from portfolio.models import Position
 from research.models import WatchlistItem
 
 from . import changes, importer, quarters, sectors
-from .models import Security
+from .models import PositionMove, Security
 
 STALE_AFTER = timedelta(days=183)
 TOP_HOLDINGS = 3
 TOP_TEN = 10
+TOP_FIVE = 5
+OTHER_SECTOR = 'Other'
+MOVE_ORDER = {changes.NEW: 0, changes.ADDED: 1, changes.TRIMMED: 2, changes.SOLD_OUT: 3}
 
 
 def tickers_for(cusips):
@@ -60,6 +64,8 @@ def _header(investor, today):
         'last_filing_at': investor.last_filing_at.isoformat() if investor.last_filing_at else None,
         'stale': is_stale(investor, today),
         'import': importer.progress(investor),
+        'styles': investor.styles,
+        'followed': investor.followed,
     }
 
 
@@ -102,16 +108,29 @@ def _filed_on(investor, quarter_end):
     return latest.isoformat() if latest else None
 
 
-def holds_ticker(investor, ticker):
-    ends = quarters.quarter_ends(investor)
-    if not ends:
-        return False
-    cusips = {row['cusip'] for row in quarters.snapshot(investor, ends[0]).values()}
-    return Security.objects.filter(cusip__in=cusips, ticker__iexact=ticker).exists()
+def _latest_quarters(investor_ids):
+    rows = (
+        PositionMove.objects.filter(investor_id__in=investor_ids)
+        .values('investor_id').annotate(latest=Max('quarter_end'))
+    )
+    return {row['investor_id']: row['latest'] for row in rows}
 
 
-def card(investor, today):
-    ends = quarters.quarter_ends(investor)
+def _moves_by_investor(latest):
+    grouped = defaultdict(list)
+    for quarter_end in set(latest.values()):
+        ids = [pk for pk, quarter in latest.items() if quarter == quarter_end]
+        for move in PositionMove.objects.filter(quarter_end=quarter_end, investor_id__in=ids):
+            grouped[move.investor_id].append(move)
+    return grouped
+
+
+def _held(moves):
+    held = [move for move in moves if move.kind != changes.SOLD_OUT]
+    return sorted(held, key=lambda move: (-move.value, move.cusip, move.put_call))
+
+
+def _card(investor, today, quarter_end, moves, held, tickers):
     base = {
         **_header(investor, today),
         'latest_quarter': None,
@@ -122,26 +141,79 @@ def card(investor, today):
         'new_count': None,
         'exited_count': None,
     }
-    if not ends:
+    if quarter_end is None:
         return base
-
-    quarter_end, previous = _resolve_quarter(ends, None)
-    snap, previous_snap, per_key, sold_out = _comparison(investor, quarter_end, previous)
-    rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
-    movement = _movement(snap, previous_snap, per_key, sold_out)
+    compared = any(move.kind is not None for move in moves)
     base.update({
         'latest_quarter': quarter_end.isoformat(),
-        'total_value': sum(row['value'] for row in rows),
-        'positions': len(rows),
-        'top10_weight': _top10(rows),
+        'total_value': sum(move.value for move in held),
+        'positions': len(held),
+        'top10_weight': round(sum(move.weight_pct for move in held[:TOP_TEN]), 2),
         'top_holdings': [
-            {'cusip': row['cusip'], 'ticker': row['ticker'], 'issuer': row['issuer'], 'weight': row['weight']}
-            for row in rows[:TOP_HOLDINGS]
+            {'cusip': move.cusip, 'ticker': tickers.get(move.cusip), 'issuer': move.issuer, 'weight': move.weight_pct}
+            for move in held[:TOP_HOLDINGS]
         ],
-        'new_count': movement['new_count'],
-        'exited_count': movement['exited_count'],
+        'new_count': sum(1 for move in held if move.kind == changes.NEW) if compared else None,
+        'exited_count': len(moves) - len(held) if compared else None,
     })
     return base
+
+
+def cards(investors, today):
+    investors = list(investors)
+    latest = _latest_quarters([investor.pk for investor in investors])
+    grouped = _moves_by_investor(latest)
+    held = {pk: _held(moves) for pk, moves in grouped.items()}
+    tickers = tickers_for({move.cusip for rows in held.values() for move in rows[:TOP_HOLDINGS]})
+    return [
+        _card(investor, today, latest.get(investor.pk), grouped.get(investor.pk, []), held.get(investor.pk, []), tickers)
+        for investor in investors
+    ]
+
+
+def card(investor, today):
+    return cards([investor], today)[0]
+
+
+def holder_ids(ticker):
+    cusips = list(Security.objects.filter(ticker__iexact=ticker).values_list('cusip', flat=True))
+    rows = list(
+        PositionMove.objects.filter(cusip__in=cusips, put_call='').exclude(kind=changes.SOLD_OUT)
+        .values_list('investor_id', 'quarter_end')
+    )
+    latest = _latest_quarters({investor_id for investor_id, _ in rows})
+    return {investor_id for investor_id, quarter_end in rows if latest.get(investor_id) == quarter_end}
+
+
+def _sectors(holdings):
+    weights = defaultdict(float)
+    for holding in holdings:
+        weights[holding['sector'] or OTHER_SECTOR] += holding['weight']
+    ranked = sorted(weights.items(), key=lambda pair: (-pair[1], pair[0]))
+    return [{'sector': sector, 'weight': round(weight, 2)} for sector, weight in ranked]
+
+
+def _story_moves(investor, quarter_end):
+    rows = list(investor.moves.filter(quarter_end=quarter_end, kind__in=MOVE_ORDER))
+    tickers = tickers_for({row.cusip for row in rows})
+    rows.sort(key=lambda row: (
+        MOVE_ORDER[row.kind], -max(row.weight_pct, row.previous_weight_pct or 0.0), row.cusip, row.put_call,
+    ))
+    return [
+        {
+            'cusip': row.cusip,
+            'put_call': row.put_call,
+            'ticker': tickers.get(row.cusip),
+            'issuer': row.issuer,
+            'kind': row.kind,
+            'weight': row.weight_pct,
+            'previous_weight': row.previous_weight_pct,
+            'shares_change_pct': row.change_pct,
+            'value': row.value,
+            'previous_value': row.previous_value,
+        }
+        for row in rows
+    ]
 
 
 def detail(investor, quarter_end, today):
@@ -159,6 +231,9 @@ def detail(investor, quarter_end, today):
         'exited_count': None,
         'turnover': None,
         'holdings': [],
+        'top5_weight': None,
+        'sectors': [],
+        'moves': [],
     }
     if not ends:
         return base
@@ -200,6 +275,9 @@ def detail(investor, quarter_end, today):
         'top10_weight': _top10(rows),
         **_movement(snap, previous_snap, per_key, sold_out),
         'holdings': holdings,
+        'top5_weight': round(sum(row['weight'] for row in rows[:TOP_FIVE]), 2),
+        'sectors': _sectors(holdings),
+        'moves': _story_moves(investor, quarter_end),
     })
     return base
 
