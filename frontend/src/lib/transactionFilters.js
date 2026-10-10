@@ -4,7 +4,7 @@ export const DATE_PRESETS = ['30D', 'YTD', '1Y']
 
 const DEFAULT_FILTERS = { search: '', type: 'All', account: '', from: '', to: '' }
 
-function validDate(value) {
+export function validDate(value) {
   if (typeof value !== 'string') return ''
   const match = ISO.exec(value)
   if (!match) return ''

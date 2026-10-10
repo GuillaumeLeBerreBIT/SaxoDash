@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -458,6 +459,37 @@ describe('Transactions filters', () => {
     expect(screen.getByLabelText('Account')).toHaveValue('')
     expect(screen.getByLabelText('From')).toHaveValue('')
     expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('edits the search text mid-word, mirrors it to the URL and empties both on Clear filters', async () => {
+    const user = userEvent.setup()
+    stub(sample())
+    renderAt('/')
+    const box = screen.getByRole('textbox', { name: /search/i })
+    await user.type(box, 'AAL')
+    await user.keyboard('{ArrowLeft}P')
+    expect(box).toHaveValue('AAPL')
+    expect(new URLSearchParams(where()).get('q')).toBe('AAPL')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('')
+    expect(where()).toBe('')
+  })
+
+  it('follows the URL when it changes under the search box', () => {
+    stub(sample())
+    renderAt('/?q=alp')
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('alp')
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('textbox', { name: /search/i })).toHaveValue('')
+  })
+
+  it('keeps both Clear filters buttons at a 44px touch target below md', () => {
+    stub(sample())
+    renderAt('/?from=2026-06-01&to=2026-01-01')
+    for (const button of screen.getAllByRole('button', { name: 'Clear filters' })) {
+      expect(button.className).toContain('h-11')
+      expect(button.className).toContain('md:h-8')
+    }
   })
 
   it('offers Clear filters when only a date range is active', () => {

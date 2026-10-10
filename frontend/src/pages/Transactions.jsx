@@ -6,6 +6,7 @@ import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txSignedTotal, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { nextSort, sortRows } from '../lib/sort'
 import { accountsOf, DATE_PRESETS, filterByDateRange, rangeForPreset, readFilters, writeFilters } from '../lib/transactionFilters'
+import { localToday } from '../lib/periods'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
 import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Select, Th, SortableTh, Td } from '../components/ui'
 
@@ -13,12 +14,6 @@ const TRANSACTION_ACCESSORS = {
   date: (t) => t.date,
   instrument: (t) => t.instrument,
   total: (t) => txSignedTotal(t),
-}
-
-function localToday() {
-  const now = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 export default function Transactions() {
@@ -38,7 +33,15 @@ export default function Transactions() {
   const effectiveFilter = types.includes(raw.type) ? raw.type : 'All'
   const account = accounts.includes(raw.account) ? raw.account : ''
   const filters = { ...raw, type: effectiveFilter, account }
-  const { search, from, to } = filters
+  const { from, to } = filters
+  const urlSearch = raw.search
+  const [searchText, setSearchText] = useState(urlSearch)
+  const [seenUrlSearch, setSeenUrlSearch] = useState(urlSearch)
+  if (seenUrlSearch !== urlSearch) {
+    setSeenUrlSearch(urlSearch)
+    setSearchText(urlSearch)
+  }
+  const search = urlSearch
 
   const dead = `${raw.type !== effectiveFilter ? raw.type : ''}|${raw.account !== account ? raw.account : ''}`
   if (dead !== deadSelection) {
@@ -118,8 +121,11 @@ export default function Transactions() {
               <Search size={14} />
             </span>
             <Input
-              value={search}
-              onChange={(e) => applyFilters({ search: e.target.value })}
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value)
+                applyFilters({ search: e.target.value })
+              }}
               placeholder="Search instrument or ticker"
               aria-label="Search transactions"
               className="w-full pl-9"
@@ -172,7 +178,7 @@ export default function Transactions() {
             </div>
           </div>
           {filtersActive && visible.length > 0 && (
-            <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+            <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
           )}
         </div>
 
@@ -226,7 +232,7 @@ export default function Transactions() {
                     <EmptyState title="No transactions match your filters." />
                     {filtersActive && (
                       <div className="pb-6 text-center">
-                        <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+                        <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
                       </div>
                     )}
                   </td>
