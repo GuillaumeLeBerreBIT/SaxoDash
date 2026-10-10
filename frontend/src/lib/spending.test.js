@@ -45,6 +45,13 @@ describe('foldSmallSlices', () => {
     expect(out.at(-1).folded).toBe(true)
     expect(out[0].folded).toBeUndefined()
   })
+  it('names the folded slice with otherName and lists the categories it absorbed', () => {
+    const out = foldSmallSlices(
+      [{ ...item('A', 90), category: 'AA' }, { ...item('B', 8), category: 'BB' }, { ...item('C', 2), category: 'CC' }, { ...item('D', 1), category: 'DD' }],
+      { threshold: 0.05, otherName: 'Smaller categories' },
+    )
+    expect(out.at(-1)).toMatchObject({ name: 'Smaller categories', folded: true, categories: ['CC', 'DD'] })
+  })
   it('does not absorb a real category that happens to be named Other', () => {
     const out = foldSmallSlices([item('A', 60), { ...item('Other', 36), category: 'OTHER' }, item('C', 4)])
     expect(out.filter((i) => i.name === 'Other')).toHaveLength(1)

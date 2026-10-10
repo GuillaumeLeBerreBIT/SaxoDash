@@ -17,9 +17,14 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
         to: period ? spendingTransactionsPath(c.category, period) : undefined,
       }))
       .sort((a, b) => b.value - a.value),
+    { otherName: 'Smaller categories' },
   )
   const items = period
-    ? folded.map((item) => (item.folded ? { ...item, to: spendingTransactionsPath(null, period) } : item))
+    ? folded.map((item) =>
+        item.folded
+          ? { ...item, to: spendingTransactionsPath(item.categories.length === 1 ? item.categories[0] : null, period) }
+          : item,
+      )
     : folded
 
   const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
