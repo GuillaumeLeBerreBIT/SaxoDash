@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterByPeriod, filterSpending, filterTransactions, netSpend, paginate, spendTotal } from './accountTransactions'
+import { filterByPeriod, filterSpending, filterTransactions, netSpend, paginate, spendTotal, spendingCategories } from './accountTransactions'
 
 describe('filterTransactions', () => {
   const rows = [
@@ -46,6 +46,9 @@ describe('filterByPeriod', () => {
   })
   it('ignores a bound that is not an ISO day', () => {
     expect(filterByPeriod(rows, { from: 'nope', to: undefined })).toHaveLength(4)
+  })
+  it('ignores an impossible calendar date like any other bad bound', () => {
+    expect(filterByPeriod(rows, { from: '2026-13-45', to: '2026-02-30' })).toHaveLength(4)
   })
   it('is empty when from is after to', () => {
     expect(filterByPeriod(rows, { from: '2026-09-30', to: '2026-09-01' })).toEqual([])
@@ -111,5 +114,20 @@ describe('spendTotal', () => {
   })
   it('is zero with nothing to count', () => {
     expect(spendTotal([])).toBe(0)
+  })
+})
+
+describe('spendingCategories', () => {
+  const tx = (effective_category, amount) => ({ effective_category, amount })
+  it('keeps categories with a net outflow and drops income', () => {
+    expect(spendingCategories([tx('GROCERIES', '-40.00'), tx('INCOME', '2500.00'), tx('DINING', '-5.00')]).sort()).toEqual(['DINING', 'GROCERIES'])
+  })
+  it('keeps a category with refunds only while its net stays negative', () => {
+    expect(spendingCategories([tx('GROCERIES', '-40.00'), tx('GROCERIES', '10.00')])).toEqual(['GROCERIES'])
+    expect(spendingCategories([tx('GROCERIES', '-40.00'), tx('GROCERIES', '40.00')])).toEqual([])
+    expect(spendingCategories([tx('GROCERIES', '-40.00'), tx('GROCERIES', '50.00')])).toEqual([])
+  })
+  it('leaves out transfers and savings', () => {
+    expect(spendingCategories([tx('TRANSFER', '-300.00'), tx('SAVINGS', '-50.00')])).toEqual([])
   })
 })

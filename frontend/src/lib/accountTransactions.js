@@ -1,3 +1,6 @@
+import { localToday } from './periods'
+import { validDate } from './transactionFilters'
+
 export const PAGE_SIZE = 25
 
 export function filterTransactions(rows, { search, category }) {
@@ -19,23 +22,17 @@ export function paginate(rows, page, pageSize = PAGE_SIZE) {
   return { rows: rows.slice(start, start + pageSize), page: current, pageCount, total: rows.length }
 }
 
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
-const TRANSFER_CATEGORIES = ['TRANSFER', 'SAVINGS']
-
-function localToday() {
-  const now = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
+export const TRANSFER_CATEGORIES = ['TRANSFER', 'SAVINGS']
 
 export function filterByPeriod(rows, { from, to }) {
-  const start = ISO_DAY.test(from ?? '') ? from : null
-  const end = ISO_DAY.test(to ?? '') ? to : null
+  const start = validDate(from)
+  const end = validDate(to)
   return rows.filter((tx) => (!start || tx.booking_date >= start) && (!end || tx.booking_date <= end))
 }
 
 export function filterSpending(rows, { category, from, to, today = localToday() }) {
-  const end = ISO_DAY.test(to ?? '') && to < today ? to : today
+  const bound = validDate(to)
+  const end = bound && bound < today ? bound : today
   return filterByPeriod(rows, { from, to: end }).filter(
     (tx) =>
       !TRANSFER_CATEGORIES.includes(tx.effective_category) &&
@@ -48,7 +45,7 @@ export function netSpend(rows) {
   return -cents / 100
 }
 
-export function spendTotal(rows) {
+function netCentsByCategory(rows) {
   const byCategory = new Map()
   for (const tx of rows) {
     if (TRANSFER_CATEGORIES.includes(tx.effective_category)) continue
@@ -57,7 +54,15 @@ export function spendTotal(rows) {
       (byCategory.get(tx.effective_category) ?? 0) + Math.round(Number(tx.amount) * 100),
     )
   }
+  return byCategory
+}
+
+export function spendingCategories(rows) {
+  return [...netCentsByCategory(rows)].filter(([, net]) => net < 0).map(([category]) => category)
+}
+
+export function spendTotal(rows) {
   let cents = 0
-  for (const net of byCategory.values()) if (net < 0) cents -= net
+  for (const net of netCentsByCategory(rows).values()) if (net < 0) cents -= net
   return cents / 100
 }

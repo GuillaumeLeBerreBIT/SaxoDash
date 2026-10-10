@@ -5,7 +5,6 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { expectValidHeadingOutline } from '../test/headingOutline'
 import SpendingTransactions from './SpendingTransactions'
 import SpendingCategoryChart from '../components/SpendingCategoryChart'
-import { filterSpending, netSpend } from '../lib/accountTransactions'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -92,13 +91,12 @@ describe('SpendingTransactions', () => {
 
   it('agrees with the chart on the category amount for the same data', () => {
     const period = { date_from: '2026-09-01', date_to: '2026-09-30' }
-    const amount = netSpend(filterSpending(ROWS, { category: 'GROCERIES', from: period.date_from, to: period.date_to, today: '2026-12-01' }))
     const queryClient = new QueryClient()
     const { unmount } = render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <SpendingCategoryChart
-            categories={[{ category: 'GROCERIES', amount: amount.toFixed(2) }, { category: 'DINING', amount: '20.00' }]}
+            categories={[{ category: 'GROCERIES', amount: '45.00' }, { category: 'DINING', amount: '20.00' }]}
             isLoading={false}
             error={null}
             periodLabel="September 2026"
@@ -151,7 +149,35 @@ describe('SpendingTransactions', () => {
     renderAt('/spending/transactions?from=2026-09-01&to=2026-09-30')
     const strip = screen.getByText('Total spend').closest('div').parentElement
     expect(within(strip).getByText('€65.00')).toBeInTheDocument()
+    const table = within(screen.getByRole('table'))
+    expect(table.queryByText('EMPLOYER')).not.toBeInTheDocument()
+    expect(table.getByText('PIZZA')).toBeInTheDocument()
+    const count = screen.getByText('Transactions (incl. refunds)').parentElement
+    expect(within(count).getByText('4')).toBeInTheDocument()
+    const options = within(screen.getByLabelText('Filter by category')).getAllByRole('option').map((o) => o.value)
+    expect(options).toEqual(expect.arrayContaining(['ALL', 'GROCERIES', 'DINING']))
+    expect(options).not.toContain('INCOME')
+  })
+
+  it('shows a category that is net positive by URL as a net credit, not a negative spend', () => {
+    stub([...ROWS, tx(8, '2026-09-20', 'INCOME', '2500.00', 'EMPLOYER')])
+    renderAt('/spending/transactions?category=INCOME&from=2026-09-01&to=2026-09-30')
     expect(within(screen.getByRole('table')).getByText('EMPLOYER')).toBeInTheDocument()
+    expect(screen.queryByText('Net spend')).not.toBeInTheDocument()
+    const strip = screen.getByText('Net credit').closest('div').parentElement
+    expect(within(strip).getByText('€2,500.00')).toBeInTheDocument()
+  })
+
+  it.each(['TRANSFER', 'SAVINGS'])('treats ?category=%s like an unknown code', (code) => {
+    renderAt(`/spending/transactions?category=${code}&from=2026-09-01&to=2026-09-30`)
+    expect(screen.getByRole('heading', { level: 1, name: 'All spending' })).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).queryByText('OWN ACCOUNT')).not.toBeInTheDocument()
+  })
+
+  it('treats an impossible calendar date in the URL as no bound', () => {
+    renderAt('/spending/transactions?category=GROCERIES&from=2026-13-45&to=2026-09-30')
+    expect(screen.queryByText(/13 /)).not.toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByText('TOO EARLY')).toBeInTheDocument()
   })
 
   it('resets the search and page when the URL moves to another drill-down', () => {

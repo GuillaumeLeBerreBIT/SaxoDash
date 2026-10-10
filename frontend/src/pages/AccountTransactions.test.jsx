@@ -171,6 +171,7 @@ describe('AccountTransactions', () => {
     fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'zzz' } })
     expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
 
+    expect(screen.getByRole('button', { name: 'Clear filters' }).className).toContain('h-11')
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.getByText('COLRUYT')).toBeInTheDocument()
   })
