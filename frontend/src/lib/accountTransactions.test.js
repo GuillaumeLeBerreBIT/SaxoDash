@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterByPeriod, filterSpending, filterTransactions, netSpend, paginate } from './accountTransactions'
+import { filterByPeriod, filterSpending, filterTransactions, netSpend, paginate, spendTotal } from './accountTransactions'
 
 describe('filterTransactions', () => {
   const rows = [
@@ -91,5 +91,25 @@ describe('filterSpending', () => {
   it('totals a category to the same amount the summary reports (net outflow)', () => {
     const mine = filterSpending(rows, { ...period, category: 'GROCERIES' })
     expect(netSpend(mine)).toBe(46)
+  })
+})
+
+describe('spendTotal', () => {
+  const tx = (effective_category, amount) => ({ effective_category, amount })
+  it('sums only categories whose net is an outflow, like the summary', () => {
+    const rows = [
+      tx('GROCERIES', '-40.00'),
+      tx('GROCERIES', '10.00'),
+      tx('DINING', '-20.00'),
+      tx('INCOME', '2000.00'),
+      tx('REFUND_CREDIT', '5.00'),
+    ]
+    expect(spendTotal(rows)).toBe(50)
+  })
+  it('ignores transfers and savings', () => {
+    expect(spendTotal([tx('TRANSFER', '-300.00'), tx('SAVINGS', '-50.00'), tx('DINING', '-5.00')])).toBe(5)
+  })
+  it('is zero with nothing to count', () => {
+    expect(spendTotal([])).toBe(0)
   })
 })

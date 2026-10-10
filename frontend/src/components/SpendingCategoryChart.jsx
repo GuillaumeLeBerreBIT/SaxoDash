@@ -7,7 +7,7 @@ import { CATEGORY_LABELS } from '../lib/categories'
 import AllocationDonut from './AllocationDonut'
 
 export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, period, onRetry }) {
-  const items = foldSmallSlices(
+  const folded = foldSmallSlices(
     (categories ?? [])
       .map((c) => ({
         name: CATEGORY_LABELS[c.category] ?? c.category,
@@ -17,6 +17,9 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
       }))
       .sort((a, b) => b.value - a.value),
   )
+  const items = period
+    ? folded.map((item) => (item.name === 'Other' ? { ...item, to: spendingTransactionsPath(null, period) } : item))
+    : folded
 
   const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
 

@@ -84,9 +84,9 @@ describe('SpendingTransactions', () => {
 
   it('shows a count and a net total equal to what the Spending chart reports for the category', () => {
     renderAt(URL)
-    const strip = screen.getByText('Total').closest('div').parentElement
+    const strip = screen.getByText('Net spend').closest('div').parentElement
     expect(within(strip).getByText('€45.00')).toBeInTheDocument()
-    const count = screen.getByText('Transactions').parentElement
+    const count = screen.getByText('Transactions (incl. refunds)').parentElement
     expect(within(count).getByText('3')).toBeInTheDocument()
   })
 
@@ -111,13 +111,13 @@ describe('SpendingTransactions', () => {
     expect(within(link).getByText('€45.00')).toBeInTheDocument()
     unmount()
     renderAt(link.getAttribute('href'))
-    const strip = screen.getByText('Total').closest('div').parentElement
+    const strip = screen.getByText('Net spend').closest('div').parentElement
     expect(within(strip).getByText('€45.00')).toBeInTheDocument()
   })
 
   it('leaves out transfers when the category is unknown and shows everything else', () => {
     renderAt('/spending/transactions?category=NOPE&from=2026-09-01&to=2026-09-30')
-    expect(screen.getByRole('heading', { level: 1, name: 'Spending' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'All spending' })).toBeInTheDocument()
     const table = within(screen.getByRole('table'))
     expect(table.getByText('PIZZA')).toBeInTheDocument()
     expect(table.getByText('COLRUYT')).toBeInTheDocument()
@@ -142,6 +142,27 @@ describe('SpendingTransactions', () => {
     fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'zzz' } })
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(within(screen.getByRole('table')).getByText('COLRUYT')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Groceries' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument()
+  })
+
+  it('totals the all-spending view like the Spending summary: only categories with a net outflow', () => {
+    stub([...ROWS, tx(8, '2026-09-20', 'INCOME', '2500.00', 'EMPLOYER')])
+    renderAt('/spending/transactions?from=2026-09-01&to=2026-09-30')
+    const strip = screen.getByText('Total spend').closest('div').parentElement
+    expect(within(strip).getByText('€65.00')).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByText('EMPLOYER')).toBeInTheDocument()
+  })
+
+  it('resets the search and page when the URL moves to another drill-down', () => {
+    stub(Array.from({ length: 30 }, (_, i) => tx(100 + i, '2026-09-05', 'GROCERIES', '-1.00', `Store ${i}`)))
+    renderAt(URL)
+    fireEvent.click(screen.getByLabelText('Next page'))
+    expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Search transactions'), { target: { value: 'store 2' } })
+    fireEvent.change(screen.getByLabelText('Filter by category'), { target: { value: 'ALL' } })
+    expect(screen.getByLabelText('Search transactions')).toHaveValue('')
+    expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument()
   })
 
   it('says so when there is no spending in the period', () => {

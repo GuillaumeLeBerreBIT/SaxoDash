@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTooltipProps } from '../lib/charts'
 import { instrumentLogoUrl } from '../lib/logos'
@@ -163,8 +164,9 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
               </>
             )
             return d.to ? (
-              <Link key={i} to={d.to} className={`${rowClass} min-h-11 md:min-h-0 -my-1 md:my-0 rounded hover:bg-zinc-800/40`}>
+              <Link key={i} to={d.to} className={`${rowClass} min-h-11 md:min-h-0 rounded hover:bg-zinc-800/40 focus-visible:bg-zinc-800/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600`}>
                 {content}
+                <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-zinc-600" />
               </Link>
             ) : (
               <div key={i} className={rowClass}>{content}</div>

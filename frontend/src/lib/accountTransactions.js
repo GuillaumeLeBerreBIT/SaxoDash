@@ -47,3 +47,17 @@ export function netSpend(rows) {
   const cents = rows.reduce((sum, tx) => sum + Math.round(Number(tx.amount) * 100), 0)
   return -cents / 100
 }
+
+export function spendTotal(rows) {
+  const byCategory = new Map()
+  for (const tx of rows) {
+    if (TRANSFER_CATEGORIES.includes(tx.effective_category)) continue
+    byCategory.set(
+      tx.effective_category,
+      (byCategory.get(tx.effective_category) ?? 0) + Math.round(Number(tx.amount) * 100),
+    )
+  }
+  let cents = 0
+  for (const net of byCategory.values()) if (net < 0) cents -= net
+  return cents / 100
+}

@@ -51,7 +51,7 @@ describe('SpendingCategoryChart', () => {
     expect(screen.getByText('€40.00')).toBeInTheDocument()
   })
 
-  it('links each category to its transactions for the exact period, and not the Other slice', () => {
+  it('links each category to its transactions for the exact period, and the folded Other slice to the all-spending view', () => {
     renderWithProviders(
       <SpendingCategoryChart
         categories={[
@@ -70,8 +70,11 @@ describe('SpendingCategoryChart', () => {
       'href',
       '/spending/transactions?category=GROCERIES&from=2026-09-01&to=2026-09-30',
     )
-    expect(screen.getAllByRole('link')).toHaveLength(1)
-    expect(screen.queryByRole('link', { name: /Other/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link')).toHaveLength(2)
+    expect(screen.getByRole('link', { name: /Other/ })).toHaveAttribute(
+      'href',
+      '/spending/transactions?from=2026-09-01&to=2026-09-30',
+    )
   })
 
   it('links every category when none is folded', () => {

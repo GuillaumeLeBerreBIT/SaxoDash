@@ -6,7 +6,7 @@ import { fmtDate, fmtEur, fmtNum } from '../lib/format'
 import { Input, PageHeader, QueryState, Select, StatRow, StatStrip } from '../components/ui'
 import BankTransactionsTable from '../components/BankTransactionsTable'
 import { CATEGORY_LABELS } from '../lib/categories'
-import { filterSpending, filterTransactions, netSpend, paginate } from '../lib/accountTransactions'
+import { filterSpending, filterTransactions, netSpend, paginate, spendTotal } from '../lib/accountTransactions'
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
 
@@ -18,6 +18,11 @@ function periodText(from, to) {
 }
 
 export default function SpendingTransactions() {
+  const [params] = useSearchParams()
+  return <SpendingTransactionsView key={params.toString()} />
+}
+
+function SpendingTransactionsView() {
   const [params, setParams] = useSearchParams()
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
@@ -34,7 +39,7 @@ export default function SpendingTransactions() {
   const matching = filterTransactions(scope, { search, category: 'ALL' })
   const paged = paginate(matching, page)
   const presentCategories = [...new Set([...inPeriod.map((tx) => tx.effective_category), ...(category === 'ALL' ? [] : [category])])]
-  const filtering = search !== '' || category !== 'ALL'
+  const filtering = search !== ''
 
   const changeSearch = (value) => {
     setSearch(value)
@@ -49,7 +54,7 @@ export default function SpendingTransactions() {
   }
   const clearFilters = () => {
     setSearch('')
-    changeCategory('ALL')
+    setPage(1)
   }
 
   const period = periodText(from, to)
@@ -64,11 +69,15 @@ export default function SpendingTransactions() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title={category === 'ALL' ? 'Spending' : CATEGORY_LABELS[category]} subtitle={subtitle} />
+      <PageHeader title={category === 'ALL' ? 'All spending' : CATEGORY_LABELS[category]} subtitle={subtitle} />
       <QueryState isLoading={isLoading || (!data && !error)} error={error} onRetry={refetch} label="transactions">
         <StatStrip>
-          <StatRow label="Transactions" value={fmtNum(scope.length)} />
-          <StatRow label="Total" value={fmtEur(netSpend(scope))} lead />
+          <StatRow label="Transactions (incl. refunds)" value={fmtNum(scope.length)} />
+          <StatRow
+            label={category === 'ALL' ? 'Total spend' : 'Net spend'}
+            value={fmtEur(category === 'ALL' ? spendTotal(scope) : netSpend(scope))}
+            lead
+          />
         </StatStrip>
         <div className="flex flex-wrap gap-2">
           <Input
