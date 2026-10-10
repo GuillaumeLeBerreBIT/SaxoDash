@@ -1,4 +1,5 @@
-import { fmtEur } from './format'
+import { fmtDayMonth, fmtEur } from './format'
+import { niceAxis } from './niceTicks'
 
 // This file is the ONLY source of chart color in the app - a component that
 // needs a gain/loss/warning/neutral hex for an SVG, canvas, or recharts prop
@@ -139,9 +140,7 @@ export const axisProps = {
   tickLine: false,
 }
 
-export function formatAxisDate(value) {
-  return new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
-}
+export const formatAxisDate = fmtDayMonth
 
 export const dateAxisProps = { ...axisProps, dataKey: 'date', tickFormatter: formatAxisDate }
 
@@ -151,9 +150,23 @@ export const moneyAxisProps = {
   tickFormatter: (value) => fmtEur(value, { decimals: 0 }),
 }
 
-export function paddedDomain([min, max]) {
+function paddedDomain([min, max]) {
   const span = max - min
   const pad = span > 0 ? span * 0.1 : Math.abs(max) * 0.01 || 1
   const low = min >= 0 ? Math.max(0, min - pad) : min - pad
   return [low, max + pad]
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === '') return NaN
+  return Number(value)
+}
+
+export function seriesAxis(rows, keys, options = {}) {
+  const values = rows.flatMap((row) => keys.map((key) => toNumber(row[key]))).filter((value) => Number.isFinite(value))
+  if (options.includeZero) values.push(0)
+  if (values.length === 0) return {}
+  const axis = niceAxis(values, { count: options.count })
+  if (axis.ticks) return axis
+  return { domain: paddedDomain([Math.min(...values), Math.max(...values)]) }
 }

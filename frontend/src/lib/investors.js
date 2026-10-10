@@ -1,5 +1,5 @@
 import { OTHER_SLICE, colorForRank } from './charts'
-import { UNKNOWN } from './format'
+import { UNKNOWN, fmtDate } from './format'
 
 const VIEW_KEY = 'saxodash:investors-top10-view'
 
@@ -39,11 +39,7 @@ export function fmtUsdCompact(value, { sign = false } = {}) {
   return `${prefix}$${body}`
 }
 
-const FILED = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })
-
-export function fmtFiledDate(iso) {
-  return iso ? FILED.format(new Date(`${iso}T00:00:00Z`)) : UNKNOWN
-}
+export const fmtFiledDate = fmtDate
 
 export function latestQuarter(cards) {
   const quarters = cards.map((c) => c.latest_quarter).filter(Boolean).sort()

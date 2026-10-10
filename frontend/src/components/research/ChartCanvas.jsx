@@ -1,4 +1,4 @@
-import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
+import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
@@ -34,7 +34,7 @@ function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) 
 
   return (
     <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap ${className}`} {...rest}>
-      <span className="text-zinc-400">{bar.date}</span>
+      <span className="text-zinc-400">{fmtDate(bar.date)}</span>
       {[
         ['O', bar.open],
         ['H', bar.high],

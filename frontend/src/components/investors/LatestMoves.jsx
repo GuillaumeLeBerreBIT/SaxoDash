@@ -1,7 +1,6 @@
 import { useId, useState } from 'react'
 
-import { Button, Card, InstrumentLogo } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { Button, Card, InstrumentLogo, LetterAvatar } from '../ui'
 import { OptionBadge } from './HoldingBadges'
 import { MOVES_SHOWN, groupMoves, moveSentence, stockLabel } from '../../lib/investorHub'
 import { quarterLabel } from '../../lib/investors'
@@ -14,7 +13,7 @@ function Move({ move }) {
   const label = stockLabel(move)
   return (
     <li className="py-2 flex items-center gap-2.5 min-w-0">
-      <InstrumentLogo symbol={move.ticker} size={22} className="rounded" fallback={<TickerInitial ticker={label} size={22} />} />
+      <InstrumentLogo symbol={move.ticker} size={22} className="rounded" fallback={<LetterAvatar symbol={label} size={22} />} />
       <span className={`shrink-0 ${move.ticker ? 'font-mono font-semibold text-zinc-100' : 'text-zinc-200'}`}>{label}</span>
       <OptionBadge putCall={move.put_call} />
       <span className="min-w-0 truncate text-[var(--fig-sm)] text-zinc-400">{moveSentence(move)}</span>

@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../api/queries'
-import { fmtQty } from '../lib/format'
+import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass, txTypes } from '../lib/transactions'
 import { toCsv, TRANSACTION_COLUMNS } from '../lib/csv'
-import { Badge, Button, Card, Input, InstrumentLogo, PageHeader, Th, Td } from '../components/ui'
+import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, PageHeader, QueryState, Th, Td } from '../components/ui'
 
 export default function Transactions() {
-  const { data, isLoading, error } = useTransactions('?page_size=1000')
+  const { data, isLoading, error, refetch } = useTransactions('?page_size=1000')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [page, setPage] = useState(1)
@@ -18,6 +18,11 @@ export default function Transactions() {
   const types = useMemo(() => txTypes(allTx), [allTx])
 
   const effectiveFilter = types.includes(typeFilter) ? typeFilter : 'All'
+
+  if (effectiveFilter !== typeFilter) {
+    setTypeFilter('All')
+    setPage(1)
+  }
 
   const filtered = useMemo(
     () =>
@@ -33,6 +38,12 @@ export default function Transactions() {
   const pageCount = Math.max(1, Math.ceil(filtered.length / perPage))
   const visible = filtered.slice((page - 1) * perPage, page * perPage)
 
+  function clearFilters() {
+    setSearch('')
+    setTypeFilter('All')
+    setPage(1)
+  }
+
   function handleExport() {
     const blob = new Blob([toCsv(TRANSACTION_COLUMNS, filtered)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -43,8 +54,14 @@ export default function Transactions() {
     URL.revokeObjectURL(url)
   }
 
-  if (error) return <div className="text-red-400 text-sm">Failed to load transactions</div>
-  if (isLoading) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (error || isLoading) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Transactions" subtitle="All account activity" />
+        <QueryState isLoading={!error} error={error} onRetry={refetch} label="transactions" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -74,20 +91,18 @@ export default function Transactions() {
               className="w-full pl-9"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-1 p-0.5 bg-zinc-950 border border-zinc-800 rounded-md">
+          <div className="flex flex-wrap items-center gap-1">
             {types.map((t) => (
-              <button
+              <Chip
                 key={t}
+                active={effectiveFilter === t}
                 onClick={() => {
                   setTypeFilter(t)
                   setPage(1)
                 }}
-                className={`px-2.5 h-8 text-[var(--fig-xs)] font-medium rounded ${
-                  effectiveFilter === t ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-200'
-                }`}
               >
                 {t}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -109,7 +124,7 @@ export default function Transactions() {
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="num text-zinc-300">{t.date}</Td>
+                  <Td edge className="num text-zinc-300">{fmtDate(t.date)}</Td>
                   <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
@@ -125,7 +140,7 @@ export default function Transactions() {
                         symbol={t.ticker}
                         size={16}
                         className="rounded-sm"
-                        fallback={<span className="w-4 h-4 shrink-0" />}
+                        fallback={<LetterAvatar symbol={t.ticker} size={16} className="rounded-sm" />}
                       />
                       {t.ticker}
                     </span>
@@ -138,8 +153,13 @@ export default function Transactions() {
               ))}
               {visible.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-zinc-500 py-8">
-                    No transactions match your filters.
+                  <td colSpan={8}>
+                    <EmptyState title="No transactions match your filters." />
+                    {(search !== '' || effectiveFilter !== 'All') && (
+                      <div className="pb-6 text-center">
+                        <Button size="sm" onClick={clearFilters}>Clear filters</Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
@@ -151,11 +171,12 @@ export default function Transactions() {
           <div className="text-[var(--fig-xs)] text-zinc-500">
             Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="w-8 h-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              aria-label="Previous page"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronLeft size={14} />
             </button>
@@ -163,7 +184,9 @@ export default function Transactions() {
               <button
                 key={n}
                 onClick={() => setPage(n)}
-                className={`w-8 h-8 text-[var(--fig-xs)] rounded font-medium ${
+                aria-label={`Page ${n}`}
+                aria-current={n === page ? 'page' : undefined}
+                className={`h-11 w-11 md:h-8 md:w-8 text-[var(--fig-xs)] rounded font-medium ${
                   n === page ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'
                 }`}
               >
@@ -173,7 +196,8 @@ export default function Transactions() {
             <button
               onClick={() => setPage(Math.min(pageCount, page + 1))}
               disabled={page === pageCount}
-              className="w-8 h-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              aria-label="Next page"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronRight size={14} />
             </button>

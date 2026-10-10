@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { expectValidHeadingOutline } from '../test/headingOutline'
+import { fireEvent, screen } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Accounts from './Accounts'
 
@@ -51,6 +52,24 @@ function mockDefaults(overrides = {}) {
 describe('Accounts', () => {
   beforeEach(() => vi.clearAllMocks())
 
+  it('has exactly one h1 and no skipped heading level', () => {
+    mockDefaults()
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while loading', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() } })
+    const { container } = renderWithProviders(<Accounts />)
+    expectValidHeadingOutline(container)
+  })
+
   it('shows the total balance across accounts', () => {
     mockDefaults()
     renderWithProviders(<Accounts />)
@@ -97,5 +116,23 @@ describe('Accounts', () => {
     })
     renderWithProviders(<Accounts />)
     expect(screen.queryByText(/^vs /)).not.toBeInTheDocument()
+  })
+
+  it('keeps the heading and offers Retry when accounts fail to load', () => {
+    const refetch = vi.fn()
+    mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch } })
+    renderWithProviders(<Accounts />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
+  })
+
+  it('shows a skeleton card, not bare Loading text, while accounts load', () => {
+    mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
+    renderWithProviders(<Accounts />)
+    expect(screen.getByRole('status', { name: 'Loading accounts' })).toBeInTheDocument()
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
   })
 })

@@ -1,15 +1,15 @@
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useSpendingTrend } from '../api/queries'
-import { axisProps, chartTooltipProps, gridProps, moneyAxisProps, NEGATIVE } from '../lib/charts'
+import { axisProps, chartTooltipProps, gridProps, moneyAxisProps, seriesAxis, NEGATIVE } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 import { trendBars, trendTooltipLabel, trendTooltipRow } from '../lib/spending'
 
 export default function SpendingTrendChart() {
-  const { data, isLoading, error } = useSpendingTrend()
+  const { data, isLoading, error, refetch } = useSpendingTrend()
 
   const bars = trendBars(data)
-  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 1, height: 220, onRetry: refetch })
   const subtitle = bars.at(-1)?.current
     ? 'Monthly total, last 6 months · current month to date'
     : 'Monthly total, last 6 months'
@@ -23,7 +23,7 @@ export default function SpendingTrendChart() {
             <BarChart data={bars}>
               <CartesianGrid {...gridProps} />
               <XAxis {...axisProps} dataKey="label" />
-              <YAxis {...moneyAxisProps} />
+              <YAxis {...moneyAxisProps} {...seriesAxis(bars, ['total'], { includeZero: true })} />
               <Tooltip
                 {...chartTooltipProps}
                 filterNull={false}

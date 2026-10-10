@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -27,6 +28,16 @@ describe('Discover page', () => {
     startScan.mutate.mockClear()
     startScan.error = null
     localStorage.clear()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    useDiscover.mockReturnValue({ data: {
+      as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' },
+      groups: [{ key: 'price', title: 'Price action' }, { key: 'fundamentals', title: 'Fundamentals' }],
+      shelves: [shelf('overbought', 'Overbought', 1, [card]), shelf('pe-under-15', 'P/E under 15', 1, [card], undefined, 'fundamentals')],
+    } })
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
   })
 
   it('keeps the updated label current while the page stays open', () => {
@@ -92,7 +103,7 @@ describe('Discover page', () => {
     renderPage()
     expect(screen.getByRole('heading', { level: 2, name: 'Events' })).toBeInTheDocument()
     expect(screen.getByText('Reports')).toBeInTheDocument()
-    expect(screen.getByText('8 Oct')).toBeInTheDocument()
+    expect(screen.getByText('08 Oct')).toBeInTheDocument()
   })
 
   it('explains the order and that a lens is not a recommendation', async () => {

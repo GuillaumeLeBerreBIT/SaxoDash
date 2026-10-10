@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { fmtNum } from '../../lib/format'
+import { fmtDate, fmtNum } from '../../lib/format'
 import { researchHref } from '../../lib/research'
 import { Card, CardHeader } from '../ui'
 
@@ -32,7 +32,7 @@ export default function UpcomingEarnings({ items }) {
                 {e.ticker}
               </Link>
               <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
-                <span className="num font-mono">{e.date}</span>
+                <span className="num font-mono">{fmtDate(e.date)}</span>
                 <span>{whenText(e.days_until)}</span>
                 <span>{SESSION[e.session] || '—'}</span>
                 <span className="num font-mono">est {fmtNum(e.eps_estimate, 2)}</span>

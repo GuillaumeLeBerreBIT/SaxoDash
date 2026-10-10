@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import { ApiError } from '../../api/client'
+import { fmtDate } from '../../lib/format'
 import { computeIndicators } from '../../lib/indicators'
 import { LATEST_TIME_VIEW, resolveTimeWindow } from '../../lib/timeWindow'
 import ChartCanvas from './ChartCanvas'
@@ -42,7 +43,7 @@ describe('ChartCanvas legend', () => {
     const oneBar = bars.slice(0, 1)
     render(canvas({ bars: oneBar, ind: computeIndicators(oneBar) }))
 
-    expect(screen.queryByText(oneBar[0].date)).not.toBeInTheDocument()
+    expect(screen.queryByText(fmtDate(oneBar[0].date))).not.toBeInTheDocument()
     expect(screen.queryByText('O')).not.toBeInTheDocument()
     expect(screen.getByText(/Only one day of history so far/)).toBeInTheDocument()
   })
@@ -51,7 +52,7 @@ describe('ChartCanvas legend', () => {
     const error = new ApiError(409, 'Saxo is not connected.')
     render(canvas({ error }))
 
-    expect(screen.queryByText(bars[bars.length - 1].date)).not.toBeInTheDocument()
+    expect(screen.queryByText(fmtDate(bars[bars.length - 1].date))).not.toBeInTheDocument()
     expect(screen.queryByText('O')).not.toBeInTheDocument()
     expect(screen.getByText(/Saxo is not connected\./)).toBeInTheDocument()
   })
@@ -59,7 +60,7 @@ describe('ChartCanvas legend', () => {
   it('shows the legend when there is real data and no error', () => {
     render(canvas())
 
-    expect(screen.getByText(bars[bars.length - 1].date)).toBeInTheDocument()
+    expect(screen.getByText(fmtDate(bars[bars.length - 1].date))).toBeInTheDocument()
     expect(screen.getAllByText('O').length).toBeGreaterThan(0)
   })
 

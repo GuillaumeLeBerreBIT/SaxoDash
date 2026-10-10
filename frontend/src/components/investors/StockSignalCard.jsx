@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { Card, InstrumentLogo } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { Card, InstrumentLogo, LetterAvatar } from '../ui'
 import InvestorAvatar from './InvestorAvatar'
 import { signalSentence, stockLabel } from '../../lib/investorHub'
 
@@ -28,7 +27,7 @@ export default function StockSignalCard({ shelfKey, item, className = '' }) {
   return (
     <Card interactive={Boolean(item.ticker)} className={`relative h-full flex flex-col gap-2 ${className}`}>
       <div className="flex items-center gap-2.5 min-w-0">
-        <InstrumentLogo symbol={item.ticker} size={28} className="rounded" fallback={<TickerInitial ticker={stockLabel(item)} size={28} />} />
+        <InstrumentLogo symbol={item.ticker} size={28} className="rounded" fallback={<LetterAvatar symbol={stockLabel(item)} size={28} />} />
         <div className="min-w-0">
           <Title item={item} />
           {item.ticker ? <div className="text-[var(--fig-2xs)] text-zinc-500 truncate">{item.issuer}</div> : null}

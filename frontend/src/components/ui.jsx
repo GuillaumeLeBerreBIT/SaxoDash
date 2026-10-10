@@ -286,19 +286,46 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
  *  is the "switch section" pattern; for "toggle a filter or range" (a chart's
  *  date range, a benchmark picker), use Pill/RangePills instead - that split
  *  is already how the app uses the two, just not written down until now. */
-export function TabList({ children, className = '' }) {
-  return <div className={`flex items-center gap-1 border-b border-white/[0.06] ${className}`}>{children}</div>
+export function TabList({ children, label, className = '' }) {
+  return (
+    <div role="tablist" aria-label={label} className={`flex items-center gap-1 border-b border-white/[0.06] ${className}`}>
+      {children}
+    </div>
+  )
 }
 
-export function TabButton({ active, onClick, children }) {
+const TAB_KEY_TARGET = {
+  ArrowRight: (index, count) => (index + 1) % count,
+  ArrowLeft: (index, count) => (index - 1 + count) % count,
+  Home: () => 0,
+  End: (index, count) => count - 1,
+}
+
+export function TabButton({ active, onClick, children, id, controls, className = '' }) {
+  function onKeyDown(event) {
+    const target = TAB_KEY_TARGET[event.key]
+    if (!target) return
+    const tabs = Array.from(event.currentTarget.closest('[role="tablist"]').querySelectorAll('[role="tab"]'))
+    const next = tabs[target(tabs.indexOf(event.currentTarget), tabs.length)]
+    if (!next) return
+    event.preventDefault()
+    next.focus()
+    next.click()
+  }
+
   return (
     <button
       type="button"
+      role="tab"
+      id={id}
+      aria-controls={controls}
+      aria-selected={!!active}
+      tabIndex={active ? 0 : -1}
       onClick={onClick}
-      aria-current={active}
-      className={`h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
+      onKeyDown={onKeyDown}
+      className={`h-11 md:h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
         active ? 'text-zinc-100 border-blue-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
-      }`}
+      } ${className}`}
     >
       {children}
     </button>
@@ -357,6 +384,24 @@ export function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
 }
 
+const LETTER_AVATAR_TEXT = [
+  [28, 'text-[var(--fig-2xs)]'],
+  [Infinity, 'text-[var(--fig-xs)]'],
+]
+
+export function LetterAvatar({ symbol, size, chars = 1, className = 'rounded' }) {
+  const textSize = LETTER_AVATAR_TEXT.find(([max]) => size <= max)[1]
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: size, height: size }}
+      className={`shrink-0 bg-zinc-800 flex items-center justify-center ${textSize} font-semibold text-zinc-400 ${className}`}
+    >
+      {symbol ? symbol.slice(0, chars).toUpperCase() : null}
+    </span>
+  )
+}
+
 /** A logo for `symbol` (elbstream.com - see lib/logos.js), rendering
  *  `fallback` instead when there's no symbol or the image fails to load.
  *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both
@@ -400,13 +445,55 @@ export function TBtn({ active, onClick, children, title }) {
       title={title}
       onClick={onClick}
       aria-pressed={active}
-      className={`h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors ${
+      className={`relative h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-[max(100%,2.75rem)] after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] md:after:hidden ${
         active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
       }`}
     >
       {children}
     </button>
   )
+}
+
+export function Chip({ active, onClick, children, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={!!active}
+      className={`inline-flex items-center h-11 md:h-8 px-3 rounded-full border text-[var(--fig-xs)] font-medium transition-colors ${
+        active
+          ? 'bg-white/[0.09] border-white/[0.16] text-zinc-100'
+          : 'border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+      } ${className}`}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function QueryState({ isLoading, error, onRetry, label, children }) {
+  if (isLoading) {
+    return (
+      <Card>
+        <div role="status" aria-label={`Loading ${label}`} className="flex flex-col gap-3">
+          <span className="sr-only">Loading {label}…</span>
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      </Card>
+    )
+  }
+  if (error) {
+    return (
+      <Card>
+        <div role="alert" className="flex flex-col gap-3 items-start">
+          <Alert className="w-full">Could not load {label}.</Alert>
+          {onRetry && <Button onClick={() => onRetry()}>Retry</Button>}
+        </div>
+      </Card>
+    )
+  }
+  return children
 }
 
 /** A labelled figure with an optional sub-hint. Shared by OverviewTab,

@@ -2,7 +2,7 @@ import { useBankAccounts, useBankTransactions, useSpendingSummary } from '../api
 import { fmtEur } from '../lib/format'
 import { spendingDelta } from '../lib/spendingDelta'
 import { resolvePeriod } from '../lib/periods'
-import { PageHeader, StatStrip, StatRow } from '../components/ui'
+import { PageHeader, QueryState, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
 import BankAccountTile from '../components/BankAccountTile'
@@ -16,12 +16,18 @@ export default function Accounts() {
   // Computed per render, not module scope - this must not freeze at
   // whichever date the JS bundle happened to first load.
   const period = resolvePeriod('this_month')
-  const { data: allAccounts, isLoading, error } = useBankAccounts()
+  const { data: allAccounts, error, refetch: refetchAccounts } = useBankAccounts()
   const { data: allTransactions } = useBankTransactions()
   const { data: summary } = useSpendingSummary(`?date_from=${period.date_from}&date_to=${period.date_to}`)
 
-  if (error) return <div className="text-red-400 text-sm">Failed to load accounts</div>
-  if (isLoading || !allAccounts) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (error || !allAccounts) {
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Accounts" subtitle="Your connected bank accounts" />
+        <QueryState isLoading={!error} error={error} onRetry={refetchAccounts} label="accounts" />
+      </div>
+    )
+  }
 
   const accounts = allAccounts.filter((a) => a.external_id !== SAXO_CASH_EXTERNAL_ID)
   const total = accounts.reduce((sum, a) => sum + Number(a.balance), 0)

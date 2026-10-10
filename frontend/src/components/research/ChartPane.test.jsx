@@ -84,10 +84,18 @@ describe('ChartPane', () => {
   })
 
   it('asks for a symbol when empty', () => {
-    renderPane({ slot: null })
-    const pane = screen.getByRole('region', { name: 'Empty chart' })
+    renderPane({ slot: null, index: 0 })
+    const pane = screen.getByRole('region', { name: 'Empty pane 1' })
     expect(within(pane).getByText('Pick a symbol from the watchlist')).toBeInTheDocument()
     expect(screen.queryByTestId('price-scale')).not.toBeInTheDocument()
+  })
+
+  it('names an empty pane once, with a single hint and no nested landmark', () => {
+    renderPane({ slot: null, index: 2 })
+    const pane = screen.getByRole('region', { name: 'Empty pane 3' })
+    expect(screen.getAllByRole('region')).toHaveLength(1)
+    expect(within(pane).getByText('Empty pane')).toBeInTheDocument()
+    expect(within(pane).getAllByText(/pick a symbol/i)).toHaveLength(1)
   })
 
   it('heads a filled pane with its ticker, price and labelled move', () => {

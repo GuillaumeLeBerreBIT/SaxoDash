@@ -86,7 +86,7 @@ describe('updatedLabel', () => {
 describe('healthNotice', () => {
   it('says why the latest scan did not refresh the data', () => {
     expect(healthNotice({ state: 'stale', issue: 'Saxo needs re-authentication.' }, '2026-10-01T17:28:00Z').text)
-      .toBe('No fresh scan since 1 Oct. Last attempt: Saxo needs re-authentication.')
+      .toBe('No fresh scan since 01 Oct. Last attempt: Saxo needs re-authentication.')
     expect(healthNotice({ state: 'failed', issue: 'boom' }, null).text).toBe('The last scan failed. Last attempt: boom')
   })
 
@@ -240,8 +240,8 @@ describe('discover view preference', () => {
 
 describe('date and one-decimal percentage formats', () => {
   it('shows a calendar date without shifting it across time zones', () => {
-    expect(formatFieldValue('date', '2026-10-08')).toBe('8 Oct')
-    expect(formatFieldValue('date', '2026-01-01')).toBe('1 Jan')
+    expect(formatFieldValue('date', '2026-10-08')).toBe('08 Oct')
+    expect(formatFieldValue('date', '2026-01-01')).toBe('01 Jan')
   })
 
   it('shows a yield to one decimal without a sign', () => {

@@ -44,11 +44,19 @@ describe('reportStatus', () => {
 
 describe('weekLabel', () => {
   it('collapses a shared month', () => {
-    expect(weekLabel({ from: '2026-10-26', to: '2026-10-30' })).toBe('Oct 26 – 30 · October 2026')
+    expect(weekLabel({ from: '2026-10-26', to: '2026-10-30' })).toBe('26 – 30 Oct 2026')
   })
 
   it('keeps both months across a boundary', () => {
-    expect(weekLabel({ from: '2026-10-28', to: '2026-11-03' })).toBe('Oct 28 – Nov 3 · November 2026')
+    expect(weekLabel({ from: '2026-10-28', to: '2026-11-03' })).toBe('28 Oct – 3 Nov 2026')
+  })
+
+  it('names both months when a week spans the boundary', () => {
+    expect(weekLabel({ from: '2026-09-28', to: '2026-10-02' })).toBe('28 Sep – 2 Oct 2026')
+  })
+
+  it('names both years when a week spans new year', () => {
+    expect(weekLabel({ from: '2026-12-29', to: '2027-01-02' })).toBe('29 Dec 2026 – 2 Jan 2027')
   })
 
   it('is empty without a window', () => {

@@ -9,7 +9,7 @@ import {
   useSpendingSummary,
   useTransactions,
 } from '../api/queries'
-import { fmtEur, fmtNum, fmtPct, pctToneClass, fmtQty } from '../lib/format'
+import { fmtDate, fmtEur, fmtNum, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { txPrice, txTone, txTotal, txTotalClass } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton, StatRow, StatStrip, Th, Td } from '../components/ui'
@@ -155,7 +155,7 @@ export default function Dashboard() {
             <tbody>
               {recentTx.map((t) => (
                 <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="text-zinc-300 num font-mono">{t.date}</Td>
+                  <Td edge className="text-zinc-300 num font-mono">{fmtDate(t.date)}</Td>
                   <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>

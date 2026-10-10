@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -63,6 +64,12 @@ describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     stub()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    stub()
+    const { container } = renderWithProviders(<Dashboard />)
+    expectValidHeadingOutline(container)
   })
 
   it('leads with the net-worth hero and a delta', () => {
@@ -164,6 +171,7 @@ describe('Dashboard', () => {
     expect(within(line).getByText('2.5')).toBeInTheDocument()
     expect(within(line).getByText('US$150.00')).toBeInTheDocument()
     expect(within(line).getByText('-€322.50')).toBeInTheDocument()
+    expect(within(line).getByText('01 Sep 2026')).toBeInTheDocument()
   })
 })
 

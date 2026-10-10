@@ -21,7 +21,7 @@ const EDGE = [withAlpha(MISS, 0.45), withAlpha(REPORTED, 0.45), withAlpha(BEAT, 
 const bySize = (a, b) => (b.revenue_estimate ?? 0) - (a.revenue_estimate ?? 0)
 const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1]
 const shortWeekday = (iso) =>
-  new Date(iso + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short' })
+  new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' })
 const absPct = (v) => fmtPct(Math.abs(v), { sign: false, decimals: 1 })
 
 function SplitBar({ beat, missed, className = '' }) {
@@ -352,7 +352,7 @@ export default function Earnings() {
           onClick={() => shiftWeek(-1)}
           disabled={week <= MIN_WEEK}
           aria-label="Previous week"
-          className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
+          className="w-11 h-11 md:w-6 md:h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronLeft size={13} />
         </button>
@@ -364,7 +364,7 @@ export default function Earnings() {
           onClick={() => shiftWeek(1)}
           disabled={week >= MAX_WEEK}
           aria-label="Next week"
-          className="w-6 h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
+          className="w-11 h-11 md:w-6 md:h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronRight size={13} />
         </button>
@@ -372,7 +372,7 @@ export default function Earnings() {
           <button
             type="button"
             onClick={resetWeek}
-            className="h-6 px-2 rounded border border-white/[0.08] bg-[#0e0e11] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100"
+            className="h-11 md:h-6 px-2 rounded border border-white/[0.08] bg-[#0e0e11] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100"
           >
             This week
           </button>

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -49,11 +50,17 @@ afterEach(() => {
 })
 
 describe('Earnings page', () => {
+  it('has exactly one h1 and no skipped heading level', () => {
+    stub({ events: [ev({ symbol: 'MSFT', held: true, mine: true })] })
+    const { container } = renderWithProviders(<Earnings />, { route: '/earnings' })
+    expectValidHeadingOutline(container)
+  })
+
   it('shows the week label and the selected day docket', () => {
     stub({ events: [ev({ symbol: 'MSFT', held: true, mine: true })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('Oct 26 – 30 · October 2026')).toBeInTheDocument()
+    expect(screen.getByText('26 – 30 Oct 2026')).toBeInTheDocument()
     // MSFT shows in both the week-strip preview and the docket row.
     expect(screen.getAllByText('MSFT').length).toBeGreaterThan(0)
     expect(screen.getByText('Held')).toBeInTheDocument()
@@ -191,6 +198,15 @@ it('does not warn about duplicate keys for the same symbol and date in two quart
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(error.mock.calls.flat().join(' ')).not.toMatch(/same key/)
   error.mockRestore()
+})
+
+it('sizes the This week button like the week arrows', async () => {
+  stub()
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+  await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
+
+  const button = screen.getByRole('button', { name: 'This week' })
+  expect(button).toHaveClass('h-11', 'md:h-6')
 })
 
 it('offers a This week button only away from the current week, and it resets the week', async () => {

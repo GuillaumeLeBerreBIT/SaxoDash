@@ -56,7 +56,7 @@ describe('AddInvestorDialog', () => {
     type('pershing')
     const first = screen.getAllByRole('listitem')[0]
     expect(within(first).getByText('Pershing Square Capital Management, L.P.')).toBeInTheDocument()
-    expect(within(first).getByText('Last 13F Aug 14, 2026')).toBeInTheDocument()
+    expect(within(first).getByText('Last 13F 14 Aug 2026')).toBeInTheDocument()
     expect(within(first).getByRole('button', { name: 'Add Pershing Square Capital Management, L.P.' })).toBeEnabled()
   })
 

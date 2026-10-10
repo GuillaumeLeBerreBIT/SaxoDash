@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -105,6 +106,26 @@ function mockRisk(data) {
 }
 
 describe('Analytics', () => {
+  it('has exactly one h1 and no skipped heading level', () => {
+    stubHappyPath()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while loading', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    stubPortfolioSummary()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level without enough history', () => {
+    queries.useRiskMetrics.mockReturnValue({ data: { has_data: false }, isLoading: false, error: null })
+    stubPortfolioSummary()
+    const { container } = renderWithProviders(<Analytics />)
+    expectValidHeadingOutline(container)
+  })
+
   it('shows a loading state while the summary is in flight', () => {
     queries.useRiskMetrics.mockReturnValue({ data: undefined, isLoading: true, error: null })
     stubPortfolioSummary()
@@ -181,7 +202,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
     expect(screen.queryByText(/counts only downside swings/)).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'What do these mean?' }))
@@ -195,7 +216,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
 
     // The top summary row already shows these headline figures once; the
     // Risk tab's own tiles repeat them in more detail, so at least 2.
@@ -208,7 +229,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
 
     expect(screen.getByText('0.95')).toBeInTheDocument() // beta
     // The benchmark name now names the whole group once, not a per-tile hint.
@@ -224,7 +245,7 @@ describe('Analytics', () => {
     stubPortfolioSummary()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
 
     expect(screen.getByText('Saxo is not connected.')).toBeInTheDocument()
   })
@@ -256,7 +277,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Projection' }))
 
     expect(screen.getByText('Invested by then')).toBeInTheDocument()
     expect(screen.getByText('Median outcome')).toBeInTheDocument()
@@ -269,7 +290,7 @@ describe('Analytics', () => {
     queries.usePortfolioSummary.mockReturnValue({ data: undefined, isLoading: true, error: null })
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Projection' }))
 
     expect(screen.getByText(/loading portfolio value/i)).toBeInTheDocument()
   })
@@ -289,7 +310,7 @@ describe('Analytics', () => {
     stubPortfolioSummary()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Projection' }))
 
     expect(screen.getByText(/only 8 days of history/i)).toBeInTheDocument()
     expect(screen.getByText('Median outcome')).toBeInTheDocument()
@@ -299,7 +320,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Projection' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Projection' }))
 
     expect(screen.queryByText(/of history, so the range/i)).not.toBeInTheDocument()
   })
@@ -307,7 +328,7 @@ describe('Analytics', () => {
   it('shows dashes and a needs-days hint instead of a bare unit when history is short', async () => {
     mockRisk(shortHistory)
     renderWithProviders(<Analytics />)
-    await userEvent.click(screen.getByRole('button', { name: 'Risk' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
     expect(screen.queryByText('—%')).not.toBeInTheDocument()
     expect(screen.getAllByText('needs 22 more days').length).toBeGreaterThan(0)
     expect(screen.getAllByText('needs 23 more days')).toHaveLength(3)

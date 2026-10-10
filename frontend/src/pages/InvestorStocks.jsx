@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { useInvestorStocks } from '../api/queries'
-import { Alert, Button, Card, EmptyState, InstrumentLogo, PageHeader, Select, Skeleton, TBtn, Td, Th, Tr } from '../components/ui'
-import TickerInitial from '../components/discover/TickerInitial'
+import { Alert, Button, Card, EmptyState, InstrumentLogo, LetterAvatar, PageHeader, Select, Skeleton, TBtn, Td, Th, Tr } from '../components/ui'
 import InvestorAvatar from '../components/investors/InvestorAvatar'
 import LimitsNote from '../components/investors/LimitsNote'
 import { STOCK_VIEWS, stockLabel } from '../lib/investorHub'
@@ -16,7 +15,7 @@ function Stock({ row }) {
   const label = stockLabel(row)
   return (
     <span className="flex items-center gap-2 min-w-0">
-      <InstrumentLogo symbol={row.ticker} size={22} className="rounded" fallback={<TickerInitial ticker={label} size={22} />} />
+      <InstrumentLogo symbol={row.ticker} size={22} className="rounded" fallback={<LetterAvatar symbol={label} size={22} />} />
       <span className="min-w-0">
         {row.ticker
           ? <Link to={`/research?symbol=${encodeURIComponent(row.ticker)}`} className="font-mono font-semibold text-zinc-100 hover:text-blue-300">{label}</Link>

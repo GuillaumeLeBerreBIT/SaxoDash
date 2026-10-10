@@ -1,4 +1,4 @@
-import { fmtCompact } from './format'
+import { fmtCompact, fmtDate } from './format'
 
 export const WEEKDAYS = [
   ['mon', 'Mon'],
@@ -56,17 +56,18 @@ export function groupByWeekday(events) {
   return groups
 }
 
-/** "Oct 26 – 30 · October 2026" from a {from, to} window; the month is
- *  collapsed on the right when both ends share it. */
+function dateWords(iso) {
+  const [day, month, year] = fmtDate(iso).split(' ')
+  return { day: String(Number(day)), month, year }
+}
+
 export function weekLabel(window) {
   if (!window || !window.from || !window.to) return ''
-  const from = new Date(window.from + 'T00:00:00')
-  const to = new Date(window.to + 'T00:00:00')
-  const short = (d) => d.toLocaleDateString(undefined, { month: 'short' })
-  const monthYear = to.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-  const left = `${short(from)} ${from.getDate()}`
-  const right = from.getMonth() === to.getMonth() ? `${to.getDate()}` : `${short(to)} ${to.getDate()}`
-  return `${left} – ${right} · ${monthYear}`
+  const from = dateWords(window.from)
+  const to = dateWords(window.to)
+  if (from.year !== to.year) return `${from.day} ${from.month} ${from.year} – ${to.day} ${to.month} ${to.year}`
+  if (from.month !== to.month) return `${from.day} ${from.month} – ${to.day} ${to.month} ${to.year}`
+  return `${from.day} – ${to.day} ${to.month} ${to.year}`
 }
 
 export const SESSIONS = [

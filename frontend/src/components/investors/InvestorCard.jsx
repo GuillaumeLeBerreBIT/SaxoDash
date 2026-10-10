@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { usePrefetchInvestor } from '../../api/queries'
-import { Card, InstrumentLogo } from '../ui'
-import TickerInitial from '../discover/TickerInitial'
+import { Card, InstrumentLogo, LetterAvatar } from '../ui'
 import FollowButton from './FollowButton'
 import ImportProgress from './ImportProgress'
 import InvestorAvatar from './InvestorAvatar'
@@ -21,7 +20,7 @@ export function TopLogos({ holdings }) {
           symbol={h.ticker}
           size={22}
           className="rounded-full ring-2 ring-zinc-900"
-          fallback={<TickerInitial ticker={h.ticker ?? h.issuer} size={22} />}
+          fallback={<LetterAvatar symbol={h.ticker ?? h.issuer} size={22} />}
         />
       ))}
     </span>

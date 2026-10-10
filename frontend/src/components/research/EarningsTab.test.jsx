@@ -25,7 +25,7 @@ describe('EarningsTab', () => {
   it('shows the next earnings date and estimates', () => {
     render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Next earnings')).toBeInTheDocument()
-    expect(screen.getByText('2999-01-15')).toBeInTheDocument()
+    expect(screen.getByText('15 Jan 2999')).toBeInTheDocument()
     expect(screen.getByText('After close')).toBeInTheDocument()
   })
 

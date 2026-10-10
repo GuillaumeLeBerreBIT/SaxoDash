@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -53,6 +54,23 @@ describe('Portfolio holdings table', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     stub()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while loading', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, isLoading: true })
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
+  })
+
+  it('keeps one h1 and no skipped level while in error', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: vi.fn() })
+    const { container } = renderWithProviders(<Portfolio />)
+    expectValidHeadingOutline(container)
   })
 
   it('prices the instrument in its own currency, not the reporting one', () => {
@@ -283,5 +301,27 @@ describe('Portfolio holdings on mobile', () => {
     expect(within(row).getByText('US$494.36').closest('td')).toHaveClass('hidden', 'md:table-cell')
     expect(within(row).getByText('27.8%').closest('td')).toHaveClass('hidden', 'md:table-cell')
     expect(within(row).getByText('€8,773.32').closest('td')).not.toHaveClass('hidden')
+  })
+
+  it('retries only the failed queries and keeps the heading', () => {
+    stub()
+    const summaryRefetch = vi.fn()
+    const positionsRefetch = vi.fn()
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: summaryRefetch })
+    queries.usePositions.mockReturnValue({ ...idle, data: [msft], refetch: positionsRefetch })
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Portfolio' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(summaryRefetch).toHaveBeenCalled()
+    expect(positionsRefetch).not.toHaveBeenCalled()
+  })
+
+  it('shows a skeleton card, not bare Loading text, while loading', () => {
+    stub()
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, isLoading: true })
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('status', { name: 'Loading portfolio' })).toBeInTheDocument()
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
   })
 })

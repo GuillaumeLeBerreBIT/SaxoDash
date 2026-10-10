@@ -2,7 +2,7 @@ import { Star } from 'lucide-react'
 
 import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { isEtf, moveCaption } from '../../lib/research'
-import { Badge, Card, InstrumentLogo } from '../ui'
+import { Badge, Card, InstrumentLogo, LetterAvatar } from '../ui'
 import { Menu, MenuRow } from './menu'
 
 function Divider() {
@@ -49,11 +49,7 @@ export default function SymbolBar({
             symbol={symbol}
             size={32}
             className="rounded-lg border border-white/10"
-            fallback={
-              <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 text-zinc-200 text-[var(--fig-xs)] font-medium flex items-center justify-center shrink-0">
-                {symbol.slice(0, 2)}
-              </div>
-            }
+            fallback={<LetterAvatar symbol={symbol} size={32} chars={2} className="rounded-lg border border-white/10" />}
           />
           <div>
             <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import {
-  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate,
+  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate, seriesAxis,
   SERIES_BANK, SERIES_INVESTMENTS, SERIES_TOTAL,
 } from '../lib/charts'
 import { Pill, RangePills } from './RangePills'
@@ -37,10 +37,10 @@ function SeriesLegend({ series, dimmed }) {
 export default function NetWorthChart() {
   const [range, setRange] = useState('6M')
   const [view, setView] = useState('ALL')
-  const { data, isLoading, error } = useNetWorthHistory(range)
+  const { data, isLoading, error, refetch } = useNetWorthHistory(range)
 
   // Lines need two points; a single snapshot with dot={false} draws nothing.
-  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2, onRetry: refetch })
 
   const visible = SERIES.filter((s) => view === 'ALL' || s.key === view)
   const isVisible = (key) => visible.some((s) => s.key === key)
@@ -73,7 +73,7 @@ export default function NetWorthChart() {
           <LineChart data={data}>
             <CartesianGrid {...gridProps} />
             <XAxis {...dateAxisProps} />
-            <YAxis {...moneyAxisProps} />
+            <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], visible.map((s) => s.dataKey))} />
             <Tooltip {...chartTooltipProps} labelFormatter={formatAxisDate} formatter={(v, n) => [fmtEur(v), n]} />
             {showInvestments && (
               <Line

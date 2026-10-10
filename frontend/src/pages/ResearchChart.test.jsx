@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -74,7 +75,7 @@ function stubQueries() {
 
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement
 const backLink = () => screen.getByRole('link', { name: 'Back to Research' })
-const panes = () => screen.getAllByRole('region', { name: /chart$/ })
+const panes = () => screen.getAllByRole('region', { name: /(chart|^Empty pane( \d)?)$/ })
 
 async function pickLayout(user, label) {
   await user.click(screen.getByRole('button', { name: 'Layout' }))
@@ -86,6 +87,11 @@ describe('ResearchChart', () => {
     vi.clearAllMocks()
     localStorage.clear()
     stubQueries()
+  })
+
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expectValidHeadingOutline(container)
   })
 
   it('lays out the tool rail, the chart, instrument search and the watchlist', () => {
@@ -234,9 +240,10 @@ describe('ResearchChart', () => {
 
     expect(panes()).toHaveLength(4)
     expect(screen.getByRole('region', { name: 'NVDA chart' })).not.toHaveAttribute('aria-current')
-    const empties = screen.getAllByRole('region', { name: 'Empty chart' })
+    const empties = screen.getAllByRole('region', { name: /^Empty pane \d$/ })
     expect(empties).toHaveLength(3)
     expect(empties[0]).toHaveAttribute('aria-current', 'true')
+    for (const empty of empties) expect(within(empty).queryByText('Volume')).not.toBeInTheDocument()
   })
 
   it('loads a watchlist pick into the active pane and keeps the other', async () => {

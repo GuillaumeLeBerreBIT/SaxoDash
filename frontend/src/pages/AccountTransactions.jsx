@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useBankAccounts, useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
-import { fmtEur } from '../lib/format'
+import { fmtDate, fmtEur } from '../lib/format'
 import { Button, Card, EmptyState, Input, PageHeader, Select, StatRow, StatStrip, Th, Td } from '../components/ui'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { PAGE_SIZE, filterTransactions, paginate } from '../lib/accountTransactions'
@@ -124,7 +124,7 @@ export default function AccountTransactions() {
             <tbody>
               {paged.rows.map((tx) => (
                 <tr key={tx.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="num text-zinc-300">{tx.booking_date}</Td>
+                  <Td edge className="num text-zinc-300">{fmtDate(tx.booking_date)}</Td>
                   <Td className="w-full max-w-0 text-zinc-100">
                     <div className="truncate">{tx.counterparty_name}</div>
                     {tx.description && tx.description !== tx.counterparty_name && (

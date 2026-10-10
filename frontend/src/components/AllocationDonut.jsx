@@ -15,6 +15,39 @@ const LEADER_EXT = 18 // elbow -> horizontal end where the % sits
 // gets clipped rather than just drawn smaller.
 const LABEL_RESERVE = CHART_MARGIN + LEADER_GAP + LEADER_EXT + 26
 
+export function SliceLogo({ symbol, x, y, size }) {
+  const [failedSymbol, setFailedSymbol] = useState(null)
+
+  return (
+    <>
+      <circle cx={x} cy={y} r={size / 2 + 2} fill="#fff" stroke="#3f3f46" strokeWidth={1} />
+      {failedSymbol === symbol ? (
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          aria-hidden="true"
+          className="text-[11px] fill-zinc-600 font-semibold"
+        >
+          {symbol ? symbol[0].toUpperCase() : null}
+        </text>
+      ) : (
+        <image
+          href={instrumentLogoUrl(symbol)}
+          x={x - size / 2}
+          y={y - size / 2}
+          width={size}
+          height={size}
+          style={{ clipPath: 'circle(50%)' }}
+          preserveAspectRatio="xMidYMid slice"
+          onError={() => setFailedSymbol(symbol)}
+        />
+      )}
+    </>
+  )
+}
+
 /** Pie `label` slot for `showIcons`: the logo sits centered inside the
  *  slice (sized off the ring's own thickness, which recharts hands back
  *  here as `innerRadius`/`outerRadius` - the same values AllocationDonut
@@ -43,18 +76,7 @@ function SliceLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, perce
   return (
     <g>
       {showLogo && (
-        <>
-          <circle cx={iconX} cy={iconY} r={size / 2 + 2} fill="#fff" stroke="#3f3f46" strokeWidth={1} />
-          <image
-            href={instrumentLogoUrl(payload.name)}
-            x={iconX - size / 2}
-            y={iconY - size / 2}
-            width={size}
-            height={size}
-            style={{ clipPath: 'circle(50%)' }}
-            preserveAspectRatio="xMidYMid slice"
-          />
-        </>
+        <SliceLogo symbol={payload.name} x={iconX} y={iconY} size={size} />
       )}
       <path d={`M${sx},${sy}L${mx},${my}L${ex},${my}`} stroke="#52525b" fill="none" strokeWidth={1} />
       <circle cx={ex} cy={my} r={1.5} fill="#71717a" stroke="none" />

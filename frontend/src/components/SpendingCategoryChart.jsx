@@ -6,7 +6,7 @@ import { foldSmallSlices } from '../lib/spending'
 import { CATEGORY_LABELS } from '../lib/categories'
 import AllocationDonut from './AllocationDonut'
 
-export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel }) {
+export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, onRetry }) {
   const items = foldSmallSlices(
     (categories ?? [])
       .map((c) => ({
@@ -17,7 +17,7 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
       .sort((a, b) => b.value - a.value),
   )
 
-  const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
 
   return (
     <Card>

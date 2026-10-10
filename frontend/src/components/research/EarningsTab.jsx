@@ -1,5 +1,5 @@
 import { daysUntil } from '../../lib/earnings'
-import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
+import { fmtCompact, fmtDate, fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader, Metric, Skeleton } from '../ui'
 import EarningsInsights from './EarningsInsights'
 import EpsBarChart from './EpsBarChart'
@@ -14,7 +14,7 @@ function NextEarningsCard({ next }) {
       <CardHeader title="Next earnings" subtitle={next ? daysUntil(next.date) : 'Not scheduled'} />
       {next ? (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Metric label="Date" value={next.date} />
+          <Metric label="Date" value={fmtDate(next.date)} />
           <Metric label="Session" value={SESSION_LABEL[next.session] || '—'} />
           <Metric label="EPS estimate" value={fmtNum(next.eps_estimate, 2)} />
           <Metric

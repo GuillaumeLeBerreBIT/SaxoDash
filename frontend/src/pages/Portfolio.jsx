@@ -5,7 +5,7 @@ import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } fro
 import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { moveLabel, priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
-import { Card, CardHeader, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
+import { Card, CardHeader, QueryState, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, Td, Tr } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
@@ -24,9 +24,16 @@ export default function Portfolio() {
 
   const failed = summaryQuery.error || positionsQuery.error || netWorthQuery.error
 
-  if (failed) return <div className="text-red-400 text-sm">Failed to load portfolio data</div>
-  if (!summaryQuery.data || !netWorthQuery.data)
-    return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (failed || !summaryQuery.data || !netWorthQuery.data) {
+    const retryFailed = () =>
+      [summaryQuery, positionsQuery, netWorthQuery].filter((q) => q.error).forEach((q) => q.refetch())
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
+        <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" />
+      </div>
+    )
+  }
 
   const summary = summaryQuery.data
   const netWorth = netWorthQuery.data

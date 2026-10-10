@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 
 import { chartPlaceholderFor } from './chartState'
 
@@ -59,5 +59,17 @@ describe('chartPlaceholderFor', () => {
   it('explains a single-point series rather than drawing an invisible line', () => {
     renderPlaceholder({ data: [{ date: '2026-08-28' }], minPoints: 2 })
     expect(screen.getByText(/only one day of history/i)).toBeInTheDocument()
+  })
+
+  it('offers Retry on a failure when onRetry is passed', () => {
+    const onRetry = vi.fn()
+    renderPlaceholder({ error: new Error('boom'), data: undefined, onRetry })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(onRetry).toHaveBeenCalledWith()
+  })
+
+  it('shows no Retry without onRetry', () => {
+    renderPlaceholder({ error: new Error('boom'), data: undefined })
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
   })
 })

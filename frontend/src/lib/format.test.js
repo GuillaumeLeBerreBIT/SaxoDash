@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -59,5 +59,62 @@ describe('pctToneClass', () => {
     expect(pctToneClass(-1)).toBe('text-red-400')
     expect(pctToneClass(0)).toBe('text-zinc-500')
     expect(pctToneClass(null, 2, 'text-zinc-600')).toBe('text-zinc-600')
+  })
+})
+
+describe('fmtDate', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('writes a date-only ISO string as day, short month and year', () => {
+    expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
+    expect(fmtDate('2026-09-01')).toBe('01 Sep 2026')
+  })
+
+  it('shows a dash for a missing or invalid date', () => {
+    expect(fmtDate(null)).toBe('—')
+    expect(fmtDate(undefined)).toBe('—')
+    expect(fmtDate('')).toBe('—')
+    expect(fmtDate('not a date')).toBe('—')
+  })
+
+  it('does not shift a date-only string in a zone behind UTC', () => {
+    const behind = (read) => function () {
+      return read(new Date(this.getTime() - 5 * 3_600_000))
+    }
+    vi.spyOn(Date.prototype, 'getDate').mockImplementation(behind((d) => d.getUTCDate()))
+    vi.spyOn(Date.prototype, 'getMonth').mockImplementation(behind((d) => d.getUTCMonth()))
+    vi.spyOn(Date.prototype, 'getFullYear').mockImplementation(behind((d) => d.getUTCFullYear()))
+    expect(fmtDate('2026-10-04')).toBe('04 Oct 2026')
+    expect(fmtDayMonth('2026-01-01')).toBe('01 Jan')
+    expect(fmtMonthYear('2026-01-01')).toBe('Jan 26')
+  })
+
+  it('formats a local datetime on its own day', () => {
+    expect(fmtDate('2026-10-04T12:00:00')).toBe('04 Oct 2026')
+  })
+
+  it('takes the date part of a full datetime', () => {
+    expect(fmtDate('2026-10-04T12:00:00Z')).toBe('04 Oct 2026')
+  })
+})
+
+describe('fmtDayMonth', () => {
+  it('writes day and short month', () => {
+    expect(fmtDayMonth('2026-10-04')).toBe('04 Oct')
+    expect(fmtDayMonth(null)).toBe('—')
+  })
+})
+
+describe('fmtDateTime', () => {
+  it('keeps the day, month, year order and adds the time', () => {
+    expect(fmtDateTime('2026-10-04T12:30:00Z')).toMatch(/^04 Oct 2026, \d{2}:\d{2}$/)
+    expect(fmtDateTime(null)).toBe('—')
+  })
+})
+
+describe('fmtMonthYear', () => {
+  it('writes short month and two-digit year', () => {
+    expect(fmtMonthYear('2024-03-12')).toBe('Mar 24')
+    expect(fmtMonthYear(null)).toBe('—')
   })
 })

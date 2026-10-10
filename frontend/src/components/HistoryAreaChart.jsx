@@ -2,17 +2,17 @@ import { useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, paddedDomain, formatAxisDate } from '../lib/charts'
+import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, seriesAxis, formatAxisDate } from '../lib/charts'
 import { RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
 export default function HistoryAreaChart({ title, subtitle, dataKey, name, color }) {
   const [range, setRange] = useState('6M')
-  const { data: history, isLoading, error } = useNetWorthHistory(range)
+  const { data: history, isLoading, error, refetch } = useNetWorthHistory(range)
   const data = history?.filter((row) => row[dataKey] != null)
 
-  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2 })
+  const placeholder = chartPlaceholderFor({ isLoading, error, data, minPoints: 2, onRetry: refetch })
   const gradientId = `${dataKey}Fill`
 
   return (
@@ -34,7 +34,7 @@ export default function HistoryAreaChart({ title, subtitle, dataKey, name, color
               </defs>
               <CartesianGrid {...gridProps} />
               <XAxis {...dateAxisProps} />
-              <YAxis {...moneyAxisProps} domain={paddedDomain} />
+              <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], [dataKey])} />
               <Tooltip
                 {...chartTooltipProps}
                 labelFormatter={formatAxisDate}

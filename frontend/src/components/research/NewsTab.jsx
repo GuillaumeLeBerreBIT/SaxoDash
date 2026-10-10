@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
 import { useCompanyNews } from '../../api/queries'
+import { fmtDayMonth } from '../../lib/format'
 import { Card, CardHeader, Skeleton } from '../ui'
 
 const NEWS_PAGE = 10
 
-const dayLabel = (iso) =>
-  new Date(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+const dayLabel = fmtDayMonth
 const timeLabel = (iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
 function groupByDay(items) {

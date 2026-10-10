@@ -8,12 +8,14 @@ import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
 import { useChartData } from './useChartData'
 
+const HEADER_CLASS = 'flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0'
+
 function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, showIdentity }) {
   const last = rangeBars[rangeBars.length - 1]
   const price = quote?.price ?? last?.close ?? null
   const { change, suffix } = moveCaption(quote, rangeBars)
   return (
-    <div className="flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0">
+    <div className={HEADER_CLASS}>
       {showIdentity ? (
         <>
           <InstrumentLogo
@@ -39,6 +41,17 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
       <div className="ml-auto">
         <PeriodChange bars={windowBars} />
       </div>
+    </div>
+  )
+}
+
+const emptyPaneName = (index) => (index == null ? 'Empty pane' : `Empty pane ${index + 1}`)
+
+function EmptyPaneHeader() {
+  return (
+    <div className={HEADER_CLASS}>
+      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />
+      <span className="text-[var(--fig-xs)] font-medium text-zinc-400">Empty pane</span>
     </div>
   )
 }
@@ -118,6 +131,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
 
 export default function ChartPane({
   slot,
+  index,
   active,
   outlined,
   controls,
@@ -132,7 +146,7 @@ export default function ChartPane({
 }) {
   return (
     <section
-      aria-label={slot ? `${slot.symbol} chart` : 'Empty chart'}
+      aria-label={slot ? `${slot.symbol} chart` : emptyPaneName(index)}
       aria-current={active || undefined}
       onMouseDown={onActivate}
       style={style}
@@ -151,9 +165,12 @@ export default function ChartPane({
             split={split}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
-            Pick a symbol from the watchlist
-          </div>
+          <>
+            <EmptyPaneHeader />
+            <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
+              Pick a symbol from the watchlist
+            </div>
+          </>
         )}
       </Card>
     </section>

@@ -58,7 +58,7 @@ describe('fmtClock', () => {
   const now = new Date('2026-09-04T18:00:00Z')
 
   const timeOnly = (iso) =>
-    new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
   it('shows the time alone for a stamp from today', () => {
     expect(fmtClock('2026-09-04T09:15:00Z', now)).toBe(timeOnly('2026-09-04T09:15:00Z'))
@@ -74,8 +74,12 @@ describe('fmtClock', () => {
     expect(stamp).toMatch(/^[A-Za-z]/)
   })
 
-  it('dates a stamp older than a week', () => {
-    expect(fmtClock('2026-08-20T09:15:00Z', now)).toMatch(/Aug/)
+  it('dates a stamp older than a week day-first with a zero-padded day', () => {
+    expect(fmtClock('2026-08-07T14:30:00', now)).toBe('07 Aug 14:30')
+  })
+
+  it('names the weekday in English with a 24-hour time', () => {
+    expect(fmtClock('2026-09-01T09:05:00', now)).toBe('Tue 09:05')
   })
 
   it('is null for a missing or unparseable stamp', () => {

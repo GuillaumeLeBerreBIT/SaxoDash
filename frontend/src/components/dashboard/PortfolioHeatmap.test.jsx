@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { LAST_SESSION_NOTE } from '../../lib/pricing'
+import { PERFORMANCE_CAPS, performanceFill } from '../../lib/charts'
 import PortfolioHeatmap from './PortfolioHeatmap'
 
 const positions = [
@@ -102,5 +103,48 @@ describe('PortfolioHeatmap', () => {
   it('shows an empty state without holdings', () => {
     renderWithProviders(<PortfolioHeatmap positions={[]} quotes={new Map()} />)
     expect(screen.getByText('No holdings yet.')).toBeInTheDocument()
+  })
+})
+
+describe('PortfolioHeatmap since-purchase legend', () => {
+  const book = (returns) =>
+    returns.map((pnl_pct, index) => ({
+      id: index + 1,
+      ticker: `T${index + 1}`,
+      name: `T${index + 1}`,
+      sector: 'Tech',
+      value: '1000.00',
+      weight: '10.0',
+      pnl: '10.00',
+      pnl_pct,
+      uic: index + 1,
+      asset_type: 'Stock',
+    }))
+
+  const sincePurchase = async (returns) => {
+    const user = userEvent.setup()
+    renderWithProviders(<PortfolioHeatmap positions={book(returns)} quotes={new Map()} />)
+    await user.click(screen.getByRole('button', { name: 'Since purchase' }))
+  }
+
+  const cap = PERFORMANCE_CAPS.sincePurchase
+
+  it.each([
+    ['an asymmetric -40% to +120% spread', [-40, 120, 10]],
+    ['a tiny range', [0.3, -0.2, 0.5]],
+  ])('labels the colour domain the tiles use for %s', async (_, returns) => {
+    await sincePurchase(returns)
+    expect(screen.getByText(`−${cap}%`)).toBeInTheDocument()
+    expect(screen.getByText(`+${cap}%`)).toBeInTheDocument()
+    returns.forEach((pct, index) => {
+      expect(tile(`T${index + 1}`)).toHaveStyle({ background: performanceFill(pct, { cap }) })
+    })
+  })
+
+  it('reaches full colour at the labelled cap and no further', async () => {
+    await sincePurchase([-40, 120, 30, -30])
+    const fills = ['T1', 'T2', 'T3', 'T4'].map((t) => tile(t).style.background)
+    expect(fills[1]).toBe(fills[2])
+    expect(fills[0]).toBe(fills[3])
   })
 })

@@ -19,6 +19,7 @@ import {
   useWidth,
 } from '../../lib/chartGeometry'
 import { AXIS_TEXT, BEAT, CATEGORY_AXIS_TEXT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { fmtDate } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
@@ -111,8 +112,8 @@ function EarningsMarkers({ markers, geometry }) {
   return markers.map((marker) => {
     const x = xAt(marker.index)
     const title = marker.actual != null
-      ? `${marker.date}: ${marker.actual} vs est ${marker.estimate}`
-      : marker.date
+      ? `${fmtDate(marker.date)}: ${marker.actual} vs est ${marker.estimate}`
+      : fmtDate(marker.date)
     return (
       <polygon
         key={marker.date}
@@ -693,7 +694,7 @@ export function TVChart({
 
 export function SubPane({ title, height, children }) {
   return (
-    <div className="border-t border-white/[0.06]">
+    <div className="relative border-t border-white/[0.06]">
       <div className="absolute z-10 px-3 pt-1.5 text-[var(--fig-2xs)] num text-zinc-500 pointer-events-none">{title}</div>
       <div style={{ height }} className="relative">
         {children}

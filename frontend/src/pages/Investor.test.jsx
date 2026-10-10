@@ -84,7 +84,7 @@ describe('Investor profile', () => {
     expect(within(tiles).getByText('$14.2B')).toBeInTheDocument()
     expect(within(tiles).getByText('11')).toBeInTheDocument()
     expect(within(tiles).getByText('78.4%')).toBeInTheDocument()
-    expect(within(tiles).getByText('Aug 14, 2026')).toBeInTheDocument()
+    expect(within(tiles).getByText('14 Aug 2026')).toBeInTheDocument()
   })
 
   it('tells the quarter as moves in plain words, in story order', () => {

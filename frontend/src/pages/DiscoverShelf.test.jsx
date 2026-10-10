@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -37,6 +38,11 @@ const renderPage = () =>
   )
 
 describe('DiscoverShelf', () => {
+  it('has exactly one h1 and no skipped heading level', () => {
+    const { container } = renderPage()
+    expectValidHeadingOutline(container)
+  })
+
   it('states the count, the criteria and the order', () => {
     renderPage()
     expect(screen.getByText('1 stock · ROE ≥ 15% · Net margin ≥ 10% · Ordered by market cap, highest first')).toBeInTheDocument()

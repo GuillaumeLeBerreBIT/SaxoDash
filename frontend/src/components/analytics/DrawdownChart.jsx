@@ -1,6 +1,6 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardHeader, EmptyState } from '../ui'
-import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, NEGATIVE } from '../../lib/charts'
+import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis, NEGATIVE } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 import { drawdownDomain } from '../../lib/portfolioStats'
 
@@ -27,7 +27,7 @@ export default function DrawdownChart({ series, maxDrawdown }) {
             </defs>
             <CartesianGrid {...gridProps} />
             <XAxis {...dateAxisProps} />
-            <YAxis {...axisProps} width={54} domain={drawdownDomain(series)} tickFormatter={(v) => `${v}%`} />
+            <YAxis {...axisProps} width={54} {...seriesAxis([...series, { dd: drawdownDomain(series)[0] }], ['dd'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
             <Tooltip
               {...chartTooltipProps}
               labelFormatter={formatAxisDate}
