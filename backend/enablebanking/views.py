@@ -8,11 +8,12 @@ from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import APIException
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
-from . import client, credentials
+from . import client, credentials, tasks
 from .filters import BankTransactionFilter
 from .models import CATEGORY_CHOICES, BUDGETABLE_CATEGORIES, BankTransaction, Budget, EnableBankingCredential, ManualIbanLabel, Subscription
 from .recategorize import recategorize_for_label
@@ -145,12 +146,45 @@ class BankTransactionCategoryView(APIView):
 
     def patch(self, request, pk):
         tx = get_object_or_404(BankTransaction, pk=pk)
-        category = request.data.get('category_override')
-        if category is not None and category not in dict(CATEGORY_CHOICES):
-            return Response({'detail': 'Unknown category'}, status=400)
-        tx.category_override = category
-        tx.save(update_fields=['category_override'])
+        fields = []
+        if 'category_override' in request.data:
+            category = request.data['category_override']
+            if category is not None and category not in dict(CATEGORY_CHOICES):
+                return Response({'detail': 'Unknown category'}, status=400)
+            tx.category_override = category
+            fields.append('category_override')
+            if category is not None:
+                tx.reviewed = True
+                fields.append('reviewed')
+        if 'reviewed' in request.data:
+            reviewed = request.data['reviewed']
+            if not isinstance(reviewed, bool):
+                return Response({'detail': 'reviewed must be true or false'}, status=400)
+            tx.reviewed = reviewed
+            if 'reviewed' not in fields:
+                fields.append('reviewed')
+        if not fields:
+            return Response({'detail': 'Nothing to update'}, status=400)
+        tx.save(update_fields=fields)
         return Response(BankTransactionSerializer(tx).data)
+
+
+class ServiceUnavailable(APIException):
+    status_code = 503
+    default_detail = 'Could not start the sync. Is the worker running?'
+
+
+class SyncNowView(APIView):
+    throttle_scope = 'enablebanking.sync'
+
+    def post(self, request):
+        try:
+            tasks.sync_enablebanking_balances.delay()
+            tasks.sync_enablebanking_transactions.delay()
+        except Exception as exc:
+            logger.warning('Could not queue the bank sync: %s', exc)
+            raise ServiceUnavailable()
+        return Response({'queued': True}, status=202)
 
 
 class SpendingSummaryView(APIView):

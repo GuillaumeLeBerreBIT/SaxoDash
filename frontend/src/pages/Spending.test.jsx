@@ -20,6 +20,9 @@ function mockDefaults(overrides = {}) {
   queries.useSpendingTrend.mockReturnValue(overrides.trend ?? { data: [], isLoading: false, error: null })
   queries.useBudgetProgress.mockReturnValue(overrides.budgetProgress ?? { data: [], isLoading: false, error: null })
   queries.useSetBudget.mockReturnValue(overrides.setBudget ?? { mutate: vi.fn() })
+  queries.useBankTransactions.mockReturnValue(overrides.reviewQueue ?? { data: [], isLoading: false, error: null })
+  queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
+  queries.useMarkTransactionReviewed.mockReturnValue({ mutate: vi.fn() })
 }
 
 describe('Spending', () => {

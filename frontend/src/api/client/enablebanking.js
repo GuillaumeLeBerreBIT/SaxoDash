@@ -13,6 +13,11 @@ export const getBankTransactions = (query = '') => apiFetch(`/api/enablebanking/
 export const updateBankTransactionCategory = (id, categoryOverride) =>
   jsonRequest(`/api/enablebanking/transactions/${id}/category/`, 'PATCH', { category_override: categoryOverride })
 
+export const markTransactionReviewed = (id) =>
+  jsonRequest(`/api/enablebanking/transactions/${id}/category/`, 'PATCH', { reviewed: true })
+
+export const syncBanksNow = () => jsonRequest('/api/enablebanking/sync/', 'POST')
+
 export const getSpendingSummary = (query = '') => apiFetch(`/api/enablebanking/spending/summary/${query}`)
 
 export const getSpendingTrend = (months = 6) => apiFetch(`/api/enablebanking/spending/trend/?months=${months}`)

@@ -89,6 +89,7 @@ class BankTransaction(models.Model):
     description = models.CharField(max_length=500, blank=True, default='')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OTHER')
     category_override = models.CharField(max_length=20, choices=CATEGORY_CHOICES, null=True, blank=True, default=None)
+    reviewed = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-booking_date', '-id']

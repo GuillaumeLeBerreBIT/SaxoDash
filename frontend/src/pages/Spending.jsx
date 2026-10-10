@@ -10,6 +10,7 @@ import PeriodSelector from '../components/PeriodSelector'
 import SpendingCategoryChart from '../components/SpendingCategoryChart'
 import BudgetSection from '../components/BudgetSection'
 import SpendingTrendChart from '../components/SpendingTrendChart'
+import ReviewQueue from '../components/ReviewQueue'
 import SubscriptionsList from '../components/SubscriptionsList'
 
 export default function Spending() {
@@ -73,6 +74,8 @@ export default function Spending() {
         />
         <SpendingTrendChart />
       </div>
+
+      <ReviewQueue />
 
       <BudgetSection />
 

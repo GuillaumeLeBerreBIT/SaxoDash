@@ -1,10 +1,17 @@
 import { Card, CardHeader } from './ui'
 import { fmtEur } from '../lib/format'
+import { monthlyTotal } from '../lib/subscriptions'
 
 export default function SubscriptionsList({ subscriptions, onDismiss }) {
+  const hasAny = (subscriptions ?? []).length > 0
+
   return (
     <Card>
-      <CardHeader title="Subscriptions" subtitle="Detected recurring payments" />
+      <CardHeader
+        title="Subscriptions"
+        subtitle="Detected recurring payments"
+        right={hasAny && <span className="text-zinc-100 num font-mono">≈ {fmtEur(monthlyTotal(subscriptions))} / month</span>}
+      />
       <div className="mt-4 space-y-2">
         {(subscriptions ?? []).length === 0 && (
           <div className="text-zinc-500 text-[var(--fig-sm)]">No subscriptions detected yet.</div>

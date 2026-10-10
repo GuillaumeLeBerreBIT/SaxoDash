@@ -41,6 +41,7 @@ function mockDefaults(overrides = {}) {
   // the previous page) are backed by these hooks - a non-crashing default
   // so the destructured hook results aren't undefined.
   queries.useEnableBankingStatus.mockReturnValue({ data: null, isLoading: false, error: null })
+  queries.useSyncNow.mockReturnValue({ syncNow: vi.fn(), syncing: false, queueError: null, note: '' })
   queries.useNetWorthHistory.mockReturnValue({ data: [], isLoading: false, error: null })
   // LabeledAccountsSection - same reasoning.
   queries.useLabeledAccounts.mockReturnValue({ data: [], isLoading: false, error: null })

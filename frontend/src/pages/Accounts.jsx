@@ -5,6 +5,7 @@ import { resolvePeriod } from '../lib/periods'
 import { PageHeader, QueryState, StatStrip, StatRow } from '../components/ui'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import EnableBankingConnectionStatus from '../components/EnableBankingConnectionStatus'
+import SyncNowButton from '../components/SyncNowButton'
 import BankAccountTile from '../components/BankAccountTile'
 import LabeledAccountsSection from '../components/LabeledAccountsSection'
 import RecentTransactionsPanel from '../components/RecentTransactionsPanel'
@@ -47,7 +48,12 @@ export default function Accounts() {
       <PageHeader
         title="Accounts"
         subtitle="Your connected bank accounts"
-        right={<EnableBankingConnectionStatus />}
+        right={
+          <span className="flex flex-wrap items-center justify-end gap-2">
+            <SyncNowButton />
+            <EnableBankingConnectionStatus />
+          </span>
+        }
       />
 
       <StatStrip>

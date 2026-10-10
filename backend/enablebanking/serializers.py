@@ -11,7 +11,7 @@ class BankTransactionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'bank', 'bank_account', 'booking_date', 'counterparty_name',
             'description', 'amount', 'currency', 'category', 'category_override',
-            'effective_category',
+            'effective_category', 'reviewed',
         ]
 
 
