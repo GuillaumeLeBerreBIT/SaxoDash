@@ -5,7 +5,7 @@ import { OptionBadge } from './HoldingBadges'
 import { MOVES_SHOWN, groupMoves, moveSentence, stockLabel } from '../../lib/investorHub'
 import { quarterLabel } from '../../lib/investors'
 
-const TONES = { new: 'text-emerald-400', added: 'text-emerald-400', trimmed: 'text-red-400', sold_out: 'text-red-400' }
+const TONES = { new: 'text-blue-400', added: 'text-zinc-300', trimmed: 'text-zinc-300', sold_out: 'text-amber-400' }
 const FIRST_QUARTER = 'First stored quarter — there is no earlier filing to compare against.'
 const NOTHING_MOVED = 'No position changed by 1% or more this quarter.'
 

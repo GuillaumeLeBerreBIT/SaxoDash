@@ -51,6 +51,12 @@ describe('InvestorStocks', () => {
     expect(within(nvda).getByRole('link', { name: 'NVDA' })).toHaveAttribute('href', '/research?symbol=NVDA')
   })
 
+  it('does not colour bought green or sold red', () => {
+    renderPage()
+    const nvda = screen.getByRole('row', { name: /NVDA/ })
+    for (const count of ['7', '2']) expect(within(nvda).getByText(count).className).not.toMatch(/emerald|red-|rose/)
+  })
+
   it('shows the issuer and no research link for an unresolved ticker', () => {
     renderPage()
     const unlisted = screen.getByRole('row', { name: /UNLISTED CO/ })
