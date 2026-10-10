@@ -349,7 +349,9 @@ Amendments are applied at read time (`quarters.effective_filings`), never by
 rewriting stored filings. The `value` unit is decided by filing date, not
 quarter: the SEC moved it from thousands to dollars for filings from 2023-01-03,
 so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
-quarter). OpenFIGI tickers are normalised `/` to `.`. `sync_investors` is
+quarter). OpenFIGI tickers are normalised `/` to `.`. An identifier
+starting with a letter is a CINS (a foreign-domiciled issuer listed in the US: Chubb, Aon,
+Medtronic) and is asked for as `ID_CINS`; `ID_CUSIP` answers "no identifier found" for those. `sync_investors` is
 `@synced(reports_health=False, needs_credential=False)`, so it never touches the
 header's Saxo health badge and runs without a Saxo credential.
 
