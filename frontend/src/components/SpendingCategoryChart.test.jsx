@@ -123,9 +123,9 @@ describe('SpendingCategoryChart', () => {
       <SpendingCategoryChart
         categories={[
           { category: 'GROCERIES', amount: '600.00' },
-          { category: 'OTHER', amount: '350.00' },
+          { category: 'OTHER', amount: '355.00' },
           { category: 'DINING', amount: '20.00' },
-          { category: 'TRANSPORT', amount: '30.00' },
+          { category: 'TRANSPORT', amount: '25.00' },
         ]}
         isLoading={false}
         error={null}
