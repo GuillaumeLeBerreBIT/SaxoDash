@@ -70,7 +70,8 @@ describe('Investors hub', () => {
     const buys = screen.getByRole('region', { name: 'Convergent buys' })
     expect(within(buys).getByText('NVDA')).toBeInTheDocument()
     expect(within(buys).getByText('7 funds bought · 2 new')).toBeInTheDocument()
-    expect(within(buys).getByRole('link', { name: 'See all 14' })).toHaveAttribute('href', '/investors/stocks?view=bought')
+    expect(within(buys).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/investors/stocks?view=bought')
+    expect(within(screen.getByRole('region', { name: 'Following' })).getByRole('link', { name: 'See all 1' })).toHaveAttribute('href', expect.any(String))
     expect(within(screen.getByRole('region', { name: 'Following' })).getByRole('link', { name: 'Warren Buffett' })).toHaveAttribute('href', '/investors/berkshire-hathaway')
   })
 

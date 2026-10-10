@@ -21,7 +21,7 @@ export default function Shelf({ shelf }) {
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={headingId} className="text-[var(--fig-md)] font-semibold text-zinc-100">{shelf.title}</h2>
         <Link to={seeAllTarget(shelf)} className="shrink-0 whitespace-nowrap text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">
-          See all <span className="num">{shelf.total}</span>
+          See all{stocks ? null : <> <span className="num">{shelf.total}</span></>}
         </Link>
       </div>
       <ShelfCards
