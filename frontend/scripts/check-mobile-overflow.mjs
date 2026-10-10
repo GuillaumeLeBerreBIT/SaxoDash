@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import {
   ROUTES,
+  routePath,
   describeGateBlindness,
   describeLoadFailure,
   formatGateBlind,
@@ -89,7 +90,7 @@ try {
   for (const route of routes) {
     await attempt(route, async () => {
       await page.goto(args.base + route)
-      await measure(page, route, route)
+      await measure(page, route, routePath(route))
     })
   }
 

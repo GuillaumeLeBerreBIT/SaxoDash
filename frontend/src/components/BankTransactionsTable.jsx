@@ -76,7 +76,7 @@ export default function BankTransactionsTable({
                   No transactions match your filters.
                   {filtering && (
                     <div className="mt-2">
-                      <Button size="sm" onClick={onClearFilters}>Clear filters</Button>
+                      <Button size="sm" className="h-11 md:h-8" onClick={onClearFilters}>Clear filters</Button>
                     </div>
                   )}
                 </td>

@@ -9,9 +9,15 @@ export const ROUTES = [
   '/earnings',
   '/investors',
   '/transactions',
+  '/transactions?type=BUY&from=2026-01-01',
   '/accounts',
   '/spending',
+  '/spending/transactions?category=GROCERIES&from=2026-01-01&to=2026-12-31',
 ]
+
+export function routePath(route) {
+  return route.split('?')[0]
+}
 
 const DEFAULTS = {
   base: 'http://localhost:5273',

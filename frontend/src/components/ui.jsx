@@ -558,7 +558,7 @@ export function SortableTh({ children, sortKey, sort, onSort, align = 'left', ed
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex h-11 items-center gap-1 font-medium hover:text-zinc-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 md:h-auto ${
+        className={`inline-flex h-11 min-w-11 items-center gap-1 font-medium hover:text-zinc-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 md:h-auto md:min-w-0 ${
           align === 'right' ? 'flex-row-reverse' : ''
         }`}
       >

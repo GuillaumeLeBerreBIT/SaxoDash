@@ -352,6 +352,13 @@ describe('SortableTh', () => {
       </table>,
     )
 
+  it('keeps a 44px wide touch target below md only', () => {
+    renderTh({ sort: null })
+    const button = screen.getByRole('button', { name: /Value/ })
+    expect(button.className).toContain('min-w-11')
+    expect(button.className).toContain('md:min-w-0')
+  })
+
   it('reports none when another column or nothing is sorted', () => {
     renderTh({ sort: null })
     expect(screen.getByRole('columnheader')).toHaveAttribute('aria-sort', 'none')
