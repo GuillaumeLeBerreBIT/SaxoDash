@@ -129,6 +129,12 @@ describe('Investor profile', () => {
     expect(screen.getByTestId('where').textContent).toBe('/investors/pershing-square?quarter=2026-03-31')
   })
 
+  it('drops the quarter param when the latest quarter is picked again', () => {
+    renderPage('/investors/pershing-square?quarter=2026-03-31')
+    fireEvent.change(screen.getByRole('combobox', { name: 'Quarter' }), { target: { value: '2026-06-30' } })
+    expect(screen.getByTestId('where').textContent).toBe('/investors/pershing-square')
+  })
+
   it('asks for the quarter named in the URL', () => {
     renderPage('/investors/pershing-square?quarter=2026-03-31')
     expect(asked).toEqual(['pershing-square', '2026-03-31'])
@@ -154,6 +160,19 @@ describe('Investor profile', () => {
     state = { data: { ...detail, stale: true }, isLoading: false, error: null }
     renderPage()
     expect(screen.getByText('No 13F since Q2 2026')).toBeInTheDocument()
+  })
+
+  it('names the latest stored quarter, not the viewed one, for a stale investor', () => {
+    state = { data: { ...detail, stale: true, quarter: '2026-03-31' }, isLoading: false, error: null }
+    renderPage('/investors/pershing-square?quarter=2026-03-31')
+    expect(screen.getByText('No 13F since Q2 2026')).toBeInTheDocument()
+  })
+
+  it('keeps the limits note and no quarter select when nothing is imported', () => {
+    state = { data: { ...detail, quarters: [], quarter: null, holdings: [], moves: [], sectors: [] }, isLoading: false, error: null }
+    renderPage()
+    expect(screen.queryByRole('combobox', { name: 'Quarter' })).not.toBeInTheDocument()
+    expect(screen.getByText(/^13F shows US-listed long positions/)).toBeInTheDocument()
   })
 
   it('explains an investor with nothing imported yet', () => {
