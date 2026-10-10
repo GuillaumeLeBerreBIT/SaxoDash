@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.utils.text import slugify
 
 from . import edgar, tasks
@@ -5,6 +7,7 @@ from .models import Investor
 
 RESERVED_SLUGS = frozenset({'hub', 'stocks', 'search'})
 SLUG_LENGTH = 60
+STOPPED_AFTER = timedelta(days=365)
 
 
 class AlreadyTracked(Exception):
@@ -25,12 +28,22 @@ class CuratedInvestor(Exception):
     pass
 
 
-def search(query):
+def _stopped_filing(last_13f, today):
+    return last_13f is not None and today - date.fromisoformat(last_13f) > STOPPED_AFTER
+
+
+def search(query, today):
     tracked = dict(Investor.objects.values_list('cik', 'slug'))
-    return [
-        {**found, 'tracked': found['cik'] in tracked, 'slug': tracked.get(found['cik'])}
+    rows = [
+        {
+            **found,
+            'tracked': found['cik'] in tracked,
+            'slug': tracked.get(found['cik']),
+            'stale': _stopped_filing(found['last_13f'], today),
+        }
         for found in edgar.search_filers(query)
     ]
+    return sorted(rows, key=lambda row: row['stale'])
 
 
 def _free_slug(name, cik):

@@ -120,6 +120,6 @@ class InvestorSearchView(APIView):
         if len(query) < MIN_QUERY:
             return Response([])
         try:
-            return Response(tracking.search(query))
+            return Response(tracking.search(query, date.today()))
         except edgar.EdgarError:
             raise BadGateway(EDGAR_DOWN)

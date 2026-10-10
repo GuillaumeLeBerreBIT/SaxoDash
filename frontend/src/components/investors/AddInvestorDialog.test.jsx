@@ -60,6 +60,15 @@ describe('AddInvestorDialog', () => {
     expect(within(first).getByRole('button', { name: 'Add Pershing Square Capital Management, L.P.' })).toBeEnabled()
   })
 
+  it('says when a filer stopped filing, and still lets it be added', () => {
+    searchState = { data: [{ cik: 1079114, name: 'GREENLIGHT CAPITAL INC', last_13f: '2024-02-14', tracked: false, slug: null, stale: true }], isFetching: false, error: null }
+    renderDialog()
+    type('greenlight')
+    const row = screen.getByRole('listitem')
+    expect(within(row).getByText('Stopped filing · last 13F 14 Feb 2024')).toBeInTheDocument()
+    expect(within(row).getByRole('button', { name: 'Add GREENLIGHT CAPITAL INC' })).toBeEnabled()
+  })
+
   it('links to an investor already tracked instead of adding it again', () => {
     searchState = { data: results, isFetching: false, error: null }
     renderDialog()
