@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterTransactions, paginate } from './accountTransactions'
+import { filterByPeriod, filterSpending, filterTransactions, netSpend, paginate } from './accountTransactions'
 
 describe('filterTransactions', () => {
   const rows = [
@@ -31,5 +31,65 @@ describe('paginate', () => {
   })
   it('has one empty page for no rows', () => {
     expect(paginate([], 1)).toMatchObject({ rows: [], page: 1, pageCount: 1, total: 0 })
+  })
+})
+
+describe('filterByPeriod', () => {
+  const rows = [
+    { id: 1, booking_date: '2026-09-01' },
+    { id: 2, booking_date: '2026-09-15' },
+    { id: 3, booking_date: '2026-09-30' },
+    { id: 4, booking_date: '2026-10-01' },
+  ]
+  it('includes both boundary days', () => {
+    expect(filterByPeriod(rows, { from: '2026-09-01', to: '2026-09-30' }).map((r) => r.id)).toEqual([1, 2, 3])
+  })
+  it('ignores a bound that is not an ISO day', () => {
+    expect(filterByPeriod(rows, { from: 'nope', to: undefined })).toHaveLength(4)
+  })
+  it('is empty when from is after to', () => {
+    expect(filterByPeriod(rows, { from: '2026-09-30', to: '2026-09-01' })).toEqual([])
+  })
+})
+
+describe('filterSpending', () => {
+  const tx = (id, booking_date, effective_category, amount) => ({ id, booking_date, effective_category, amount })
+  const rows = [
+    tx(1, '2026-09-02', 'GROCERIES', '-40.00'),
+    tx(2, '2026-09-10', 'GROCERIES', '-10.50'),
+    tx(3, '2026-09-12', 'GROCERIES', '5.50'),
+    tx(4, '2026-09-12', 'DINING', '-20.00'),
+    tx(5, '2026-09-13', 'TRANSFER', '-300.00'),
+    tx(6, '2026-09-13', 'SAVINGS', '-100.00'),
+    tx(7, '2026-08-31', 'GROCERIES', '-99.00'),
+    tx(8, '2026-10-01', 'GROCERIES', '-77.00'),
+    tx(9, '2026-09-30', 'GROCERIES', '-1.00'),
+  ]
+  const period = { from: '2026-09-01', to: '2026-09-30', today: '2026-12-01' }
+
+  it('keeps credits so they net against the category, like the summary does', () => {
+    expect(filterSpending(rows, { ...period, category: 'GROCERIES' }).map((r) => r.id)).toEqual([1, 2, 3, 9])
+  })
+  it('excludes transfers and savings even without a category', () => {
+    expect(filterSpending(rows, period).map((r) => r.id)).toEqual([1, 2, 3, 4, 9])
+  })
+  it('does not return a transfer category even when asked for it', () => {
+    expect(filterSpending(rows, { ...period, category: 'TRANSFER' })).toEqual([])
+  })
+  it('includes both boundary days and nothing outside', () => {
+    const ids = filterSpending(rows, period).map((r) => r.id)
+    expect(ids).not.toContain(7)
+    expect(ids).not.toContain(8)
+    expect(ids).toContain(9)
+  })
+  it('clamps the end of the period to today', () => {
+    expect(filterSpending(rows, { ...period, today: '2026-09-10', category: 'GROCERIES' }).map((r) => r.id)).toEqual([1, 2])
+  })
+  it('treats ALL as no category filter', () => {
+    expect(filterSpending(rows, { ...period, category: 'ALL' })).toHaveLength(5)
+  })
+  it('totals a category to the same amount the summary reports (net outflow)', () => {
+    const mine = filterSpending(rows, { ...period, category: 'GROCERIES' })
+    expect(netSpend(mine)).toBe(46)
   })
 })

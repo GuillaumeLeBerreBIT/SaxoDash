@@ -18,3 +18,32 @@ export function paginate(rows, page, pageSize = PAGE_SIZE) {
   const start = (current - 1) * pageSize
   return { rows: rows.slice(start, start + pageSize), page: current, pageCount, total: rows.length }
 }
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
+const TRANSFER_CATEGORIES = ['TRANSFER', 'SAVINGS']
+
+function localToday() {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+export function filterByPeriod(rows, { from, to }) {
+  const start = ISO_DAY.test(from ?? '') ? from : null
+  const end = ISO_DAY.test(to ?? '') ? to : null
+  return rows.filter((tx) => (!start || tx.booking_date >= start) && (!end || tx.booking_date <= end))
+}
+
+export function filterSpending(rows, { category, from, to, today = localToday() }) {
+  const end = ISO_DAY.test(to ?? '') && to < today ? to : today
+  return filterByPeriod(rows, { from, to: end }).filter(
+    (tx) =>
+      !TRANSFER_CATEGORIES.includes(tx.effective_category) &&
+      (!category || category === 'ALL' || tx.effective_category === category),
+  )
+}
+
+export function netSpend(rows) {
+  const cents = rows.reduce((sum, tx) => sum + Math.round(Number(tx.amount) * 100), 0)
+  return -cents / 100
+}
