@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawdownDomain, needsDaysNote, pctOrDash, yearTicks } from './analytics'
+import { drawdownDomain, needsDaysNote, pctOrDash, yearTicks } from './portfolioStats'
 
 describe('needsDaysNote', () => {
   it('is null when nothing is missing or unknown', () => {

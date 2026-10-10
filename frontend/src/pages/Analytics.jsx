@@ -10,7 +10,7 @@ import ReturnsTable from '../components/analytics/ReturnsTable'
 import CalendarYears from '../components/analytics/CalendarYears'
 import Attribution from '../components/analytics/Attribution'
 import { fmtNum, fmtPct } from '../lib/format'
-import { needsDaysNote, pctOrDash } from '../lib/analytics'
+import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
 const SUBTITLE = 'Performance, risk and projection, computed from your own portfolio-value history'
 const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'

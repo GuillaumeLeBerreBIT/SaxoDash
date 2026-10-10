@@ -4,7 +4,7 @@ import { Card, CardHeader, InfoTip, MetricTile } from '../ui'
 import { Pill } from '../RangePills'
 import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
-import { yearTicks } from '../../lib/analytics'
+import { yearTicks } from '../../lib/portfolioStats'
 import { CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, axisProps, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 
 const MONTHLY_OPTIONS = [500, 1000, 1500, 2000, 2500]
