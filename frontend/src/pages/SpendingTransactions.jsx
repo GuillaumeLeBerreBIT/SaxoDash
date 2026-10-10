@@ -18,11 +18,6 @@ function periodText(from, to) {
 }
 
 export default function SpendingTransactions() {
-  const [params] = useSearchParams()
-  return <SpendingTransactionsView key={params.toString()} />
-}
-
-function SpendingTransactionsView() {
   const [params, setParams] = useSearchParams()
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
@@ -33,6 +28,13 @@ function SpendingTransactionsView() {
   const updateCategory = useUpdateBankTransactionCategory()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const paramsKey = params.toString()
+  const [seenKey, setSeenKey] = useState(paramsKey)
+  if (seenKey !== paramsKey) {
+    setSeenKey(paramsKey)
+    setSearch('')
+    setPage(1)
+  }
 
   const inPeriod = data ? filterSpending(data, { from, to }) : []
   const scope = category === 'ALL' ? inPeriod : filterSpending(data ?? [], { category, from, to })

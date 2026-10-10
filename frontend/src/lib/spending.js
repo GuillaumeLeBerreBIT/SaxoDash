@@ -24,14 +24,14 @@ export function foldSmallSlices(items, { threshold = 0.03, otherName = 'Other', 
   let folded = 0
   let foldedAny = false
   for (const item of items) {
-    if (item.name === otherName || item.value / total < threshold) {
+    if ((item.name === otherName && !item.category) || item.value / total < threshold) {
       folded += item.value
       foldedAny = foldedAny || item.value > 0
     } else {
       kept.push(item)
     }
   }
-  return foldedAny && folded > 0 ? [...kept, { name: otherName, value: folded, color: otherColor }] : kept
+  return foldedAny && folded > 0 ? [...kept, { name: otherName, value: folded, color: otherColor, folded: true }] : kept
 }
 
 export function trendTooltipRow(value) {

@@ -40,6 +40,16 @@ describe('foldSmallSlices', () => {
     const out = foldSmallSlices([item('A', 100), item('B', 0)])
     expect(out.map((i) => i.name)).toEqual(['A'])
   })
+  it('marks the folded slice and leaves real categories unmarked', () => {
+    const out = foldSmallSlices([item('A', 90), item('B', 8), item('C', 2)])
+    expect(out.at(-1).folded).toBe(true)
+    expect(out[0].folded).toBeUndefined()
+  })
+  it('does not absorb a real category that happens to be named Other', () => {
+    const out = foldSmallSlices([item('A', 60), { ...item('Other', 36), category: 'OTHER' }, item('C', 4)])
+    expect(out.filter((i) => i.name === 'Other')).toHaveLength(1)
+    expect(out.map((i) => i.value)).toEqual([60, 36, 4])
+  })
   it('leaves a zero total alone', () => {
     expect(foldSmallSlices([item('A', 0)])).toHaveLength(1)
   })

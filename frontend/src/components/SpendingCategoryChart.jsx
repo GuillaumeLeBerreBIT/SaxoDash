@@ -11,6 +11,7 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
     (categories ?? [])
       .map((c) => ({
         name: CATEGORY_LABELS[c.category] ?? c.category,
+        category: c.category,
         value: Number(c.amount),
         color: colorForCategory(c.category),
         to: period ? spendingTransactionsPath(c.category, period) : undefined,
@@ -18,7 +19,7 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
       .sort((a, b) => b.value - a.value),
   )
   const items = period
-    ? folded.map((item) => (item.name === 'Other' ? { ...item, to: spendingTransactionsPath(null, period) } : item))
+    ? folded.map((item) => (item.folded ? { ...item, to: spendingTransactionsPath(null, period) } : item))
     : folded
 
   const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
