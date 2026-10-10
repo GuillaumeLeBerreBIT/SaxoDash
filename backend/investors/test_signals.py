@@ -108,18 +108,20 @@ class HubShelvesTest(TestCase):
 
         self.assertEqual((sold['total'], sold['items'][0]['issuer'], sold['items'][0]['sold']), (1, 'TESLA INC', 3))
 
-    def test_new_bets_rank_by_weight_and_name_the_investor(self):
+    def test_new_bets_are_one_card_per_stock_ranked_by_the_biggest_position(self):
+        amd = '007903107'
         self.after(self.funds[0], [*BEFORE, (NVDA, 'NVIDIA CORP', 10, 1000)])
         self.after(self.funds[1], [*BEFORE, (NVDA, 'NVIDIA CORP', 10, 250)])
-        for investor in self.funds[2:]:
-            self.after(investor, BEFORE)
+        self.after(self.funds[2], [*BEFORE, (amd, 'ADVANCED MICRO DEVICES INC', 10, 100)])
+        self.after(self.funds[3], BEFORE)
 
         bets = shelf(signals.hub(TODAY), 'new-bets')
 
         self.assertEqual(bets['total'], 2)
         self.assertEqual(
-            [(item['weight'], item['investors'][0]['slug']) for item in bets['items']],
-            [(50.0, 'fund-1'), (20.0, 'fund-2')],
+            [(item['issuer'], item['weight'], item['new'], [face['slug'] for face in item['investors']])
+             for item in bets['items']],
+            [('NVIDIA CORP', 50.0, 2, ['fund-1', 'fund-2']), ('ADVANCED MICRO DEVICES INC', 9.09, 1, ['fund-3'])],
         )
 
     def test_following_and_just_filed_are_investor_shelves(self):

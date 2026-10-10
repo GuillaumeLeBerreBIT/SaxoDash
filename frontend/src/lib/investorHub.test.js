@@ -86,7 +86,8 @@ describe('signalSentence', () => {
     expect(signalSentence('convergent-buys', { bought: 7, new: 2 })).toBe('7 funds bought · 2 new')
     expect(signalSentence('convergent-buys', { bought: 3, new: 0 })).toBe('3 funds bought')
     expect(signalSentence('most-sold', { sold: 6 })).toBe('6 funds sold')
-    expect(signalSentence('new-bets', { weight: 9.04, investors: [{ name: 'Bill Ackman' }] })).toBe('New 9.0% position · Bill Ackman')
+    expect(signalSentence('new-bets', { weight: 9.04, new: 1, investors: [{ name: 'Bill Ackman' }] })).toBe('New 9.0% position · Bill Ackman')
+    expect(signalSentence('new-bets', { weight: 61.9, new: 3, investors: [{ name: 'Dan Sundheim' }, { name: 'Marc Stad' }] })).toBe('New 61.9% position · Dan Sundheim +2 more')
   })
 })
 
