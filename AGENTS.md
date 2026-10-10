@@ -353,9 +353,20 @@ quarter). OpenFIGI tickers are normalised `/` to `.`. `sync_investors` is
 `@synced(reports_health=False, needs_credential=False)`, so it never touches the
 header's Saxo health badge and runs without a Saxo credential.
 
-**Investors pages read only `/api/investors/…`.** `/investors` and
-`/investors/:slug` never touch Saxo or Finnhub. Turnover is opened + closed value
-over both quarters' value (no prices), and change value deltas include price
-moves, so they always sit next to the share change that says what was actually
-bought or sold. Phase 4 features (Add investor, Stop tracking, cross-investor
-panels) are deliberately absent until their backend exists.
+**Investors pages read only `/api/investors/…`.** `/investors` (hub), `/investors/stocks`
+and `/investors/:slug` never touch Saxo or Finnhub. The one place a request reaches EDGAR
+is the Add-investor search and the add itself — explicit user actions. Only the
+search is throttled (`investors.search`); both answer 502 rather than 500 when EDGAR is
+down, and the add answers 503 when the import cannot be queued. Turnover is opened +
+closed value over both quarters' value (no prices), and value deltas include price moves, so
+they always sit next to the share change that says what was actually bought or sold.
+
+**Cross-fund signals read `PositionMove`, a cache the importer rebuilds.** `moves.rebuild`
+is its only writer and classifies with `changes.py`, so "added" has one definition; it reads
+`quarters.effective_filings`, so amendments stay a read-time rule. Drop the table and
+`rebuild_moves` restores it. Directory cards read it in a fixed number of queries — the old
+per-card snapshot comparison cost two snapshots per fund. The hub's signals describe the newest
+quarter at least half the tracked funds have filed, and say which; option rows never count as a
+stock signal; a fund with one stored quarter owns but did not buy. Funds holding thousands of
+positions (Citadel, Millennium, Renaissance, …) are deliberately not in `curated.csv`: they buy
+nearly everything and would drown "bought by 3+ funds".

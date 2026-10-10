@@ -56,3 +56,16 @@ class SyncInvestorsTaskTest(TestCase):
 
     def test_the_run_never_counts_toward_saxo_health(self, sync_investor):
         self.assertNotIn(tasks.SYNC_TASK, SYNC_TASKS)
+
+
+class BackfillInvestorTaskTest(TestCase):
+    @patch('investors.tasks.importer.backfill')
+    def test_backfills_the_named_investor(self, backfill):
+        investor = make_investor()
+        tasks.backfill_investor(investor.pk)
+        backfill.assert_called_once_with(investor)
+
+    @patch('investors.tasks.importer.backfill')
+    def test_an_investor_removed_meanwhile_is_ignored(self, backfill):
+        tasks.backfill_investor(999)
+        backfill.assert_not_called()

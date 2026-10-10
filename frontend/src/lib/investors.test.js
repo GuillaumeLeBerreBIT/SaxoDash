@@ -123,6 +123,12 @@ describe('top ten', () => {
     expect(slices[10]).toMatchObject({ name: 'Other', color: OTHER_SLICE, logo: false, weight: 20 })
   })
 
+  it('names a single leftover position in the singular', () => {
+    const eleven = { holdings: holdings.slice(0, 11), positions: 11, total_value: 1045, top10_weight: 90 }
+    expect(donutSlices(eleven)[10].note).toBe('1 smaller position')
+    expect(donutSlices(detail)[10].note).toBe('2 smaller positions')
+  })
+
   it('omits the Other slice at ten positions or fewer', () => {
     expect(donutSlices({ holdings: holdings.slice(0, 4), positions: 4, total_value: 394, top10_weight: 100 })).toHaveLength(4)
   })

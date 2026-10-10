@@ -2,7 +2,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Card, CardHeader, EmptyState } from '../ui'
 import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis, NEGATIVE } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
-import { drawdownDomain } from '../../lib/analytics'
+import { drawdownDomain } from '../../lib/portfolioStats'
 
 /** Decline from the running peak of the portfolio's own value - no benchmark. */
 export default function DrawdownChart({ series, maxDrawdown }) {

@@ -1,91 +1,38 @@
-import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState } from 'react'
 
-import { useInvestors } from '../api/queries'
-import { Button, EmptyState, PageHeader, QueryState, Skeleton } from '../components/ui'
-import InvestorCards from '../components/investors/InvestorCards'
-import InvestorTable from '../components/investors/InvestorTable'
-import InvestorToolbar from '../components/investors/InvestorToolbar'
+import { useInvestorHub, useInvestors } from '../api/queries'
+import { Alert, Button, PageHeader, Skeleton } from '../components/ui'
+import AddInvestorDialog from '../components/investors/AddInvestorDialog'
+import InvestorDirectory from '../components/investors/InvestorDirectory'
 import LimitsNote from '../components/investors/LimitsNote'
-import SnapshotPanel from '../components/investors/SnapshotPanel'
-import { CARD_LIMIT, latestQuarter, looksLikeTicker, quarterLabel, visibleInvestors } from '../lib/investors'
-import { useDebouncedValue } from '../lib/useDebouncedValue'
+import Shelf from '../components/investors/Shelf'
+import { hubSubtitle } from '../lib/investorHub'
 
-const DEFAULT_INVESTOR = 'berkshire-hathaway'
+const NO_SIGNALS = 'No cross-fund signals yet. They appear once investors have two quarters imported.'
+
+function Shelves({ hub }) {
+  if (hub.error) return <Alert>Could not load this quarter's signals. {hub.error.message}</Alert>
+  if (hub.isLoading || !hub.data) return <Skeleton className="h-40" />
+  if (hub.data.shelves.length === 0) return <p className="text-[var(--fig-sm)] text-zinc-500">{NO_SIGNALS}</p>
+  return hub.data.shelves.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)
+}
 
 export default function Investors() {
-  const [params, setParams] = useSearchParams()
-  const [group, setGroup] = useState('all')
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState('value')
-  const [layout, setLayout] = useState('cards')
-  const [showAll, setShowAll] = useState(false)
-
-  const { data: cards = [], isLoading, error, refetch } = useInvestors()
-  const debounced = useDebouncedValue(query.trim())
-  const holds = looksLikeTicker(debounced) ? debounced.toUpperCase() : ''
-  const { data: holders = [], isFetching: holdersFetching } = useInvestors({ holds })
-
-  const visible = useMemo(
-    () => visibleInvestors(cards, { group, query, sort, holderSlugs: new Set(holds ? holders.map((h) => h.slug) : []) }),
-    [cards, group, query, sort, holds, holders],
-  )
-
-  const fallback = cards.some((c) => c.slug === DEFAULT_INVESTOR) ? DEFAULT_INVESTOR : visible[0]?.slug
-  const selected = params.get('investor') ?? fallback
-  const select = (slug) => setParams({ investor: slug }, { replace: true })
-
-  const searching = query.trim() !== ''
-  const resolving = looksLikeTicker(query) && (debounced !== query.trim() || (holds !== '' && holdersFetching))
-  const shown = showAll || searching ? visible : visible.slice(0, CARD_LIMIT)
-  const latest = latestQuarter(cards)
-
-  if (error) {
-    return (
-      <div className="space-y-4">
-        <PageHeader title="Investors" />
-        <QueryState error={error} onRetry={refetch} label="investors" />
-      </div>
-    )
-  }
+  const [adding, setAdding] = useState(false)
+  const hub = useInvestorHub()
+  const { data: cards = [], isLoading, error } = useInvestors()
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title="Investors"
-        subtitle={`13F holdings of ${cards.length} tracked managers · latest quarter ${quarterLabel(latest)} · filings arrive up to 45 days after quarter end`}
+        subtitle={hubSubtitle(hub.data)}
+        right={<Button size="sm" onClick={() => setAdding(true)}>Add investor</Button>}
       />
-      <InvestorToolbar
-        group={group}
-        onGroup={(g) => { setGroup(g); setShowAll(false) }}
-        query={query}
-        onQuery={setQuery}
-        sort={sort}
-        onSort={setSort}
-        layout={layout}
-        onLayout={setLayout}
-      />
-      {isLoading || (visible.length === 0 && resolving) ? (
-        <Skeleton className="h-40" />
-      ) : visible.length === 0 && searching ? (
-        <EmptyState title={`No tracked investor matches “${query}”.`} hint="Try a manager, a firm or a ticker they hold." />
-      ) : visible.length === 0 ? (
-        <EmptyState title="No investors in this group." />
-      ) : layout === 'table' ? (
-        <InvestorTable investors={visible} selected={selected} onSelect={select} />
-      ) : (
-        <>
-          <InvestorCards investors={shown} selected={selected} onSelect={select} />
-          {shown.length < visible.length && (
-            <div className="flex items-center justify-between gap-3 text-[var(--fig-xs)] text-zinc-500">
-              <span>{`Showing ${shown.length} of ${visible.length}`}</span>
-              <Button size="sm" onClick={() => setShowAll(true)}>{`Show all ${visible.length}`}</Button>
-            </div>
-          )}
-        </>
-      )}
-      {selected && <SnapshotPanel slug={selected} />}
+      <Shelves hub={hub} />
+      <InvestorDirectory cards={cards} isLoading={isLoading} error={error} />
       <LimitsNote />
+      {adding ? <AddInvestorDialog onClose={() => setAdding(false)} /> : null}
     </div>
   )
 }

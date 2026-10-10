@@ -1,6 +1,6 @@
 import { Card, CardHeader } from '../ui'
 import { fmtPct, pctTone, pctToneClass } from '../../lib/format'
-import { needsDaysNote } from '../../lib/analytics'
+import { needsDaysNote } from '../../lib/portfolioStats'
 
 const ALPHA_BADGE = {
   positive: 'bg-emerald-500/10 text-emerald-400',
