@@ -319,3 +319,45 @@ class SyncRebuildsMovesTest(TestCase):
                 patch('investors.importer.moves.rebuild') as rebuild:
             importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
         rebuild.assert_not_called()
+
+
+class ProgressFlagTest(TestCase):
+    ENTRY = SyncRebuildsMovesTest.ENTRY
+
+    def expected(self, investor):
+        return Investor.objects.get(pk=investor.pk).quarters_expected
+
+    def test_the_flag_outlives_the_rebuild_and_the_ticker_lookup(self):
+        investor = make_investor()
+        seen = {}
+
+        def rebuild(_):
+            seen['rebuild'] = self.expected(investor)
+
+        def resolve():
+            seen['resolve'] = self.expected(investor)
+            return 0
+
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', return_value=True), \
+                patch('investors.importer.moves.rebuild', side_effect=rebuild), \
+                patch('investors.importer.resolve_securities', side_effect=resolve):
+            importer.sync_investor(investor, date(2021, 1, 1), track_progress=True)
+
+        self.assertEqual(seen, {'rebuild': 1, 'resolve': 1})
+        self.assertIsNone(self.expected(investor))
+
+    def test_the_flag_is_cleared_when_the_loop_raises(self):
+        investor = make_investor()
+        with patch('investors.importer.edgar.filings', return_value=[self.ENTRY]), \
+                patch('investors.importer._import_filing', side_effect=edgar.EdgarError('timeout')):
+            with self.assertRaises(edgar.EdgarError):
+                importer.sync_investor(investor, date(2021, 1, 1), track_progress=True, resolve=False)
+        self.assertIsNone(self.expected(investor))
+        self.assertIsNone(investor.quarters_expected)
+
+    def test_a_leftover_flag_is_cleared_by_a_plain_sync(self):
+        investor = make_investor(quarters_expected=0)
+        with patch('investors.importer.edgar.filings', return_value=[]):
+            importer.sync_investor(investor, date(2021, 1, 1), resolve=False)
+        self.assertIsNone(self.expected(investor))

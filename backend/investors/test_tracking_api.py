@@ -67,6 +67,15 @@ class TrackingApiTest(APITestCase):
         self.assertEqual(response.data['import']['quarters_expected'], 0)
         delay.assert_called_once_with(investor.pk)
 
+    @patch('investors.tracking.tasks.backfill_investor.delay', side_effect=ConnectionError('broker down'))
+    @patch('investors.tracking.edgar.filer', return_value=PERSHING)
+    def test_an_import_that_cannot_be_queued_is_a_503_and_leaves_no_investor(self, filer, delay):
+        response = self.client.post(self.list_url, {'cik': 1336528}, format='json')
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.data['detail'], 'Could not start the import. Is the worker running?')
+        self.assertFalse(Investor.objects.filter(cik=1336528).exists())
+
     @patch('investors.tracking.tasks.backfill_investor.delay')
     @patch('investors.tracking.edgar.filer')
     def test_a_name_that_slugs_to_a_route_gets_a_safe_slug(self, filer, delay):

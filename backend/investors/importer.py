@@ -69,28 +69,30 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
     if track_progress:
         _set_expected(investor, len({e['quarter_end'] for e in entries}))
     try:
-        for entry in entries:
-            if entry['accession'] in stored:
-                continue
-            try:
-                stored_now = _import_filing(investor, entry)
-            except (parse.FilingUnreadable, edgar.FilingIncomplete) as exc:
-                logger.warning('Skipping %s filing %s: %s', investor.slug, entry['accession'], exc)
-                result.skipped.append(entry['accession'])
-                continue
-            if stored_now:
-                result.imported += 1
+        try:
+            for entry in entries:
+                if entry['accession'] in stored:
+                    continue
+                try:
+                    stored_now = _import_filing(investor, entry)
+                except (parse.FilingUnreadable, edgar.FilingIncomplete) as exc:
+                    logger.warning('Skipping %s filing %s: %s', investor.slug, entry['accession'], exc)
+                    result.skipped.append(entry['accession'])
+                    continue
+                if stored_now:
+                    result.imported += 1
+        finally:
+            Investor.objects.filter(pk=investor.pk).update(
+                last_checked_at=timezone.now(),
+                last_filing_at=investor.filings.aggregate(latest=Max('filed_on'))['latest'],
+            )
+            if result.imported or _moves_are_behind(investor):
+                moves.rebuild(investor)
+        if resolve:
+            resolve_securities()
     finally:
-        if track_progress:
+        if investor.quarters_expected is not None:
             _set_expected(investor, None)
-        Investor.objects.filter(pk=investor.pk).update(
-            last_checked_at=timezone.now(),
-            last_filing_at=investor.filings.aggregate(latest=Max('filed_on'))['latest'],
-        )
-        if result.imported or _moves_are_behind(investor):
-            moves.rebuild(investor)
-    if resolve:
-        resolve_securities()
     return result
 
 

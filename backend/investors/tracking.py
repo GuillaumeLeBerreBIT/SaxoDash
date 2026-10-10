@@ -17,6 +17,10 @@ class NotA13FFiler(Exception):
     pass
 
 
+class ImportNotQueued(Exception):
+    pass
+
+
 class CuratedInvestor(Exception):
     pass
 
@@ -47,7 +51,11 @@ def add(cik):
         cik=cik, name=found['name'], firm=found['name'], slug=_free_slug(found['name'], cik),
         curated=False, quarters_expected=0,
     )
-    tasks.backfill_investor.delay(investor.pk)
+    try:
+        tasks.backfill_investor.delay(investor.pk)
+    except Exception as exc:
+        investor.delete()
+        raise ImportNotQueued(found['name']) from exc
     return investor
 
 

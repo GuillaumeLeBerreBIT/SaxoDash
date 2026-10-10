@@ -24,6 +24,10 @@ class BadGateway(APIException):
     status_code = 502
 
 
+class ServiceUnavailable(APIException):
+    status_code = 503
+
+
 class InvestorListView(APIView):
     def get(self, request):
         investors = Investor.objects.all()
@@ -44,6 +48,8 @@ class InvestorListView(APIView):
             raise Refused(f'{exc} has never filed a 13F.')
         except edgar.EdgarError:
             raise BadGateway(EDGAR_DOWN)
+        except tracking.ImportNotQueued:
+            raise ServiceUnavailable('Could not start the import. Is the worker running?')
         return Response(summaries.card(investor, date.today()), status=201)
 
 
