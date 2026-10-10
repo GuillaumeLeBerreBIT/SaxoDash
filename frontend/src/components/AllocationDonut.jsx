@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTooltipProps } from '../lib/charts'
 import { instrumentLogoUrl } from '../lib/logos'
@@ -151,14 +152,22 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
         <div className="grid grid-cols-1 gap-y-2 mt-3 pt-4 border-t border-zinc-800">
           {items.map((d, i) => {
             const pct = total > 0 ? (d.value / total) * 100 : 0
-            return (
-              <div key={i} className="flex items-center gap-2 text-[var(--fig-xs)]">
+            const rowClass = 'flex items-center gap-2 text-[var(--fig-xs)]'
+            const content = (
+              <>
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                 <span className={`text-zinc-300 font-medium truncate${d.note ? ' shrink-0 max-w-[60%]' : ''}`}>{d.name}</span>
                 {d.note && <span className="text-zinc-500 truncate min-w-0">{d.note}</span>}
                 <span className="ml-auto text-zinc-500 num font-mono">{formatValue(d.value)}</span>
                 <span className="text-zinc-600 num font-mono w-12 text-right">{pct.toFixed(1)}%</span>
-              </div>
+              </>
+            )
+            return d.to ? (
+              <Link key={i} to={d.to} className={`${rowClass} min-h-11 md:min-h-0 -my-1 md:my-0 rounded hover:bg-zinc-800/40`}>
+                {content}
+              </Link>
+            ) : (
+              <div key={i} className={rowClass}>{content}</div>
             )
           })}
         </div>

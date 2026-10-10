@@ -2,17 +2,18 @@ import { fmtEur } from '../lib/format'
 import { colorForCategory } from '../lib/charts'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
-import { foldSmallSlices } from '../lib/spending'
+import { foldSmallSlices, spendingTransactionsPath } from '../lib/spending'
 import { CATEGORY_LABELS } from '../lib/categories'
 import AllocationDonut from './AllocationDonut'
 
-export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, onRetry }) {
+export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, period, onRetry }) {
   const items = foldSmallSlices(
     (categories ?? [])
       .map((c) => ({
         name: CATEGORY_LABELS[c.category] ?? c.category,
         value: Number(c.amount),
         color: colorForCategory(c.category),
+        to: period ? spendingTransactionsPath(c.category, period) : undefined,
       }))
       .sort((a, b) => b.value - a.value),
   )

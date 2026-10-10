@@ -52,3 +52,8 @@ export function trendBars(rows) {
     current: Boolean(row.partial) && index === list.length - 1,
   }))
 }
+
+export function spendingTransactionsPath(category, { date_from: from, date_to: to }) {
+  const params = new URLSearchParams({ category, from, to })
+  return `/spending/transactions?${params}`
+}

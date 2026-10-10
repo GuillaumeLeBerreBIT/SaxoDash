@@ -8,6 +8,7 @@ import Transactions from './pages/Transactions'
 import Accounts from './pages/Accounts'
 import AccountTransactions from './pages/AccountTransactions'
 import Spending from './pages/Spending'
+import SpendingTransactions from './pages/SpendingTransactions'
 import Research from './pages/Research'
 import ResearchChart from './pages/ResearchChart'
 import Discover from './pages/Discover'
@@ -33,6 +34,7 @@ function App() {
           <Route path='accounts' element={<Accounts />} />
           <Route path='accounts/:accountId' element={<AccountTransactions />} />
           <Route path='spending' element={<Spending />} />
+          <Route path='spending/transactions' element={<SpendingTransactions />} />
           <Route path='research' element={<Research />} />
           <Route path='discover' element={<Discover />} />
           <Route path='discover/:key' element={<DiscoverShelf />} />

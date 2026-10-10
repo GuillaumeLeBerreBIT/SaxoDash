@@ -50,4 +50,48 @@ describe('SpendingCategoryChart', () => {
     expect(screen.getByText('Other')).toBeInTheDocument()
     expect(screen.getByText('€40.00')).toBeInTheDocument()
   })
+
+  it('links each category to its transactions for the exact period, and not the Other slice', () => {
+    renderWithProviders(
+      <SpendingCategoryChart
+        categories={[
+          { category: 'GROCERIES', amount: '960.00' },
+          { category: 'DINING', amount: '20.00' },
+          { category: 'TRANSPORT', amount: '20.00' },
+        ]}
+        isLoading={false}
+        error={null}
+        periodLabel="September 2026"
+        period={{ date_from: '2026-09-01', date_to: '2026-09-30' }}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /Groceries/ })).toHaveAttribute(
+      'href',
+      '/spending/transactions?category=GROCERIES&from=2026-09-01&to=2026-09-30',
+    )
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.queryByRole('link', { name: /Other/ })).not.toBeInTheDocument()
+  })
+
+  it('links every category when none is folded', () => {
+    renderWithProviders(
+      <SpendingCategoryChart
+        categories={[
+          { category: 'GROCERIES', amount: '120.00' },
+          { category: 'DINING', amount: '80.00' },
+        ]}
+        isLoading={false}
+        error={null}
+        periodLabel="September 2026"
+        period={{ date_from: '2026-09-01', date_to: '2026-09-30' }}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /Dining/ })).toHaveAttribute(
+      'href',
+      '/spending/transactions?category=DINING&from=2026-09-01&to=2026-09-30',
+    )
+    expect(screen.getAllByRole('link')).toHaveLength(2)
+  })
 })
