@@ -1,6 +1,7 @@
 import itertools
 from datetime import timedelta
 
+from . import moves
 from .models import Filing, Holding, Investor
 
 _accessions = itertools.count(1)
@@ -15,7 +16,7 @@ def make_investor(**overrides):
     return Investor.objects.create(**fields)
 
 
-def store_quarter(investor, quarter_end, holdings, *, filed_on=None, amendment_type='', form=None):
+def store_quarter(investor, quarter_end, holdings, *, filed_on=None, amendment_type='', form=None, rebuild=True):
     rows = [
         {'cusip': h[0], 'issuer': h[1], 'shares': h[2], 'value': h[3], 'put_call': h[4] if len(h) > 4 else ''}
         for h in holdings
@@ -31,4 +32,6 @@ def store_quarter(investor, quarter_end, holdings, *, filed_on=None, amendment_t
         positions=len(rows),
     )
     Holding.objects.bulk_create(Holding(filing=filing, **row) for row in rows)
+    if rebuild:
+        moves.rebuild(investor)
     return filing

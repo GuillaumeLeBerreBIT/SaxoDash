@@ -1,6 +1,9 @@
 from django.db import models
 
 
+STYLES = ('Value', 'Growth', 'Activist', 'Macro', 'Tech', 'Concentrated', 'Contrarian', 'Quant')
+
+
 class Investor(models.Model):
     name = models.CharField(max_length=120)
     firm = models.CharField(max_length=160)
@@ -12,6 +15,8 @@ class Investor(models.Model):
     last_checked_at = models.DateTimeField(null=True, blank=True)
     last_filing_at = models.DateField(null=True, blank=True)
     quarters_expected = models.PositiveSmallIntegerField(null=True, blank=True)
+    styles = models.JSONField(default=list, blank=True)
+    followed = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['name']
@@ -87,3 +92,33 @@ class Security(models.Model):
 
     def __str__(self):
         return f'{self.cusip} {self.ticker or "?"}'
+
+
+class PositionMove(models.Model):
+    investor = models.ForeignKey(Investor, related_name='moves', on_delete=models.CASCADE)
+    quarter_end = models.DateField()
+    cusip = models.CharField(max_length=9)
+    put_call = models.CharField(max_length=4, blank=True, default='')
+    issuer = models.CharField(max_length=200)
+    kind = models.CharField(max_length=10, null=True, blank=True)
+    shares = models.BigIntegerField()
+    previous_shares = models.BigIntegerField(null=True, blank=True)
+    value = models.BigIntegerField()
+    previous_value = models.BigIntegerField(null=True, blank=True)
+    weight_pct = models.FloatField()
+    previous_weight_pct = models.FloatField(null=True, blank=True)
+    change_pct = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['investor', 'quarter_end', 'cusip', 'put_call'], name='move_investor_quarter_holding',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['quarter_end', 'kind'], name='move_quarter_kind_idx'),
+            models.Index(fields=['cusip'], name='move_cusip_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.investor.slug} {self.quarter_end} {self.cusip} {self.kind}'

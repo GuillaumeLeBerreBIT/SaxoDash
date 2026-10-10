@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 
 import AllocationDonut from '../AllocationDonut'
 import { InstrumentLogo, TBtn } from '../ui'
@@ -10,7 +9,7 @@ import WeightBar from './WeightBar'
 import { OptionBadge, YouBadge } from './HoldingBadges'
 import { fmtPct } from '../../lib/format'
 import {
-  TOP10_VIEWS, donutSlices, fmtUsdCompact, holdingLabel, readTop10View, remainder, topTen, writeTop10View,
+  TOP10_VIEWS, donutSlices, fmtUsdCompact, holdingLabel, positionCount, readTop10View, remainder, topTen, writeTop10View,
 } from '../../lib/investors'
 
 const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
@@ -47,7 +46,7 @@ function HoldingTile({ holding, max }) {
 function Grid({ holdings }) {
   const max = Math.max(0, ...holdings.map((h) => h.weight))
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] 2xl:grid-cols-5 gap-2">
       {holdings.map((h) => <HoldingTile key={`${h.cusip}-${h.put_call}`} holding={h} max={max} />)}
     </div>
   )
@@ -58,11 +57,11 @@ function Donut({ detail }) {
   const center = (active) =>
     active
       ? { label: active.name, value: share(active.weight), hint: fmtUsdCompact(active.value) }
-      : { label: 'Total value', value: fmtUsdCompact(detail.total_value), hint: `${detail.positions} positions` }
+      : { label: 'Total value', value: fmtUsdCompact(detail.total_value), hint: positionCount(detail.positions) }
   return <AllocationDonut items={slices} formatValue={(v) => fmtUsdCompact(v)} center={center} height="300px" />
 }
 
-export default function TopHoldings({ detail, slug }) {
+export default function TopHoldings({ detail }) {
   const [view, setView] = useState(readTop10View)
   const holdings = topTen(detail.holdings)
   const rest = remainder(detail)
@@ -88,10 +87,9 @@ export default function TopHoldings({ detail, slug }) {
       <div className="flex items-center justify-between gap-3 flex-wrap text-[var(--fig-xs)] text-zinc-500">
         <span>
           {rest
-            ? `Remaining ${rest.count} positions: ${share(rest.weight)} · ${fmtUsdCompact(rest.value)}`
-            : `That's the whole portfolio: ${detail.positions} positions.`}
+            ? `Remaining ${positionCount(rest.count)}: ${share(rest.weight)} · ${fmtUsdCompact(rest.value)}`
+            : `That's the whole portfolio: ${positionCount(detail.positions)}.`}
         </span>
-        <Link to={`/investors/${slug}`} className="text-blue-400 hover:text-blue-300">Open full portfolio →</Link>
       </div>
     </div>
   )

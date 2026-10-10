@@ -37,3 +37,11 @@ def _sync_all():
 @shared_task
 def sync_investors():
     return _sync_all()
+
+
+@shared_task
+def backfill_investor(investor_id):
+    investor = Investor.objects.filter(pk=investor_id).first()
+    if investor is None:
+        return
+    importer.backfill(investor)

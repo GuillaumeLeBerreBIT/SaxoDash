@@ -13,7 +13,7 @@ const detail = (count) => ({
   holdings: Array.from({ length: count }, (_, i) => holding(i, i === 0 ? { owned: true, change: 'new' } : {})),
 })
 
-const renderTop = (d) => render(<MemoryRouter><TopHoldings detail={d} slug="berkshire-hathaway" /></MemoryRouter>)
+const renderTop = (d) => render(<MemoryRouter><TopHoldings detail={d} /></MemoryRouter>)
 
 describe('TopHoldings', () => {
   beforeEach(() => localStorage.clear())
@@ -25,16 +25,25 @@ describe('TopHoldings', () => {
     expect(screen.getByText('You own')).toBeInTheDocument()
   })
 
-  it('states the remaining positions and links to the full portfolio', () => {
+  it('states the remaining positions', () => {
     renderTop(detail(29))
     expect(screen.getByText(/Remaining 19 positions/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Open full portfolio →' })).toHaveAttribute('href', '/investors/berkshire-hathaway')
+  })
+
+  it('states a single remaining position in the singular', () => {
+    renderTop(detail(11))
+    expect(screen.getByText(/Remaining 1 position:/)).toBeInTheDocument()
   })
 
   it('says a small portfolio is shown whole', () => {
     renderTop(detail(4))
     expect(screen.getAllByTestId('holding-tile')).toHaveLength(4)
     expect(screen.getByText("That's the whole portfolio: 4 positions.")).toBeInTheDocument()
+  })
+
+  it('says a one-position portfolio in the singular', () => {
+    renderTop(detail(1))
+    expect(screen.getByText("That's the whole portfolio: 1 position.")).toBeInTheDocument()
   })
 
   it('switches to the list and remembers the choice', () => {

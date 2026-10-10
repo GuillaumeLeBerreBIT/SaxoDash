@@ -1,72 +1,66 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { useInvestor } from '../api/queries'
-import { Alert, Card, EmptyState, PageHeader, Select, Skeleton, TabButton, TabList } from '../components/ui'
-import ChangesTab from '../components/investors/ChangesTab'
+import { Alert, Card, EmptyState, MetricTile, Skeleton } from '../components/ui'
+import ConcentrationPanel from '../components/investors/ConcentrationPanel'
 import HoldingsTab from '../components/investors/HoldingsTab'
-import InvestorStats from '../components/investors/InvestorStats'
+import ImportProgress from '../components/investors/ImportProgress'
+import InvestorHero from '../components/investors/InvestorHero'
+import LatestMoves from '../components/investors/LatestMoves'
 import LimitsNote from '../components/investors/LimitsNote'
-import { ImportProgress } from '../components/investors/SnapshotPanel'
-import { quarterLabel } from '../lib/investors'
+import { fmtNum, fmtPct } from '../lib/format'
+import { fmtFiledDate, fmtUsdCompact, quarterLabel } from '../lib/investors'
 
-const TABS = [['holdings', 'Holdings'], ['changes', 'Changes']]
+const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
+
+const back = (
+  <Link to="/investors" className="inline-block text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">← Investors</Link>
+)
+
+function Summary({ detail }) {
+  return (
+    <div role="group" aria-label="Portfolio summary" className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+      <MetricTile label="Portfolio" value={fmtUsdCompact(detail.total_value)} hint={`as of ${quarterLabel(detail.quarter)} end`} />
+      <MetricTile label="Positions" value={fmtNum(detail.positions)} hint="US-listed longs + options" />
+      <MetricTile label="Top 5" value={share(detail.top5_weight)} hint="of reported value" />
+      <MetricTile label="Filed" value={fmtFiledDate(detail.filed_on)} hint="up to 45 days after quarter end" />
+    </div>
+  )
+}
 
 export default function Investor() {
   const { slug } = useParams()
   const [params, setParams] = useSearchParams()
   const quarter = params.get('quarter') ?? undefined
-  const tab = params.get('tab') === 'changes' ? 'changes' : 'holdings'
   const { data, error } = useInvestor(slug, quarter)
 
-  const update = (patch) => {
+  const chooseQuarter = (value) => {
     const next = new URLSearchParams(params)
-    Object.entries(patch).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)))
+    if (value) next.set('quarter', value)
+    else next.delete('quarter')
     setParams(next, { replace: true })
   }
-
-  const back = (
-    <Link to={`/investors?investor=${slug}`} className="inline-block text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">
-      ← Investors
-    </Link>
-  )
 
   if (error) return <div className="flex flex-col gap-3">{back}<Alert>Could not load this investor. {error.message}</Alert></div>
   if (!data) return <div className="flex flex-col gap-3">{back}<Skeleton className="h-64" /></div>
 
-  const subtitle = data.stale && data.quarter
-    ? <>{data.firm} · <span className="text-amber-400">{`No 13F since ${quarterLabel(data.quarters[0])}`}</span></>
-    : data.firm
-
   return (
     <div className="flex flex-col gap-4">
       {back}
-      <PageHeader
-        title={data.name}
-        subtitle={subtitle}
-        right={
-          data.quarters.length > 0 && (
-            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
-              Quarter
-              <Select aria-label="Quarter" value={data.quarter} onChange={(e) => update({ quarter: e.target.value === data.quarters[0] ? null : e.target.value })}>
-                {data.quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
-              </Select>
-            </label>
-          )
-        }
-      />
+      <InvestorHero detail={data} onQuarter={chooseQuarter} />
       <ImportProgress progress={data.import} />
       {data.quarter ? (
-        <Card>
-          <div className="flex flex-col gap-4">
-            <InvestorStats detail={data} />
-            <TabList>
-              {TABS.map(([key, label]) => (
-                <TabButton key={key} active={tab === key} onClick={() => update({ tab: key === 'holdings' ? null : key })}>{label}</TabButton>
-              ))}
-            </TabList>
-            {tab === 'holdings' ? <HoldingsTab key={data.quarter} detail={data} /> : <ChangesTab slug={slug} quarter={quarter} />}
-          </div>
-        </Card>
+        <>
+          <Summary detail={data} />
+          <LatestMoves key={data.quarter} detail={data} />
+          <ConcentrationPanel detail={data} />
+          <Card>
+            <div className="flex flex-col gap-3">
+              <h2 className="text-[var(--fig-md)] font-semibold text-zinc-100">{`All holdings · ${quarterLabel(data.quarter)}`}</h2>
+              <HoldingsTab key={data.quarter} detail={data} />
+            </div>
+          </Card>
+        </>
       ) : (
         <EmptyState title={`Nothing imported for ${data.name} yet`} hint="The newest quarter appears here once its filing lands." />
       )}
