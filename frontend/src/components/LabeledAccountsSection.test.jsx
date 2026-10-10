@@ -126,4 +126,17 @@ describe('LabeledAccountsSection', () => {
     )
   })
 
+
+  it('truncates a very long suggestion name without pushing the page wider', () => {
+    const name = 'Geldopneming via Bancontact CASH Kortrijkses Oostkamp '.repeat(4)
+    stub({ candidates: [{ counterparty_name: name, counterparty_iban: null, count: 2, total: 150 }] })
+    renderWithProviders(<LabeledAccountsSection />)
+    const row = screen.getByTestId('suggestion-text')
+    const nameEl = row.firstElementChild
+    expect(nameEl).toHaveClass('truncate', 'min-w-0')
+    expect(row).toHaveClass('min-w-0', 'max-w-full')
+    expect(row.closest('li')).toHaveClass('min-w-0')
+    expect(within(row).getByText(/2×/)).toHaveClass('shrink-0')
+    expect(within(row).getByText(/€\s?150/)).toBeInTheDocument()
+  })
 })

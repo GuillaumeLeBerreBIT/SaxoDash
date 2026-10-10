@@ -98,8 +98,10 @@ try {
     const label = `/analytics [${tab}]`
     await attempt(label, async () => {
       await page.goto(args.base + '/analytics')
-      const asTab = page.getByRole('tab', { name: tab, exact: true })
-      const target = (await asTab.count()) > 0 ? asTab : page.getByRole('button', { name: tab, exact: true })
+      const target = page
+        .getByRole('tab', { name: tab, exact: true })
+        .or(page.getByRole('button', { name: tab, exact: true }))
+        .first()
       await target.click({ timeout: 5000 })
       await measure(page, label, '/analytics')
     })

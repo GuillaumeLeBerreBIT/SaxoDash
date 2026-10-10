@@ -170,9 +170,10 @@ export default function LabeledAccountsSection() {
           <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-2">Suggestions</div>
           <ul className="space-y-1.5">
             {candidates.map((c) => (
-              <li key={`${c.counterparty_name}:${c.counterparty_iban ?? ''}`} className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between md:gap-3">
-                <span className="text-[var(--fig-xs)] text-zinc-300 truncate">
-                  {c.counterparty_name} <span className="text-zinc-600">· {c.count}× · {fmtEur(c.total)}</span>
+              <li key={`${c.counterparty_name}:${c.counterparty_iban ?? ''}`} className="flex min-w-0 flex-col items-start gap-2 md:flex-row md:items-center md:justify-between md:gap-3">
+                <span data-testid="suggestion-text" className="flex min-w-0 max-w-full items-baseline gap-1 text-[var(--fig-xs)] text-zinc-300">
+                  <span className="min-w-0 truncate">{c.counterparty_name}</span>
+                  <span className="shrink-0 text-zinc-600">· {c.count}× · {fmtEur(c.total)}</span>
                 </span>
                 <Button size="sm" variant="secondary" onClick={() => openFromCandidate(c)}>
                   Label this
