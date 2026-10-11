@@ -220,6 +220,17 @@ class ResolveSecuritiesTest(TestCase):
         missing = Security.objects.get(cusip='999999999')
         self.assertEqual((missing.ticker, missing.attempts), (None, 1))
 
+    @patch('investors.importer.handovers.apply')
+    @patch('investors.importer.figi.resolve')
+    def test_tickers_are_inherited_after_the_lookup_even_when_it_fails(self, resolve, apply):
+        Security.objects.create(cusip='037833100')
+        resolve.side_effect = figi.FigiError('429')
+        apply.return_value = 4
+
+        self.assertEqual(importer.resolve_securities(), 4)
+
+        apply.assert_called_once_with()
+
     @patch('investors.importer.figi.resolve')
     def test_resolved_and_exhausted_cusips_are_not_looked_up_again(self, resolve):
         Security.objects.create(cusip='037833100', ticker='AAPL')
