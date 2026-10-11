@@ -54,11 +54,19 @@ def _headers(extra=None):
     return {'Authorization': f'Bearer {_jwt()}', **(extra or {})}
 
 
+DAILY_QUOTA_MARKER = 'consented multiplicity per day'
+
+
 def _request(send, path, label, **kwargs):
-    return request_json(
-        send, f'{API_BASE_URL}{path}', label,
-        transient=EnableBankingTransientError, permanent=EnableBankingPermanentError, **kwargs,
-    )
+    try:
+        return request_json(
+            send, f'{API_BASE_URL}{path}', label,
+            transient=EnableBankingTransientError, permanent=EnableBankingPermanentError, **kwargs,
+        )
+    except EnableBankingTransientError as exc:
+        if DAILY_QUOTA_MARKER in str(exc):
+            raise EnableBankingPermanentError(str(exc)) from exc
+        raise
 
 
 def _valid_until_180_days():

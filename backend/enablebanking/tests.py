@@ -227,6 +227,13 @@ class EnableBankingAPIErrorClassificationTest(TestCase):
             client.get_balances('sess-1', 'acc-1')
 
     @patch('enablebanking.client.requests.get')
+    def test_a_daily_access_quota_429_is_permanent(self, mock_get):
+        body = '{"code":429,"message":"The access on the account has been exceeding the consented multiplicity per day"}'
+        mock_get.return_value = Mock(ok=False, status_code=429, text=body)
+        with self.assertRaises(client.EnableBankingPermanentError):
+            client.get_balances('sess-1', 'acc-1')
+
+    @patch('enablebanking.client.requests.get')
     def test_a_400_response_is_permanent(self, mock_get):
         mock_get.return_value = Mock(ok=False, status_code=400, text='Bad request')
         with self.assertRaises(client.EnableBankingPermanentError):
