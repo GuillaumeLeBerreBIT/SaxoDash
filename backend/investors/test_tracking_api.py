@@ -1,3 +1,4 @@
+from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -12,6 +13,12 @@ from .models import Investor
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 PERSHING = {'cik': 1336528, 'name': 'Pershing Square Capital Management, L.P.', 'last_13f': '2026-08-14'}
+
+
+class FixedToday(date):
+    @classmethod
+    def today(cls):
+        return date(2026, 10, 5)
 
 
 @override_settings(CACHES=LOCMEM)
@@ -37,6 +44,23 @@ class TrackingApiTest(APITestCase):
             [(1067983, True, 'berkshire-hathaway'), (1336528, False, None)],
         )
         search_filers.assert_called_once_with('capital')
+
+    @patch('investors.views.date', FixedToday)
+    @patch('investors.tracking.edgar.search_filers')
+    def test_search_flags_filers_that_stopped_and_lists_them_last(self, search_filers):
+        search_filers.return_value = [
+            {'cik': 1079114, 'name': 'GREENLIGHT CAPITAL INC', 'last_13f': '2024-02-14'},
+            {'cik': 5, 'name': 'ACME INC', 'last_13f': None},
+            PERSHING,
+            {'cik': 6, 'name': 'JUST INSIDE LP', 'last_13f': '2025-10-05'},
+        ]
+
+        response = self.client.get(self.search_url, {'q': 'capital'})
+
+        self.assertEqual(
+            [(row['cik'], row['stale']) for row in response.data],
+            [(5, False), (1336528, False), (6, False), (1079114, True)],
+        )
 
     @patch('investors.tracking.edgar.search_filers')
     def test_a_query_under_three_characters_does_not_reach_edgar(self, search_filers):

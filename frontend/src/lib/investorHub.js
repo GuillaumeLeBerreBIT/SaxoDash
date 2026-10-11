@@ -55,7 +55,8 @@ export function groupMoves(moves) {
 const SIGNAL_SENTENCES = {
   'convergent-buys': (item) => `${item.bought} funds bought${item.new ? ` · ${item.new} new` : ''}`,
   'most-sold': (item) => `${item.sold} funds sold`,
-  'new-bets': (item) => `New ${share(item.weight)} position · ${item.investors[0].name}`,
+  'new-bets': (item) =>
+    `New ${share(item.weight)} position · ${item.investors[0].name}${item.new > 1 ? ` +${item.new - 1} more` : ''}`,
 }
 
 export const signalSentence = (shelfKey, item) => SIGNAL_SENTENCES[shelfKey](item)

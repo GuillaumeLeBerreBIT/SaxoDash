@@ -109,23 +109,19 @@ def _items(stocks, view, investors, minimum, limit):
     return len(ranked), [_item(stock, side, investors, tickers) for stock in ranked[:limit]]
 
 
-def _new_bets(quarter_end, investors):
-    found = PositionMove.objects.filter(quarter_end=quarter_end, put_call='', kind=changes.NEW)
-    rows = list(found.order_by('-weight_pct', 'cusip', 'investor_id')[:SHELF_LIMIT])
-    tickers = summaries.tickers_for(row.cusip for row in rows)
-    items = [
-        {
-            'cusip': row.cusip,
-            'ticker': tickers.get(row.cusip),
-            'issuer': row.issuer,
-            'sector': sectors.sector_for(tickers.get(row.cusip)),
-            'weight': row.weight_pct,
-            'value': row.value,
-            'investors': [_face(investors[row.investor_id])],
-        }
-        for row in rows
-    ]
-    return found.count(), items
+def _biggest_new(stock):
+    return max(weight for weight, _ in stock['new'])
+
+
+def _new_bets(stocks, investors):
+    ranked = sorted(
+        (stock for stock in stocks.values() if stock['new']),
+        key=lambda stock: (-_biggest_new(stock), stock['cusip']),
+    )
+    shown = ranked[:SHELF_LIMIT]
+    tickers = summaries.tickers_for(stock['cusip'] for stock in shown)
+    items = [{**_item(stock, 'new', investors, tickers), 'weight': _biggest_new(stock)} for stock in shown]
+    return len(ranked), items
 
 
 def _shelf(key, title, kind, total, items):
@@ -153,7 +149,7 @@ def hub(today):
     shelves = [_investor_shelf('following', 'Following', [i for i in everyone if i.followed], today)]
     for key, title, view in STOCK_SHELVES:
         shelves.append(_shelf(key, title, 'stocks', *_items(stocks, view, investors, MIN_FUNDS, SHELF_LIMIT)))
-    shelves.append(_shelf('new-bets', 'Biggest new bets', 'stocks', *_new_bets(signal['quarter'], investors)))
+    shelves.append(_shelf('new-bets', 'Biggest new bets', 'stocks', *_new_bets(stocks, investors)))
     shelves.append(_investor_shelf('just-filed', 'Just filed', [i for i in everyone if i.last_filing_at], today))
     return {
         'quarter': signal['quarter'].isoformat(),

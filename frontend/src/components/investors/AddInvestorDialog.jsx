@@ -17,13 +17,20 @@ function Action({ filer, onAdd, pending }) {
   return <Button size="sm" disabled={pending} aria-label={`Add ${filer.name}`} onClick={() => onAdd(filer.cik)}>Add</Button>
 }
 
+function filerNote(filer) {
+  if (filer.tracked) return 'Already tracked'
+  if (!filer.last_13f) return 'No 13F on file'
+  const filed = fmtFiledDate(filer.last_13f)
+  return filer.stale ? `Stopped filing · last 13F ${filed}` : `Last 13F ${filed}`
+}
+
 function Filer({ filer, onAdd, pending }) {
   return (
     <li className="py-2 flex items-center justify-between gap-3">
       <span className="min-w-0">
         <span className="block truncate text-[var(--fig-sm)] text-zinc-100">{filer.name}</span>
-        <span className="block text-[var(--fig-2xs)] text-zinc-500">
-          {filer.tracked ? 'Already tracked' : filer.last_13f ? `Last 13F ${fmtFiledDate(filer.last_13f)}` : 'No 13F on file'}
+        <span className={`block text-[var(--fig-2xs)] ${filer.stale && !filer.tracked ? 'text-amber-400' : 'text-zinc-500'}`}>
+          {filerNote(filer)}
         </span>
       </span>
       <Action filer={filer} onAdd={onAdd} pending={pending} />
