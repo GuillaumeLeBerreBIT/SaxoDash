@@ -180,3 +180,60 @@ class StockActivityTest(TestCase):
     def test_an_unknown_view_is_refused(self):
         with self.assertRaises(signals.UnknownView):
             signals.stock_activity('hot')
+
+
+class OneStockUnderTwoIdentifiersTest(TestCase):
+    OLD, NEW = '30231G102', '30233Q108'
+
+    def setUp(self):
+        Security.objects.create(cusip=self.OLD, ticker='XOM', inherited_via=Security.ALIAS)
+        Security.objects.create(cusip=self.NEW, ticker='XOM')
+        self.funds = [fund(index) for index in (1, 2, 3)]
+
+    def rows(self, view):
+        return signals.stock_activity(view, Q2)['rows']
+
+    def test_funds_filing_either_identifier_own_the_same_stock(self):
+        store_quarter(self.funds[0], Q2, [(self.OLD, 'EXXON MOBIL CORP', 100, 500)])
+        store_quarter(self.funds[1], Q2, [(self.OLD, 'EXXON MOBIL CORP', 10, 50)])
+        store_quarter(self.funds[2], Q2, [(self.NEW, 'EXXONMOBIL HOLDINGS CORP', 300, 1500)])
+
+        owned = self.rows('owned')
+
+        self.assertEqual(len(owned), 1)
+        self.assertEqual(
+            (owned[0]['ticker'], owned[0]['owners'], owned[0]['value'], owned[0]['cusip'], owned[0]['issuer']),
+            ('XOM', 3, 2050, self.NEW, 'EXXONMOBIL HOLDINGS CORP'),
+        )
+
+    def test_a_fund_switching_identifier_neither_sold_nor_opened_the_stock(self):
+        store_quarter(self.funds[0], Q1, [(self.OLD, 'EXXON MOBIL CORP', 100, 500)])
+        store_quarter(self.funds[0], Q2, [(self.NEW, 'EXXONMOBIL HOLDINGS CORP', 100, 550)])
+
+        self.assertEqual(self.rows('sold'), [])
+        self.assertEqual(self.rows('new'), [])
+        self.assertEqual(self.rows('bought'), [])
+        self.assertEqual([(row['ticker'], row['owners']) for row in self.rows('owned')], [('XOM', 1)])
+
+    def test_a_fund_that_switched_and_bought_more_is_a_buyer_of_the_difference(self):
+        store_quarter(self.funds[0], Q1, [(self.OLD, 'EXXON MOBIL CORP', 100, 500)])
+        store_quarter(self.funds[0], Q2, [(self.NEW, 'EXXONMOBIL HOLDINGS CORP', 150, 900)])
+
+        bought = self.rows('bought')
+
+        self.assertEqual([(row['ticker'], row['bought'], row['new']) for row in bought], [('XOM', 1, 0)])
+        self.assertEqual(self.rows('sold'), [])
+
+    def test_identifiers_without_a_ticker_stay_separate_stocks(self):
+        store_quarter(self.funds[0], Q2, [('111111111', 'ACME CORP', 100, 500)])
+        store_quarter(self.funds[1], Q2, [('222222222', 'ACME CORP', 100, 500)])
+
+        self.assertEqual(sorted(row['cusip'] for row in self.rows('owned')), ['111111111', '222222222'])
+
+    def test_a_first_stored_quarter_under_two_identifiers_owns_but_did_not_buy(self):
+        store_quarter(self.funds[0], Q2, [
+            (self.OLD, 'EXXON MOBIL CORP', 100, 500), (self.NEW, 'EXXONMOBIL HOLDINGS CORP', 50, 250),
+        ])
+
+        self.assertEqual(self.rows('bought'), [])
+        self.assertEqual([(row['owners'], row['value']) for row in self.rows('owned')], [(1, 750)])

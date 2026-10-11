@@ -381,4 +381,8 @@ drop one CUSIP and open another with the identical share count in the same quart
 old one takes the successor's ticker. `investors/cusip_aliases.csv` is the hand-kept
 answer for the few no fund has handed over yet. `Security.inherited_via` marks both, so a
 looked-up ticker is never overwritten and an inherited one is withdrawn when its evidence
-goes. A delisted company or a bond has nothing to inherit and stays without a ticker.
+goes. A delisted company or a bond has nothing to inherit and stays without a ticker. Cross-fund signals count a
+stock once per ticker, not per CUSIP, and net each fund's rows first, so a fund that merely
+switched identifier neither sold nor opened anything. The per-fund pages still read
+`PositionMove` per CUSIP and show that switch as a sale and a new position; the holdings
+table marks an inherited ticker "Earlier CUSIP".

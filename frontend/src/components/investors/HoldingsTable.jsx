@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { InstrumentLogo, LetterAvatar, Td, Th, Tr } from '../ui'
 import ChangeBadge from './ChangeBadge'
 import WeightBar from './WeightBar'
-import { OptionBadge, YouBadge } from './HoldingBadges'
+import { EarlierCusipBadge, OptionBadge, YouBadge } from './HoldingBadges'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { fmtUsdCompact, holdingLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
@@ -57,6 +57,7 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
                           <span className="text-zinc-200">{holdingLabel(h)}</span>
                         )}
                         <OptionBadge putCall={h.put_call} />
+                        <EarlierCusipBadge inherited={h.ticker_inherited} />
                       </div>
                       {h.ticker && <div className="text-[var(--fig-xs)] text-zinc-500 truncate max-w-[260px]">{h.issuer}</div>}
                     </div>

@@ -21,6 +21,12 @@ def tickers_for(cusips):
     return dict(Security.objects.filter(cusip__in=list(cusips)).values_list('cusip', 'ticker'))
 
 
+def inherited_cusips(cusips):
+    return set(
+        Security.objects.filter(cusip__in=list(cusips)).exclude(inherited_via='').values_list('cusip', flat=True)
+    )
+
+
 def _weight(value, total):
     return round(value / total * 100, 2) if total else 0.0
 
@@ -242,6 +248,7 @@ def detail(investor, quarter_end, today):
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
     held = quarters.quarters_held(quarters.held_keys_by_quarter(investor), quarter_end)
     owned, watched = _yours()
+    inherited = inherited_cusips(row['cusip'] for row in rows)
 
     holdings = []
     for row in rows:
@@ -264,6 +271,7 @@ def detail(investor, quarter_end, today):
             'sector': sectors.sector_for(ticker),
             'owned': bool(ticker) and ticker.upper() in owned,
             'watched': bool(ticker) and ticker.upper() in watched,
+            'ticker_inherited': row['cusip'] in inherited,
         })
 
     base.update({
