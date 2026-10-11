@@ -1,5 +1,5 @@
 import { OTHER_SLICE, colorForRank } from './charts'
-import { UNKNOWN, fmtDate } from './format'
+import { UNKNOWN, fmtDate, fmtPct } from './format'
 
 const VIEW_KEY = 'saxodash:investors-top10-view'
 
@@ -8,7 +8,7 @@ export const PAGE_SIZE = 15
 export const PAGE_STEP = 25
 export const TOP10_VIEWS = [['grid', 'Grid'], ['donut', 'Donut'], ['list', 'List']]
 export const INVESTOR_GROUPS = [['all', 'All'], ['curated', 'Curated'], ['stale', 'Stopped filing']]
-export const INVESTOR_SORTS = [['value', 'Largest value'], ['filed', 'Recently filed'], ['changes', 'Most changes'], ['positions', 'Most positions'], ['name', 'Name']]
+export const INVESTOR_SORTS = [['value', 'Largest value'], ['filed', 'Recently filed'], ['changes', 'Most changes'], ['positions', 'Most positions'], ['copy', 'Copy performance'], ['name', 'Name']]
 export const COMPARING_FILTERS = new Set(['new', 'added', 'trimmed'])
 export const HOLDING_FILTERS = [['all', 'All'], ['new', 'New'], ['added', 'Added'], ['trimmed', 'Trimmed'], ['options', 'Options'], ['yours', 'Yours']]
 
@@ -48,6 +48,25 @@ export function alertSummary(counts) {
   return parts.length ? parts.join(' · ') : 'No position changes'
 }
 
+export function copySeries(series) {
+  return (series ?? []).map(([date, clone, benchmark]) => ({
+    date, clone: Number((clone - 100).toFixed(2)), benchmark: Number((benchmark - 100).toFixed(2)),
+  }))
+}
+
+export function copyVerdict(excess, benchmark) {
+  if (excess == null) return ''
+  if (Math.abs(excess) < 0.05) return `level with the ${benchmark}`
+  return excess > 0 ? `ahead of the ${benchmark}` : `behind the ${benchmark}`
+}
+
+export function copyCaveat(copy) {
+  const cash = copy.skipped_periods > 0
+    ? ` ${copy.skipped_periods} of ${copy.periods + copy.skipped_periods} filing periods sat in cash because fewer than half the holdings had a price.`
+    : ''
+  return `Price moves only, in US dollars: no dividends, trading costs or taxes. On average the copy could price ${fmtPct(copy.coverage_pct, { sign: false, decimals: 0 })} of the portfolio's stock value.${cash}`
+}
+
 export const alertHref = (alert) => `/investors/${alert.investor.slug}?quarter=${alert.quarter}`
 
 export function latestQuarter(cards) {
@@ -58,6 +77,8 @@ export function latestQuarter(cards) {
 export function looksLikeTicker(query) {
   return /^[A-Za-z]{1,5}(\.[A-Za-z])?$/.test(query.trim())
 }
+
+const UNMEASURED = -1e9
 
 const GROUP_TESTS = {
   all: () => true,
@@ -70,6 +91,7 @@ const SORT_KEYS = {
   filed: (c) => -(c.last_filing_at ? Date.parse(c.last_filing_at) : 0),
   changes: (c) => -((c.new_count ?? 0) + (c.exited_count ?? 0)),
   positions: (c) => -(c.positions ?? -1),
+  copy: (c) => -(c.copy_excess_cagr_pct ?? UNMEASURED),
 }
 
 export function visibleInvestors(cards, { group = 'all', query = '', sort = 'value', holderSlugs = new Set() }) {

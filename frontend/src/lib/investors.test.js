@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { OTHER_SLICE, colorForRank } from './charts'
 import {
-  alertHref, alertSummary, donutSlices, filterHoldings, fmtFiledDate, fmtUsdCompact, latestQuarter, looksLikeTicker,
+  alertHref, alertSummary, copyCaveat, copySeries, copyVerdict, donutSlices, filterHoldings, fmtFiledDate, fmtUsdCompact, latestQuarter, looksLikeTicker,
   quarterLabel, readTop10View, remainder, topTen, visibleInvestors, writeTop10View,
 } from './investors'
 
@@ -162,5 +162,38 @@ describe('filing alerts', () => {
   it('links an alert to the investor at the quarter that was filed', () => {
     expect(alertHref({ investor: { slug: 'berkshire-hathaway' }, quarter: '2026-06-30' }))
       .toBe('/investors/berkshire-hathaway?quarter=2026-06-30')
+  })
+})
+
+describe('copy performance', () => {
+  it('turns index levels into percent change from the start', () => {
+    expect(copySeries([['2023-02-15', 100, 100], ['2026-10-09', 180.456, 95]])).toEqual([
+      { date: '2023-02-15', clone: 0, benchmark: 0 },
+      { date: '2026-10-09', clone: 80.46, benchmark: -5 },
+    ])
+    expect(copySeries(undefined)).toEqual([])
+  })
+
+  it('puts the gap into words', () => {
+    expect(copyVerdict(12, 'S&P 500')).toBe('ahead of the S&P 500')
+    expect(copyVerdict(-3, 'S&P 500')).toBe('behind the S&P 500')
+    expect(copyVerdict(0.01, 'S&P 500')).toBe('level with the S&P 500')
+    expect(copyVerdict(null, 'S&P 500')).toBe('')
+  })
+
+  it('mentions cash periods only when there were some', () => {
+    const copy = { coverage_pct: 88.6, periods: 10, skipped_periods: 0 }
+    expect(copyCaveat(copy)).not.toMatch(/cash/)
+    expect(copyCaveat({ ...copy, skipped_periods: 2 })).toMatch(/2 of 12 filing periods sat in cash/)
+    expect(copyCaveat(copy)).toMatch(/price 89% of/)
+  })
+
+  it('sorts the directory by annualised edge with unmeasured investors last', () => {
+    const rows = [
+      card({ slug: 'none', name: 'A', copy_excess_cagr_pct: null }),
+      card({ slug: 'behind', name: 'B', copy_excess_cagr_pct: -4 }),
+      card({ slug: 'ahead', name: 'C', copy_excess_cagr_pct: 6 }),
+    ]
+    expect(visibleInvestors(rows, { sort: 'copy' }).map((c) => c.slug)).toEqual(['ahead', 'behind', 'none'])
   })
 })

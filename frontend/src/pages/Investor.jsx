@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useInvestor } from '../api/queries'
 import { Alert, Card, EmptyState, MetricTile, Skeleton } from '../components/ui'
 import ConcentrationPanel from '../components/investors/ConcentrationPanel'
+import CopyPerformancePanel from '../components/investors/CopyPerformancePanel'
 import HoldingsTab from '../components/investors/HoldingsTab'
 import ImportProgress from '../components/investors/ImportProgress'
 import InvestorHero from '../components/investors/InvestorHero'
@@ -54,6 +55,7 @@ export default function Investor() {
           <Summary detail={data} />
           <LatestMoves key={data.quarter} detail={data} />
           <ConcentrationPanel detail={data} />
+          <CopyPerformancePanel slug={slug} name={data.name} />
           <Card>
             <div className="flex flex-col gap-3">
               <h2 className="text-[var(--fig-md)] font-semibold text-zinc-100">{`All holdings · ${quarterLabel(data.quarter)}`}</h2>

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  addInvestor, getFilingAlerts, getInvestor, getInvestorChanges, getInvestorHub, getInvestors, getInvestorStocks,
+  addInvestor, getFilingAlerts, getInvestor, getInvestorChanges, getInvestorCopy, getInvestorHub, getInvestors, getInvestorStocks,
   markFilingAlertsRead, searchFilers, setInvestorFollowed, stopTrackingInvestor,
 } from '../client'
 
@@ -14,6 +14,7 @@ export const investorsKeys = {
   list: (holds = '') => ['investors', holds],
   detail: (slug, quarter) => ['investor', slug, quarter ?? 'latest'],
   changes: (slug, quarter) => ['investor-changes', slug, quarter ?? 'latest'],
+  copy: (slug) => ['investor-copy', slug],
   hub: ['investor-hub'],
   stocks: (view, quarter) => ['investor-stocks', view, quarter ?? 'signal'],
   search: (q) => ['investor-search', q],
@@ -47,6 +48,10 @@ export function useInvestorChanges(slug, quarter) {
     enabled: Boolean(slug),
     placeholderData: keepPreviousData,
   })
+}
+
+export function useInvestorCopy(slug) {
+  return useQuery({ queryKey: investorsKeys.copy(slug), queryFn: () => getInvestorCopy(slug), enabled: Boolean(slug) })
 }
 
 export function useInvestorHub() {

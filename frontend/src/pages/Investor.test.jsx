@@ -33,6 +33,9 @@ vi.mock('../api/queries', () => ({
   useStopTracking: () => ({ mutate: stop, isPending: false, error: null }),
 }))
 vi.mock('../components/investors/HoldingsTab', () => ({ default: () => <div data-testid="holdings-tab" /> }))
+vi.mock('../components/investors/CopyPerformancePanel', () => ({
+  default: ({ slug, name }) => <div data-testid="copy-panel">{`${slug} ${name}`}</div>,
+}))
 vi.mock('../components/investors/TopHoldings', () => ({ default: () => <div data-testid="top-holdings" /> }))
 
 function Where() {
@@ -55,6 +58,11 @@ describe('Investor profile', () => {
     state = { data: detail, isLoading: false, error: null }
     follow.mockReset()
     stop.mockReset()
+  })
+
+  it('shows what copying this investor would have returned', () => {
+    renderPage()
+    expect(screen.getByTestId('copy-panel')).toHaveTextContent('pershing-square Bill Ackman')
   })
 
   it('opens with who this is', () => {

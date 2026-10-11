@@ -142,3 +142,39 @@ class FilingAlert(models.Model):
 
     def __str__(self):
         return f'{self.investor.slug} {self.quarter_end}'
+
+
+class PriceHistory(models.Model):
+    OK = 'ok'
+    UNMATCHED = 'unmatched'
+    FAILED = 'failed'
+    STATUS_CHOICES = [(OK, 'OK'), (UNMATCHED, 'Unmatched'), (FAILED, 'Failed')]
+
+    ticker = models.CharField(max_length=16, unique=True)
+    uic = models.PositiveIntegerField(null=True, blank=True)
+    asset_type = models.CharField(max_length=20, default='Stock')
+    closes = models.JSONField(default=list, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, blank=True, default='')
+    error = models.CharField(max_length=200, blank=True, default='')
+    checked_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.ticker} {self.status or "pending"}'
+
+
+class CopyPerformance(models.Model):
+    investor = models.OneToOneField(Investor, related_name='copy_performance', on_delete=models.CASCADE)
+    since = models.DateField()
+    until = models.DateField()
+    clone_return_pct = models.FloatField()
+    benchmark_return_pct = models.FloatField()
+    clone_cagr_pct = models.FloatField(null=True, blank=True)
+    benchmark_cagr_pct = models.FloatField(null=True, blank=True)
+    coverage_pct = models.FloatField()
+    periods = models.PositiveSmallIntegerField()
+    skipped_periods = models.PositiveSmallIntegerField(default=0)
+    series = models.JSONField(default=list)
+    computed_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.investor.slug} {self.clone_return_pct:+.1f}% vs {self.benchmark_return_pct:+.1f}%'

@@ -6,7 +6,7 @@ from django.db.models import Max
 from portfolio.models import Position
 from research.models import WatchlistItem
 
-from . import changes, importer, quarters, sectors
+from . import changes, copying, importer, quarters, sectors
 from .models import PositionMove, Security
 
 STALE_AFTER = timedelta(days=183)
@@ -137,7 +137,7 @@ def _held(moves):
     return sorted(held, key=lambda move: (-move.value, move.cusip, move.put_call))
 
 
-def _card(investor, today, quarter_end, moves, held, tickers):
+def _card(investor, today, quarter_end, moves, held, tickers, copy_edge=None):
     base = {
         **_header(investor, today),
         'latest_quarter': None,
@@ -147,6 +147,7 @@ def _card(investor, today, quarter_end, moves, held, tickers):
         'top_holdings': [],
         'new_count': None,
         'exited_count': None,
+        'copy_excess_cagr_pct': copy_edge,
     }
     if quarter_end is None:
         return base
@@ -172,8 +173,12 @@ def cards(investors, today):
     grouped = _moves_by_investor(latest)
     held = {pk: _held(moves) for pk, moves in grouped.items()}
     tickers = tickers_for({move.cusip for rows in held.values() for move in rows[:TOP_HOLDINGS]})
+    edges = copying.annualised_edges([investor.pk for investor in investors])
     return [
-        _card(investor, today, latest.get(investor.pk), grouped.get(investor.pk, []), held.get(investor.pk, []), tickers)
+        _card(
+            investor, today, latest.get(investor.pk), grouped.get(investor.pk, []), held.get(investor.pk, []),
+            tickers, edges.get(investor.pk),
+        )
         for investor in investors
     ]
 

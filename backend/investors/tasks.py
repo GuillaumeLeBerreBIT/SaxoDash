@@ -2,10 +2,11 @@ from celery import shared_task
 
 from saxo.tasks import SyncReport, synced
 
-from . import edgar, importer
+from . import copying, edgar, importer, price_feed
 from .models import Investor
 
 SYNC_TASK = 'sync_investors'
+COPY_TASK = 'refresh_copy_performance'
 
 
 def _detail(skipped):
@@ -45,3 +46,18 @@ def backfill_investor(investor_id):
     if investor is None:
         return
     importer.backfill(investor)
+
+
+@synced(reports_health=False, task=COPY_TASK)
+def _refresh_copies(credential):
+    fetched = 0
+    try:
+        fetched = price_feed.refresh()
+    finally:
+        measured = copying.rebuild_all()
+    return SyncReport(rows=measured, detail=f'{fetched} price series fetched')
+
+
+@shared_task
+def refresh_copy_performance():
+    return _refresh_copies()

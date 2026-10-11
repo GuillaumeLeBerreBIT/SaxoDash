@@ -5,7 +5,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 vi.mock('../client')
 import * as client from '../client'
 import {
-  investorsKeys, useAddInvestor, useFilingAlerts, useFollowInvestor, useInvestor, useInvestorChanges, useInvestorHub,
+  investorsKeys, useAddInvestor, useFilingAlerts, useFollowInvestor, useInvestor, useInvestorCopy, useInvestorChanges, useInvestorHub,
   useInvestors, useInvestorSearch, useInvestorStocks, useMarkAlertsRead, useStopTracking,
 } from './investors'
 
@@ -16,6 +16,13 @@ function setup(useHook, queryClient = new QueryClient({ defaultOptions: { querie
 
 describe('investor queries', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('loads copy performance for one investor', async () => {
+    client.getInvestorCopy.mockResolvedValue({ available: false })
+    const { result } = setup(() => useInvestorCopy('berkshire-hathaway'))
+    await waitFor(() => expect(result.current.data).toEqual({ available: false }))
+    expect(client.getInvestorCopy).toHaveBeenCalledWith('berkshire-hathaway')
+  })
 
   it('loads the filing alerts inbox', async () => {
     client.getFilingAlerts.mockResolvedValue({ unread: 1, alerts: [{ id: 7 }] })
