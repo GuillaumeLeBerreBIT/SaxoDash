@@ -4,6 +4,7 @@ import secrets
 from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
@@ -174,14 +175,25 @@ class ServiceUnavailable(APIException):
     default_detail = 'Could not start the sync. Is the worker running?'
 
 
+class SyncCoolingDown(APIException):
+    status_code = 429
+    default_detail = 'A sync was started a moment ago. Please wait a few minutes; the banks limit how often they can be read.'
+
+
+SYNC_COOLDOWN_KEY = 'enablebanking:sync-now'
+SYNC_COOLDOWN_SECONDS = 300
+
+
 class SyncNowView(APIView):
-    throttle_scope = 'enablebanking.sync'
 
     def post(self, request):
+        if not cache.add(SYNC_COOLDOWN_KEY, True, SYNC_COOLDOWN_SECONDS):
+            raise SyncCoolingDown()
         try:
             tasks.sync_enablebanking_balances.delay()
             tasks.sync_enablebanking_transactions.delay()
         except Exception as exc:
+            cache.delete(SYNC_COOLDOWN_KEY)
             logger.warning('Could not queue the bank sync: %s', exc)
             raise ServiceUnavailable()
         return Response({'queued': True}, status=202)

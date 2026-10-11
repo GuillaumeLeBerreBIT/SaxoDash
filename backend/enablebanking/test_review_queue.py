@@ -1,16 +1,15 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import override_settings
 from rest_framework.test import APITestCase
-from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
 
+from . import views
 from .models import BankTransaction
 
 
@@ -168,23 +167,36 @@ class SyncNowViewTest(APITestCase):
         self.assertEqual(self.client.get(self.url).status_code, 405)
 
 
-@patch.dict(ScopedRateThrottle.THROTTLE_RATES, {'enablebanking.sync': '3/min'})
 @override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}})
-class SyncNowThrottleTest(APITestCase):
+class SyncNowCooldownTest(APITestCase):
+    url = '/api/enablebanking/sync/'
+
     def setUp(self):
         cache.clear()
         _auth_client(self)
 
-    def test_is_throttled_past_its_scope_rate(self):
-        with patch('enablebanking.views.tasks.sync_enablebanking_balances.delay'), \
-                patch('enablebanking.views.tasks.sync_enablebanking_transactions.delay'):
-            codes = [self.client.post('/api/enablebanking/sync/').status_code for _ in range(4)]
-        self.assertEqual(codes[:3], [202, 202, 202])
-        self.assertEqual(codes[3], 429)
+    def post_with_workers_mocked(self):
+        with patch('enablebanking.views.tasks.sync_enablebanking_balances.delay') as balances, \
+                patch('enablebanking.views.tasks.sync_enablebanking_transactions.delay') as transactions:
+            response = self.client.post(self.url)
+        return response, balances, transactions
 
+    def test_a_second_click_inside_the_cooldown_is_refused_and_queues_nothing(self):
+        self.post_with_workers_mocked()
+        response, balances, transactions = self.post_with_workers_mocked()
+        self.assertEqual(response.status_code, 429)
+        self.assertIn('wait', response.data['detail'].lower())
+        balances.assert_not_called()
+        transactions.assert_not_called()
 
-class SyncNowScopeConfigTest(TestCase):
-    def test_scope_has_a_configured_rate(self):
-        from . import views
+    def test_a_click_after_the_cooldown_is_accepted(self):
+        self.post_with_workers_mocked()
+        cache.delete(views.SYNC_COOLDOWN_KEY)
+        response, _, _ = self.post_with_workers_mocked()
+        self.assertEqual(response.status_code, 202)
 
-        self.assertIn(views.SyncNowView.throttle_scope, settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'])
+    def test_a_failed_queue_does_not_start_a_cooldown(self):
+        with patch('enablebanking.views.tasks.sync_enablebanking_balances.delay', side_effect=OSError('redis')):
+            self.client.post(self.url)
+        response, _, _ = self.post_with_workers_mocked()
+        self.assertEqual(response.status_code, 202)
