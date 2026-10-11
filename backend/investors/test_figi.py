@@ -32,6 +32,19 @@ class ResolveTest(SimpleTestCase):
         )
         self.assertNotIn('X-OPENFIGI-APIKEY', post.call_args.kwargs['headers'])
 
+    def test_a_foreign_issuer_identifier_is_asked_for_as_a_cins(self, post, sleep):
+        chubb = {'data': [
+            {'figi': 'BBG000BR14K5', 'name': 'CHUBB LTD', 'ticker': 'CB', 'exchCode': 'US', 'securityType': 'Common Stock'},
+        ]}
+        post.return_value = ok([chubb, APPLE])
+
+        batch = next(figi.resolve(['H1467J104', '037833100']))
+
+        self.assertEqual(post.call_args.kwargs['json'], [
+            {'idType': 'ID_CINS', 'idValue': 'H1467J104'}, {'idType': 'ID_CUSIP', 'idValue': '037833100'},
+        ])
+        self.assertEqual((batch['H1467J104']['ticker'], batch['037833100']['ticker']), ('CB', 'AAPL'))
+
     def test_a_body_that_is_not_a_list_is_a_figi_error(self, post, sleep):
         post.return_value = ok({'error': 'nope'})
         with self.assertRaises(figi.FigiError):

@@ -9,6 +9,8 @@ MAPPING_URL = 'https://api.openfigi.com/v3/mapping'
 KEYLESS_LIMITS = (10, 2.5)
 KEYED_LIMITS = (100, 0.25)
 US_COMPOSITE = 'US'
+CUSIP = 'ID_CUSIP'
+CINS = 'ID_CINS'
 
 
 class FigiError(Exception):
@@ -38,6 +40,10 @@ def _shape(result):
     }
 
 
+def id_type(cusip):
+    return CINS if cusip[:1].isalpha() else CUSIP
+
+
 def resolve(cusips):
     size, spacing = batch_limits()
     cusips = list(cusips)
@@ -48,7 +54,7 @@ def resolve(cusips):
         results = request_json(
             requests.post, MAPPING_URL, 'OpenFIGI mapping',
             transient=FigiError, permanent=FigiError,
-            json=[{'idType': 'ID_CUSIP', 'idValue': cusip} for cusip in batch],
+            json=[{'idType': id_type(cusip), 'idValue': cusip} for cusip in batch],
             headers=_headers(),
         )
         if not isinstance(results, list) or len(results) != len(batch):
