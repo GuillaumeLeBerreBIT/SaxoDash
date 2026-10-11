@@ -98,6 +98,17 @@ describe('Investor profile', () => {
     ])
   })
 
+  it('colours the move groups like the change badges, never green or red', () => {
+    renderPage()
+    const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })
+    const tone = (title) => within(moves).getByRole('heading', { level: 3, name: title }).className
+    expect(tone('New')).toContain('text-blue-400')
+    expect(tone('Sold out')).toContain('text-amber-400')
+    expect(tone('Added')).toContain('text-zinc-300')
+    expect(tone('Trimmed')).toContain('text-zinc-300')
+    for (const title of ['New', 'Added', 'Trimmed', 'Sold out']) expect(tone(title)).not.toMatch(/emerald|red-|rose/)
+  })
+
   it('shows eight moves and reveals the rest on request', () => {
     const many = Array.from({ length: 11 }, (_, i) => move('new', `T${i}`))
     state = { data: { ...detail, moves: many }, isLoading: false, error: null }

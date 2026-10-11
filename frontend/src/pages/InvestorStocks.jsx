@@ -61,8 +61,8 @@ function Rows({ rows }) {
                 <Tr key={row.cusip}>
                   <Td edge><Stock row={row} /></Td>
                   <Td align="right" className="num font-mono text-zinc-200">{row.owners}</Td>
-                  <Td align="right" className="num font-mono text-emerald-400">{row.bought}</Td>
-                  <Td align="right" className="num font-mono text-red-400">{row.sold}</Td>
+                  <Td align="right" className="num font-mono text-zinc-200">{row.bought}</Td>
+                  <Td align="right" className="num font-mono text-zinc-200">{row.sold}</Td>
                   <Td align="right" className="num font-mono text-zinc-400">{row.new}</Td>
                   <Td align="right" className="num font-mono text-zinc-400">{fmtUsdCompact(row.value)}</Td>
                   <Td edge><Faces investors={row.investors} /></Td>
