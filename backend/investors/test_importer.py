@@ -231,6 +231,24 @@ class ResolveSecuritiesTest(TestCase):
 
         apply.assert_called_once_with()
 
+    @patch('investors.importer.handovers.apply', return_value=0)
+    @patch('investors.importer.figi.resolve')
+    def test_moves_are_rebuilt_only_for_funds_holding_a_newly_named_security(self, resolve, apply):
+        holder = make_investor()
+        bystander = make_investor(cik=2, slug='bystander', firm='Bystander')
+        store_quarter(holder, date(2026, 6, 30), [('037833100', 'APPLE INC', 1, 1)])
+        store_quarter(bystander, date(2026, 6, 30), [('67066G104', 'NVIDIA CORP', 1, 1)])
+        Security.objects.create(cusip='037833100')
+        Security.objects.create(cusip='67066G104', ticker='NVDA')
+        resolve.return_value = iter([{
+            '037833100': {'ticker': 'AAPL', 'name': 'APPLE INC', 'figi': 'F', 'security_type': 'Common Stock'},
+        }])
+
+        with patch('investors.importer.moves.rebuild') as rebuild:
+            importer.resolve_securities()
+
+        self.assertEqual([call.args[0] for call in rebuild.call_args_list], [holder])
+
     @patch('investors.importer.figi.resolve')
     def test_resolved_and_exhausted_cusips_are_not_looked_up_again(self, resolve):
         Security.objects.create(cusip='037833100', ticker='AAPL')

@@ -55,12 +55,14 @@ def _compared_quarter(investor, quarter_end, snap, previous_snap):
 def rebuild(investor):
     rows = []
     previous_snap = None
+    tickers = quarters.tickers_held(investor)
     for quarter_end in sorted(quarters.quarter_ends(investor)):
         snap = quarters.snapshot(investor, quarter_end)
         if previous_snap is None:
             rows.extend(_first_quarter(investor, quarter_end, snap))
         else:
-            rows.extend(_compared_quarter(investor, quarter_end, snap, previous_snap))
+            carried = quarters.carried_over(previous_snap, snap, tickers)
+            rows.extend(_compared_quarter(investor, quarter_end, snap, carried))
         previous_snap = snap
     PositionMove.objects.filter(investor=investor).delete()
     PositionMove.objects.bulk_create(rows, batch_size=BATCH)

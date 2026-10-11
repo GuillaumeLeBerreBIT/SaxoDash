@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from . import moves
 from .factories import make_investor, store_quarter
-from .models import Filing, PositionMove
+from .models import Filing, PositionMove, Security
 
 Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
@@ -117,3 +117,29 @@ class RebuildMovesCommandTest(TestCase):
 
         self.assertEqual(PositionMove.objects.count(), 1)
         self.assertIn('1 moves', out.getvalue())
+
+
+class IdentifierSwitchTest(TestCase):
+    OLD, NEW = '30231G102', '30233Q108'
+
+    def setUp(self):
+        self.investor = make_investor()
+        Security.objects.create(cusip=self.OLD, ticker='XOM', inherited_via=Security.ALIAS)
+        Security.objects.create(cusip=self.NEW, ticker='XOM')
+
+    def test_a_position_refiled_under_a_new_identifier_was_neither_sold_nor_opened(self):
+        store_quarter(self.investor, Q1, [(self.OLD, 'EXXON MOBIL CORP', 100, 500)], rebuild=False)
+        store_quarter(self.investor, Q2, [(self.NEW, 'EXXONMOBIL HOLDINGS CORP', 100, 550)])
+
+        row = PositionMove.objects.get(quarter_end=Q2)
+
+        self.assertEqual(
+            (row.cusip, row.kind, row.shares, row.previous_shares, row.previous_value, row.change_pct),
+            (self.NEW, 'unchanged', 100, 100, 500, 0.0),
+        )
+
+    def test_buying_more_while_switching_is_an_addition(self):
+        store_quarter(self.investor, Q1, [(self.OLD, 'EXXON MOBIL CORP', 100, 500)], rebuild=False)
+        store_quarter(self.investor, Q2, [(self.NEW, 'EXXONMOBIL HOLDINGS CORP', 150, 900)])
+
+        self.assertEqual(kinds(self.investor, Q2), {(self.NEW, ''): 'added'})

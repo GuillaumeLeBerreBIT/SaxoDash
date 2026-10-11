@@ -79,3 +79,22 @@ class InvestorChangesApiTest(APITestCase):
 
     def test_an_unknown_investor_is_404(self):
         self.assertEqual(self.client.get(self.url('nobody')).status_code, 404)
+
+
+class IdentifierSwitchChangesTest(APITestCase):
+    def test_a_refiled_position_is_in_no_change_group_and_counts_as_held_throughout(self):
+        self.client.force_authenticate(User.objects.create_user('me', password='x'))
+        investor = make_investor()
+        Security.objects.create(cusip='30231G102', ticker='XOM', inherited_via=Security.ALIAS)
+        Security.objects.create(cusip='30233Q108', ticker='XOM')
+        store_quarter(investor, Q1, [('30231G102', 'EXXON MOBIL CORP', 100, 500)])
+        store_quarter(investor, Q2, [('30233Q108', 'EXXONMOBIL HOLDINGS CORP', 100, 550)])
+
+        changed = self.client.get(reverse('investor-changes', args=[investor.slug])).data
+        detail = self.client.get(reverse('investor-detail', args=[investor.slug])).data
+
+        self.assertEqual([changed[group] for group in ('new', 'added', 'trimmed', 'sold_out')], [[], [], [], []])
+        self.assertEqual((detail['new_count'], detail['exited_count'], detail['turnover']), (0, 0, 0.0))
+        holding = detail['holdings'][0]
+        self.assertEqual((holding['change'], holding['quarters_held']), ('unchanged', 2))
+        self.assertEqual(detail['moves'], [])

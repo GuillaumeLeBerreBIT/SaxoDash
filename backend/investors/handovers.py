@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from . import changes
 from .models import PositionMove, Security
 
 ALIASES_CSV = Path(__file__).resolve().parent / 'cusip_aliases.csv'
@@ -27,22 +26,26 @@ def _only_once(positions):
     return {shares: cusip for shares, cusip in positions if shares and counts[shares] == 1}
 
 
-def _backers():
-    left, arrived = defaultdict(list), defaultdict(list)
-    rows = PositionMove.objects.filter(put_call='', kind__in=[changes.NEW, changes.SOLD_OUT]).values_list(
-        'investor_id', 'quarter_end', 'cusip', 'kind', 'shares', 'previous_shares',
+def _stock_positions():
+    held = defaultdict(lambda: defaultdict(dict))
+    rows = PositionMove.objects.filter(put_call='', shares__gt=0).values_list(
+        'investor_id', 'quarter_end', 'cusip', 'shares',
     )
-    for investor_id, quarter_end, cusip, kind, shares, previous_shares in rows:
-        if kind == changes.SOLD_OUT:
-            left[investor_id, quarter_end].append((previous_shares, cusip))
-        else:
-            arrived[investor_id, quarter_end].append((shares, cusip))
+    for investor_id, quarter_end, cusip, shares in rows:
+        held[investor_id][quarter_end][cusip] = shares
+    return held
+
+
+def _backers():
     backers = defaultdict(lambda: defaultdict(set))
-    for (investor_id, quarter_end), departures in left.items():
-        arrivals = _only_once(arrived.get((investor_id, quarter_end), []))
-        for shares, cusip in _only_once(departures).items():
-            if shares in arrivals:
-                backers[cusip][arrivals[shares]].add(investor_id)
+    for investor_id, by_quarter in _stock_positions().items():
+        ordered = [by_quarter[quarter_end] for quarter_end in sorted(by_quarter)]
+        for before, after in zip(ordered, ordered[1:]):
+            left = _only_once([(shares, cusip) for cusip, shares in before.items() if cusip not in after])
+            arrived = _only_once([(shares, cusip) for cusip, shares in after.items() if cusip not in before])
+            for shares, cusip in left.items():
+                if shares in arrived:
+                    backers[cusip][arrived[shares]].add(investor_id)
     return backers
 
 
