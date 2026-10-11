@@ -26,6 +26,18 @@ describe('HoldingsTable', () => {
     expect(screen.getByRole('link', { name: 'AAPL' })).toHaveAttribute('href', '/research?symbol=AAPL&tab=overview')
   })
 
+  it('marks a ticker carried over from a replaced identifier, and only that one', () => {
+    render(
+      <MemoryRouter>
+        <HoldingsTable holdings={[{ ...holdings[0], ticker_inherited: true }, holdings[1]]} />
+      </MemoryRouter>,
+    )
+    const badges = screen.getAllByText('Earlier CUSIP')
+    expect(badges).toHaveLength(1)
+    expect(badges[0].closest('tr')).toHaveTextContent('AAPL')
+    expect(badges[0].parentElement).toHaveAttribute('title', expect.stringContaining('since replaced'))
+  })
+
   it('shows an unresolved holding by issuer with no link', () => {
     renderTable()
     expect(screen.getByText('LIBERTY LATIN AMERICA LTD')).toBeInTheDocument()

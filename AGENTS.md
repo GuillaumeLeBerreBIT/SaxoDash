@@ -372,3 +372,17 @@ quarter at least half the tracked funds have filed, and say which; option rows n
 stock signal; a fund with one stored quarter owns but did not buy. Funds holding thousands of
 positions (Citadel, Millennium, Renaissance, …) are deliberately not in `curated.csv`: they buy
 nearly everything and would drown "bought by 3+ funds".
+
+**A CUSIP with no ticker can inherit one, and the inheritance is always re-derivable.**
+A reorganised company gets a new CUSIP; OpenFIGI moves the US listing to it and the old
+one (still in every past filing, and in funds slow to switch) answers with foreign
+listings only. `handovers.apply` runs after every OpenFIGI pass: when at least two funds
+drop one CUSIP and open another with the identical share count in the same quarter, the
+old one takes the successor's ticker. `investors/cusip_aliases.csv` is the hand-kept
+answer for the few no fund has handed over yet. `Security.inherited_via` marks both, so a
+looked-up ticker is never overwritten and an inherited one is withdrawn when its evidence
+goes. A delisted company or a bond has nothing to inherit and stays without a ticker. Cross-fund signals count a
+stock once per ticker, not per CUSIP, and net each fund's rows first, so a fund that merely
+switched identifier neither sold nor opened anything. The per-fund pages still read
+`PositionMove` per CUSIP and show that switch as a sale and a new position; the holdings
+table marks an inherited ticker "Earlier CUSIP".

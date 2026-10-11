@@ -1,7 +1,7 @@
 from django.db.models import Count
 
 from . import changes, sectors, summaries
-from .models import Investor, PositionMove
+from .models import Investor, PositionMove, Security
 
 MIN_FUNDS = 3
 SHELF_LIMIT = 12
@@ -48,31 +48,75 @@ def signal_quarter():
     }
 
 
-def _blank(cusip, issuer):
+def _blank(position):
     return {
-        'cusip': cusip, 'issuer': issuer, 'owners': [], 'bought': [], 'sold': [], 'new': [],
-        'value': 0, 'bought_value': 0, 'sold_value': 0,
+        'cusip': position['cusip'], 'issuer': position['issuer'], 'ticker': position['ticker'],
+        'owners': [], 'bought': [], 'sold': [], 'new': [], 'value': 0, 'bought_value': 0, 'sold_value': 0,
     }
+
+
+def _size(position):
+    return max(position['value'], position['previous_value'] or 0)
+
+
+def _combined(position, row):
+    earlier = [side for side in (position, row) if side['previous_shares'] is not None]
+    merged = {
+        **(row if (_size(row), row['cusip']) > (_size(position), position['cusip']) else position),
+        'shares': position['shares'] + row['shares'],
+        'value': position['value'] + row['value'],
+        'weight': position['weight'] + row['weight'],
+        'previous_shares': sum(side['previous_shares'] for side in earlier) if earlier else None,
+        'previous_value': sum(side['previous_value'] or 0 for side in earlier) if earlier else None,
+        'previous_weight': sum(side['previous_weight'] or 0.0 for side in earlier) if earlier else None,
+    }
+    if position['kind'] is None or row['kind'] is None:
+        merged['kind'] = None
+    elif merged['shares'] == 0:
+        merged['kind'] = changes.SOLD_OUT
+    else:
+        merged['kind'] = changes.position_change(merged['shares'], merged['previous_shares'])[0]
+    return merged
+
+
+def _positions(quarter_end):
+    tickers = dict(Security.objects.filter(ticker__isnull=False).values_list('cusip', 'ticker'))
+    positions = {}
+    rows = PositionMove.objects.filter(quarter_end=quarter_end, put_call='').order_by('cusip').values(
+        'cusip', 'issuer', 'investor_id', 'kind', 'shares', 'previous_shares', 'value', 'previous_value',
+        'weight_pct', 'previous_weight_pct',
+    )
+    for row in rows:
+        row['ticker'] = tickers.get(row['cusip'])
+        row['weight'] = row.pop('weight_pct')
+        row['previous_weight'] = row.pop('previous_weight_pct')
+        key = (row['ticker'] or row['cusip'], row['investor_id'])
+        positions[key] = _combined(positions[key], row) if key in positions else row
+    return positions
 
 
 def _stocks(quarter_end):
     stocks = {}
-    rows = PositionMove.objects.filter(quarter_end=quarter_end, put_call='').values_list(
-        'cusip', 'issuer', 'investor_id', 'kind', 'value', 'previous_value', 'weight_pct', 'previous_weight_pct',
-    )
-    for cusip, issuer, investor_id, kind, value, previous_value, weight, previous_weight in rows:
-        stock = stocks.setdefault(cusip, _blank(cusip, issuer))
-        delta = value - (previous_value or 0)
+    for (identity, investor_id), position in _positions(quarter_end).items():
+        stock = stocks.get(identity)
+        if stock is None:
+            stock = stocks[identity] = _blank(position)
+            stock['largest'] = (_size(position), position['cusip'])
+        elif (_size(position), position['cusip']) > stock['largest']:
+            stock.update(cusip=position['cusip'], issuer=position['issuer'])
+            stock['largest'] = (_size(position), position['cusip'])
+        kind = position['kind']
+        delta = position['value'] - (position['previous_value'] or 0)
         if kind != changes.SOLD_OUT:
-            stock['owners'].append((weight, investor_id))
-            stock['value'] += value
+            stock['owners'].append((position['weight'], investor_id))
+            stock['value'] += position['value']
         if kind in BUYS:
-            stock['bought'].append((weight, investor_id))
+            stock['bought'].append((position['weight'], investor_id))
             stock['bought_value'] += delta
         if kind == changes.NEW:
-            stock['new'].append((weight, investor_id))
+            stock['new'].append((position['weight'], investor_id))
         if kind in SELLS:
-            stock['sold'].append((previous_weight or 0.0, investor_id))
+            stock['sold'].append((position['previous_weight'] or 0.0, investor_id))
             stock['sold_value'] -= delta
     return stocks
 
@@ -86,8 +130,8 @@ def _faces(pairs, investors):
     return [_face(investors[investor_id]) for _, investor_id in ranked]
 
 
-def _item(stock, side, investors, tickers):
-    ticker = tickers.get(stock['cusip'])
+def _item(stock, side, investors):
+    ticker = stock['ticker']
     return {
         'cusip': stock['cusip'],
         'ticker': ticker,
@@ -105,8 +149,7 @@ def _item(stock, side, investors, tickers):
 def _items(stocks, view, investors, minimum, limit):
     side, key = VIEWS[view]
     ranked = sorted((stock for stock in stocks.values() if len(stock[side]) >= minimum), key=key)
-    tickers = summaries.tickers_for(stock['cusip'] for stock in ranked[:limit])
-    return len(ranked), [_item(stock, side, investors, tickers) for stock in ranked[:limit]]
+    return len(ranked), [_item(stock, side, investors) for stock in ranked[:limit]]
 
 
 def _biggest_new(stock):
@@ -119,8 +162,7 @@ def _new_bets(stocks, investors):
         key=lambda stock: (-_biggest_new(stock), stock['cusip']),
     )
     shown = ranked[:SHELF_LIMIT]
-    tickers = summaries.tickers_for(stock['cusip'] for stock in shown)
-    items = [{**_item(stock, 'new', investors, tickers), 'weight': _biggest_new(stock)} for stock in shown]
+    items = [{**_item(stock, 'new', investors), 'weight': _biggest_new(stock)} for stock in shown]
     return len(ranked), items
 
 

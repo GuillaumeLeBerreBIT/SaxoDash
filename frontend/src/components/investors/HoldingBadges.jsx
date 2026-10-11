@@ -10,3 +10,12 @@ export function YouBadge({ owned, watched }) {
   if (watched) return <Badge tone="zinc">Watchlist</Badge>
   return null
 }
+
+export function EarlierCusipBadge({ inherited }) {
+  if (!inherited) return null
+  return (
+    <span title="Filed under an identifier the company has since replaced. The ticker is its successor's.">
+      <Badge tone="zinc">Earlier CUSIP</Badge>
+    </span>
+  )
+}

@@ -81,6 +81,9 @@ class Holding(models.Model):
 
 class Security(models.Model):
     MAX_ATTEMPTS = 3
+    HANDOVER = 'handover'
+    ALIAS = 'alias'
+    INHERITED_VIA_CHOICES = [(HANDOVER, 'Handover'), (ALIAS, 'Alias')]
 
     cusip = models.CharField(max_length=9, primary_key=True)
     ticker = models.CharField(max_length=16, null=True, blank=True)
@@ -89,6 +92,7 @@ class Security(models.Model):
     security_type = models.CharField(max_length=60, blank=True, default='')
     resolved_at = models.DateTimeField(null=True, blank=True)
     attempts = models.PositiveSmallIntegerField(default=0)
+    inherited_via = models.CharField(max_length=10, choices=INHERITED_VIA_CHOICES, blank=True, default='')
 
     def __str__(self):
         return f'{self.cusip} {self.ticker or "?"}'

@@ -58,8 +58,16 @@ class InvestorDetailApiTest(APITestCase):
             'cusip': '037833100', 'ticker': 'AAPL', 'issuer': 'APPLE INC', 'class': '',
             'put_call': '', 'amount_type': 'SH', 'shares': 110, 'value': 700, 'weight': 70.0,
             'change': 'added', 'shares_change_pct': 10.0, 'quarters_held': 2,
-            'sector': 'Information Technology', 'owned': False, 'watched': False,
+            'sector': 'Information Technology', 'owned': False, 'watched': False, 'ticker_inherited': False,
         })
+
+    def test_a_ticker_inherited_from_a_successor_says_so(self):
+        Security.objects.filter(cusip='084670702').update(inherited_via=Security.HANDOVER)
+
+        holdings = self.holdings()
+
+        self.assertTrue(holdings[('084670702', '')]['ticker_inherited'])
+        self.assertFalse(holdings[('67066G104', '')]['ticker_inherited'])
 
     def test_an_option_is_its_own_row_and_new(self):
         call = self.holdings()[('67066G104', 'CALL')]

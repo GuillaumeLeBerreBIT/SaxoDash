@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F, Max
 from django.utils import timezone
 
-from . import edgar, figi, moves, parse
+from . import edgar, figi, handovers, moves, parse
 from .models import Filing, Holding, Investor, Security
 
 logger = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ def resolve_securities():
             hits += _store_batch(batch)
     except figi.FigiError as exc:
         logger.warning('OpenFIGI stopped resolving: %s', exc)
-    return hits
+    return hits + handovers.apply()
 
 
 def progress(investor):
