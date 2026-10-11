@@ -93,6 +93,7 @@ def _resolve_quarter(ends, quarter_end):
 def _comparison(investor, quarter_end, previous):
     snap = quarters.snapshot(investor, quarter_end)
     previous_snap = quarters.snapshot(investor, previous) if previous else None
+    previous_snap = quarters.carried_over(previous_snap, snap, quarters.tickers_held(investor))
     previous_shares = _shares(previous_snap) if previous_snap is not None else None
     per_key, sold_out = changes.compare(_shares(snap), previous_shares)
     return snap, previous_snap, per_key, sold_out
@@ -246,7 +247,8 @@ def detail(investor, quarter_end, today):
     quarter_end, previous = _resolve_quarter(ends, quarter_end)
     snap, previous_snap, per_key, sold_out = _comparison(investor, quarter_end, previous)
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
-    held = quarters.quarters_held(quarters.held_keys_by_quarter(investor), quarter_end)
+    tickers = quarters.tickers_held(investor)
+    held = quarters.quarters_held(quarters.held_keys_by_quarter(investor, tickers), quarter_end)
     owned, watched = _yours()
     inherited = inherited_cusips(row['cusip'] for row in rows)
 
@@ -267,7 +269,7 @@ def detail(investor, quarter_end, today):
             'weight': row['weight'],
             'change': change[0] if change else None,
             'shares_change_pct': change[1] if change else None,
-            'quarters_held': held.get(key, 1),
+            'quarters_held': held.get(quarters.identity(key, tickers), 1),
             'sector': sectors.sector_for(ticker),
             'owned': bool(ticker) and ticker.upper() in owned,
             'watched': bool(ticker) and ticker.upper() in watched,

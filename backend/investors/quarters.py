@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from .models import Filing, Holding
+from .models import Filing, Holding, Security
 
 
 def quarter_ends(investor):
@@ -44,13 +44,42 @@ def snapshot(investor, quarter_end):
     return merged
 
 
-def held_keys_by_quarter(investor):
+def tickers_held(investor):
+    held = Holding.objects.filter(filing__investor=investor).values('cusip')
+    return dict(Security.objects.filter(cusip__in=held, ticker__isnull=False).values_list('cusip', 'ticker'))
+
+
+def identity(key, tickers):
+    return tickers.get(key[0]) or key[0], key[1]
+
+
+def _by_identity(keys, tickers):
+    grouped = defaultdict(list)
+    for key in keys:
+        if key[0] in tickers:
+            grouped[identity(key, tickers)].append(key)
+    return grouped
+
+
+def carried_over(previous_snap, snap, tickers):
+    if previous_snap is None:
+        return None
+    left = _by_identity((key for key in previous_snap if key not in snap), tickers)
+    arrived = _by_identity((key for key in snap if key not in previous_snap), tickers)
+    renamed = {
+        keys[0]: arrived[stock][0]
+        for stock, keys in left.items() if len(keys) == 1 and len(arrived.get(stock, [])) == 1
+    }
+    return {renamed.get(key, key): row for key, row in previous_snap.items()}
+
+
+def held_keys_by_quarter(investor, tickers):
     ids_by_quarter = _effective_ids_by_quarter(investor)
     quarter_of = {pk: quarter for quarter, ids in ids_by_quarter.items() for pk in ids}
     keys = {quarter: set() for quarter in ids_by_quarter}
     rows = Holding.objects.filter(filing_id__in=quarter_of).values_list('filing_id', 'cusip', 'put_call')
     for filing_id, cusip, put_call in rows:
-        keys[quarter_of[filing_id]].add((cusip, put_call))
+        keys[quarter_of[filing_id]].add(identity((cusip, put_call), tickers))
     return keys
 
 

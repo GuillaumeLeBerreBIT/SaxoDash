@@ -2,7 +2,7 @@ from datetime import date
 
 from django.test import TestCase
 
-from . import handovers
+from . import handovers, moves
 from .factories import make_investor, store_quarter
 from .models import Security
 
@@ -157,6 +157,21 @@ class HandoverTest(TestCase):
         handovers.apply(NO_ALIASES)
 
         self.assertEqual(handovers.apply(NO_ALIASES), 1)
+
+        self.assertEqual(state(OLD), ('LIN', Security.HANDOVER))
+
+
+    def test_the_evidence_survives_moves_rebuilt_with_the_inherited_ticker(self):
+        Security.objects.create(cusip=OLD)
+        linde()
+        funds = [fund(1), fund(2)]
+        hand_over(funds[0], 500)
+        hand_over(funds[1], 1200)
+        handovers.apply(NO_ALIASES)
+        for investor in funds:
+            moves.rebuild(investor)
+
+        handovers.apply(NO_ALIASES)
 
         self.assertEqual(state(OLD), ('LIN', Security.HANDOVER))
 

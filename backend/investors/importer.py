@@ -114,7 +114,19 @@ def _store_batch(batch):
     return hits
 
 
+def _tickers():
+    return dict(Security.objects.values_list('cusip', 'ticker'))
+
+
+def _rebuild_moves_holding(cusips):
+    if not cusips:
+        return
+    for investor in Investor.objects.filter(filings__holdings__cusip__in=cusips).distinct():
+        moves.rebuild(investor)
+
+
 def resolve_securities():
+    before = _tickers()
     pending = list(
         Security.objects.filter(ticker__isnull=True, attempts__lt=Security.MAX_ATTEMPTS)
         .order_by('cusip').values_list('cusip', flat=True)
@@ -125,7 +137,9 @@ def resolve_securities():
             hits += _store_batch(batch)
     except figi.FigiError as exc:
         logger.warning('OpenFIGI stopped resolving: %s', exc)
-    return hits + handovers.apply()
+    resolved = hits + handovers.apply()
+    _rebuild_moves_holding({cusip for cusip, ticker in _tickers().items() if before.get(cusip) != ticker})
+    return resolved
 
 
 def progress(investor):
