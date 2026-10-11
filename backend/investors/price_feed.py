@@ -18,34 +18,12 @@ BARS = 1200
 PAUSE_SECONDS = 1.2
 REFRESH_AFTER = timedelta(hours=20)
 RETRY_AFTER = timedelta(days=7)
-SPLIT_FACTORS = (2, 3, 4, 5, 6, 7, 8, 10, 15, 20, 25, 50)
-SPLIT_TOLERANCE = 0.06
 BENCHMARK_UIC = BENCHMARKS['sp500']['uic']
 BENCHMARK_ASSET_TYPE = BENCHMARKS['sp500']['asset_type']
 
 
 class NoBars(Exception):
     pass
-
-
-def _split_factor(before, after):
-    ratio = before / after
-    for factor in SPLIT_FACTORS:
-        if abs(ratio / factor - 1) <= SPLIT_TOLERANCE:
-            return factor
-        if abs(ratio * factor - 1) <= SPLIT_TOLERANCE:
-            return 1 / factor
-    return 1
-
-
-def adjusted_for_splits(rows):
-    adjusted = [list(row) for row in rows]
-    scale = 1
-    for index in range(len(adjusted) - 1, 0, -1):
-        scale *= _split_factor(rows[index - 1][1], rows[index][1])
-        if scale != 1:
-            adjusted[index - 1][1] = round(rows[index - 1][1] / scale, 6)
-    return adjusted
 
 
 def _wanted():
@@ -92,7 +70,7 @@ def _fetch(row):
     bars = market.chart(row.uic, row.asset_type, DAILY, BARS)
     if not bars:
         raise NoBars('Saxo returned no daily bars')
-    row.closes = adjusted_for_splits([[bar['date'], bar['close']] for bar in bars])
+    row.closes = [[bar['date'], bar['close']] for bar in bars]
     row.status = PriceHistory.OK
 
 

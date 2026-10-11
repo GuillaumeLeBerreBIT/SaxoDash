@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from django.test import SimpleTestCase, TestCase
+from django.test import TestCase
 from django.utils import timezone
 
 from research.providers import ProviderError, ProviderNotConnected
@@ -20,32 +20,6 @@ def bars(*closes, start=date(2026, 1, 5)):
 
 def rows(*closes):
     return [[bar['date'], bar['close']] for bar in bars(*closes)]
-
-
-class SplitAdjustmentTest(SimpleTestCase):
-    def closes(self, *values):
-        return [close for _, close in price_feed.adjusted_for_splits(rows(*values))]
-
-    def test_ordinary_moves_are_left_alone(self):
-        self.assertEqual(self.closes(100, 104, 71, 95), [100, 104, 71, 95])
-
-    def test_a_ten_for_one_split_rescales_everything_before_it(self):
-        self.assertEqual(self.closes(1000, 1200, 121, 130), [100.0, 120.0, 121, 130])
-
-    def test_a_two_for_one_split_with_a_move_on_the_day(self):
-        self.assertEqual(self.closes(200, 97), [100.0, 97])
-
-    def test_a_reverse_split_scales_earlier_prices_up(self):
-        self.assertEqual(self.closes(2, 2.1, 41), [40.0, 42.0, 41])
-
-    def test_two_splits_compound(self):
-        self.assertEqual(self.closes(4000, 2000, 1000, 100), [100.0, 100.0, 100.0, 100])
-
-    def test_a_crash_that_is_not_a_whole_ratio_is_a_crash(self):
-        self.assertEqual(self.closes(100, 40), [100, 40])
-
-    def test_an_empty_series_stays_empty(self):
-        self.assertEqual(price_feed.adjusted_for_splits([]), [])
 
 
 @patch('investors.price_feed.market.chart')
@@ -82,14 +56,6 @@ class RefreshTest(TestCase):
         self.assertEqual([call.args[0] for call in resolve.call_args_list], ['AAPL', 'NVDA'])
         chart.assert_any_call(1, 'Stock', price_feed.DAILY, price_feed.BARS)
         self.assertEqual(self.pauses, [price_feed.PAUSE_SECONDS] * 3)
-
-    def test_stored_closes_are_split_adjusted(self, resolve, chart):
-        resolve.return_value = self.found(1)
-        chart.return_value = bars(1000, 100)
-
-        self.refresh()
-
-        self.assertEqual(PriceHistory.objects.get(ticker='AAPL').closes, rows(100.0, 100))
 
     def test_a_ticker_saxo_does_not_list_is_marked_and_never_charted(self, resolve, chart):
         resolve.side_effect = lambda ticker: None if ticker == 'AAPL' else self.found(2)

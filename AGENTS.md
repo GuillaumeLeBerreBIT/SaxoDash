@@ -412,6 +412,5 @@ with no price is left out and the rest reweighted; a period priced for under hal
 value sits in cash and is counted; leading unpriceable periods are dropped, so `since` is the
 first day the clone could really be bought. Price return only, in USD, no dividends or costs.
 Per-year figures are null under a year of history, and the directory sorts on the annualised
-edge because total returns over different spans are not comparable. `adjusted_for_splits`
-rescales history across an overnight ratio within 6% of a whole split factor: it is a guard
-written before Saxo's own split handling could be checked, and is inert if Saxo already adjusts.
+edge because total returns over different spans are not comparable. Saxo's daily bars are already split-adjusted
+(checked on NVDA, GOOGL, AMZN and WMT across their splits), so closes are stored as served.
