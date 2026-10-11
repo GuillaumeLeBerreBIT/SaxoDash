@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { OTHER_SLICE, colorForRank } from './charts'
 import {
-  donutSlices, filterHoldings, fmtFiledDate, fmtUsdCompact, latestQuarter, looksLikeTicker,
+  alertHref, alertSummary, donutSlices, filterHoldings, fmtFiledDate, fmtUsdCompact, latestQuarter, looksLikeTicker,
   quarterLabel, readTop10View, remainder, topTen, visibleInvestors, writeTop10View,
 } from './investors'
 
@@ -146,5 +146,21 @@ describe('top-10 view preference', () => {
   it('ignores an unknown stored value', () => {
     localStorage.setItem('saxodash:investors-top10-view', 'pie')
     expect(readTop10View()).toBe('grid')
+  })
+})
+
+describe('filing alerts', () => {
+  it('summarises only the kinds of move that happened', () => {
+    expect(alertSummary({ new: 2, added: 0, trimmed: 1, sold_out: 3 })).toBe('2 new · 1 trimmed · 3 sold out')
+  })
+
+  it('says so when a filing changed nothing', () => {
+    expect(alertSummary({ new: 0, added: 0, trimmed: 0, sold_out: 0 })).toBe('No position changes')
+    expect(alertSummary(undefined)).toBe('No position changes')
+  })
+
+  it('links an alert to the investor at the quarter that was filed', () => {
+    expect(alertHref({ investor: { slug: 'berkshire-hathaway' }, quarter: '2026-06-30' }))
+      .toBe('/investors/berkshire-hathaway?quarter=2026-06-30')
   })
 })

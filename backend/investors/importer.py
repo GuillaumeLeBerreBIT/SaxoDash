@@ -6,7 +6,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import F, Max
 from django.utils import timezone
 
-from . import edgar, figi, handovers, moves, parse
+from . import alerts, edgar, figi, handovers, moves, parse
 from .models import Filing, Holding, Investor, Security
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,8 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
         Filing.objects.filter(accession__in=[e['accession'] for e in entries]).values_list('accession', flat=True)
     )
     result = SyncResult()
+    newest_before = investor.filings.aggregate(latest=Max('quarter_end'))['latest']
+    arrived = []
     if track_progress:
         _set_expected(investor, len({e['quarter_end'] for e in entries}))
     try:
@@ -81,6 +83,7 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
                     continue
                 if stored_now:
                     result.imported += 1
+                    arrived.append(entry)
         finally:
             Investor.objects.filter(pk=investor.pk).update(
                 last_checked_at=timezone.now(),
@@ -88,6 +91,7 @@ def sync_investor(investor, since, *, track_progress=False, resolve=True):
             )
             if result.imported or _moves_are_behind(investor):
                 moves.rebuild(investor)
+            alerts.record(investor, newest_before, arrived)
         if resolve:
             resolve_securities()
     finally:

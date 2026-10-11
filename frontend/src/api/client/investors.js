@@ -26,3 +26,7 @@ export const setInvestorFollowed = (slug, followed) => jsonRequest(`/api/investo
 export const addInvestor = (cik) => jsonRequest('/api/investors/', 'POST', { cik })
 
 export const stopTrackingInvestor = (slug) => apiFetch(`/api/investors/${slug}/`, { method: 'DELETE' })
+
+export const getFilingAlerts = () => apiFetch('/api/investors/alerts/')
+
+export const markFilingAlertsRead = () => jsonRequest('/api/investors/alerts/read/', 'POST', {})

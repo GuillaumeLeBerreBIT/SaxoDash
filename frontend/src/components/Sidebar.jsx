@@ -3,6 +3,7 @@ import { LineChart, PanelLeftClose, PanelLeftOpen, LogOut, Search } from 'lucide
 import { getUsername, logout } from '../api/client'
 import { NAV_ITEMS } from '../lib/navigation'
 import SaxoConnectionStatus from './SaxoConnectionStatus'
+import FilingAlerts from './investors/FilingAlerts'
 
 export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
   const navigate = useNavigate()
@@ -53,19 +54,22 @@ export default function Sidebar({ collapsed, setCollapsed, onOpenPalette }) {
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={onOpenPalette}
-        title="Search (⌘K)"
-        aria-label="Search"
-        className={`mx-2 mt-2 h-8 rounded-md border border-white/[0.06] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 flex items-center ${
-          collapsed ? 'justify-center' : 'px-2.5 gap-2'
-        }`}
-      >
-        <Search size={14} />
-        {!collapsed && <span className="text-[var(--fig-xs)]">Search</span>}
-        {!collapsed && <span className="ml-auto text-[var(--fig-2xs)] text-zinc-600">⌘K</span>}
-      </button>
+      <div className={`mx-2 mt-2 flex gap-1.5 ${collapsed ? 'flex-col items-center' : ''}`}>
+        <button
+          type="button"
+          onClick={onOpenPalette}
+          title="Search (⌘K)"
+          aria-label="Search"
+          className={`h-8 rounded-md border border-white/[0.06] text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 flex items-center ${
+            collapsed ? 'w-8 justify-center' : 'flex-1 min-w-0 px-2.5 gap-2'
+          }`}
+        >
+          <Search size={14} />
+          {!collapsed && <span className="text-[var(--fig-xs)]">Search</span>}
+          {!collapsed && <span className="ml-auto text-[var(--fig-2xs)] text-zinc-600">⌘K</span>}
+        </button>
+        <FilingAlerts side="right" panelLeft={width + 8} />
+      </div>
 
       <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-3'} py-3 space-y-0.5`}>
         {NAV_ITEMS.map(({ to, label, icon: ItemIcon, end }) => (

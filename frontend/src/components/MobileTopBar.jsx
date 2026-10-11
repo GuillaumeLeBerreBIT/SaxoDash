@@ -1,5 +1,6 @@
 import { LineChart, Search } from 'lucide-react'
 import SaxoConnectionStatus from './SaxoConnectionStatus'
+import FilingAlerts from './investors/FilingAlerts'
 
 export default function MobileTopBar({ onOpenPalette }) {
   return (
@@ -13,6 +14,7 @@ export default function MobileTopBar({ onOpenPalette }) {
         </div>
         <div className="flex items-center gap-1">
           <SaxoConnectionStatus compact />
+          <FilingAlerts side="below" />
           <button
             type="button"
             onClick={onOpenPalette}

@@ -391,3 +391,12 @@ changed. Handover detection reads only which CUSIPs were held and in what size, 
 `kind` column — reading new/sold-out would erase its own evidence the moment the moves were
 rebuilt, withdraw the ticker, and flip back on the next run. The holdings table marks an
 inherited ticker "Earlier CUSIP".
+
+**A filing alert is news, not history, and its words are computed when read.** `alerts.record`
+runs inside `sync_investor` and writes one `FilingAlert` per (investor, quarter) only when a
+followed investor files a quarter newer than anything already stored — so a first import, a
+backfill and a late amendment to an old quarter raise nothing. The row holds no counts or
+moves: `alerts.payload` reads them from `PositionMove` each time, so a ticker resolved later
+shows up in an old alert. Following is also a read-time filter, so unfollowing empties the
+inbox without deleting anything. The bell (`FilingAlerts`) marks the inbox read when the
+panel closes, not when it opens, so the unread dots are still there to be seen.

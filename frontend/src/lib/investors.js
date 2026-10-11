@@ -41,6 +41,15 @@ export function fmtUsdCompact(value, { sign = false } = {}) {
 
 export const fmtFiledDate = fmtDate
 
+const ALERT_COUNTS = [['new', 'new'], ['added', 'added'], ['trimmed', 'trimmed'], ['sold_out', 'sold out']]
+
+export function alertSummary(counts) {
+  const parts = ALERT_COUNTS.filter(([key]) => counts?.[key] > 0).map(([key, word]) => `${counts[key]} ${word}`)
+  return parts.length ? parts.join(' · ') : 'No position changes'
+}
+
+export const alertHref = (alert) => `/investors/${alert.investor.slug}?quarter=${alert.quarter}`
+
 export function latestQuarter(cards) {
   const quarters = cards.map((c) => c.latest_quarter).filter(Boolean).sort()
   return quarters.length ? quarters[quarters.length - 1] : null
