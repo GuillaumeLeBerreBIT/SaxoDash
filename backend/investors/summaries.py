@@ -200,7 +200,7 @@ def _sectors(holdings):
     return [{'sector': sector, 'weight': round(weight, 2)} for sector, weight in ranked]
 
 
-def _story_moves(investor, quarter_end):
+def story_moves(investor, quarter_end):
     rows = list(investor.moves.filter(quarter_end=quarter_end, kind__in=MOVE_ORDER))
     tickers = tickers_for({row.cusip for row in rows})
     rows.sort(key=lambda row: (
@@ -287,7 +287,7 @@ def detail(investor, quarter_end, today):
         'holdings': holdings,
         'top5_weight': round(sum(row['weight'] for row in rows[:TOP_FIVE]), 2),
         'sectors': _sectors(holdings),
-        'moves': _story_moves(investor, quarter_end),
+        'moves': story_moves(investor, quarter_end),
     })
     return base
 

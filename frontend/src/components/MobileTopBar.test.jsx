@@ -9,6 +9,8 @@ import * as queries from '../api/queries'
 
 beforeEach(() => {
   queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+  queries.useFilingAlerts.mockReturnValue({ data: { unread: 0, alerts: [] } })
+  queries.useMarkAlertsRead.mockReturnValue({ mutate: vi.fn() })
 })
 
 describe('MobileTopBar', () => {
@@ -22,6 +24,11 @@ describe('MobileTopBar', () => {
   it('is hidden from the md breakpoint up', () => {
     const { container } = renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
     expect(container.firstChild).toHaveClass('md:hidden')
+  })
+
+  it('offers the filing alerts bell', () => {
+    renderWithProviders(<MobileTopBar onOpenPalette={() => {}} />)
+    expect(screen.getByRole('button', { name: 'Filing alerts' })).toBeInTheDocument()
   })
 
   it('shows the wordmark', () => {

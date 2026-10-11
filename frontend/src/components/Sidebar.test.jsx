@@ -10,6 +10,8 @@ import * as queries from '../api/queries'
 
 beforeEach(() => {
   queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+  queries.useFilingAlerts.mockReturnValue({ data: { unread: 0, alerts: [] } })
+  queries.useMarkAlertsRead.mockReturnValue({ mutate: vi.fn() })
 })
 
 vi.mock('../api/client', () => ({

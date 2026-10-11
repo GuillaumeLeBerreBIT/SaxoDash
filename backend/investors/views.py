@@ -5,7 +5,7 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import edgar, signals, summaries, tracking
+from . import alerts, edgar, signals, summaries, tracking
 from .models import Investor
 
 MIN_QUERY = 3
@@ -101,6 +101,17 @@ class InvestorChangesView(APIView):
 class InvestorHubView(APIView):
     def get(self, request):
         return Response(signals.hub(date.today()))
+
+
+class InvestorAlertsView(APIView):
+    def get(self, request):
+        return Response(alerts.payload())
+
+
+class InvestorAlertsReadView(APIView):
+    def post(self, request):
+        alerts.mark_read()
+        return Response(alerts.payload())
 
 
 class InvestorStocksView(APIView):

@@ -126,3 +126,19 @@ class PositionMove(models.Model):
 
     def __str__(self):
         return f'{self.investor.slug} {self.quarter_end} {self.cusip} {self.kind}'
+
+
+class FilingAlert(models.Model):
+    investor = models.ForeignKey(Investor, related_name='alerts', on_delete=models.CASCADE)
+    quarter_end = models.DateField()
+    filed_on = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['investor', 'quarter_end'], name='alert_investor_quarter'),
+        ]
+
+    def __str__(self):
+        return f'{self.investor.slug} {self.quarter_end}'

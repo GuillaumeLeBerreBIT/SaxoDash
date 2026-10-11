@@ -6,6 +6,8 @@ vi.mock('../api/client', () => ({
   getUsername: () => 'Test User',
   logout: vi.fn(),
   getSaxoStatus: vi.fn(() => new Promise(() => {})),
+  getFilingAlerts: vi.fn(() => new Promise(() => {})),
+  markFilingAlertsRead: vi.fn(),
 }))
 vi.mock('./CommandPalette', () => ({ default: () => null }))
 

@@ -1,12 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  addInvestor, getInvestor, getInvestorChanges, getInvestorHub, getInvestors, getInvestorStocks,
-  searchFilers, setInvestorFollowed, stopTrackingInvestor,
+  addInvestor, getFilingAlerts, getInvestor, getInvestorChanges, getInvestorHub, getInvestors, getInvestorStocks,
+  markFilingAlertsRead, searchFilers, setInvestorFollowed, stopTrackingInvestor,
 } from '../client'
 
 const IMPORT_POLL_MS = 4000
 const SEARCH_MIN = 3
+const ALERTS_FRESH_MS = 60_000
 const LISTS = ['investors']
 
 export const investorsKeys = {
@@ -16,6 +17,7 @@ export const investorsKeys = {
   hub: ['investor-hub'],
   stocks: (view, quarter) => ['investor-stocks', view, quarter ?? 'signal'],
   search: (q) => ['investor-search', q],
+  alerts: ['investor-alerts'],
 }
 
 const importing = (cards) => Array.isArray(cards) && cards.some((card) => card.import)
@@ -95,7 +97,20 @@ export function useFollowInvestor() {
       queryClient.invalidateQueries({ queryKey: LISTS })
       queryClient.invalidateQueries({ queryKey: ['investor', slug] })
       queryClient.invalidateQueries({ queryKey: investorsKeys.hub })
+      queryClient.invalidateQueries({ queryKey: investorsKeys.alerts })
     },
+  })
+}
+
+export function useFilingAlerts() {
+  return useQuery({ queryKey: investorsKeys.alerts, queryFn: getFilingAlerts, staleTime: ALERTS_FRESH_MS })
+}
+
+export function useMarkAlertsRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: markFilingAlertsRead,
+    onSuccess: (inbox) => queryClient.setQueryData(investorsKeys.alerts, inbox),
   })
 }
 
@@ -106,6 +121,7 @@ function useRosterChange(mutationFn) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LISTS })
       queryClient.invalidateQueries({ queryKey: investorsKeys.hub })
+      queryClient.invalidateQueries({ queryKey: investorsKeys.alerts })
     },
   })
 }

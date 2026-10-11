@@ -5,8 +5,8 @@ import { renderHook, waitFor } from '@testing-library/react'
 vi.mock('../client')
 import * as client from '../client'
 import {
-  investorsKeys, useAddInvestor, useFollowInvestor, useInvestor, useInvestorChanges, useInvestorHub,
-  useInvestors, useInvestorSearch, useInvestorStocks, useStopTracking,
+  investorsKeys, useAddInvestor, useFilingAlerts, useFollowInvestor, useInvestor, useInvestorChanges, useInvestorHub,
+  useInvestors, useInvestorSearch, useInvestorStocks, useMarkAlertsRead, useStopTracking,
 } from './investors'
 
 function setup(useHook, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
@@ -16,6 +16,28 @@ function setup(useHook, queryClient = new QueryClient({ defaultOptions: { querie
 
 describe('investor queries', () => {
   beforeEach(() => vi.clearAllMocks())
+
+  it('loads the filing alerts inbox', async () => {
+    client.getFilingAlerts.mockResolvedValue({ unread: 1, alerts: [{ id: 7 }] })
+    const { result } = setup(() => useFilingAlerts())
+    await waitFor(() => expect(result.current.data).toEqual({ unread: 1, alerts: [{ id: 7 }] }))
+  })
+
+  it('replaces the inbox with the answer to marking it read', async () => {
+    client.markFilingAlertsRead.mockResolvedValue({ unread: 0, alerts: [{ id: 7, read: true }] })
+    const { result, queryClient } = setup(() => useMarkAlertsRead())
+    queryClient.setQueryData(investorsKeys.alerts, { unread: 1, alerts: [{ id: 7, read: false }] })
+    result.current.mutate()
+    await waitFor(() => expect(queryClient.getQueryData(investorsKeys.alerts).unread).toBe(0))
+  })
+
+  it('refreshes the inbox when you follow or unfollow someone', async () => {
+    client.setInvestorFollowed.mockResolvedValue({ slug: 'berkshire-hathaway', followed: false })
+    const { result, queryClient } = setup(() => useFollowInvestor())
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
+    result.current.mutate({ slug: 'berkshire-hathaway', followed: false })
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: investorsKeys.alerts }))
+  })
 
   it('lists every investor without a holds filter', async () => {
     client.getInvestors.mockResolvedValue([{ slug: 'berkshire-hathaway' }])
