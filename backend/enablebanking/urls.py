@@ -16,6 +16,7 @@ from .views import (
     SpendingTrendView,
     SubscriptionDetailView,
     SubscriptionListView,
+    SyncNowView,
 )
 
 urlpatterns = [
@@ -25,6 +26,7 @@ urlpatterns = [
     path('status/', EnableBankingStatusView.as_view(), name='enablebanking-status'),
     path('transactions/', BankTransactionListView.as_view(), name='enablebanking-transactions'),
     path('transactions/<int:pk>/category/', BankTransactionCategoryView.as_view(), name='enablebanking-transaction-category'),
+    path('sync/', SyncNowView.as_view(), name='enablebanking-sync'),
     path('spending/summary/', SpendingSummaryView.as_view(), name='enablebanking-spending-summary'),
     path('spending/trend/', SpendingTrendView.as_view(), name='enablebanking-spending-trend'),
     path('subscriptions/', SubscriptionListView.as_view(), name='enablebanking-subscriptions'),

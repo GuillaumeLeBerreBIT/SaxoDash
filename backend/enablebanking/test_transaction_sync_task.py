@@ -73,6 +73,18 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
         self.assertIsNone(mock_iter.call_args.kwargs.get('strategy'))
 
     @patch('enablebanking.tasks.client.iter_transactions')
+    def test_date_from_never_lies_in_the_future(self, mock_iter):
+        tomorrow = timezone.localdate() + timedelta(days=1)
+        mock_iter.return_value = iter([{**RAW_TX, 'booking_date': tomorrow.isoformat()}])
+        sync_enablebanking_transactions()
+
+        mock_iter.reset_mock()
+        mock_iter.return_value = iter([])
+        sync_enablebanking_transactions()
+
+        self.assertEqual(mock_iter.call_args.kwargs.get('date_from'), timezone.localdate().isoformat())
+
+    @patch('enablebanking.tasks.client.iter_transactions')
     def test_every_account_failing_is_recorded_as_failed_not_ok(self, mock_iter):
         mock_iter.side_effect = client.EnableBankingPermanentError('404 gone')
         sync_enablebanking_transactions()

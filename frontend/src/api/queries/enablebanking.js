@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createLabeledAccount,
@@ -11,11 +12,14 @@ import {
   getSpendingSummary,
   getSpendingTrend,
   getSubscriptions,
+  markTransactionReviewed,
   setBudget,
+  syncBanksNow,
   updateBankTransactionCategory,
   updateLabeledAccount,
   updateSubscription,
 } from '../client'
+import { latestSyncedAt, syncAdvanced, syncOutcomeNote } from '../../lib/syncNow'
 import { unwrap } from './shared'
 
 export const enableBankingKeys = {
@@ -74,6 +78,71 @@ export function useUpdateBankTransactionCategory() {
       queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgetProgress })
     },
   })
+}
+
+export function useMarkTransactionReviewed() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: markTransactionReviewed,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bank-transactions'] }),
+  })
+}
+
+const SYNC_POLL_MS = 3_000
+const SYNC_GIVE_UP_MS = 60_000
+const SYNC_TIMED_OUT = 'No new data yet. The sync may still be running.'
+
+export function useSyncNow() {
+  const queryClient = useQueryClient()
+  const { data: status } = useEnableBankingStatus()
+  const [run, setRun] = useState(null)
+  const [now, setNow] = useState(() => Date.now())
+  const [queueError, setQueueError] = useState(null)
+  const queue = useMutation({ mutationFn: syncBanksNow })
+
+  const advanced = run !== null && syncAdvanced(run.since, status)
+  const syncing = run !== null && !advanced && now - run.startedAt < SYNC_GIVE_UP_MS
+  const finished = run !== null && !syncing
+
+  useEffect(() => {
+    if (!syncing) return undefined
+    const timer = setInterval(() => {
+      setNow(Date.now())
+      queryClient.invalidateQueries({ queryKey: enableBankingKeys.enableBankingStatus })
+    }, SYNC_POLL_MS)
+    return () => clearInterval(timer)
+  }, [syncing, queryClient])
+
+  useEffect(() => {
+    if (!finished) return
+    queryClient.invalidateQueries({ queryKey: ['bank-transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['spending-summary'] })
+    queryClient.invalidateQueries({ queryKey: ['spending-trend'] })
+    queryClient.invalidateQueries({ queryKey: ['bank-accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['net-worth'] })
+  }, [finished, queryClient])
+
+  const syncNow = async () => {
+    setQueueError(null)
+    const baseline = status ?? (await queryClient.fetchQuery({
+      queryKey: enableBankingKeys.enableBankingStatus,
+      queryFn: getEnableBankingStatus,
+    }))
+    const since = latestSyncedAt(baseline)
+    queue.mutate(undefined, {
+      onSuccess: () => {
+        const startedAt = Date.now()
+        setNow(startedAt)
+        setRun({ since, startedAt })
+      },
+      onError: (error) => setQueueError(error.message),
+    })
+  }
+
+  let note = ''
+  if (finished) note = advanced ? syncOutcomeNote(status) : SYNC_TIMED_OUT
+
+  return { syncNow, syncing: syncing || queue.isPending, queueError, note }
 }
 
 export function useDismissSubscription() {

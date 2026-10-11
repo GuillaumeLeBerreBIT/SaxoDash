@@ -100,7 +100,10 @@ def _fetch_transactions_for_account(bank, credential, account):
         BankTransaction.objects.filter(bank_account=bank_account)
         .order_by('-booking_date').first()
     )
-    fetch_kwargs = {'strategy': 'longest'} if latest is None else {'date_from': str(latest.booking_date)}
+    fetch_kwargs = (
+        {'strategy': 'longest'} if latest is None
+        else {'date_from': str(min(latest.booking_date, date.today()))}
+    )
 
     batch = []
     for raw in client.iter_transactions(credential.session_id, account_uid, **fetch_kwargs):
