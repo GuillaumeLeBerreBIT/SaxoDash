@@ -162,6 +162,14 @@ describe('usePaneViews linking', () => {
     expect(result.current.view(1).followDates).toBeNull()
   })
 
+  it('forgets an earlier linked window when aligning to a pane that shows nothing', () => {
+    const { result, rerender } = renderLinked([nvda, amd, null])
+    act(() => result.current.view(0).commitTimeView({ offset: 5, barCount: 20 }, datesA))
+    act(() => result.current.alignTo(2))
+    rerender({ slots: [nvda, amd, tsla], linked: true })
+    expect(result.current.view(2).followDates).toBeNull()
+  })
+
   it('does not align empty panes', () => {
     const { result } = renderLinked([nvda, null])
     act(() => result.current.view(0).reportWindow(datesA))

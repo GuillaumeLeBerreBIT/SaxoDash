@@ -49,7 +49,10 @@ export function usePaneViews(slots, range, linked = false) {
 
   const alignTo = (index) => {
     const dates = windows.current[index]
-    if (!dates) return
+    if (!dates) {
+      setLinkedDates(null)
+      return
+    }
     setViews((current) => current.map((view, i) => (i !== index && slots[i] ? { ...view, followDates: dates } : view)))
     setLinkedDates(dates)
   }
