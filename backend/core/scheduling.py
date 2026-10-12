@@ -64,6 +64,10 @@ PERIODIC_TASKS = {
         'task': 'research.tasks.scan_universe',
         'crontab': {'minute': '30', 'hour': '22'},
     },
+    'Refresh copy performance': {
+        'task': 'investors.tasks.refresh_copy_performance',
+        'crontab': {'minute': '30', 'hour': '1'},
+    },
     'Sync investors (13F deadline months)': {
         'task': 'investors.tasks.sync_investors',
         'crontab': {'minute': '15', 'hour': '6', 'month_of_year': '2,5,8,11'},

@@ -139,7 +139,7 @@ class InvestorListApiTest(APITestCase):
             investor = make_investor(name=f'M{index}', firm=f'F{index}', cik=index + 1, slug=f'f{index}')
             store_quarter(investor, Q1, [('037833100', 'APPLE INC', 10, 600)])
             store_quarter(investor, Q2, [('037833100', 'APPLE INC', 12, 700)])
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             self.client.get(self.url)
 
     def test_an_investor_still_importing_has_an_empty_card(self):

@@ -400,3 +400,21 @@ moves: `alerts.payload` reads them from `PositionMove` each time, so a ticker re
 shows up in an old alert. Following is also a read-time filter, so unfollowing empties the
 inbox without deleting anything. The bell (`FilingAlerts`) marks the inbox read when the
 panel closes, not when it opens, so the unread dots are still there to be seen.
+
+**Copy performance is a clone, measured from prices the investors app stores itself.**
+`price_feed.refresh` (nightly, `refresh_copy_performance`) fetches 1,200 daily Saxo bars per
+ticker into `PriceHistory` — the benchmark, every ticker in a current top-20 nightly, and a
+ticker only held in the past once. `copying.measure` then holds each fund's 20 largest
+disclosed stock positions at disclosed weights from the close of the first session after the
+filing date until the next filing's, against the S&P 500 ETF over the same days, and
+`CopyPerformance` caches the result per investor; the pages read only that table. A holding
+with no price is left out and the rest reweighted; a period priced for under half its copied
+value sits in cash and is counted; leading unpriceable periods are dropped, so `since` is the
+first day the clone could really be bought. Price return only, in USD, no dividends or costs.
+Per-year figures are null under a year of history, and the directory sorts on the annualised
+edge because total returns over different spans are not comparable. Saxo's daily bars are already split-adjusted
+(checked on NVDA, GOOGL, AMZN and WMT across their splits), so closes are stored as served. Tickers are matched by `price_feed.resolve`, not the Discover
+scan's stock-only resolver: it searches stocks and ETFs (funds hold IVV, QQQ, GLD as top
+positions), knows Saxo's share-class spellings (`BRK.B` is `BRKb`, `LEN.B` is `LEN_B`) and its
+`_NEW` relistings, and falls back to the issuer's first name word when a symbol search returns
+nothing (`ETN` does, `Eaton` does not) — always requiring the symbol itself to match.

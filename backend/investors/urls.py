@@ -1,7 +1,8 @@
 from django.urls import path
 
 from .views import (
-    InvestorAlertsReadView, InvestorAlertsView, InvestorChangesView, InvestorDetailView, InvestorHubView,
+    InvestorAlertsReadView, InvestorAlertsView, InvestorChangesView, InvestorCopyView, InvestorDetailView,
+    InvestorHubView,
     InvestorListView, InvestorSearchView, InvestorStocksView,
 )
 
@@ -14,4 +15,5 @@ urlpatterns = [
     path('alerts/read/', InvestorAlertsReadView.as_view(), name='investor-alerts-read'),
     path('<slug:slug>/', InvestorDetailView.as_view(), name='investor-detail'),
     path('<slug:slug>/changes/', InvestorChangesView.as_view(), name='investor-changes'),
+    path('<slug:slug>/copy/', InvestorCopyView.as_view(), name='investor-copy'),
 ]

@@ -15,6 +15,8 @@ export const getInvestor = (slug, quarter) => apiFetch(`/api/investors/${slug}/$
 export const getInvestorChanges = (slug, quarter) =>
   apiFetch(`/api/investors/${slug}/changes/${quarterQuery(quarter)}`)
 
+export const getInvestorCopy = (slug) => apiFetch(`/api/investors/${slug}/copy/`)
+
 export const getInvestorHub = () => apiFetch('/api/investors/hub/')
 
 export const getInvestorStocks = (view, quarter) => apiFetch(`/api/investors/stocks/${query({ view, quarter })}`)

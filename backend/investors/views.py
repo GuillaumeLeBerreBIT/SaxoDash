@@ -5,7 +5,7 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import alerts, edgar, signals, summaries, tracking
+from . import alerts, copying, edgar, signals, summaries, tracking
 from .models import Investor
 
 MIN_QUERY = 3
@@ -96,6 +96,11 @@ class InvestorChangesView(APIView):
             return Response(summaries.changes_payload(investor, _quarter_param(request)))
         except summaries.QuarterNotFound:
             raise NotFound('No filing is stored for that quarter.')
+
+
+class InvestorCopyView(APIView):
+    def get(self, request, slug):
+        return Response(copying.payload(get_object_or_404(Investor, slug=slug)))
 
 
 class InvestorHubView(APIView):
