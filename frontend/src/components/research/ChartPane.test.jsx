@@ -29,6 +29,9 @@ const view = {
   setYShift: vi.fn(),
   setTimeView: vi.fn(),
   resetView: vi.fn(),
+  followDates: null,
+  commitTimeView: vi.fn(),
+  reportWindow: vi.fn(),
 }
 
 function stub() {
@@ -128,6 +131,17 @@ describe('ChartPane', () => {
     renderPane({ onActivate })
     fireEvent.mouseDown(screen.getByRole('region', { name: 'NVDA chart' }))
     expect(onActivate).toHaveBeenCalled()
+  })
+
+  it('reports the dates it is showing', () => {
+    renderPane()
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-01', to: '2026-08-30' })
+  })
+
+  it('shows the followed window and reports it', () => {
+    renderPane({ view: { ...view, followDates: { from: '2026-08-05', to: '2026-08-14' } } })
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-05', to: '2026-08-14' })
+    expect(view.commitTimeView).not.toHaveBeenCalled()
   })
 
   it('marks the active pane', () => {

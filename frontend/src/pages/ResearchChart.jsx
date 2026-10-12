@@ -27,7 +27,14 @@ export default function ResearchChart() {
   const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
-  const { view: paneView, rangePicked } = usePaneViews(workspace.slots, controls.range)
+  const layout = layoutById(workspace.layout)
+  const linkable = layout.panes > 1
+  const linked = workspace.linked && linkable
+  const { view: paneView, rangePicked, alignTo } = usePaneViews(workspace.slots, controls.range, linked)
+  const setLinked = (next) => {
+    workspace.setLinked(next)
+    if (next) alignTo(workspace.active)
+  }
   const activeView = paneView(workspace.active)
   const rangeControls = {
     ...controls,
@@ -60,7 +67,6 @@ export default function ResearchChart() {
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
 
-  const layout = layoutById(workspace.layout)
   const split = layout.panes > 1
   const activeSlot = workspace.slots[workspace.active]
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
@@ -76,6 +82,9 @@ export default function ResearchChart() {
         backHref={researchHref(symbol, undefined, instrument)}
         layout={workspace.layout}
         onLayoutChange={workspace.setLayout}
+        linkable={linkable}
+        linked={linked}
+        onLinkedChange={setLinked}
       />
 
       <main className="flex flex-col gap-2 p-2 min-w-0 min-h-0">

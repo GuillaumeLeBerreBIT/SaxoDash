@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CandlestickChart, Check, Crosshair, LayoutGrid, Minimize2, Minus, RotateCcw, Sigma, Slash, Type } from 'lucide-react'
+import { CandlestickChart, Check, Crosshair, LayoutGrid, Link2, Minimize2, Minus, RotateCcw, Sigma, Slash, Type } from 'lucide-react'
 
 import { Menu, MenuRow } from './menu'
 import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
@@ -43,7 +43,18 @@ function LayoutIcon({ preset }) {
   )
 }
 
-export default function ChartToolRail({ controls, tool, onToolChange, canAnnotate, backHref, layout = '1', onLayoutChange }) {
+export default function ChartToolRail({
+  controls,
+  tool,
+  onToolChange,
+  canAnnotate,
+  backHref,
+  layout = '1',
+  onLayoutChange,
+  linkable = false,
+  linked = false,
+  onLinkedChange,
+}) {
   return (
     <nav aria-label="Chart tools" className="flex flex-col items-center gap-1 py-2 border-r border-white/[0.06]">
       <RailButton label="Crosshair" icon={Crosshair} pressed={tool === 'crosshair'} onClick={() => onToolChange('crosshair')} />
@@ -91,6 +102,11 @@ export default function ChartToolRail({ controls, tool, onToolChange, canAnnotat
           ))}
         </Menu>
       </div>
+      {linkable ? (
+        <div className="hidden lg:flex">
+          <RailButton label="Link panes" icon={Link2} pressed={linked} onClick={() => onLinkedChange(!linked)} />
+        </div>
+      ) : null}
       <RailButton
         label="Reset price scale"
         icon={RotateCcw}

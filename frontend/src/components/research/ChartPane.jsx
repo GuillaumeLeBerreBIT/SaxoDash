@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useSize } from '../../lib/chartGeometry'
 import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { moveCaption } from '../../lib/research'
+import { resolveTimeViewChange, windowToDates } from '../../lib/timeWindow'
 import { Card, InstrumentLogo } from '../ui'
 import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
@@ -60,10 +61,12 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
   const instrument = slot.uic ? { uic: slot.uic, assetType: slot.assetType } : null
   const {
     chart,
+    allBars,
     bars,
     rangeBars,
     ind,
     timeWindow,
+    timeView,
     earningsMarkers,
     priceLines,
     trendLines,
@@ -76,7 +79,21 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
     instrument,
     range: controls.range,
     timeView: view.timeView,
+    followDates: view.followDates,
   })
+  const shownDates = windowToDates(timeWindow, allBars)
+  const reportWindow = view.reportWindow
+  useEffect(() => {
+    reportWindow(shownDates)
+  })
+  const paneView = {
+    ...view,
+    timeView,
+    setTimeView: (next) => {
+      const change = resolveTimeViewChange(next, timeView, { bars: allBars, range: controls.range })
+      view.commitTimeView(change.timeView, change.dates)
+    },
+  }
   const [hover, setHover] = useState(null)
   const [canvasRef, canvasSize] = useSize()
   const safeHover = hover != null && hover < bars.length ? hover : null
@@ -96,7 +113,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           bars={bars}
           ind={ind}
           timeWindow={timeWindow}
-          controls={{ ...controls, ...view }}
+          controls={{ ...controls, ...paneView }}
           hover={safeHover}
           setHover={setHover}
           symbol={slot.symbol}
