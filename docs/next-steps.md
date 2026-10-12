@@ -15,9 +15,12 @@ Done 2026-09-30 — up to four panes on `/research/chart`, each its own symbol,
 spec `docs/superpowers/specs/2026-09-29-chart-splits-design.md`. Next Advanced
 View slices, in rough order (see that spec's "Roadmap"):
 
-1. Workspace follow-ups: sync switches (symbol, range, crosshair; time/scroll
-   sync after axis panning), a custom rows × cols grid, saved named workspace
-   tabs.
+1. Workspace follow-ups: a custom rows × cols grid, saved named workspace
+   tabs. Linked time range and linked crosshair are done (2026-10-12, one
+   "Link panes" toggle, spec
+   `docs/superpowers/specs/2026-10-11-linked-research-charts-design.md`); the
+   compare overlay (a second symbol drawn in one pane) is the remaining 5C
+   slice.
 2. Panels menu: Overview (fundamentals of the active pane), News (compact),
    Notes (thesis/target/stop), Lines (price lines).
 3. Drawing tools: trend line, ray, rectangle, Fibonacci and text, with visible
