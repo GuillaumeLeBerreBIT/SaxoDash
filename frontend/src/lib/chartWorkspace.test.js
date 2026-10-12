@@ -3,7 +3,7 @@ import { readWorkspace, sameSlot, sanitizeWorkspace, withActiveSlot, writeWorksp
 
 const nvda = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
 const amd = { symbol: 'AMD', uic: 7, assetType: 'Stock' }
-const DEFAULTS = { layout: '1', slots: [null], active: 0 }
+const DEFAULTS = { layout: '1', slots: [null], active: 0, linked: false }
 
 describe('sanitizeWorkspace', () => {
   it('defaults to one empty pane', () => {
@@ -16,6 +16,7 @@ describe('sanitizeWorkspace', () => {
       layout: '1',
       slots: [nvda],
       active: 0,
+      linked: false,
     })
   })
 
@@ -37,6 +38,18 @@ describe('sanitizeWorkspace', () => {
     expect(sanitizeWorkspace({ layout: '2h', slots: [nvda, amd], active: 3 }).active).toBe(0)
     expect(sanitizeWorkspace({ layout: '2h', slots: [nvda, amd], active: -1 }).active).toBe(0)
   })
+
+  it('reads linked only when it is exactly true', () => {
+    const base = { layout: '2h', slots: [nvda, amd], active: 0 }
+    expect(sanitizeWorkspace(base).linked).toBe(false)
+    expect(sanitizeWorkspace({ ...base, linked: true }).linked).toBe(true)
+    expect(sanitizeWorkspace({ ...base, linked: 'yes' }).linked).toBe(false)
+    expect(sanitizeWorkspace({ ...base, linked: 1 }).linked).toBe(false)
+  })
+
+  it('keeps linked across a layout that shrinks to one pane', () => {
+    expect(sanitizeWorkspace({ layout: '1', slots: [nvda, amd], active: 0, linked: true }).linked).toBe(true)
+  })
 })
 
 describe('readWorkspace and writeWorkspace', () => {
@@ -44,9 +57,14 @@ describe('readWorkspace and writeWorkspace', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('round-trips a workspace', () => {
-    const workspace = { layout: '2v', slots: [nvda, amd], active: 1 }
+    const workspace = { layout: '2v', slots: [nvda, amd], active: 1, linked: false }
     expect(writeWorkspace(workspace)).toBe(true)
     expect(readWorkspace()).toEqual(workspace)
+  })
+
+  it('round-trips linked through storage', () => {
+    writeWorkspace({ layout: '2h', slots: [nvda, amd], active: 0, linked: true })
+    expect(readWorkspace().linked).toBe(true)
   })
 
   it('reads the defaults when nothing is stored', () => {

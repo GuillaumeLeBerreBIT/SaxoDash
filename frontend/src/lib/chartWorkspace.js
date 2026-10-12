@@ -17,7 +17,7 @@ export function sanitizeWorkspace(raw) {
   const slots = resizeSlots(Array.isArray(source.slots) ? source.slots.map(sanitizeSlot) : [], preset.panes)
   const active =
     Number.isInteger(source.active) && source.active >= 0 && source.active < preset.panes ? source.active : 0
-  return { layout: preset.id, slots, active }
+  return { layout: preset.id, slots, active, linked: source.linked === true }
 }
 
 export function readWorkspace() {
@@ -28,9 +28,9 @@ export function readWorkspace() {
   }
 }
 
-export function writeWorkspace({ layout, slots, active }) {
+export function writeWorkspace({ layout, slots, active, linked }) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ layout, slots, active }))
+    localStorage.setItem(KEY, JSON.stringify({ layout, slots, active, linked }))
     return true
   } catch {
     return false

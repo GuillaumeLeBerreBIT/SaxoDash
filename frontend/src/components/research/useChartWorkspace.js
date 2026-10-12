@@ -54,9 +54,20 @@ export function useChartWorkspace({ symbol, instrument, selectSymbol }) {
     const preset = layoutById(id)
     const slots = resizeSlots(workspace.slots, preset.panes)
     const active = activeAfterResize(workspace.active, workspace.slots.length, slots)
-    setState((previous) => ({ ...previous, workspace: { layout: preset.id, slots, active } }))
+    setState((previous) => ({ ...previous, workspace: { ...previous.workspace, layout: preset.id, slots, active } }))
     if (active !== workspace.active) show(slots[active])
   }
 
-  return { layout: workspace.layout, slots: workspace.slots, active: workspace.active, activate, setLayout }
+  const setLinked = (next) =>
+    setState((previous) => ({ ...previous, workspace: { ...previous.workspace, linked: next } }))
+
+  return {
+    layout: workspace.layout,
+    slots: workspace.slots,
+    active: workspace.active,
+    linked: workspace.linked,
+    activate,
+    setLayout,
+    setLinked,
+  }
 }
