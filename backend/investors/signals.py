@@ -79,10 +79,15 @@ def _combined(position, row):
     return merged
 
 
-def _positions(quarter_end):
-    tickers = dict(Security.objects.filter(ticker__isnull=False).values_list('cusip', 'ticker'))
+def stock_positions(quarter_end, tickers_by_cusip=None):
+    moves = PositionMove.objects.filter(quarter_end=quarter_end, put_call='')
+    if tickers_by_cusip is None:
+        tickers = dict(Security.objects.filter(ticker__isnull=False).values_list('cusip', 'ticker'))
+    else:
+        tickers = tickers_by_cusip
+        moves = moves.filter(cusip__in=tickers)
     positions = {}
-    rows = PositionMove.objects.filter(quarter_end=quarter_end, put_call='').order_by('cusip').values(
+    rows = moves.order_by('cusip').values(
         'cusip', 'issuer', 'investor_id', 'kind', 'shares', 'previous_shares', 'value', 'previous_value',
         'weight_pct', 'previous_weight_pct',
     )
@@ -97,7 +102,7 @@ def _positions(quarter_end):
 
 def _stocks(quarter_end):
     stocks = {}
-    for (identity, investor_id), position in _positions(quarter_end).items():
+    for (identity, investor_id), position in stock_positions(quarter_end).items():
         stock = stocks.get(identity)
         if stock is None:
             stock = stocks[identity] = _blank(position)
