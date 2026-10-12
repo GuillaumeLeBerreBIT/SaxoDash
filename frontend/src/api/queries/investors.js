@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 
 import {
   addInvestor, getFilingAlerts, getInvestor, getInvestorChanges, getInvestorCopy, getInvestorHub, getInvestors, getInvestorStocks,
-  markFilingAlertsRead, searchFilers, setInvestorFollowed, stopTrackingInvestor,
+  getOwnership, getOwnershipSummary, markFilingAlertsRead, searchFilers, setInvestorFollowed, stopTrackingInvestor,
 } from '../client'
 
 const IMPORT_POLL_MS = 4000
@@ -19,6 +19,8 @@ export const investorsKeys = {
   stocks: (view, quarter) => ['investor-stocks', view, quarter ?? 'signal'],
   search: (q) => ['investor-search', q],
   alerts: ['investor-alerts'],
+  ownershipSummary: (tickers) => ['investor-ownership', 'summary', tickers.join(',')],
+  ownership: (ticker) => ['investor-ownership', 'detail', ticker],
 }
 
 const importing = (cards) => Array.isArray(cards) && cards.some((card) => card.import)
@@ -63,6 +65,23 @@ export function useInvestorStocks(view, quarter) {
     queryKey: investorsKeys.stocks(view, quarter),
     queryFn: () => getInvestorStocks(view, quarter),
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useOwnershipSummary(tickers) {
+  return useQuery({
+    queryKey: investorsKeys.ownershipSummary(tickers),
+    queryFn: () => getOwnershipSummary(tickers),
+    enabled: tickers.length > 0,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useOwnership(ticker) {
+  return useQuery({
+    queryKey: investorsKeys.ownership(ticker),
+    queryFn: () => getOwnership(ticker),
+    enabled: Boolean(ticker),
   })
 }
 

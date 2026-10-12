@@ -6,7 +6,7 @@ vi.mock('../client')
 import * as client from '../client'
 import {
   investorsKeys, useAddInvestor, useFilingAlerts, useFollowInvestor, useInvestor, useInvestorCopy, useInvestorChanges, useInvestorHub,
-  useInvestors, useInvestorSearch, useInvestorStocks, useMarkAlertsRead, useStopTracking,
+  useInvestors, useInvestorSearch, useInvestorStocks, useMarkAlertsRead, useOwnership, useOwnershipSummary, useStopTracking,
 } from './investors'
 
 function setup(useHook, queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
@@ -93,6 +93,28 @@ describe('investor queries', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(client.getInvestorStocks).toHaveBeenCalledWith('sold', '2026-03-31')
     expect(investorsKeys.stocks('sold')).not.toEqual(investorsKeys.stocks('bought'))
+  })
+
+  it('asks for the ownership of several tickers in one request', async () => {
+    client.getOwnershipSummary.mockResolvedValue({ stocks: {} })
+    const { result } = setup(() => useOwnershipSummary(['AAPL', 'MSFT']))
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(client.getOwnershipSummary).toHaveBeenCalledWith(['AAPL', 'MSFT'])
+    expect(investorsKeys.ownershipSummary(['AAPL'])).not.toEqual(investorsKeys.ownershipSummary(['AAPL', 'MSFT']))
+  })
+
+  it('asks nothing when there is no ticker to look up', () => {
+    setup(() => useOwnershipSummary([]))
+    setup(() => useOwnership(null))
+    expect(client.getOwnershipSummary).not.toHaveBeenCalled()
+    expect(client.getOwnership).not.toHaveBeenCalled()
+  })
+
+  it('loads the funds behind one ticker', async () => {
+    client.getOwnership.mockResolvedValue({ ticker: 'NBIS', funds: [] })
+    const { result } = setup(() => useOwnership('NBIS'))
+    await waitFor(() => expect(result.current.data).toEqual({ ticker: 'NBIS', funds: [] }))
+    expect(client.getOwnership).toHaveBeenCalledWith('NBIS')
   })
 
   it('does not search EDGAR for fewer than three characters', () => {

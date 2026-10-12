@@ -48,6 +48,7 @@ function stub(positions = [msft]) {
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
+  queries.useOwnershipSummary.mockReturnValue(idle)
 }
 
 describe('Portfolio holdings table', () => {
@@ -59,6 +60,27 @@ describe('Portfolio holdings table', () => {
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderWithProviders(<Portfolio />)
     expectValidHeadingOutline(container)
+  })
+
+  it('shows what tracked funds did with a holding and skips non-USD ones', () => {
+    const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
+    stub([msft, asml])
+    queries.useOwnershipSummary.mockReturnValue({
+      ...idle,
+      data: {
+        quarter: '2026-06-30',
+        stocks: { MSFT: { owners: 34, new: 2, added: 13, trimmed: 14, sold_out: 4, unchanged: 5 } },
+      },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['MSFT'])
+    expect(screen.getByRole('columnheader', { name: 'Funds' })).toBeInTheDocument()
+    const links = screen.getAllByRole('link', { name: /tracked funds buying/ })
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAccessibleName('15 tracked funds buying, 18 selling in Q2 2026')
+    expect(links[0]).toHaveAttribute('href', '/research?symbol=MSFT&tab=funds')
   })
 
   it('keeps one h1 and no skipped level while loading', () => {
