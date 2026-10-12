@@ -413,4 +413,8 @@ value sits in cash and is counted; leading unpriceable periods are dropped, so `
 first day the clone could really be bought. Price return only, in USD, no dividends or costs.
 Per-year figures are null under a year of history, and the directory sorts on the annualised
 edge because total returns over different spans are not comparable. Saxo's daily bars are already split-adjusted
-(checked on NVDA, GOOGL, AMZN and WMT across their splits), so closes are stored as served.
+(checked on NVDA, GOOGL, AMZN and WMT across their splits), so closes are stored as served. Tickers are matched by `price_feed.resolve`, not the Discover
+scan's stock-only resolver: it searches stocks and ETFs (funds hold IVV, QQQ, GLD as top
+positions), knows Saxo's share-class spellings (`BRK.B` is `BRKb`, `LEN.B` is `LEN_B`) and its
+`_NEW` relistings, and falls back to the issuer's first name word when a symbol search returns
+nothing (`ETN` does, `Eaton` does not) — always requiring the symbol itself to match.

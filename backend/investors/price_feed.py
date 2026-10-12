@@ -5,11 +5,11 @@ from datetime import timedelta
 from django.utils import timezone
 
 from analytics.benchmarks import BENCHMARKS
-from research import market, scan
+from research import market
 from research.providers import ProviderNotConnected
 
 from . import copying
-from .models import Investor, PriceHistory
+from .models import Investor, PriceHistory, Security
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +22,43 @@ BENCHMARK_UIC = BENCHMARKS['sp500']['uic']
 BENCHMARK_ASSET_TYPE = BENCHMARKS['sp500']['asset_type']
 
 
+US_VENUES = ('NYSE', 'NASDAQ', 'NYSE_ARCA', 'NYSE_MKT', 'AMEX', 'BATS_BZX', 'NSC')
+SEARCH_TYPES = 'Stock,Etf'
+RELISTED = '_NEW'
+MIN_NAME_WORD = 4
+
+
 class NoBars(Exception):
     pass
+
+
+def saxo_symbols(ticker):
+    forms = {ticker}
+    if '.' in ticker:
+        base, share_class = ticker.split('.', 1)
+        forms |= {f'{base}{share_class.lower()}', f'{base}_{share_class}', f'{base}{share_class}'}
+    return forms | {f'{form}{RELISTED}' for form in forms}
+
+
+def _search_keywords(ticker, name):
+    yield ticker.split('.', 1)[0]
+    first_word = (name or '').split(' ', 1)[0]
+    if len(first_word) >= MIN_NAME_WORD and first_word.isalpha():
+        yield first_word
+
+
+def resolve(ticker, name=''):
+    wanted = {form.upper() for form in saxo_symbols(ticker)}
+    for keywords in _search_keywords(ticker, name):
+        matches = [
+            found for found in market.search(keywords, SEARCH_TYPES)
+            if found['symbol'].upper() in wanted and found.get('currency') == 'USD'
+        ]
+        if matches:
+            listed = [found for found in matches if found.get('exchange') in US_VENUES]
+            exact = [found for found in listed or matches if found['symbol'].upper() == ticker.upper()]
+            return (exact or listed or matches)[0]
+    return None
 
 
 def _wanted():
@@ -59,9 +94,13 @@ def _due(now):
     return sorted(due, key=lambda row: (row.ticker != copying.BENCHMARK_TICKER, row.ticker))
 
 
+def _name(ticker):
+    return Security.objects.filter(ticker=ticker).exclude(name='').values_list('name', flat=True).first() or ''
+
+
 def _fetch(row):
     if row.uic is None:
-        found = scan.resolve(row.ticker)
+        found = resolve(row.ticker, _name(row.ticker))
         if found is None:
             row.status = PriceHistory.UNMATCHED
             return

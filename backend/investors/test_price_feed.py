@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from research.providers import ProviderError, ProviderNotConnected
@@ -22,12 +22,68 @@ def rows(*closes):
     return [[bar['date'], bar['close']] for bar in bars(*closes)]
 
 
+def listing(symbol, uic, exchange='NYSE', currency='USD', asset_type='Stock'):
+    return {'symbol': symbol, 'uic': uic, 'exchange': exchange, 'currency': currency, 'asset_type': asset_type}
+
+
+@patch('investors.price_feed.market.search')
+class ResolveTest(SimpleTestCase):
+    def test_takes_the_us_dollar_listing_of_the_exact_symbol(self, search):
+        search.return_value = [listing('AAPL', 9, 'XETR', 'EUR'), listing('AAPLX', 8), listing('AAPL', 211, 'NASDAQ')]
+
+        self.assertEqual(price_feed.resolve('AAPL')['uic'], 211)
+        search.assert_called_once_with('AAPL', 'Stock,Etf')
+
+    def test_an_etf_is_found_too(self, search):
+        search.return_value = [listing('IVV', 37891, 'ASX', 'AUD', 'Etf'), listing('IVV', 31973, 'NYSE_ARCA', 'USD', 'Etf')]
+
+        found = price_feed.resolve('IVV')
+
+        self.assertEqual((found['uic'], found['asset_type']), (31973, 'Etf'))
+
+    def test_a_share_class_matches_saxos_spelling_of_it(self, search):
+        search.return_value = [listing('BRKa', 2630), listing('BRKb', 2631), listing('BRKU', 1, 'NASDAQ')]
+
+        self.assertEqual(price_feed.resolve('BRK.B')['uic'], 2631)
+        search.assert_called_once_with('BRK', 'Stock,Etf')
+
+    def test_an_underscored_share_class_and_a_relisted_symbol_match(self, search):
+        search.side_effect = [[listing('LEN', 1), listing('LEN_B', 2)], [listing('SHOP_NEW', 3, 'NASDAQ')]]
+
+        self.assertEqual(price_feed.resolve('LEN.B')['uic'], 2)
+        self.assertEqual(price_feed.resolve('SHOP')['uic'], 3)
+
+    def test_falls_back_to_the_company_name_when_the_symbol_finds_nothing(self, search):
+        search.side_effect = [[], [listing('ETN', 461)]]
+
+        self.assertEqual(price_feed.resolve('ETN', 'EATON CORP PLC')['uic'], 461)
+        self.assertEqual([call.args[0] for call in search.call_args_list], ['ETN', 'EATON'])
+
+    def test_a_name_search_still_has_to_match_the_symbol(self, search):
+        search.side_effect = [[], [listing('ETNX', 5), listing('EAT', 6)]]
+
+        self.assertIsNone(price_feed.resolve('ETN', 'EATON CORP PLC'))
+
+    def test_a_short_or_numeric_first_word_is_not_searched(self, search):
+        search.return_value = []
+
+        price_feed.resolve('ABC', 'AB INC')
+        price_feed.resolve('XYZ', '3M CO')
+
+        self.assertEqual([call.args[0] for call in search.call_args_list], ['ABC', 'XYZ'])
+
+    def test_no_us_dollar_listing_is_no_match(self, search):
+        search.return_value = [listing('BAM', 1, 'TSE', 'CAD')]
+
+        self.assertIsNone(price_feed.resolve('BAM'))
+
+
 @patch('investors.price_feed.market.chart')
-@patch('investors.price_feed.scan.resolve')
+@patch('investors.price_feed.resolve')
 class RefreshTest(TestCase):
     def setUp(self):
         self.investor = make_investor()
-        Security.objects.create(cusip='037833100', ticker='AAPL')
+        Security.objects.create(cusip='037833100', ticker='AAPL', name='APPLE INC')
         Security.objects.create(cusip='67066G104', ticker='NVDA')
         store_quarter(self.investor, Q1, [('037833100', 'APPLE INC', 10, 600), ('999999999', 'ACME', 1, 5)])
         store_quarter(self.investor, Q2, [('67066G104', 'NVIDIA CORP', 10, 600)])
@@ -40,7 +96,7 @@ class RefreshTest(TestCase):
         return {'uic': uic, 'asset_type': asset_type, 'symbol': 'X'}
 
     def test_fetches_the_benchmark_and_every_ticker_a_clone_ever_held(self, resolve, chart):
-        resolve.side_effect = lambda ticker: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
+        resolve.side_effect = lambda ticker, name: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
         chart.return_value = bars(10, 11)
 
         self.assertEqual(self.refresh(), 3)
@@ -54,11 +110,12 @@ class RefreshTest(TestCase):
         )
         self.assertEqual(PriceHistory.objects.get(ticker='AAPL').closes, rows(10, 11))
         self.assertEqual([call.args[0] for call in resolve.call_args_list], ['AAPL', 'NVDA'])
+        self.assertEqual(resolve.call_args_list[0].args[1], 'APPLE INC')
         chart.assert_any_call(1, 'Stock', price_feed.DAILY, price_feed.BARS)
         self.assertEqual(self.pauses, [price_feed.PAUSE_SECONDS] * 3)
 
     def test_a_ticker_saxo_does_not_list_is_marked_and_never_charted(self, resolve, chart):
-        resolve.side_effect = lambda ticker: None if ticker == 'AAPL' else self.found(2)
+        resolve.side_effect = lambda ticker, name: None if ticker == 'AAPL' else self.found(2)
         chart.return_value = bars(10, 11)
 
         self.assertEqual(self.refresh(), 2)
@@ -67,7 +124,7 @@ class RefreshTest(TestCase):
         self.assertEqual((apple.status, apple.closes, apple.checked_at), (PriceHistory.UNMATCHED, [], NOW))
 
     def test_one_failing_ticker_does_not_stop_the_rest(self, resolve, chart):
-        resolve.side_effect = lambda ticker: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
+        resolve.side_effect = lambda ticker, name: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
         chart.side_effect = lambda uic, *_: (_ for _ in ()).throw(ProviderError('boom')) if uic == 1 else bars(10, 11)
 
         self.assertEqual(self.refresh(), 2)
@@ -104,7 +161,7 @@ class RefreshTest(TestCase):
         chart.assert_not_called()
 
     def test_the_next_night_refreshes_current_holdings_and_the_benchmark_only(self, resolve, chart):
-        resolve.side_effect = lambda ticker: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
+        resolve.side_effect = lambda ticker, name: self.found({'AAPL': 1, 'NVDA': 2}[ticker])
         chart.return_value = bars(10, 11)
         self.refresh()
         chart.reset_mock()
@@ -114,7 +171,7 @@ class RefreshTest(TestCase):
         self.assertEqual(sorted(call.args[0] for call in chart.call_args_list), [2, price_feed.BENCHMARK_UIC])
 
     def test_an_unlisted_ticker_is_retried_after_a_week(self, resolve, chart):
-        resolve.side_effect = lambda ticker: None if ticker == 'NVDA' else self.found(1)
+        resolve.side_effect = lambda ticker, name: None if ticker == 'NVDA' else self.found(1)
         chart.return_value = bars(10, 11)
         self.refresh()
         resolve.reset_mock()
