@@ -147,6 +147,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           onEditTextAnnotationText={textAnnotationActions.setText}
           fitHeight={canvasSize.height}
           paneHeights={paneHeights}
+          shedToFit={split}
           tool={tool}
           onPlaced={onPlaced}
         />
