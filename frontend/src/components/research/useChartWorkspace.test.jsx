@@ -107,6 +107,23 @@ describe('useChartWorkspace', () => {
   it('persists the workspace', () => {
     const { result } = renderWorkspace()
     act(() => result.current.workspace.setLayout('2v'))
-    expect(stored()).toEqual({ layout: '2v', slots: [nvda, null], active: 1 })
+    expect(stored()).toEqual({ layout: '2v', slots: [nvda, null], active: 1, linked: false })
+  })
+
+  it('is unlinked until asked, and remembers the choice', () => {
+    store({ layout: '2h', slots: [nvda, amd], active: 0 })
+    const { result } = renderWorkspace()
+    expect(result.current.workspace.linked).toBe(false)
+    act(() => result.current.workspace.setLinked(true))
+    expect(result.current.workspace.linked).toBe(true)
+    expect(stored().linked).toBe(true)
+  })
+
+  it('keeps linked when the layout changes', () => {
+    store({ layout: '2h', slots: [nvda, amd], active: 0, linked: true })
+    const { result } = renderWorkspace()
+    act(() => result.current.workspace.setLayout('4'))
+    expect(result.current.workspace.linked).toBe(true)
+    expect(stored().linked).toBe(true)
   })
 })

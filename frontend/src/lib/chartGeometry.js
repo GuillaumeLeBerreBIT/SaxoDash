@@ -123,12 +123,30 @@ export function useWidth() {
 const TIME_AXIS_HEIGHT = 22
 const CANVAS_PADDING = 4
 export const MIN_PRICE_HEIGHT = 240
+export const SPLIT_MIN_PRICE_HEIGHT = 120
+const SHORTEST_PRICE_HEIGHT = 40
+const PANE_HIDING_ORDER = ['macd', 'rsi', 'volume']
 
-export function pricePaneHeight({ total, legendHeight, panes, paneHeights }) {
+function priceRoom({ total, legendHeight, panes, paneHeights }) {
   const lower = Object.keys(panes)
     .filter((key) => panes[key])
     .reduce((sum, key) => sum + paneHeights[key] + 1, 0)
-  return Math.max(MIN_PRICE_HEIGHT, Math.floor(total - legendHeight - TIME_AXIS_HEIGHT - CANVAS_PADDING - lower))
+  return Math.floor(total - legendHeight - TIME_AXIS_HEIGHT - CANVAS_PADDING - lower)
+}
+
+export function pricePaneHeight(layout) {
+  return Math.max(MIN_PRICE_HEIGHT, priceRoom(layout))
+}
+
+export function fitChartPanes({ total, legendHeight, panes, paneHeights }) {
+  if (!(total > 0)) return { panes, priceHeight: SPLIT_MIN_PRICE_HEIGHT }
+  const shown = { ...panes }
+  const room = () => priceRoom({ total, legendHeight, panes: shown, paneHeights })
+  for (const key of PANE_HIDING_ORDER) {
+    if (room() >= SPLIT_MIN_PRICE_HEIGHT) break
+    shown[key] = false
+  }
+  return { panes: shown, priceHeight: Math.max(SHORTEST_PRICE_HEIGHT, room()) }
 }
 
 /** Everything the price pane needs to place a bar: scales, slots and ticks.

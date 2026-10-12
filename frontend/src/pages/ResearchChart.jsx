@@ -10,6 +10,7 @@ import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { useCommandPalette } from '../components/useCommandPalette'
 import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
+import { LinkedHoverProvider } from '../components/research/LinkedHover'
 import SymbolBar from '../components/research/SymbolBar'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { RangeButtons } from '../components/research/chartHeader'
@@ -27,7 +28,14 @@ export default function ResearchChart() {
   const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
-  const { view: paneView, rangePicked } = usePaneViews(workspace.slots, controls.range)
+  const layout = layoutById(workspace.layout)
+  const linkable = layout.panes > 1
+  const linked = workspace.linked && linkable
+  const { view: paneView, rangePicked, alignTo } = usePaneViews(workspace.slots, controls.range, linked)
+  const setLinked = (next) => {
+    workspace.setLinked(next)
+    if (next) alignTo(workspace.active)
+  }
   const activeView = paneView(workspace.active)
   const rangeControls = {
     ...controls,
@@ -60,7 +68,6 @@ export default function ResearchChart() {
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
 
-  const layout = layoutById(workspace.layout)
   const split = layout.panes > 1
   const activeSlot = workspace.slots[workspace.active]
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
@@ -76,6 +83,9 @@ export default function ResearchChart() {
         backHref={researchHref(symbol, undefined, instrument)}
         layout={workspace.layout}
         onLayoutChange={workspace.setLayout}
+        linkable={linkable}
+        linked={linked}
+        onLinkedChange={setLinked}
       />
 
       <main className="flex flex-col gap-2 p-2 min-w-0 min-h-0">
@@ -98,29 +108,31 @@ export default function ResearchChart() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col gap-2 lg:grid" style={gridStyle(layout)}>
-          {workspace.slots.map((slot, index) => {
-            const active = index === workspace.active
-            return (
-              <ChartPane
-                key={index}
-                slot={slot}
-                index={index}
-                active={active}
-                outlined={split && active}
-                controls={controls}
-                view={paneView(index)}
-                onActivate={() => workspace.activate(index)}
-                tool={tool}
-                onPlaced={() => setTool('crosshair')}
-                paneHeights={paneHeights}
-                style={paneStyle(layout, index)}
-                className={active ? 'flex' : 'hidden lg:flex'}
-                split={split}
-              />
-            )
-          })}
-        </div>
+        <LinkedHoverProvider enabled={linked}>
+          <div className="flex-1 min-h-0 flex flex-col gap-2 lg:grid" style={gridStyle(layout)}>
+            {workspace.slots.map((slot, index) => {
+              const active = index === workspace.active
+              return (
+                <ChartPane
+                  key={index}
+                  slot={slot}
+                  index={index}
+                  active={active}
+                  outlined={split && active}
+                  controls={controls}
+                  view={paneView(index)}
+                  onActivate={() => workspace.activate(index)}
+                  tool={tool}
+                  onPlaced={() => setTool('crosshair')}
+                  paneHeights={paneHeights}
+                  style={paneStyle(layout, index)}
+                  className={active ? 'flex' : 'hidden lg:flex'}
+                  split={split}
+                />
+              )
+            })}
+          </div>
+        </LinkedHoverProvider>
       </main>
 
       <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0">

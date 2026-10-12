@@ -2,7 +2,7 @@ import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
-import { OVERLAY_STROKES, pricePaneHeight, useSize } from '../../lib/chartGeometry'
+import { OVERLAY_STROKES, fitChartPanes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { RVOL_WINDOW } from '../../lib/indicators'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
@@ -70,6 +70,7 @@ export default function ChartCanvas({
   controls,
   hover,
   setHover,
+  hoverDimmed = false,
   symbol,
   isLoading,
   error,
@@ -96,6 +97,7 @@ export default function ChartCanvas({
   tool = 'crosshair',
   onPlaced,
   timeWindow,
+  shedToFit = false,
 }) {
   const { type, overlays, panes, range, yScale, setYScale, yShift, setYShift, setTimeView } = controls
   const shown = timeWindow ?? resolveTimeWindow(LATEST_TIME_VIEW, { total: bars.length, range })
@@ -112,10 +114,10 @@ export default function ChartCanvas({
   const bar = bars[hover ?? bars.length - 1]
   const [legendRef, legendSize] = useSize()
 
-  const resolvedPriceHeight =
-    fitHeight != null
-      ? pricePaneHeight({ total: fitHeight, legendHeight: legendSize.height, panes, paneHeights })
-      : priceHeight
+  const layout = { total: fitHeight, legendHeight: legendSize.height, panes, paneHeights }
+  const fitted = fitHeight != null && shedToFit ? fitChartPanes(layout) : null
+  const shownPanes = fitted?.panes ?? panes
+  const resolvedPriceHeight = fitted?.priceHeight ?? (fitHeight != null ? pricePaneHeight(layout) : priceHeight)
 
   const placeholder = chartPlaceholderFor({
     isLoading,
@@ -161,6 +163,7 @@ export default function ChartCanvas({
             overlays={overlays}
             hover={hover}
             setHover={setHover}
+            hoverDimmed={hoverDimmed}
             height={resolvedPriceHeight}
             earningsMarkers={earningsMarkers}
             yScale={yScale}
@@ -188,19 +191,19 @@ export default function ChartCanvas({
             tool={tool}
             onPlaced={onPlaced}
           />
-          {panes.volume ? (
+          {shownPanes.volume ? (
             <SubPane title="Volume" height={paneHeights.volume}>
-              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} />
+              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
-          {panes.rsi ? (
+          {shownPanes.rsi ? (
             <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={paneHeights.rsi}>
-              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} />
+              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
-          {panes.macd ? (
+          {shownPanes.macd ? (
             <SubPane title="MACD 12 26 9" height={paneHeights.macd}>
-              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
+              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
           <TimeAxis data={bars} onBarCountChange={zoomTime} onReset={resetTime} />

@@ -73,6 +73,9 @@ function stubQueries() {
   })
 }
 
+const nvdaSlot = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
+const tslaSlot = { symbol: 'TSLA', uic: 9, assetType: 'Stock' }
+const renderPage = () => renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement
 const backLink = () => screen.getByRole('link', { name: 'Back to Research' })
 const panes = () => screen.getAllByRole('region', { name: /(chart|^Empty pane( \d)?)$/ })
@@ -290,6 +293,29 @@ describe('ResearchChart', () => {
 
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
     expect(panes()).toHaveLength(2)
+  })
+
+  it('links panes only in a split layout and saves the choice', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(
+      'saxodash:chart-workspace',
+      JSON.stringify({ layout: '2h', slots: [nvdaSlot, tslaSlot], active: 0 }),
+    )
+    renderPage()
+    const toggle = screen.getByRole('button', { name: 'Link panes' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await user.click(toggle)
+    expect(screen.getByRole('button', { name: 'Link panes' })).toHaveAttribute('aria-pressed', 'true')
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-workspace')).linked).toBe(true)
+  })
+
+  it('offers no Link panes toggle in a single layout even if linked was saved', () => {
+    localStorage.setItem(
+      'saxodash:chart-workspace',
+      JSON.stringify({ layout: '1', slots: [nvdaSlot], active: 0, linked: true }),
+    )
+    renderPage()
+    expect(screen.queryByRole('button', { name: 'Link panes' })).not.toBeInTheDocument()
   })
 })
 

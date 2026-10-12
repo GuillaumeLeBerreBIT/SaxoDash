@@ -158,6 +158,26 @@ describe('ChartCanvas panning and zoom', () => {
   })
 })
 
+describe('ChartCanvas fitting a short pane', () => {
+  const withVolume = () => ({ ...controls(), panes: { volume: true, rsi: false, macd: false } })
+
+  it('keeps the date strip and hides volume when the pane is too short for both', () => {
+    render(canvas({ controls: withVolume(), fitHeight: 180, shedToFit: true }))
+    expect(screen.getByTestId('time-axis')).toBeInTheDocument()
+    expect(screen.queryByText('Volume')).not.toBeInTheDocument()
+  })
+
+  it('shows volume when the pane has room', () => {
+    render(canvas({ controls: withVolume(), fitHeight: 400, shedToFit: true }))
+    expect(screen.getByText('Volume')).toBeInTheDocument()
+  })
+
+  it('keeps volume in a short pane unless asked to fit', () => {
+    render(canvas({ controls: withVolume(), fitHeight: 180 }))
+    expect(screen.getByText('Volume')).toBeInTheDocument()
+  })
+})
+
 describe('ChartCanvas legend height', () => {
   let wrapAt = Infinity
   const LINE = 18

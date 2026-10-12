@@ -147,4 +147,23 @@ describe('ChartToolRail', () => {
     const wrapper = screen.getByRole('button', { name: 'Layout' }).closest('.hidden')
     expect(wrapper).toHaveClass('hidden', 'lg:flex')
   })
+
+  it('offers Link panes only when there is more than one pane', () => {
+    renderRail()
+    expect(screen.queryByRole('button', { name: 'Link panes' })).not.toBeInTheDocument()
+  })
+
+  it('toggles linking', async () => {
+    const onLinkedChange = vi.fn()
+    renderRail({ linkable: true, linked: false, onLinkedChange })
+    const button = screen.getByRole('button', { name: 'Link panes' })
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.setup().click(button)
+    expect(onLinkedChange).toHaveBeenCalledWith(true)
+  })
+
+  it('shows linking as on', () => {
+    renderRail({ linkable: true, linked: true, onLinkedChange: vi.fn() })
+    expect(screen.getByRole('button', { name: 'Link panes' })).toHaveAttribute('aria-pressed', 'true')
+  })
 })

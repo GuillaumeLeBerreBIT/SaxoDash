@@ -4,6 +4,8 @@ import {
   MAX_Y_SCALE,
   MAX_Y_SHIFT,
   MIN_PRICE_HEIGHT,
+  SPLIT_MIN_PRICE_HEIGHT,
+  fitChartPanes,
   MIN_Y_SCALE,
   PAD_R,
   barCountFromDrag,
@@ -220,6 +222,41 @@ describe('pricePaneHeight', () => {
     const panes = { volume: true, rsi: true, macd: true }
     expect(pricePaneHeight({ total: 300, legendHeight: 68, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
     expect(pricePaneHeight({ total: 0, legendHeight: 68, panes, paneHeights })).toBe(MIN_PRICE_HEIGHT)
+  })
+})
+
+describe('fitChartPanes', () => {
+  const paneHeights = { volume: 74, rsi: 92, macd: 92 }
+  const all = { volume: true, rsi: true, macd: true }
+  const fit = (total, panes = all) => fitChartPanes({ total, legendHeight: 100, panes, paneHeights })
+
+  it('keeps every pane when the price area still has room', () => {
+    expect(fit(700)).toEqual({ panes: all, priceHeight: 700 - 100 - 22 - 4 - 75 - 93 - 93 })
+  })
+
+  it('hides MACD first, then RSI, then volume, until the price area is readable', () => {
+    expect(fit(500).panes).toEqual({ volume: true, rsi: true, macd: false })
+    expect(fit(400).panes).toEqual({ volume: true, rsi: false, macd: false })
+    expect(fit(300).panes).toEqual({ volume: false, rsi: false, macd: false })
+  })
+
+  it('gives the price area what the hidden panes freed', () => {
+    expect(fit(400).priceHeight).toBe(400 - 100 - 22 - 4 - 75)
+    expect(fit(300).priceHeight).toBe(300 - 100 - 22 - 4)
+  })
+
+  it('hides a pane only when hiding it is needed', () => {
+    const volumeOnly = { volume: true, rsi: false, macd: false }
+    expect(fit(100 + 22 + 4 + 75 + SPLIT_MIN_PRICE_HEIGHT, volumeOnly).panes).toEqual(volumeOnly)
+    expect(fit(100 + 22 + 4 + 75 + SPLIT_MIN_PRICE_HEIGHT - 1, volumeOnly).panes.volume).toBe(false)
+  })
+
+  it('leaves the panes alone before the pane has been measured', () => {
+    expect(fit(0)).toEqual({ panes: all, priceHeight: SPLIT_MIN_PRICE_HEIGHT })
+  })
+
+  it('never returns a price area too short to draw', () => {
+    expect(fit(150).priceHeight).toBe(40)
   })
 })
 

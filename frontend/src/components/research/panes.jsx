@@ -35,8 +35,10 @@ const paneMouseProps = (slot, length, setHover) => ({
   onMouseLeave: () => setHover(null),
 })
 
-function HoverLine({ x, height }) {
-  return <line x1={x} x2={x} y1={0} y2={height} stroke={AXIS_TEXT} strokeDasharray="3 3" />
+function HoverLine({ x, height, dimmed }) {
+  return (
+    <line x1={x} x2={x} y1={0} y2={height} stroke={AXIS_TEXT} strokeDasharray="3 3" opacity={dimmed ? 0.4 : undefined} />
+  )
 }
 
 const volumeHeight = (volume, max, height) => (max === 0 ? 0 : (volume / max) * (height - 16))
@@ -58,7 +60,7 @@ const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth,
   })
 })
 
-export function VolumePane({ data, rvol = null, hover, setHover, height = 74 }) {
+export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = false, height = 74 }) {
   const [ref, width] = useWidth()
   const { slot, barWidth, xAt } = paneGeometry(width, data.length)
 
@@ -86,7 +88,7 @@ export function VolumePane({ data, rvol = null, hover, setHover, height = 74 }) 
               fill={hovered.close >= hovered.open ? UP : DOWN}
               opacity={0.85}
             />
-            <HoverLine x={xAt(hover)} height={height} />
+            <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} />
           </>
         ) : null}
         <text x={width - PAD_R + 8} y={14} fill={AXIS_TEXT} fontSize="10" fontFamily={MONO_FONT}>
@@ -135,7 +137,7 @@ const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height }) {
   )
 })
 
-export function RsiPane({ values, hover, setHover, height = 92 }) {
+export function RsiPane({ values, hover, setHover, hoverDimmed = false, height = 92 }) {
   const [ref, width] = useWidth()
   const { slot, chartW, xAt } = paneGeometry(width, values.length)
 
@@ -145,7 +147,7 @@ export function RsiPane({ values, hover, setHover, height = 92 }) {
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, values.length, setHover)}>
       <svg width={width} height={height}>
         <RsiBody values={values} xAt={xAt} width={width} chartW={chartW} height={height} />
-        {hover != null ? <HoverLine x={xAt(hover)} height={height} /> : null}
+        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} /> : null}
       </svg>
     </div>
   )
@@ -185,7 +187,7 @@ const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height }) {
   )
 })
 
-export function MacdPane({ macd, hover, setHover, height = 92 }) {
+export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 92 }) {
   const [ref, width] = useWidth()
   const { slot, chartW, xAt } = paneGeometry(width, macd.line.length)
 
@@ -195,7 +197,7 @@ export function MacdPane({ macd, hover, setHover, height = 92 }) {
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, macd.line.length, setHover)}>
       <svg width={width} height={height}>
         <MacdBody macd={macd} slot={slot} chartW={chartW} xAt={xAt} height={height} />
-        {hover != null ? <HoverLine x={xAt(hover)} height={height} /> : null}
+        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} /> : null}
       </svg>
     </div>
   )

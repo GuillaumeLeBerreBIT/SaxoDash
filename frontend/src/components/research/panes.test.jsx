@@ -20,4 +20,12 @@ describe('VolumePane', () => {
     const opacities = [...container.querySelectorAll('rect')].map((rect) => rect.getAttribute('opacity'))
     expect(opacities).toEqual(['0.4', '0.4'])
   })
+
+  it('dims the hover line on request', () => {
+    const data = [{ date: '2026-08-01', open: 1, high: 2, low: 1, close: 2, volume: 10 }, { date: '2026-08-02', open: 2, high: 3, low: 2, close: 3, volume: 20 }]
+    const plain = render(<VolumePane data={data} hover={1} setHover={vi.fn()} />)
+    expect(plain.container.querySelector('line[opacity="0.4"]')).toBeNull()
+    const dimmed = render(<VolumePane data={data} hover={1} setHover={vi.fn()} hoverDimmed />)
+    expect(dimmed.container.querySelector('line[opacity="0.4"]')).not.toBeNull()
+  })
 })

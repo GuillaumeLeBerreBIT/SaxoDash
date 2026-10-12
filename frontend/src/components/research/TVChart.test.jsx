@@ -63,6 +63,13 @@ describe('TVChart', () => {
     expect(dashed(idle.container)).toBe(0)
     expect(dashed(hovered.container)).toBe(2)
   })
+
+  it('draws the crosshair dimmed for a day matched on an earlier bar', () => {
+    const exact = renderChart({ hover: 10 })
+    expect(exact.container.querySelector('g[pointer-events="none"][opacity="0.4"]')).toBeNull()
+    const dimmed = renderChart({ hover: 10, hoverDimmed: true })
+    expect(dimmed.container.querySelector('g[pointer-events="none"][opacity="0.4"]')).not.toBeNull()
+  })
 })
 
 describe('earnings markers', () => {

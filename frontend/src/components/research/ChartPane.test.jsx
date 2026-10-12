@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { DEFAULT_CHART_PREFS } from '../../lib/chartPrefs'
 import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
+import { fmtDate } from '../../lib/format'
 import { LATEST_TIME_VIEW } from '../../lib/timeWindow'
 import ChartPane from './ChartPane'
+import { LinkedHoverProvider, useLinkedHover } from './LinkedHover'
 
 vi.mock('../../api/queries')
 import * as queries from '../../api/queries'
@@ -29,6 +31,9 @@ const view = {
   setYShift: vi.fn(),
   setTimeView: vi.fn(),
   resetView: vi.fn(),
+  followDates: null,
+  commitTimeView: vi.fn(),
+  reportWindow: vi.fn(),
 }
 
 function stub() {
@@ -128,6 +133,70 @@ describe('ChartPane', () => {
     renderPane({ onActivate })
     fireEvent.mouseDown(screen.getByRole('region', { name: 'NVDA chart' }))
     expect(onActivate).toHaveBeenCalled()
+  })
+
+  it('reports the dates it is showing', () => {
+    renderPane()
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-01', to: '2026-08-30' })
+  })
+
+  it('shows the followed window and reports it', () => {
+    renderPane({ view: { ...view, followDates: { from: '2026-08-05', to: '2026-08-14' } } })
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-05', to: '2026-08-14' })
+    expect(view.commitTimeView).not.toHaveBeenCalled()
+  })
+
+  it('shows the day hovered in another pane', () => {
+    let hover
+    function Probe() {
+      hover = useLinkedHover()
+      return null
+    }
+    renderWithProviders(
+      <LinkedHoverProvider enabled>
+        <Probe />
+        <ChartPane slot={nvda} active={false} outlined={false} controls={controls} view={view} onActivate={vi.fn()} tool="crosshair" onPlaced={vi.fn()} paneHeights={DEFAULT_PANE_HEIGHTS} />
+      </LinkedHoverProvider>,
+    )
+    expect(screen.queryByText(fmtDate('2026-08-12'))).not.toBeInTheDocument()
+    act(() => hover.setDate('2026-08-12'))
+    expect(screen.getByText(fmtDate('2026-08-12'))).toBeInTheDocument()
+  })
+
+  it('draws nothing for a day outside the visible bars', () => {
+    let hover
+    function Probe() {
+      hover = useLinkedHover()
+      return null
+    }
+    renderWithProviders(
+      <LinkedHoverProvider enabled>
+        <Probe />
+        <ChartPane slot={nvda} active={false} outlined={false} controls={controls} view={view} onActivate={vi.fn()} tool="crosshair" onPlaced={vi.fn()} paneHeights={DEFAULT_PANE_HEIGHTS} />
+      </LinkedHoverProvider>,
+    )
+    act(() => hover.setDate('2026-07-01'))
+    expect(screen.queryByText(fmtDate('2026-07-01'))).not.toBeInTheDocument()
+    expect(screen.getByText(fmtDate('2026-08-30'))).toBeInTheDocument()
+  })
+
+  it('publishes the day its own hover is on', () => {
+    let hover
+    function Probe() {
+      hover = useLinkedHover()
+      return null
+    }
+    const { container } = renderWithProviders(
+      <LinkedHoverProvider enabled>
+        <Probe />
+        <ChartPane slot={nvda} active={false} outlined={false} controls={controls} view={view} onActivate={vi.fn()} tool="crosshair" onPlaced={vi.fn()} paneHeights={DEFAULT_PANE_HEIGHTS} />
+      </LinkedHoverProvider>,
+    )
+    const plot = container.querySelector('.select-none')
+    fireEvent.mouseMove(plot, { clientX: 0, clientY: 100 })
+    expect(hover.date).toBe('2026-08-01')
+    fireEvent.mouseLeave(plot)
+    expect(hover.date).toBeNull()
   })
 
   it('marks the active pane', () => {

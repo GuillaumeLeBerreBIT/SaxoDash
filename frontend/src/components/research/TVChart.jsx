@@ -243,11 +243,11 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
   )
 })
 
-function Crosshair({ bar, index, geometry, width }) {
+function Crosshair({ bar, index, geometry, width, dimmed }) {
   const { xAt, scaleY, chartH } = geometry
 
   return (
-    <g pointerEvents="none">
+    <g pointerEvents="none" opacity={dimmed ? 0.4 : undefined}>
       <line
         x1={xAt(index)}
         x2={xAt(index)}
@@ -337,6 +337,7 @@ export function TVChart({
   overlays,
   hover,
   setHover,
+  hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
   yScale = 1,
@@ -600,7 +601,7 @@ export function TVChart({
           />
         ) : null}
         {hover != null && data[hover] ? (
-          <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} />
+          <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} dimmed={hoverDimmed} />
         ) : null}
       </svg>
       {editing ? (
