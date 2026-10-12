@@ -10,6 +10,7 @@ import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { useCommandPalette } from '../components/useCommandPalette'
 import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
+import { LinkedHoverProvider } from '../components/research/LinkedHover'
 import SymbolBar from '../components/research/SymbolBar'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { RangeButtons } from '../components/research/chartHeader'
@@ -107,29 +108,31 @@ export default function ResearchChart() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col gap-2 lg:grid" style={gridStyle(layout)}>
-          {workspace.slots.map((slot, index) => {
-            const active = index === workspace.active
-            return (
-              <ChartPane
-                key={index}
-                slot={slot}
-                index={index}
-                active={active}
-                outlined={split && active}
-                controls={controls}
-                view={paneView(index)}
-                onActivate={() => workspace.activate(index)}
-                tool={tool}
-                onPlaced={() => setTool('crosshair')}
-                paneHeights={paneHeights}
-                style={paneStyle(layout, index)}
-                className={active ? 'flex' : 'hidden lg:flex'}
-                split={split}
-              />
-            )
-          })}
-        </div>
+        <LinkedHoverProvider enabled={linked}>
+          <div className="flex-1 min-h-0 flex flex-col gap-2 lg:grid" style={gridStyle(layout)}>
+            {workspace.slots.map((slot, index) => {
+              const active = index === workspace.active
+              return (
+                <ChartPane
+                  key={index}
+                  slot={slot}
+                  index={index}
+                  active={active}
+                  outlined={split && active}
+                  controls={controls}
+                  view={paneView(index)}
+                  onActivate={() => workspace.activate(index)}
+                  tool={tool}
+                  onPlaced={() => setTool('crosshair')}
+                  paneHeights={paneHeights}
+                  style={paneStyle(layout, index)}
+                  className={active ? 'flex' : 'hidden lg:flex'}
+                  split={split}
+                />
+              )
+            })}
+          </div>
+        </LinkedHoverProvider>
       </main>
 
       <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0">

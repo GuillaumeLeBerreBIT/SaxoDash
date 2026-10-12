@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { useSize } from '../../lib/chartGeometry'
 import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { moveCaption } from '../../lib/research'
-import { resolveTimeViewChange, windowToDates } from '../../lib/timeWindow'
+import { matchBarByDate, resolveTimeViewChange, windowToDates } from '../../lib/timeWindow'
 import { Card, InstrumentLogo } from '../ui'
 import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange } from './chartHeader'
+import { useLinkedHover } from './LinkedHover'
 import { useChartData } from './useChartData'
 
 const HEADER_CLASS = 'flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0'
@@ -94,9 +95,16 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
       view.commitTimeView(change.timeView, change.dates)
     },
   }
-  const [hover, setHover] = useState(null)
+  const linkedHover = useLinkedHover()
+  const [ownHover, setOwnHover] = useState(null)
   const [canvasRef, canvasSize] = useSize()
-  const safeHover = hover != null && hover < bars.length ? hover : null
+  const ownIndex = ownHover != null && ownHover < bars.length ? ownHover : null
+  const followed = ownIndex == null && linkedHover ? matchBarByDate(bars, linkedHover.date) : null
+  const hover = ownIndex ?? followed?.index ?? null
+  const setHover = (index) => {
+    setOwnHover(index)
+    linkedHover?.setDate(index == null ? null : (bars[index]?.date ?? null))
+  }
 
   return (
     <>
@@ -114,8 +122,9 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           ind={ind}
           timeWindow={timeWindow}
           controls={{ ...controls, ...paneView }}
-          hover={safeHover}
+          hover={hover}
           setHover={setHover}
+          hoverDimmed={followed != null && !followed.exact}
           symbol={slot.symbol}
           isLoading={chart.isLoading}
           error={chart.error}

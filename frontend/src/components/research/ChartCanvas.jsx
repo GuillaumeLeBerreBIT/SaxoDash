@@ -70,6 +70,7 @@ export default function ChartCanvas({
   controls,
   hover,
   setHover,
+  hoverDimmed = false,
   symbol,
   isLoading,
   error,
@@ -161,6 +162,7 @@ export default function ChartCanvas({
             overlays={overlays}
             hover={hover}
             setHover={setHover}
+            hoverDimmed={hoverDimmed}
             height={resolvedPriceHeight}
             earningsMarkers={earningsMarkers}
             yScale={yScale}
@@ -190,17 +192,17 @@ export default function ChartCanvas({
           />
           {panes.volume ? (
             <SubPane title="Volume" height={paneHeights.volume}>
-              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} />
+              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
           {panes.rsi ? (
             <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={paneHeights.rsi}>
-              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} />
+              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
           {panes.macd ? (
             <SubPane title="MACD 12 26 9" height={paneHeights.macd}>
-              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} />
+              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
             </SubPane>
           ) : null}
           <TimeAxis data={bars} onBarCountChange={zoomTime} onReset={resetTime} />
