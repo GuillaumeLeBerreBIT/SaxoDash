@@ -3,6 +3,8 @@ way market.py does for Saxo - call, shape, cache. Finnhub needs a static API
 key, not a per-user OAuth token, so there is no credential lookup here.
 """
 
+import contextlib
+import contextvars
 import html
 import logging
 import re
@@ -63,31 +65,59 @@ class FinnhubUnexpected(ProviderUnavailable):
 
 
 class FinnhubBusy(ProviderUnavailable):
+    log = True
+    log_level = logging.INFO
+
     def __init__(self):
         super().__init__('Market data is busy. Try again in a minute.')
 
 
 BUDGET_WINDOW_SECONDS = 60
-BUDGET_KEY_TTL = 2 * BUDGET_WINDOW_SECONDS
+BUDGET_KEY_TTL = 3 * BUDGET_WINDOW_SECONDS
+
+_background_reserve = contextvars.ContextVar('finnhub_background_reserve', default=0)
 
 
-def _minute():
-    return int(time.time() // BUDGET_WINDOW_SECONDS)
+def _now():
+    return time.time()
 
 
-def _budget_key():
-    return f'research:finnhub-calls:{_minute()}'
+def _budget_key(window):
+    return f'research:finnhub-calls:{window}'
+
+
+@contextlib.contextmanager
+def background_calls():
+    token = _background_reserve.set(settings.FINNHUB_BACKGROUND_RESERVE)
+    try:
+        yield
+    finally:
+        _background_reserve.reset(token)
+
+
+def seconds_until_budget_refills():
+    return BUDGET_WINDOW_SECONDS - (_now() % BUDGET_WINDOW_SECONDS)
+
+
+def _calls_in_the_last_minute(window, elapsed):
+    key = _budget_key(window)
+    cache.add(key, 0, BUDGET_KEY_TTL)
+    spent = cache.incr(key)
+    carried = (cache.get(_budget_key(window - 1)) or 0) * (1 - elapsed)
+    return key, spent + carried
 
 
 def _spend_call():
-    key = _budget_key()
+    window, into_window = divmod(_now(), BUDGET_WINDOW_SECONDS)
+    allowed = settings.FINNHUB_CALLS_PER_MINUTE - _background_reserve.get()
     try:
-        cache.add(key, 0, BUDGET_KEY_TTL)
-        spent = cache.incr(key)
+        key, used = _calls_in_the_last_minute(int(window), into_window / BUDGET_WINDOW_SECONDS)
+        if used > allowed:
+            cache.decr(key)
     except Exception:
         logger.warning('Finnhub call budget could not be counted', exc_info=True)
         return
-    if spent > settings.FINNHUB_CALLS_PER_MINUTE:
+    if used > allowed:
         raise FinnhubBusy()
 
 
@@ -476,6 +506,8 @@ def fundamentals(symbol):
             # endpoint doesn't cover (rate limit, no US-GAAP filings) degrades
             # to no cash-flow trend rather than failing the whole payload.
             reported = reported_annual(symbol)
+        except FinnhubBusy:
+            raise
         except ProviderUnavailable:
             reported = None
         return to_fundamentals(

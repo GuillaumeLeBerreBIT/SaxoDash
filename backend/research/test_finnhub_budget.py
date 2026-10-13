@@ -10,57 +10,85 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 FILING = {'data': [{'form': '10-K', 'year': 2025}]}
 
 
-@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key', FINNHUB_CALLS_PER_MINUTE=2)
+def at(seconds):
+    return patch('research.finnhub._now', return_value=float(seconds))
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key', FINNHUB_CALLS_PER_MINUTE=2, FINNHUB_BACKGROUND_RESERVE=1)
 class CallBudgetTest(TestCase):
     def setUp(self):
         cache.clear()
+        requests_get = patch('research.finnhub.requests.get', return_value=Mock(ok=True, json=lambda: {}))
+        self.requests_get = requests_get.start()
+        self.addCleanup(requests_get.stop)
 
-    @patch('research.finnhub.requests.get')
-    def test_refuses_a_call_beyond_the_budget_without_reaching_finnhub(self, mock_get):
-        mock_get.return_value = Mock(ok=True, json=lambda: {})
-        finnhub._get('/stock/profile2', symbol='AAPL')
-        finnhub._get('/stock/metric', symbol='AAPL')
+    def test_refuses_a_call_beyond_the_budget_without_reaching_finnhub(self):
+        with at(6000):
+            finnhub._get('/stock/profile2', symbol='AAPL')
+            finnhub._get('/stock/metric', symbol='AAPL')
+            with self.assertRaises(finnhub.FinnhubBusy):
+                finnhub._get('/stock/earnings', symbol='AAPL')
 
-        with self.assertRaises(finnhub.FinnhubBusy):
-            finnhub._get('/stock/earnings', symbol='AAPL')
+        self.assertEqual(self.requests_get.call_count, 2)
 
-        self.assertEqual(mock_get.call_count, 2)
-
-    @patch('research.finnhub.requests.get')
-    def test_the_budget_refills_with_the_next_minute(self, mock_get):
-        mock_get.return_value = Mock(ok=True, json=lambda: {})
-        with patch('research.finnhub._minute', return_value=100):
+    def test_the_budget_is_whole_again_a_full_minute_later(self):
+        with at(6000):
             finnhub._get('/a')
             finnhub._get('/b')
-        with patch('research.finnhub._minute', return_value=101):
+        with at(6120):
+            finnhub._get('/c')
+            finnhub._get('/d')
+
+        self.assertEqual(self.requests_get.call_count, 4)
+
+    def test_calls_just_before_a_minute_boundary_still_count_just_after_it(self):
+        with at(6059):
+            finnhub._get('/a')
+            finnhub._get('/b')
+        with at(6061):
+            with self.assertRaises(finnhub.FinnhubBusy):
+                finnhub._get('/c')
+
+    def test_the_earlier_minute_fades_as_the_new_one_goes_on(self):
+        with at(6059):
+            finnhub._get('/a')
+            finnhub._get('/b')
+        with at(6095):
             finnhub._get('/c')
 
-        self.assertEqual(mock_get.call_count, 3)
+        self.assertEqual(self.requests_get.call_count, 3)
 
-    @patch('research.finnhub.requests.get')
-    def test_a_refused_call_does_not_spend_from_the_next_minute(self, mock_get):
-        mock_get.return_value = Mock(ok=True, json=lambda: {})
-        with patch('research.finnhub._minute', return_value=100):
+    def test_refused_calls_are_not_counted_as_spent(self):
+        with at(6000):
             finnhub._get('/a')
             finnhub._get('/b')
             for _ in range(5):
                 with self.assertRaises(finnhub.FinnhubBusy):
                     finnhub._get('/c')
-        with patch('research.finnhub._minute', return_value=101):
-            finnhub._get('/d')
-            finnhub._get('/e')
 
-        self.assertEqual(mock_get.call_count, 4)
+        self.assertEqual(cache.get(finnhub._budget_key(100)), 2)
 
-    @patch('research.finnhub.requests.get')
-    def test_a_broken_cache_does_not_block_calls(self, mock_get):
-        mock_get.return_value = Mock(ok=True, json=lambda: {})
+    def test_background_work_leaves_a_reserve_for_interactive_calls(self):
+        with at(6000):
+            with finnhub.background_calls():
+                finnhub._get('/a')
+                with self.assertRaises(finnhub.FinnhubBusy):
+                    finnhub._get('/b')
+            finnhub._get('/c')
+
+        self.assertEqual(self.requests_get.call_count, 2)
+
+    def test_says_how_long_until_the_minute_turns(self):
+        with at(6042):
+            self.assertEqual(finnhub.seconds_until_budget_refills(), 18)
+
+    def test_a_cache_that_cannot_count_does_not_block_calls(self):
         with patch('research.finnhub.cache') as broken:
             broken.add.side_effect = ConnectionError('redis is down')
             for _ in range(5):
                 finnhub._get('/a')
 
-        self.assertEqual(mock_get.call_count, 5)
+        self.assertEqual(self.requests_get.call_count, 5)
 
     def test_a_refusal_tells_the_client_to_try_again(self):
         body = finnhub.FinnhubBusy().body()
@@ -70,9 +98,32 @@ class CallBudgetTest(TestCase):
 
     @override_settings(FINNHUB_API_KEY='')
     def test_a_missing_key_is_reported_before_any_budget_is_spent(self):
-        with self.assertRaises(finnhub.FinnhubNotConfigured):
-            finnhub._get('/a')
-        self.assertIsNone(cache.get(finnhub._budget_key()))
+        with at(6000):
+            with self.assertRaises(finnhub.FinnhubNotConfigured):
+                finnhub._get('/a')
+
+        self.assertIsNone(cache.get(finnhub._budget_key(100)))
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class BusyFundamentalsTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.finnhub.get_earnings_history', return_value=[])
+    @patch('research.finnhub.get_recommendation_trends', return_value=[])
+    @patch('research.finnhub.get_basic_financials', return_value={'metric': {}})
+    @patch('research.finnhub.get_profile', return_value={'name': 'Apple Inc'})
+    @patch('research.finnhub.get_financials_reported', side_effect=finnhub.FinnhubBusy())
+    def test_a_busy_refusal_is_not_cached_as_fundamentals_without_results(self, mock_reported, *others):
+        with self.assertRaises(finnhub.FinnhubBusy):
+            finnhub.fundamentals('AAPL')
+        mock_reported.side_effect = None
+        mock_reported.return_value = FILING
+
+        finnhub.fundamentals('AAPL')
+
+        self.assertEqual(mock_reported.call_count, 2)
 
 
 @override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

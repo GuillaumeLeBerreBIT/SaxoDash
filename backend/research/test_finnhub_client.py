@@ -10,6 +10,10 @@ RAW_NEWS_ROW = {
 }
 
 
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
+
+
+@override_settings(CACHES=LOCMEM)
 class FinnhubClientTest(TestCase):
     @override_settings(FINNHUB_API_KEY='')
     def test_raises_when_the_api_key_is_not_set(self):
@@ -87,6 +91,7 @@ class FinnhubClientTest(TestCase):
         self.assertEqual(mock_get.call_args.args[0], 'https://finnhub.io/api/v1/stock/earnings')
 
 
+@override_settings(CACHES=LOCMEM)
 class PeersClientTest(TestCase):
     @override_settings(FINNHUB_API_KEY='test-key')
     @patch('research.finnhub.requests.get')
@@ -100,6 +105,7 @@ class PeersClientTest(TestCase):
         self.assertEqual(mock_get.call_args.kwargs['params']['symbol'], 'AAPL')
 
 
+@override_settings(CACHES=LOCMEM)
 class CompanyNewsClientTest(TestCase):
     @override_settings(FINNHUB_API_KEY='test-key')
     @patch('research.finnhub.requests.get')
@@ -115,6 +121,7 @@ class CompanyNewsClientTest(TestCase):
         self.assertEqual(kwargs['params']['to'], '2026-01-15')
 
 
+@override_settings(CACHES=LOCMEM)
 class EarningsCalendarClientTest(TestCase):
     @override_settings(FINNHUB_API_KEY='test-key')
     @patch('research.finnhub.requests.get')

@@ -122,7 +122,6 @@ def to_summary(rows):
     summary = {
         'buys': 0, 'sells': 0,
         'shares_bought': 0, 'shares_sold': 0,
-        'value_bought': 0, 'value_sold': 0,
     }
     names = set()
     for row in transactions:
@@ -132,7 +131,6 @@ def to_summary(rows):
         names.add(row['name'])
         summary['buys' if side == 'bought' else 'sells'] += 1
         summary[f'shares_{side}'] += abs(row['shares'])
-        summary[f'value_{side}'] += row['value'] or 0
     dates = [row['date'] for row in transactions]
     return {
         **summary,
@@ -158,16 +156,18 @@ def to_sentiment(rows):
 
 def _produce_filings(symbol):
     by_form = {}
+    missing = []
     failure = None
     for form in FORM_LIMITS:
         try:
             by_form[form] = finnhub.get_filings(symbol, form)
         except ProviderUnavailable as exc:
+            missing.append(form)
             failure = exc
-    if failure and not by_form:
+    if not by_form:
         raise failure
-    partial = failure is not None
-    return {'filings': to_filings(by_form), 'partial': partial}, PARTIAL_TTL if partial else FILINGS_TTL
+    body = {'filings': to_filings(by_form), 'partial': bool(missing), 'missing': missing}
+    return body, PARTIAL_TTL if missing else FILINGS_TTL
 
 
 def _sentiment_window():

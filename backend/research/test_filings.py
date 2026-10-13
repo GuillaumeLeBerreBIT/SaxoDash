@@ -262,8 +262,8 @@ class InsiderShapingTest(SimpleTestCase):
 
         self.assertEqual(summary['shares_sold'], 400)
         self.assertEqual(summary['shares_bought'], 60)
-        self.assertAlmostEqual(summary['value_sold'], 7000.0)
-        self.assertAlmostEqual(summary['value_bought'], 250.0)
+        self.assertNotIn('value_sold', summary)
+        self.assertNotIn('value_bought', summary)
 
     def test_summary_counts_distinct_insiders_among_buys_and_sells(self):
         summary = filings.to_summary([
@@ -287,8 +287,6 @@ class InsiderShapingTest(SimpleTestCase):
         self.assertEqual(summary['sells'], 0)
         self.assertEqual(summary['shares_bought'], 0)
         self.assertEqual(summary['shares_sold'], 0)
-        self.assertEqual(summary['value_bought'], 0)
-        self.assertEqual(summary['value_sold'], 0)
         self.assertEqual(summary['insiders'], 0)
 
     def test_summary_is_computed_before_the_cap(self):
@@ -382,6 +380,7 @@ class FilingsEntryPointTest(TestCase):
 
         self.assertTrue(result['available'])
         self.assertTrue(result['partial'])
+        self.assertEqual(result['missing'], ['10-Q'])
         self.assertEqual(sorted(row['form'] for row in result['filings']), ['10-K', '8-K'])
         self.assertEqual(fake_cache.set.call_args.args[2], filings.PARTIAL_TTL)
 
@@ -406,7 +405,7 @@ class FilingsEntryPointTest(TestCase):
 
     @patch('research.finnhub.get_filings', return_value=[])
     def test_all_forms_empty_answers_an_empty_list_and_is_cached(self, mock_get):
-        self.assertEqual(filings.filings('NEW'), {'available': True, 'filings': [], 'partial': False})
+        self.assertEqual(filings.filings('NEW'), {'available': True, 'filings': [], 'partial': False, 'missing': []})
         filings.filings('NEW')
 
         self.assertEqual(mock_get.call_count, len(filings.FORM_LIMITS))

@@ -8,7 +8,7 @@ from django.db import DatabaseError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from research import scan, scan_progress
+from research import finnhub, scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
 from research.models import ScreenerRow
 from research.providers import ProviderError, ProviderNotConnected
@@ -342,3 +342,35 @@ class EarningsDatesTest(TestCase):
             with self.assertLogs('research.scan', level='WARNING'):
                 scan.refresh_earnings_dates(self.today)
         self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))
+
+
+@override_settings(CACHES=LOCMEM)
+class ScanBudgetTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.row = ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500', uic=211, asset_type='Stock')
+
+    @mock.patch('research.scan.market.chart', return_value=BARS)
+    @mock.patch('research.scan.finnhub.seconds_until_budget_refills', return_value=17)
+    @mock.patch('research.scan.finnhub.get_basic_financials')
+    def test_a_busy_refusal_waits_for_the_budget_and_retries_once(self, mock_financials, mock_seconds, mock_chart):
+        mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS]
+        pauses = []
+
+        scan.scan_row(self.row, with_fundamentals=True, pause=pauses.append)
+
+        self.row.refresh_from_db()
+        self.assertEqual(pauses, [17])
+        self.assertEqual(mock_financials.call_count, 2)
+        self.assertEqual(self.row.error, '')
+        self.assertIsNotNone(self.row.fundamentals_at)
+
+    @mock.patch('research.scan.market.chart', return_value=BARS)
+    @mock.patch('research.scan.finnhub.seconds_until_budget_refills', return_value=17)
+    @mock.patch('research.scan.finnhub.get_basic_financials', side_effect=finnhub.FinnhubBusy())
+    def test_a_second_refusal_is_recorded_on_the_row(self, mock_financials, mock_seconds, mock_chart):
+        scan.scan_row(self.row, with_fundamentals=True, pause=lambda seconds: None)
+
+        self.row.refresh_from_db()
+        self.assertEqual(mock_financials.call_count, 2)
+        self.assertIn('busy', self.row.error)
