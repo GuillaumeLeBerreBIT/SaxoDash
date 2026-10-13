@@ -19,6 +19,13 @@ describe('ChangeBadge', () => {
     expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-zinc-300')
   })
 
+  it('shows a position grown a thousand percent or more as a multiple', () => {
+    const { rerender } = render(<ChangeBadge change="added" pct={76194} />)
+    expect(screen.getByText('▲ Added 763×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={999.4} />)
+    expect(screen.getByText('▲ Added 999%')).toBeInTheDocument()
+  })
+
   it('keeps the arrow beside its word when a narrow tile wraps the badge', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={10.4} />)
     expect(screen.getByText('▲ Added 10%').textContent).toBe('▲\u00a0Added 10%')

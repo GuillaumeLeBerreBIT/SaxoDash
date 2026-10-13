@@ -9,6 +9,7 @@ import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
+import FundsTab from '../components/research/FundsTab'
 import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
@@ -32,6 +33,7 @@ const TABS = [
   ['statistics', 'Statistics', { equityOnly: true }],
   ['peers', 'Peers', { equityOnly: true }],
   ['earnings', 'Earnings', { equityOnly: true }],
+  ['funds', 'Funds'],
   ['news', 'News'],
   ['guide', 'Guide'],
 ]
@@ -195,6 +197,9 @@ export default function Research() {
               {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'earnings' ? (
                 <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+              ) : null}
+              {tab === 'funds' ? (
+                <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
               ) : null}
               {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'guide' ? <GuideTab /> : null}

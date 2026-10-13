@@ -21,6 +21,11 @@ export const getInvestorHub = () => apiFetch('/api/investors/hub/')
 
 export const getInvestorStocks = (view, quarter) => apiFetch(`/api/investors/stocks/${query({ view, quarter })}`)
 
+export const getOwnershipSummary = (tickers) =>
+  apiFetch(`/api/investors/ownership/${query({ tickers: tickers.join(',') })}`)
+
+export const getOwnership = (ticker) => apiFetch(`/api/investors/ownership/${encodeURIComponent(ticker)}/`)
+
 export const searchFilers = (q) => apiFetch(`/api/investors/search/${query({ q })}`)
 
 export const setInvestorFollowed = (slug, followed) => jsonRequest(`/api/investors/${slug}/`, 'PATCH', { followed })

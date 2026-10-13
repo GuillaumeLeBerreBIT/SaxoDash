@@ -530,12 +530,14 @@ export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right })
   )
 }
 
+const HIDE_BELOW = { md: 'hidden md:table-cell', wide: 'hidden min-[1440px]:table-cell' }
+
 /** Table header/body cell with the app's shared density scale - edge columns
  *  get more horizontal room than interior ones. Used by every data table
  *  (Dashboard's two, Portfolio Holdings, Transactions) so row density is
  *  governed from one place instead of copied per table. */
 export function Th({ children, align = 'left', edge = false, hideBelow, className = '', ariaSort }) {
-  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
+  const hideClass = HIDE_BELOW[hideBelow] ?? ''
   return (
     <th
       aria-sort={ariaSort}
@@ -576,7 +578,7 @@ export function SortableTh({ children, sortKey, sort, onSort, align = 'left', ed
  *  already the intended behavior. A cell that genuinely needs to wrap can
  *  still override via `className`. */
 export function Td({ children, align = 'left', edge = false, hideBelow, className = '' }) {
-  const hideClass = hideBelow === 'md' ? 'hidden md:table-cell' : ''
+  const hideClass = HIDE_BELOW[hideBelow] ?? ''
   return (
     <td
       className={`whitespace-nowrap ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${

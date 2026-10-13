@@ -218,6 +218,14 @@ describe('Th / Td hideBelow', () => {
     expect(screen.getByText('10')).toHaveClass('hidden', 'md:table-cell')
   })
 
+  it('hides a cell below 1440px when asked for wide', () => {
+    render(
+      <table><thead><tr><Th hideBelow="wide">Fund shares</Th></tr></thead><tbody><tr><Td hideBelow="wide">9.3M</Td></tr></tbody></table>,
+    )
+    expect(screen.getByText('Fund shares')).toHaveClass('hidden', 'min-[1440px]:table-cell')
+    expect(screen.getByText('9.3M')).toHaveClass('hidden', 'min-[1440px]:table-cell')
+  })
+
   it('leaves a cell without hideBelow visible', () => {
     render(<table><tbody><tr><Td>Name</Td></tr></tbody></table>)
     expect(screen.getByText('Name')).not.toHaveClass('hidden')

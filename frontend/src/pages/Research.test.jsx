@@ -203,6 +203,16 @@ describe('Research', () => {
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })
 
+  it('opens on the Funds tab for a ?tab=funds link, for an ETF too', () => {
+    queries.useOwnership.mockReturnValue({ ...idle, data: { quarter: null, filed: 0, tracked: 0, stock: null, funds: [] } })
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=funds' })
+
+    expect(screen.getByRole('tab', { name: 'Funds' })).toHaveAttribute('aria-selected', 'true')
+    expect(queries.useOwnership).toHaveBeenCalledWith('SPY')
+    expect(screen.getByText('No 13F filings imported yet')).toBeInTheDocument()
+  })
+
   it('opens on the Earnings tab when ?tab=earnings is in the URL', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=AAPL&tab=earnings' })
     expect(screen.getByRole('tab', { name: 'Earnings' })).toHaveAttribute('aria-selected', 'true')
