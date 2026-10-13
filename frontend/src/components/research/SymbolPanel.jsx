@@ -10,7 +10,9 @@ import { isEtf } from '../../lib/research'
 import { seasonalSeries } from '../../lib/seasonals'
 import { technicalRating } from '../../lib/technicalRating'
 import { Card, Skeleton } from '../ui'
+import AnalystCounts from './AnalystCounts'
 import EarningsDots from './EarningsDots'
+import MiniFinancials from './MiniFinancials'
 import PerformanceTiles from './PerformanceTiles'
 import RatingGauge from './RatingGauge'
 import SeasonalsChart from './SeasonalsChart'
@@ -52,23 +54,16 @@ function Section({ title, note, children }) {
   )
 }
 
-function Counts({ rows }) {
-  return (
-    <dl className="mt-1 grid gap-1 text-center" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}>
-      {rows.map(([label, count]) => (
-        <div key={label} className="flex flex-col-reverse justify-end">
-          <dt className="text-[var(--fig-2xs)] text-zinc-500">{label}</dt>
-          <dd className="num font-mono text-[var(--fig-sm)] text-zinc-100">{count}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
-
-export default function SymbolPanel({ symbol, instrument, bars, earnings, href }) {
+export default function SymbolPanel({ symbol, instrument, bars, earnings, href, financialsHref }) {
   const hasCompany = Boolean(instrument) && !isEtf(instrument)
   const fundamentals = useFundamentals(hasCompany ? symbol : '')
   const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
+  const annual = (company?.annual_results ?? []).map(({ label, fiscal_year, revenue, net_income }) => ({
+    label,
+    fiscal_year,
+    income: net_income == null ? { revenue } : { revenue, net_income },
+  }))
+  const hasFinancials = annual.filter((year) => year.income.revenue != null).length >= 2
   const reported = hasCompany && earnings.data?.available ? earnings.data : null
   const nextReport = upcoming(reported?.next)
 
@@ -90,7 +85,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
   const hasReturns = returns.some((row) => row.pct != null)
   const hasEarnings = Boolean(reported?.history?.some((row) => row.eps_actual != null) || nextReport?.eps_estimate != null)
   const hasAnything =
-    stats.length > 0 || hasReturns || hasEarnings || analyst || technical || seasons.length > 0 || loadingCompany
+    stats.length > 0 || hasReturns || hasEarnings || hasFinancials || analyst || technical || seasons.length > 0 || loadingCompany
   if (!hasAnything) return null
 
   return (
@@ -122,12 +117,21 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
         </Section>
       )}
 
+      {hasFinancials && (
+        <Section
+          title="Financials"
+          note={financialsHref ? <Link to={financialsHref} className="hover:text-zinc-300">More financials →</Link> : null}
+        >
+          <MiniFinancials annual={annual} />
+        </Section>
+      )}
+
       {loadingCompany && <Skeleton className="h-24 w-full mt-3" data-testid="symbol-panel-loading" />}
 
       {analyst && (
         <Section title="Analyst rating">
           <RatingGauge title="Analyst rating" fraction={analyst.fraction} label={analyst.label} />
-          <Counts rows={analyst.counts.map((row) => [row.label, row.count])} />
+          <AnalystCounts rows={analyst.counts.map((row) => [row.label, row.count])} />
           <p className="mt-1 text-center text-[var(--fig-2xs)] text-zinc-500">
             {analyst.period ? `${analyst.total} analysts · as of ${fmtMonthYear(analyst.period)}` : `${analyst.total} analysts`}
           </p>
@@ -137,7 +141,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
       {technical && (
         <Section title="Technicals" note="Daily">
           <RatingGauge title="Technicals" fraction={technical.fraction} label={technical.label} />
-          <Counts
+          <AnalystCounts
             rows={[
               ['Sell', technical.sell],
               ['Neutral', technical.neutral],

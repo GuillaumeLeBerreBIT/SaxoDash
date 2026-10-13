@@ -136,6 +136,55 @@ class FundamentalsViewTest(APITestCase):
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class StatementsViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        response = self.client.get('/api/research/statements/AAPL/')
+        self.assertEqual(response.status_code, 401)
+
+    @patch('research.finnhub.get_financials_reported')
+    def test_returns_available_true_with_rows(self, mock_reported):
+        mock_reported.return_value = {'data': [{
+            'year': 2025, 'quarter': 0, 'form': '10-K',
+            'startDate': '2025-01-01 00:00:00', 'endDate': '2025-12-31 00:00:00',
+            'filedDate': '2026-02-01 00:00:00',
+            'report': {'ic': [{'concept': 'us-gaap_Revenues', 'value': 1000}], 'bs': [], 'cf': []},
+        }]}
+
+        response = self.client.get('/api/research/statements/aapl/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['annual'][0]['income']['revenue'], 1000)
+        mock_reported.assert_any_call('AAPL', 'annual')
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/statements/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    @patch('research.finnhub.get_financials_reported', return_value={'data': []})
+    def test_returns_available_false_for_a_company_with_no_filings(self, mock_reported):
+        response = self.client.get('/api/research/statements/ZZZZ/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+        self.assertIn('No annual reports', response.data['reason'])
+
+    def test_rejects_a_malformed_symbol(self):
+        response = self.client.get('/api/research/statements/AAPL%20US/')
+        self.assertEqual(response.status_code, 400)
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class PeersViewTest(APITestCase):
     def setUp(self):
         cache.clear()
@@ -279,6 +328,7 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.InstrumentDetailsView,
             research_views.QuotesView,
             research_views.FundamentalsView,
+            research_views.StatementsView,
             research_views.EarningsCalendarView,
             research_views.SymbolEarningsView,
             research_views.CompanyNewsView,

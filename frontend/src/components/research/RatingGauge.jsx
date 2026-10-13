@@ -1,13 +1,7 @@
 import { ratingBand } from '../../lib/ratingBand'
-import { ESTIMATE, NEGATIVE, POSITIVE, withAlpha } from '../../lib/charts'
+import { RATING_SEGMENTS } from '../../lib/charts'
 
-const SEGMENTS = [
-  withAlpha(NEGATIVE, 0.75),
-  withAlpha(NEGATIVE, 0.35),
-  ESTIMATE,
-  withAlpha(POSITIVE, 0.4),
-  withAlpha(POSITIVE, 0.85),
-]
+const SEGMENTS = RATING_SEGMENTS
 const CENTER_X = 100
 const CENTER_Y = 96
 const RADIUS = 80

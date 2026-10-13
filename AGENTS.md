@@ -442,3 +442,19 @@ The technicals rating is ours, a daily vote of six indicators, and names its inp
 under the gauge so it is not read as TradingView's. An ETF gets no company blocks,
 and a block without data is left out. Analyst price targets and estimates beyond two
 quarters are refused by the free Finnhub key, so there is no forecast cone.
+
+**Company statements are mapped, not passed through.** `research/statements.py` reads
+Finnhub's `/stock/financials-reported` (SEC XBRL) and maps each company's own concepts
+onto one fixed row set, trying an ordered list of candidates per row and stripping the
+`us-gaap_` prefix first, because filings before about 2014 carry none. A row nobody
+matched is left out, never zero. A 10-Q's income and cash-flow figures are year-to-date,
+so a quarter is its filing minus the previous one, and the fourth quarter is the annual
+report minus the third; a quarter whose predecessor was never filed is dropped. Statements carry no
+per-share rows: a 10-K's EPS is as filed, so a split reads as a collapse; annual EPS comes
+from Finnhub's split-adjusted series on the fundamentals payload instead. `GET
+/api/research/statements/<symbol>/` follows the fundamentals contract (200 with
+`available`, 24h cache, `research.fundamentals` scope) and costs two Finnhub calls on a
+miss. The Research tabs are Overview, Financials, Statistics, Peers, Earnings, News and
+Guide; `?tab=valuation` is an alias for Statistics. Annual ratio series arrive as
+fractions and are stored as percent, to match the TTM figures beside them. The free key
+returns four months of analyst recommendations, so the "trend" is four columns. An answer whose quarterly call failed is cached for ten minutes only. The chart page's panel and the Earnings tab read fundamentals only; the statements request is made by the Financials tab alone.

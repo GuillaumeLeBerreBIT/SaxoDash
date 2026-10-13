@@ -1,10 +1,11 @@
+import { useState } from 'react'
+
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
+import { annualEpsRows, quarterlyEpsRows } from '../../lib/epsSeries'
 import { fmtCompact, fmtDate, fmtNum, fmtPct } from '../../lib/format'
-import { Card, CardHeader, Metric, Skeleton } from '../ui'
+import { Card, CardHeader, Metric, Skeleton, TBtn } from '../ui'
 import EarningsInsights from './EarningsInsights'
 import EpsBarChart from './EpsBarChart'
-import FundamentalsGate from './FundamentalsGate'
-import QuarterlyTrendsChart from './QuarterlyTrendsChart'
 
 function NextEarningsCard({ next }) {
   return (
@@ -53,6 +54,7 @@ function BeatRecord({ score }) {
 
 export default function EarningsTab({ symbol, earnings, fundamentals }) {
   const { data, isLoading } = earnings
+  const [view, setView] = useState('quarterly')
 
   if (isLoading) {
     return (
@@ -75,30 +77,48 @@ export default function EarningsTab({ symbol, earnings, fundamentals }) {
     )
   }
 
-  const epsRows = data.history.map((e) => ({
-    period: e.date.slice(0, 7),
-    actual: e.eps_actual,
-    estimate: e.eps_estimate,
-    surprise: e.eps_surprise_pct,
-  }))
+  const annualRows = annualEpsRows(fundamentals?.data?.available ? fundamentals.data.annual_eps : [])
+  const viewToggle = (
+    <div className="flex items-center gap-0.5">
+      {[
+        ['quarterly', 'Quarterly'],
+        ['annual', 'Annual'],
+      ].map(([key, label]) => (
+        <TBtn key={key} active={view === key} onClick={() => setView(key)}>
+          {label}
+        </TBtn>
+      ))}
+    </div>
+  )
 
   return (
     <div className="space-y-4">
       <NextEarningsCard next={data.next} />
       <EarningsInsights fundamentals={fundamentals} />
-      <FundamentalsGate
-        fundamentals={fundamentals}
-        title="Margin trend"
-        fallback="Margin history is unavailable for this symbol."
-      >
-        {(fData) => <QuarterlyTrendsChart trends={fData.quarterly_trends} />}
-      </FundamentalsGate>
-      <EpsBarChart
-        title="EPS: actual vs. estimate"
-        subtitle="Reported quarters, labelled with the surprise vs. consensus"
-        data={epsRows}
-        format={(v) => fmtNum(v, 2)}
-      />
+      <div className="flex justify-end">{viewToggle}</div>
+      {view === 'quarterly' ? (
+        <EpsBarChart
+          title="EPS: actual vs. estimate"
+          subtitle="Reported quarters, labelled with the surprise vs. consensus"
+          data={quarterlyEpsRows(data.history, data.upcoming)}
+          format={(v) => fmtNum(v, 2)}
+        />
+      ) : fundamentals?.isLoading ? (
+        <Card>
+          <Skeleton className="h-40 w-full" />
+        </Card>
+      ) : annualRows.length > 0 ? (
+        <EpsBarChart
+          title="Diluted EPS by fiscal year"
+          subtitle="Adjusted for splits, from Finnhub"
+          data={annualRows}
+          format={(v) => fmtNum(v, 2)}
+        />
+      ) : (
+        <Card>
+          <p className="text-[var(--fig-xs)] text-zinc-500">Annual EPS is unavailable for {symbol}.</p>
+        </Card>
+      )}
       <BeatRecord score={data.score} />
     </div>
   )

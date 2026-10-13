@@ -226,3 +226,22 @@ class SymbolEarningsTest(TestCase):
         self.assertEqual(result['history'], [])
         self.assertIsNone(result['next'])
         self.assertEqual(result['score']['quarters'], 0)
+
+
+@override_settings(CACHES=LOCMEM)
+class SymbolEarningsCacheKeyTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_the_symbol_key_carries_its_own_version_independent_of_the_week_calendar(self):
+        self.assertEqual(earnings.SYMBOL_CACHE_V, 'v6')
+        self.assertNotEqual(earnings.CACHE_V, earnings.SYMBOL_CACHE_V)
+        with patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []}):
+            with patch('research.earnings.finnhub.get_earnings_history', return_value=[]):
+                with patch('research.earnings.cache', wraps=cache) as spy:
+                    earnings.symbol_earnings('AAPL')
+        key = spy.get_or_set.call_args.args[0]
+        self.assertIn(f':{earnings.SYMBOL_CACHE_V}:', key)
+
+    def test_the_week_calendar_key_is_unchanged_by_the_symbol_version(self):
+        self.assertEqual(earnings.CACHE_V, 'v4')

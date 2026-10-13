@@ -166,3 +166,22 @@ class IndustryShapingTest(TestCase):
 
         with self.assertRaises(finnhub.FinnhubNoData):
             finnhub.industry('IWDA')
+
+
+@override_settings(CACHES=LOCMEM)
+class FundamentalsMalformedPayloadTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    @patch('research.finnhub.get_financials_reported', return_value={'data': []})
+    @patch('research.finnhub.get_earnings_history', return_value=[])
+    @patch('research.finnhub.get_recommendation_trends', return_value=[])
+    @patch('research.finnhub.get_basic_financials')
+    @patch('research.finnhub.get_profile', return_value=SAMPLE_PROFILE)
+    def test_a_null_in_the_ratio_series_becomes_finnhub_unexpected(
+        self, mock_profile, mock_financials, mock_recs, mock_earnings, mock_reported
+    ):
+        mock_financials.return_value = {'metric': {}, 'series': {'annual': {'pe': [None]}}}
+
+        with self.assertRaises(finnhub.FinnhubUnexpected):
+            finnhub.fundamentals('AAPL')

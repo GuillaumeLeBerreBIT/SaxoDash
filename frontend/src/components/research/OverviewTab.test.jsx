@@ -5,6 +5,28 @@ import OverviewTab from './OverviewTab'
 
 const bars = []
 
+const risingBars = (count) =>
+  Array.from({ length: count }, (_, index) => {
+    const day = new Date(Date.UTC(2026, 9, 9) - (count - 1 - index) * 86_400_000)
+    const close = 100 + index
+    return { date: day.toISOString().slice(0, 10), open: close, high: close, low: close, close, volume: 1000 }
+  })
+
+const renderOverview = (props = {}) =>
+  render(
+    <OverviewTab
+      symbol="AAPL"
+      position={null}
+      details={null}
+      detailsLoading={false}
+      bars={bars}
+      allBars={[]}
+      range="1M"
+      fundamentals={{ data: { available: false }, isLoading: false }}
+      {...props}
+    />,
+  )
+
 describe('OverviewTab fundamentals', () => {
   it('shows real metrics when fundamentals are available', () => {
     // Market cap / dividend yield / 52W range moved to the Valuation tab's
@@ -125,3 +147,60 @@ describe('OverviewTab fundamentals', () => {
     expect(screen.getByText(/This is an ETF/)).toBeInTheDocument()
   })
 })
+
+describe('OverviewTab company view', () => {
+  it('opens the company view with the key facts', () => {
+    renderOverview({ fundamentals: { data: { available: true, market_cap: 4_976_177, country: 'US' }, isLoading: false } })
+
+    expect(screen.getByText('Market cap')).toBeInTheDocument()
+    expect(screen.getByText('Country')).toBeInTheDocument()
+  })
+
+  it('shows trailing performance from the full price history', () => {
+    renderOverview({ allBars: risingBars(300) })
+
+    expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
+    expect(screen.getByText('1Y')).toBeInTheDocument()
+  })
+
+  it('shows ownership, capital structure and the analyst rating when the data is there', () => {
+    renderOverview({
+      fundamentals: {
+        isLoading: false,
+        data: {
+          available: true,
+          shares_outstanding: 1000,
+          free_float: 800,
+          market_cap: 4_000_000,
+          enterprise_value: 4_050_000,
+          recommendation: { strong_buy: 5, buy: 5, hold: 2, sell: 0, strong_sell: 0, period: '2026-09-01' },
+          recommendation_history: [],
+        },
+      },
+    })
+
+    expect(screen.getByText('Ownership')).toBeInTheDocument()
+    expect(screen.getByText('Capital structure')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: /analyst rating/i })).toBeInTheDocument()
+  })
+
+  it('shows none of the company cards for an ETF', () => {
+    renderOverview({
+      isEtf: true,
+      allBars: risingBars(300),
+      fundamentals: { isLoading: false, data: { available: true, market_cap: 100, shares_outstanding: 10, free_float: 8 } },
+    })
+
+    expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
+    expect(screen.queryByText('Market cap')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
+  })
+
+  it('shows none of the company cards while fundamentals are unavailable', () => {
+    renderOverview({ fundamentals: { isLoading: false, data: { available: false } } })
+
+    expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
+    expect(screen.queryByText('Capital structure')).not.toBeInTheDocument()
+  })
+})
+

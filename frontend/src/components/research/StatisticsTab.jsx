@@ -1,8 +1,9 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card, CardHeader } from '../ui'
-import CashFlowTrendChart from './CashFlowTrendChart'
 import FundamentalsGate from './FundamentalsGate'
+import RatioHistoryChart from './RatioHistoryChart'
+import RatioHistoryTable from './RatioHistoryTable'
 import VerdictBadge from './VerdictBadge'
 
 function Ratio({ label, value }) {
@@ -47,49 +48,12 @@ function RatioGroup({ label, children }) {
   )
 }
 
-const RECOMMENDATION_SEGMENTS = [
-  ['strong_buy', 'Strong buy', 'bg-emerald-500'],
-  ['buy', 'Buy', 'bg-emerald-700'],
-  ['hold', 'Hold', 'bg-zinc-500'],
-  ['sell', 'Sell', 'bg-red-700'],
-  ['strong_sell', 'Strong sell', 'bg-red-500'],
-]
-
-function RecommendationBar({ recommendation }) {
-  if (!recommendation) return null
-
-  const total = RECOMMENDATION_SEGMENTS.reduce((sum, [key]) => sum + (recommendation[key] || 0), 0)
-  if (total === 0) return null
-
-  return (
-    <Card>
-      <CardHeader title="Analyst recommendations" subtitle={`As of ${recommendation.period}`} />
-      <div className="mt-4 flex h-2.5 rounded-full overflow-hidden">
-        {RECOMMENDATION_SEGMENTS.map(([key, , color]) => {
-          const count = recommendation[key] || 0
-          return count > 0 ? (
-            <span key={key} className={color} style={{ width: `${(count / total) * 100}%` }} />
-          ) : null
-        })}
-      </div>
-      <div className="mt-3 grid grid-cols-5 gap-2 text-center">
-        {RECOMMENDATION_SEGMENTS.map(([key, label]) => (
-          <div key={key}>
-            <div className="text-[var(--fig-md)] num font-mono text-zinc-100">{recommendation[key] || 0}</div>
-            <div className="text-[var(--fig-2xs)] text-zinc-500">{label}</div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
-
-export default function ValuationTab({ fundamentals }) {
+export default function StatisticsTab({ fundamentals }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
-      title="Valuation"
-      fallback="Valuation data is unavailable for this symbol."
+      title="Statistics"
+      fallback="Statistics are unavailable for this symbol."
     >
       {(data) => (
         <div className="space-y-4">
@@ -141,8 +105,17 @@ export default function ValuationTab({ fundamentals }) {
             </div>
           </Card>
 
-          <CashFlowTrendChart trend={data.cash_flow_trend} />
-          <RecommendationBar recommendation={data.recommendation} />
+          {data.ratio_history?.length > 0 && (
+            <Card>
+              <CardHeader title="Ratios by year" subtitle="Fiscal years, from Finnhub's annual series" />
+              <div className="mt-3">
+                <RatioHistoryTable history={data.ratio_history} current={data} />
+              </div>
+              <div className="mt-5 pt-4 border-t border-white/[0.06]">
+                <RatioHistoryChart history={data.ratio_history} />
+              </div>
+            </Card>
+          )}
         </div>
       )}
     </FundamentalsGate>

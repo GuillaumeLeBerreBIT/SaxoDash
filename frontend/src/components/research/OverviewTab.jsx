@@ -1,7 +1,15 @@
+import { useMemo } from 'react'
+
 import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
 import { priceBasis } from '../../lib/pricing'
+import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
 import { Card, CardHeader, Metric } from '../ui'
+import AnalystRatingCard from './AnalystRatingCard'
+import CapitalStructureCard from './CapitalStructureCard'
+import KeyFactsStrip from './KeyFactsStrip'
+import OwnershipCard from './OwnershipCard'
+import PerformanceTiles from './PerformanceTiles'
 import SnapshotSection from './SnapshotSection'
 import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
@@ -109,6 +117,7 @@ export default function OverviewTab({
   details,
   detailsLoading,
   bars,
+  allBars = [],
   range,
   fundamentals,
   note,
@@ -117,13 +126,36 @@ export default function OverviewTab({
   reviewing = false,
   isEtf = false,
 }) {
+  const company = !isEtf && fundamentals?.data?.available ? fundamentals.data : null
+  const returns = useMemo(() => trailingReturns(allBars), [allBars])
+  const hasReturns = returns.some((row) => row.pct != null)
+
   return (
     <div className="space-y-4">
       {position ? <PositionCard position={position} /> : null}
 
+      {company && <KeyFactsStrip fundamentals={company} />}
+
+      {hasReturns && (
+        <Card>
+          <CardHeader title="Performance" subtitle="Change in price up to the latest close" />
+          <div className="mt-3 [&>ul]:grid-cols-6">
+            <PerformanceTiles returns={returns} />
+          </div>
+        </Card>
+      )}
+
       {/* An ETF never gets Finnhub fundamentals - the gate's "unavailable
           for this symbol" fallback would wrongly imply that's temporary. */}
       {isEtf ? <EtfNote /> : <SnapshotSection fundamentals={fundamentals} />}
+      {company && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <OwnershipCard fundamentals={company} />
+          <CapitalStructureCard fundamentals={company} />
+        </div>
+      )}
+      {company && <AnalystRatingCard fundamentals={company} />}
+
       <ReferenceStrip symbol={symbol} details={details} isLoading={detailsLoading} />
 
       <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />

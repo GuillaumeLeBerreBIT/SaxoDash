@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import EarningsTab from './EarningsTab'
+
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 const NO_FUNDAMENTALS = { data: { available: false, reason: 'x' }, isLoading: false }
 
@@ -21,7 +25,21 @@ const AVAILABLE = {
   score: { beats: 2, quarters: 3, beat_rate: 0.67, avg_surprise: 1.03, streak: 1 },
 }
 
+const renderTab = (extraEarnings = {}) =>
+  render(
+    <EarningsTab
+      symbol="NVDA"
+      earnings={{ data: { ...AVAILABLE, ...extraEarnings }, isLoading: false }}
+      fundamentals={NO_FUNDAMENTALS}
+    />,
+  )
+
 describe('EarningsTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    queries.useStatements.mockReturnValue({ data: undefined, isLoading: false })
+  })
+
   it('shows the next earnings date and estimates', () => {
     render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Next earnings')).toBeInTheDocument()
@@ -75,5 +93,71 @@ describe('EarningsTab', () => {
       />,
     )
     expect(screen.getByText('What changed')).toBeInTheDocument()
+  })
+
+  it('labels the quarters still to come as estimates', () => {
+    renderTab({ upcoming: [{ date: '2026-11-02', eps_estimate: 1.02 }] })
+
+    expect(screen.getByText(/1 upcoming quarter, estimate only/i)).toBeInTheDocument()
+  })
+
+  it('never asks for statements, in either view', async () => {
+    renderTab()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(queries.useStatements).not.toHaveBeenCalled()
+  })
+
+  it('shows the split-adjusted annual EPS from fundamentals', async () => {
+    render(
+      <EarningsTab
+        symbol="NVDA"
+        earnings={{ data: AVAILABLE, isLoading: false }}
+        fundamentals={{
+          isLoading: false,
+          data: {
+            available: true,
+            annual_eps: [
+              { period: '2024-01-28', eps: 1.19 },
+              { period: '2025-01-26', eps: 2.94 },
+            ],
+          },
+        }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.getByText('Diluted EPS by fiscal year')).toBeInTheDocument()
+    expect(screen.getByText('Adjusted for splits, from Finnhub')).toBeInTheDocument()
+  })
+
+  it('shows a skeleton while fundamentals load', async () => {
+    render(
+      <EarningsTab
+        symbol="NVDA"
+        earnings={{ data: AVAILABLE, isLoading: false }}
+        fundamentals={{ isLoading: true, data: undefined }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.queryByText(/annual EPS is unavailable/i)).not.toBeInTheDocument()
+  })
+
+  it('says so when annual EPS is unavailable', async () => {
+    renderTab()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.getByText(/annual EPS is unavailable/i)).toBeInTheDocument()
+  })
+
+  it('no longer shows the margin trend', () => {
+    renderTab()
+
+    expect(screen.queryByText('Margin trend')).not.toBeInTheDocument()
   })
 })

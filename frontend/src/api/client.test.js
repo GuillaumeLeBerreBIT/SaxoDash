@@ -15,6 +15,7 @@ import {
   startDiscoverScan,
   searchInstruments,
   getFundamentals,
+  getStatements,
   getEarningsCalendar,
   getSymbolEarnings,
   getCompanyNews,
@@ -390,6 +391,18 @@ describe('research endpoints', () => {
     expect(options.method).toBe('POST')
     expect(options.headers['Content-Type']).toBe('application/json')
     expect(JSON.parse(options.body)).toEqual({ name: 'Tech' })
+  })
+
+  it('asks for statements by symbol', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ available: true, annual: [], quarterly: [] }))
+
+    const result = await getStatements('NVDA')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/statements/NVDA/'),
+      expect.anything()
+    )
+    expect(result.available).toBe(true)
   })
 
   it('asks for fundamentals by symbol', async () => {
