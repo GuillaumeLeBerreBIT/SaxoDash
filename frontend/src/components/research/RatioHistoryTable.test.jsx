@@ -55,6 +55,12 @@ describe('RatioHistoryTable', () => {
     expect(screen.queryByText('Solvency')).not.toBeInTheDocument()
   })
 
+  it('keeps each group title in view while the years scroll', () => {
+    render(<RatioHistoryTable history={history} current={current} />)
+
+    expect(screen.getByText('Valuation')).toHaveClass('sticky', 'left-0')
+  })
+
   it('renders nothing without a history', () => {
     const { container } = render(<RatioHistoryTable history={undefined} current={current} />)
 

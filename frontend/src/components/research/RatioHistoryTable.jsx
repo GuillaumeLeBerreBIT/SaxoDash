@@ -36,7 +36,7 @@ export default function RatioHistoryTable({ history, current }) {
                   role="presentation"
                   className="pt-3 pb-1 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium"
                 >
-                  {group.label}
+                  <span className="sticky left-0 inline-block">{group.label}</span>
                 </td>
               </tr>
               {group.ratios.map((ratio) => (
