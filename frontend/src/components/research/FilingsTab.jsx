@@ -104,7 +104,16 @@ export default function FilingsTab({ symbol }) {
         loadError="SEC filings could not be loaded."
         unavailable={`SEC filings are unavailable for ${symbol}.`}
       >
-        {(data) => <FilingsList filings={data.filings ?? []} />}
+        {(data) => (
+          <>
+            {data.missing?.length > 0 && (
+              <p data-testid="filings-missing" className="mb-3 text-[var(--fig-xs)] text-amber-400">
+                {`Could not load ${data.missing.join(', ')} filings just now; showing the rest.`}
+              </p>
+            )}
+            <FilingsList filings={data.filings ?? []} />
+          </>
+        )}
       </QueryCard>
     </div>
   )

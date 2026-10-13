@@ -29,7 +29,8 @@ export function useChartData({
   timeView = LATEST_TIME_VIEW,
   followDates = null,
   position = null,
-  resolution,
+  resolving = false,
+  requireInstrument = false,
 }) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
@@ -54,11 +55,12 @@ export function useChartData({
   const ind = useMemo(() => computeIndicatorsForWindow(allBars, { start, end }), [allBars, start, end])
 
   const details = useInstrumentDetails({ uic, assetType })
+  const currency = listingCurrency({ position, instrument, details: details.data })
   const companyData = companyDataStatus({
-    resolution,
     instrument,
-    currency: listingCurrency({ position, details: details.data }),
-    detailsLoading: details.isLoading,
+    currency,
+    lookingUp: resolving || (Boolean(instrument) && !currency && details.isLoading),
+    requireInstrument,
   })
   const earnings = useSymbolEarnings(companyData === COMPANY_DATA.eligible ? symbol : '')
   const note = useSymbolNote(symbol)
@@ -93,6 +95,7 @@ export function useChartData({
     timeView: effectiveTimeView,
     earnings,
     companyData,
+    currency,
     earningsMarkers,
     note,
     priceLines,

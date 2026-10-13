@@ -2,7 +2,6 @@ import { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useInstrumentSearch, usePositions } from '../../api/queries'
-import { RESOLUTION } from '../../lib/companyData'
 import { needsInstrumentSearch, resolveInstrument } from '../../lib/research'
 import { pushRecentSymbol } from '../../lib/recentSymbols'
 
@@ -10,7 +9,7 @@ const FALLBACK_SYMBOL = 'NVDA'
 
 export function useResearchInstrument() {
   const [params, setParams] = useSearchParams()
-  const { data: positions = [] } = usePositions()
+  const { data: positions = [], isLoading: positionsLoading } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
   const position = positions.find((p) => p.ticker === symbol) ?? null
 
@@ -26,11 +25,12 @@ export function useResearchInstrument() {
   const pinnedAssetType = params.get('assetType')
   const instrument = useMemo(() => {
     const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
-    return resolveInstrument({ symbol, positions, results: searchResults, pinned })
-  }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
+    const results = searching ? [] : searchResults
+    return resolveInstrument({ symbol, positions, results, pinned })
+  }, [symbol, positions, searchResults, searching, pinnedUic, pinnedAssetType])
 
   const resolved = Boolean(instrument)
-  const resolution = resolved ? RESOLUTION.resolved : searching ? RESOLUTION.resolving : RESOLUTION.unresolved
+  const resolving = !resolved && (searching || Boolean(positionsLoading))
   useEffect(() => {
     if (resolved) pushRecentSymbol(symbol)
   }, [symbol, resolved])
@@ -47,5 +47,5 @@ export function useResearchInstrument() {
     setParams(nextParams, { replace: true })
   }
 
-  return { symbol, instrument, resolution, position, positions, selectSymbol }
+  return { symbol, instrument, resolving, position, positions, selectSymbol }
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
-import { COMPANY_DATA } from '../lib/companyData'
+import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { Card, PageHeader, TabButton, TabList } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
@@ -25,33 +25,32 @@ import { useChartData } from '../components/research/useChartData'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
-// `equityOnly` tabs are all Finnhub company-fundamentals underneath, which
-// Finnhub's free tier never returns for an ETF - so unlike a stock with
-// temporarily missing data, there's nothing to wait on. Marked here, once,
-// so the visible tab list and the hidden-tab reset below can't drift apart.
 const TABS = [
   ['overview', 'Overview'],
-  ['financials', 'Financials', { equityOnly: true }],
-  ['statistics', 'Statistics', { equityOnly: true }],
-  ['peers', 'Peers', { equityOnly: true }],
-  ['earnings', 'Earnings', { equityOnly: true }],
+  ['financials', 'Financials', 'company'],
+  ['statistics', 'Statistics', 'company'],
+  ['peers', 'Peers', 'company'],
+  ['earnings', 'Earnings', 'company'],
   ['funds', 'Funds'],
-  ['filings', 'Filings', { equityOnly: true }],
-  ['news', 'News'],
+  ['filings', 'Filings', 'company'],
+  ['news', 'News', 'ticker'],
   ['guide', 'Guide'],
 ]
 
 const TAB_ALIASES = { valuation: 'statistics' }
-const WITHOUT_COMPANY_DATA = new Set([COMPANY_DATA.fund, COMPANY_DATA.foreign])
+const TAB_NEEDS = Object.fromEntries(TABS.map(([key, , needs]) => [key, needs]))
+const TAB_KEYS = new Set(Object.keys(TAB_NEEDS))
 
-const NEWS_TAB = 'news'
-const TAB_KEYS = new Set(TABS.map(([key]) => key))
-const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
-const TICKER_LOOKUP_TAB_KEYS = new Set([...EQUITY_ONLY_TAB_KEYS, NEWS_TAB])
+const REFUSALS = {
+  [COMPANY_DATA.foreign]:
+    'This is looked up by US ticker, which may name another company, so it is left out for a listing outside the US.',
+  [COMPANY_DATA.unverified]:
+    'Saxo could not confirm where this instrument is listed, so data looked up by US ticker is held back. Reload once Saxo answers.',
+}
 
 export default function Research() {
   const [params] = useSearchParams()
-  const { symbol, instrument, resolution, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
@@ -81,25 +80,25 @@ export default function Research() {
     quote,
     details,
     companyData,
+    currency,
   } = useChartData({
     symbol,
     instrument,
     range: controls.range,
     timeView: controls.timeView,
     position,
-    resolution,
+    resolving,
   })
   const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
   const fundamentals = useFundamentals(companySymbol)
 
-  const withoutCompanyData = WITHOUT_COMPANY_DATA.has(companyData)
-  const visibleTabs = withoutCompanyData ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
-  if (withoutCompanyData && EQUITY_ONLY_TAB_KEYS.has(tab)) {
+  const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
+  const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
+  const gate = gateOf(tab)
+  if (gate === TAB_GATE.hidden) {
     setTab('overview')
   }
-  const awaitingCompanyData = companyData === COMPANY_DATA.pending && TICKER_LOOKUP_TAB_KEYS.has(tab)
-  const foreignListing = companyData === COMPANY_DATA.foreign
-  const companyTab = (key) => tab === key && companyData === COMPANY_DATA.eligible
+  const shown = (key) => tab === key && gate === TAB_GATE.show
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -196,7 +195,7 @@ export default function Research() {
             </TabList>
 
             <div role="tabpanel" id={`research-panel-${tab}`} aria-labelledby={`research-tab-${tab}`}>
-              {tab === 'overview' ? (
+              {shown('overview') ? (
                 <OverviewTab
                   symbol={symbol}
                   position={position}
@@ -213,32 +212,30 @@ export default function Research() {
                   companyData={companyData}
                 />
               ) : null}
-              {awaitingCompanyData ? (
+              {gate === TAB_GATE.pending ? (
                 <Card>
                   <p data-testid="tab-pending" className="text-[var(--fig-xs)] text-zinc-500">
                     Looking up this instrument…
                   </p>
                 </Card>
               ) : null}
-              {companyTab('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {companyTab('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
-              {companyTab('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {companyTab('earnings') ? (
-                <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
-              ) : null}
-              {tab === 'funds' ? (
-                <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
-              ) : null}
-              {companyTab('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-              {tab === NEWS_TAB && foreignListing ? (
+              {gate === TAB_GATE.refused ? (
                 <Card>
-                  <p className="text-[var(--fig-xs)] text-zinc-500">
-                    News is looked up by US ticker, which may name another company, so it is left out for this listing.
+                  <p data-testid="tab-refused" className="text-[var(--fig-xs)] text-zinc-500">
+                    {REFUSALS[companyData]}
                   </p>
                 </Card>
               ) : null}
-              {tab === NEWS_TAB && !foreignListing && !awaitingCompanyData ? <NewsTab key={symbol} symbol={symbol} /> : null}
-              {tab === 'guide' ? <GuideTab /> : null}
+              {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+              {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {shown('earnings') ? (
+                <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+              ) : null}
+              {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+              {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+              {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
+              {shown('guide') ? <GuideTab /> : null}
             </div>
           </div>
 

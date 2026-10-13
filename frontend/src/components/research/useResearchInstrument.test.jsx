@@ -20,28 +20,44 @@ beforeEach(() => {
 })
 afterEach(() => localStorage.clear())
 
-describe('useResearchInstrument resolution', () => {
-  const resolutionFor = (route) =>
-    renderHook(() => useResearchInstrument(), { wrapper: wrapperFor(route) }).result.current.resolution
+describe('useResearchInstrument lookup', () => {
+  const render = (route) => renderHook(() => useResearchInstrument(), { wrapper: wrapperFor(route) }).result.current
+  const nvda = { symbol: 'NVDA', description: 'NVIDIA', exchange: 'NASDAQ', uic: 7, asset_type: 'Stock', currency: 'USD' }
 
   it('is resolving while the instrument search has not settled', () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [], isResolving: true })
-    expect(resolutionFor('/research?symbol=ZZZZ')).toBe('resolving')
+    expect(render('/research?symbol=ZZZZ')).toMatchObject({ resolving: true, instrument: null })
   })
 
-  it('is unresolved once the search settled without a match', () => {
+  it('is no longer resolving once the search settled without a match', () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [], isResolving: false })
-    expect(resolutionFor('/research?symbol=ZZZZ')).toBe('unresolved')
+    expect(render('/research?symbol=ZZZZ')).toMatchObject({ resolving: false, instrument: null })
   })
 
-  it('is resolved as soon as an instrument is known, even while a search is still running', () => {
+  it('ignores results left over from the previous symbol while the new search is pending', () => {
+    queries.useInstrumentSearch.mockReturnValue({ data: [nvda], isResolving: true })
+    expect(render('/research?symbol=BBBB')).toMatchObject({ resolving: true, instrument: null })
+  })
+
+  it('carries the listing currency of a search match', () => {
+    queries.useInstrumentSearch.mockReturnValue({ data: [nvda], isResolving: false })
+    expect(render('/research?symbol=NVDA').instrument).toMatchObject({ uic: 7, currency: 'USD' })
+  })
+
+  it('takes a pinned instrument at once, even while a search is still running', () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [], isResolving: true })
-    expect(resolutionFor('/research?symbol=NVDA&uic=7&assetType=Stock')).toBe('resolved')
+    expect(render('/research?symbol=NVDA&uic=7&assetType=Stock')).toMatchObject({ resolving: false, instrument: { uic: 7 } })
   })
 
-  it('is resolved for a held position without any search', () => {
+  it('takes a held position without any search', () => {
     queries.usePositions.mockReturnValue({ data: [{ ticker: 'NVDA', uic: 211, asset_type: 'Stock' }] })
-    expect(resolutionFor('/research?symbol=NVDA')).toBe('resolved')
+    expect(render('/research?symbol=NVDA')).toMatchObject({ resolving: false, instrument: { uic: 211 } })
+  })
+
+  it('is resolving while the positions that could answer are still loading', () => {
+    queries.usePositions.mockReturnValue({ data: undefined, isLoading: true })
+    queries.useInstrumentSearch.mockReturnValue({ data: [], isResolving: false })
+    expect(render('/research?symbol=ASML')).toMatchObject({ resolving: true, instrument: null })
   })
 })
 

@@ -357,6 +357,40 @@ describe('Research', () => {
     expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
   })
 
+  it('does not ask about the new symbol with the previous symbol\'s search result', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { currency: 'USD' } })
+    queries.useInstrumentSearch.mockReturnValue({
+      ...idle,
+      data: [{ symbol: 'NVDA', uic: 7, asset_type: 'Stock', currency: 'USD' }],
+      isResolving: true,
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=BBBB&tab=filings' })
+
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+    for (const hook of [queries.useFundamentals, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
+      expect(hook).not.toHaveBeenCalledWith('BBBB')
+    }
+  })
+
+  it('holds company data back for a pinned instrument whose listing Saxo could not confirm', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined, error: new Error('saxo down') })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&uic=9&assetType=Stock&tab=filings' })
+
+    expect(screen.getByTestId('tab-refused')).toHaveTextContent(/could not confirm where this instrument is listed/i)
+    expect(queries.useFilings).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('WHAT')
+  })
+
+  it('shows no US news for a fund listed in another currency', () => {
+    stubQueries({ positions: [{ ...etfPosition, currency: 'EUR' }] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=news' })
+
+    expect(queries.useCompanyNews).not.toHaveBeenCalledWith('SPY')
+    expect(screen.getByTestId('tab-refused')).toHaveTextContent(/looked up by US ticker/i)
+  })
+
   it('opens the company tabs once the lookup has settled, even without a match', () => {
     stubQueries({ positions: [] })
     queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
@@ -388,7 +422,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
 
     expect(queries.useCompanyNews).not.toHaveBeenCalledWith('NVDA')
-    expect(screen.getByText(/news is looked up by US ticker/i)).toBeInTheDocument()
+    expect(screen.getByTestId('tab-refused')).toHaveTextContent(/looked up by US ticker/i)
   })
 
   it('still shows news for a fund', () => {

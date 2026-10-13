@@ -130,6 +130,14 @@ describe('FinancialsTab', () => {
     expect(screen.getByText(/no balance sheet figures for these periods/i)).toBeInTheDocument()
   })
 
+  it('keeps the statements on screen when a background refresh fails', () => {
+    queries.useStatements.mockReturnValue({ ...idle, data: { available: true, annual, quarterly }, error: new Error('refresh failed') })
+    renderWithProviders(<FinancialsTab symbol="NVDA" fundamentals={fundamentals} />)
+
+    expect(screen.getByRole('rowheader', { name: 'Revenue' })).toBeInTheDocument()
+    expect(screen.queryByText('Statements could not be loaded.')).not.toBeInTheDocument()
+  })
+
   it('shows a skeleton while the statements load', () => {
     queries.useStatements.mockReturnValue({ ...idle, isLoading: true })
     renderWithProviders(<FinancialsTab symbol="NVDA" fundamentals={fundamentals} />)

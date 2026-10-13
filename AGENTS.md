@@ -477,24 +477,31 @@ bare ticker, and a ticker names a US-listed company: a European listing with the
 same letters would be shown another company's fundamentals, statements, earnings,
 news, filings and insider trades. `lib/companyData.js::companyDataStatus` is the only
 place that decides, from the instrument and its listing currency (the held position's,
-else Saxo's instrument details): `eligible` (US dollars, or nothing known that says
-otherwise), `fund` (an ETF), `foreign` (any other currency) or `pending` (the
-instrument search or its details are still in flight). `useChartData` computes it once
-and every consumer reads it: the page hides the company tabs and passes an empty symbol
-to the hooks, so no request is made at all. `pending` only ever waits for a request in
-flight, never for an instrument: with Saxo disconnected the search settles empty and
-the Finnhub tabs still work. The chart page's panel additionally needs a resolved
-instrument, because it describes the chart beside it. A US-dollar listing outside the
+else the search match's, else Saxo's instrument details), in this order: `pending`
+while any lookup is in flight; `foreign` for a known currency other than US dollars
+(a fund included); `fund` for an ETF; `eligible` for a US-dollar listing;
+`unverified` for a resolved instrument whose currency never arrived. A ticker nobody
+could resolve is `eligible` on the Research page, so the Finnhub tabs still work with
+Saxo disconnected, and `unverified` on the chart page, whose panel describes the
+chart beside it. `useChartData` computes the status once; `tabGate` turns it into
+show / pending / hidden / refused per tab (`company` tabs, and News as a `ticker`
+tab that a US-dollar fund may use), and a symbol that may not be asked about reaches
+the hooks as an empty string, so no request is made. While a new symbol's search is
+pending, the previous symbol's results are ignored. A US-dollar listing outside the
 US is the known remaining gap.
 
 **Finnhub is rate-limited where the calls leave, not where requests arrive.** One
 request fans out to between one and five Finnhub calls, so the per-view DRF scopes
-cannot bound the 60-a-minute key. `finnhub._get` spends from one per-minute counter in
-the cache (`FINNHUB_CALLS_PER_MINUTE`, default 58) and raises `FinnhubBusy` before
-calling when it is exhausted: the views answer 200 `available: false` with "try again
-in a minute", nothing is cached, and the browser retries after five minutes at most.
-The nightly scan spends from the same counter. A cache that cannot be reached fails
-open. The annual filing is fetched once per symbol (`finnhub.reported_annual`, raw,
-24h) and shared by fundamentals and statements. Filings asks per form and keeps the
-forms that answered, flagged `partial` and cached for ten minutes, instead of throwing
-away two paid calls because the third failed.
+cannot bound the 60-a-minute key. `finnhub._get` counts calls per minute in the cache
+and weighs in the previous minute's tail, so a burst across a minute boundary is still
+bounded (`FINNHUB_CALLS_PER_MINUTE`, default 58). When the budget is gone it raises
+`FinnhubBusy` before calling: the view answers 200 `available: false` with "try again
+in a minute", a refusal is not counted as spent, and an answer that depends on the
+refused call is not cached as complete. Background work runs inside
+`finnhub.background_calls()`, which holds back `FINNHUB_BACKGROUND_RESERVE` (15) for
+interactive requests; the nightly scan waits for the next minute and retries a refused
+row once. A cache that cannot count fails open. The annual filing is fetched once per
+symbol (`finnhub.reported_annual`, raw, 24h, about 200 KB each) and shared by
+fundamentals and statements. Filings asks per form and keeps the forms that answered,
+names the ones that did not (`missing`), and caches that for ten minutes instead of
+throwing away two paid calls because the third failed.

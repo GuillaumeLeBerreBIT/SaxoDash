@@ -76,10 +76,42 @@ describe('useChartData company data', () => {
   })
 
   it('asks for no earnings while the instrument is still being resolved', () => {
-    const { result } = render({ instrument: null, resolution: 'resolving' })
+    const { result } = render({ instrument: null, resolving: true })
 
     expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
     expect(result.current.companyData).toBe('pending')
+  })
+
+  it('waits for the currency of a resolved instrument whose details are loading', () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, isLoading: true })
+    const { result } = render()
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('pending')
+  })
+
+  it('does not wait for details when the instrument already carries its currency', () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, isLoading: true })
+    const { result } = render({ instrument: { ...instrument, currency: 'USD' } })
+
+    expect(result.current.companyData).toBe('eligible')
+    expect(result.current.currency).toBe('USD')
+  })
+
+  it('does not vouch for a resolved instrument whose details failed', () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined, error: new Error('saxo down') })
+    const { result } = render()
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('unverified')
+  })
+
+  it('asks for nothing about an unresolved symbol where an instrument is required', () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
+    const { result } = render({ instrument: null, requireInstrument: true })
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('unverified')
   })
 
   it('asks for no earnings for a fund', () => {

@@ -48,9 +48,22 @@ function ForeignListingNote() {
   )
 }
 
+function UnverifiedListingNote() {
+  return (
+    <Card>
+      <CardHeader title="Listing not confirmed" subtitle="Company data is held back" />
+      <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        Saxo could not confirm where this instrument is listed. Fundamentals and filings are looked up by US ticker,
+        so they are held back until it can. Range statistics and your notes are below.
+      </p>
+    </Card>
+  )
+}
+
 function CompanyReads({ companyData, fundamentals }) {
   if (companyData === COMPANY_DATA.fund) return <EtfNote />
   if (companyData === COMPANY_DATA.foreign) return <ForeignListingNote />
+  if (companyData === COMPANY_DATA.unverified) return <UnverifiedListingNote />
   if (companyData === COMPANY_DATA.pending) return null
   return <SnapshotSection fundamentals={fundamentals} />
 }

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions'
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
-import { COMPANY_DATA } from '../lib/companyData'
 import { chartHref, researchHref } from '../lib/research'
 import CommandPalette from '../components/CommandPalette'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
@@ -27,7 +26,7 @@ const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, 
 const paletteHrefFor = (symbol, instrument) => chartHref(symbol, instrument)
 
 export default function ResearchChart() {
-  const { symbol, instrument, resolution, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
   const layout = layoutById(workspace.layout)
@@ -70,7 +69,8 @@ export default function ResearchChart() {
     instrument,
     range: controls.range,
     position,
-    resolution,
+    resolving,
+    requireInstrument: true,
   })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
@@ -150,7 +150,7 @@ export default function ResearchChart() {
         </div>
         <SymbolPanel
           symbol={symbol}
-          companyData={instrument ? companyData : COMPANY_DATA.pending}
+          companyData={companyData}
           bars={allBars}
           earnings={earnings}
           href={researchHref(symbol, undefined, instrument)}

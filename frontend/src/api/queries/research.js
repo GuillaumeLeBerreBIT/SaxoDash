@@ -120,6 +120,8 @@ export function usePositionQuotes(positions = []) {
   return useMemo(() => quotesByUic(data), [data])
 }
 
+const SEARCH_MIN_LENGTH = 2
+
 export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
   // Without this, every keystroke fires its own request - typing a symbol
   // out blows through the backend's research.search throttle (20/min,
@@ -133,10 +135,12 @@ export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
     enabled: trimmed.length >= SEARCH_MIN_LENGTH,
     staleTime: 60_000,
   })
-  return { ...search, isResolving: isSearchResolving(wanted, trimmed, search.isLoading) }
+  return {
+    data: search.data,
+    isError: search.isError,
+    isResolving: isSearchResolving(wanted, trimmed, search.isLoading),
+  }
 }
-
-const SEARCH_MIN_LENGTH = 2
 
 export function isSearchResolving(wanted, debounced, isLoading) {
   if (wanted.length < SEARCH_MIN_LENGTH) return false

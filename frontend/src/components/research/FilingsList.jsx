@@ -30,10 +30,14 @@ export default function FilingsList({ filings }) {
         {shown.map((filing) => {
           const href = secUrl(filing.url) ?? secUrl(filing.report_url)
           return (
-            <li key={filing.accession || `${filing.form}-${filing.filed}`} className="flex items-center gap-3 py-2.5 text-[var(--fig-xs)]">
-              <Badge>{filing.form}</Badge>
-              <span className="text-zinc-100">{FORM_LABELS[filing.form] ?? filing.form}</span>
-              <span className="text-zinc-500 num font-mono">{fmtDate(filing.filed)}</span>
+            <li key={filing.accession || `${filing.form}-${filing.filed}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-[var(--fig-xs)]">
+              <span className="shrink-0 whitespace-nowrap">
+                <Badge>{filing.form}</Badge>
+              </span>
+              <span className="min-w-0">
+                <span className="block text-zinc-100 sm:inline">{FORM_LABELS[filing.form] ?? filing.form}</span>{' '}
+                <span className="block whitespace-nowrap text-zinc-500 num font-mono sm:inline sm:ml-2">{fmtDate(filing.filed)}</span>
+              </span>
               {href && (
                 <a
                   href={href}
