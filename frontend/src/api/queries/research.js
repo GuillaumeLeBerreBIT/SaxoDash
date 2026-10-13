@@ -21,6 +21,7 @@ import {
   getDiscoverShelf,
   getEarningsCalendar,
   getFundamentals,
+  getStatements,
   getInstrumentDetails,
   getPeers,
   getPriceLines,
@@ -54,6 +55,7 @@ export const researchKeys = {
   instrumentSearch: (query, assetTypes) => ['instrument-search', query.toLowerCase(), assetTypes],
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
+  statements: (symbol) => ['statements', symbol],
   companyNews: (symbol) => ['company-news', symbol],
   peers: (symbol) => ['peers', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
@@ -143,6 +145,15 @@ export function useFundamentals(symbol) {
   return useQuery({
     queryKey: researchKeys.fundamentals(symbol),
     queryFn: () => getFundamentals(symbol),
+    enabled: !!symbol,
+    staleTime: 24 * 60 * 60_000,
+  })
+}
+
+export function useStatements(symbol) {
+  return useQuery({
+    queryKey: researchKeys.statements(symbol),
+    queryFn: () => getStatements(symbol),
     enabled: !!symbol,
     staleTime: 24 * 60 * 60_000,
   })

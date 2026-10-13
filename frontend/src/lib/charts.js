@@ -44,6 +44,13 @@ export const SERIES_INVESTMENTS = POSITIVE // reuses the gain green deliberately
 export const SERIES_BANK = '#fbbf24' // amber-gold; a bank balance isn't a PENDING/warning signal despite the nearby hue
 export const SERIES_TOTAL = '#60a5fa' // lighter accent blue than REPORTED - reads as "the headline line" over two dashed/faded siblings
 
+export const STATEMENT_SERIES = {
+  revenue: REPORTED,
+  gross_profit: SERIES_TOTAL,
+  operating_income: SERIES_BANK,
+  net_income: POSITIVE,
+}
+
 /** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
 export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
 export const surpriseColor = (value) => [MISS, ESTIMATE, BEAT][surpriseSign(value) + 1]

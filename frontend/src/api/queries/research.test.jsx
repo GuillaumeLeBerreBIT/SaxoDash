@@ -7,6 +7,7 @@ import * as client from '../client'
 import {
   researchKeys,
   useNoteLevelMutation,
+  useStatements,
   usePriceLineMutations,
   usePriceLines,
   useTrendLineMutations,
@@ -281,5 +282,24 @@ describe('text annotations', () => {
     })
 
     await waitFor(() => expect(result.current.update.isError).toBe(true))
+  })
+})
+
+describe('useStatements', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('fetches the statements of the symbol', async () => {
+    client.getStatements.mockResolvedValue({ available: true, annual: [], quarterly: [] })
+
+    const { result } = setup(() => useStatements('NVDA'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(client.getStatements).toHaveBeenCalledWith('NVDA')
+  })
+
+  it('does not fetch for an empty symbol', () => {
+    setup(() => useStatements(''))
+
+    expect(client.getStatements).not.toHaveBeenCalled()
   })
 })
