@@ -12,6 +12,7 @@ import EarningsTab from '../components/research/EarningsTab'
 import FundsTab from '../components/research/FundsTab'
 import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
+import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PeersTab from '../components/research/PeersTab'
@@ -34,6 +35,7 @@ const TABS = [
   ['peers', 'Peers', { equityOnly: true }],
   ['earnings', 'Earnings', { equityOnly: true }],
   ['funds', 'Funds'],
+  ['filings', 'Filings', { equityOnly: true }],
   ['news', 'News'],
   ['guide', 'Guide'],
 ]
@@ -201,6 +203,7 @@ export default function Research() {
               {tab === 'funds' ? (
                 <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
               ) : null}
+              {tab === 'filings' ? <FilingsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'guide' ? <GuideTab /> : null}
             </div>
