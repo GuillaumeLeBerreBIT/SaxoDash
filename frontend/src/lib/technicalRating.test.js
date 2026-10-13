@@ -87,3 +87,77 @@ describe('technicalRating', () => {
     expect(rating.label).toBe('Strong sell')
   })
 })
+
+describe('technicalRating values and readings', () => {
+  const byKey = (rating) => Object.fromEntries(rating.votes.map((vote) => [vote.key, vote]))
+
+  it('gives every vote a finite value and a reading on a steady climb', () => {
+    const votes = byKey(technicalRating(series(260, (i) => 100 + i)))
+
+    for (const vote of Object.values(votes)) {
+      expect(Number.isFinite(vote.value)).toBe(true)
+      expect(typeof vote.reading).toBe('string')
+    }
+    expect(votes.rsi.reading).toBe('Overbought')
+    expect(votes.macd.reading).toBe('Above signal')
+    expect(votes.macd.value).toBeGreaterThan(0)
+    for (const key of ['ema9', 'sma20', 'sma50', 'sma200']) expect(votes[key].reading).toBe('Price above')
+    expect(votes.sma20.value).toBeCloseTo(359 - 9.5, 6)
+  })
+
+  it('reads an RSI above 70 as Overbought with a sell vote', () => {
+    const rsi = byKey(technicalRating(series(260, (i) => 100 + i))).rsi
+
+    expect(rsi.value).toBeGreaterThan(70)
+    expect(rsi.reading).toBe('Overbought')
+    expect(rsi.vote).toBe('sell')
+  })
+
+  it('reads a steady decline as Oversold, Below signal and Price below', () => {
+    const votes = byKey(technicalRating(series(260, (i) => 400 - i)))
+
+    expect(votes.rsi.reading).toBe('Oversold')
+    expect(votes.rsi.vote).toBe('buy')
+    expect(votes.macd.reading).toBe('Below signal')
+    expect(votes.macd.value).toBeLessThan(0)
+    expect(votes.sma200.reading).toBe('Price below')
+  })
+
+  it('reads a mid-range RSI as Mid-range', () => {
+    const rsi = byKey(technicalRating(series(260, (i) => 100 + (i % 2)))).rsi
+
+    expect(rsi.value).toBeGreaterThanOrEqual(30)
+    expect(rsi.value).toBeLessThanOrEqual(70)
+    expect(rsi.reading).toBe('Mid-range')
+  })
+
+  it('reads price equal to an average as Price at and MACD equal to its signal as On signal', () => {
+    const votes = byKey(technicalRating(series(260, () => 50)))
+
+    expect(votes.sma20.reading).toBe('Price at')
+    expect(votes.sma20.value).toBe(50)
+    expect(votes.macd.reading).toBe('On signal')
+    expect(votes.macd.value).toBe(0)
+  })
+
+  it('has no sma50 or sma200 vote with only 30 bars', () => {
+    const keys = technicalRating(series(30, (i) => 100 + i)).votes.map((vote) => vote.key)
+
+    expect(keys).not.toContain('sma50')
+    expect(keys).not.toContain('sma200')
+    expect(keys).toContain('sma20')
+  })
+
+  it('keeps the key, label and vote of every entry', () => {
+    const rating = technicalRating(series(260, (i) => 100 + i))
+
+    expect(rating.votes.map(({ key, label, vote }) => ({ key, label, vote }))).toEqual([
+      { key: 'rsi', label: 'RSI (14)', vote: 'sell' },
+      { key: 'macd', label: 'MACD (12, 26)', vote: 'buy' },
+      { key: 'ema9', label: 'EMA 9', vote: 'buy' },
+      { key: 'sma20', label: 'SMA 20', vote: 'buy' },
+      { key: 'sma50', label: 'SMA 50', vote: 'buy' },
+      { key: 'sma200', label: 'SMA 200', vote: 'buy' },
+    ])
+  })
+})

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useFundamentals } from '../../api/queries'
@@ -16,6 +16,7 @@ import MiniFinancials from './MiniFinancials'
 import PerformanceTiles from './PerformanceTiles'
 import RatingGauge from './RatingGauge'
 import SeasonalsChart from './SeasonalsChart'
+import TechnicalsTable from './TechnicalsTable'
 
 const AVERAGE_VOLUME_SESSIONS = 30
 
@@ -51,6 +52,28 @@ function Section({ title, note, children }) {
       </div>
       {children}
     </section>
+  )
+}
+
+function IndicatorDisclosure({ votes }) {
+  const [open, setOpen] = useState(false)
+  const tableId = useId()
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={tableId}
+        onClick={() => setOpen((value) => !value)}
+        className="mx-auto block text-[var(--fig-2xs)] text-zinc-400 hover:text-zinc-200 transition-colors"
+      >
+        {open ? 'Hide indicators' : `Show indicators (${votes.length})`}
+      </button>
+      <div id={tableId} className="mt-2">
+        {open && <TechnicalsTable votes={votes} />}
+      </div>
+    </div>
   )
 }
 
@@ -148,9 +171,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href, 
               ['Buy', technical.buy],
             ]}
           />
-          <p className="mt-1 text-center text-[var(--fig-2xs)] text-zinc-500">
-            {technical.votes.map((vote) => vote.label).join(', ')}
-          </p>
+          <IndicatorDisclosure key={symbol} votes={technical.votes} />
         </Section>
       )}
 

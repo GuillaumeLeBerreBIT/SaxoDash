@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { fmtMonthYear } from '../../lib/format'
@@ -154,6 +156,43 @@ describe('SymbolPanel', () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toMatch(/^In \d+ days$/)
     expect(lines[1]).toBe('After close')
+  })
+
+  it('keeps the indicator table closed until asked, and closes it again', async () => {
+    renderWithProviders(panel())
+
+    const button = screen.getByRole('button', { name: /Show indicators \(6\)/ })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.queryByText('RSI (14), MACD (12, 26), EMA 9, SMA 20, SMA 50, SMA 200')).not.toBeInTheDocument()
+
+    await userEvent.click(button)
+    const open = screen.getByRole('button', { name: 'Hide indicators' })
+    expect(open).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('RSI (14)')).toBeInTheDocument()
+    expect(document.getElementById(open.getAttribute('aria-controls'))).toContainElement(screen.getByRole('table'))
+
+    await userEvent.click(open)
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show indicators \(6\)/ })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('closes the indicator table when the symbol changes', async () => {
+    const inRouter = (ui) => <MemoryRouter>{ui}</MemoryRouter>
+    const { rerender } = render(inRouter(panel()))
+    await userEvent.click(screen.getByRole('button', { name: /Show indicators/ }))
+    expect(screen.getByRole('table')).toBeInTheDocument()
+
+    rerender(inRouter(panel({ symbol: 'ABNB' })))
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Show indicators/ })).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('counts only the indicators that could vote', () => {
+    renderWithProviders(panel({ bars: dailyBars(60) }))
+
+    expect(screen.getByRole('button', { name: /Show indicators \(5\)/ })).toBeInTheDocument()
   })
 
   it('puts each count term before its value', () => {
