@@ -4,7 +4,7 @@ import { Star } from 'lucide-react'
 import { useOwnership } from '../../api/queries'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { fmtUsdCompact, quarterLabel } from '../../lib/investors'
-import { ownershipTicker } from '../../lib/ownership'
+import { ownershipTicker, sharesChange } from '../../lib/ownership'
 import { Card, CardHeader, EmptyState, QueryState, StatRow, StatStrip, Td, Th, Tr } from '../ui'
 import ChangeBadge from '../investors/ChangeBadge'
 import InvestorAvatar from '../investors/InvestorAvatar'
@@ -13,6 +13,15 @@ import WeightBar from '../investors/WeightBar'
 
 const US_ONLY = '13F filings cover US-listed securities only.'
 const SOLD_OUT = 'sold_out'
+const PCT_LIMIT = 1000
+
+function MoveCounts({ stock }) {
+  return (
+    <span className="num font-mono text-[var(--fig-xs)] text-zinc-500">
+      {`${stock.new} new · ${stock.added} added · ${stock.trimmed} trimmed · ${stock.sold_out} sold out`}
+    </span>
+  )
+}
 
 const shownWeight = (fund) => (fund.kind === SOLD_OUT ? fund.previous_weight : fund.weight)
 
@@ -22,7 +31,7 @@ function Fund({ fund }) {
       <InvestorAvatar name={fund.name} size={24} />
       <span className="min-w-0">
         <span className="flex items-center gap-1.5">
-          <Link to={`/investors/${fund.slug}`} className="font-medium text-zinc-100 hover:text-blue-300 truncate">
+          <Link to={`/investors/${fund.slug}`} className="font-medium text-zinc-100 hover:text-blue-300 truncate max-w-[190px]">
             {fund.name}
           </Link>
           {fund.followed ? (
@@ -32,7 +41,7 @@ function Fund({ fund }) {
             </>
           ) : null}
         </span>
-        <span className="block text-[var(--fig-xs)] text-zinc-500 truncate max-w-[260px]">{fund.firm}</span>
+        <span className="block text-[var(--fig-xs)] text-zinc-500 truncate max-w-[190px]">{fund.firm}</span>
       </span>
     </span>
   )
@@ -46,7 +55,7 @@ function Weight({ fund, max }) {
       <span className={`num font-mono ${exited ? 'text-zinc-500' : 'text-zinc-200'}`}>
         {`${exited ? 'was ' : ''}${fmtPct(weight, { sign: false, decimals: 1 })}`}
       </span>
-      <WeightBar weight={exited ? 0 : weight} max={max} className="w-16" />
+      <WeightBar weight={exited ? 0 : weight} max={max} className="w-12" />
     </div>
   )
 }
@@ -105,14 +114,20 @@ export default function FundsTab({ symbol, currency }) {
   }
 
   const waiting = tracked - filed
+  const change = sharesChange(stock)
+  const up = change?.direction === 'up'
+  const changePct = change?.pct != null && Math.abs(change.pct) < PCT_LIMIT ? fmtPct(change.pct, { decimals: 1 }) : null
   return (
     <div className="space-y-3">
       <StatStrip>
         <StatRow label="Owners" value={`${stock.owners} of ${tracked}`} note="tracked funds" lead />
-        <StatRow label="New" value={stock.new} />
-        <StatRow label="Added" value={stock.added} />
-        <StatRow label="Trimmed" value={stock.trimmed} />
-        <StatRow label="Sold out" value={stock.sold_out} />
+        <StatRow label="Shares held" value={fmtNum(stock.shares)} note="at quarter end" />
+        <StatRow
+          label="Net change"
+          value={change ? `${up ? '▲' : '▼'}\u00a0${up ? '+' : '-'}${fmtNum(change.shares)}` : '—'}
+          badge={changePct}
+          note="shares vs last quarter"
+        />
       </StatStrip>
       <Card padding={false}>
         <div className="p-4 pb-3">
@@ -121,6 +136,7 @@ export default function FundsTab({ symbol, currency }) {
             subtitle={`As of ${quarterLabel(quarter)} quarter end, filed up to 45 days later${
               waiting > 0 ? ` · ${waiting} of ${tracked} funds have not filed it yet` : ''
             }`}
+            right={<MoveCounts stock={stock} />}
           />
         </div>
         <Funds funds={funds} />

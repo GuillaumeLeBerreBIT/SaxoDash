@@ -1,3 +1,4 @@
+import { fmtNum } from './format'
 import { quarterLabel } from './investors'
 
 const FILING_CURRENCY = 'USD'
@@ -12,14 +13,30 @@ export function ownershipTickers(positions = []) {
   return [...new Set(positions.map(ownershipTicker).filter(Boolean))].sort()
 }
 
-export function fundBalance(stock) {
-  if (!stock) return null
-  const buying = stock.new + stock.added
-  const selling = stock.trimmed + stock.sold_out
-  return buying || selling ? { buying, selling } : null
+export function sharesHeld(stock) {
+  return stock && stock.shares > 0 ? stock.shares : null
 }
 
-export function balanceLabel({ buying, selling }, quarter) {
-  const funds = buying === 1 ? 'fund' : 'funds'
-  return `${buying} tracked ${funds} buying, ${selling} selling in ${quarterLabel(quarter)}`
+export function sharesChange(stock) {
+  if (!stock || !stock.shares_change) return null
+  return {
+    direction: stock.shares_change > 0 ? 'up' : 'down',
+    shares: Math.abs(stock.shares_change),
+    pct: stock.shares_change_pct,
+  }
 }
+
+const COMPACT_UNITS = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']]
+
+export function fmtSharesCompact(shares) {
+  const size = Math.abs(shares)
+  const unit = COMPACT_UNITS.find(([scale]) => Math.round((size / scale) * 10) >= 10)
+  if (!unit) return fmtNum(shares)
+  return `${Number((shares / unit[0]).toFixed(1))}${unit[1]}`
+}
+
+export const heldLabel = (shares, quarter) =>
+  `Tracked funds hold ${fmtNum(shares)} shares at the end of ${quarterLabel(quarter)}`
+
+export const changeLabel = ({ direction, shares }, quarter) =>
+  `Tracked funds net ${direction === 'up' ? 'bought' : 'sold'} ${fmtNum(shares)} shares in ${quarterLabel(quarter)}`

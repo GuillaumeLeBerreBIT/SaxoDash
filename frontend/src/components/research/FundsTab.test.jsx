@@ -15,7 +15,10 @@ const OWNERSHIP = {
   tracked: 88,
   ticker: 'NBIS',
   issuer: 'NEBIUS GROUP N.V.',
-  stock: { owners: 2, new: 1, added: 1, trimmed: 0, sold_out: 1, unchanged: 0 },
+  stock: {
+    owners: 2, new: 1, added: 1, trimmed: 0, sold_out: 1, unchanged: 0,
+    shares: 1_200_300, shares_change: 301_100, shares_change_pct: 33.5,
+  },
   funds: [
     {
       slug: 'tci', name: 'Chris Hohn', firm: 'TCI Fund Management', followed: true, kind: 'new',
@@ -40,13 +43,28 @@ describe('FundsTab', () => {
     queries.useOwnership.mockReturnValue({ ...idle, data: OWNERSHIP })
   })
 
-  it('leads with owners and the four move counts for the named quarter', () => {
+  it('leads with owners, shares held and the net change for the named quarter', () => {
     show()
 
     expect(queries.useOwnership).toHaveBeenCalledWith('NBIS')
     expect(screen.getByText('2 of 88')).toBeInTheDocument()
+    expect(screen.getByText('1,200,300')).toBeInTheDocument()
+    expect(screen.getByText('▲ +301,100')).toBeInTheDocument()
+    expect(screen.getByText('+33.5%')).toBeInTheDocument()
+    expect(screen.getByText('1 new · 1 added · 0 trimmed · 1 sold out')).toBeInTheDocument()
     expect(screen.getByText(/As of Q2 2026 quarter end, filed up to 45 days later/)).toBeInTheDocument()
     expect(screen.getByText(/8 of 88 funds have not filed it yet/)).toBeInTheDocument()
+  })
+
+  it('shows a dash for the net change when nothing moved', () => {
+    queries.useOwnership.mockReturnValue({
+      ...idle,
+      data: { ...OWNERSHIP, stock: { ...OWNERSHIP.stock, shares_change: 0, shares_change_pct: 0.0 } },
+    })
+    show()
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText(/▲ \+/)).not.toBeInTheDocument()
   })
 
   it('lists each fund with its move, linked to its profile', () => {
@@ -84,7 +102,7 @@ describe('FundsTab', () => {
 
     queries.useOwnership.mockReturnValue({
       ...idle,
-      data: { ...OWNERSHIP, stock: { owners: 0, new: 0, added: 0, trimmed: 0, sold_out: 0, unchanged: 0 }, funds: [] },
+      data: { ...OWNERSHIP, stock: { owners: 0, new: 0, added: 0, trimmed: 0, sold_out: 0, unchanged: 0, shares: 0, shares_change: 0, shares_change_pct: null }, funds: [] },
     })
     show()
     expect(screen.getByText('No tracked fund reported NBIS in Q2 2026')).toBeInTheDocument()

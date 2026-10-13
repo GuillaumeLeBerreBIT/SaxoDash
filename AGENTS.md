@@ -381,8 +381,10 @@ import `investors`. It describes `signals.signal_quarter()`, the hub's quarter, 
 `signals.stock_positions`, so two CUSIPs under one ticker are one position and options never
 count. An unknown ticker is `null`, never zeros. Tickers are bare symbols, so only USD-quoted
 instruments are asked about (`lib/ownership.js::ownershipTicker`) — a European listing can share a
-symbol with an unrelated US stock. The column leads with buyers against sellers, not the owner
-count: 37 to 40 of 88 funds hold each megacap, so the count alone says nothing.
+symbol with an unrelated US stock. Portfolio shows the shares tracked funds hold and their net
+change since last quarter, not the owner count: 37 to 40 of 88 funds hold each megacap, so the
+count alone says nothing. A net change of zero is a dash. The columns are hidden below 1440px
+(`hideBelow="wide"`), where they would push Weight out of the table.
 
 **A CUSIP with no ticker can inherit one, and the inheritance is always re-derivable.**
 A reorganised company gets a new CUSIP; OpenFIGI moves the US listing to it and the old

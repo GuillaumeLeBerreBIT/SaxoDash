@@ -62,25 +62,32 @@ describe('Portfolio holdings table', () => {
     expectValidHeadingOutline(container)
   })
 
-  it('shows what tracked funds did with a holding and skips non-USD ones', () => {
+  it('shows the shares tracked funds hold and their net change, skipping non-USD holdings', () => {
     const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
-    stub([msft, asml])
+    const flat = { ...msft, ticker: 'AAPL', name: 'Apple Inc.' }
+    stub([msft, asml, flat])
     queries.useOwnershipSummary.mockReturnValue({
       ...idle,
       data: {
         quarter: '2026-06-30',
-        stocks: { MSFT: { owners: 34, new: 2, added: 13, trimmed: 14, sold_out: 4, unchanged: 5 } },
+        stocks: {
+          MSFT: { owners: 34, shares: 212_000_000, shares_change: -4_200_000, shares_change_pct: -1.9 },
+          AAPL: { owners: 21, shares: 8_000_000, shares_change: 0, shares_change_pct: 0.0 },
+        },
       },
     })
 
     renderWithProviders(<Portfolio />)
 
-    expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['MSFT'])
-    expect(screen.getByRole('columnheader', { name: 'Funds' })).toBeInTheDocument()
-    const links = screen.getAllByRole('link', { name: /tracked funds buying/ })
-    expect(links).toHaveLength(1)
-    expect(links[0]).toHaveAccessibleName('15 tracked funds buying, 18 selling in Q2 2026')
-    expect(links[0]).toHaveAttribute('href', '/research?symbol=MSFT&tab=funds')
+    expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['AAPL', 'MSFT'])
+    expect(screen.getByRole('columnheader', { name: 'Fund shares' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Fund change' })).toBeInTheDocument()
+    const held = screen.getByRole('link', { name: 'Tracked funds hold 212,000,000 shares at the end of Q2 2026' })
+    expect(held).toHaveAttribute('href', '/research?symbol=MSFT&tab=funds')
+    const change = screen.getByRole('link', { name: 'Tracked funds net sold 4,200,000 shares in Q2 2026' })
+    expect(change.textContent).toBe('▼\u00a0-4.2M-1.9%')
+    expect(screen.getByRole('link', { name: 'Tracked funds hold 8,000,000 shares at the end of Q2 2026' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /net (bought|sold) 0 shares/ })).not.toBeInTheDocument()
   })
 
   it('keeps one h1 and no skipped level while loading', () => {

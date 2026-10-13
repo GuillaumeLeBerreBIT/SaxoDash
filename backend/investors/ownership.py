@@ -26,12 +26,20 @@ def _header():
 
 
 def _counts(positions):
-    counts = {'owners': 0, **{kind: 0 for kind in KINDS}}
+    counts = {'owners': 0, **{kind: 0 for kind in KINDS}, 'shares': 0, 'shares_change': 0}
+    compared_before = 0
     for position in positions:
+        counts['shares'] += position['shares']
         if position['kind'] != changes.SOLD_OUT:
             counts['owners'] += 1
         if position['kind'] is not None:
             counts[position['kind']] += 1
+            before = position['previous_shares'] or 0
+            counts['shares_change'] += position['shares'] - before
+            compared_before += before
+    counts['shares_change_pct'] = (
+        round(counts['shares_change'] / compared_before * 100, 2) if compared_before else None
+    )
     return counts
 
 

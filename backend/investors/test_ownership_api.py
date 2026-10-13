@@ -16,7 +16,10 @@ MICROSOFT = ('594918104', 'MICROSOFT CORP')
 ALPHABET_OLD = ('38259P508', 'GOOGLE INC')
 ALPHABET = ('02079K305', 'ALPHABET INC')
 
-NO_MOVES = {'owners': 0, 'new': 0, 'added': 0, 'trimmed': 0, 'sold_out': 0, 'unchanged': 0}
+NO_MOVES = {
+    'owners': 0, 'new': 0, 'added': 0, 'trimmed': 0, 'sold_out': 0, 'unchanged': 0,
+    'shares': 0, 'shares_change': 0, 'shares_change_pct': None,
+}
 
 
 def held(security, shares, value, put_call=''):
@@ -62,9 +65,17 @@ class OwnershipApiTest(APITestCase):
     def test_moves_are_counted_per_kind_and_a_sold_out_fund_is_not_an_owner(self):
         stocks = self.summary('aapl,NVDA, msft').data['stocks']
 
-        self.assertEqual(stocks['AAPL'], {**NO_MOVES, 'owners': 1, 'added': 1, 'sold_out': 1})
-        self.assertEqual(stocks['NVDA'], {**NO_MOVES, 'owners': 1, 'new': 1})
-        self.assertEqual(stocks['MSFT'], {**NO_MOVES, 'owners': 1, 'unchanged': 1})
+        self.assertEqual(
+            stocks['AAPL'],
+            {**NO_MOVES, 'owners': 1, 'added': 1, 'sold_out': 1, 'shares': 20, 'shares_change': 0, 'shares_change_pct': 0.0},
+        )
+        self.assertEqual(
+            stocks['NVDA'], {**NO_MOVES, 'owners': 1, 'new': 1, 'shares': 1, 'shares_change': 1},
+        )
+        self.assertEqual(
+            stocks['MSFT'],
+            {**NO_MOVES, 'owners': 1, 'unchanged': 1, 'shares': 5, 'shares_change': 0, 'shares_change_pct': 0.0},
+        )
 
     def test_an_unknown_ticker_is_null_and_an_unheld_one_is_zero(self):
         Security.objects.create(cusip='88160R101', ticker='TSLA')
@@ -77,20 +88,47 @@ class OwnershipApiTest(APITestCase):
         desk = make_investor(name='Options Desk', firm='Desk Capital', cik=1111111, slug='desk-capital')
         store_quarter(desk, Q2, [held(NVIDIA, 9, 900, 'Call')])
 
-        self.assertEqual(self.summary('NVDA').data['stocks']['NVDA'], {**NO_MOVES, 'owners': 1, 'new': 1})
+        self.assertEqual(
+            self.summary('NVDA').data['stocks']['NVDA'], {**NO_MOVES, 'owners': 1, 'new': 1, 'shares': 1, 'shares_change': 1},
+        )
 
     def test_two_cusips_under_one_ticker_are_one_position(self):
         third = make_investor(name='Chris Hohn', firm='TCI', cik=1647251, slug='tci')
         store_quarter(third, Q1, [held(ALPHABET_OLD, 10, 1000)])
         store_quarter(third, Q2, [held(ALPHABET_OLD, 10, 1000), held(ALPHABET, 10, 1000)])
 
-        self.assertEqual(self.summary('GOOGL').data['stocks']['GOOGL'], {**NO_MOVES, 'owners': 1, 'added': 1})
+        self.assertEqual(
+            self.summary('GOOGL').data['stocks']['GOOGL'],
+            {**NO_MOVES, 'owners': 1, 'added': 1, 'shares': 20, 'shares_change': 10, 'shares_change_pct': 100.0},
+        )
 
     def test_a_fund_with_one_stored_quarter_owns_without_a_move(self):
         newcomer = make_investor(name='Li Lu', firm='Himalaya', cik=1709323, slug='himalaya')
         store_quarter(newcomer, Q2, [held(NVIDIA, 3, 300)])
 
-        self.assertEqual(self.summary('NVDA').data['stocks']['NVDA'], {**NO_MOVES, 'owners': 2, 'new': 1})
+        self.assertEqual(
+            self.summary('NVDA').data['stocks']['NVDA'],
+            {**NO_MOVES, 'owners': 2, 'new': 1, 'shares': 4, 'shares_change': 1},
+        )
+
+    def test_a_net_sale_is_negative_and_measured_against_what_was_held_before(self):
+        third = make_investor(name='Chris Hohn', firm='TCI', cik=1647251, slug='tci')
+        store_quarter(third, Q1, [held(NVIDIA, 100, 1000)])
+        store_quarter(third, Q2, [held(NVIDIA, 60, 600)])
+
+        stock = self.summary('NVDA').data['stocks']['NVDA']
+
+        self.assertEqual(
+            (stock['shares'], stock['shares_change'], stock['shares_change_pct']), (61, -39, -39.0),
+        )
+
+    def test_a_fund_with_nothing_to_compare_adds_shares_but_no_change(self):
+        newcomer = make_investor(name='Li Lu', firm='Himalaya', cik=1709323, slug='himalaya')
+        store_quarter(newcomer, Q2, [held(APPLE, 7, 70)])
+
+        stock = self.summary('AAPL').data['stocks']['AAPL']
+
+        self.assertEqual((stock['shares'], stock['shares_change'], stock['shares_change_pct']), (27, 0, 0.0))
 
     def test_the_summary_refuses_no_tickers_and_too_many(self):
         self.assertEqual(self.client.get(reverse('investor-ownership')).status_code, 400)
@@ -112,7 +150,9 @@ class OwnershipApiTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual((response.data['ticker'], response.data['issuer']), ('NVDA', 'NVIDIA CORP'))
-        self.assertEqual(response.data['stock'], {**NO_MOVES, 'owners': 2, 'new': 2})
+        self.assertEqual(
+            response.data['stock'], {**NO_MOVES, 'owners': 2, 'new': 2, 'shares': 31, 'shares_change': 31},
+        )
         self.assertEqual([fund['slug'] for fund in response.data['funds']], ['tci', 'berkshire-hathaway'])
         self.assertEqual(
             response.data['funds'][1],
