@@ -52,6 +52,9 @@ function Activity({ symbol, data }) {
   }
   return (
     <>
+      {!activity && (
+        <p className="text-[var(--fig-xs)] text-zinc-500">No open-market buying or selling by insiders in this period.</p>
+      )}
       {activity && (
         <>
           <p className={`text-[var(--fig-sm)] font-medium ${TONES[activity.tone]}`}>{activity.text}</p>
@@ -91,7 +94,7 @@ export default function FilingsTab({ symbol }) {
         loadError="Insider transactions could not be loaded."
         unavailable={`Insider transactions are unavailable for ${symbol}.`}
       >
-        {(data) => <InsiderTransactions transactions={data.transactions ?? []} />}
+        {(data) => <InsiderTransactions transactions={data.transactions ?? []} counts={data.counts} />}
       </QueryCard>
       <QueryCard
         title="SEC filings"

@@ -369,6 +369,8 @@ describe('filingsStaleTime', () => {
     expect(filingsStaleTime({ available: true })).toBe(12 * 60 * 60_000)
     expect(filingsStaleTime({ available: false })).toBe(5 * 60_000)
     expect(filingsStaleTime(undefined)).toBe(5 * 60_000)
+    expect(filingsStaleTime({ available: true, partial: true })).toBe(5 * 60_000)
+    expect(filingsStaleTime({ available: true, partial: false })).toBe(12 * 60 * 60_000)
   })
 })
 

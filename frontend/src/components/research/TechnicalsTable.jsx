@@ -24,10 +24,13 @@ export default function TechnicalsTable({ votes }) {
             const [word, tone] = VOTE_WORDS[vote.vote]
             return (
               <tr key={vote.key} className="border-t border-white/[0.06]">
-                <td className="py-1.5 pr-2 text-zinc-300 whitespace-nowrap">{vote.label}</td>
-                <td className="py-1.5 px-2 text-right num font-mono text-zinc-100">{fmtNum(vote.value, 2)}</td>
-                <td className="py-1.5 pl-2 text-right text-zinc-400 whitespace-nowrap">
-                  {vote.reading} · <span className={tone}>{word}</span>
+                <th scope="row" className="py-1.5 pr-2 text-left font-normal text-zinc-300">
+                  <span className="block">{vote.label}</span>
+                  <span className="block text-zinc-500">{vote.reading}</span>
+                </th>
+                <td className="py-1.5 px-2 text-right align-top num font-mono text-zinc-100">{fmtNum(vote.value, 2)}</td>
+                <td className="py-1.5 pl-2 text-right align-top whitespace-nowrap">
+                  <span className={tone}>{word}</span>
                 </td>
               </tr>
             )

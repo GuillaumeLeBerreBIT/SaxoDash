@@ -173,7 +173,7 @@ export function useStatements(symbol) {
 const FILINGS_FRESH = 12 * 60 * 60_000
 
 export function filingsStaleTime(data) {
-  return data?.available ? FILINGS_FRESH : STATEMENTS_RETRY
+  return data?.available && !data.partial ? FILINGS_FRESH : STATEMENTS_RETRY
 }
 
 export function useFilings(symbol) {

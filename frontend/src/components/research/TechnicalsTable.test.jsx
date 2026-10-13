@@ -35,16 +35,23 @@ describe('TechnicalsTable', () => {
     expect(screen.getByText('120.10')).toBeInTheDocument()
   })
 
-  it('shows the reading followed by the vote word, coloured by vote', () => {
+  it('puts the reading under the indicator name and only the vote word in the signal cell', () => {
     render(<TechnicalsTable votes={votes} />)
 
     const [rsi, macd, sma] = bodyRows()
-    expect(rsi).toHaveTextContent(/Overbought.*Sell/)
+    expect(within(rsi).getByRole('rowheader')).toHaveTextContent('RSI (14)Overbought')
+    expect(within(rsi).getAllByRole('cell').at(-1)).toHaveTextContent(/^Sell$/)
     expect(within(rsi).getByText('Sell')).toHaveClass('text-red-400')
-    expect(macd).toHaveTextContent(/Above signal.*Buy/)
+    expect(within(macd).getByRole('rowheader')).toHaveTextContent('MACD (12, 26)Above signal')
     expect(within(macd).getByText('Buy')).toHaveClass('text-emerald-400')
-    expect(sma).toHaveTextContent(/Price at.*Neutral/)
+    expect(within(sma).getAllByRole('cell').at(-1)).toHaveTextContent(/^Neutral$/)
     expect(within(sma).getByText('Neutral')).toHaveClass('text-zinc-400')
+  })
+
+  it('lets the indicator column wrap so the table fits a narrow panel', () => {
+    render(<TechnicalsTable votes={votes} />)
+
+    expect(within(bodyRows()[0]).getByRole('rowheader')).not.toHaveClass('whitespace-nowrap')
   })
 
   it('renders nothing for no votes', () => {

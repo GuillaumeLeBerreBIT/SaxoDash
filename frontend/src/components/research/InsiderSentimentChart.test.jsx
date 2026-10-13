@@ -26,7 +26,24 @@ describe('InsiderSentimentChart', () => {
     render(<InsiderSentimentChart sentiment={sentiment} />)
 
     expect(screen.getByText('Aug 26')).toBeInTheDocument()
-    expect(screen.getByText('Sep 26')).toBeInTheDocument()
+    expect(screen.getByText('Sep')).toBeInTheDocument()
+  })
+
+  it('shows the year on the first month and each January only', () => {
+    const months = ['2025-10', '2025-11', '2025-12', '2026-01', '2026-02'].map((month) => ({ month, mspr: 10, change: 1 }))
+    render(<InsiderSentimentChart sentiment={months} />)
+
+    const labels = screen.getAllByRole('listitem').map((item) => item.querySelector('[data-month-label]').textContent)
+    expect(labels).toEqual(['Oct 25', 'Nov', 'Dec', 'Jan 26', 'Feb'])
+    expect(screen.getAllByRole('listitem')[1]).toHaveAccessibleName('Nov 25: 10, net 1 shares')
+  })
+
+  it('lets the columns share the full width', () => {
+    render(<InsiderSentimentChart sentiment={sentiment} />)
+
+    const item = screen.getAllByRole('listitem')[0]
+    expect(item).toHaveClass('flex-1', 'min-w-0')
+    expect(item.className).not.toMatch(/max-w-/)
   })
 
   it('draws buying above the centre line in the positive colour and selling below in the negative one', () => {

@@ -72,6 +72,28 @@ describe('FilingsTab', () => {
     expect(screen.getByText('No insider transactions were filed for NVDA in the past year.')).toBeInTheDocument()
   })
 
+  it('says there was no open-market trading when insiders only received awards', () => {
+    queries.useInsiders.mockReturnValue(
+      ok({
+        available: true,
+        transactions: [{ ...insidersData.transactions[0], code: 'A', shares: 500, price: null, value: null }],
+        counts: { open_market: 0, other: 1 },
+        summary: { ...insidersData.summary, buys: 0, sells: 0, shares_sold: 0, value_sold: 0 },
+        sentiment: [],
+      }),
+    )
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.getByText('No open-market buying or selling by insiders in this period.')).toBeInTheDocument()
+  })
+
+  it('passes the source counts to the transactions table', () => {
+    queries.useInsiders.mockReturnValue(ok({ ...insidersData, counts: { open_market: 9, other: 0 } }))
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.getByText('Showing the newest 1 of 9.')).toBeInTheDocument()
+  })
+
   it('shows skeletons while loading, per card', () => {
     queries.useInsiders.mockReturnValue({ data: undefined, isLoading: true, error: null, refetch: vi.fn() })
     renderWithProviders(<FilingsTab symbol="NVDA" />)

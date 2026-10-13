@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
 import { chartHref, isEtf } from '../lib/research'
-import { PageHeader, TabButton, TabList } from '../components/ui'
+import { Card, PageHeader, TabButton, TabList } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { readRecentSymbols } from '../lib/recentSymbols'
@@ -41,6 +41,7 @@ const TABS = [
 ]
 
 const TAB_ALIASES = { valuation: 'statistics' }
+const INSTRUMENT_GATED_TAB_KEYS = new Set(['financials', 'filings'])
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
 const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
@@ -89,6 +90,8 @@ export default function Research() {
     details: details.data,
     position,
   })
+
+  const awaitingInstrument = !instrument && INSTRUMENT_GATED_TAB_KEYS.has(tab)
 
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
 
@@ -194,7 +197,14 @@ export default function Research() {
                   isEtf={instrumentIsEtf}
                 />
               ) : null}
-              {tab === 'financials' ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {awaitingInstrument ? (
+                <Card>
+                  <p data-testid="tab-pending" className="text-[var(--fig-xs)] text-zinc-500">
+                    Available once the instrument is resolved.
+                  </p>
+                </Card>
+              ) : null}
+              {tab === 'financials' && instrument ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'statistics' ? <StatisticsTab fundamentals={fundamentals} /> : null}
               {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'earnings' ? (
@@ -203,7 +213,7 @@ export default function Research() {
               {tab === 'funds' ? (
                 <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
               ) : null}
-              {tab === 'filings' ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+              {tab === 'filings' && instrument ? <FilingsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'guide' ? <GuideTab /> : null}
             </div>

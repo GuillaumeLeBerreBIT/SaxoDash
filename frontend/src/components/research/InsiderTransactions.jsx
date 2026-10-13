@@ -25,11 +25,12 @@ const HEADERS = [
   ['Holding after', 'right'],
 ]
 
-export default function InsiderTransactions({ transactions }) {
+export default function InsiderTransactions({ transactions, counts }) {
   const [scope, setScope] = useState('open')
   const [expanded, setExpanded] = useState(false)
   const rows = filterTransactions(transactions, scope)
   const shown = expanded ? rows : rows.slice(0, VISIBLE)
+  const atSource = counts ? (scope === 'open' ? counts.open_market : counts.open_market + counts.other) : rows.length
 
   return (
     <div>
@@ -74,6 +75,9 @@ export default function InsiderTransactions({ transactions }) {
               </tbody>
             </table>
           </div>
+          {atSource > rows.length && (
+            <p className="mt-2 text-[var(--fig-2xs)] text-zinc-500">{`Showing the newest ${rows.length} of ${atSource}.`}</p>
+          )}
           {!expanded && rows.length > VISIBLE && (
             <div className="mt-3">
               <TBtn onClick={() => setExpanded(true)}>{`Show all ${rows.length}`}</TBtn>

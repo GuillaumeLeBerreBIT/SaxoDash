@@ -83,6 +83,25 @@ describe('InsiderTransactions', () => {
     expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument()
   })
 
+  it('says when a scope shows only the newest of more trades', async () => {
+    const transactions = [...many(3), ...many(4, { code: 'A' })]
+    render(<InsiderTransactions transactions={transactions} counts={{ open_market: 9, other: 40 }} />)
+
+    expect(screen.getByText('Showing the newest 3 of 9.')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'All' }))
+
+    expect(screen.getByText('Showing the newest 7 of 49.')).toBeInTheDocument()
+  })
+
+  it('says nothing about a subset when nothing was cut or no counts came', () => {
+    const { rerender } = render(<InsiderTransactions transactions={many(3)} counts={{ open_market: 3, other: 0 }} />)
+    expect(screen.queryByText(/Showing the newest/)).not.toBeInTheDocument()
+
+    rerender(<InsiderTransactions transactions={many(3)} />)
+    expect(screen.queryByText(/Showing the newest/)).not.toBeInTheDocument()
+  })
+
   it('says so when there are no open-market trades', () => {
     render(<InsiderTransactions transactions={[trade({ code: 'A' })]} />)
 

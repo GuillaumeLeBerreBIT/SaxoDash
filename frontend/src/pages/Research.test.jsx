@@ -337,6 +337,23 @@ describe('Research', () => {
     expect(screen.getByText(/Saxo is not connected/)).toBeInTheDocument()
   })
 
+  it('holds the Filings tab back until the instrument is resolved', () => {
+    stubQueries({ positions: [] })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=filings' })
+
+    expect(queries.useFilings).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useInsiders).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+  })
+
+  it('holds the Financials tab back until the instrument is resolved', () => {
+    stubQueries({ positions: [] })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=financials' })
+
+    expect(queries.useStatements).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+  })
+
   it('warns when a symbol cannot be resolved to a Saxo instrument', () => {
     stubQueries({ positions: [] })
     renderWithProviders(<Research />, { route: '/research?symbol=WHAT' })
