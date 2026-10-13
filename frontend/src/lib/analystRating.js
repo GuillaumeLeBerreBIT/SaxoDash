@@ -1,6 +1,6 @@
 import { ratingBand } from './ratingBand'
 
-const GRADES = [
+export const ANALYST_GRADES = [
   ['strong_sell', 'Strong sell'],
   ['sell', 'Sell'],
   ['hold', 'Hold'],
@@ -10,7 +10,7 @@ const GRADES = [
 
 export function analystRating(recommendation) {
   if (!recommendation) return null
-  const counts = GRADES.map(([key, label]) => ({ key, label, count: Number(recommendation[key]) || 0 }))
+  const counts = ANALYST_GRADES.map(([key, label]) => ({ key, label, count: Number(recommendation[key]) || 0 }))
   const total = counts.reduce((sum, row) => sum + row.count, 0)
   if (total === 0) return null
 
@@ -20,7 +20,7 @@ export function analystRating(recommendation) {
     total,
     mean,
     fraction,
-    label: GRADES[ratingBand(fraction)][1],
+    label: ANALYST_GRADES[ratingBand(fraction)][1],
     period: recommendation.period ?? '',
     counts,
   }

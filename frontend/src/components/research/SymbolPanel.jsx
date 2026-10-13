@@ -10,6 +10,7 @@ import { isEtf } from '../../lib/research'
 import { seasonalSeries } from '../../lib/seasonals'
 import { technicalRating } from '../../lib/technicalRating'
 import { Card, Skeleton } from '../ui'
+import AnalystCounts from './AnalystCounts'
 import EarningsDots from './EarningsDots'
 import PerformanceTiles from './PerformanceTiles'
 import RatingGauge from './RatingGauge'
@@ -49,19 +50,6 @@ function Section({ title, note, children }) {
       </div>
       {children}
     </section>
-  )
-}
-
-function Counts({ rows }) {
-  return (
-    <dl className="mt-1 grid gap-1 text-center" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}>
-      {rows.map(([label, count]) => (
-        <div key={label} className="flex flex-col-reverse justify-end">
-          <dt className="text-[var(--fig-2xs)] text-zinc-500">{label}</dt>
-          <dd className="num font-mono text-[var(--fig-sm)] text-zinc-100">{count}</dd>
-        </div>
-      ))}
-    </dl>
   )
 }
 
@@ -127,7 +115,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
       {analyst && (
         <Section title="Analyst rating">
           <RatingGauge title="Analyst rating" fraction={analyst.fraction} label={analyst.label} />
-          <Counts rows={analyst.counts.map((row) => [row.label, row.count])} />
+          <AnalystCounts rows={analyst.counts.map((row) => [row.label, row.count])} />
           <p className="mt-1 text-center text-[var(--fig-2xs)] text-zinc-500">
             {analyst.period ? `${analyst.total} analysts · as of ${fmtMonthYear(analyst.period)}` : `${analyst.total} analysts`}
           </p>
@@ -137,7 +125,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
       {technical && (
         <Section title="Technicals" note="Daily">
           <RatingGauge title="Technicals" fraction={technical.fraction} label={technical.label} />
-          <Counts
+          <AnalystCounts
             rows={[
               ['Sell', technical.sell],
               ['Neutral', technical.neutral],

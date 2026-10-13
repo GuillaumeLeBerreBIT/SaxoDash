@@ -177,3 +177,11 @@ export function seriesAxis(rows, keys, options = {}) {
   if (axis.ticks) return axis
   return { domain: paddedDomain([Math.min(...values), Math.max(...values)]) }
 }
+
+export const RATING_SEGMENTS = [
+  withAlpha(NEGATIVE, 0.75),
+  withAlpha(NEGATIVE, 0.35),
+  ESTIMATE,
+  withAlpha(POSITIVE, 0.4),
+  withAlpha(POSITIVE, 0.85),
+]
