@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, pctTone, pctToneClass } from './format'
+import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, fmtShares, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -116,5 +116,19 @@ describe('fmtMonthYear', () => {
   it('writes short month and two-digit year', () => {
     expect(fmtMonthYear('2024-03-12')).toBe('Mar 24')
     expect(fmtMonthYear(null)).toBe('—')
+  })
+})
+
+describe('fmtShares', () => {
+  it('scales a share count to K, M and B', () => {
+    expect(fmtShares(9_580_000)).toBe('9.58M')
+    expect(fmtShares(1_030_000_000)).toBe('1.03B')
+    expect(fmtShares(45_200)).toBe('45.2K')
+    expect(fmtShares(812)).toBe('812')
+  })
+
+  it('shows a dash for a missing or zero count', () => {
+    expect(fmtShares(null)).toBe('—')
+    expect(fmtShares(0)).toBe('—')
   })
 })

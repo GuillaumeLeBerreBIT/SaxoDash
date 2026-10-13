@@ -107,3 +107,12 @@ export function fmtDateTime(value) {
   const time = DATE_ONLY.test(String(value)) ? '' : `, ${pad2(at.getHours())}:${pad2(at.getMinutes())}`
   return `${fmtDate(value)}${time}`
 }
+
+export function fmtShares(count) {
+  const n = Number(count)
+  if (!n) return UNKNOWN
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
+  return String(Math.round(n))
+}
