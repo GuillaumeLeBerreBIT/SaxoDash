@@ -1,5 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react'
-import { Check, LayoutGrid, LayoutList, List, Plus, Search, X } from 'lucide-react'
+import { Check, Eye, LayoutGrid, LayoutList, List, Plus, Search, X } from 'lucide-react'
 
 import {
   useInstrumentSearch,
@@ -276,17 +276,20 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
                   ) : null}
                   <span className="text-[var(--fig-2xs)] text-zinc-600 min-w-0 truncate">{item.exchange}</span>
-                  {sinceLastLook != null ? (
-                    <span title="Since you last looked" className="shrink-0">
-                      <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
-                    </span>
-                  ) : null}
                 </div>
                 <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
                   {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
                 </span>
                 <span className="flex items-center justify-end gap-1">
-                  <DayChange value={change} className="text-[var(--fig-xs)]" />
+                  <span className="flex flex-col items-end gap-0.5 leading-none">
+                    <DayChange value={change} className="text-[var(--fig-xs)]" />
+                    {sinceLastLook != null ? (
+                      <span title="Since you last looked" className="flex items-center gap-0.5 text-zinc-600">
+                        <Eye size={9} aria-hidden="true" />
+                        <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
+                      </span>
+                    ) : null}
+                  </span>
                   <button
                     type="button"
                     onClick={(e) => {
