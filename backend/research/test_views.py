@@ -177,6 +177,7 @@ class StatementsViewTest(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.data['available'])
+        self.assertIn('No annual reports', response.data['reason'])
 
     def test_rejects_a_malformed_symbol(self):
         response = self.client.get('/api/research/statements/AAPL%20US/')

@@ -16,6 +16,7 @@ from django.core.cache import cache
 from core.http_client import request_json
 
 from .providers import ProviderUnavailable
+from .statement_shaping import to_annual
 
 API_BASE = 'https://finnhub.io/api/v1'
 
@@ -119,7 +120,7 @@ NEWS_MAX_ITEMS = 30
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
-CACHE_V = 'v5'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v6'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -343,6 +344,33 @@ def _ratio_history(financials):
     return [{'period': period, **by_period[period]} for period in periods]
 
 
+ANNUAL_EPS_POINTS = 8
+ANNUAL_RESULTS_YEARS = 5
+
+
+def _annual_eps(financials):
+    points = ((financials.get('series') or {}).get('annual') or {}).get('eps') or []
+    usable = [
+        {'period': point['period'], 'eps': round(point['v'], 2)}
+        for point in points
+        if point.get('period') and isinstance(point.get('v'), (int, float)) and not isinstance(point.get('v'), bool)
+    ]
+    return sorted(usable, key=lambda row: row['period'])[-ANNUAL_EPS_POINTS:]
+
+
+def _annual_results(reported):
+    results = []
+    for row in to_annual(reported):
+        revenue = row['income'].get('revenue')
+        if revenue is None:
+            continue
+        result = {'label': row['label'], 'fiscal_year': row['fiscal_year'], 'revenue': revenue}
+        if 'net_income' in row['income']:
+            result['net_income'] = row['income']['net_income']
+        results.append(result)
+    return results[-ANNUAL_RESULTS_YEARS:]
+
+
 def to_fundamentals(profile, financials, recommendations, earnings, reported=None):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
@@ -414,7 +442,13 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
     ratio_history = _ratio_history(financials)
     if ratio_history:
         shaped['ratio_history'] = ratio_history
+    annual_eps = _annual_eps(financials)
+    if annual_eps:
+        shaped['annual_eps'] = annual_eps
     if reported:
+        annual_results = _annual_results(reported)
+        if annual_results:
+            shaped['annual_results'] = annual_results
         cash_flow_trend = _cash_flow_trend(reported)
         if cash_flow_trend:
             shaped['cash_flow_trend'] = cash_flow_trend

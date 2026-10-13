@@ -234,7 +234,7 @@ class SymbolEarningsCacheKeyTest(TestCase):
         cache.clear()
 
     def test_the_symbol_key_carries_its_own_version_independent_of_the_week_calendar(self):
-        self.assertEqual(earnings.SYMBOL_CACHE_V, 'v5')
+        self.assertEqual(earnings.SYMBOL_CACHE_V, 'v6')
         self.assertNotEqual(earnings.CACHE_V, earnings.SYMBOL_CACHE_V)
         with patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []}):
             with patch('research.earnings.finnhub.get_earnings_history', return_value=[]):

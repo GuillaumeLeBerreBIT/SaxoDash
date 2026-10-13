@@ -138,7 +138,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v5:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v6:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -476,3 +476,77 @@ class RecommendationHistoryGapTest(SimpleTestCase):
         ], [])
 
         self.assertEqual([row['period'] for row in shaped['recommendation_history']], ['2026-07-01', '2026-09-01'])
+
+
+def _annual_filing(year, revenue=None, net_income=None):
+    income = []
+    if revenue is not None:
+        income.append({'concept': 'us-gaap_Revenues', 'value': revenue})
+    if net_income is not None:
+        income.append({'concept': 'us-gaap_NetIncomeLoss', 'value': net_income})
+    return {
+        'year': year, 'quarter': 0, 'form': '10-K',
+        'startDate': f'{year}-01-01 00:00:00', 'endDate': f'{year}-12-31 00:00:00',
+        'filedDate': f'{year + 1}-02-01 00:00:00',
+        'report': {'ic': income, 'bs': [], 'cf': []},
+    }
+
+
+class AnnualEpsTest(SimpleTestCase):
+    def shaped(self, eps):
+        return finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}, 'series': {'annual': {'eps': eps}}}, [], [])
+
+    def test_carries_the_split_adjusted_series_oldest_first_rounded(self):
+        shaped = self.shaped([{'period': '2025-01-26', 'v': 2.93823}, {'period': '2024-01-28', 'v': 1.19331}])
+
+        self.assertEqual(shaped['annual_eps'], [
+            {'period': '2024-01-28', 'eps': 1.19},
+            {'period': '2025-01-26', 'eps': 2.94},
+        ])
+
+    def test_keeps_the_newest_eight_oldest_first(self):
+        points = [{'period': f'{2010 + n}-12-31', 'v': float(n)} for n in range(12)]
+
+        shaped = self.shaped(points)
+
+        self.assertEqual([row['period'] for row in shaped['annual_eps']], [f'{2010 + n}-12-31' for n in range(4, 12)])
+
+    def test_skips_points_without_a_period_or_a_number(self):
+        shaped = self.shaped([{'period': '2024-12-31', 'v': None}, {'v': 3.0}, {'period': '2025-12-31', 'v': 2.0}])
+
+        self.assertEqual(shaped['annual_eps'], [{'period': '2025-12-31', 'eps': 2.0}])
+
+    def test_omitted_without_data(self):
+        self.assertNotIn('annual_eps', self.shaped([]))
+        self.assertNotIn('annual_eps', finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], []))
+
+
+class AnnualResultsTest(SimpleTestCase):
+    def shaped(self, *filings):
+        return finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], [], {'data': list(filings)})
+
+    def test_summarises_revenue_and_net_income_per_fiscal_year(self):
+        shaped = self.shaped(_annual_filing(2025, 1000, 200))
+
+        self.assertEqual(shaped['annual_results'], [
+            {'label': 'FY 2025', 'fiscal_year': 2025, 'revenue': 1000, 'net_income': 200},
+        ])
+
+    def test_keeps_the_newest_five_oldest_first(self):
+        shaped = self.shaped(*[_annual_filing(2015 + n, 100 + n, 10) for n in range(8)])
+
+        self.assertEqual([row['fiscal_year'] for row in shaped['annual_results']], [2018, 2019, 2020, 2021, 2022])
+
+    def test_leaves_net_income_out_of_a_year_without_it(self):
+        shaped = self.shaped(_annual_filing(2025, 1000))
+
+        self.assertNotIn('net_income', shaped['annual_results'][0])
+
+    def test_skips_a_year_without_revenue(self):
+        shaped = self.shaped(_annual_filing(2024, None, 5), _annual_filing(2025, 1000, 200))
+
+        self.assertEqual([row['fiscal_year'] for row in shaped['annual_results']], [2025])
+
+    def test_omitted_without_reported_data_or_revenue(self):
+        self.assertNotIn('annual_results', finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], []))
+        self.assertNotIn('annual_results', self.shaped(_annual_filing(2025, None, 5)))

@@ -19,12 +19,13 @@ from .providers import ProviderUnavailable
 logger = logging.getLogger(__name__)
 
 HISTORY_AHEAD = timedelta(days=120)
+UPCOMING_AHEAD = timedelta(days=300)
 
 # Bump when a cached payload's SHAPE changes, so a deploy never hands new code
 # an entry an old build wrote (a shape mismatch here was a 500, not just
 # staleness). Old entries expire on their own TTL.
 CACHE_V = 'v4'
-SYMBOL_CACHE_V = 'v5'
+SYMBOL_CACHE_V = 'v6'
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
@@ -215,6 +216,8 @@ def _eps_history(symbol):
             'eps_actual': row.get('actual'),
             'eps_estimate': row.get('estimate'),
             'eps_surprise_pct': row.get('surprisePercent'),
+            'quarter': row.get('quarter'),
+            'year': row.get('year'),
         }
         for row in rows
         if row.get('period')
@@ -252,7 +255,7 @@ UPCOMING_KEPT = 4
 
 
 def _upcoming(symbol, today):
-    rows = _fetch_calendar(symbol, today, today + HISTORY_AHEAD)
+    rows = _fetch_calendar(symbol, today, today + UPCOMING_AHEAD)
     unreported = [e for e in rows if (e['date'] or '') >= today.isoformat() and e['eps_actual'] is None]
     return sorted(unreported, key=lambda event: event['date'])[:UPCOMING_KEPT]
 

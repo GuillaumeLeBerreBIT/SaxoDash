@@ -43,7 +43,6 @@ class AnnualShapingTest(SimpleTestCase):
         self.assertEqual(row['label'], 'FY 2025')
         self.assertEqual(row['income']['revenue'], 1000)
         self.assertEqual(row['income']['gross_profit'], 600)
-        self.assertEqual(row['income']['eps_diluted'], 2.5)
         self.assertEqual(row['balance'], {'total_assets': 5000, 'equity': 2000})
         self.assertEqual(row['cash_flow'], {'operating_cash_flow': 350})
 
@@ -184,7 +183,7 @@ class QuarterlyShapingTest(SimpleTestCase):
             ytd(2025, 1, '2025-03-31', 200, operating=80, capex=20, bs={'us-gaap_Assets': 6000}),
         )
 
-        self.assertEqual([row['label'] for row in result], ['Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'])
+        self.assertEqual([row['label'] for row in result], ['Q1 FY25', 'Q2 FY25', 'Q3 FY25', 'Q4 FY25'])
         self.assertEqual([row['income']['revenue'] for row in result], [200, 250, 270, 280])
         self.assertEqual([row['cash_flow']['free_cash_flow'] for row in result], [60, 80, 80, 80])
         self.assertEqual([row['quarter'] for row in result], [1, 2, 3, 4])
@@ -204,15 +203,17 @@ class QuarterlyShapingTest(SimpleTestCase):
 
         self.assertEqual(row['balance'], {})
 
-    def test_leaves_per_share_figures_out_of_quarters(self):
-        result = self.quarterly(
-            ytd(2025, 3, '2025-09-30', 720),
-            ytd(2025, 2, '2025-06-30', 450),
-            ytd(2025, 1, '2025-03-31', 200),
+    def test_carries_no_per_share_rows_in_annual_or_quarterly(self):
+        per_share = rows(**{'us-gaap_Revenues': 1000, 'us-gaap_EarningsPerShareDiluted': 2.5,
+                            'us-gaap_WeightedAverageNumberOfDilutedSharesOutstanding': 400})
+        annual = statements.to_annual({'data': [filing(2025, 0, '2025-01-01', '2025-12-31', ic=per_share)]})
+        quarterly = statements.to_quarterly(
+            {'data': [filing(2025, 1, '2025-01-01', '2025-03-31', ic=per_share, form='10-Q')]}, annual
         )
 
-        for row in result:
+        for row in annual + quarterly:
             self.assertNotIn('eps_diluted', row['income'])
+            self.assertNotIn('diluted_shares', row['income'])
 
     def test_a_quarter_after_a_missing_filing_is_dropped(self):
         result = self.quarterly(
@@ -220,7 +221,7 @@ class QuarterlyShapingTest(SimpleTestCase):
             ytd(2025, 1, '2025-03-31', 200),
         )
 
-        self.assertEqual([row['label'] for row in result], ['Q1 2025', 'Q4 2025'])
+        self.assertEqual([row['label'] for row in result], ['Q1 FY25', 'Q4 FY25'])
         self.assertEqual(result[-1]['income']['revenue'], 280)
 
     def test_a_filing_that_already_covers_one_quarter_is_not_subtracted(self):
@@ -239,14 +240,14 @@ class QuarterlyShapingTest(SimpleTestCase):
             ytd(2026, 1, '2026-03-31', 300),
         ]}, self.annual_rows)
 
-        self.assertEqual([row['label'] for row in result], ['Q1 2026'])
+        self.assertEqual([row['label'] for row in result], ['Q1 FY26'])
 
     def test_uses_the_fiscal_year_in_the_label(self):
         fiscal = filing(2027, 1, '2026-01-26', '2026-04-26', ic=rows(**{'us-gaap_Revenues': 44}))
 
         [row] = statements.to_quarterly({'data': [fiscal]}, [])
 
-        self.assertEqual(row['label'], 'Q1 2027')
+        self.assertEqual(row['label'], 'Q1 FY27')
         self.assertEqual(row['fiscal_year'], 2027)
 
     def test_keeps_the_newest_twelve_quarters(self):
@@ -259,7 +260,7 @@ class QuarterlyShapingTest(SimpleTestCase):
         result = statements.to_quarterly({'data': filings}, [])
 
         self.assertEqual(len(result), 12)
-        self.assertEqual(result[-1]['label'], 'Q3 2024')
+        self.assertEqual(result[-1]['label'], 'Q3 FY24')
 
     def test_survives_an_empty_or_missing_payload(self):
         self.assertEqual(statements.to_quarterly(None, []), [])
@@ -278,4 +279,4 @@ class UndatedQuarterTest(SimpleTestCase):
             ytd(2025, 3, '2025-09-30', 720),
         ]}, annual_rows)
 
-        self.assertEqual([row['label'] for row in result], ['Q1 2025'])
+        self.assertEqual([row['label'] for row in result], ['Q1 FY25'])

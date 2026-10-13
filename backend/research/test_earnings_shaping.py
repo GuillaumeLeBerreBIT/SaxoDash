@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.test import TestCase
@@ -230,3 +230,25 @@ class UpcomingTest(TestCase):
     @patch('research.earnings._fetch_calendar', return_value=[])
     def test_nothing_scheduled_gives_an_empty_list(self, mock_calendar):
         self.assertEqual(earnings._upcoming('AAPL', date(2026, 10, 13)), [])
+
+    @patch('research.earnings._fetch_calendar', return_value=[])
+    def test_looks_three_hundred_days_ahead(self, mock_calendar):
+        earnings._upcoming('AAPL', date(2026, 10, 13))
+
+        start, end = mock_calendar.call_args.args[1:3]
+        self.assertEqual(start, date(2026, 10, 13))
+        self.assertEqual(end, date(2026, 10, 13) + timedelta(days=300))
+
+
+class EpsHistoryShapingTest(TestCase):
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_rows_carry_their_fiscal_quarter_and_year(self, mock_history):
+        mock_history.return_value = [
+            {'period': '2026-06-30', 'quarter': 2, 'year': 2026, 'actual': 1.2, 'estimate': 1.1, 'surprisePercent': 9},
+            {'period': '2026-03-31', 'actual': 1.0, 'estimate': 1.0, 'surprisePercent': 0},
+        ]
+
+        first, second = earnings._eps_history('AAPL')
+
+        self.assertEqual((first['quarter'], first['year']), (None, None))
+        self.assertEqual((second['quarter'], second['year']), (2, 2026))
