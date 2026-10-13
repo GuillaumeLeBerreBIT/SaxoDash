@@ -2,8 +2,9 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 
-import { useNetWorth, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
+import { useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
+import { ownershipTicker, ownershipTickers } from '../lib/ownership'
 import { moveLabel, priceBasis } from '../lib/pricing'
 import { researchHref } from '../lib/research'
 import { Card, CardHeader, QueryState, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, SortableTh, Td, Tr } from '../components/ui'
@@ -13,6 +14,7 @@ import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import AllocationDonut from '../components/AllocationDonut'
+import { FundChange, FundShares } from '../components/investors/FundHoldings'
 import { nextSort, sortRows } from '../lib/sort'
 import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from '../lib/charts'
 
@@ -36,6 +38,9 @@ export default function Portfolio() {
 
   const [sort, setSort] = useState(null)
   const holdings = positionsQuery.data
+  const fundTickers = useMemo(() => ownershipTickers(holdings ?? []), [holdings])
+  const ownership = useOwnershipSummary(fundTickers).data
+  const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
   const sortedHoldings = useMemo(() => sortRows(holdings ?? [], sort, HOLDING_ACCESSORS), [holdings, sort])
   const onSort = (key) => setSort((current) => nextSort(current, key))
 
@@ -151,6 +156,8 @@ export default function Portfolio() {
                   <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
                   <SortableTh align="right" sortKey="value" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Value</SortableTh>
                   <SortableTh align="right" sortKey="pnl" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">P&L</SortableTh>
+                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund shares</Th>
+                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund change</Th>
                   <SortableTh edge align="right" hideBelow="md" sortKey="weight" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Weight</SortableTh>
                 </tr>
               </thead>
@@ -200,6 +207,12 @@ export default function Portfolio() {
                     <Td align="right" className={`num ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {fmtEur(p.pnl, { sign: true })}
                     </Td>
+                    <Td align="right" hideBelow="wide">
+                      <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                    </Td>
+                    <Td align="right" hideBelow="wide">
+                      <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                    </Td>
                     <Td edge align="right" hideBelow="md" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
                   </Tr>
                 ))}
@@ -213,6 +226,8 @@ export default function Portfolio() {
                   <Td hideBelow="md" />
                   <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(summary.total_value)}</Td>
                   <Td align="right" className={`num font-medium ${pnlTone}`}>{fmtEur(summary.total_pnl, { sign: true })}</Td>
+                  <Td hideBelow="wide" />
+                  <Td hideBelow="wide" />
                   <Td edge align="right" hideBelow="md" className="num text-zinc-300">100.0%</Td>
                 </tr>
               </tbody>

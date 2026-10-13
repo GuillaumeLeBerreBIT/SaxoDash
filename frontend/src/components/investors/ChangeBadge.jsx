@@ -1,6 +1,12 @@
 import { Badge } from '../ui'
 
-const wholePct = (pct) => (pct == null ? '' : ` ${Math.round(Math.abs(pct))}%`)
+const MULTIPLE_FROM_PCT = 1000
+
+function wholePct(pct) {
+  if (pct == null) return ''
+  const size = Math.abs(pct)
+  return size >= MULTIPLE_FROM_PCT ? ` ${Math.round(size / 100 + 1)}×` : ` ${Math.round(size)}%`
+}
 
 export default function ChangeBadge({ change, pct }) {
   if (change === 'new') return <Badge tone="blue">New</Badge>

@@ -48,6 +48,7 @@ function stub(positions = [msft]) {
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
+  queries.useOwnershipSummary.mockReturnValue(idle)
 }
 
 describe('Portfolio holdings table', () => {
@@ -59,6 +60,34 @@ describe('Portfolio holdings table', () => {
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderWithProviders(<Portfolio />)
     expectValidHeadingOutline(container)
+  })
+
+  it('shows the shares tracked funds hold and their net change, skipping non-USD holdings', () => {
+    const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
+    const flat = { ...msft, ticker: 'AAPL', name: 'Apple Inc.' }
+    stub([msft, asml, flat])
+    queries.useOwnershipSummary.mockReturnValue({
+      ...idle,
+      data: {
+        quarter: '2026-06-30',
+        stocks: {
+          MSFT: { owners: 34, shares: 212_000_000, shares_change: -4_200_000, shares_change_pct: -1.9 },
+          AAPL: { owners: 21, shares: 8_000_000, shares_change: 0, shares_change_pct: 0.0 },
+        },
+      },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['AAPL', 'MSFT'])
+    expect(screen.getByRole('columnheader', { name: 'Fund shares' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Fund change' })).toBeInTheDocument()
+    const held = screen.getByRole('link', { name: 'Tracked funds hold 212,000,000 shares at the end of Q2 2026' })
+    expect(held).toHaveAttribute('href', '/research?symbol=MSFT&tab=funds')
+    const change = screen.getByRole('link', { name: 'Tracked funds net sold 4,200,000 shares in Q2 2026' })
+    expect(change.textContent).toBe('▼\u00a0-4.2M-1.9%')
+    expect(screen.getByRole('link', { name: 'Tracked funds hold 8,000,000 shares at the end of Q2 2026' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /net (bought|sold) 0 shares/ })).not.toBeInTheDocument()
   })
 
   it('keeps one h1 and no skipped level while loading', () => {

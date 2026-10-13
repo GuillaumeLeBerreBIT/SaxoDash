@@ -373,6 +373,19 @@ stock signal; a fund with one stored quarter owns but did not buy. Funds holding
 positions (Citadel, Millennium, Renaissance, …) are deliberately not in `curated.csv`: they buy
 nearly everything and would drown "bought by 3+ funds".
 
+**Fund ownership of a ticker is looked up by the pages, not joined in the backend.**
+`investors/ownership.py` answers `/api/investors/ownership/` (counts for many tickers, a fixed
+number of queries) and `/ownership/<ticker>/` (the funds behind one); Portfolio's "Funds" column
+and Research's Funds tab call them beside their own requests, so `portfolio` and `research` never
+import `investors`. It describes `signals.signal_quarter()`, the hub's quarter, and reuses
+`signals.stock_positions`, so two CUSIPs under one ticker are one position and options never
+count. An unknown ticker is `null`, never zeros. Tickers are bare symbols, so only USD-quoted
+instruments are asked about (`lib/ownership.js::ownershipTicker`) — a European listing can share a
+symbol with an unrelated US stock. Portfolio shows the shares tracked funds hold and their net
+change since last quarter, not the owner count: 37 to 40 of 88 funds hold each megacap, so the
+count alone says nothing. A net change of zero is a dash. The columns are hidden below 1440px
+(`hideBelow="wide"`), where they would push Weight out of the table.
+
 **A CUSIP with no ticker can inherit one, and the inheritance is always re-derivable.**
 A reorganised company gets a new CUSIP; OpenFIGI moves the US listing to it and the old
 one (still in every past filing, and in funds slow to switch) answers with foreign

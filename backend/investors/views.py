@@ -5,7 +5,7 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import alerts, copying, edgar, signals, summaries, tracking
+from . import alerts, copying, edgar, ownership, signals, summaries, tracking
 from .models import Investor
 
 MIN_QUERY = 3
@@ -126,6 +126,20 @@ class InvestorStocksView(APIView):
             return Response(signals.stock_activity(view, _quarter_param(request)))
         except signals.UnknownView:
             raise ValidationError({'view': f'Use one of {", ".join(signals.VIEWS)}.'})
+
+
+class OwnershipSummaryView(APIView):
+    def get(self, request):
+        try:
+            tickers = ownership.parse_tickers(request.query_params.get('tickers'))
+        except ownership.BadTickers as error:
+            raise ValidationError({'tickers': str(error)})
+        return Response(ownership.summary(tickers))
+
+
+class OwnershipDetailView(APIView):
+    def get(self, request, ticker):
+        return Response(ownership.detail(ticker.upper()))
 
 
 class InvestorSearchView(APIView):
