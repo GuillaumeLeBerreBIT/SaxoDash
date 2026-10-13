@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import EarningsTab from './EarningsTab'
+
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 const NO_FUNDAMENTALS = { data: { available: false, reason: 'x' }, isLoading: false }
 
@@ -21,7 +25,21 @@ const AVAILABLE = {
   score: { beats: 2, quarters: 3, beat_rate: 0.67, avg_surprise: 1.03, streak: 1 },
 }
 
+const renderTab = (extraEarnings = {}) =>
+  render(
+    <EarningsTab
+      symbol="NVDA"
+      earnings={{ data: { ...AVAILABLE, ...extraEarnings }, isLoading: false }}
+      fundamentals={NO_FUNDAMENTALS}
+    />,
+  )
+
 describe('EarningsTab', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    queries.useStatements.mockReturnValue({ data: undefined, isLoading: false })
+  })
+
   it('shows the next earnings date and estimates', () => {
     render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Next earnings')).toBeInTheDocument()
@@ -75,5 +93,55 @@ describe('EarningsTab', () => {
       />,
     )
     expect(screen.getByText('What changed')).toBeInTheDocument()
+  })
+
+  it('labels the quarters still to come as estimates', () => {
+    renderTab({ upcoming: [{ date: '2026-11-02', eps_estimate: 1.02 }] })
+
+    expect(screen.getByText(/1 upcoming quarter, estimate only/i)).toBeInTheDocument()
+  })
+
+  it('does not fetch statements until the annual view is chosen', async () => {
+    renderTab()
+
+    expect(queries.useStatements).toHaveBeenLastCalledWith('')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(queries.useStatements).toHaveBeenLastCalledWith('NVDA')
+  })
+
+  it('shows annual diluted EPS from the statements', async () => {
+    queries.useStatements.mockReturnValue({
+      isLoading: false,
+      data: {
+        available: true,
+        annual: [
+          { label: 'FY 2024', income: { eps_diluted: 2.9 } },
+          { label: 'FY 2025', income: { eps_diluted: 3.4 } },
+        ],
+        quarterly: [],
+      },
+    })
+    renderTab()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.getByText('Diluted EPS by fiscal year')).toBeInTheDocument()
+  })
+
+  it('says so when annual EPS is unavailable', async () => {
+    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: false } })
+    renderTab()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.getByText(/annual EPS is unavailable/i)).toBeInTheDocument()
+  })
+
+  it('no longer shows the margin trend', () => {
+    renderTab()
+
+    expect(screen.queryByText('Margin trend')).not.toBeInTheDocument()
   })
 })

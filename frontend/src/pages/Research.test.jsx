@@ -67,6 +67,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
   queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
   queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
   queries.usePeerFundamentals.mockReturnValue([])

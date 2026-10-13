@@ -4,6 +4,7 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -11,7 +12,7 @@ import {
   YAxis,
 } from 'recharts'
 
-import { axisProps, BEAT, chartTooltipProps, ESTIMATE, gridProps, MISS, REPORTED, surpriseColor } from '../../lib/charts'
+import { axisProps, BEAT, chartTooltipProps, ESTIMATE, gridProps, MISS, REPORTED, surpriseColor, TRACK } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
 
@@ -25,6 +26,9 @@ const surpriseTag = (v) => (v == null ? '' : fmtPct(v, { decimals: 1 }))
 export default function EpsBarChart({ title, subtitle, data, format }) {
   if (!data?.length) return null
 
+  const forward = data.filter((row) => row.forward)
+  const hasEstimates = data.some((row) => row.estimate != null)
+
   return (
     <Card>
       <CardHeader
@@ -32,9 +36,13 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
         subtitle={subtitle}
         right={
           <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: ESTIMATE }} /> Estimate</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: BEAT }} /> Beat</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: MISS }} /> Miss</span>
+            {hasEstimates && (
+              <>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: ESTIMATE }} /> Estimate</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: BEAT }} /> Beat</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: MISS }} /> Miss</span>
+              </>
+            )}
           </div>
         }
       />
@@ -42,6 +50,9 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid {...gridProps} />
+            {forward.length > 0 && (
+              <ReferenceArea x1={forward[0].period} x2={forward.at(-1).period} fill={TRACK} strokeOpacity={0} />
+            )}
             <XAxis {...axisProps} dataKey="period" />
             <YAxis {...axisProps} width={52} tickFormatter={format} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
@@ -65,6 +76,11 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {forward.length > 0 && (
+        <p className="mt-2 text-[var(--fig-2xs)] text-zinc-500">
+          {forward.length} upcoming {forward.length === 1 ? 'quarter' : 'quarters'}, estimate only.
+        </p>
+      )}
     </Card>
   )
 }
