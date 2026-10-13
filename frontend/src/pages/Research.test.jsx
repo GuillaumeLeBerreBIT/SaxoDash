@@ -241,6 +241,7 @@ describe('Research', () => {
       'Statistics',
       'Peers',
       'Earnings',
+      'Funds',
       'News',
       'Guide',
     ])
