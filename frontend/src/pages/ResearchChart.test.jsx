@@ -55,6 +55,7 @@ function stubQueries() {
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
@@ -92,6 +93,53 @@ describe('ResearchChart', () => {
     stubQueries()
   })
 
+  it('shows the symbol panel under the watchlist', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(screen.getByRole('heading', { name: 'Technicals' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /open in research/i })).toHaveAttribute(
+      'href',
+      '/research?symbol=NVDA&uic=211&assetType=Stock',
+    )
+  })
+
+  it('shows analyst and earnings blocks when the company data is there', () => {
+    queries.useFundamentals.mockReturnValue({
+      ...idle,
+      data: { available: true, market_cap: 3_105_000, recommendation: { period: '2026-09-01', buy: 30, hold: 5 } },
+    })
+    queries.useSymbolEarnings.mockReturnValue({
+      ...idle,
+      data: {
+        available: true,
+        history: [{ date: '2026-06-30', eps_actual: 0.99, eps_estimate: 0.96, eps_surprise_pct: 3.1 }],
+        next: null,
+        score: null,
+      },
+    })
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(screen.getByRole('heading', { name: 'Analyst rating' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Earnings' })).toBeInTheDocument()
+  })
+
+  it('keeps the heading outline valid with the panel mounted', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    expectValidHeadingOutline(container)
+  })
+
+  it('renders without a panel when the symbol resolves to nothing', () => {
+    queries.usePositions.mockReturnValue({ ...idle, data: [] })
+    queries.useInstrumentSearch.mockImplementation(() => ({ ...idle, data: [], isError: false }))
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
+    queries.useChart.mockReturnValue({ data: [], isLoading: false, error: null })
+
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=ZZZZ' })
+
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('ZZZZ')
+    expect(screen.queryByRole('link', { name: /open in research/i })).not.toBeInTheDocument()
+  })
+
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
     expectValidHeadingOutline(container)
@@ -114,10 +162,10 @@ describe('ResearchChart', () => {
     )
   })
 
-  it('does not load company fundamentals', () => {
+  it('loads company fundamentals for the symbol only through the panel', () => {
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 
-    expect(queries.useFundamentals).not.toHaveBeenCalled()
+    expect(queries.useFundamentals).toHaveBeenCalledWith('NVDA')
   })
 
   it('falls back to the first held position when no symbol is given', () => {

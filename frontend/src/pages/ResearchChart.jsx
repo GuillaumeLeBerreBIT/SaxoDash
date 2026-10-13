@@ -12,6 +12,7 @@ import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
 import { LinkedHoverProvider } from '../components/research/LinkedHover'
 import SymbolBar from '../components/research/SymbolBar'
+import SymbolPanel from '../components/research/SymbolPanel'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { RangeButtons } from '../components/research/chartHeader'
 import { useChartControls } from '../components/research/useChartControls'
@@ -63,7 +64,7 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [tool])
 
-  const { rangeBars, priceLines, quote, details } = useChartData({ symbol, instrument, range: controls.range })
+  const { allBars, rangeBars, priceLines, quote, details, earnings } = useChartData({ symbol, instrument, range: controls.range })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
@@ -135,11 +136,18 @@ export default function ResearchChart() {
         </LinkedHoverProvider>
       </main>
 
-      <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0">
+      <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0 overflow-y-auto">
         <InstrumentSearchBar hrefFor={chartResultHref} />
-        <div className="flex-1 min-h-0">
+        <div className="h-[340px] shrink-0">
           <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
+        <SymbolPanel
+          symbol={symbol}
+          instrument={instrument}
+          bars={allBars}
+          earnings={earnings}
+          href={researchHref(symbol, undefined, instrument)}
+        />
       </aside>
 
       <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} hrefFor={paletteHrefFor} />

@@ -380,8 +380,8 @@ export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, l
   )
 }
 
-export function Skeleton({ className = '' }) {
-  return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} />
+export function Skeleton({ className = '', ...props }) {
+  return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} {...props} />
 }
 
 const LETTER_AVATAR_TEXT = [

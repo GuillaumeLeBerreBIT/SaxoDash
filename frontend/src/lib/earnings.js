@@ -76,6 +76,8 @@ export const SESSIONS = [
   ['amc', 'After close'],
 ]
 
+export const SESSION_LABEL = Object.fromEntries(SESSIONS)
+
 export function splitBySession(events) {
   const known = new Set(SESSIONS.map(([key]) => key))
   const sections = SESSIONS.map(([key, label]) => ({

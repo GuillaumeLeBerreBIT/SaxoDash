@@ -1,12 +1,10 @@
-import { daysUntil } from '../../lib/earnings'
+import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtDate, fmtNum, fmtPct } from '../../lib/format'
 import { Card, CardHeader, Metric, Skeleton } from '../ui'
 import EarningsInsights from './EarningsInsights'
 import EpsBarChart from './EpsBarChart'
 import FundamentalsGate from './FundamentalsGate'
 import QuarterlyTrendsChart from './QuarterlyTrendsChart'
-
-const SESSION_LABEL = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
 
 function NextEarningsCard({ next }) {
   return (

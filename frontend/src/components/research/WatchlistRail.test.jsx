@@ -64,6 +64,15 @@ describe('WatchlistRail', () => {
     expect(screen.getByTitle('Since you last looked')).toHaveTextContent('+16.72%')
   })
 
+  it('stacks the since-last-look change under the day change, outside the symbol cell', () => {
+    recordLook('NVDA', 750)
+    render()
+
+    const badge = screen.getByTitle('Since you last looked')
+    expect(screen.getByText('NVDA').parentElement).not.toContainElement(badge)
+    expect(screen.getByText('+1.42%').parentElement).toContainElement(badge)
+  })
+
   it('lets the symbol keep its width and the exchange take the squeeze', () => {
     stub({
       watchlists: [
