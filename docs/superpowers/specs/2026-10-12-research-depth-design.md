@@ -80,8 +80,8 @@ Blocks, top to bottom, each a section inside one `Card` separated by hairlines:
    ring for the estimate; the next quarter has only the ring. Vertical position is
    EPS on a shared scale.
 4. **Analyst rating.** A half-circle gauge with five segments and a needle at the
-   weighted mean of the five counts (strong sell 1 to strong buy 5), the label that
-   mean rounds to, the five counts beneath, and "N analysts, as of period".
+   weighted mean of the five counts (strong sell 1 to strong buy 5), the label of
+   the gauge segment the needle is in, the five counts beneath, and "N analysts, as of period".
 5. **Technicals.** The same gauge, fed by a daily rating computed from indicators
    the app already has: RSI(14), MACD line against signal, and price against
    SMA 20, 50, 200 and EMA 9. Each votes buy, neutral or sell; the gauge shows the

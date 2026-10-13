@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ratingLabel, technicalRating } from './technicalRating'
+import { technicalRating } from './technicalRating'
 
 const series = (length, closeAt) =>
   Array.from({ length }, (_, i) => ({ date: `d${i}`, open: closeAt(i), high: closeAt(i), low: closeAt(i), close: closeAt(i), volume: 1 }))
@@ -38,23 +38,18 @@ describe('technicalRating', () => {
     expect(technicalRating(series(3, () => 10))).toBeNull()
   })
 
+  it('votes buy on MACD for an accelerating rise', () => {
+    const rating = technicalRating(series(260, (i) => 100 + i * i * 0.01))
+    expect(rating.votes.find((vote) => vote.key === 'macd').vote).toBe('buy')
+  })
+
+  it('votes sell on MACD for an accelerating decline that stays positive', () => {
+    const rating = technicalRating(series(260, (i) => 700 - i * i * 0.01))
+    expect(rating.votes.find((vote) => vote.key === 'macd').vote).toBe('sell')
+  })
+
   it('maps the score onto a 0 to 1 fraction', () => {
     const rating = technicalRating(series(260, (i) => 100 + i))
     expect(rating.fraction).toBeCloseTo((rating.score + 1) / 2, 10)
-  })
-})
-
-describe('ratingLabel', () => {
-  it('names the five bands', () => {
-    expect(ratingLabel(0.8)).toBe('Strong buy')
-    expect(ratingLabel(0.3)).toBe('Buy')
-    expect(ratingLabel(0)).toBe('Neutral')
-    expect(ratingLabel(-0.3)).toBe('Sell')
-    expect(ratingLabel(-0.8)).toBe('Strong sell')
-  })
-
-  it('keeps the band edges neutral-side', () => {
-    expect(ratingLabel(0.1)).toBe('Neutral')
-    expect(ratingLabel(0.5)).toBe('Buy')
   })
 })

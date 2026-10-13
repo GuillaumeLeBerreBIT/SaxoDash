@@ -1,3 +1,5 @@
+import { ratingBand } from './ratingBand'
+
 const GRADES = [
   ['strong_sell', 'Strong sell'],
   ['sell', 'Sell'],
@@ -13,11 +15,12 @@ export function analystRating(recommendation) {
   if (total === 0) return null
 
   const mean = counts.reduce((sum, row, index) => sum + row.count * (index + 1), 0) / total
+  const fraction = (mean - 1) / 4
   return {
     total,
     mean,
-    fraction: (mean - 1) / 4,
-    label: GRADES[Math.round(mean) - 1][1],
+    fraction,
+    label: GRADES[ratingBand(fraction)][1],
     period: recommendation.period ?? '',
     counts,
   }

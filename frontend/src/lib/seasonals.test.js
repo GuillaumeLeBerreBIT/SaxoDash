@@ -27,6 +27,16 @@ describe('seasonalSeries', () => {
     expect(series.map((row) => row.year)).toEqual([2025])
   })
 
+  it('drops a year whose first bar falls after the first week of January', () => {
+    const series = seasonalSeries([bar('2024-01-20', 50), bar('2024-12-30', 60), bar('2025-01-02', 100)])
+    expect(series.map((row) => row.year)).toEqual([2025])
+  })
+
+  it('keeps a year whose first bar falls in the first week of January', () => {
+    const series = seasonalSeries([bar('2024-01-02', 50), bar('2024-12-30', 60)])
+    expect(series.map((row) => row.year)).toEqual([2024])
+  })
+
   it('drops a year whose first close is zero', () => {
     const series = seasonalSeries([bar('2025-01-02', 0), bar('2025-02-02', 10), bar('2026-01-05', 20)])
     expect(series.map((row) => row.year)).toEqual([2026])

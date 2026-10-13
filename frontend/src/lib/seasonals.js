@@ -5,7 +5,9 @@ function dayOfYear(iso) {
   return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(year, 0, 0)) / DAY_MS)
 }
 
-const startsInJanuary = (rows) => rows[0].date.slice(5, 7) === '01'
+const FIRST_WEEK = 7
+
+const startsInJanuary = (rows) => dayOfYear(rows[0].date) <= FIRST_WEEK
 
 export function seasonalSeries(bars) {
   const byYear = new Map()

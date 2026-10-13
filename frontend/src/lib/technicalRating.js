@@ -1,9 +1,9 @@
 import { ema, macd, rsi, sma } from './indicators'
+import { ratingBand } from './ratingBand'
 
 const RSI_OVERSOLD = 30
 const RSI_OVERBOUGHT = 70
-const STRONG = 0.5
-const MILD = 0.1
+const LABELS = ['Strong sell', 'Sell', 'Neutral', 'Buy', 'Strong buy']
 
 const last = (series) => series[series.length - 1]
 
@@ -17,14 +17,6 @@ function rsiVote(value) {
   if (value < RSI_OVERSOLD) return 'buy'
   if (value > RSI_OVERBOUGHT) return 'sell'
   return 'neutral'
-}
-
-export function ratingLabel(score) {
-  if (score > STRONG) return 'Strong buy'
-  if (score > MILD) return 'Buy'
-  if (score < -STRONG) return 'Strong sell'
-  if (score < -MILD) return 'Sell'
-  return 'Neutral'
 }
 
 export function technicalRating(bars) {
@@ -55,5 +47,7 @@ export function technicalRating(bars) {
   const sell = count('sell')
   const score = (buy - sell) / votes.length
 
-  return { votes, buy, neutral: count('neutral'), sell, score, fraction: (score + 1) / 2, label: ratingLabel(score) }
+  const fraction = (score + 1) / 2
+
+  return { votes, buy, neutral: count('neutral'), sell, score, fraction, label: LABELS[ratingBand(fraction)] }
 }

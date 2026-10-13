@@ -33,6 +33,12 @@ describe('analystRating', () => {
     expect(analystRating({ period: '2026-09-01', strong_buy: 0, buy: 0, hold: 0, sell: 0, strong_sell: 0 })).toBeNull()
   })
 
+  it('names the band the fraction falls in, not the rounded mean', () => {
+    expect(analystRating({ strong_buy: 24, buy: 38, hold: 4, sell: 1 }).label).toBe('Strong buy')
+    expect(analystRating({ buy: 1, hold: 10, sell: 8, strong_sell: 1 }).label).toBe('Sell')
+    expect(analystRating({ hold: 7 }).label).toBe('Hold')
+  })
+
   it('labels the extremes', () => {
     expect(analystRating({ strong_buy: 9, buy: 1 }).label).toBe('Strong buy')
     expect(analystRating({ strong_sell: 9, sell: 1 }).label).toBe('Strong sell')
