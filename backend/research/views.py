@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 from saxo import client
 from saxo.credentials import connection_state
 
-from . import discover, earnings, finnhub, market, scan_progress, shelves, statements, tasks
+from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -156,6 +156,22 @@ class StatementsView(APIView):
     def get(self, request, symbol):
         symbol = _symbol(symbol)
         return provider_response(lambda: statements.statements(symbol))
+
+
+class FilingsView(APIView):
+    throttle_scope = 'research.filings'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: filings.filings(symbol))
+
+
+class InsidersView(APIView):
+    throttle_scope = 'research.filings'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: filings.insiders(symbol))
 
 
 class PeersView(APIView):

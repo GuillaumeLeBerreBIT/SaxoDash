@@ -111,6 +111,18 @@ def get_financials_reported(symbol, freq='annual'):
     return _get('/stock/financials-reported', symbol=symbol, freq=freq)
 
 
+def get_filings(symbol, form):
+    return _get('/stock/filings', symbol=symbol, form=form)
+
+
+def get_insider_transactions(symbol):
+    return _get('/stock/insider-transactions', symbol=symbol)
+
+
+def get_insider_sentiment(symbol, date_from, date_to):
+    return _get('/stock/insider-sentiment', symbol=symbol, **{'from': date_from, 'to': date_to})
+
+
 FUNDAMENTALS_TTL = 86400
 EARNINGS_CAL_TTL = 43200  # 12h — a settled (past / far-future) market week
 EARNINGS_TTL = 7200       # 2h — per-symbol history; short so today's actual shows
@@ -120,7 +132,7 @@ NEWS_MAX_ITEMS = 30
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
-CACHE_V = 'v6'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v7'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -257,54 +269,6 @@ def _quarterly_trends(financials):
         }
         for period in periods
     ]
-
-
-CASH_TREND_POINTS = 10  # ~10 fiscal years, oldest-first
-
-# US-GAAP XBRL concept tags read from /stock/financials-reported (SEC-EDGAR
-# sourced). A foreign private issuer filing on Form 20-F simply yields no
-# rows below - the field is omitted, not guessed at.
-_DEBT_CONCEPTS = (
-    'us-gaap_CommercialPaper',
-    'us-gaap_LongTermDebtCurrent',
-    'us-gaap_LongTermDebtNoncurrent',
-)
-
-
-def _concept_values(rows):
-    return {row.get('concept'): row.get('value') for row in (rows or []) if row.get('concept')}
-
-
-def _cash_flow_row(entry):
-    cf = _concept_values(entry.get('report', {}).get('cf'))
-    bs = _concept_values(entry.get('report', {}).get('bs'))
-
-    op_cf = cf.get('us-gaap_NetCashProvidedByUsedInOperatingActivities')
-    capex = cf.get('us-gaap_PaymentsToAcquirePropertyPlantAndEquipment')
-    fcf = op_cf - capex if op_cf is not None and capex is not None else None
-
-    debt_parts = [bs[c] for c in _DEBT_CONCEPTS if bs.get(c) is not None]
-    debt = sum(debt_parts) if debt_parts else None
-
-    cash = bs.get('us-gaap_CashAndCashEquivalentsAtCarryingValue')
-
-    if fcf is None and debt is None and cash is None:
-        return None
-    return {'period': (entry.get('endDate') or '')[:10], 'fcf': fcf, 'debt': debt, 'cash': cash}
-
-
-def _cash_flow_trend(reported):
-    """Annual free cash flow / total debt / cash, oldest-first, from 10-K
-    filings only - each already a clean full fiscal year, so no quarter-over-
-    quarter de-cumulation is needed the way a 10-Q's YTD cash-flow section
-    would require. `None` when the filer isn't US-GAAP (no rows survive) or
-    reporting history is too shallow to call a trend."""
-    entries = [e for e in (reported.get('data') or []) if e.get('form') == '10-K']
-    entries.sort(key=lambda e: e.get('endDate') or '')
-    entries = entries[-CASH_TREND_POINTS:]
-
-    rows = [row for row in (_cash_flow_row(e) for e in entries) if row]
-    return rows or None
 
 
 RECOMMENDATION_HISTORY_MONTHS = 12
@@ -449,9 +413,6 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
         annual_results = _annual_results(reported)
         if annual_results:
             shaped['annual_results'] = annual_results
-        cash_flow_trend = _cash_flow_trend(reported)
-        if cash_flow_trend:
-            shaped['cash_flow_trend'] = cash_flow_trend
     return shaped
 
 

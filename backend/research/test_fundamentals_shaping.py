@@ -138,7 +138,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v6:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v7:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -315,38 +315,24 @@ SAMPLE_REPORTED = {
 }
 
 
-class CashFlowTrendShapingTest(TestCase):
-    def test_computes_fcf_from_operating_cash_flow_minus_capex(self):
-        rows = finnhub._cash_flow_trend(SAMPLE_REPORTED)
-        self.assertEqual(rows[-1]['fcf'], 100)  # 110 - 10, the newest 10-K
-
-    def test_sums_whichever_debt_concepts_are_present(self):
-        entry = _reported_entry(2025, '2025-09-27', debt_rows={
-            'us-gaap_CommercialPaper': 2, 'us-gaap_LongTermDebtCurrent': 8, 'us-gaap_LongTermDebtNoncurrent': 74,
-        })
-        row = finnhub._cash_flow_row(entry)
-        self.assertEqual(row['debt'], 84)
-
-    def test_is_oldest_first_and_excludes_10qs(self):
-        rows = finnhub._cash_flow_trend(SAMPLE_REPORTED)
-        self.assertEqual([r['period'] for r in rows], ['2024-09-28', '2025-09-27'])
-
-    def test_none_when_no_10k_filings_have_usable_rows(self):
-        # A foreign filer's non-US-GAAP concepts leave nothing to read - this
-        # is how a Form 20-F filer degrades, not a crash.
-        reported = {'data': [_reported_entry(2025, '2025-09-27')]}
-        self.assertIsNone(finnhub._cash_flow_trend(reported))
-
-    def test_none_without_any_reported_data(self):
-        self.assertIsNone(finnhub._cash_flow_trend({'data': []}))
-
-    def test_to_fundamentals_includes_cash_flow_trend_when_available(self):
+class CashFlowTrendRemovedTest(TestCase):
+    def test_the_payload_has_no_cash_flow_trend_even_with_annual_filings(self):
         result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], SAMPLE_REPORTED)
-        self.assertEqual(len(result['cash_flow_trend']), 2)
 
-    def test_to_fundamentals_omits_cash_flow_trend_when_absent(self):
-        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [])
         self.assertNotIn('cash_flow_trend', result)
+
+    def test_annual_results_is_still_built_from_the_same_reported_filings(self):
+        reported = {'data': [{
+            'year': 2025, 'quarter': 0, 'form': '10-K',
+            'startDate': '2025-01-01 00:00:00', 'endDate': '2025-12-31 00:00:00',
+            'filedDate': '2026-02-01 00:00:00',
+            'report': {'ic': [{'concept': 'us-gaap_Revenues', 'value': 1000}], 'bs': [], 'cf': []},
+        }]}
+
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], reported)
+
+        self.assertNotIn('cash_flow_trend', result)
+        self.assertEqual(result['annual_results'][0]['revenue'], 1000)
 
 
 class ScreenerFundamentalsTest(SimpleTestCase):
