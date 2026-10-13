@@ -28,6 +28,18 @@ function Statements({ symbol, statements }) {
     )
   }
 
+  if (statements.error) {
+    return (
+      <Card>
+        <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />
+        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">Statements could not be loaded.</p>
+        <div className="mt-3">
+          <TBtn onClick={() => statements.refetch()}>Try again</TBtn>
+        </div>
+      </Card>
+    )
+  }
+
   const data = statements.data
   if (!data?.available || data.annual.length === 0) {
     return (
@@ -65,6 +77,11 @@ function Statements({ symbol, statements }) {
             ) : null
           }
         />
+        {data.partial && (
+          <p className="mt-2 text-[var(--fig-xs)] text-zinc-500">
+            Quarterly figures could not be loaded; showing annual reports only.
+          </p>
+        )}
         <div className="mt-4">
           <FinancialsChart periods={periods} />
         </div>

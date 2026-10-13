@@ -194,7 +194,7 @@ export default function Research() {
               {tab === 'statistics' ? <StatisticsTab fundamentals={fundamentals} /> : null}
               {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'earnings' ? (
-                <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+                <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
               ) : null}
               {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'guide' ? <GuideTab /> : null}

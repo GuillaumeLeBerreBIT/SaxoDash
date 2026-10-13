@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
 import { statementByKey } from '../../lib/statements'
@@ -16,7 +16,7 @@ const year = (fiscal_year, income) => ({
 const periods = [
   year(2023, { revenue: 80_000_000_000, net_income: -4_000_000_000 }),
   year(2024, { revenue: 100_000_000_000, net_income: 10_000_000_000 }),
-  year(2025, { revenue: 125_000_000_000, net_income: 20_000_000_000, eps_diluted: 2.5 }),
+  year(2025, { revenue: 125_000_000_000, net_income: 20_000_000_000, income_tax: 3_000_000_000 }),
 ]
 
 const renderTable = (visible = periods.slice(-2)) =>
@@ -34,7 +34,7 @@ describe('StatementTable', () => {
     renderTable()
 
     expect(screen.getByRole('rowheader', { name: 'Revenue' })).toBeInTheDocument()
-    expect(screen.getByRole('rowheader', { name: 'Diluted EPS' })).toBeInTheDocument()
+    expect(screen.getByRole('rowheader', { name: 'Income tax' })).toBeInTheDocument()
     expect(screen.queryByRole('rowheader', { name: 'Gross profit' })).not.toBeInTheDocument()
   })
 
@@ -43,9 +43,9 @@ describe('StatementTable', () => {
 
     const revenue = screen.getByRole('rowheader', { name: 'Revenue' }).closest('tr')
     expect(within(revenue).getByText('125.00B')).toBeInTheDocument()
-    const eps = screen.getByRole('rowheader', { name: 'Diluted EPS' }).closest('tr')
-    expect(within(eps).getByText('—')).toBeInTheDocument()
-    expect(within(eps).getByText('2.50')).toBeInTheDocument()
+    const tax = screen.getByRole('rowheader', { name: 'Income tax' }).closest('tr')
+    expect(within(tax).getByText('—')).toBeInTheDocument()
+    expect(within(tax).getByText('3.00B')).toBeInTheDocument()
   })
 
   it('shows the year-on-year change under a headline figure', () => {
@@ -71,8 +71,8 @@ describe('StatementTable', () => {
   it('shows no change under a row that is not a headline', () => {
     renderTable()
 
-    const eps = screen.getByRole('rowheader', { name: 'Diluted EPS' }).closest('tr')
-    expect(within(eps).queryByText(/%$/)).not.toBeInTheDocument()
+    const tax = screen.getByRole('rowheader', { name: 'Income tax' }).closest('tr')
+    expect(within(tax).queryByText(/%$/)).not.toBeInTheDocument()
   })
 
   it('renders nothing when no row has data', () => {
@@ -81,5 +81,29 @@ describe('StatementTable', () => {
     )
 
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('opening on the newest period', () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth')
+
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 640 })
+  })
+
+  afterEach(() => {
+    if (original) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', original)
+    else delete HTMLElement.prototype.scrollWidth
+  })
+
+  it('scrolls the wide table to its right edge on render and again when the periods change', () => {
+    const { container, rerender } = render(<StatementTable statement={statementByKey('income')} periods={periods.slice(-2)} allPeriods={periods} />)
+    const wrapper = container.querySelector('.overflow-x-auto')
+    expect(wrapper.scrollLeft).toBe(640)
+
+    wrapper.scrollLeft = 0
+    rerender(<StatementTable statement={statementByKey('income')} periods={periods} allPeriods={periods} />)
+
+    expect(wrapper.scrollLeft).toBe(640)
   })
 })

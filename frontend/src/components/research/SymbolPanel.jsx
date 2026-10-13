@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
-import { useFundamentals, useStatements } from '../../api/queries'
+import { useFundamentals } from '../../api/queries'
 import { analystRating } from '../../lib/analystRating'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtMonthYear, fmtShares } from '../../lib/format'
@@ -57,10 +57,13 @@ function Section({ title, note, children }) {
 export default function SymbolPanel({ symbol, instrument, bars, earnings, href, financialsHref }) {
   const hasCompany = Boolean(instrument) && !isEtf(instrument)
   const fundamentals = useFundamentals(hasCompany ? symbol : '')
-  const statements = useStatements(hasCompany ? symbol : '')
-  const annual = hasCompany && statements.data?.available ? statements.data.annual : []
-  const hasFinancials = annual.filter((year) => year.income?.revenue != null).length >= 2
   const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
+  const annual = (company?.annual_results ?? []).map(({ label, fiscal_year, revenue, net_income }) => ({
+    label,
+    fiscal_year,
+    income: net_income == null ? { revenue } : { revenue, net_income },
+  }))
+  const hasFinancials = annual.filter((year) => year.income.revenue != null).length >= 2
   const reported = hasCompany && earnings.data?.available ? earnings.data : null
   const nextReport = upcoming(reported?.next)
 

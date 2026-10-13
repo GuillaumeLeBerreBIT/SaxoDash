@@ -125,20 +125,20 @@ describe('ResearchChart', () => {
   })
 
   it('hands the panel a link to the Financials tab for the same instrument', () => {
-    queries.useStatements.mockReturnValue({
+    queries.useFundamentals.mockReturnValue({
       ...idle,
       data: {
         available: true,
-        quarterly: [],
-        annual: [
-          { label: 'FY 2024', fiscal_year: 2024, income: { revenue: 10e9, net_income: 2e9 } },
-          { label: 'FY 2025', fiscal_year: 2025, income: { revenue: 12e9, net_income: 3e9 } },
+        annual_results: [
+          { label: 'FY 2024', fiscal_year: 2024, revenue: 10e9, net_income: 2e9 },
+          { label: 'FY 2025', fiscal_year: 2025, revenue: 12e9, net_income: 3e9 },
         ],
       },
     })
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 
     expect(screen.getByRole('link', { name: /more financials/i }).getAttribute('href')).toContain('tab=financials')
+    expect(queries.useStatements).not.toHaveBeenCalled()
   })
 
   it('keeps the heading outline valid with the panel mounted', () => {

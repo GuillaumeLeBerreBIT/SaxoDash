@@ -1,6 +1,5 @@
 import { useState } from 'react'
 
-import { useStatements } from '../../api/queries'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
 import { annualEpsRows, quarterlyEpsRows } from '../../lib/epsSeries'
 import { fmtCompact, fmtDate, fmtNum, fmtPct } from '../../lib/format'
@@ -56,7 +55,6 @@ function BeatRecord({ score }) {
 export default function EarningsTab({ symbol, earnings, fundamentals }) {
   const { data, isLoading } = earnings
   const [view, setView] = useState('quarterly')
-  const statements = useStatements(view === 'annual' ? symbol : '')
 
   if (isLoading) {
     return (
@@ -79,7 +77,7 @@ export default function EarningsTab({ symbol, earnings, fundamentals }) {
     )
   }
 
-  const annualRows = annualEpsRows(statements.data?.available ? statements.data.annual : [])
+  const annualRows = annualEpsRows(fundamentals?.data?.available ? fundamentals.data.annual_eps : [])
   const viewToggle = (
     <div className="flex items-center gap-0.5">
       {[
@@ -105,14 +103,14 @@ export default function EarningsTab({ symbol, earnings, fundamentals }) {
           data={quarterlyEpsRows(data.history, data.upcoming)}
           format={(v) => fmtNum(v, 2)}
         />
-      ) : statements.isLoading ? (
+      ) : fundamentals?.isLoading ? (
         <Card>
           <Skeleton className="h-40 w-full" />
         </Card>
       ) : annualRows.length > 0 ? (
         <EpsBarChart
           title="Diluted EPS by fiscal year"
-          subtitle="From the annual reports"
+          subtitle="Adjusted for splits, from Finnhub"
           data={annualRows}
           format={(v) => fmtNum(v, 2)}
         />

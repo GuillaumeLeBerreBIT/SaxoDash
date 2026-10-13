@@ -25,6 +25,33 @@ describe('quarterlyEpsRows', () => {
     expect(rows[2].surprise).toBeNull()
   })
 
+  it('labels rows that know their fiscal quarter, reported and upcoming alike', () => {
+    const rows = quarterlyEpsRows(
+      [{ date: '2026-06-30', quarter: 2, year: 2026, eps_actual: 1, eps_estimate: 1 }],
+      [{ date: '2026-11-02', quarter: 3, year: 2026, eps_estimate: 1.1 }],
+    )
+
+    expect(rows.map((row) => row.period)).toEqual(['Q2 FY26', 'Q3 FY26'])
+  })
+
+  it('falls back to the month for a row without a fiscal quarter', () => {
+    const rows = quarterlyEpsRows([{ date: '2026-03-31', quarter: null, year: null, eps_actual: 1 }], [])
+
+    expect(rows[0].period).toBe('2026-03')
+  })
+
+  it('makes duplicate labels unique by falling the later one back to its month', () => {
+    const rows = quarterlyEpsRows(
+      [
+        { date: '2026-03-31', quarter: 1, year: 2026, eps_actual: 1 },
+        { date: '2026-04-02', quarter: 1, year: 2026, eps_actual: 2 },
+      ],
+      [],
+    )
+
+    expect(rows.map((row) => row.period)).toEqual(['Q1 FY26', '2026-04'])
+  })
+
   it('leaves out an upcoming quarter with no estimate', () => {
     expect(quarterlyEpsRows(history, [{ date: '2026-11-02', eps_estimate: null }])).toHaveLength(2)
   })
@@ -36,18 +63,26 @@ describe('quarterlyEpsRows', () => {
 })
 
 describe('annualEpsRows', () => {
-  const annual = Array.from({ length: 10 }, (_, index) => ({
-    label: `FY ${2016 + index}`,
-    income: index === 3 ? {} : { eps_diluted: 1 + index },
-  }))
+  const annual = [
+    { period: '2024-01-28', eps: 1.19 },
+    { period: '2025-01-26', eps: 2.94 },
+  ]
 
-  it('lists diluted EPS for the newest eight years that report it', () => {
-    const rows = annualEpsRows(annual)
+  it('labels each split-adjusted point with its fiscal year', () => {
+    expect(annualEpsRows(annual)).toEqual([
+      { period: 'FY 2024', actual: 1.19, estimate: null, surprise: null, forward: false },
+      { period: 'FY 2025', actual: 2.94, estimate: null, surprise: null, forward: false },
+    ])
+  })
 
-    expect(rows).toHaveLength(8)
-    expect(rows[0].period).toBe('FY 2017')
-    expect(rows.at(-1)).toEqual({ period: 'FY 2025', actual: 10, estimate: null, surprise: null, forward: false })
-    expect(rows.map((row) => row.period)).not.toContain('FY 2019')
+  it('uses the month for two points that share a year', () => {
+    const rows = annualEpsRows([
+      { period: '2023-01-29', eps: 1 },
+      { period: '2023-12-31', eps: 2 },
+      { period: '2024-12-31', eps: 3 },
+    ])
+
+    expect(rows.map((row) => row.period)).toEqual(['Jan 23', 'Dec 23', 'FY 2024'])
   })
 
   it('is empty for a missing input', () => {

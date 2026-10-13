@@ -1,4 +1,4 @@
-import { UNKNOWN, fmtNum, fmtShares } from './format'
+import { UNKNOWN } from './format'
 
 export const STATEMENTS = [
   {
@@ -14,8 +14,6 @@ export const STATEMENTS = [
       { key: 'pretax_income', label: 'Pretax income' },
       { key: 'income_tax', label: 'Income tax' },
       { key: 'net_income', label: 'Net income', headline: true },
-      { key: 'eps_diluted', label: 'Diluted EPS', format: 'perShare' },
-      { key: 'diluted_shares', label: 'Diluted shares', format: 'shares' },
     ],
   },
   {
@@ -92,10 +90,8 @@ function fmtDollars(value) {
   return `${sign}${(magnitude / size).toFixed(2)}${suffix}`
 }
 
-export function fmtStatement(value, format) {
+export function fmtStatement(value) {
   if (value == null) return UNKNOWN
-  if (format === 'perShare') return fmtNum(value, 2)
-  if (format === 'shares') return fmtShares(value)
   return fmtDollars(value)
 }
 
@@ -138,7 +134,13 @@ export function waterfallSteps(period) {
     moveTo('operating_expenses', 'Operating expenses', income.operating_income)
     subtotal('operating_income', 'Operating income')
   }
-  moveTo('tax_and_other', 'Tax & other', income.net_income)
+  const lastStepLabel =
+    income.operating_income != null
+      ? 'Tax & other'
+      : income.gross_profit != null
+        ? 'Operating costs, tax & other'
+        : 'Costs, tax & other'
+  moveTo('tax_and_other', lastStepLabel, income.net_income)
   subtotal('net_income', 'Net income')
   return steps
 }

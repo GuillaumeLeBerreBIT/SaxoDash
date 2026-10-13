@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
 import RatioHistoryTable from './RatioHistoryTable'
@@ -59,5 +59,38 @@ describe('RatioHistoryTable', () => {
     const { container } = render(<RatioHistoryTable history={undefined} current={current} />)
 
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('RatioHistoryTable layout', () => {
+  it('pins the ratio names while the years scroll', () => {
+    render(<RatioHistoryTable history={history} current={current} />)
+
+    expect(screen.getByRole('columnheader', { name: 'Ratio' }).className).toMatch(/sticky left-0 bg-zinc-900/)
+    expect(screen.getByRole('rowheader', { name: 'P/E' }).className).toMatch(/sticky left-0 bg-zinc-900/)
+  })
+})
+
+describe('opening on the newest period', () => {
+  const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth')
+
+  beforeEach(() => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, get: () => 640 })
+  })
+
+  afterEach(() => {
+    if (original) Object.defineProperty(HTMLElement.prototype, 'scrollWidth', original)
+    else delete HTMLElement.prototype.scrollWidth
+  })
+
+  it('scrolls the wide table to its right edge on render and again when the periods change', () => {
+    const { container, rerender } = render(<RatioHistoryTable history={history.slice(1)} current={current} />)
+    const wrapper = container.querySelector('.overflow-x-auto')
+    expect(wrapper.scrollLeft).toBe(640)
+
+    wrapper.scrollLeft = 0
+    rerender(<RatioHistoryTable history={history} current={current} />)
+
+    expect(wrapper.scrollLeft).toBe(640)
   })
 })

@@ -61,7 +61,9 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
               formatter={(value, name) => [format(value), name]}
             />
-            <Bar dataKey="estimate" name="Estimate" fill={ESTIMATE} radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
+            {hasEstimates && (
+              <Bar dataKey="estimate" name="Estimate" fill={ESTIMATE} radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
+            )}
             <Bar dataKey="actual" name="Actual" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false}>
               <LabelList
                 dataKey="surprise"

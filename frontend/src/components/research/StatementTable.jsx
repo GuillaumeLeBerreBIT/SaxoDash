@@ -1,12 +1,14 @@
 import { fmtPct, pctToneClass } from '../../lib/format'
+import { useScrollToEnd } from '../../lib/useScrollToEnd'
 import { changePct, fmtStatement, rowsWithData } from '../../lib/statements'
 
 export default function StatementTable({ statement, periods, allPeriods }) {
   const rows = rowsWithData(statement, periods)
+  const scroller = useScrollToEnd(periods.length, periods[0]?.period, periods.at(-1)?.period)
   if (!rows.length) return null
 
   return (
-    <div className="overflow-x-auto">
+    <div ref={scroller} className="overflow-x-auto">
       <table className="w-full border-collapse text-[var(--fig-xs)]">
         <thead>
           <tr className="text-zinc-500">
@@ -36,7 +38,7 @@ export default function StatementTable({ statement, periods, allPeriods }) {
                 return (
                   <td key={period.period} className="text-right py-2 pl-4 align-top whitespace-nowrap">
                     <span className={`block num font-mono ${row.headline ? 'text-zinc-100' : 'text-zinc-300'}`}>
-                      {fmtStatement(period[statement.key]?.[row.key], row.format)}
+                      {fmtStatement(period[statement.key]?.[row.key])}
                     </span>
                     {change != null && (
                       <span className={`block num font-mono text-[var(--fig-2xs)] ${pctToneClass(change)}`}>

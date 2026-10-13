@@ -7,6 +7,7 @@ import * as client from '../client'
 import {
   researchKeys,
   useNoteLevelMutation,
+  statementsStaleTime,
   useStatements,
   usePriceLineMutations,
   usePriceLines,
@@ -301,5 +302,25 @@ describe('useStatements', () => {
     setup(() => useStatements(''))
 
     expect(client.getStatements).not.toHaveBeenCalled()
+  })
+
+  it('holds a complete answer for a day and a failed or partial one for five minutes', () => {
+    const day = 24 * 60 * 60_000
+    const short = 5 * 60_000
+
+    expect(statementsStaleTime({ available: true, partial: false })).toBe(day)
+    expect(statementsStaleTime({ available: true, partial: true })).toBe(short)
+    expect(statementsStaleTime({ available: false })).toBe(short)
+    expect(statementsStaleTime(undefined)).toBe(short)
+  })
+
+  it('uses that policy for the query', async () => {
+    client.getStatements.mockResolvedValue({ available: true, partial: true, annual: [], quarterly: [] })
+
+    const { result, queryClient } = setup(() => useStatements('NVDA'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const query = queryClient.getQueryCache().find({ queryKey: researchKeys.statements('NVDA') })
+    expect(query.observers[0].options.staleTime(query)).toBe(5 * 60_000)
   })
 })

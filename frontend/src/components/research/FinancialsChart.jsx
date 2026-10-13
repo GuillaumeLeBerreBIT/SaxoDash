@@ -1,7 +1,7 @@
-import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
-import { STATEMENT_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { NEGATIVE, STATEMENT_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { CHART_SERIES, chartRows } from '../../lib/statements'
 
 export default function FinancialsChart({ periods }) {
@@ -40,7 +40,10 @@ export default function FinancialsChart({ periods }) {
                 radius={[2, 2, 0, 0]}
                 maxBarSize={14}
                 isAnimationActive={false}
-              />
+              >
+                {key === 'net_income' &&
+                  rows.map((row) => <Cell key={row.label} fill={row[key] < 0 ? NEGATIVE : STATEMENT_SERIES[key]} />)}
+              </Bar>
             ))}
           </BarChart>
         </ResponsiveContainer>

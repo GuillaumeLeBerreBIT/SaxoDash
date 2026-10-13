@@ -436,11 +436,12 @@ onto one fixed row set, trying an ordered list of candidates per row and strippi
 `us-gaap_` prefix first, because filings before about 2014 carry none. A row nobody
 matched is left out, never zero. A 10-Q's income and cash-flow figures are year-to-date,
 so a quarter is its filing minus the previous one, and the fourth quarter is the annual
-report minus the third; a quarter whose predecessor was never filed is dropped. Per-share
-figures are annual only, since a year-to-date EPS cannot be subtracted. `GET
+report minus the third; a quarter whose predecessor was never filed is dropped. Statements carry no
+per-share rows: a 10-K's EPS is as filed, so a split reads as a collapse; annual EPS comes
+from Finnhub's split-adjusted series on the fundamentals payload instead. `GET
 /api/research/statements/<symbol>/` follows the fundamentals contract (200 with
 `available`, 24h cache, `research.fundamentals` scope) and costs two Finnhub calls on a
 miss. The Research tabs are Overview, Financials, Statistics, Peers, Earnings, News and
 Guide; `?tab=valuation` is an alias for Statistics. Annual ratio series arrive as
 fractions and are stored as percent, to match the TTM figures beside them. The free key
-returns four months of analyst recommendations, so the "trend" is four columns. An answer whose quarterly call failed is cached for ten minutes only.
+returns four months of analyst recommendations, so the "trend" is four columns. An answer whose quarterly call failed is cached for ten minutes only. The chart page's panel and the Earnings tab read fundamentals only; the statements request is made by the Financials tab alone.

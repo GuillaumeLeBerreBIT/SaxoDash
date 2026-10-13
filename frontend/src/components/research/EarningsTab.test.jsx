@@ -101,37 +101,53 @@ describe('EarningsTab', () => {
     expect(screen.getByText(/1 upcoming quarter, estimate only/i)).toBeInTheDocument()
   })
 
-  it('does not fetch statements until the annual view is chosen', async () => {
+  it('never asks for statements, in either view', async () => {
     renderTab()
-
-    expect(queries.useStatements).toHaveBeenLastCalledWith('')
 
     await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
 
-    expect(queries.useStatements).toHaveBeenLastCalledWith('NVDA')
+    expect(queries.useStatements).not.toHaveBeenCalled()
   })
 
-  it('shows annual diluted EPS from the statements', async () => {
-    queries.useStatements.mockReturnValue({
-      isLoading: false,
-      data: {
-        available: true,
-        annual: [
-          { label: 'FY 2024', income: { eps_diluted: 2.9 } },
-          { label: 'FY 2025', income: { eps_diluted: 3.4 } },
-        ],
-        quarterly: [],
-      },
-    })
-    renderTab()
+  it('shows the split-adjusted annual EPS from fundamentals', async () => {
+    render(
+      <EarningsTab
+        symbol="NVDA"
+        earnings={{ data: AVAILABLE, isLoading: false }}
+        fundamentals={{
+          isLoading: false,
+          data: {
+            available: true,
+            annual_eps: [
+              { period: '2024-01-28', eps: 1.19 },
+              { period: '2025-01-26', eps: 2.94 },
+            ],
+          },
+        }}
+      />,
+    )
 
     await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
 
     expect(screen.getByText('Diluted EPS by fiscal year')).toBeInTheDocument()
+    expect(screen.getByText('Adjusted for splits, from Finnhub')).toBeInTheDocument()
+  })
+
+  it('shows a skeleton while fundamentals load', async () => {
+    render(
+      <EarningsTab
+        symbol="NVDA"
+        earnings={{ data: AVAILABLE, isLoading: false }}
+        fundamentals={{ isLoading: true, data: undefined }}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+
+    expect(screen.queryByText(/annual EPS is unavailable/i)).not.toBeInTheDocument()
   })
 
   it('says so when annual EPS is unavailable', async () => {
-    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: false } })
     renderTab()
 
     await userEvent.click(screen.getByRole('button', { name: 'Annual' }))

@@ -129,17 +129,9 @@ describe('fmtStatement', () => {
     expect(fmtStatement(-0)).toBe('0')
   })
 
-  it('prints a share count the way fmtShares does', () => {
-    expect(fmtStatement(15_000_000_000, 'shares')).toBe('15.00B')
-  })
-
-  it('prints a per-share figure with two decimals', () => {
-    expect(fmtStatement(7.459, 'perShare')).toBe('7.46')
-  })
-
   it('prints a dash for a missing value', () => {
     expect(fmtStatement(null)).toBe('—')
-    expect(fmtStatement(undefined, 'perShare')).toBe('—')
+    expect(fmtStatement(undefined)).toBe('—')
   })
 })
 
@@ -180,6 +172,14 @@ describe('waterfallSteps', () => {
     expect(steps[1]).toMatchObject({ from: 100, to: 30 })
   })
 
+  it('names the last step by what it covers', () => {
+    const lastChange = (income) => waterfallSteps(year(2025, income)).find((step) => step.key === 'tax_and_other').label
+
+    expect(lastChange({ revenue: 100, gross_profit: 60, operating_income: 35, net_income: 28 })).toBe('Tax & other')
+    expect(lastChange({ revenue: 100, gross_profit: 60, net_income: 28 })).toBe('Operating costs, tax & other')
+    expect(lastChange({ revenue: 100, net_income: 28 })).toBe('Costs, tax & other')
+  })
+
   it('handles a net loss', () => {
     const steps = waterfallSteps(year(2025, { revenue: 100, operating_income: -20, net_income: -25 }))
 
@@ -190,5 +190,14 @@ describe('waterfallSteps', () => {
     expect(waterfallSteps(year(2025, { revenue: 100 }))).toEqual([])
     expect(waterfallSteps(year(2025, { net_income: 5 }))).toEqual([])
     expect(waterfallSteps(null)).toEqual([])
+  })
+})
+
+describe('the income statement rows', () => {
+  it('has no per-share rows', () => {
+    const keys = statementByKey('income').rows.map((row) => row.key)
+
+    expect(keys).not.toContain('eps_diluted')
+    expect(keys).not.toContain('diluted_shares')
   })
 })

@@ -338,6 +338,26 @@ describe('Research', () => {
     expect(links()).toHaveLength(10)
   })
 
+  it('opens the Earnings tab on Quarterly again after the symbol changes', async () => {
+    queries.useSymbolEarnings.mockReturnValue({
+      ...idle,
+      data: {
+        available: true,
+        next: null,
+        history: [{ date: '2026-06-30', quarter: 2, year: 2026, eps_actual: 1.6, eps_estimate: 1.5, eps_surprise_pct: 6 }],
+      },
+    })
+    localStorage.setItem('saxodash:recent-symbols', JSON.stringify(['AAPL']))
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=earnings' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annual' }))
+    expect(screen.getByRole('button', { name: 'Annual' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(screen.getByRole('button', { name: 'AAPL' }))
+
+    expect(screen.getByRole('button', { name: 'Quarterly' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('falls back to Overview for the retired ?tab=market link', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=market' })
     expect(screen.getByText('Your position')).toBeInTheDocument()

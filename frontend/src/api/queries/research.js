@@ -150,12 +150,19 @@ export function useFundamentals(symbol) {
   })
 }
 
+const STATEMENTS_FRESH = 24 * 60 * 60_000
+const STATEMENTS_RETRY = 5 * 60_000
+
+export function statementsStaleTime(data) {
+  return data?.available && !data.partial ? STATEMENTS_FRESH : STATEMENTS_RETRY
+}
+
 export function useStatements(symbol) {
   return useQuery({
     queryKey: researchKeys.statements(symbol),
     queryFn: () => getStatements(symbol),
     enabled: !!symbol,
-    staleTime: 24 * 60 * 60_000,
+    staleTime: (query) => statementsStaleTime(query.state.data),
   })
 }
 

@@ -44,10 +44,12 @@ beforeEach(() => {
   queries.useStatements.mockReturnValue({ data: undefined, isLoading: false })
 })
 
-const annual = [
-  { label: 'FY 2024', fiscal_year: 2024, income: { revenue: 10e9, net_income: 2e9 } },
-  { label: 'FY 2025', fiscal_year: 2025, income: { revenue: 12e9, net_income: 3e9 } },
+const annualResults = [
+  { label: 'FY 2024', fiscal_year: 2024, revenue: 10e9, net_income: 2e9 },
+  { label: 'FY 2025', fiscal_year: 2025, revenue: 12e9, net_income: 3e9 },
 ]
+const withResults = (results = annualResults) =>
+  queries.useFundamentals.mockReturnValue({ data: { ...fundamentals, annual_results: results }, isLoading: false })
 
 describe('SymbolPanel', () => {
   it('shows every block for a stock with full data', () => {
@@ -185,25 +187,44 @@ describe('SymbolPanel', () => {
   })
 
   it('shows the mini financials with a link to the Financials tab', () => {
-    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: true, annual, quarterly: [] } })
+    withResults()
     renderWithProviders(panel({ financialsHref: '/research?symbol=NOW&tab=financials' }))
 
     expect(screen.getByRole('heading', { name: 'Financials' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /more financials/i })).toHaveAttribute('href', '/research?symbol=NOW&tab=financials')
   })
 
-  it('leaves the financials block out when statements are unavailable', () => {
-    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: false } })
+  it('leaves the financials block out when fundamentals carry no annual results', () => {
     renderWithProviders(panel())
 
     expect(screen.queryByRole('heading', { name: 'Financials' })).not.toBeInTheDocument()
   })
 
-  it('asks for no statements for an ETF or an unresolved symbol', () => {
-    renderWithProviders(panel({ instrument: { uic: 2, assetType: 'Etf' } }))
-    expect(queries.useStatements).toHaveBeenLastCalledWith('')
+  it('leaves the financials block out with a single year of results', () => {
+    withResults(annualResults.slice(0, 1))
+    renderWithProviders(panel())
 
-    renderWithProviders(panel({ instrument: null }))
-    expect(queries.useStatements).toHaveBeenLastCalledWith('')
+    expect(screen.queryByRole('heading', { name: 'Financials' })).not.toBeInTheDocument()
+  })
+
+  it('draws a year without net income from its revenue alone', () => {
+    withResults([annualResults[0], { label: 'FY 2025', fiscal_year: 2025, revenue: 12e9 }])
+    renderWithProviders(panel())
+
+    expect(screen.getByRole('heading', { name: 'Financials' })).toBeInTheDocument()
+  })
+
+  it('never asks for statements', () => {
+    withResults()
+    renderWithProviders(panel())
+
+    expect(queries.useStatements).not.toHaveBeenCalled()
+  })
+
+  it('shows no financials block for an ETF even when fundamentals carry annual results', () => {
+    withResults()
+    renderWithProviders(panel({ instrument: { uic: 2, assetType: 'Etf' } }))
+
+    expect(screen.queryByRole('heading', { name: 'Financials' })).not.toBeInTheDocument()
   })
 })

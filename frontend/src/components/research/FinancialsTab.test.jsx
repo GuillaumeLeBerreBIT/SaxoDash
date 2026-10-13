@@ -151,4 +151,30 @@ describe('FinancialsTab', () => {
 
     expect(screen.getByText('Cash generation & balance sheet')).toBeInTheDocument()
   })
+
+  it('offers a retry when the statements request failed', async () => {
+    const refetch = vi.fn()
+    queries.useStatements.mockReturnValue({ ...idle, error: new Error('boom'), refetch })
+    renderWithProviders(<FinancialsTab symbol="NVDA" fundamentals={fundamentals} />)
+
+    expect(screen.getByText('Statements could not be loaded.')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+
+    expect(refetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('says so when only the annual reports could be loaded', () => {
+    renderTab({ available: true, partial: true, annual, quarterly: [] })
+
+    expect(
+      screen.getByText('Quarterly figures could not be loaded; showing annual reports only.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Quarterly' })).not.toBeInTheDocument()
+  })
+
+  it('does not claim a partial answer when the quarters are simply absent', () => {
+    renderTab({ available: true, partial: false, annual, quarterly: [] })
+
+    expect(screen.queryByText(/quarterly figures could not be loaded/i)).not.toBeInTheDocument()
+  })
 })

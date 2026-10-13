@@ -17,9 +17,9 @@ function Trend({ history }) {
   const tallest = Math.max(...totals, 1)
 
   return (
-    <ol aria-label="Analyst ratings by month" className="mt-4 flex items-end justify-center gap-3 h-24">
+    <ol aria-label="Analyst ratings by month" className="mt-4 flex items-end justify-center gap-4 h-24">
       {history.map((month, index) => (
-        <li key={month.period} aria-label={monthSummary(month)} className="flex h-full w-10 flex-col items-center justify-end gap-1">
+        <li key={month.period} aria-label={monthSummary(month)} className="flex h-full w-14 flex-col items-center justify-end gap-1">
           <span className="flex w-full flex-col overflow-hidden rounded-sm" style={{ height: `${(totals[index] / tallest) * 100}%` }}>
             {BEST_FIRST.map(({ key, color }) =>
               month[key] ? <span key={key} style={{ flexGrow: month[key], backgroundColor: color }} /> : null,
