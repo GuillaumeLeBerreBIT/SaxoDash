@@ -1,5 +1,10 @@
 from datetime import date
 
+from django.core.cache import cache
+
+from . import finnhub
+from .providers import ProviderUnavailable
+
 PREFIX = 'us-gaap_'
 SINGLE_QUARTER_MAX_DAYS = 100
 QUARTERS_KEPT = 12
@@ -230,3 +235,32 @@ def to_quarterly(reported, annual_rows):
     for year, filings in by_year.items():
         rows.extend(_year_quarters(year, filings, annual_by_year.get(year)))
     return sorted(rows, key=lambda row: row['period'])[-QUARTERS_KEPT:]
+
+
+STATEMENTS_TTL = 86400
+CACHE_V = 'v1'
+
+
+def _cache_key(symbol):
+    return f'research:statements:{CACHE_V}:{symbol}'
+
+
+def statements(symbol):
+    def produce():
+        annual = to_annual(finnhub.get_financials_reported(symbol, 'annual'))
+        if not annual:
+            raise finnhub.FinnhubNoData(symbol)
+        try:
+            quarterly = to_quarterly(finnhub.get_financials_reported(symbol, 'quarterly'), annual)
+        except ProviderUnavailable:
+            quarterly = []
+        return {'annual': annual, 'quarterly': quarterly}
+
+    try:
+        data = cache.get_or_set(_cache_key(symbol), produce, STATEMENTS_TTL)
+    except ProviderUnavailable:
+        raise
+    except (KeyError, TypeError, IndexError, ValueError, AttributeError) as exc:
+        raise finnhub.FinnhubUnexpected() from exc
+
+    return {'available': True, **data}
