@@ -147,6 +147,7 @@ export default function ResearchChart() {
           bars={allBars}
           earnings={earnings}
           href={researchHref(symbol, undefined, instrument)}
+          financialsHref={researchHref(symbol, 'financials', instrument)}
         />
       </aside>
 

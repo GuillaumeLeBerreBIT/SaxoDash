@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 
-import { useFundamentals } from '../../api/queries'
+import { useFundamentals, useStatements } from '../../api/queries'
 import { analystRating } from '../../lib/analystRating'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtMonthYear, fmtShares } from '../../lib/format'
@@ -12,6 +12,7 @@ import { technicalRating } from '../../lib/technicalRating'
 import { Card, Skeleton } from '../ui'
 import AnalystCounts from './AnalystCounts'
 import EarningsDots from './EarningsDots'
+import MiniFinancials from './MiniFinancials'
 import PerformanceTiles from './PerformanceTiles'
 import RatingGauge from './RatingGauge'
 import SeasonalsChart from './SeasonalsChart'
@@ -53,9 +54,12 @@ function Section({ title, note, children }) {
   )
 }
 
-export default function SymbolPanel({ symbol, instrument, bars, earnings, href }) {
+export default function SymbolPanel({ symbol, instrument, bars, earnings, href, financialsHref }) {
   const hasCompany = Boolean(instrument) && !isEtf(instrument)
   const fundamentals = useFundamentals(hasCompany ? symbol : '')
+  const statements = useStatements(hasCompany ? symbol : '')
+  const annual = hasCompany && statements.data?.available ? statements.data.annual : []
+  const hasFinancials = annual.filter((year) => year.income?.revenue != null).length >= 2
   const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
   const reported = hasCompany && earnings.data?.available ? earnings.data : null
   const nextReport = upcoming(reported?.next)
@@ -78,7 +82,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
   const hasReturns = returns.some((row) => row.pct != null)
   const hasEarnings = Boolean(reported?.history?.some((row) => row.eps_actual != null) || nextReport?.eps_estimate != null)
   const hasAnything =
-    stats.length > 0 || hasReturns || hasEarnings || analyst || technical || seasons.length > 0 || loadingCompany
+    stats.length > 0 || hasReturns || hasEarnings || hasFinancials || analyst || technical || seasons.length > 0 || loadingCompany
   if (!hasAnything) return null
 
   return (
@@ -107,6 +111,15 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
       {hasEarnings && (
         <Section title="Earnings" note="EPS vs estimate">
           <EarningsDots history={reported.history} next={nextReport} />
+        </Section>
+      )}
+
+      {hasFinancials && (
+        <Section
+          title="Financials"
+          note={financialsHref ? <Link to={financialsHref} className="hover:text-zinc-300">More financials →</Link> : null}
+        >
+          <MiniFinancials annual={annual} />
         </Section>
       )}
 

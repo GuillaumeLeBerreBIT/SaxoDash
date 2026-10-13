@@ -56,6 +56,7 @@ function stubQueries() {
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
@@ -121,6 +122,23 @@ describe('ResearchChart', () => {
 
     expect(screen.getByRole('heading', { name: 'Analyst rating' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Earnings' })).toBeInTheDocument()
+  })
+
+  it('hands the panel a link to the Financials tab for the same instrument', () => {
+    queries.useStatements.mockReturnValue({
+      ...idle,
+      data: {
+        available: true,
+        quarterly: [],
+        annual: [
+          { label: 'FY 2024', fiscal_year: 2024, income: { revenue: 10e9, net_income: 2e9 } },
+          { label: 'FY 2025', fiscal_year: 2025, income: { revenue: 12e9, net_income: 3e9 } },
+        ],
+      },
+    })
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(screen.getByRole('link', { name: /more financials/i }).getAttribute('href')).toContain('tab=financials')
   })
 
   it('keeps the heading outline valid with the panel mounted', () => {

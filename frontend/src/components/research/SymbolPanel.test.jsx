@@ -41,7 +41,13 @@ const panel = (props) => (
 beforeEach(() => {
   vi.resetAllMocks()
   queries.useFundamentals.mockReturnValue({ data: fundamentals, isLoading: false })
+  queries.useStatements.mockReturnValue({ data: undefined, isLoading: false })
 })
+
+const annual = [
+  { label: 'FY 2024', fiscal_year: 2024, income: { revenue: 10e9, net_income: 2e9 } },
+  { label: 'FY 2025', fiscal_year: 2025, income: { revenue: 12e9, net_income: 3e9 } },
+]
 
 describe('SymbolPanel', () => {
   it('shows every block for a stock with full data', () => {
@@ -176,5 +182,28 @@ describe('SymbolPanel', () => {
     renderWithProviders(panel())
 
     expect(screen.getByTestId('symbol-panel-loading')).toBeInTheDocument()
+  })
+
+  it('shows the mini financials with a link to the Financials tab', () => {
+    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: true, annual, quarterly: [] } })
+    renderWithProviders(panel({ financialsHref: '/research?symbol=NOW&tab=financials' }))
+
+    expect(screen.getByRole('heading', { name: 'Financials' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /more financials/i })).toHaveAttribute('href', '/research?symbol=NOW&tab=financials')
+  })
+
+  it('leaves the financials block out when statements are unavailable', () => {
+    queries.useStatements.mockReturnValue({ isLoading: false, data: { available: false } })
+    renderWithProviders(panel())
+
+    expect(screen.queryByRole('heading', { name: 'Financials' })).not.toBeInTheDocument()
+  })
+
+  it('asks for no statements for an ETF or an unresolved symbol', () => {
+    renderWithProviders(panel({ instrument: { uic: 2, assetType: 'Etf' } }))
+    expect(queries.useStatements).toHaveBeenLastCalledWith('')
+
+    renderWithProviders(panel({ instrument: null }))
+    expect(queries.useStatements).toHaveBeenLastCalledWith('')
   })
 })
