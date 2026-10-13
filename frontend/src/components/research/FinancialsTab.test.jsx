@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
@@ -69,6 +71,33 @@ describe('FinancialsTab', () => {
 
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
     expect(headers).toEqual(['Income statement', 'Q1 2025', 'Q2 2025', 'Q3 2025', 'Q4 2025'])
+  })
+
+  it('goes back to the annual income statement when the symbol changes', async () => {
+    queries.useStatements.mockReturnValue({ ...idle, data: { available: true, annual, quarterly } })
+    const tree = (symbol) => (
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <FinancialsTab symbol={symbol} fundamentals={fundamentals} />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+    const { rerender } = render(tree('NVDA'))
+    await userEvent.click(screen.getByRole('button', { name: 'Quarterly' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Balance sheet' }))
+
+    rerender(tree('AAPL'))
+
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
+    expect(headers[0]).toBe('Income statement')
+    expect(headers[1]).toMatch(/^FY /)
+  })
+
+  it('shows one unavailable card when an available answer has no annual rows', () => {
+    renderTab({ available: true, annual: [], quarterly: [] })
+
+    expect(screen.getByText('Statements are unavailable for NVDA.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Balance sheet' })).not.toBeInTheDocument()
   })
 
   it('hides the quarterly switch when there are no quarters', () => {

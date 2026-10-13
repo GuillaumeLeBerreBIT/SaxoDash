@@ -112,6 +112,25 @@ describe('fmtStatement', () => {
   it('prints dollars compactly', () => {
     expect(fmtStatement(416_161_000_000)).toBe('416.16B')
     expect(fmtStatement(-1_500_000_000)).toBe('-1.50B')
+    expect(fmtStatement(4_976_000_000_000)).toBe('4.98T')
+  })
+
+  it('moves a value that rounds up to 1000 of a unit to the next unit', () => {
+    expect(fmtStatement(999_600_000)).toBe('999.60M')
+    expect(fmtStatement(999_999_999)).toBe('1.00B')
+  })
+
+  it('prints millions, thousands and small figures without losing them', () => {
+    expect(fmtStatement(4_900_000)).toBe('4.90M')
+    expect(fmtStatement(250_000)).toBe('250.00K')
+    expect(fmtStatement(-400_000)).toBe('-400.00K')
+    expect(fmtStatement(950)).toBe('950')
+    expect(fmtStatement(0)).toBe('0')
+    expect(fmtStatement(-0)).toBe('0')
+  })
+
+  it('prints a share count the way fmtShares does', () => {
+    expect(fmtStatement(15_000_000_000, 'shares')).toBe('15.00B')
   })
 
   it('prints a per-share figure with two decimals', () => {

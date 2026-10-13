@@ -29,7 +29,7 @@ function Statements({ symbol, statements }) {
   }
 
   const data = statements.data
-  if (!data?.available) {
+  if (!data?.available || data.annual.length === 0) {
     return (
       <Card>
         <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />
@@ -109,7 +109,7 @@ export default function FinancialsTab({ symbol, fundamentals }) {
 
   return (
     <div className="space-y-4">
-      <Statements symbol={symbol} statements={statements} />
+      <Statements key={symbol} symbol={symbol} statements={statements} />
       <CashFlowTrendChart trend={company?.cash_flow_trend} />
       <QuarterlyTrendsChart trends={company?.quarterly_trends} />
     </div>

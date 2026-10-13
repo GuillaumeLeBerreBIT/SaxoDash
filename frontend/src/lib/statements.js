@@ -1,4 +1,4 @@
-import { UNKNOWN, fmtCompact, fmtNum, fmtShares } from './format'
+import { UNKNOWN, fmtNum, fmtShares } from './format'
 
 export const STATEMENTS = [
   {
@@ -75,13 +75,28 @@ export function changePct(periods, period, statementKey, rowKey) {
   return ((current - prior) / Math.abs(prior)) * 100
 }
 
-const MILLION = 1e6
+const DOLLAR_UNITS = [
+  { suffix: 'T', size: 1e12 },
+  { suffix: 'B', size: 1e9 },
+  { suffix: 'M', size: 1e6 },
+  { suffix: 'K', size: 1e3 },
+]
+
+function fmtDollars(value) {
+  const magnitude = Math.abs(value)
+  const sign = value < 0 ? '-' : ''
+  const start = DOLLAR_UNITS.findIndex(({ size }) => magnitude >= size)
+  if (start === -1) return magnitude === 0 ? '0' : `${sign}${Math.round(magnitude)}`
+  const index = start > 0 && (magnitude / DOLLAR_UNITS[start].size).toFixed(2) === '1000.00' ? start - 1 : start
+  const { suffix, size } = DOLLAR_UNITS[index]
+  return `${sign}${(magnitude / size).toFixed(2)}${suffix}`
+}
 
 export function fmtStatement(value, format) {
   if (value == null) return UNKNOWN
   if (format === 'perShare') return fmtNum(value, 2)
   if (format === 'shares') return fmtShares(value)
-  return fmtCompact(value / MILLION)
+  return fmtDollars(value)
 }
 
 export const CHART_SERIES = [
