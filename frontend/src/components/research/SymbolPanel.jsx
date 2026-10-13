@@ -23,10 +23,11 @@ function averageVolume(bars) {
   return traded.reduce((sum, bar) => sum + bar.volume, 0) / traded.length
 }
 
+const upcoming = (next) => (next?.date && daysUntil(next.date) !== 'past' ? next : null)
+
 function nextEarningsParts(next) {
-  if (!next?.date) return null
+  if (!next) return null
   const when = daysUntil(next.date)
-  if (when === 'past') return null
   return { day: when.charAt(0).toUpperCase() + when.slice(1), session: SESSION_LABEL[next.session] ?? null }
 }
 
@@ -55,7 +56,7 @@ function Counts({ rows }) {
   return (
     <dl className="mt-1 grid gap-1 text-center" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}>
       {rows.map(([label, count]) => (
-        <div key={label} className="flex flex-col-reverse">
+        <div key={label} className="flex flex-col-reverse justify-end">
           <dt className="text-[var(--fig-2xs)] text-zinc-500">{label}</dt>
           <dd className="num font-mono text-[var(--fig-sm)] text-zinc-100">{count}</dd>
         </div>
@@ -69,6 +70,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
   const fundamentals = useFundamentals(hasCompany ? symbol : '')
   const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
   const reported = hasCompany && earnings.data?.available ? earnings.data : null
+  const nextReport = upcoming(reported?.next)
 
   const returns = useMemo(() => trailingReturns(bars), [bars])
   const seasons = useMemo(() => seasonalSeries(bars), [bars])
@@ -79,14 +81,14 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
   const latestVolume = bars.length ? bars[bars.length - 1].volume : 0
   const typicalVolume = averageVolume(bars)
   const stats = [
-    ['next-earnings', 'Next earnings', nextEarningsParts(reported?.next)],
+    ['next-earnings', 'Next earnings', nextEarningsParts(nextReport)],
     ['volume', 'Volume', latestVolume > 0 ? fmtShares(latestVolume) : null],
     ['average-volume', 'Average volume (30D)', typicalVolume > 0 ? fmtShares(typicalVolume) : null],
     ['market-cap', 'Market cap', company?.market_cap == null ? null : fmtCompact(company.market_cap)],
   ].filter(([, , value]) => value != null)
 
   const hasReturns = returns.some((row) => row.pct != null)
-  const hasEarnings = Boolean(reported?.history?.some((row) => row.eps_actual != null) || reported?.next?.eps_estimate != null)
+  const hasEarnings = Boolean(reported?.history?.some((row) => row.eps_actual != null) || nextReport?.eps_estimate != null)
   const hasAnything =
     stats.length > 0 || hasReturns || hasEarnings || analyst || technical || seasons.length > 0 || loadingCompany
   if (!hasAnything) return null
@@ -116,7 +118,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
 
       {hasEarnings && (
         <Section title="Earnings" note="EPS vs estimate">
-          <EarningsDots history={reported.history} next={reported.next} />
+          <EarningsDots history={reported.history} next={nextReport} />
         </Section>
       )}
 

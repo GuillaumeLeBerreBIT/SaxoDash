@@ -121,6 +121,23 @@ describe('SymbolPanel', () => {
     expect(screen.queryByText(/Past/)).not.toBeInTheDocument()
   })
 
+  it('draws no Next ring for a date that has passed', () => {
+    const stale = { data: { ...earnings.data, next: { date: '2020-01-01', session: 'amc', eps_estimate: 1.02 } } }
+    renderWithProviders(panel({ earnings: stale }))
+
+    expect(screen.getByRole('heading', { name: 'Earnings' })).toBeInTheDocument()
+    expect(screen.queryByText('Next')).not.toBeInTheDocument()
+  })
+
+  it('leaves the Earnings block out when only a stale next date remains', () => {
+    const stale = {
+      data: { available: true, history: [], next: { date: '2020-01-01', session: 'amc', eps_estimate: 1.02 }, score: null },
+    }
+    renderWithProviders(panel({ earnings: stale }))
+
+    expect(screen.queryByRole('heading', { name: 'Earnings' })).not.toBeInTheDocument()
+  })
+
   it('prints the day and the session of the next earnings in separate elements', () => {
     const { container } = renderWithProviders(panel())
 
@@ -136,8 +153,10 @@ describe('SymbolPanel', () => {
 
     const group = screen.getByText('Strong buy').closest('div')
     expect(group.firstElementChild.tagName).toBe('DT')
+    expect(group).toHaveClass('justify-end')
     const technicals = screen.getByText('Neutral').closest('div')
     expect(technicals.firstElementChild.tagName).toBe('DT')
+    expect(technicals).toHaveClass('justify-end')
   })
 
   it('averages volume over the bars that carry it', () => {

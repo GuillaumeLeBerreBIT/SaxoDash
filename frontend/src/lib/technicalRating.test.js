@@ -52,4 +52,38 @@ describe('technicalRating', () => {
     const rating = technicalRating(series(260, (i) => 100 + i))
     expect(rating.fraction).toBeCloseTo((rating.score + 1) / 2, 10)
   })
+
+  it('labels five buys against one sell, a score of 2/3, as Strong buy', () => {
+    const rating = technicalRating(series(260, (i) => 100 + i))
+    expect([rating.buy, rating.neutral, rating.sell]).toEqual([5, 0, 1])
+    expect(rating.fraction).toBeCloseTo(5 / 6, 10)
+    expect(rating.label).toBe('Strong buy')
+  })
+
+  it('labels four buys against two sells, a score of 1/3, as Buy', () => {
+    const rating = technicalRating(series(260, (i) => (i < 240 ? 400 - i : 160 + (i - 240) * 3)))
+    expect([rating.buy, rating.neutral, rating.sell]).toEqual([4, 0, 2])
+    expect(rating.fraction).toBeCloseTo(2 / 3, 10)
+    expect(rating.label).toBe('Buy')
+  })
+
+  it('labels two buys against four sells as Sell', () => {
+    const rating = technicalRating(series(260, (i) => (i < 240 ? 100 + i : 340 - (i - 240) * 3)))
+    expect([rating.buy, rating.neutral, rating.sell]).toEqual([2, 0, 4])
+    expect(rating.fraction).toBeCloseTo(1 / 3, 10)
+    expect(rating.label).toBe('Sell')
+  })
+
+  it('labels two buys, one neutral and three sells as Neutral', () => {
+    const rating = technicalRating(series(260, (i) => (i < 255 ? 100 + i : 355 - (i - 254) * 2)))
+    expect([rating.buy, rating.neutral, rating.sell]).toEqual([2, 1, 3])
+    expect(rating.fraction).toBeCloseTo(5 / 12, 10)
+    expect(rating.label).toBe('Neutral')
+  })
+
+  it('labels one buy against five sells as Strong sell', () => {
+    const rating = technicalRating(series(260, (i) => 400 - i))
+    expect([rating.buy, rating.neutral, rating.sell]).toEqual([1, 0, 5])
+    expect(rating.label).toBe('Strong sell')
+  })
 })
