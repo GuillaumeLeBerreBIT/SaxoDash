@@ -418,3 +418,14 @@ scan's stock-only resolver: it searches stocks and ETFs (funds hold IVV, QQQ, GL
 positions), knows Saxo's share-class spellings (`BRK.B` is `BRKb`, `LEN.B` is `LEN_B`) and its
 `_NEW` relistings, and falls back to the issuer's first name word when a symbol search returns
 nothing (`ETN` does, `Eaton` does not) — always requiring the symbol itself to match.
+
+**The chart page's symbol panel computes from what the page already fetched.**
+`SymbolPanel` sits under the watchlist on `/research/chart` and follows the URL's
+symbol. Performance, seasonals and the technicals gauge are arithmetic over the one
+1,200-bar fetch (`lib/performance.js::trailingReturns`, `lib/seasonals.js`,
+`lib/technicalRating.js`); earnings dots reuse the page's `useSymbolEarnings`; only
+the analyst gauge and market cap add a request, the 24h-cached `useFundamentals`.
+The technicals rating is ours, a daily vote of six indicators, and names its inputs
+under the gauge so it is not read as TradingView's. An ETF gets no company blocks,
+and a block without data is left out. Analyst price targets and estimates beyond two
+quarters are refused by the free Finnhub key, so there is no forecast cone.
