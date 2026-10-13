@@ -1,4 +1,4 @@
-import { fmtNum, fmtPct } from './format'
+import { fmtMonthYear, fmtNum, fmtPct } from './format'
 
 export const RATIO_GROUPS = [
   {
@@ -51,4 +51,17 @@ export function fmtRatio(value, format) {
 export function ratiosWithHistory(history) {
   const points = history ?? []
   return RATIO_GROUPS.flatMap((group) => group.ratios).filter((ratio) => points.some((point) => point[ratio.key] != null))
+}
+
+export function periodLabels(history) {
+  const points = history ?? []
+  const counts = new Map()
+  points.forEach((point) => {
+    const year = point.period.slice(0, 4)
+    counts.set(year, (counts.get(year) ?? 0) + 1)
+  })
+  return points.map((point) => {
+    const year = point.period.slice(0, 4)
+    return counts.get(year) > 1 ? fmtMonthYear(point.period) : year
+  })
 }

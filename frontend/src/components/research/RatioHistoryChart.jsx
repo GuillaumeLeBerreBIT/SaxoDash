@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { SERIES_TOTAL, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
-import { fmtRatio, ratiosWithHistory } from '../../lib/ratioHistory'
+import { fmtRatio, periodLabels, ratiosWithHistory } from '../../lib/ratioHistory'
 import { Select } from '../ui'
 
 const MIN_POINTS = 2
@@ -12,10 +12,12 @@ export default function RatioHistoryChart({ history }) {
     (ratio) => history.filter((point) => point[ratio.key] != null).length >= MIN_POINTS,
   )
   const [chosen, setChosen] = useState(null)
+  if (chosen !== null && !ratios.some((candidate) => candidate.key === chosen)) setChosen(null)
   if (!ratios.length) return null
 
   const ratio = ratios.find((candidate) => candidate.key === chosen) ?? ratios[0]
-  const rows = history.map((point) => ({ year: point.period.slice(0, 4), value: point[ratio.key] ?? null }))
+  const labels = periodLabels(history)
+  const rows = history.map((point, index) => ({ year: labels[index], value: point[ratio.key] ?? null }))
 
   return (
     <div>

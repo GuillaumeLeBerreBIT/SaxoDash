@@ -1,9 +1,10 @@
 import { Fragment } from 'react'
 
-import { RATIO_GROUPS, fmtRatio } from '../../lib/ratioHistory'
+import { RATIO_GROUPS, fmtRatio, periodLabels } from '../../lib/ratioHistory'
 
 export default function RatioHistoryTable({ history, current }) {
   const points = history ?? []
+  const labels = periodLabels(points)
   const groups = RATIO_GROUPS.map((group) => ({
     ...group,
     ratios: group.ratios.filter((ratio) => points.some((point) => point[ratio.key] != null)),
@@ -16,9 +17,9 @@ export default function RatioHistoryTable({ history, current }) {
         <thead>
           <tr className="text-zinc-500">
             <th scope="col" className="text-left font-medium py-2 pr-4">Ratio</th>
-            {points.map((point) => (
+            {points.map((point, index) => (
               <th key={point.period} scope="col" className="text-right font-medium py-2 pl-4">
-                {point.period.slice(0, 4)}
+                {labels[index]}
               </th>
             ))}
             <th scope="col" className="text-right font-medium py-2 pl-4 text-zinc-300">Current</th>

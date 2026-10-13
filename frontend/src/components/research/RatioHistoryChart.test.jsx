@@ -26,6 +26,19 @@ describe('RatioHistoryChart', () => {
     expect(screen.getByRole('img', { name: 'ROE by fiscal year' })).toBeInTheDocument()
   })
 
+  it('forgets a ratio the company lacks instead of restoring it for the next one', async () => {
+    const { rerender } = render(<RatioHistoryChart history={history} />)
+    await userEvent.selectOptions(screen.getByLabelText('Ratio'), 'roe')
+
+    const peOnly = history.map(({ period, pe }) => ({ period, pe }))
+    rerender(<RatioHistoryChart history={peOnly} />)
+    expect(screen.getByRole('img', { name: 'P/E by fiscal year' })).toBeInTheDocument()
+
+    rerender(<RatioHistoryChart history={history} />)
+    expect(screen.getByRole('img', { name: 'P/E by fiscal year' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Ratio').value).toBe('pe')
+  })
+
   it('renders nothing with fewer than two points', () => {
     const { container } = render(<RatioHistoryChart history={[{ period: '2025-09-27', pe: 33 }]} />)
 

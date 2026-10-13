@@ -18,6 +18,19 @@ describe('RatioHistoryTable', () => {
     expect(headers).toEqual(['Ratio', '2023', '2024', '2025', 'Current'])
   })
 
+  it('keeps column headers distinct when a fiscal year end moved within a calendar year', () => {
+    const shifted = [
+      { period: '2023-12-31', pe: 20 },
+      { period: '2024-01-31', pe: 21 },
+      { period: '2024-12-31', pe: 22 },
+    ]
+    render(<RatioHistoryTable history={shifted} current={current} />)
+
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
+    expect(new Set(headers).size).toBe(5)
+    expect(headers[1]).toBe('2023')
+  })
+
   it('prints each ratio across the years and its current figure', () => {
     render(<RatioHistoryTable history={history} current={current} />)
 
