@@ -54,6 +54,14 @@ describe('EarningsDots', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('reads each figure to a screen reader', () => {
+    render(<EarningsDots history={history} next={{ date: '2026-10-28', eps_estimate: 1.02 }} />)
+
+    const name = screen.getByRole('img').getAttribute('aria-label')
+    expect(name).toContain("Q2 '26 0.99 against 0.96")
+    expect(name).toContain('Next estimate 1.02')
+  })
+
   it('says what it shows to a screen reader', () => {
     render(<EarningsDots history={history} next={null} />)
     expect(screen.getByRole('img', { name: /EPS, actual against estimate/i })).toBeInTheDocument()

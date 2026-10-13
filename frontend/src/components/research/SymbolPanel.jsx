@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { useFundamentals } from '../../api/queries'
 import { analystRating } from '../../lib/analystRating'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
-import { fmtCompact, fmtShares } from '../../lib/format'
+import { fmtCompact, fmtMonthYear, fmtShares } from '../../lib/format'
 import { trailingReturns } from '../../lib/performance'
 import { isEtf } from '../../lib/research'
 import { seasonalSeries } from '../../lib/seasonals'
@@ -18,17 +18,25 @@ import SeasonalsChart from './SeasonalsChart'
 const AVERAGE_VOLUME_SESSIONS = 30
 
 function averageVolume(bars) {
-  const recent = bars.slice(-AVERAGE_VOLUME_SESSIONS)
-  if (!recent.length) return 0
-  return recent.reduce((sum, bar) => sum + (bar.volume || 0), 0) / recent.length
+  const traded = bars.slice(-AVERAGE_VOLUME_SESSIONS).filter((bar) => bar.volume > 0)
+  if (!traded.length) return 0
+  return traded.reduce((sum, bar) => sum + bar.volume, 0) / traded.length
 }
 
-function nextEarningsText(next) {
+function nextEarningsParts(next) {
   if (!next?.date) return null
   const when = daysUntil(next.date)
-  const session = SESSION_LABEL[next.session]
-  const sentence = when.charAt(0).toUpperCase() + when.slice(1)
-  return session ? `${sentence} · ${session}` : sentence
+  if (when === 'past') return null
+  return { day: when.charAt(0).toUpperCase() + when.slice(1), session: SESSION_LABEL[next.session] ?? null }
+}
+
+function NextEarnings({ day, session }) {
+  return (
+    <>
+      <span className="block whitespace-nowrap">{day}</span>
+      {session && <span className="block whitespace-nowrap text-[var(--fig-2xs)] text-zinc-500">{session}</span>}
+    </>
+  )
 }
 
 function Section({ title, note, children }) {
@@ -47,9 +55,9 @@ function Counts({ rows }) {
   return (
     <dl className="mt-1 grid gap-1 text-center" style={{ gridTemplateColumns: `repeat(${rows.length}, minmax(0, 1fr))` }}>
       {rows.map(([label, count]) => (
-        <div key={label}>
-          <dd className="num font-mono text-[var(--fig-sm)] text-zinc-100">{count}</dd>
+        <div key={label} className="flex flex-col-reverse">
           <dt className="text-[var(--fig-2xs)] text-zinc-500">{label}</dt>
+          <dd className="num font-mono text-[var(--fig-sm)] text-zinc-100">{count}</dd>
         </div>
       ))}
     </dl>
@@ -57,21 +65,21 @@ function Counts({ rows }) {
 }
 
 export default function SymbolPanel({ symbol, instrument, bars, earnings, href }) {
-  const etf = isEtf(instrument)
-  const fundamentals = useFundamentals(etf ? '' : symbol)
-  const company = !etf && fundamentals.data?.available ? fundamentals.data : null
-  const reported = !etf && earnings.data?.available ? earnings.data : null
+  const hasCompany = Boolean(instrument) && !isEtf(instrument)
+  const fundamentals = useFundamentals(hasCompany ? symbol : '')
+  const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
+  const reported = hasCompany && earnings.data?.available ? earnings.data : null
 
   const returns = useMemo(() => trailingReturns(bars), [bars])
   const seasons = useMemo(() => seasonalSeries(bars), [bars])
   const technical = useMemo(() => technicalRating(bars), [bars])
   const analyst = analystRating(company?.recommendation)
-  const loadingCompany = !etf && fundamentals.isLoading
+  const loadingCompany = hasCompany && fundamentals.isLoading
 
   const latestVolume = bars.length ? bars[bars.length - 1].volume : 0
   const typicalVolume = averageVolume(bars)
   const stats = [
-    ['next-earnings', 'Next earnings', nextEarningsText(reported?.next)],
+    ['next-earnings', 'Next earnings', nextEarningsParts(reported?.next)],
     ['volume', 'Volume', latestVolume > 0 ? fmtShares(latestVolume) : null],
     ['average-volume', 'Average volume (30D)', typicalVolume > 0 ? fmtShares(typicalVolume) : null],
     ['market-cap', 'Market cap', company?.market_cap == null ? null : fmtCompact(company.market_cap)],
@@ -90,9 +98,9 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
           <dl className="text-[var(--fig-xs)]">
             {stats.map(([key, label, value]) => (
               <div key={key} className="flex justify-between gap-3 py-1">
-                <dt className="text-zinc-400">{label}</dt>
+                <dt className="whitespace-nowrap text-zinc-400">{label}</dt>
                 <dd data-stat={key} className="num font-mono text-zinc-100 text-right">
-                  {value}
+                  {typeof value === 'object' ? <NextEarnings {...value} /> : value}
                 </dd>
               </div>
             ))}
@@ -107,7 +115,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
       )}
 
       {hasEarnings && (
-        <Section title="Earnings" note="EPS, actual against estimate">
+        <Section title="Earnings" note="EPS vs estimate">
           <EarningsDots history={reported.history} next={reported.next} />
         </Section>
       )}
@@ -119,7 +127,7 @@ export default function SymbolPanel({ symbol, instrument, bars, earnings, href }
           <RatingGauge title="Analyst rating" fraction={analyst.fraction} label={analyst.label} />
           <Counts rows={analyst.counts.map((row) => [row.label, row.count])} />
           <p className="mt-1 text-center text-[var(--fig-2xs)] text-zinc-500">
-            {`${analyst.total} analysts · as of ${analyst.period}`}
+            {analyst.period ? `${analyst.total} analysts · as of ${fmtMonthYear(analyst.period)}` : `${analyst.total} analysts`}
           </p>
         </Section>
       )}

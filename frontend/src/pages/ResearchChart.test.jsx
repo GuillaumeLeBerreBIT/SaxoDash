@@ -136,7 +136,8 @@ describe('ResearchChart', () => {
 
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=ZZZZ' })
 
-    expect(screen.queryByRole('heading', { name: 'Technicals' })).not.toBeInTheDocument()
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('ZZZZ')
+    expect(screen.queryByRole('link', { name: /open in research/i })).not.toBeInTheDocument()
   })
 
   it('has exactly one h1 and no skipped heading level', () => {

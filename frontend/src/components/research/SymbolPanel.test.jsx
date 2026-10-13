@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
+import { fmtMonthYear } from '../../lib/format'
 import SymbolPanel from './SymbolPanel'
 
 vi.mock('../../api/queries')
@@ -53,7 +54,7 @@ describe('SymbolPanel', () => {
     for (const name of ['Performance', 'Earnings', 'Analyst rating', 'Technicals', 'Seasonals']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument()
     }
-    expect(screen.getByText('55 analysts · as of 2026-09-01')).toBeInTheDocument()
+    expect(screen.getByText(`55 analysts · as of ${fmtMonthYear('2026-09-01')}`)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /open in research/i })).toHaveAttribute('href', '/research?symbol=NOW')
   })
 
@@ -91,6 +92,64 @@ describe('SymbolPanel', () => {
     )
 
     expect(container.firstChild).toBeNull()
+  })
+
+  it('leaves the date out of the analyst caption when the recommendation has none', () => {
+    queries.useFundamentals.mockReturnValue({
+      data: { ...fundamentals, recommendation: { ...fundamentals.recommendation, period: undefined } },
+      isLoading: false,
+    })
+    renderWithProviders(panel())
+
+    expect(screen.getByText('55 analysts')).toBeInTheDocument()
+  })
+
+  it('does not ask for fundamentals or hold a place when the instrument is unresolved', () => {
+    queries.useFundamentals.mockReturnValue({ data: undefined, isLoading: true })
+    renderWithProviders(panel({ instrument: null }))
+
+    expect(queries.useFundamentals).toHaveBeenCalledWith('')
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('NOW')
+    expect(screen.queryByTestId('symbol-panel-loading')).not.toBeInTheDocument()
+  })
+
+  it('leaves the next earnings row out when its date has passed', () => {
+    const stale = { data: { ...earnings.data, next: { date: '2020-01-01', session: 'amc', eps_estimate: 1.02 } } }
+    renderWithProviders(panel({ earnings: stale }))
+
+    expect(screen.queryByText('Next earnings')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Past/)).not.toBeInTheDocument()
+  })
+
+  it('prints the day and the session of the next earnings in separate elements', () => {
+    const { container } = renderWithProviders(panel())
+
+    const value = container.querySelector('[data-stat="next-earnings"]')
+    const lines = [...value.children].map((node) => node.textContent)
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toMatch(/^In \d+ days$/)
+    expect(lines[1]).toBe('After close')
+  })
+
+  it('puts each count term before its value', () => {
+    renderWithProviders(panel())
+
+    const group = screen.getByText('Strong buy').closest('div')
+    expect(group.firstElementChild.tagName).toBe('DT')
+    const technicals = screen.getByText('Neutral').closest('div')
+    expect(technicals.firstElementChild.tagName).toBe('DT')
+  })
+
+  it('averages volume over the bars that carry it', () => {
+    const bars = dailyBars(700).map((bar, i, all) => ({ ...bar, volume: (all.length - 1 - i) % 2 === 0 ? 2_000_000 : 0 }))
+    renderWithProviders(panel({ bars }))
+
+    expect(screen.getByText('2.00M', { selector: '[data-stat="average-volume"]' })).toBeInTheDocument()
+  })
+
+  it('names the earnings section briefly', () => {
+    renderWithProviders(panel())
+    expect(screen.getByText('EPS vs estimate')).toBeInTheDocument()
   })
 
   it('holds a place for the analyst block while fundamentals load', () => {

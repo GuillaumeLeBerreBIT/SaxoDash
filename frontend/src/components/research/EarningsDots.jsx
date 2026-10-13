@@ -27,6 +27,13 @@ function columnsFor(history, next) {
   return [...reported, ...upcoming]
 }
 
+function describeColumn(column) {
+  const figure = column.actual ?? column.estimate
+  if (column.actual == null) return `${column.label} estimate ${figure.toFixed(2)}`
+  const reported = `${column.label} ${column.actual.toFixed(2)}`
+  return column.estimate == null ? reported : `${reported} against ${column.estimate.toFixed(2)}`
+}
+
 export default function EarningsDots({ history, next }) {
   const columns = columnsFor(history ?? [], next)
   if (!columns.length) return null
@@ -36,9 +43,10 @@ export default function EarningsDots({ history, next }) {
   const span = high - Math.min(...figures)
   const yFor = (value) => (span === 0 ? PLOT_TOP + PLOT_HEIGHT / 2 : PLOT_TOP + ((high - value) / span) * PLOT_HEIGHT)
   const step = WIDTH / columns.length
+  const summary = columns.map(describeColumn).join('; ')
 
   return (
-    <svg viewBox={`0 0 ${WIDTH} 92`} className="w-full" role="img" aria-label="EPS, actual against estimate, by quarter">
+    <svg viewBox={`0 0 ${WIDTH} 92`} className="w-full" role="img" aria-label={`EPS, actual against estimate, by quarter: ${summary}`}>
       {columns.map((column, index) => {
         const x = step * (index + 0.5)
         return (
