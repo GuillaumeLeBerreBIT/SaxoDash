@@ -26,7 +26,7 @@ def _filings_key(symbol):
 
 
 def _insiders_key(symbol):
-    return f'research:insiders:v1:{symbol}'
+    return f'research:insiders:v2:{symbol}'
 
 
 def _sec_url(url):
@@ -96,8 +96,23 @@ def _all_transactions(rows):
     return transactions
 
 
+def _by_kind(transactions):
+    open_market = [row for row in transactions if row['code'] in OPEN_MARKET]
+    other = [row for row in transactions if row['code'] not in OPEN_MARKET]
+    return open_market, other
+
+
 def to_transactions(rows):
-    return _all_transactions(rows)[:TRANSACTIONS_KEPT]
+    open_market, other = _by_kind(_all_transactions(rows))
+    kept = open_market[:TRANSACTIONS_KEPT] + other[:TRANSACTIONS_KEPT]
+    kept.sort(key=lambda row: row['name'])
+    kept.sort(key=lambda row: row['date'], reverse=True)
+    return kept
+
+
+def to_counts(rows):
+    open_market, other = _by_kind(_all_transactions(rows))
+    return {'open_market': len(open_market), 'other': len(other)}
 
 
 def to_summary(rows):
@@ -154,14 +169,15 @@ def _produce_insiders(symbol):
     rows = finnhub.get_insider_transactions(symbol)['data']
     data = {
         'transactions': to_transactions(rows),
+        'counts': to_counts(rows),
         'summary': to_summary(rows),
     }
     try:
         date_from, date_to = _sentiment_window()
         data['sentiment'] = to_sentiment(finnhub.get_insider_sentiment(symbol, date_from, date_to)['data'])
     except (ProviderUnavailable, *SHAPING_ERRORS):
-        return {**data, 'sentiment': []}, PARTIAL_TTL
-    return data, INSIDERS_TTL
+        return {**data, 'sentiment': [], 'partial': True}, PARTIAL_TTL
+    return {**data, 'partial': False}, INSIDERS_TTL
 
 
 def _cached(key, produce, symbol):

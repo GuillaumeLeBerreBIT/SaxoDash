@@ -186,10 +186,37 @@ class InsiderShapingTest(SimpleTestCase):
 
         self.assertEqual([row['name'] for row in result], ['C', 'A', 'B'])
 
-    def test_caps_the_list_at_the_transactions_kept(self):
-        rows = [trade(name=f'N{i:03d}') for i in range(filings.TRANSACTIONS_KEPT + 15)]
+    def test_caps_each_kind_at_the_transactions_kept(self):
+        sales = [trade(name=f'S{i:03d}') for i in range(filings.TRANSACTIONS_KEPT + 15)]
+        awards = [trade(name=f'A{i:03d}', code='A', change=50, price=0) for i in range(filings.TRANSACTIONS_KEPT + 5)]
 
-        self.assertEqual(len(filings.to_transactions(rows)), filings.TRANSACTIONS_KEPT)
+        result = filings.to_transactions(sales + awards)
+
+        self.assertEqual(len([row for row in result if row['code'] == 'S']), filings.TRANSACTIONS_KEPT)
+        self.assertEqual(len([row for row in result if row['code'] == 'A']), filings.TRANSACTIONS_KEPT)
+
+    def test_an_old_sale_survives_a_flood_of_newer_awards(self):
+        sale = trade(name='SELLER', day='2026-01-05', code='S')
+        awards = [trade(name=f'A{i:03d}', day='2026-09-10', code='A', change=50, price=0) for i in range(150)]
+
+        result = filings.to_transactions([sale] + awards)
+
+        self.assertEqual(len(result), filings.TRANSACTIONS_KEPT + 1)
+        self.assertEqual(result[-1]['name'], 'SELLER')
+        self.assertEqual([row['date'] for row in result], sorted((row['date'] for row in result), reverse=True))
+
+    def test_counts_report_each_kind_before_the_caps(self):
+        sale = trade(name='SELLER', code='S')
+        buy = trade(name='BUYER', code='P', change=10)
+        awards = [trade(name=f'A{i:03d}', code='A', change=50, price=0) for i in range(150)]
+
+        self.assertEqual(filings.to_counts([sale, buy] + awards), {'open_market': 2, 'other': 150})
+        self.assertEqual(filings.to_counts([]), {'open_market': 0, 'other': 0})
+
+    def test_nothing_is_dropped_below_the_caps(self):
+        rows = [trade(name=f'S{i}') for i in range(5)] + [trade(name=f'G{i}', code='G', price=0) for i in range(7)]
+
+        self.assertEqual(len(filings.to_transactions(rows)), 12)
 
     def test_carries_the_filing_date(self):
         [one] = filings.to_transactions([trade(filingDate='2026-09-12')])
@@ -365,6 +392,8 @@ class InsidersEntryPointTest(TestCase):
         self.assertEqual(len(result['transactions']), 1)
         self.assertEqual(result['summary']['sells'], 1)
         self.assertEqual(result['sentiment'][0]['month'], '2026-09')
+        self.assertFalse(result['partial'])
+        self.assertEqual(result['counts'], {'open_market': 1, 'other': 0})
         mock_tx.assert_called_once_with('NVDA')
 
     @patch('research.finnhub.get_insider_sentiment', return_value={'data': []})
@@ -391,6 +420,7 @@ class InsidersEntryPointTest(TestCase):
 
         self.assertEqual(len(result['transactions']), 1)
         self.assertEqual(result['sentiment'], [])
+        self.assertTrue(result['partial'])
 
     @patch('research.finnhub.get_insider_sentiment', side_effect=finnhub.FinnhubAPIError('boom'))
     @patch('research.finnhub.get_insider_transactions', return_value={'data': [trade()]})
