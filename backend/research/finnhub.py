@@ -119,7 +119,7 @@ NEWS_MAX_ITEMS = 30
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
-CACHE_V = 'v4'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v5'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -306,6 +306,43 @@ def _cash_flow_trend(reported):
     return rows or None
 
 
+RECOMMENDATION_HISTORY_MONTHS = 12
+RATIO_HISTORY_YEARS = 10
+PERCENT = 100
+
+RATIO_SERIES = {
+    'pe': ('pe', 1),
+    'ps': ('ps', 1),
+    'pb': ('pb', 1),
+    'ev_ebitda': ('evEbitda', 1),
+    'pfcf': ('pfcf', 1),
+    'gross_margin': ('grossMargin', PERCENT),
+    'operating_margin': ('operatingMargin', PERCENT),
+    'net_margin': ('netMargin', PERCENT),
+    'roe': ('roe', PERCENT),
+    'roa': ('roa', PERCENT),
+    'roic': ('roic', PERCENT),
+    'current_ratio': ('currentRatio', 1),
+    'quick_ratio': ('quickRatio', 1),
+    'cash_ratio': ('cashRatio', 1),
+    'debt_to_equity': ('totalDebtToEquity', 1),
+    'debt_to_assets': ('totalDebtToTotalAsset', 1),
+    'long_term_debt_to_equity': ('longtermDebtTotalEquity', 1),
+}
+
+
+def _ratio_history(financials):
+    annual = (financials.get('series') or {}).get('annual') or {}
+    by_period = {}
+    for field, (series_key, scale) in RATIO_SERIES.items():
+        for point in annual.get(series_key) or []:
+            if point.get('v') is None or not point.get('period'):
+                continue
+            by_period.setdefault(point['period'], {})[field] = round(point['v'] * scale, 2)
+    periods = sorted(by_period)[-RATIO_HISTORY_YEARS:]
+    return [{'period': period, **by_period[period]} for period in periods]
+
+
 def to_fundamentals(profile, financials, recommendations, earnings, reported=None):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
@@ -317,6 +354,11 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
         'logo': profile.get('logo', ''),
         'market_cap': profile.get('marketCapitalization'),
         'shares_outstanding': profile.get('shareOutstanding'),
+        'free_float': profile.get('floatingShare'),
+        'ipo_date': profile.get('ipo') or None,
+        'website': profile.get('weburl', ''),
+        'country': profile.get('country', ''),
+        'enterprise_value': _metric(financials, 'enterpriseValue'),
         'pe_ratio': pe,
         'ps_ratio': _metric(financials, 'psTTM'),
         'pb_ratio': _metric(financials, 'pbAnnual'),
@@ -354,6 +396,9 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
         'quick_ratio': _metric(financials, 'quickRatioQuarterly'),
         # Finnhub sends newest-first; the most recent period is "the" trend.
         'recommendation': _to_recommendation(recommendations[0] if recommendations else None),
+        'recommendation_history': [
+            _to_recommendation(row) for row in reversed(recommendations[:RECOMMENDATION_HISTORY_MONTHS])
+        ],
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
         'eps_history': [_to_eps_row(row) for row in reversed(earnings)],
     }
@@ -364,6 +409,9 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
     trends = _quarterly_trends(financials)
     if trends:
         shaped['quarterly_trends'] = trends
+    ratio_history = _ratio_history(financials)
+    if ratio_history:
+        shaped['ratio_history'] = ratio_history
     if reported:
         cash_flow_trend = _cash_flow_trend(reported)
         if cash_flow_trend:

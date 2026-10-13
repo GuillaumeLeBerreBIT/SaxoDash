@@ -23,7 +23,7 @@ HISTORY_AHEAD = timedelta(days=120)
 # Bump when a cached payload's SHAPE changes, so a deploy never hands new code
 # an entry an old build wrote (a shape mismatch here was a 500, not just
 # staleness). Old entries expire on their own TTL.
-CACHE_V = 'v4'
+CACHE_V = 'v5'
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
@@ -247,11 +247,13 @@ def _score(history):
     }
 
 
-def _next_scheduled(symbol, today):
-    """The soonest still-unreported earnings date from the forward calendar."""
+UPCOMING_KEPT = 4
+
+
+def _upcoming(symbol, today):
     rows = _fetch_calendar(symbol, today, today + HISTORY_AHEAD)
-    upcoming = [e for e in rows if (e['date'] or '') >= today.isoformat() and e['eps_actual'] is None]
-    return upcoming[0] if upcoming else None
+    unreported = [e for e in rows if (e['date'] or '') >= today.isoformat() and e['eps_actual'] is None]
+    return sorted(unreported, key=lambda event: event['date'])[:UPCOMING_KEPT]
 
 
 def symbol_earnings(symbol):
@@ -260,9 +262,11 @@ def symbol_earnings(symbol):
 
     def produce():
         history = _eps_history(symbol)
+        upcoming = _upcoming(symbol, today)
         return {
             'history': history,
-            'next': _next_scheduled(symbol, today),
+            'next': upcoming[0] if upcoming else None,
+            'upcoming': upcoming,
             'score': _score(history),
         }
 

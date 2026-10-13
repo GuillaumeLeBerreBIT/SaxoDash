@@ -1,3 +1,6 @@
+from datetime import date
+from unittest.mock import patch
+
 from django.test import TestCase
 
 from . import earnings
@@ -192,3 +195,38 @@ class ScoreTest(TestCase):
             earnings._score([]),
             {'beats': 0, 'quarters': 0, 'beat_rate': None, 'avg_surprise': None, 'streak': 0},
         )
+
+
+class UpcomingTest(TestCase):
+    def event(self, day, actual=None):
+        return {'date': day, 'eps_actual': actual, 'eps_estimate': 1.0}
+
+    @patch('research.earnings._fetch_calendar')
+    def test_lists_unreported_events_oldest_first(self, mock_calendar):
+        mock_calendar.return_value = [
+            self.event('2027-04-28'), self.event('2027-01-27'), self.event('2026-11-02'),
+        ]
+
+        upcoming = earnings._upcoming('AAPL', date(2026, 10, 13))
+
+        self.assertEqual([e['date'] for e in upcoming], ['2026-11-02', '2027-01-27', '2027-04-28'])
+
+    @patch('research.earnings._fetch_calendar')
+    def test_leaves_out_past_and_already_reported_events(self, mock_calendar):
+        mock_calendar.return_value = [
+            self.event('2026-10-01'), self.event('2026-11-02', actual=2.1), self.event('2027-01-27'),
+        ]
+
+        upcoming = earnings._upcoming('AAPL', date(2026, 10, 13))
+
+        self.assertEqual([e['date'] for e in upcoming], ['2027-01-27'])
+
+    @patch('research.earnings._fetch_calendar')
+    def test_keeps_at_most_four(self, mock_calendar):
+        mock_calendar.return_value = [self.event(f'2027-0{month}-15') for month in range(1, 7)]
+
+        self.assertEqual(len(earnings._upcoming('AAPL', date(2026, 10, 13))), 4)
+
+    @patch('research.earnings._fetch_calendar', return_value=[])
+    def test_nothing_scheduled_gives_an_empty_list(self, mock_calendar):
+        self.assertEqual(earnings._upcoming('AAPL', date(2026, 10, 13)), [])

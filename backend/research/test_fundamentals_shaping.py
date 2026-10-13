@@ -138,7 +138,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v4:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v5:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -377,3 +377,91 @@ class ScreenerFundamentalsTest(SimpleTestCase):
 
     def test_empty_payload_is_all_null(self):
         self.assertTrue(all(v is None for v in finnhub.to_screener_fundamentals({}).values()))
+
+
+class ProfileFactsTest(SimpleTestCase):
+    def shaped(self, profile=None, financials=None, recommendations=None):
+        return finnhub.to_fundamentals(
+            {**SAMPLE_PROFILE, **(profile or {})},
+            financials if financials is not None else SAMPLE_FINANCIALS,
+            recommendations if recommendations is not None else [],
+            [],
+        )
+
+    def test_carries_the_profile_facts(self):
+        shaped = self.shaped(profile={
+            'floatingShare': 14445.7, 'ipo': '1980-12-12', 'weburl': 'https://www.apple.com/', 'country': 'US',
+        })
+
+        self.assertEqual(shaped['free_float'], 14445.7)
+        self.assertEqual(shaped['ipo_date'], '1980-12-12')
+        self.assertEqual(shaped['website'], 'https://www.apple.com/')
+        self.assertEqual(shaped['country'], 'US')
+
+    def test_a_profile_without_those_facts_leaves_them_empty(self):
+        shaped = self.shaped()
+
+        self.assertIsNone(shaped['free_float'])
+        self.assertIsNone(shaped['ipo_date'])
+        self.assertEqual(shaped['website'], '')
+        self.assertEqual(shaped['country'], '')
+
+    def test_carries_enterprise_value(self):
+        shaped = self.shaped(financials={'metric': {'enterpriseValue': 5001423}})
+
+        self.assertEqual(shaped['enterprise_value'], 5001423)
+
+    def test_recommendation_history_is_oldest_first(self):
+        shaped = self.shaped(recommendations=[
+            {'period': '2026-09-01', 'strongBuy': 12, 'buy': 22, 'hold': 15, 'sell': 3, 'strongSell': 1},
+            {'period': '2026-08-01', 'strongBuy': 13, 'buy': 24, 'hold': 14, 'sell': 3, 'strongSell': 0},
+        ])
+
+        self.assertEqual([row['period'] for row in shaped['recommendation_history']], ['2026-08-01', '2026-09-01'])
+        self.assertEqual(shaped['recommendation_history'][-1]['strong_buy'], 12)
+        self.assertEqual(shaped['recommendation']['period'], '2026-09-01')
+
+    def test_no_recommendations_gives_an_empty_history(self):
+        self.assertEqual(self.shaped()['recommendation_history'], [])
+
+
+class RatioHistoryTest(SimpleTestCase):
+    def shaped(self, annual):
+        return finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}, 'series': {'annual': annual}}, [], [])
+
+    def test_groups_the_annual_series_by_period_oldest_first(self):
+        shaped = self.shaped({
+            'pe': [{'period': '2025-09-27', 'v': 33.5574}, {'period': '2024-09-28', 'v': 37.2}],
+            'currentRatio': [{'period': '2025-09-27', 'v': 0.8933}],
+        })
+
+        self.assertEqual(shaped['ratio_history'], [
+            {'period': '2024-09-28', 'pe': 37.2},
+            {'period': '2025-09-27', 'pe': 33.56, 'current_ratio': 0.89},
+        ])
+
+    def test_margins_and_returns_become_percent(self):
+        shaped = self.shaped({
+            'grossMargin': [{'period': '2025-09-27', 'v': 0.4691}],
+            'roe': [{'period': '2025-09-27', 'v': 1.5191}],
+        })
+
+        self.assertEqual(shaped['ratio_history'], [{'period': '2025-09-27', 'gross_margin': 46.91, 'roe': 151.91}])
+
+    def test_keeps_the_newest_ten_periods(self):
+        points = [{'period': f'{year}-12-31', 'v': 10} for year in range(2005, 2026)]
+
+        history = self.shaped({'pe': points})['ratio_history']
+
+        self.assertEqual(len(history), 10)
+        self.assertEqual(history[0]['period'], '2016-12-31')
+
+    def test_skips_points_without_a_value_or_a_period(self):
+        shaped = self.shaped({'pe': [{'period': '2025-09-27', 'v': None}, {'v': 12}, {'period': '2024-09-28', 'v': 11}]})
+
+        self.assertEqual(shaped['ratio_history'], [{'period': '2024-09-28', 'pe': 11}])
+
+    def test_no_annual_series_leaves_the_key_out(self):
+        shaped = finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], [])
+
+        self.assertNotIn('ratio_history', shaped)
