@@ -465,3 +465,14 @@ class RatioHistoryTest(SimpleTestCase):
         shaped = finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], [])
 
         self.assertNotIn('ratio_history', shaped)
+
+
+class RecommendationHistoryGapTest(SimpleTestCase):
+    def test_a_missing_row_in_the_list_is_left_out_of_the_history(self):
+        shaped = finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [
+            {'period': '2026-09-01', 'strongBuy': 12, 'buy': 22, 'hold': 15, 'sell': 3, 'strongSell': 1},
+            None,
+            {'period': '2026-07-01', 'strongBuy': 13, 'buy': 24, 'hold': 14, 'sell': 3, 'strongSell': 0},
+        ], [])
+
+        self.assertEqual([row['period'] for row in shaped['recommendation_history']], ['2026-07-01', '2026-09-01'])

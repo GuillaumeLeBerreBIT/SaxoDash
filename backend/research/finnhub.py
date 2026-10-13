@@ -397,7 +397,9 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
         # Finnhub sends newest-first; the most recent period is "the" trend.
         'recommendation': _to_recommendation(recommendations[0] if recommendations else None),
         'recommendation_history': [
-            _to_recommendation(row) for row in reversed(recommendations[:RECOMMENDATION_HISTORY_MONTHS])
+            _to_recommendation(row)
+            for row in reversed(recommendations[:RECOMMENDATION_HISTORY_MONTHS])
+            if row
         ],
         # Oldest-first, same convention as market.chart's candles - the chart draws left to right.
         'eps_history': [_to_eps_row(row) for row in reversed(earnings)],
@@ -447,7 +449,7 @@ def fundamentals(symbol):
         data = cache.get_or_set(_cache_key(symbol), produce, FUNDAMENTALS_TTL)
     except ProviderUnavailable:
         raise
-    except (KeyError, TypeError, IndexError) as exc:
+    except (KeyError, TypeError, IndexError, AttributeError) as exc:
         # A payload shape to_fundamentals could not read - degrade, don't 500.
         # A real bug (AttributeError, NameError, ...) still surfaces as a 500.
         raise FinnhubUnexpected() from exc

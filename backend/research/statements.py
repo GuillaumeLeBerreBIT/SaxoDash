@@ -165,12 +165,11 @@ def to_annual(reported):
     return sorted(rows, key=lambda row: row['period'])
 
 
-def _covers_one_quarter(filing):
+def _span_days(filing):
     try:
-        span = date.fromisoformat(_day(filing.get('endDate'))) - date.fromisoformat(_day(filing.get('startDate')))
+        return (date.fromisoformat(_day(filing.get('endDate'))) - date.fromisoformat(_day(filing.get('startDate')))).days
     except ValueError:
-        return False
-    return span.days <= SINGLE_QUARTER_MAX_DAYS
+        return None
 
 
 def _flows(income, cash_flow):
@@ -207,7 +206,9 @@ def _year_quarters(year, filings, annual_row):
         previous = to_date.get(quarter - 1)
         if quarter == 1:
             single = to_date[quarter] = reported
-        elif _covers_one_quarter(filing):
+        elif _span_days(filing) is None:
+            return rows
+        elif _span_days(filing) <= SINGLE_QUARTER_MAX_DAYS:
             single = reported
             if previous is not None:
                 to_date[quarter] = _combine(previous, reported, lambda a, b: a + b)
@@ -238,6 +239,7 @@ def to_quarterly(reported, annual_rows):
 
 
 STATEMENTS_TTL = 86400
+PARTIAL_TTL = 600
 CACHE_V = 'v1'
 
 
@@ -245,19 +247,24 @@ def _cache_key(symbol):
     return f'research:statements:{CACHE_V}:{symbol}'
 
 
-def statements(symbol):
-    def produce():
-        annual = to_annual(finnhub.get_financials_reported(symbol, 'annual'))
-        if not annual:
-            raise finnhub.FinnhubNoData(symbol)
-        try:
-            quarterly = to_quarterly(finnhub.get_financials_reported(symbol, 'quarterly'), annual)
-        except ProviderUnavailable:
-            quarterly = []
-        return {'annual': annual, 'quarterly': quarterly}
-
+def _produce(symbol):
+    annual = to_annual(finnhub.get_financials_reported(symbol, 'annual'))
+    if not annual:
+        raise finnhub.FinnhubNoData(symbol)
     try:
-        data = cache.get_or_set(_cache_key(symbol), produce, STATEMENTS_TTL)
+        quarterly = to_quarterly(finnhub.get_financials_reported(symbol, 'quarterly'), annual)
+    except ProviderUnavailable:
+        return {'annual': annual, 'quarterly': []}, PARTIAL_TTL
+    return {'annual': annual, 'quarterly': quarterly}, STATEMENTS_TTL
+
+
+def statements(symbol):
+    key = _cache_key(symbol)
+    try:
+        data = cache.get(key)
+        if data is None:
+            data, timeout = _produce(symbol)
+            cache.set(key, data, timeout)
     except ProviderUnavailable:
         raise
     except (KeyError, TypeError, IndexError, ValueError, AttributeError) as exc:

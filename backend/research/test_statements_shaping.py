@@ -264,3 +264,18 @@ class QuarterlyShapingTest(SimpleTestCase):
     def test_survives_an_empty_or_missing_payload(self):
         self.assertEqual(statements.to_quarterly(None, []), [])
         self.assertEqual(statements.to_quarterly({'data': []}, []), [])
+
+
+class UndatedQuarterTest(SimpleTestCase):
+    def test_a_quarter_whose_span_cannot_be_read_is_dropped_with_its_successors(self):
+        annual_rows = statements.to_annual({'data': [annual(2025, **{'us-gaap_Revenues': 1000})]})
+        undated = ytd(2025, 2, '2025-06-30', 450)
+        undated['startDate'] = ''
+
+        result = statements.to_quarterly({'data': [
+            ytd(2025, 1, '2025-03-31', 200),
+            undated,
+            ytd(2025, 3, '2025-09-30', 720),
+        ]}, annual_rows)
+
+        self.assertEqual([row['label'] for row in result], ['Q1 2025'])

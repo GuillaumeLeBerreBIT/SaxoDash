@@ -23,7 +23,8 @@ HISTORY_AHEAD = timedelta(days=120)
 # Bump when a cached payload's SHAPE changes, so a deploy never hands new code
 # an entry an old build wrote (a shape mismatch here was a 500, not just
 # staleness). Old entries expire on their own TTL.
-CACHE_V = 'v5'
+CACHE_V = 'v4'
+SYMBOL_CACHE_V = 'v5'
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
@@ -258,7 +259,7 @@ def _upcoming(symbol, today):
 
 def symbol_earnings(symbol):
     today = date.today()
-    key = f'research:earnings-sym:{CACHE_V}:{symbol}:{today.isoformat()}'
+    key = f'research:earnings-sym:{SYMBOL_CACHE_V}:{symbol}:{today.isoformat()}'
 
     def produce():
         history = _eps_history(symbol)

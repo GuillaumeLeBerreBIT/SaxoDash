@@ -63,3 +63,33 @@ class StatementsTest(TestCase):
     def test_an_unreadable_payload_becomes_finnhub_unexpected(self, mock_reported):
         with self.assertRaises(finnhub.FinnhubUnexpected):
             statements.statements('AAPL')
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class StatementsCacheTtlTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def timeout_stored_for(self, answer):
+        with patch('research.finnhub.get_financials_reported', side_effect=answer):
+            with patch('research.statements.cache', wraps=cache) as spy:
+                statements.statements('AAPL')
+        return spy.set.call_args.args[2]
+
+    def test_a_failed_quarterly_call_is_cached_only_briefly(self):
+        def answer(symbol, freq='annual'):
+            if freq == 'quarterly':
+                raise finnhub.FinnhubAPIError('quarterly failed')
+            return ANNUAL
+
+        self.assertEqual(self.timeout_stored_for(answer), statements.PARTIAL_TTL)
+        self.assertEqual(statements.PARTIAL_TTL, 600)
+
+    def test_a_complete_answer_is_cached_for_the_full_ttl(self):
+        self.assertEqual(self.timeout_stored_for(by_frequency), statements.STATEMENTS_TTL)
+
+    def test_a_successful_empty_quarterly_answer_keeps_the_full_ttl(self):
+        def answer(symbol, freq='annual'):
+            return ANNUAL if freq == 'annual' else {'data': []}
+
+        self.assertEqual(self.timeout_stored_for(answer), statements.STATEMENTS_TTL)
