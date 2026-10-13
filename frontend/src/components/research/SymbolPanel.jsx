@@ -6,7 +6,7 @@ import { analystRating } from '../../lib/analystRating'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
 import { fmtCompact, fmtMonthYear, fmtShares } from '../../lib/format'
 import { trailingReturns } from '../../lib/performance'
-import { isEtf } from '../../lib/research'
+import { COMPANY_DATA } from '../../lib/companyData'
 import { seasonalSeries } from '../../lib/seasonals'
 import { technicalRating } from '../../lib/technicalRating'
 import { Card, Skeleton } from '../ui'
@@ -77,8 +77,8 @@ function IndicatorDisclosure({ votes }) {
   )
 }
 
-export default function SymbolPanel({ symbol, instrument, bars, earnings, href, financialsHref }) {
-  const hasCompany = Boolean(instrument) && !isEtf(instrument)
+export default function SymbolPanel({ symbol, companyData, bars, earnings, href, financialsHref }) {
+  const hasCompany = companyData === COMPANY_DATA.eligible
   const fundamentals = useFundamentals(hasCompany ? symbol : '')
   const company = hasCompany && fundamentals.data?.available ? fundamentals.data : null
   const annual = (company?.annual_results ?? []).map(({ label, fiscal_year, revenue, net_income }) => ({

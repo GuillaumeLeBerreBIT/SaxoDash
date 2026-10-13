@@ -337,21 +337,82 @@ describe('Research', () => {
     expect(screen.getByText(/Saxo is not connected/)).toBeInTheDocument()
   })
 
-  it('holds the Filings tab back until the instrument is resolved', () => {
+  it('holds an equity tab back while the instrument is still being looked up', () => {
     stubQueries({ positions: [] })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: true })
     renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=filings' })
 
     expect(queries.useFilings).not.toHaveBeenCalledWith('WHAT')
     expect(queries.useInsiders).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('WHAT')
     expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
   })
 
-  it('holds the Financials tab back until the instrument is resolved', () => {
+  it('holds the Financials tab back the same way', () => {
     stubQueries({ positions: [] })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: true })
     renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=financials' })
 
     expect(queries.useStatements).not.toHaveBeenCalledWith('WHAT')
     expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+  })
+
+  it('opens the company tabs once the lookup has settled, even without a match', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: false })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=filings' })
+
+    expect(screen.queryByTestId('tab-pending')).not.toBeInTheDocument()
+    expect(queries.useFilings).toHaveBeenCalledWith('WHAT')
+    expect(queries.useFundamentals).toHaveBeenCalledWith('WHAT')
+  })
+
+  it('shows no US company data for a listing in another currency', () => {
+    queries.useInstrumentDetails.mockReturnValue({
+      ...idle,
+      data: { symbol: 'NVDA', description: 'NVIDIA on Xetra', exchange: 'XETR', currency: 'EUR', uic: 211 },
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=filings' })
+
+    const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'News', 'Guide'])
+    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    for (const hook of [queries.useFundamentals, queries.useStatements, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
+      expect(hook).not.toHaveBeenCalledWith('NVDA')
+    }
+  })
+
+  it('leaves the news of a same-ticker US company out for a listing in another currency', async () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { symbol: 'NVDA', currency: 'EUR', uic: 211 } })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
+
+    expect(queries.useCompanyNews).not.toHaveBeenCalledWith('NVDA')
+    expect(screen.getByText(/news is looked up by US ticker/i)).toBeInTheDocument()
+  })
+
+  it('still shows news for a fund', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=news' })
+
+    expect(queries.useCompanyNews).toHaveBeenCalledWith('SPY')
+  })
+
+  it('holds the news back while the instrument is still being looked up', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: true })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=news' })
+
+    expect(queries.useCompanyNews).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+  })
+
+  it('trusts the held position currency over the instrument details', () => {
+    stubQueries({ positions: [{ ...position, currency: 'EUR' }] })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('NVDA')
   })
 
   it('warns when a symbol cannot be resolved to a Saxo instrument', () => {

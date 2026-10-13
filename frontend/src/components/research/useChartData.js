@@ -7,6 +7,7 @@ import {
   useSymbolEarnings,
   useSymbolNote,
 } from '../../api/queries'
+import { COMPANY_DATA, companyDataStatus, listingCurrency } from '../../lib/companyData'
 import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars } from '../../lib/research'
@@ -21,7 +22,15 @@ import { useChartTrendLines } from './useChartTrendLines'
 // not recompute on every render.
 const NO_BARS = []
 
-export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME_VIEW, followDates = null }) {
+export function useChartData({
+  symbol,
+  instrument,
+  range,
+  timeView = LATEST_TIME_VIEW,
+  followDates = null,
+  position = null,
+  resolution,
+}) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
 
@@ -45,7 +54,13 @@ export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME
   const ind = useMemo(() => computeIndicatorsForWindow(allBars, { start, end }), [allBars, start, end])
 
   const details = useInstrumentDetails({ uic, assetType })
-  const earnings = useSymbolEarnings(symbol)
+  const companyData = companyDataStatus({
+    resolution,
+    instrument,
+    currency: listingCurrency({ position, details: details.data }),
+    detailsLoading: details.isLoading,
+  })
+  const earnings = useSymbolEarnings(companyData === COMPANY_DATA.eligible ? symbol : '')
   const note = useSymbolNote(symbol)
   const priceLines = useChartLines({ symbol, uic, assetType, note: note?.data })
   const savedTrendLines = useChartTrendLines({ symbol, uic, assetType })
@@ -77,6 +92,7 @@ export function useChartData({ symbol, instrument, range, timeView = LATEST_TIME
     timeWindow,
     timeView: effectiveTimeView,
     earnings,
+    companyData,
     earningsMarkers,
     note,
     priceLines,

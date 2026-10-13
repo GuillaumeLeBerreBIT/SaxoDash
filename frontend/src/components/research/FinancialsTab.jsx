@@ -29,7 +29,7 @@ function Statements({ symbol, statements }) {
     )
   }
 
-  if (statements.error) {
+  if (statements.error && !statements.data) {
     return (
       <Card>
         <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />

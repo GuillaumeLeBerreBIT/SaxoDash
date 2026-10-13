@@ -125,13 +125,22 @@ export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
   // out blows through the backend's research.search throttle (20/min,
   // shared with Saxo's own per-app rate limit) well before the user is done
   // typing.
-  const trimmed = useDebouncedValue(query.trim(), 300)
-  return useQuery({
+  const wanted = query.trim()
+  const trimmed = useDebouncedValue(wanted, 300)
+  const search = useQuery({
     queryKey: researchKeys.instrumentSearch(trimmed, assetTypes),
     queryFn: () => searchInstruments(trimmed, assetTypes),
-    enabled: trimmed.length >= 2,
+    enabled: trimmed.length >= SEARCH_MIN_LENGTH,
     staleTime: 60_000,
   })
+  return { ...search, isResolving: isSearchResolving(wanted, trimmed, search.isLoading) }
+}
+
+const SEARCH_MIN_LENGTH = 2
+
+export function isSearchResolving(wanted, debounced, isLoading) {
+  if (wanted.length < SEARCH_MIN_LENGTH) return false
+  return wanted !== debounced || isLoading
 }
 
 export function useInstrumentDetails({ uic, assetType }) {

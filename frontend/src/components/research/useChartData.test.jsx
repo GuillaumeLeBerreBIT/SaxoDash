@@ -48,6 +48,48 @@ function stub() {
 const render = (props = {}) =>
   renderHook(() => useChartData({ symbol: 'NVDA', instrument, range: '1M', ...props }))
 
+describe('useChartData company data', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    stub()
+  })
+
+  it('asks for the earnings of a US-dollar listing', () => {
+    const { result } = render()
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('NVDA')
+    expect(result.current.companyData).toBe('eligible')
+  })
+
+  it('asks for no earnings when the listing is in another currency', () => {
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { currency: 'EUR' } })
+    const { result } = render()
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('foreign')
+  })
+
+  it('trusts the held position over the instrument details for the currency', () => {
+    const { result } = render({ position: { currency: 'EUR' } })
+
+    expect(result.current.companyData).toBe('foreign')
+  })
+
+  it('asks for no earnings while the instrument is still being resolved', () => {
+    const { result } = render({ instrument: null, resolution: 'resolving' })
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('pending')
+  })
+
+  it('asks for no earnings for a fund', () => {
+    const { result } = render({ instrument: { uic: 300, assetType: 'Etf' } })
+
+    expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('')
+    expect(result.current.companyData).toBe('fund')
+  })
+})
+
 describe('useChartData linked window', () => {
   beforeEach(() => {
     vi.clearAllMocks()

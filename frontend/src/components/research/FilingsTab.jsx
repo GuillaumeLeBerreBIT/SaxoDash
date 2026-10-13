@@ -17,7 +17,7 @@ function QueryCard({ title, subtitle, query, loadingId, loadError, unavailable, 
       </Card>
     )
   }
-  if (query.error) {
+  if (query.error && !query.data) {
     return (
       <Card>
         <CardHeader title={title} subtitle={subtitle} />

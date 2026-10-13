@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
-import { chartHref, isEtf } from '../lib/research'
+import { COMPANY_DATA } from '../lib/companyData'
+import { chartHref } from '../lib/research'
 import { Card, PageHeader, TabButton, TabList } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
@@ -41,14 +42,16 @@ const TABS = [
 ]
 
 const TAB_ALIASES = { valuation: 'statistics' }
-const INSTRUMENT_GATED_TAB_KEYS = new Set(['financials', 'filings'])
+const WITHOUT_COMPANY_DATA = new Set([COMPANY_DATA.fund, COMPANY_DATA.foreign])
 
+const NEWS_TAB = 'news'
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
 const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
+const TICKER_LOOKUP_TAB_KEYS = new Set([...EQUITY_ONLY_TAB_KEYS, NEWS_TAB])
 
 export default function Research() {
   const [params] = useSearchParams()
-  const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolution, position, positions, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
@@ -64,24 +67,39 @@ export default function Research() {
 
   const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
-  const instrumentIsEtf = isEtf(instrument)
-  const visibleTabs = instrumentIsEtf ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
+  const {
+    chart,
+    bars,
+    allBars,
+    rangeBars,
+    ind,
+    timeWindow,
+    earnings,
+    earningsMarkers,
+    note,
+    priceLines,
+    quote,
+    details,
+    companyData,
+  } = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
+    timeView: controls.timeView,
+    position,
+    resolution,
+  })
+  const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
+  const fundamentals = useFundamentals(companySymbol)
 
-  // Adjusted during render, React's own pattern for "reset state when a prop
-  // makes it invalid" - covers both a stale `?tab=` link and switching to an
-  // ETF mid-session (the watchlist rail, ⌘K) while an equity-only tab is open.
-  if (instrumentIsEtf && EQUITY_ONLY_TAB_KEYS.has(tab)) {
+  const withoutCompanyData = WITHOUT_COMPANY_DATA.has(companyData)
+  const visibleTabs = withoutCompanyData ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
+  if (withoutCompanyData && EQUITY_ONLY_TAB_KEYS.has(tab)) {
     setTab('overview')
   }
-
-  const { chart, bars, allBars, rangeBars, ind, timeWindow, earnings, earningsMarkers, note, priceLines, quote, details } =
-    useChartData({
-      symbol,
-      instrument,
-      range: controls.range,
-      timeView: controls.timeView,
-    })
-  const fundamentals = useFundamentals(symbol)
+  const awaitingCompanyData = companyData === COMPANY_DATA.pending && TICKER_LOOKUP_TAB_KEYS.has(tab)
+  const foreignListing = companyData === COMPANY_DATA.foreign
+  const companyTab = (key) => tab === key && companyData === COMPANY_DATA.eligible
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -90,8 +108,6 @@ export default function Research() {
     details: details.data,
     position,
   })
-
-  const awaitingInstrument = !instrument && INSTRUMENT_GATED_TAB_KEYS.has(tab)
 
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
 
@@ -194,27 +210,34 @@ export default function Research() {
                   onSaveNote={(patch) => noteMutation.mutate(patch)}
                   onMarkReviewed={() => reviewMutation.mutate()}
                   reviewing={reviewMutation.isPending}
-                  isEtf={instrumentIsEtf}
+                  companyData={companyData}
                 />
               ) : null}
-              {awaitingInstrument ? (
+              {awaitingCompanyData ? (
                 <Card>
                   <p data-testid="tab-pending" className="text-[var(--fig-xs)] text-zinc-500">
-                    Available once the instrument is resolved.
+                    Looking up this instrument…
                   </p>
                 </Card>
               ) : null}
-              {tab === 'financials' && instrument ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {tab === 'statistics' ? <StatisticsTab fundamentals={fundamentals} /> : null}
-              {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {tab === 'earnings' ? (
+              {companyTab('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {companyTab('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+              {companyTab('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {companyTab('earnings') ? (
                 <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
               ) : null}
               {tab === 'funds' ? (
                 <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
               ) : null}
-              {tab === 'filings' && instrument ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-              {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
+              {companyTab('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+              {tab === NEWS_TAB && foreignListing ? (
+                <Card>
+                  <p className="text-[var(--fig-xs)] text-zinc-500">
+                    News is looked up by US ticker, which may name another company, so it is left out for this listing.
+                  </p>
+                </Card>
+              ) : null}
+              {tab === NEWS_TAB && !foreignListing && !awaitingCompanyData ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {tab === 'guide' ? <GuideTab /> : null}
             </div>
           </div>

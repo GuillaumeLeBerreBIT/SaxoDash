@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions'
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
+import { COMPANY_DATA } from '../lib/companyData'
 import { chartHref, researchHref } from '../lib/research'
 import CommandPalette from '../components/CommandPalette'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
@@ -26,7 +27,7 @@ const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, 
 const paletteHrefFor = (symbol, instrument) => chartHref(symbol, instrument)
 
 export default function ResearchChart() {
-  const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolution, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
   const layout = layoutById(workspace.layout)
@@ -64,7 +65,13 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [tool])
 
-  const { allBars, rangeBars, priceLines, quote, details, earnings } = useChartData({ symbol, instrument, range: controls.range })
+  const { allBars, rangeBars, priceLines, quote, details, earnings, companyData } = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
+    position,
+    resolution,
+  })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
@@ -143,7 +150,7 @@ export default function ResearchChart() {
         </div>
         <SymbolPanel
           symbol={symbol}
-          instrument={instrument}
+          companyData={instrument ? companyData : COMPANY_DATA.pending}
           bars={allBars}
           earnings={earnings}
           href={researchHref(symbol, undefined, instrument)}

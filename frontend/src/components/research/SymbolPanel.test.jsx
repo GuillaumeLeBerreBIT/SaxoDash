@@ -35,9 +35,8 @@ const earnings = {
   },
 }
 
-const stock = { uic: 1, assetType: 'Stock' }
 const panel = (props) => (
-  <SymbolPanel symbol="NOW" instrument={stock} bars={dailyBars(700)} earnings={earnings} href="/research?symbol=NOW" {...props} />
+  <SymbolPanel symbol="NOW" companyData="eligible" bars={dailyBars(700)} earnings={earnings} href="/research?symbol=NOW" {...props} />
 )
 
 beforeEach(() => {
@@ -68,8 +67,15 @@ describe('SymbolPanel', () => {
     expect(screen.getByRole('link', { name: /open in research/i })).toHaveAttribute('href', '/research?symbol=NOW')
   })
 
+  it('asks for no fundamentals for a listing outside the US', () => {
+    renderWithProviders(panel({ companyData: 'foreign' }))
+
+    expect(queries.useFundamentals).toHaveBeenCalledWith('')
+    expect(queries.useFundamentals).not.toHaveBeenCalledWith('NOW')
+  })
+
   it('leaves company blocks out for an ETF and does not ask for fundamentals', () => {
-    renderWithProviders(panel({ instrument: { uic: 2, assetType: 'Etf' } }))
+    renderWithProviders(panel({ companyData: 'fund' }))
 
     expect(queries.useFundamentals).toHaveBeenCalledWith('')
     expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
@@ -114,9 +120,9 @@ describe('SymbolPanel', () => {
     expect(screen.getByText('55 analysts')).toBeInTheDocument()
   })
 
-  it('does not ask for fundamentals or hold a place when the instrument is unresolved', () => {
+  it('does not ask for fundamentals or hold a place while the instrument is being resolved', () => {
     queries.useFundamentals.mockReturnValue({ data: undefined, isLoading: true })
-    renderWithProviders(panel({ instrument: null }))
+    renderWithProviders(panel({ companyData: 'pending' }))
 
     expect(queries.useFundamentals).toHaveBeenCalledWith('')
     expect(queries.useFundamentals).not.toHaveBeenCalledWith('NOW')
@@ -262,7 +268,7 @@ describe('SymbolPanel', () => {
 
   it('shows no financials block for an ETF even when fundamentals carry annual results', () => {
     withResults()
-    renderWithProviders(panel({ instrument: { uic: 2, assetType: 'Etf' } }))
+    renderWithProviders(panel({ companyData: 'fund' }))
 
     expect(screen.queryByRole('heading', { name: 'Financials' })).not.toBeInTheDocument()
   })

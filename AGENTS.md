@@ -230,8 +230,8 @@ boolean rather than a status code: 409 already means "not connected to
 Saxo" and reusing it here would blur that. A metric the free tier doesn't
 return is omitted, never guessed or defaulted to zero. `FundamentalsView`
 just uppercases whatever ticker the URL hands it - that only works because
-callers already pass a bare, US-listed symbol; an international listing
-needing an exchange suffix is a known gap. Market
+callers already pass a bare, US-listed symbol; the frontend decides who may
+ask (see "One module decides who gets US company data" below). Market
 context (Buffett indicator, macro series) is still deferred: it needs an
 unrelated data source (FRED) and was deliberately kept out of this pass.
 
@@ -438,8 +438,8 @@ symbol. Performance, seasonals and the technicals gauge are arithmetic over the 
 1,200-bar fetch (`lib/performance.js::trailingReturns`, `lib/seasonals.js`,
 `lib/technicalRating.js`); earnings dots reuse the page's `useSymbolEarnings`; only
 the analyst gauge and market cap add a request, the 24h-cached `useFundamentals`.
-The technicals rating is ours, a daily vote of six indicators, and names its inputs
-under the gauge so it is not read as TradingView's. An ETF gets no company blocks,
+The technicals rating is ours, a daily vote of six indicators; "Show indicators"
+under the gauge lists them with their values, so it is not read as TradingView's. An ETF gets no company blocks,
 and a block without data is left out. Analyst price targets and estimates beyond two
 quarters are refused by the free Finnhub key, so there is no forecast cone.
 
@@ -471,3 +471,30 @@ and option exercises never read as buying or selling. Links leave the app only f
 `research.filings` scope, cached for 12 hours. Financial health charts are arithmetic
 over the statements endpoint; the older `cash_flow_trend` on fundamentals, a second
 mapping of the same filings, is gone.
+
+**One module decides who gets US company data.** Finnhub and the SEC are asked by
+bare ticker, and a ticker names a US-listed company: a European listing with the
+same letters would be shown another company's fundamentals, statements, earnings,
+news, filings and insider trades. `lib/companyData.js::companyDataStatus` is the only
+place that decides, from the instrument and its listing currency (the held position's,
+else Saxo's instrument details): `eligible` (US dollars, or nothing known that says
+otherwise), `fund` (an ETF), `foreign` (any other currency) or `pending` (the
+instrument search or its details are still in flight). `useChartData` computes it once
+and every consumer reads it: the page hides the company tabs and passes an empty symbol
+to the hooks, so no request is made at all. `pending` only ever waits for a request in
+flight, never for an instrument: with Saxo disconnected the search settles empty and
+the Finnhub tabs still work. The chart page's panel additionally needs a resolved
+instrument, because it describes the chart beside it. A US-dollar listing outside the
+US is the known remaining gap.
+
+**Finnhub is rate-limited where the calls leave, not where requests arrive.** One
+request fans out to between one and five Finnhub calls, so the per-view DRF scopes
+cannot bound the 60-a-minute key. `finnhub._get` spends from one per-minute counter in
+the cache (`FINNHUB_CALLS_PER_MINUTE`, default 58) and raises `FinnhubBusy` before
+calling when it is exhausted: the views answer 200 `available: false` with "try again
+in a minute", nothing is cached, and the browser retries after five minutes at most.
+The nightly scan spends from the same counter. A cache that cannot be reached fails
+open. The annual filing is fetched once per symbol (`finnhub.reported_annual`, raw,
+24h) and shared by fundamentals and statements. Filings asks per form and keeps the
+forms that answered, flagged `partial` and cached for ten minutes, instead of throwing
+away two paid calls because the third failed.

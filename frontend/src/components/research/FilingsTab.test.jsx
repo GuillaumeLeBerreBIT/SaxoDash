@@ -123,6 +123,14 @@ describe('FilingsTab', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps a filled card when a background refresh fails', () => {
+    queries.useFilings.mockReturnValue({ ...ok(filingsData), error: new Error('refresh failed') })
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.getByRole('link', { name: /SEC\.gov/i })).toBeInTheDocument()
+    expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument()
+  })
+
   it('retries the filings query from its own card', async () => {
     const refetch = vi.fn()
     queries.useFilings.mockReturnValue({ data: undefined, isLoading: false, error: new Error('boom'), refetch })

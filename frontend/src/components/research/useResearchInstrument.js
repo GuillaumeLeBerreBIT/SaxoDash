@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useInstrumentSearch, usePositions } from '../../api/queries'
+import { RESOLUTION } from '../../lib/companyData'
 import { needsInstrumentSearch, resolveInstrument } from '../../lib/research'
 import { pushRecentSymbol } from '../../lib/recentSymbols'
 
@@ -15,7 +16,7 @@ export function useResearchInstrument() {
 
   // Only searched for when the portfolio cannot answer: a held instrument
   // already knows its own uic.
-  const { data: searchResults = [] } = useInstrumentSearch(
+  const { data: searchResults = [], isResolving: searching = false } = useInstrumentSearch(
     needsInstrumentSearch(symbol, positions) ? symbol : '',
   )
   // A search dropdown (⌘K, add-peer) may have already picked the exact row
@@ -29,6 +30,7 @@ export function useResearchInstrument() {
   }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
 
   const resolved = Boolean(instrument)
+  const resolution = resolved ? RESOLUTION.resolved : searching ? RESOLUTION.resolving : RESOLUTION.unresolved
   useEffect(() => {
     if (resolved) pushRecentSymbol(symbol)
   }, [symbol, resolved])
@@ -45,5 +47,5 @@ export function useResearchInstrument() {
     setParams(nextParams, { replace: true })
   }
 
-  return { symbol, instrument, position, positions, selectSymbol }
+  return { symbol, instrument, resolution, position, positions, selectSymbol }
 }
