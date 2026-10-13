@@ -266,6 +266,7 @@ SAXO_SECRET = os.environ.get('SAXO_SECRET', '')
 SAXO_REDIRECT_URI = os.environ.get('SAXO_REDIRECT_URI', 'http://localhost:8000/api/saxo/callback/')
 SAXO_TOKEN_ENCRYPTION_KEY = os.environ.get('SAXO_TOKEN_ENCRYPTION_KEY', '')
 FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY', '')
+FINNHUB_CALLS_PER_MINUTE = int(os.environ.get('FINNHUB_CALLS_PER_MINUTE', '58'))
 SEC_USER_AGENT = os.environ.get('SEC_USER_AGENT', '')
 OPENFIGI_API_KEY = os.environ.get('OPENFIGI_API_KEY', '')
 

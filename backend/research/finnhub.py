@@ -7,6 +7,7 @@ import html
 import logging
 import re
 import statistics
+import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
@@ -17,6 +18,8 @@ from core.http_client import request_json
 
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual
+
+logger = logging.getLogger(__name__)
 
 API_BASE = 'https://finnhub.io/api/v1'
 
@@ -59,9 +62,39 @@ class FinnhubUnexpected(ProviderUnavailable):
         super().__init__('Fundamentals data is unavailable.')
 
 
+class FinnhubBusy(ProviderUnavailable):
+    def __init__(self):
+        super().__init__('Market data is busy. Try again in a minute.')
+
+
+BUDGET_WINDOW_SECONDS = 60
+BUDGET_KEY_TTL = 2 * BUDGET_WINDOW_SECONDS
+
+
+def _minute():
+    return int(time.time() // BUDGET_WINDOW_SECONDS)
+
+
+def _budget_key():
+    return f'research:finnhub-calls:{_minute()}'
+
+
+def _spend_call():
+    key = _budget_key()
+    try:
+        cache.add(key, 0, BUDGET_KEY_TTL)
+        spent = cache.incr(key)
+    except Exception:
+        logger.warning('Finnhub call budget could not be counted', exc_info=True)
+        return
+    if spent > settings.FINNHUB_CALLS_PER_MINUTE:
+        raise FinnhubBusy()
+
+
 def _get(path, **params):
     if not settings.FINNHUB_API_KEY:
         raise FinnhubNotConfigured()
+    _spend_call()
 
     return request_json(
         requests.get,
@@ -109,6 +142,19 @@ def get_peers(symbol):
 
 def get_financials_reported(symbol, freq='annual'):
     return _get('/stock/financials-reported', symbol=symbol, freq=freq)
+
+
+REPORTED_ANNUAL_TTL = 86400
+
+
+def reported_annual(symbol):
+    key = f'research:reported-annual:v1:{symbol}'
+    reported = cache.get(key)
+    if reported is None:
+        reported = get_financials_reported(symbol, 'annual')
+        if (reported or {}).get('data'):
+            cache.set(key, reported, REPORTED_ANNUAL_TTL)
+    return reported
 
 
 def get_filings(symbol, form):
@@ -429,7 +475,7 @@ def fundamentals(symbol):
             # An optional enrichment, not core to fundamentals: a symbol this
             # endpoint doesn't cover (rate limit, no US-GAAP filings) degrades
             # to no cash-flow trend rather than failing the whole payload.
-            reported = get_financials_reported(symbol)
+            reported = reported_annual(symbol)
         except ProviderUnavailable:
             reported = None
         return to_fundamentals(

@@ -29,6 +29,18 @@ class StatementsTest(TestCase):
         self.assertEqual(result['annual'][0]['income']['revenue'], 1000)
         self.assertEqual(result['quarterly'][0]['label'], 'Q1 FY25')
 
+    @patch('research.finnhub.get_earnings_history', return_value=[])
+    @patch('research.finnhub.get_recommendation_trends', return_value=[])
+    @patch('research.finnhub.get_basic_financials', return_value={'metric': {}})
+    @patch('research.finnhub.get_profile', return_value={'name': 'Apple Inc'})
+    @patch('research.finnhub.get_financials_reported', side_effect=by_frequency)
+    def test_fundamentals_and_statements_share_one_annual_fetch(self, mock_reported, *others):
+        finnhub.fundamentals('AAPL')
+        statements.statements('AAPL')
+
+        annual_calls = [call for call in mock_reported.call_args_list if call.args[1:] in ((), ('annual',))]
+        self.assertEqual(len(annual_calls), 1)
+
     @patch('research.finnhub.get_financials_reported', side_effect=by_frequency)
     def test_a_second_call_for_the_same_symbol_does_not_refetch(self, mock_reported):
         statements.statements('AAPL')

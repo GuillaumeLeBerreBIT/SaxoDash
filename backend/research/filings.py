@@ -74,7 +74,8 @@ def _transaction(key, rows):
     shares = sum(row['change'] for row in rows)
     priced = [row for row in rows if (row.get('transactionPrice') or 0) > 0]
     priced_shares = sum(abs(row['change']) for row in priced)
-    value = sum(abs(row['change']) * row['transactionPrice'] for row in priced)
+    paid = sum(abs(row['change']) * row['transactionPrice'] for row in priced)
+    price = paid / priced_shares if priced else None
     holdings = [row['share'] for row in rows if row.get('share') is not None]
     pick = min if shares < 0 else max
     return {
@@ -83,14 +84,15 @@ def _transaction(key, rows):
         'name': name,
         'code': code,
         'shares': shares,
-        'price': value / priced_shares if priced else None,
-        'value': value if priced else None,
+        'price': price,
+        'value': paid if priced and len(priced) == len(rows) else None,
         'holdings': pick(holdings) if holdings else None,
     }
 
 
 def _all_transactions(rows):
-    transactions = [_transaction(key, group) for key, group in _groups(rows or []).items()]
+    merged = [_transaction(key, group) for key, group in _groups(rows or []).items()]
+    transactions = [row for row in merged if row['shares']]
     transactions.sort(key=lambda row: row['name'])
     transactions.sort(key=lambda row: row['date'], reverse=True)
     return transactions
@@ -155,8 +157,17 @@ def to_sentiment(rows):
 
 
 def _produce_filings(symbol):
-    by_form = {form: finnhub.get_filings(symbol, form) for form in FORM_LIMITS}
-    return {'filings': to_filings(by_form)}, FILINGS_TTL
+    by_form = {}
+    failure = None
+    for form in FORM_LIMITS:
+        try:
+            by_form[form] = finnhub.get_filings(symbol, form)
+        except ProviderUnavailable as exc:
+            failure = exc
+    if failure and not by_form:
+        raise failure
+    partial = failure is not None
+    return {'filings': to_filings(by_form), 'partial': partial}, PARTIAL_TTL if partial else FILINGS_TTL
 
 
 def _sentiment_window():
