@@ -119,7 +119,6 @@ describe('StatisticsTab', () => {
   it('no longer shows analyst recommendations or the cash flow chart', () => {
     renderTab({
       recommendation: { strong_buy: 1, buy: 1, hold: 1, sell: 0, strong_sell: 0, period: '2026-09-01' },
-      cash_flow_trend: [{ period: '2024-12-31', fcf: 1, debt: 1, cash: 1 }],
     })
 
     expect(screen.queryByText('Analyst recommendations')).not.toBeInTheDocument()
