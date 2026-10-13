@@ -1,5 +1,5 @@
 import { performanceFill } from '../../lib/charts'
-import { fmtPct, pctToneClass } from '../../lib/format'
+import { fmtPct } from '../../lib/format'
 
 const TINT_CAP = 40
 
@@ -14,7 +14,7 @@ export default function PerformanceTiles({ returns }) {
           className="rounded px-1 py-1.5 text-center"
           style={{ backgroundColor: performanceFill(pct, { cap: TINT_CAP }) ?? undefined }}
         >
-          <div className={`num font-mono text-[var(--fig-sm)] ${pctToneClass(pct)}`}>{fmtPct(pct)}</div>
+          <div className={`num font-mono text-[var(--fig-sm)] ${pct == null ? 'text-zinc-500' : 'text-zinc-100'}`}>{fmtPct(pct)}</div>
           <div className="text-[var(--fig-2xs)] text-zinc-400">{key}</div>
         </li>
       ))}

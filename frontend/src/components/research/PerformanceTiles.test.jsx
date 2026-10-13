@@ -21,6 +21,14 @@ describe('PerformanceTiles', () => {
     expect(screen.getByText('YTD')).toBeInTheDocument()
   })
 
+  it('prints the figure in neutral text on the tinted tile', () => {
+    render(<PerformanceTiles returns={returns} />)
+
+    const figure = screen.getByText('+56.22%')
+    expect(figure).toHaveClass('text-zinc-100')
+    expect(figure).not.toHaveClass('text-emerald-400')
+  })
+
   it('shows a dash for a window the history does not reach', () => {
     render(<PerformanceTiles returns={returns} />)
 

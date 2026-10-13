@@ -1,3 +1,4 @@
+import { ratingBand } from '../../lib/ratingBand'
 import { ESTIMATE, NEGATIVE, POSITIVE, withAlpha } from '../../lib/charts'
 
 const SEGMENTS = [
@@ -22,8 +23,9 @@ function pointAt(degrees, radius) {
 const clamp = (value) => Math.min(1, Math.max(0, Number(value) || 0))
 
 function toneClass(fraction) {
-  if (fraction >= 0.6) return 'text-emerald-400'
-  if (fraction <= 0.4) return 'text-red-400'
+  const band = ratingBand(fraction)
+  if (band >= 3) return 'text-emerald-400'
+  if (band <= 1) return 'text-red-400'
   return 'text-zinc-300'
 }
 

@@ -28,6 +28,17 @@ describe('RatingGauge', () => {
     expect(needleX(over.container)).toBe(needleX(full.container))
   })
 
+  it('colours the label by the segment the needle is in', () => {
+    const buy = render(<RatingGauge title="t" fraction={0.65} label="Buy" />)
+    const sell = render(<RatingGauge title="t" fraction={0.3} label="Sell" />)
+    const hold = render(<RatingGauge title="t" fraction={0.4} label="Hold" />)
+
+    expect(buy.getByText('Buy')).toHaveClass('text-emerald-400')
+    expect(sell.getByText('Sell')).toHaveClass('text-red-400')
+    expect(hold.getByText('Hold')).not.toHaveClass('text-emerald-400')
+    expect(hold.getByText('Hold')).not.toHaveClass('text-red-400')
+  })
+
   it('draws five segments', () => {
     const { container } = render(<RatingGauge title="t" fraction={0.5} label="Hold" />)
     expect(container.querySelectorAll('path')).toHaveLength(5)
