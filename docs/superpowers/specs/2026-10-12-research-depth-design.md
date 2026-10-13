@@ -148,7 +148,18 @@ series.
 Insider transactions with monthly sentiment, a filings list (10-K, 10-Q, 8-K with
 links), financial health charts (debt, free cash flow and cash by year; short- and
 long-term assets against liabilities), and a full technicals table behind the gauge.
-Scoped when phase 2 is done.
+Scoped on 2026-10-13
+(plan: `docs/superpowers/plans/2026-10-13-research-extras.md`):
+
+- A new **Filings** tab (equity only, after Funds) holds the SEC filings list and
+  insider activity. Filings are requested per form, because the unfiltered list is the
+  newest 500 of everything. Insider rows are merged per insider, day and type; totals
+  count open-market buys and sales only.
+- **Financial health** sits on the Financials tab as two charts computed from the
+  statements endpoint. They replace the phase 2 cash generation chart, and the
+  `cash_flow_trend` field leaves the fundamentals payload.
+- The **technicals table** is a disclosure under the chart page's technicals gauge,
+  listing the six indicators the gauge votes with, their values and their signals.
 
 ## Testing
 
