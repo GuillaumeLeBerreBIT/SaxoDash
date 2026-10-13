@@ -14,7 +14,7 @@ import NewsTab from '../components/research/NewsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PeersTab from '../components/research/PeersTab'
 import SymbolBar from '../components/research/SymbolBar'
-import ValuationTab from '../components/research/ValuationTab'
+import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
@@ -184,7 +184,7 @@ export default function Research() {
                   isEtf={instrumentIsEtf}
                 />
               ) : null}
-              {tab === 'valuation' ? <ValuationTab fundamentals={fundamentals} /> : null}
+              {tab === 'valuation' ? <StatisticsTab fundamentals={fundamentals} /> : null}
               {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'earnings' ? (
                 <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
