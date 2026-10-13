@@ -11,6 +11,7 @@ import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
+import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PeersTab from '../components/research/PeersTab'
 import SymbolBar from '../components/research/SymbolBar'
@@ -27,12 +28,15 @@ import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 // so the visible tab list and the hidden-tab reset below can't drift apart.
 const TABS = [
   ['overview', 'Overview'],
-  ['valuation', 'Valuation', { equityOnly: true }],
+  ['financials', 'Financials', { equityOnly: true }],
+  ['statistics', 'Statistics', { equityOnly: true }],
   ['peers', 'Peers', { equityOnly: true }],
   ['earnings', 'Earnings', { equityOnly: true }],
   ['news', 'News'],
   ['guide', 'Guide'],
 ]
+
+const TAB_ALIASES = { valuation: 'statistics' }
 
 const TAB_KEYS = new Set(TABS.map(([key]) => key))
 const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
@@ -43,7 +47,8 @@ export default function Research() {
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
-  const requestedTab = params.get('tab')
+  const rawTab = params.get('tab')
+  const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
   const [scaledSymbol, setScaledSymbol] = useState(symbol)
@@ -64,7 +69,7 @@ export default function Research() {
     setTab('overview')
   }
 
-  const { chart, bars, rangeBars, ind, timeWindow, earnings, earningsMarkers, note, priceLines, quote, details } =
+  const { chart, bars, allBars, rangeBars, ind, timeWindow, earnings, earningsMarkers, note, priceLines, quote, details } =
     useChartData({
       symbol,
       instrument,
@@ -175,6 +180,7 @@ export default function Research() {
                   details={details.data}
                   detailsLoading={details.isLoading}
                   bars={rangeBars}
+                  allBars={allBars}
                   range={controls.range}
                   fundamentals={fundamentals}
                   note={note}
@@ -184,7 +190,8 @@ export default function Research() {
                   isEtf={instrumentIsEtf}
                 />
               ) : null}
-              {tab === 'valuation' ? <StatisticsTab fundamentals={fundamentals} /> : null}
+              {tab === 'financials' ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {tab === 'statistics' ? <StatisticsTab fundamentals={fundamentals} /> : null}
               {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
               {tab === 'earnings' ? (
                 <EarningsTab symbol={symbol} earnings={earnings} fundamentals={fundamentals} />

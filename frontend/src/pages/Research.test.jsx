@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
-import { fireEvent, screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -187,10 +187,10 @@ describe('Research', () => {
     expect(screen.getByText('Your position')).toBeInTheDocument()
   })
 
-  it('shows the valuation tab, using the fundamentals already fetched for overview', async () => {
+  it('shows the statistics tab, using the fundamentals already fetched for overview', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    await userEvent.click(screen.getByRole('tab', { name: 'Valuation' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Statistics' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
   })
@@ -208,16 +208,58 @@ describe('Research', () => {
     expect(screen.getByRole('tab', { name: 'Earnings' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('hides the Valuation, Peers and Earnings tabs for an ETF', () => {
+  it('hides the Financials, Statistics, Peers and Earnings tabs for an ETF', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
 
-    expect(screen.queryByRole('tab', { name: 'Valuation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Financials' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Statistics' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Peers' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Earnings' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Guide' })).toBeInTheDocument()
+  })
+
+  it('lists the tabs in reading order', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Overview',
+      'Financials',
+      'Statistics',
+      'Peers',
+      'Earnings',
+      'News',
+      'Guide',
+    ])
+  })
+
+  it('opens Statistics for the old ?tab=valuation link', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=valuation' })
+
+    expect(screen.getByRole('tab', { name: 'Statistics' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('opens the Financials tab from ?tab=financials and asks for the statements', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=financials' })
+
+    expect(screen.getByRole('tab', { name: 'Financials' })).toHaveAttribute('aria-selected', 'true')
+    expect(queries.useStatements).toHaveBeenCalledWith('NVDA')
+  })
+
+  it('does not ask for statements on the other tabs', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(queries.useStatements).not.toHaveBeenCalledWith('NVDA')
+  })
+
+  it('falls back to Overview when ?tab=financials is opened for an ETF', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=financials' })
+
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('falls back to Overview when a stale ?tab does not apply to an ETF', () => {
@@ -384,8 +426,8 @@ describe('Research panning', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.getByRole('tablist')).toBeInTheDocument()
-    const valuation = screen.getByRole('tab', { name: 'Valuation' })
-    expect(valuation).toHaveAttribute('aria-selected', 'false')
+    const statistics = screen.getByRole('tab', { name: 'Statistics' })
+    expect(statistics).toHaveAttribute('aria-selected', 'false')
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
     const panel = screen.getByRole('tabpanel')
     expect(panel).toHaveAttribute('aria-labelledby', screen.getByRole('tab', { name: 'Overview' }).id)
