@@ -70,6 +70,8 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
   queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
   queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
+  queries.useFilings.mockReturnValue({ ...idle, data: { available: true, filings: [] } })
+  queries.useInsiders.mockReturnValue({ ...idle, data: { available: true, transactions: [], summary: null, sentiment: [] } })
   queries.usePeerFundamentals.mockReturnValue([])
   queries.useMarkReviewedMutation.mockReturnValue({ mutate: vi.fn(), isPending: false })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
@@ -226,6 +228,7 @@ describe('Research', () => {
     expect(screen.queryByRole('tab', { name: 'Statistics' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Peers' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Earnings' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Filings' })).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Guide' })).toBeInTheDocument()
@@ -242,6 +245,7 @@ describe('Research', () => {
       'Peers',
       'Earnings',
       'Funds',
+      'Filings',
       'News',
       'Guide',
     ])
@@ -264,6 +268,30 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(queries.useStatements).not.toHaveBeenCalledWith('NVDA')
+  })
+
+  it('opens the Filings tab from ?tab=filings and asks for both datasets', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=filings' })
+
+    expect(screen.getByRole('tab', { name: 'Filings' })).toHaveAttribute('aria-selected', 'true')
+    expect(queries.useFilings).toHaveBeenCalledWith('NVDA')
+    expect(queries.useInsiders).toHaveBeenCalledWith('NVDA')
+    expect(screen.getByRole('heading', { name: 'SEC filings' })).toBeInTheDocument()
+  })
+
+  it('does not ask for filings or insiders on the other tabs', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(queries.useFilings).not.toHaveBeenCalledWith('NVDA')
+    expect(queries.useInsiders).not.toHaveBeenCalledWith('NVDA')
+  })
+
+  it('falls back to Overview when ?tab=filings is opened for an ETF', () => {
+    stubQueries({ positions: [etfPosition] })
+    renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=filings' })
+
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(queries.useFilings).not.toHaveBeenCalledWith('SPY')
   })
 
   it('falls back to Overview when ?tab=financials is opened for an ETF', () => {
@@ -307,6 +335,23 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.getByText(/Saxo is not connected/)).toBeInTheDocument()
+  })
+
+  it('holds the Filings tab back until the instrument is resolved', () => {
+    stubQueries({ positions: [] })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=filings' })
+
+    expect(queries.useFilings).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useInsiders).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
+  })
+
+  it('holds the Financials tab back until the instrument is resolved', () => {
+    stubQueries({ positions: [] })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&tab=financials' })
+
+    expect(queries.useStatements).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByTestId('tab-pending')).toBeInTheDocument()
   })
 
   it('warns when a symbol cannot be resolved to a Saxo instrument', () => {

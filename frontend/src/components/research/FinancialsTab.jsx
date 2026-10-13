@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useStatements } from '../../api/queries'
 import { STATEMENTS, latestPeriods, rowsWithData, statementByKey, waterfallSteps } from '../../lib/statements'
 import { Card, CardHeader, Skeleton, TBtn } from '../ui'
-import CashFlowTrendChart from './CashFlowTrendChart'
+import AssetsLiabilitiesChart from './AssetsLiabilitiesChart'
+import CashAndDebtChart from './CashAndDebtChart'
 import FinancialsChart from './FinancialsChart'
 import ProfitWaterfall from './ProfitWaterfall'
 import QuarterlyTrendsChart from './QuarterlyTrendsChart'
@@ -116,6 +117,9 @@ function Statements({ symbol, statements }) {
           </Card>
         </section>
       )}
+
+      <CashAndDebtChart annual={data.annual} />
+      <AssetsLiabilitiesChart annual={data.annual} />
     </>
   )
 }
@@ -127,7 +131,6 @@ export default function FinancialsTab({ symbol, fundamentals }) {
   return (
     <div className="space-y-4">
       <Statements key={symbol} symbol={symbol} statements={statements} />
-      <CashFlowTrendChart trend={company?.cash_flow_trend} />
       <QuarterlyTrendsChart trends={company?.quarterly_trends} />
     </div>
   )

@@ -51,6 +51,16 @@ export const STATEMENT_SERIES = {
   net_income: POSITIVE,
 }
 
+export const HEALTH_SERIES = {
+  free_cash_flow: POSITIVE,
+  cash: SERIES_TOTAL,
+  total_debt: SERIES_BANK,
+  current_assets: SERIES_TOTAL,
+  long_term_assets: REPORTED,
+  current_liabilities: SERIES_BANK,
+  long_term_liabilities: PENDING,
+}
+
 /** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
 export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
 export const surpriseColor = (value) => [MISS, ESTIMATE, BEAT][surpriseSign(value) + 1]

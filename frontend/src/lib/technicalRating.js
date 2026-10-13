@@ -13,6 +13,15 @@ function against(value, reference) {
   return 'neutral'
 }
 
+function rsiReading(value) {
+  if (value < RSI_OVERSOLD) return 'Oversold'
+  if (value > RSI_OVERBOUGHT) return 'Overbought'
+  return 'Mid-range'
+}
+
+const MACD_READINGS = { buy: 'Above signal', sell: 'Below signal', neutral: 'On signal' }
+const AVERAGE_READINGS = { buy: 'Price above', sell: 'Price below', neutral: 'Price at' }
+
 function rsiVote(value) {
   if (value < RSI_OVERSOLD) return 'buy'
   if (value > RSI_OVERBOUGHT) return 'sell'
@@ -28,18 +37,27 @@ export function technicalRating(bars) {
   const macdSignal = last(macdSeries.signal)
   const rsiValue = last(rsi(closes))
 
+  const average = (key, label, value) =>
+    value == null ? null : { key, label, vote: against(price, value), value, reading: AVERAGE_READINGS[against(price, value)] }
+
   const candidates = [
-    ['rsi', 'RSI (14)', rsiValue == null ? null : rsiVote(rsiValue)],
-    ['macd', 'MACD (12, 26)', macdLine == null || macdSignal == null ? null : against(macdLine, macdSignal)],
-    ...[
-      ['ema9', 'EMA 9', last(ema(closes, 9))],
-      ['sma20', 'SMA 20', last(sma(closes, 20))],
-      ['sma50', 'SMA 50', last(sma(closes, 50))],
-      ['sma200', 'SMA 200', last(sma(closes, 200))],
-    ].map(([key, label, average]) => [key, label, average == null ? null : against(price, average)]),
+    rsiValue == null ? null : { key: 'rsi', label: 'RSI (14)', vote: rsiVote(rsiValue), value: rsiValue, reading: rsiReading(rsiValue) },
+    macdLine == null || macdSignal == null
+      ? null
+      : {
+          key: 'macd',
+          label: 'MACD (12, 26)',
+          vote: against(macdLine, macdSignal),
+          value: macdLine - macdSignal,
+          reading: MACD_READINGS[against(macdLine, macdSignal)],
+        },
+    average('ema9', 'EMA 9', last(ema(closes, 9))),
+    average('sma20', 'SMA 20', last(sma(closes, 20))),
+    average('sma50', 'SMA 50', last(sma(closes, 50))),
+    average('sma200', 'SMA 200', last(sma(closes, 200))),
   ]
 
-  const votes = candidates.filter(([, , vote]) => vote != null).map(([key, label, vote]) => ({ key, label, vote }))
+  const votes = candidates.filter(Boolean)
   if (!votes.length) return null
 
   const count = (kind) => votes.filter((vote) => vote.vote === kind).length

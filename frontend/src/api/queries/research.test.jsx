@@ -7,7 +7,10 @@ import * as client from '../client'
 import {
   researchKeys,
   useNoteLevelMutation,
+  filingsStaleTime,
   statementsStaleTime,
+  useFilings,
+  useInsiders,
   useStatements,
   usePriceLineMutations,
   usePriceLines,
@@ -322,5 +325,57 @@ describe('useStatements', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const query = queryClient.getQueryCache().find({ queryKey: researchKeys.statements('NVDA') })
     expect(query.observers[0].options.staleTime(query)).toBe(5 * 60_000)
+  })
+})
+
+describe.each([
+  ['useFilings', useFilings, 'getFilings', 'filings'],
+  ['useInsiders', useInsiders, 'getInsiders', 'insiders'],
+])('%s', (_name, hook, clientCall, keyName) => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('fetches for the symbol', async () => {
+    client[clientCall].mockResolvedValue({ available: true })
+
+    const { result } = setup(() => hook('NVDA'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(client[clientCall]).toHaveBeenCalledWith('NVDA')
+  })
+
+  it('does not fetch for an empty symbol', () => {
+    setup(() => hook(''))
+
+    expect(client[clientCall]).not.toHaveBeenCalled()
+  })
+
+  it('has its own key per symbol', () => {
+    expect(researchKeys[keyName]('NVDA')).not.toEqual(researchKeys[keyName]('AAPL'))
+  })
+
+  it('uses the filings stale time policy for the query', async () => {
+    client[clientCall].mockResolvedValue({ available: false })
+
+    const { result, queryClient } = setup(() => hook('NVDA'))
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const query = queryClient.getQueryCache().find({ queryKey: researchKeys[keyName]('NVDA') })
+    expect(query.observers[0].options.staleTime(query)).toBe(5 * 60_000)
+  })
+})
+
+describe('filingsStaleTime', () => {
+  it('holds an available answer for twelve hours and anything else for five minutes', () => {
+    expect(filingsStaleTime({ available: true })).toBe(12 * 60 * 60_000)
+    expect(filingsStaleTime({ available: false })).toBe(5 * 60_000)
+    expect(filingsStaleTime(undefined)).toBe(5 * 60_000)
+    expect(filingsStaleTime({ available: true, partial: true })).toBe(5 * 60_000)
+    expect(filingsStaleTime({ available: true, partial: false })).toBe(12 * 60 * 60_000)
+  })
+})
+
+describe('filings and insiders keys', () => {
+  it('differ from each other for one symbol', () => {
+    expect(researchKeys.filings('NVDA')).not.toEqual(researchKeys.insiders('NVDA'))
   })
 })

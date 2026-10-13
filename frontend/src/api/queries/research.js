@@ -20,7 +20,9 @@ import {
   getDiscover,
   getDiscoverShelf,
   getEarningsCalendar,
+  getFilings,
   getFundamentals,
+  getInsiders,
   getStatements,
   getInstrumentDetails,
   getPeers,
@@ -56,6 +58,8 @@ export const researchKeys = {
   instrumentDetails: (uic, assetType) => ['instrument-details', instrumentKey(uic, assetType)],
   fundamentals: (symbol) => ['fundamentals', symbol],
   statements: (symbol) => ['statements', symbol],
+  filings: (symbol) => ['filings', symbol],
+  insiders: (symbol) => ['insiders', symbol],
   companyNews: (symbol) => ['company-news', symbol],
   peers: (symbol) => ['peers', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
@@ -163,6 +167,30 @@ export function useStatements(symbol) {
     queryFn: () => getStatements(symbol),
     enabled: !!symbol,
     staleTime: (query) => statementsStaleTime(query.state.data),
+  })
+}
+
+const FILINGS_FRESH = 12 * 60 * 60_000
+
+export function filingsStaleTime(data) {
+  return data?.available && !data.partial ? FILINGS_FRESH : STATEMENTS_RETRY
+}
+
+export function useFilings(symbol) {
+  return useQuery({
+    queryKey: researchKeys.filings(symbol),
+    queryFn: () => getFilings(symbol),
+    enabled: !!symbol,
+    staleTime: (query) => filingsStaleTime(query.state.data),
+  })
+}
+
+export function useInsiders(symbol) {
+  return useQuery({
+    queryKey: researchKeys.insiders(symbol),
+    queryFn: () => getInsiders(symbol),
+    enabled: !!symbol,
+    staleTime: (query) => filingsStaleTime(query.state.data),
   })
 }
 

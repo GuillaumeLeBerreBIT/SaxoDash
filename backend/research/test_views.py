@@ -185,6 +185,85 @@ class StatementsViewTest(APITestCase):
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class FilingsViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get('/api/research/filings/AAPL/').status_code, 401)
+
+    @patch('research.finnhub.get_filings')
+    def test_returns_available_true_with_filings(self, mock_filings):
+        mock_filings.return_value = [{
+            'accessNumber': '0001', 'form': '10-K', 'filedDate': '2026-02-01 00:00:00',
+            'acceptedDate': '2026-02-01 16:00:00',
+            'filingUrl': 'https://www.sec.gov/f', 'reportUrl': 'https://www.sec.gov/r',
+        }]
+
+        response = self.client.get('/api/research/filings/aapl/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['filings'][0]['filed'], '2026-02-01')
+        mock_filings.assert_any_call('AAPL', '10-K')
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/filings/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    def test_rejects_a_malformed_symbol(self):
+        self.assertEqual(self.client.get('/api/research/filings/AAPL%20US/').status_code, 400)
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class InsidersViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='alex', password='pw')
+        token = RefreshToken.for_user(self.user).access_token
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+
+    def test_requires_authentication(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get('/api/research/insiders/AAPL/').status_code, 401)
+
+    @patch('research.finnhub.get_insider_sentiment', return_value={'data': []})
+    @patch('research.finnhub.get_insider_transactions')
+    def test_returns_available_true_with_shaped_data(self, mock_tx, mock_sent):
+        mock_tx.return_value = {'data': [{
+            'name': 'DOE JANE', 'transactionDate': '2026-09-10', 'filingDate': '2026-09-12',
+            'transactionCode': 'S', 'change': -100, 'transactionPrice': 10.0, 'share': 900,
+            'isDerivative': False,
+        }]}
+
+        response = self.client.get('/api/research/insiders/nvda/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.data['available'])
+        self.assertEqual(response.data['transactions'][0]['shares'], -100)
+        self.assertEqual(response.data['summary']['sells'], 1)
+        self.assertEqual(response.data['sentiment'], [])
+        mock_tx.assert_called_once_with('NVDA')
+
+    @override_settings(FINNHUB_API_KEY='')
+    def test_returns_available_false_when_not_configured(self):
+        response = self.client.get('/api/research/insiders/AAPL/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data['available'])
+
+    def test_rejects_a_malformed_symbol(self):
+        self.assertEqual(self.client.get('/api/research/insiders/AAPL%20US/').status_code, 400)
+
+
+@override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
 class PeersViewTest(APITestCase):
     def setUp(self):
         cache.clear()
@@ -329,12 +408,21 @@ class ThrottleScopeConfigTest(TestCase):
             research_views.QuotesView,
             research_views.FundamentalsView,
             research_views.StatementsView,
+            research_views.FilingsView,
+            research_views.InsidersView,
             research_views.EarningsCalendarView,
             research_views.SymbolEarningsView,
             research_views.CompanyNewsView,
             research_views.PeersView,
         ):
             self.assertIn(view.throttle_scope, rates, view.__name__)
+
+    def test_filings_and_insiders_share_the_filings_scope_at_thirty_a_minute(self):
+        from research import views as research_views
+
+        self.assertEqual(research_views.FilingsView.throttle_scope, 'research.filings')
+        self.assertEqual(research_views.InsidersView.throttle_scope, 'research.filings')
+        self.assertEqual(settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['research.filings'], '30/min')
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM, FINNHUB_API_KEY='test-key')

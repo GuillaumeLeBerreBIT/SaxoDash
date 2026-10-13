@@ -17,8 +17,15 @@ const annual = [2019, 2020, 2021, 2022, 2023, 2024, 2025].map((fiscal_year, inde
   fiscal_year,
   label: `FY ${fiscal_year}`,
   income: { revenue: (index + 1) * 10e9, gross_profit: (index + 1) * 6e9, operating_income: (index + 1) * 3e9, net_income: (index + 1) * 2e9 },
-  balance: { total_assets: (index + 1) * 50e9 },
-  cash_flow: { operating_cash_flow: (index + 1) * 4e9 },
+  balance: {
+    total_assets: (index + 1) * 50e9,
+    current_assets: (index + 1) * 20e9,
+    total_liabilities: (index + 1) * 30e9,
+    current_liabilities: (index + 1) * 10e9,
+    cash: (index + 1) * 5e9,
+    total_debt: (index + 1) * 6e9,
+  },
+  cash_flow: { operating_cash_flow: (index + 1) * 4e9, free_cash_flow: (index + 1) * 3e9 },
 }))
 
 const quarterly = [1, 2, 3, 4].map((quarter) => ({
@@ -142,14 +149,44 @@ describe('FinancialsTab', () => {
     expect(screen.getByText(/statements are unavailable for NVDA/i)).toBeInTheDocument()
   })
 
-  it('still shows the fundamentals-based charts when statements are unavailable', () => {
+  it('keeps the margin trend when statements are unavailable', () => {
     queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
-    const trend = [{ period: '2024-12-31', fcf: 1e9, debt: 2e9, cash: 3e9 }]
+    const quarterly_trends = [
+      { period: '2025-03-31', gross_margin: 60, operating_margin: 30, net_margin: 20 },
+      { period: '2025-06-30', gross_margin: 61, operating_margin: 31, net_margin: 21 },
+    ]
     renderWithProviders(
-      <FinancialsTab symbol="NVDA" fundamentals={{ ...idle, data: { available: true, cash_flow_trend: trend } }} />,
+      <FinancialsTab symbol="NVDA" fundamentals={{ ...idle, data: { available: true, quarterly_trends } }} />,
     )
 
-    expect(screen.getByText('Cash generation & balance sheet')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /margin/i })).toBeInTheDocument()
+  })
+
+  it('shows the cash and debt and the assets against liabilities charts after the profit walk', () => {
+    renderTab()
+
+    const walk = screen.getByRole('heading', { name: 'From revenue to profit' })
+    const cash = screen.getByRole('heading', { name: 'Cash and debt' })
+    const balance = screen.getByRole('heading', { name: 'Assets against liabilities' })
+    expect(walk.compareDocumentPosition(cash) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(cash.compareDocumentPosition(balance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('keeps both health charts when Quarterly is chosen', async () => {
+    renderTab()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Quarterly' }))
+
+    expect(screen.getByRole('heading', { name: 'Cash and debt' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Assets against liabilities' })).toBeInTheDocument()
+  })
+
+  it('shows neither health chart nor the old cash card when statements are unavailable', () => {
+    renderTab({ available: false })
+
+    expect(screen.queryByRole('heading', { name: 'Cash and debt' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Assets against liabilities' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Cash generation & balance sheet')).not.toBeInTheDocument()
   })
 
   it('offers a retry when the statements request failed', async () => {

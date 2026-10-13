@@ -458,3 +458,16 @@ miss. The Research tabs are Overview, Financials, Statistics, Peers, Earnings, N
 Guide; `?tab=valuation` is an alias for Statistics. Annual ratio series arrive as
 fractions and are stored as percent, to match the TTM figures beside them. The free key
 returns four months of analyst recommendations, so the "trend" is four columns. An answer whose quarterly call failed is cached for ten minutes only. The chart page's panel and the Earnings tab read fundamentals only; the statements request is made by the Financials tab alone.
+
+**SEC filings and insider activity are asked for by form and merged by trade.**
+`research/filings.py` requests Finnhub's filings once per form (10-K, 10-Q, 8-K): the
+unfiltered list is the newest 500 of everything, which for a bank is a week of
+prospectuses with no annual report in it. Insider rows are merged per insider, day and
+transaction type, because one sale is filed as dozens of rows at different prices; the
+price shown is share-weighted and a row with no price has no value rather than zero.
+The buy and sell totals count open-market trades only (codes P and S), so awards, gifts
+and option exercises never read as buying or selling. Links leave the app only for
+`https://www.sec.gov/`. Both endpoints follow the fundamentals contract under their own
+`research.filings` scope, cached for 12 hours. Financial health charts are arithmetic
+over the statements endpoint; the older `cash_flow_trend` on fundamentals, a second
+mapping of the same filings, is gone.

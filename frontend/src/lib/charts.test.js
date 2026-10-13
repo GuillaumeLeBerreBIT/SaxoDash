@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FLAT_FILL, NEGATIVE, PERFORMANCE_CAPS, POSITIVE, colorForCategory, performanceFill, seriesAxis, withAlpha } from './charts'
+import { FLAT_FILL, HEALTH_SERIES, NEGATIVE, PENDING, PERFORMANCE_CAPS, POSITIVE, REPORTED, SERIES_BANK, SERIES_TOTAL, colorForCategory, performanceFill, seriesAxis, withAlpha } from './charts'
 
 describe('colorForCategory', () => {
   it('gives TRANSFER and SAVINGS a distinct neutral color, not a budgetable category color', () => {
@@ -124,5 +124,19 @@ describe('seriesAxis', () => {
     const { domain } = seriesAxis(rows, ['a'])
     expect(domain[0]).toBeGreaterThan(0)
     expect(seriesAxis([{ a: '' }, { a: null }, {}], ['a'])).toEqual({})
+  })
+})
+
+describe('HEALTH_SERIES', () => {
+  it('colours the seven financial health series from the shared palette', () => {
+    expect(HEALTH_SERIES).toEqual({
+      free_cash_flow: POSITIVE,
+      cash: SERIES_TOTAL,
+      total_debt: SERIES_BANK,
+      current_assets: SERIES_TOTAL,
+      long_term_assets: REPORTED,
+      current_liabilities: SERIES_BANK,
+      long_term_liabilities: PENDING,
+    })
   })
 })
