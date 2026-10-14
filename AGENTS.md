@@ -501,7 +501,20 @@ refused call is not cached as complete. Background work runs inside
 `finnhub.background_calls()`, which holds back `FINNHUB_BACKGROUND_RESERVE` (15) for
 interactive requests; the nightly scan waits for the next minute and retries a refused
 row once. A cache that cannot count fails open. The annual filing is fetched once per
-symbol (`finnhub.reported_annual`, raw, 24h, about 200 KB each) and shared by
+symbol and kept as shaped statement rows (`finnhub.annual_statements`, 24h), shared by
 fundamentals and statements. Filings asks per form and keeps the forms that answered,
 names the ones that did not (`missing`), and caches that for ten minutes instead of
 throwing away two paid calls because the third failed.
+
+**Every cached provider answer goes through `research/provider_cache.py::cached`.**
+Fundamentals, the annual statements, statements, filings, insiders, earnings, peers,
+industry and news all used to repeat "look in the cache, else fetch and shape, pick a
+time to live, turn an unreadable payload into unavailable"; one module had already
+drifted (a partial answer cached for a day). Now the producer returns `(value, ttl)`
+and the helper does the rest: a `ttl` of `None` returns the answer without storing it,
+provider refusals pass through and are never stored, and `unexpected=` names the error
+an unreadable payload becomes. It also keeps two requests for the same cold key from
+both calling Finnhub: the first takes a short lock (`<key>:filling`, 30s) and fills;
+the second polls for up to five seconds and returns that answer, or fills itself if
+the first gave up. Budget counting in `finnhub._spend_call` is the one cache use
+outside it, because it counts calls rather than caching answers.

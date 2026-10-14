@@ -18,6 +18,7 @@ from django.core.cache import cache
 
 from core.http_client import request_json
 
+from .provider_cache import cached
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual
 
@@ -178,13 +179,11 @@ ANNUAL_STATEMENTS_TTL = 86400
 
 
 def annual_statements(symbol):
-    key = f'research:annual-statements:v1:{symbol}'
-    rows = cache.get(key)
-    if rows is None:
+    def produce():
         rows = to_annual(get_financials_reported(symbol, 'annual'))
-        if rows:
-            cache.set(key, rows, ANNUAL_STATEMENTS_TTL)
-    return rows
+        return rows, ANNUAL_STATEMENTS_TTL if rows else None
+
+    return cached(f'research:annual-statements:v1:{symbol}', produce)
 
 
 def get_filings(symbol, form):
@@ -518,15 +517,7 @@ def fundamentals(symbol):
             annual_rows,
         )
 
-    try:
-        data = cache.get_or_set(_cache_key(symbol), produce, FUNDAMENTALS_TTL)
-    except ProviderUnavailable:
-        raise
-    except (KeyError, TypeError, IndexError, AttributeError) as exc:
-        # A payload shape to_fundamentals could not read - degrade, don't 500.
-        # A real bug (AttributeError, NameError, ...) still surfaces as a 500.
-        raise FinnhubUnexpected() from exc
-
+    data = cached(_cache_key(symbol), lambda: (produce(), FUNDAMENTALS_TTL), unexpected=FinnhubUnexpected)
     return {'available': True, **data}
 
 
@@ -540,7 +531,7 @@ def peers(symbol):
         symbols = [s for s in raw if s and s.upper() != symbol][:MAX_PEERS]
         return {'symbols': symbols}
 
-    data = cache.get_or_set(_peers_cache_key(symbol), produce, PEERS_TTL)
+    data = cached(_peers_cache_key(symbol), lambda: (produce(), PEERS_TTL))
     return {'available': True, **data}
 
 
@@ -569,7 +560,7 @@ def industry(symbol):
             raise FinnhubNoData(symbol)
         return value
 
-    return cache.get_or_set(_industry_cache_key(symbol), produce, INDUSTRY_TTL)
+    return cached(_industry_cache_key(symbol), lambda: (produce(), INDUSTRY_TTL))
 
 
 _TAG = re.compile(r'</?[A-Za-z!][^>]*>')
@@ -610,4 +601,4 @@ def news(symbol):
         items.sort(key=lambda item: item['datetime'], reverse=True)
         return items[:NEWS_MAX_ITEMS]
 
-    return {'available': True, 'items': cache.get_or_set(key, produce, NEWS_TTL)}
+    return {'available': True, 'items': cached(key, lambda: (produce(), NEWS_TTL))}

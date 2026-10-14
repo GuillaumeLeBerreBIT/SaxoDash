@@ -151,11 +151,11 @@ class WindowEarningsTest(TestCase):
 
     @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
     def test_the_current_week_caches_briefly_and_settled_weeks_do_not(self, _mock_cal):
-        with patch('research.earnings.cache.get_or_set', wraps=cache.get_or_set) as spy:
+        with patch('research.provider_cache.cache', wraps=cache) as spy:
             earnings.window_earnings('all', 0)
-            self.assertEqual(spy.call_args.args[2], earnings.CURRENT_WEEK_TTL)
+            self.assertEqual(spy.set.call_args.args[2], earnings.CURRENT_WEEK_TTL)
             earnings.window_earnings('all', 3)
-            self.assertEqual(spy.call_args.args[2], finnhub.EARNINGS_CAL_TTL)
+            self.assertEqual(spy.set.call_args.args[2], finnhub.EARNINGS_CAL_TTL)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_duplicate_rows_for_one_symbol_date_quarter_collapse_to_the_reported_one(self, mock_cal):
@@ -238,9 +238,9 @@ class SymbolEarningsCacheKeyTest(TestCase):
         self.assertNotEqual(earnings.CACHE_V, earnings.SYMBOL_CACHE_V)
         with patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []}):
             with patch('research.earnings.finnhub.get_earnings_history', return_value=[]):
-                with patch('research.earnings.cache', wraps=cache) as spy:
+                with patch('research.provider_cache.cache', wraps=cache) as spy:
                     earnings.symbol_earnings('AAPL')
-        key = spy.get_or_set.call_args.args[0]
+        key = spy.set.call_args.args[0]
         self.assertIn(f':{earnings.SYMBOL_CACHE_V}:', key)
 
     def test_the_week_calendar_key_is_unchanged_by_the_symbol_version(self):
