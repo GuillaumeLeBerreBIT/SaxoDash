@@ -23,7 +23,7 @@ class NoStatements(ProviderUnavailable):
 
 
 def _produce(symbol):
-    annual = to_annual(finnhub.reported_annual(symbol))
+    annual = finnhub.annual_statements(symbol)
     if not annual:
         raise NoStatements(symbol)
     try:

@@ -1,9 +1,12 @@
+import logging
 from datetime import date
 
 from django.core.cache import cache
 
 from . import finnhub
 from .providers import ProviderUnavailable
+
+logger = logging.getLogger(__name__)
 
 
 SEC_PREFIX = 'https://www.sec.gov/'
@@ -187,6 +190,7 @@ def _produce_insiders(symbol):
         date_from, date_to = _sentiment_window()
         data['sentiment'] = to_sentiment(finnhub.get_insider_sentiment(symbol, date_from, date_to)['data'])
     except (ProviderUnavailable, *SHAPING_ERRORS):
+        logger.warning('Insider sentiment unavailable for %s', symbol, exc_info=True)
         return {**data, 'sentiment': [], 'partial': True}, PARTIAL_TTL
     return {**data, 'partial': False}, INSIDERS_TTL
 

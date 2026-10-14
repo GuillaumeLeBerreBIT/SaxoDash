@@ -7,7 +7,11 @@ from . import finnhub
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
-FILING = {'data': [{'form': '10-K', 'year': 2025}]}
+FILING = {'data': [{
+    'form': '10-K', 'year': 2025, 'quarter': 0,
+    'startDate': '2025-01-01 00:00:00', 'endDate': '2025-12-31 00:00:00', 'filedDate': '2026-02-01 00:00:00',
+    'report': {'ic': [{'concept': 'us-gaap_Revenues', 'value': 1000}], 'bs': [], 'cf': []},
+}]}
 
 
 def at(seconds):
@@ -133,32 +137,38 @@ class ReportedAnnualTest(TestCase):
 
     @patch('research.finnhub.get_financials_reported', return_value=FILING)
     def test_fetches_the_annual_filings_once_per_symbol(self, mock_reported):
-        first = finnhub.reported_annual('AAPL')
-        second = finnhub.reported_annual('AAPL')
+        first = finnhub.annual_statements('AAPL')
+        second = finnhub.annual_statements('AAPL')
 
-        self.assertEqual(first, FILING)
-        self.assertEqual(second, FILING)
+        self.assertEqual(first[0]['income'], {'revenue': 1000})
+        self.assertEqual(second, first)
         mock_reported.assert_called_once_with('AAPL', 'annual')
 
     @patch('research.finnhub.get_financials_reported', return_value=FILING)
     def test_keeps_symbols_apart(self, mock_reported):
-        finnhub.reported_annual('AAPL')
-        finnhub.reported_annual('MSFT')
+        finnhub.annual_statements('AAPL')
+        finnhub.annual_statements('MSFT')
 
         self.assertEqual(mock_reported.call_count, 2)
 
+    @patch('research.finnhub.get_financials_reported', return_value=FILING)
+    def test_keeps_the_shaped_rows_not_the_raw_filing(self, mock_reported):
+        finnhub.annual_statements('AAPL')
+
+        self.assertEqual(cache.get('research:annual-statements:v1:AAPL'), finnhub.annual_statements('AAPL'))
+
     @patch('research.finnhub.get_financials_reported', return_value={'data': []})
     def test_an_answer_with_no_filings_is_not_kept(self, mock_reported):
-        finnhub.reported_annual('ZZZZ')
-        finnhub.reported_annual('ZZZZ')
+        finnhub.annual_statements('ZZZZ')
+        finnhub.annual_statements('ZZZZ')
 
         self.assertEqual(mock_reported.call_count, 2)
 
     @patch('research.finnhub.get_financials_reported', side_effect=finnhub.FinnhubAPIError('boom'))
     def test_a_failure_propagates_and_is_not_kept(self, mock_reported):
         with self.assertRaises(finnhub.FinnhubAPIError):
-            finnhub.reported_annual('AAPL')
+            finnhub.annual_statements('AAPL')
         with self.assertRaises(finnhub.FinnhubAPIError):
-            finnhub.reported_annual('AAPL')
+            finnhub.annual_statements('AAPL')
 
         self.assertEqual(mock_reported.call_count, 2)

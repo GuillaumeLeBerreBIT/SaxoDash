@@ -1,6 +1,7 @@
 from django.test import TestCase, SimpleTestCase
 
 from . import finnhub
+from .statement_shaping import to_annual
 
 SAMPLE_PROFILE = {
     'name': 'Apple Inc',
@@ -317,7 +318,7 @@ SAMPLE_REPORTED = {
 
 class CashFlowTrendRemovedTest(TestCase):
     def test_the_payload_has_no_cash_flow_trend_even_with_annual_filings(self):
-        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], SAMPLE_REPORTED)
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], to_annual(SAMPLE_REPORTED))
 
         self.assertNotIn('cash_flow_trend', result)
 
@@ -329,7 +330,7 @@ class CashFlowTrendRemovedTest(TestCase):
             'report': {'ic': [{'concept': 'us-gaap_Revenues', 'value': 1000}], 'bs': [], 'cf': []},
         }]}
 
-        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], reported)
+        result = finnhub.to_fundamentals(SAMPLE_PROFILE, SAMPLE_FINANCIALS, [], [], to_annual(reported))
 
         self.assertNotIn('cash_flow_trend', result)
         self.assertEqual(result['annual_results'][0]['revenue'], 1000)
@@ -509,7 +510,7 @@ class AnnualEpsTest(SimpleTestCase):
 
 class AnnualResultsTest(SimpleTestCase):
     def shaped(self, *filings):
-        return finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], [], {'data': list(filings)})
+        return finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], [], to_annual({'data': list(filings)}))
 
     def test_summarises_revenue_and_net_income_per_fiscal_year(self):
         shaped = self.shaped(_annual_filing(2025, 1000, 200))
