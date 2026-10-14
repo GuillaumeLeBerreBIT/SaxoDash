@@ -26,7 +26,7 @@ const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, 
 const paletteHrefFor = (symbol, instrument) => chartHref(symbol, instrument)
 
 export default function ResearchChart() {
-  const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })
   const layout = layoutById(workspace.layout)
@@ -64,7 +64,14 @@ export default function ResearchChart() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [tool])
 
-  const { allBars, rangeBars, priceLines, quote, details, earnings } = useChartData({ symbol, instrument, range: controls.range })
+  const { allBars, rangeBars, priceLines, quote, details, earnings, companyData } = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
+    position,
+    resolving,
+    requireInstrument: true,
+  })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
@@ -143,7 +150,7 @@ export default function ResearchChart() {
         </div>
         <SymbolPanel
           symbol={symbol}
-          instrument={instrument}
+          companyData={companyData}
           bars={allBars}
           earnings={earnings}
           href={researchHref(symbol, undefined, instrument)}

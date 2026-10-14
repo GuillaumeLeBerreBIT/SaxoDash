@@ -230,8 +230,8 @@ boolean rather than a status code: 409 already means "not connected to
 Saxo" and reusing it here would blur that. A metric the free tier doesn't
 return is omitted, never guessed or defaulted to zero. `FundamentalsView`
 just uppercases whatever ticker the URL hands it - that only works because
-callers already pass a bare, US-listed symbol; an international listing
-needing an exchange suffix is a known gap. Market
+callers already pass a bare, US-listed symbol; the frontend decides who may
+ask (see "One module decides who gets US company data" below). Market
 context (Buffett indicator, macro series) is still deferred: it needs an
 unrelated data source (FRED) and was deliberately kept out of this pass.
 
@@ -438,8 +438,8 @@ symbol. Performance, seasonals and the technicals gauge are arithmetic over the 
 1,200-bar fetch (`lib/performance.js::trailingReturns`, `lib/seasonals.js`,
 `lib/technicalRating.js`); earnings dots reuse the page's `useSymbolEarnings`; only
 the analyst gauge and market cap add a request, the 24h-cached `useFundamentals`.
-The technicals rating is ours, a daily vote of six indicators, and names its inputs
-under the gauge so it is not read as TradingView's. An ETF gets no company blocks,
+The technicals rating is ours, a daily vote of six indicators; "Show indicators"
+under the gauge lists them with their values, so it is not read as TradingView's. An ETF gets no company blocks,
 and a block without data is left out. Analyst price targets and estimates beyond two
 quarters are refused by the free Finnhub key, so there is no forecast cone.
 
@@ -471,3 +471,37 @@ and option exercises never read as buying or selling. Links leave the app only f
 `research.filings` scope, cached for 12 hours. Financial health charts are arithmetic
 over the statements endpoint; the older `cash_flow_trend` on fundamentals, a second
 mapping of the same filings, is gone.
+
+**One module decides who gets US company data.** Finnhub and the SEC are asked by
+bare ticker, and a ticker names a US-listed company: a European listing with the
+same letters would be shown another company's fundamentals, statements, earnings,
+news, filings and insider trades. `lib/companyData.js::companyDataStatus` is the only
+place that decides, from the instrument and its listing currency (the held position's,
+else the search match's, else Saxo's instrument details), in this order: `pending`
+while any lookup is in flight; `foreign` for a known currency other than US dollars
+(a fund included); `fund` for an ETF; `eligible` for a US-dollar listing;
+`unverified` for a resolved instrument whose currency never arrived. A ticker nobody
+could resolve is `eligible` on the Research page, so the Finnhub tabs still work with
+Saxo disconnected, and `unverified` on the chart page, whose panel describes the
+chart beside it. `useChartData` computes the status once; `tabGate` turns it into
+show / pending / hidden / refused per tab (`company` tabs, and News as a `ticker`
+tab that a US-dollar fund may use), and a symbol that may not be asked about reaches
+the hooks as an empty string, so no request is made. While a new symbol's search is
+pending, the previous symbol's results are ignored. A US-dollar listing outside the
+US is the known remaining gap.
+
+**Finnhub is rate-limited where the calls leave, not where requests arrive.** One
+request fans out to between one and five Finnhub calls, so the per-view DRF scopes
+cannot bound the 60-a-minute key. `finnhub._get` counts calls per minute in the cache
+and weighs in the previous minute's tail, so a burst across a minute boundary is still
+bounded (`FINNHUB_CALLS_PER_MINUTE`, default 58). When the budget is gone it raises
+`FinnhubBusy` before calling: the view answers 200 `available: false` with "try again
+in a minute", a refusal is not counted as spent, and an answer that depends on the
+refused call is not cached as complete. Background work runs inside
+`finnhub.background_calls()`, which holds back `FINNHUB_BACKGROUND_RESERVE` (15) for
+interactive requests; the nightly scan waits for the next minute and retries a refused
+row once. A cache that cannot count fails open. The annual filing is fetched once per
+symbol (`finnhub.reported_annual`, raw, 24h, about 200 KB each) and shared by
+fundamentals and statements. Filings asks per form and keeps the forms that answered,
+names the ones that did not (`missing`), and caches that for ten minutes instead of
+throwing away two paid calls because the third failed.

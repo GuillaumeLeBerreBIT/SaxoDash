@@ -118,7 +118,7 @@ describe('OverviewTab fundamentals', () => {
         bars={bars}
         range="1M"
         fundamentals={{ data: { available: false, reason: 'Not a company' }, isLoading: false }}
-        isEtf
+        companyData="fund"
       />
     )
 
@@ -142,7 +142,7 @@ describe('OverviewTab fundamentals', () => {
 
   it('explains why an ETF has no fundamentals snapshot', () => {
     render(
-      <OverviewTab symbol="SPY" position={null} details={null} detailsLoading={false} bars={bars} range="1M" isEtf />
+      <OverviewTab symbol="SPY" position={null} details={null} detailsLoading={false} bars={bars} range="1M" companyData="fund" />
     )
     expect(screen.getByText(/This is an ETF/)).toBeInTheDocument()
   })
@@ -186,7 +186,7 @@ describe('OverviewTab company view', () => {
 
   it('shows none of the company cards for an ETF', () => {
     renderOverview({
-      isEtf: true,
+      companyData: 'fund',
       allBars: risingBars(300),
       fundamentals: { isLoading: false, data: { available: true, market_cap: 100, shares_outstanding: 10, free_float: 8 } },
     })
@@ -194,6 +194,25 @@ describe('OverviewTab company view', () => {
     expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
     expect(screen.queryByText('Market cap')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
+  })
+
+  it('explains a listing outside the US instead of showing another company', () => {
+    renderOverview({
+      companyData: 'foreign',
+      fundamentals: { isLoading: false, data: { available: true, market_cap: 100, shares_outstanding: 10, free_float: 8 } },
+    })
+
+    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    expect(screen.queryByText('Market cap')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
+    expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
+  })
+
+  it('shows no company reads and no fallback while the instrument is pending', () => {
+    renderOverview({ companyData: 'pending', fundamentals: { isLoading: false, data: undefined } })
+
+    expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
+    expect(screen.queryByText('Listed outside the US')).not.toBeInTheDocument()
   })
 
   it('shows none of the company cards while fundamentals are unavailable', () => {

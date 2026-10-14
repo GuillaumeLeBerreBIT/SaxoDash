@@ -8,6 +8,7 @@ import {
   researchKeys,
   useNoteLevelMutation,
   filingsStaleTime,
+  isSearchResolving,
   statementsStaleTime,
   useFilings,
   useInsiders,
@@ -361,6 +362,25 @@ describe.each([
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const query = queryClient.getQueryCache().find({ queryKey: researchKeys[keyName]('NVDA') })
     expect(query.observers[0].options.staleTime(query)).toBe(5 * 60_000)
+  })
+})
+
+describe('isSearchResolving', () => {
+  it('is resolving while the typed query has not reached the search yet', () => {
+    expect(isSearchResolving('NVDA', 'NV', false)).toBe(true)
+  })
+
+  it('is resolving while the search for the query is in flight', () => {
+    expect(isSearchResolving('NVDA', 'NVDA', true)).toBe(true)
+  })
+
+  it('is settled once the search for the query has answered or failed', () => {
+    expect(isSearchResolving('NVDA', 'NVDA', false)).toBe(false)
+  })
+
+  it('never resolves a query too short to search', () => {
+    expect(isSearchResolving('', '', false)).toBe(false)
+    expect(isSearchResolving('N', '', true)).toBe(false)
   })
 })
 

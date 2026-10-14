@@ -141,7 +141,7 @@ export function resolveInstrument({ symbol, positions = [], results = [], pinned
 
   const [best] = rankInstrumentResults(results, symbol)
   if (best?.uic) {
-    return { uic: best.uic, assetType: best.asset_type, exact: best.symbol === symbol }
+    return { uic: best.uic, assetType: best.asset_type, exact: best.symbol === symbol, currency: best.currency || null }
   }
 
   return null

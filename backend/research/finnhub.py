@@ -3,10 +3,13 @@ way market.py does for Saxo - call, shape, cache. Finnhub needs a static API
 key, not a per-user OAuth token, so there is no credential lookup here.
 """
 
+import contextlib
+import contextvars
 import html
 import logging
 import re
 import statistics
+import time
 from datetime import date, datetime, timedelta, timezone
 
 import requests
@@ -17,6 +20,8 @@ from core.http_client import request_json
 
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual
+
+logger = logging.getLogger(__name__)
 
 API_BASE = 'https://finnhub.io/api/v1'
 
@@ -59,9 +64,67 @@ class FinnhubUnexpected(ProviderUnavailable):
         super().__init__('Fundamentals data is unavailable.')
 
 
+class FinnhubBusy(ProviderUnavailable):
+    log = True
+    log_level = logging.INFO
+
+    def __init__(self):
+        super().__init__('Market data is busy. Try again in a minute.')
+
+
+BUDGET_WINDOW_SECONDS = 60
+BUDGET_KEY_TTL = 3 * BUDGET_WINDOW_SECONDS
+
+_background_reserve = contextvars.ContextVar('finnhub_background_reserve', default=0)
+
+
+def _now():
+    return time.time()
+
+
+def _budget_key(window):
+    return f'research:finnhub-calls:{window}'
+
+
+@contextlib.contextmanager
+def background_calls():
+    token = _background_reserve.set(settings.FINNHUB_BACKGROUND_RESERVE)
+    try:
+        yield
+    finally:
+        _background_reserve.reset(token)
+
+
+def seconds_until_budget_refills():
+    return BUDGET_WINDOW_SECONDS - (_now() % BUDGET_WINDOW_SECONDS)
+
+
+def _calls_in_the_last_minute(window, elapsed):
+    key = _budget_key(window)
+    cache.add(key, 0, BUDGET_KEY_TTL)
+    spent = cache.incr(key)
+    carried = (cache.get(_budget_key(window - 1)) or 0) * (1 - elapsed)
+    return key, spent + carried
+
+
+def _spend_call():
+    window, into_window = divmod(_now(), BUDGET_WINDOW_SECONDS)
+    allowed = settings.FINNHUB_CALLS_PER_MINUTE - _background_reserve.get()
+    try:
+        key, used = _calls_in_the_last_minute(int(window), into_window / BUDGET_WINDOW_SECONDS)
+        if used > allowed:
+            cache.decr(key)
+    except Exception:
+        logger.warning('Finnhub call budget could not be counted', exc_info=True)
+        return
+    if used > allowed:
+        raise FinnhubBusy()
+
+
 def _get(path, **params):
     if not settings.FINNHUB_API_KEY:
         raise FinnhubNotConfigured()
+    _spend_call()
 
     return request_json(
         requests.get,
@@ -109,6 +172,19 @@ def get_peers(symbol):
 
 def get_financials_reported(symbol, freq='annual'):
     return _get('/stock/financials-reported', symbol=symbol, freq=freq)
+
+
+REPORTED_ANNUAL_TTL = 86400
+
+
+def reported_annual(symbol):
+    key = f'research:reported-annual:v1:{symbol}'
+    reported = cache.get(key)
+    if reported is None:
+        reported = get_financials_reported(symbol, 'annual')
+        if (reported or {}).get('data'):
+            cache.set(key, reported, REPORTED_ANNUAL_TTL)
+    return reported
 
 
 def get_filings(symbol, form):
@@ -429,7 +505,9 @@ def fundamentals(symbol):
             # An optional enrichment, not core to fundamentals: a symbol this
             # endpoint doesn't cover (rate limit, no US-GAAP filings) degrades
             # to no cash-flow trend rather than failing the whole payload.
-            reported = get_financials_reported(symbol)
+            reported = reported_annual(symbol)
+        except FinnhubBusy:
+            raise
         except ProviderUnavailable:
             reported = None
         return to_fundamentals(

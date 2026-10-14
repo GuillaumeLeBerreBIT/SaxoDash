@@ -123,6 +123,28 @@ describe('FilingsTab', () => {
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
+  it('names the forms that could not be loaded instead of showing a short list as complete', () => {
+    queries.useFilings.mockReturnValue(ok({ ...filingsData, partial: true, missing: ['10-Q', '8-K'] }))
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.getByTestId('filings-missing')).toHaveTextContent('Could not load 10-Q, 8-K filings just now; showing the rest.')
+  })
+
+  it('says nothing about missing forms for a complete answer', () => {
+    queries.useFilings.mockReturnValue(ok({ ...filingsData, partial: false, missing: [] }))
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.queryByTestId('filings-missing')).not.toBeInTheDocument()
+  })
+
+  it('keeps a filled card when a background refresh fails', () => {
+    queries.useFilings.mockReturnValue({ ...ok(filingsData), error: new Error('refresh failed') })
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    expect(screen.getByRole('link', { name: /SEC\.gov/i })).toBeInTheDocument()
+    expect(screen.queryByText(/could not be loaded/i)).not.toBeInTheDocument()
+  })
+
   it('retries the filings query from its own card', async () => {
     const refetch = vi.fn()
     queries.useFilings.mockReturnValue({ data: undefined, isLoading: false, error: new Error('boom'), refetch })

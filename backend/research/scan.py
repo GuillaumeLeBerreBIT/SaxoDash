@@ -64,7 +64,16 @@ def _mark_failed(row, exc):
         logger.error('Could not record the failure for %s', row.ticker, exc_info=True)
 
 
-def scan_row(row, *, with_fundamentals):
+def _refresh_fundamentals_within_budget(row, pause):
+    with finnhub.background_calls():
+        try:
+            _refresh_fundamentals(row)
+        except finnhub.FinnhubBusy:
+            pause(finnhub.seconds_until_budget_refills())
+            _refresh_fundamentals(row)
+
+
+def scan_row(row, *, with_fundamentals, pause=time.sleep):
     try:
         if not _resolved(row):
             row.status = ScreenerRow.UNMATCHED
@@ -82,7 +91,7 @@ def scan_row(row, *, with_fundamentals):
     row.error = ''
     if with_fundamentals:
         try:
-            _refresh_fundamentals(row)
+            _refresh_fundamentals_within_budget(row, pause)
         except finnhub.FinnhubNotConfigured:
             with_fundamentals = False
         except ProviderUnavailable as exc:
@@ -155,7 +164,7 @@ def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
     with_fundamentals = True
     try:
         for done, row in enumerate(rows, start=1):
-            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals)
+            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals, pause=pause)
             scan_progress.report(done, len(rows), started_at)
             pause(PAUSE_SECONDS)
         refresh_earnings_dates(timezone.localdate())

@@ -84,6 +84,7 @@ describe('resolveInstrument', () => {
       uic: 211,
       assetType: 'Stock',
       exact: true,
+      currency: null,
     })
   })
 
@@ -94,6 +95,7 @@ describe('resolveInstrument', () => {
       uic: 211,
       assetType: 'Stock',
       exact: false,
+      currency: null,
     })
   })
 
@@ -109,7 +111,14 @@ describe('resolveInstrument', () => {
       uic: 204300,
       assetType: 'Stock',
       exact: true,
+      currency: null,
     })
+  })
+
+  it('carries the listing currency of the search match it picked', () => {
+    const results = [{ symbol: 'ASML', uic: 77, asset_type: 'Stock', currency: 'EUR' }]
+
+    expect(resolveInstrument({ symbol: 'ASML', results }).currency).toBe('EUR')
   })
 
   it('trusts a pinned instrument over search entirely, even a same-ticker collision', () => {

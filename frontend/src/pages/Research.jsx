@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
-import { chartHref, isEtf } from '../lib/research'
+import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
+import { chartHref } from '../lib/research'
 import { Card, PageHeader, TabButton, TabList } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
@@ -24,31 +25,32 @@ import { useChartData } from '../components/research/useChartData'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
-// `equityOnly` tabs are all Finnhub company-fundamentals underneath, which
-// Finnhub's free tier never returns for an ETF - so unlike a stock with
-// temporarily missing data, there's nothing to wait on. Marked here, once,
-// so the visible tab list and the hidden-tab reset below can't drift apart.
 const TABS = [
   ['overview', 'Overview'],
-  ['financials', 'Financials', { equityOnly: true }],
-  ['statistics', 'Statistics', { equityOnly: true }],
-  ['peers', 'Peers', { equityOnly: true }],
-  ['earnings', 'Earnings', { equityOnly: true }],
+  ['financials', 'Financials', 'company'],
+  ['statistics', 'Statistics', 'company'],
+  ['peers', 'Peers', 'company'],
+  ['earnings', 'Earnings', 'company'],
   ['funds', 'Funds'],
-  ['filings', 'Filings', { equityOnly: true }],
-  ['news', 'News'],
+  ['filings', 'Filings', 'company'],
+  ['news', 'News', 'ticker'],
   ['guide', 'Guide'],
 ]
 
 const TAB_ALIASES = { valuation: 'statistics' }
-const INSTRUMENT_GATED_TAB_KEYS = new Set(['financials', 'filings'])
+const TAB_NEEDS = Object.fromEntries(TABS.map(([key, , needs]) => [key, needs]))
+const TAB_KEYS = new Set(Object.keys(TAB_NEEDS))
 
-const TAB_KEYS = new Set(TABS.map(([key]) => key))
-const EQUITY_ONLY_TAB_KEYS = new Set(TABS.filter(([, , meta]) => meta?.equityOnly).map(([key]) => key))
+const REFUSALS = {
+  [COMPANY_DATA.foreign]:
+    'This is looked up by US ticker, which may name another company, so it is left out for a listing outside the US.',
+  [COMPANY_DATA.unverified]:
+    'Saxo could not confirm where this instrument is listed, so data looked up by US ticker is held back. Reload once Saxo answers.',
+}
 
 export default function Research() {
   const [params] = useSearchParams()
-  const { symbol, instrument, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
@@ -64,24 +66,39 @@ export default function Research() {
 
   const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
-  const instrumentIsEtf = isEtf(instrument)
-  const visibleTabs = instrumentIsEtf ? TABS.filter(([, , meta]) => !meta?.equityOnly) : TABS
+  const {
+    chart,
+    bars,
+    allBars,
+    rangeBars,
+    ind,
+    timeWindow,
+    earnings,
+    earningsMarkers,
+    note,
+    priceLines,
+    quote,
+    details,
+    companyData,
+    currency,
+  } = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
+    timeView: controls.timeView,
+    position,
+    resolving,
+  })
+  const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
+  const fundamentals = useFundamentals(companySymbol)
 
-  // Adjusted during render, React's own pattern for "reset state when a prop
-  // makes it invalid" - covers both a stale `?tab=` link and switching to an
-  // ETF mid-session (the watchlist rail, ⌘K) while an equity-only tab is open.
-  if (instrumentIsEtf && EQUITY_ONLY_TAB_KEYS.has(tab)) {
+  const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
+  const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
+  const gate = gateOf(tab)
+  if (gate === TAB_GATE.hidden) {
     setTab('overview')
   }
-
-  const { chart, bars, allBars, rangeBars, ind, timeWindow, earnings, earningsMarkers, note, priceLines, quote, details } =
-    useChartData({
-      symbol,
-      instrument,
-      range: controls.range,
-      timeView: controls.timeView,
-    })
-  const fundamentals = useFundamentals(symbol)
+  const shown = (key) => tab === key && gate === TAB_GATE.show
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -90,8 +107,6 @@ export default function Research() {
     details: details.data,
     position,
   })
-
-  const awaitingInstrument = !instrument && INSTRUMENT_GATED_TAB_KEYS.has(tab)
 
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
 
@@ -180,7 +195,7 @@ export default function Research() {
             </TabList>
 
             <div role="tabpanel" id={`research-panel-${tab}`} aria-labelledby={`research-tab-${tab}`}>
-              {tab === 'overview' ? (
+              {shown('overview') ? (
                 <OverviewTab
                   symbol={symbol}
                   position={position}
@@ -194,28 +209,33 @@ export default function Research() {
                   onSaveNote={(patch) => noteMutation.mutate(patch)}
                   onMarkReviewed={() => reviewMutation.mutate()}
                   reviewing={reviewMutation.isPending}
-                  isEtf={instrumentIsEtf}
+                  companyData={companyData}
                 />
               ) : null}
-              {awaitingInstrument ? (
+              {gate === TAB_GATE.pending ? (
                 <Card>
                   <p data-testid="tab-pending" className="text-[var(--fig-xs)] text-zinc-500">
-                    Available once the instrument is resolved.
+                    Looking up this instrument…
                   </p>
                 </Card>
               ) : null}
-              {tab === 'financials' && instrument ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {tab === 'statistics' ? <StatisticsTab fundamentals={fundamentals} /> : null}
-              {tab === 'peers' ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {tab === 'earnings' ? (
+              {gate === TAB_GATE.refused ? (
+                <Card>
+                  <p data-testid="tab-refused" className="text-[var(--fig-xs)] text-zinc-500">
+                    {REFUSALS[companyData]}
+                  </p>
+                </Card>
+              ) : null}
+              {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+              {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+              {shown('earnings') ? (
                 <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
               ) : null}
-              {tab === 'funds' ? (
-                <FundsTab symbol={symbol} currency={position?.currency ?? details.data?.currency} />
-              ) : null}
-              {tab === 'filings' && instrument ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-              {tab === 'news' ? <NewsTab key={symbol} symbol={symbol} /> : null}
-              {tab === 'guide' ? <GuideTab /> : null}
+              {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+              {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+              {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
+              {shown('guide') ? <GuideTab /> : null}
             </div>
           </div>
 

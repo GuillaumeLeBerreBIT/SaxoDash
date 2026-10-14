@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 
 import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
+import { COMPANY_DATA } from '../../lib/companyData'
 import { priceBasis } from '../../lib/pricing'
 import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
@@ -32,6 +33,39 @@ function EtfNote() {
       </p>
     </Card>
   )
+}
+
+function ForeignListingNote() {
+  return (
+    <Card>
+      <CardHeader title="Listed outside the US" subtitle="Company data covers US-listed shares" />
+      <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        Fundamentals, statements, earnings and SEC filings are looked up by ticker alone, and that ticker belongs
+        to a US-listed company that may not be this one. They are left out here. Range statistics and your
+        notes are below.
+      </p>
+    </Card>
+  )
+}
+
+function UnverifiedListingNote() {
+  return (
+    <Card>
+      <CardHeader title="Listing not confirmed" subtitle="Company data is held back" />
+      <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        Saxo could not confirm where this instrument is listed. Fundamentals and filings are looked up by US ticker,
+        so they are held back until it can. Range statistics and your notes are below.
+      </p>
+    </Card>
+  )
+}
+
+function CompanyReads({ companyData, fundamentals }) {
+  if (companyData === COMPANY_DATA.fund) return <EtfNote />
+  if (companyData === COMPANY_DATA.foreign) return <ForeignListingNote />
+  if (companyData === COMPANY_DATA.unverified) return <UnverifiedListingNote />
+  if (companyData === COMPANY_DATA.pending) return null
+  return <SnapshotSection fundamentals={fundamentals} />
 }
 
 function PositionCard({ position }) {
@@ -124,9 +158,9 @@ export default function OverviewTab({
   onSaveNote,
   onMarkReviewed,
   reviewing = false,
-  isEtf = false,
+  companyData = COMPANY_DATA.eligible,
 }) {
-  const company = !isEtf && fundamentals?.data?.available ? fundamentals.data : null
+  const company = companyData === COMPANY_DATA.eligible && fundamentals?.data?.available ? fundamentals.data : null
   const returns = useMemo(() => trailingReturns(allBars), [allBars])
   const hasReturns = returns.some((row) => row.pct != null)
 
@@ -144,10 +178,7 @@ export default function OverviewTab({
           </div>
         </Card>
       )}
-
-      {/* An ETF never gets Finnhub fundamentals - the gate's "unavailable
-          for this symbol" fallback would wrongly imply that's temporary. */}
-      {isEtf ? <EtfNote /> : <SnapshotSection fundamentals={fundamentals} />}
+      <CompanyReads companyData={companyData} fundamentals={fundamentals} />
       {company && (
         <div className="grid gap-4 lg:grid-cols-2">
           <OwnershipCard fundamentals={company} />

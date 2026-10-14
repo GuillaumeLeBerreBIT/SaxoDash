@@ -9,13 +9,13 @@ const FALLBACK_SYMBOL = 'NVDA'
 
 export function useResearchInstrument() {
   const [params, setParams] = useSearchParams()
-  const { data: positions = [] } = usePositions()
+  const { data: positions = [], isLoading: positionsLoading } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
   const position = positions.find((p) => p.ticker === symbol) ?? null
 
   // Only searched for when the portfolio cannot answer: a held instrument
   // already knows its own uic.
-  const { data: searchResults = [] } = useInstrumentSearch(
+  const { data: searchResults = [], isResolving: searching = false } = useInstrumentSearch(
     needsInstrumentSearch(symbol, positions) ? symbol : '',
   )
   // A search dropdown (⌘K, add-peer) may have already picked the exact row
@@ -25,10 +25,12 @@ export function useResearchInstrument() {
   const pinnedAssetType = params.get('assetType')
   const instrument = useMemo(() => {
     const pinned = pinnedUic ? { uic: pinnedUic, assetType: pinnedAssetType } : null
-    return resolveInstrument({ symbol, positions, results: searchResults, pinned })
-  }, [symbol, positions, searchResults, pinnedUic, pinnedAssetType])
+    const results = searching ? [] : searchResults
+    return resolveInstrument({ symbol, positions, results, pinned })
+  }, [symbol, positions, searchResults, searching, pinnedUic, pinnedAssetType])
 
   const resolved = Boolean(instrument)
+  const resolving = !resolved && (searching || Boolean(positionsLoading))
   useEffect(() => {
     if (resolved) pushRecentSymbol(symbol)
   }, [symbol, resolved])
@@ -45,5 +47,5 @@ export function useResearchInstrument() {
     setParams(nextParams, { replace: true })
   }
 
-  return { symbol, instrument, position, positions, selectSymbol }
+  return { symbol, instrument, resolving, position, positions, selectSymbol }
 }

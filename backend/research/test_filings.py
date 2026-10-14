@@ -133,7 +133,7 @@ class InsiderShapingTest(SimpleTestCase):
 
         self.assertEqual(one['shares'], -1000)
         self.assertAlmostEqual(one['price'], 10.0)
-        self.assertAlmostEqual(one['value'], 1000.0)
+        self.assertIsNone(one['value'])
 
     def test_holdings_is_the_smallest_share_for_a_net_decrease(self):
         [one] = filings.to_transactions([
@@ -218,6 +218,25 @@ class InsiderShapingTest(SimpleTestCase):
 
         self.assertEqual(len(filings.to_transactions(rows)), 12)
 
+    def test_a_group_that_nets_to_zero_is_dropped(self):
+        rows = [trade(code='J', change=100, price=0), trade(code='J', change=-100, price=0), trade(name='OTHER')]
+
+        self.assertEqual([row['name'] for row in filings.to_transactions(rows)], ['OTHER'])
+        self.assertEqual(filings.to_counts(rows), {'open_market': 1, 'other': 0})
+
+    def test_a_partly_priced_group_has_no_value_rather_than_a_guess(self):
+        [one] = filings.to_transactions([trade(change=-100, price=50.0), trade(change=-100, price=0)])
+
+        self.assertEqual(one['shares'], -200)
+        self.assertEqual(one['price'], 50.0)
+        self.assertIsNone(one['value'])
+
+    def test_a_fully_priced_group_is_valued_row_by_row(self):
+        [one] = filings.to_transactions([trade(change=-100, price=50.0), trade(change=-300, price=60.0)])
+
+        self.assertEqual(one['value'], 23000.0)
+        self.assertAlmostEqual(one['price'], 57.5)
+
     def test_carries_the_filing_date(self):
         [one] = filings.to_transactions([trade(filingDate='2026-09-12')])
 
@@ -243,8 +262,8 @@ class InsiderShapingTest(SimpleTestCase):
 
         self.assertEqual(summary['shares_sold'], 400)
         self.assertEqual(summary['shares_bought'], 60)
-        self.assertAlmostEqual(summary['value_sold'], 7000.0)
-        self.assertAlmostEqual(summary['value_bought'], 250.0)
+        self.assertNotIn('value_sold', summary)
+        self.assertNotIn('value_bought', summary)
 
     def test_summary_counts_distinct_insiders_among_buys_and_sells(self):
         summary = filings.to_summary([
@@ -268,8 +287,6 @@ class InsiderShapingTest(SimpleTestCase):
         self.assertEqual(summary['sells'], 0)
         self.assertEqual(summary['shares_bought'], 0)
         self.assertEqual(summary['shares_sold'], 0)
-        self.assertEqual(summary['value_bought'], 0)
-        self.assertEqual(summary['value_sold'], 0)
         self.assertEqual(summary['insiders'], 0)
 
     def test_summary_is_computed_before_the_cap(self):
@@ -349,7 +366,7 @@ class FilingsEntryPointTest(TestCase):
         self.assertEqual(mock_get.call_count, len(filings.FORM_LIMITS))
 
     @patch('research.finnhub.get_filings')
-    def test_a_provider_failure_on_any_form_propagates_and_caches_nothing(self, mock_get):
+    def test_a_failed_form_leaves_the_others_as_a_partial_answer(self, mock_get):
         def answer(symbol, form):
             if form == '10-Q':
                 raise finnhub.FinnhubAPIError('boom')
@@ -357,6 +374,27 @@ class FilingsEntryPointTest(TestCase):
 
         mock_get.side_effect = answer
 
+        with patch('research.filings.cache') as fake_cache:
+            fake_cache.get.return_value = None
+            result = filings.filings('JPM')
+
+        self.assertTrue(result['available'])
+        self.assertTrue(result['partial'])
+        self.assertEqual(result['missing'], ['10-Q'])
+        self.assertEqual(sorted(row['form'] for row in result['filings']), ['10-K', '8-K'])
+        self.assertEqual(fake_cache.set.call_args.args[2], filings.PARTIAL_TTL)
+
+    @patch('research.finnhub.get_filings', side_effect=lambda symbol, form: [filing(form)])
+    def test_a_complete_answer_is_not_partial_and_keeps_the_long_ttl(self, mock_get):
+        with patch('research.filings.cache') as fake_cache:
+            fake_cache.get.return_value = None
+            result = filings.filings('JPM')
+
+        self.assertFalse(result['partial'])
+        self.assertEqual(fake_cache.set.call_args.args[2], filings.FILINGS_TTL)
+
+    @patch('research.finnhub.get_filings', side_effect=finnhub.FinnhubAPIError('boom'))
+    def test_every_form_failing_propagates_and_caches_nothing(self, mock_get):
         with self.assertRaises(finnhub.FinnhubAPIError):
             filings.filings('JPM')
         calls_after_failure = mock_get.call_count
@@ -367,7 +405,7 @@ class FilingsEntryPointTest(TestCase):
 
     @patch('research.finnhub.get_filings', return_value=[])
     def test_all_forms_empty_answers_an_empty_list_and_is_cached(self, mock_get):
-        self.assertEqual(filings.filings('NEW'), {'available': True, 'filings': []})
+        self.assertEqual(filings.filings('NEW'), {'available': True, 'filings': [], 'partial': False, 'missing': []})
         filings.filings('NEW')
 
         self.assertEqual(mock_get.call_count, len(filings.FORM_LIMITS))
