@@ -94,6 +94,33 @@ describe('ResearchChart', () => {
     stubQueries()
   })
 
+  it('gives the sidebar and the watchlist their stored sizes', () => {
+    localStorage.setItem('saxodash:chart-rail-width', '420')
+    localStorage.setItem('saxodash:chart-watchlist-height', '500')
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    expect(container.firstChild.style.getPropertyValue('--rail-width')).toBe('420px')
+    expect(screen.getByTestId('chart-watchlist')).toHaveStyle({ height: '500px' })
+  })
+
+  it('resizes the sidebar from its handle and remembers the width', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    fireEvent.keyDown(screen.getByRole('separator', { name: 'Sidebar width' }), { key: 'ArrowLeft' })
+
+    expect(container.firstChild.style.getPropertyValue('--rail-width')).toBe('316px')
+    expect(localStorage.getItem('saxodash:chart-rail-width')).toBe('316')
+  })
+
+  it('resizes the watchlist from its handle and remembers the height', () => {
+    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+
+    fireEvent.keyDown(screen.getByRole('separator', { name: 'Watchlist height' }), { key: 'ArrowDown' })
+
+    expect(screen.getByTestId('chart-watchlist')).toHaveStyle({ height: '356px' })
+    expect(localStorage.getItem('saxodash:chart-watchlist-height')).toBe('356')
+  })
+
   it('shows the symbol panel under the watchlist', () => {
     renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
 

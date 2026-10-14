@@ -174,17 +174,17 @@ def get_financials_reported(symbol, freq='annual'):
     return _get('/stock/financials-reported', symbol=symbol, freq=freq)
 
 
-REPORTED_ANNUAL_TTL = 86400
+ANNUAL_STATEMENTS_TTL = 86400
 
 
-def reported_annual(symbol):
-    key = f'research:reported-annual:v1:{symbol}'
-    reported = cache.get(key)
-    if reported is None:
-        reported = get_financials_reported(symbol, 'annual')
-        if (reported or {}).get('data'):
-            cache.set(key, reported, REPORTED_ANNUAL_TTL)
-    return reported
+def annual_statements(symbol):
+    key = f'research:annual-statements:v1:{symbol}'
+    rows = cache.get(key)
+    if rows is None:
+        rows = to_annual(get_financials_reported(symbol, 'annual'))
+        if rows:
+            cache.set(key, rows, ANNUAL_STATEMENTS_TTL)
+    return rows
 
 
 def get_filings(symbol, form):
@@ -398,9 +398,9 @@ def _annual_eps(financials):
     return sorted(usable, key=lambda row: row['period'])[-ANNUAL_EPS_POINTS:]
 
 
-def _annual_results(reported):
+def _annual_results(annual_rows):
     results = []
-    for row in to_annual(reported):
+    for row in annual_rows:
         revenue = row['income'].get('revenue')
         if revenue is None:
             continue
@@ -411,7 +411,7 @@ def _annual_results(reported):
     return results[-ANNUAL_RESULTS_YEARS:]
 
 
-def to_fundamentals(profile, financials, recommendations, earnings, reported=None):
+def to_fundamentals(profile, financials, recommendations, earnings, annual_rows=None):
     pe = _metric(financials, 'peNormalizedAnnual')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
 
@@ -485,8 +485,8 @@ def to_fundamentals(profile, financials, recommendations, earnings, reported=Non
     annual_eps = _annual_eps(financials)
     if annual_eps:
         shaped['annual_eps'] = annual_eps
-    if reported:
-        annual_results = _annual_results(reported)
+    if annual_rows:
+        annual_results = _annual_results(annual_rows)
         if annual_results:
             shaped['annual_results'] = annual_results
     return shaped
@@ -505,17 +505,17 @@ def fundamentals(symbol):
             # An optional enrichment, not core to fundamentals: a symbol this
             # endpoint doesn't cover (rate limit, no US-GAAP filings) degrades
             # to no cash-flow trend rather than failing the whole payload.
-            reported = reported_annual(symbol)
+            annual_rows = annual_statements(symbol)
         except FinnhubBusy:
             raise
         except ProviderUnavailable:
-            reported = None
+            annual_rows = None
         return to_fundamentals(
             profile,
             get_basic_financials(symbol),
             get_recommendation_trends(symbol),
             get_earnings_history(symbol),
-            reported,
+            annual_rows,
         )
 
     try:

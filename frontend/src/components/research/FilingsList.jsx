@@ -43,7 +43,7 @@ export default function FilingsList({ filings }) {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Open ${filing.form} filed ${fmtDate(filing.filed)} on SEC.gov`}
+                  aria-label={`Open on SEC.gov: ${filing.form} filed ${fmtDate(filing.filed)} (opens in a new tab)`}
                   className="ml-auto text-sky-400 hover:text-sky-300 whitespace-nowrap"
                 >
                   Open on SEC.gov

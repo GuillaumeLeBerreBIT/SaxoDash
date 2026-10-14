@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty } from '../../lib/format'
+import { fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty, fmtShares } from '../../lib/format'
 import { COMPANY_DATA } from '../../lib/companyData'
 import { priceBasis } from '../../lib/pricing'
 import { trailingReturns } from '../../lib/performance'
@@ -125,7 +125,7 @@ function RangeStatsCard({ bars, range }) {
         <Fact label={`${range} high`} value={fmtNum(stats.high, 2)} />
         <Fact label={`${range} low`} value={fmtNum(stats.low, 2)} />
         <Fact label="Last close" value={fmtNum(stats.last, 2)} />
-        <Fact label="Avg volume" value={`${fmtNum(stats.avgVolume / 1e6, 1)}M`} />
+        <Fact label="Avg volume" value={fmtShares(stats.avgVolume)} />
       </div>
 
       <div className="mt-4 pt-3 border-t border-white/[0.06]">

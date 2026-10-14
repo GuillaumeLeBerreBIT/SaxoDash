@@ -15,7 +15,7 @@ describe('RatioHistoryTable', () => {
     render(<RatioHistoryTable history={history} current={current} />)
 
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
-    expect(headers).toEqual(['Ratio', '2023', '2024', '2025', 'Current'])
+    expect(headers).toEqual(['Ratio', 'FY 2023', 'FY 2024', 'FY 2025', 'Current'])
   })
 
   it('keeps column headers distinct when a fiscal year end moved within a calendar year', () => {
@@ -28,7 +28,7 @@ describe('RatioHistoryTable', () => {
 
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent)
     expect(new Set(headers).size).toBe(5)
-    expect(headers[1]).toBe('2023')
+    expect(headers[1]).toBe('FY 2023')
   })
 
   it('prints each ratio across the years and its current figure', () => {

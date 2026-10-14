@@ -29,6 +29,19 @@ describe('InsiderTransactions', () => {
     expect(container.querySelector('.overflow-x-auto')).toContainElement(screen.getByRole('table'))
   })
 
+  it('prints every trade value in one compact dollar format', () => {
+    render(<InsiderTransactions transactions={[trade({ value: 3_417_500 }), trade({ name: 'Other', value: 950 })]} />)
+
+    expect(screen.getByText('$3.42M')).toBeInTheDocument()
+    expect(screen.getByText('$950')).toBeInTheDocument()
+  })
+
+  it('names the table for assistive technology', () => {
+    render(<InsiderTransactions transactions={[trade()]} />)
+
+    expect(screen.getByRole('table', { name: 'Insider transactions' })).toBeInTheDocument()
+  })
+
   it('formats a trade row', () => {
     render(<InsiderTransactions transactions={[trade()]} />)
 
@@ -38,7 +51,7 @@ describe('InsiderTransactions', () => {
     expect(within(row).getByText('Sell')).toBeInTheDocument()
     expect(within(row).getByText('-1,500')).toHaveClass('text-red-400')
     expect(within(row).getByText('US$120.50')).toBeInTheDocument()
-    expect(within(row).getByText('US$180,750')).toBeInTheDocument()
+    expect(within(row).getByText('$180.75K')).toBeInTheDocument()
     expect(within(row).getByText('40,000')).toBeInTheDocument()
   })
 

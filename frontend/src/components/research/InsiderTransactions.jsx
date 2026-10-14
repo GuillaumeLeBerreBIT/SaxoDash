@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { fmtAxisDollars } from '../../lib/axisFormat'
+import { fmtStatement } from '../../lib/statements'
 import { UNKNOWN, fmtDate, fmtMoney, fmtNum } from '../../lib/format'
 import { filterTransactions, insiderName, transactionLabel } from '../../lib/insiders'
 import { TBtn } from '../ui'
@@ -11,9 +11,9 @@ const SCOPES = [
   ['all', 'All'],
 ]
 
+const fmtTradeValue = (value) => (value == null ? UNKNOWN : `$${fmtStatement(value)}`)
 const signedShares = (shares) => `${shares > 0 ? '+' : ''}${fmtNum(shares)}`
 const shareTone = (shares) => (shares > 0 ? 'text-emerald-400' : shares < 0 ? 'text-red-400' : 'text-zinc-300')
-const fmtValue = (value) => (value == null ? UNKNOWN : value >= 1e6 ? fmtAxisDollars(value) : fmtMoney(value, 'USD', { decimals: 0 }))
 
 const HEADERS = [
   ['Date', 'left'],
@@ -48,7 +48,7 @@ export default function InsiderTransactions({ transactions, counts }) {
       ) : (
         <>
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full border-collapse text-[var(--fig-xs)]">
+            <table aria-label="Insider transactions" className="w-full border-collapse text-[var(--fig-xs)]">
               <thead>
                 <tr className="text-zinc-500">
                   {HEADERS.map(([label, align]) => (
@@ -68,7 +68,7 @@ export default function InsiderTransactions({ transactions, counts }) {
                     <td className="py-2 px-2 text-right num font-mono text-zinc-300">
                       {row.price == null ? UNKNOWN : fmtMoney(row.price, 'USD')}
                     </td>
-                    <td className="py-2 px-2 text-right num font-mono text-zinc-300">{fmtValue(row.value)}</td>
+                    <td className="py-2 px-2 text-right num font-mono text-zinc-300">{fmtTradeValue(row.value)}</td>
                     <td className="py-2 px-2 text-right num font-mono text-zinc-400">{fmtNum(row.holdings)}</td>
                   </tr>
                 ))}

@@ -11,7 +11,7 @@ export default function TechnicalsTable({ votes }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[var(--fig-2xs)]">
+      <table aria-label="Technical indicators" className="w-full border-collapse text-[var(--fig-2xs)]">
         <thead>
           <tr className="text-zinc-500">
             <th scope="col" className="text-left font-medium py-1.5 pr-2 whitespace-nowrap">Indicator</th>

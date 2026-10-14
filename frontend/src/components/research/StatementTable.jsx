@@ -9,7 +9,7 @@ export default function StatementTable({ statement, periods, allPeriods }) {
 
   return (
     <div ref={scroller} className="overflow-x-auto">
-      <table className="w-full border-collapse text-[var(--fig-xs)]">
+      <table aria-label={statement.label} className="w-full border-collapse text-[var(--fig-xs)]">
         <thead>
           <tr className="text-zinc-500">
             <th scope="col" className="sticky left-0 bg-zinc-900 text-left font-medium py-2 pr-4 whitespace-nowrap">
