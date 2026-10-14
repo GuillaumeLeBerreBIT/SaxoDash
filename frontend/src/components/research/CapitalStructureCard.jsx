@@ -1,5 +1,5 @@
 import { fmtCompact } from '../../lib/format'
-import { Card, CardHeader } from '../ui'
+import { Card, CardHeader, InfoTip } from '../ui'
 
 export default function CapitalStructureCard({ fundamentals }) {
   const { market_cap: cap, enterprise_value: enterprise } = fundamentals
@@ -14,7 +14,16 @@ export default function CapitalStructureCard({ fundamentals }) {
 
   return (
     <Card>
-      <CardHeader title="Capital structure" subtitle="Market cap plus debt, less cash, is enterprise value" />
+      <CardHeader
+        title="Capital structure"
+        subtitle="Market cap plus debt, less cash, is enterprise value"
+        right={
+          <InfoTip>
+            Net debt here is enterprise value minus market cap. Finnhub reports the two figures separately and they
+            can be a day or two apart, so treat it as approximate.
+          </InfoTip>
+        }
+      />
       <dl className="mt-4 grid grid-cols-3 gap-4">
         {rows.map(([label, value]) => (
           <div key={label}>

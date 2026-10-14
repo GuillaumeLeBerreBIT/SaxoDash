@@ -40,12 +40,12 @@ describe('ratiosWithHistory', () => {
 
 describe('periodLabels', () => {
   it('uses the year when each year occurs once', () => {
-    expect(periodLabels([{ period: '2023-09-30' }, { period: '2024-09-28' }])).toEqual(['2023', '2024'])
+    expect(periodLabels([{ period: '2023-09-30' }, { period: '2024-09-28' }])).toEqual(['FY 2023', 'FY 2024'])
   })
 
   it('uses month and year for every point whose year repeats', () => {
     const history = [{ period: '2023-12-31' }, { period: '2024-01-31' }, { period: '2024-12-31' }]
-    expect(periodLabels(history)).toEqual(['2023', fmtMonthYear('2024-01-31'), fmtMonthYear('2024-12-31')])
+    expect(periodLabels(history)).toEqual(['FY 2023', fmtMonthYear('2024-01-31'), fmtMonthYear('2024-12-31')])
   })
 
   it('is empty for a missing or empty history', () => {

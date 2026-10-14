@@ -62,6 +62,6 @@ export function periodLabels(history) {
   })
   return points.map((point) => {
     const year = point.period.slice(0, 4)
-    return counts.get(year) > 1 ? fmtMonthYear(point.period) : year
+    return counts.get(year) > 1 ? fmtMonthYear(point.period) : `FY ${year}`
   })
 }
