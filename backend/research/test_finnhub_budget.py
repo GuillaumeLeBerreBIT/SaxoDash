@@ -1,3 +1,4 @@
+import threading
 from unittest.mock import Mock, patch
 
 from django.core.cache import cache
@@ -172,3 +173,29 @@ class ReportedAnnualTest(TestCase):
             finnhub.annual_statements('AAPL')
 
         self.assertEqual(mock_reported.call_count, 2)
+
+
+@override_settings(CACHES=LOCMEM, FINNHUB_API_KEY='test-key')
+class SimultaneousAnnualFetchTest(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def test_two_requests_at_once_fetch_the_annual_filing_only_once(self):
+        calls = []
+
+        def slow_filing(symbol, freq='annual'):
+            calls.append(symbol)
+            threading.Event().wait(0.3)
+            return FILING
+
+        results = []
+        with patch('research.finnhub.get_financials_reported', side_effect=slow_filing):
+            threads = [threading.Thread(target=lambda: results.append(finnhub.annual_statements('AAPL'))) for _ in range(2)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], results[1])

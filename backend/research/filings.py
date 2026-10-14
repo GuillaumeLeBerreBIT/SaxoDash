@@ -1,9 +1,8 @@
 import logging
 from datetime import date
 
-from django.core.cache import cache
-
 from . import finnhub
+from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ FILINGS_TTL = 43200
 INSIDERS_TTL = 43200
 PARTIAL_TTL = 600
 OPEN_MARKET = {'P': 'bought', 'S': 'sold'}
-SHAPING_ERRORS = (KeyError, TypeError, IndexError, ValueError, AttributeError)
 
 
 def _today():
@@ -195,23 +193,9 @@ def _produce_insiders(symbol):
     return {**data, 'partial': False}, INSIDERS_TTL
 
 
-def _cached(key, produce, symbol):
-    try:
-        data = cache.get(key)
-        if data is None:
-            data, timeout = produce(symbol)
-            cache.set(key, data, timeout)
-    except ProviderUnavailable:
-        raise
-    except SHAPING_ERRORS as exc:
-        raise finnhub.FinnhubUnexpected() from exc
-
-    return {'available': True, **data}
-
-
 def filings(symbol):
-    return _cached(_filings_key(symbol), _produce_filings, symbol)
+    return {'available': True, **cached(_filings_key(symbol), lambda: _produce_filings(symbol), unexpected=finnhub.FinnhubUnexpected)}
 
 
 def insiders(symbol):
-    return _cached(_insiders_key(symbol), _produce_insiders, symbol)
+    return {'available': True, **cached(_insiders_key(symbol), lambda: _produce_insiders(symbol), unexpected=finnhub.FinnhubUnexpected)}

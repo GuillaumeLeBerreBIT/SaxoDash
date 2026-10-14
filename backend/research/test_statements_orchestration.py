@@ -108,7 +108,7 @@ class StatementsCacheTtlTest(TestCase):
 
     def timeout_stored_for(self, answer):
         with patch('research.finnhub.get_financials_reported', side_effect=answer):
-            with patch('research.statements.cache', wraps=cache) as spy:
+            with patch('research.provider_cache.cache', wraps=cache) as spy:
                 statements.statements('AAPL')
         return spy.set.call_args.args[2]
 

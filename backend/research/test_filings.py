@@ -374,8 +374,7 @@ class FilingsEntryPointTest(TestCase):
 
         mock_get.side_effect = answer
 
-        with patch('research.filings.cache') as fake_cache:
-            fake_cache.get.return_value = None
+        with patch('research.provider_cache.cache', wraps=cache) as fake_cache:
             result = filings.filings('JPM')
 
         self.assertTrue(result['available'])
@@ -386,8 +385,7 @@ class FilingsEntryPointTest(TestCase):
 
     @patch('research.finnhub.get_filings', side_effect=lambda symbol, form: [filing(form)])
     def test_a_complete_answer_is_not_partial_and_keeps_the_long_ttl(self, mock_get):
-        with patch('research.filings.cache') as fake_cache:
-            fake_cache.get.return_value = None
+        with patch('research.provider_cache.cache', wraps=cache) as fake_cache:
             result = filings.filings('JPM')
 
         self.assertFalse(result['partial'])
@@ -463,8 +461,7 @@ class InsidersEntryPointTest(TestCase):
     @patch('research.finnhub.get_insider_sentiment', side_effect=finnhub.FinnhubAPIError('boom'))
     @patch('research.finnhub.get_insider_transactions', return_value={'data': [trade()]})
     def test_a_partial_answer_is_cached_for_the_short_ttl(self, mock_tx, mock_sent):
-        with patch('research.filings.cache') as fake_cache:
-            fake_cache.get.return_value = None
+        with patch('research.provider_cache.cache', wraps=cache) as fake_cache:
             filings.insiders('NVDA')
 
         self.assertEqual(fake_cache.set.call_args.args[2], filings.PARTIAL_TTL)
@@ -472,8 +469,7 @@ class InsidersEntryPointTest(TestCase):
     @patch('research.finnhub.get_insider_sentiment', return_value={'data': []})
     @patch('research.finnhub.get_insider_transactions', return_value={'data': [trade()]})
     def test_a_full_answer_is_cached_for_the_long_ttl(self, mock_tx, mock_sent):
-        with patch('research.filings.cache') as fake_cache:
-            fake_cache.get.return_value = None
+        with patch('research.provider_cache.cache', wraps=cache) as fake_cache:
             filings.insiders('NVDA')
 
         self.assertEqual(fake_cache.set.call_args.args[2], filings.INSIDERS_TTL)

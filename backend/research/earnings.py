@@ -8,12 +8,12 @@ per-symbol history split. It reads `portfolio.models.Position` and
 import logging
 from datetime import date, timedelta
 
-from django.core.cache import cache
 
 from portfolio.models import Position
 
 from . import finnhub
 from .models import WatchlistItem
+from .provider_cache import cached
 from .providers import ProviderUnavailable
 
 logger = logging.getLogger(__name__)
@@ -179,7 +179,7 @@ def window_earnings(scope='all', week_offset=0):
     ttl = CURRENT_WEEK_TTL if week_offset == 0 else finnhub.EARNINGS_CAL_TTL
 
     try:
-        events = cache.get_or_set(key, lambda: _market_week(start, end), ttl)
+        events = cached(key, lambda: (_market_week(start, end), ttl))
     except ProviderUnavailable as exc:
         logger.warning('market earnings calendar unavailable for week of %s: %s', start, exc)
         return {'events': [], 'window': window, 'ok': False}
@@ -274,4 +274,4 @@ def symbol_earnings(symbol):
             'score': _score(history),
         }
 
-    return {'available': True, **cache.get_or_set(key, produce, finnhub.EARNINGS_TTL)}
+    return {'available': True, **cached(key, lambda: (produce(), finnhub.EARNINGS_TTL))}

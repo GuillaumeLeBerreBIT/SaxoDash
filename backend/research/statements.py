@@ -1,6 +1,5 @@
-from django.core.cache import cache
-
 from . import finnhub
+from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual, to_quarterly
 
@@ -28,21 +27,11 @@ def _produce(symbol):
         raise NoStatements(symbol)
     try:
         quarterly = to_quarterly(finnhub.get_financials_reported(symbol, 'quarterly'), annual)
-    except (ProviderUnavailable, KeyError, TypeError, IndexError, ValueError, AttributeError):
+    except (ProviderUnavailable, *SHAPING_ERRORS):
         return {'annual': annual, 'quarterly': [], 'partial': True}, PARTIAL_TTL
     return {'annual': annual, 'quarterly': quarterly, 'partial': False}, STATEMENTS_TTL
 
 
 def statements(symbol):
-    key = _cache_key(symbol)
-    try:
-        data = cache.get(key)
-        if data is None:
-            data, timeout = _produce(symbol)
-            cache.set(key, data, timeout)
-    except ProviderUnavailable:
-        raise
-    except (KeyError, TypeError, IndexError, ValueError, AttributeError) as exc:
-        raise finnhub.FinnhubUnexpected() from exc
-
+    data = cached(_cache_key(symbol), lambda: _produce(symbol), unexpected=finnhub.FinnhubUnexpected)
     return {'available': True, **data}
