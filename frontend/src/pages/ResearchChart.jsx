@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions'
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
+import { RAIL_WIDTH, WATCHLIST_HEIGHT } from '../lib/railLayout'
 import { chartHref, researchHref } from '../lib/research'
 import CommandPalette from '../components/CommandPalette'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
@@ -12,6 +13,7 @@ import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
 import { LinkedHoverProvider } from '../components/research/LinkedHover'
 import SymbolBar from '../components/research/SymbolBar'
+import ResizeHandle from '../components/research/ResizeHandle'
 import SymbolPanel from '../components/research/SymbolPanel'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { RangeButtons } from '../components/research/chartHeader'
@@ -20,6 +22,7 @@ import { useChartData } from '../components/research/useChartData'
 import { useChartWorkspace } from '../components/research/useChartWorkspace'
 import { usePaneViews } from '../components/research/usePaneViews'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
+import { usePersistedSize } from '../components/research/usePersistedSize'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, assetType: result.asset_type })
@@ -75,13 +78,18 @@ export default function ResearchChart() {
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const palette = useCommandPalette()
+  const [railWidth, setRailWidth] = usePersistedSize(RAIL_WIDTH)
+  const [watchlistHeight, setWatchlistHeight] = usePersistedSize(WATCHLIST_HEIGHT)
 
   const split = layout.panes > 1
   const activeSlot = workspace.slots[workspace.active]
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
 
   return (
-    <div className="h-dvh overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_300px]">
+    <div
+      className="relative h-dvh overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]"
+      style={{ '--rail-width': `${railWidth}px` }}
+    >
       <h1 className="sr-only">Chart workspace</h1>
       <ChartToolRail
         controls={rangeControls}
@@ -143,11 +151,30 @@ export default function ResearchChart() {
         </LinkedHoverProvider>
       </main>
 
-      <aside className="hidden lg:flex flex-col gap-2 p-2 pl-0 min-h-0 overflow-y-auto">
+      <ResizeHandle
+        label="Sidebar width"
+        orientation="vertical"
+        value={railWidth}
+        limits={RAIL_WIDTH}
+        onResize={setRailWidth}
+        invert
+        className="hidden lg:block absolute top-0 bottom-0 z-10 w-2 py-2"
+        style={{ right: `calc(var(--rail-width) - 0.25rem)` }}
+      />
+
+      <aside className="hidden lg:flex flex-col gap-1 p-2 pl-0 min-h-0 overflow-y-auto">
         <InstrumentSearchBar hrefFor={chartResultHref} />
-        <div className="h-[340px] shrink-0">
+        <div className="shrink-0 mt-1" style={{ height: watchlistHeight }} data-testid="chart-watchlist">
           <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
+        <ResizeHandle
+          label="Watchlist height"
+          orientation="horizontal"
+          value={watchlistHeight}
+          limits={WATCHLIST_HEIGHT}
+          onResize={setWatchlistHeight}
+          className="h-2 shrink-0 flex"
+        />
         <SymbolPanel
           symbol={symbol}
           companyData={companyData}
