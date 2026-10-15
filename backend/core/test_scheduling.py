@@ -116,3 +116,9 @@ class SyncPeriodicTasksTest(TestCase):
             (task.crontab.day_of_week, task.crontab.month_of_year),
             ('1', '1,3,4,6,7,9,10,12'),
         )
+
+    def test_house_trades_sync_daily_after_the_washington_rebuild(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Sync House trades')
+        self.assertEqual(task.task, 'congress.tasks.sync_house')
+        self.assertEqual((task.crontab.minute, task.crontab.hour), ('0', '14'))
