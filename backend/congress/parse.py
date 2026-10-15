@@ -21,6 +21,7 @@ _OWNER = re.compile(r'^(SP|JT|DC)\s+')
 _TYPE = re.compile(r'\s*\[([A-Z]{2})\]')
 _TICKER = re.compile(r'\(([A-Z][A-Z0-9.]{0,9})\)\s*\[')
 _DOLLARS = re.compile(r'\$[\d,]+')
+_PUT = re.compile(r'\bput\b')
 _KINDS = {'P': 'purchase', 'S': 'sale', 'S (partial)': 'partial_sale', 'E': 'exchange'}
 _PRICEABLE_TYPES = {'ST', 'OP'}
 
@@ -61,9 +62,26 @@ def _body(text):
     return _PAGE_BREAK.sub('', body + '\n')
 
 
+def _is_continuation(line, following):
+    if _OWNER.match(line) or _TYPE.search(line) or _CORE.search(line):
+        return False
+    rest = []
+    closed = False
+    for later in following:
+        if _STATUS.match(later):
+            closed = True
+            break
+        rest.append(later.strip())
+    if not closed:
+        return True
+    flat = ' '.join(rest)
+    return bool(_TYPE.search(flat) and _CORE.search(flat))
+
+
 def _records(body):
     records, current, continuing = [], [], False
-    for line in body.splitlines():
+    lines = body.splitlines()
+    for index, line in enumerate(lines):
         status = _STATUS.match(line)
         if status:
             records.append({'lines': current, 'status': status.group(1), 'notes': []})
@@ -71,7 +89,7 @@ def _records(body):
             continue
         if records and not current:
             label = _LABEL.match(line)
-            if label or continuing:
+            if label or (continuing and _is_continuation(line, lines[index + 1:])):
                 note = label.group('text') if label else line
                 records[-1]['notes'].append(note)
                 is_description = (label and label.group('key') == 'D') or (not label and continuing)
@@ -111,7 +129,7 @@ def _trade(record):
     description = ' '.join(record['notes']).lower()
     option = ''
     if asset_type == 'OP':
-        option = 'put' if 'put' in description else 'call'
+        option = 'put' if _PUT.search(description) else 'call'
     return ParsedTrade(
         owner=owner,
         asset=asset,
@@ -132,7 +150,10 @@ def parse_report(text):
     records, leftover = _records(_body(text))
     parsed = ParsedReport(amended=any(record['status'] == 'Amended' for record in records))
     for record in records:
-        trade = _trade(record)
+        try:
+            trade = _trade(record)
+        except ValueError:
+            trade = None
         if trade is None:
             parsed.unparsed_rows += 1
         else:

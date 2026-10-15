@@ -90,3 +90,62 @@ class AmendedReportTest(SimpleTestCase):
     def test_an_amended_status_line_marks_the_report(self):
         text = pdf_text((TESTDATA / '20035553.pdf').read_bytes()).replace(': New', ': Amended')
         self.assertTrue(parse_report(text).amended)
+
+
+HEADER = 'Name: Hon. Test\n$200?\n'
+FOOTER = '* For the complete list of asset type abbreviations\n'
+
+
+def inline(*rows):
+    return HEADER + ''.join(rows) + FOOTER
+
+
+OPTION_ROW = (
+    'Alphabet Inc. (GOOGL) [OP] P 01/14/2025 01/14/2025 $1,001 - $15,000\n'
+    'F S : New\n'
+    'D          : Bought shares on the open market\n'
+)
+
+
+class DescriptionWithoutFinalStopTest(SimpleTestCase):
+    def test_a_self_owned_row_after_it_still_parses(self):
+        tesla = 'Tesla, Inc. (TSLA) [ST]\nP 01/15/2025 01/15/2025 $1,001 - $15,000\nF S : New\n'
+        parsed = parse_report(inline(OPTION_ROW, tesla))
+        self.assertEqual(parsed.unparsed_rows, 0)
+        self.assertEqual([row.ticker for row in parsed.rows], ['GOOGL', 'TSLA'])
+        self.assertEqual((parsed.rows[0].option, parsed.rows[0].exercise), ('call', False))
+
+    def test_an_owner_prefixed_row_after_it_still_parses(self):
+        tesla = 'SP Tesla, Inc. (TSLA) [ST] P 01/15/2025 01/15/2025 $1,001 - $15,000\nF S : New\n'
+        parsed = parse_report(inline(OPTION_ROW, tesla))
+        self.assertEqual(parsed.unparsed_rows, 0)
+        self.assertEqual([(row.owner, row.ticker) for row in parsed.rows], [('self', 'GOOGL'), ('SP', 'TSLA')])
+
+    def test_a_genuine_continuation_is_attached_to_its_row(self):
+        row = (
+            'Alphabet Inc. (GOOGL) [OP] P 01/14/2025 01/14/2025 $1,001 - $15,000\n'
+            'F S : New\n'
+            'D          : Exercised put options with an expiration date\n'
+            'of 12/20/24.\n'
+        )
+        parsed = parse_report(inline(row))
+        self.assertEqual(parsed.unparsed_rows, 0)
+        self.assertTrue(parsed.rows[0].exercise)
+        self.assertEqual(parsed.rows[0].option, 'put')
+
+
+class RowHardeningTest(SimpleTestCase):
+    def test_put_is_matched_as_a_word(self):
+        row = (
+            'Alphabet Inc. (GOOGL) [OP] P 01/14/2025 01/14/2025 $1,001 - $15,000\n'
+            'F S : New\n'
+            'D          : Purchased on a computer input.\n'
+        )
+        self.assertEqual(parse_report(inline(row)).rows[0].option, 'call')
+
+    def test_an_impossible_date_costs_one_row_not_the_report(self):
+        bad = 'Alphabet Inc. (GOOGL) [ST] P 02/30/2025 02/30/2025 $1,001 - $15,000\nF S : New\n'
+        good = 'Tesla, Inc. (TSLA) [ST] P 01/15/2025 01/15/2025 $1,001 - $15,000\nF S : New\n'
+        parsed = parse_report(inline(bad, good))
+        self.assertEqual(parsed.unparsed_rows, 1)
+        self.assertEqual([row.ticker for row in parsed.rows], ['TSLA'])
