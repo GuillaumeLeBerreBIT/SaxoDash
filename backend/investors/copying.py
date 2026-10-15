@@ -139,7 +139,7 @@ def measure(periods, prices, benchmark):
     }
 
 
-def _series(tickers):
+def price_series(tickers):
     stored = PriceHistory.objects.filter(ticker__in=tickers, status=PriceHistory.OK).values_list('ticker', 'closes')
     return {ticker: Series.from_rows(closes) for ticker, closes in stored}
 
@@ -148,7 +148,7 @@ def _series(tickers):
 def rebuild(investor):
     found = periods(investor)
     wanted = {ticker for period in found for ticker, _ in period.holdings if ticker}
-    prices = _series(wanted | {BENCHMARK_TICKER})
+    prices = price_series(wanted | {BENCHMARK_TICKER})
     measured = measure(found, prices, prices.get(BENCHMARK_TICKER) or Series([], []))
     if measured is None:
         CopyPerformance.objects.filter(investor=investor).delete()
@@ -161,7 +161,7 @@ def rebuild_all():
     return sum(rebuild(investor) for investor in Investor.objects.all())
 
 
-def _edge(ours, market):
+def edge(ours, market):
     return None if ours is None or market is None else round(ours - market, 2)
 
 
@@ -177,10 +177,10 @@ def payload(investor):
         'until': stored.until.isoformat(),
         'clone_return_pct': stored.clone_return_pct,
         'benchmark_return_pct': stored.benchmark_return_pct,
-        'excess_return_pct': _edge(stored.clone_return_pct, stored.benchmark_return_pct),
+        'excess_return_pct': edge(stored.clone_return_pct, stored.benchmark_return_pct),
         'clone_cagr_pct': stored.clone_cagr_pct,
         'benchmark_cagr_pct': stored.benchmark_cagr_pct,
-        'excess_cagr_pct': _edge(stored.clone_cagr_pct, stored.benchmark_cagr_pct),
+        'excess_cagr_pct': edge(stored.clone_cagr_pct, stored.benchmark_cagr_pct),
         'coverage_pct': stored.coverage_pct,
         'periods': stored.periods,
         'skipped_periods': stored.skipped_periods,
@@ -193,4 +193,4 @@ def annualised_edges(investor_ids):
     rows = CopyPerformance.objects.filter(investor_id__in=investor_ids).values_list(
         'investor_id', 'clone_cagr_pct', 'benchmark_cagr_pct',
     )
-    return {investor_id: _edge(ours, market) for investor_id, ours, market in rows}
+    return {investor_id: edge(ours, market) for investor_id, ours, market in rows}

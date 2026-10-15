@@ -61,6 +61,14 @@ def resolve(ticker, name=''):
     return None
 
 
+_ticker_sources = []
+
+
+def add_ticker_source(source):
+    if source not in _ticker_sources:
+        _ticker_sources.append(source)
+
+
 def _wanted():
     current, ever = set(), set()
     for investor in Investor.objects.all():
@@ -70,6 +78,10 @@ def _wanted():
             ever |= tickers
             if index == len(found) - 1:
                 current |= tickers
+    for source in _ticker_sources:
+        more_current, more_ever = source()
+        current |= more_current
+        ever |= more_ever | more_current
     return current, ever
 
 
