@@ -1,0 +1,141 @@
+import io
+import re
+from dataclasses import dataclass, field
+from datetime import datetime
+
+import pypdf
+
+from .amounts import parse_range
+
+_HEADER_END = '$200?\n'
+_FOOTER = re.compile(r'^\* For the complete list', re.M)
+_PAGE_BREAK = re.compile(r'Filing ID #\d+\n(?:.*\n)*?\$200\?\n')
+_STATUS = re.compile(r'^F(?:iling)?\s+S(?:tatus)?\s*:\s*(New|Amended)\b')
+_LABEL = re.compile(r'^(?P<key>[A-Z])(?:\s{2,}|[a-z]+\s*)[A-Za-z ]*:\s*(?P<text>.*)$')
+_CORE = re.compile(
+    r'(?:^|(?<=\s))(?P<kind>S \(partial\)|P|S|E)\s+'
+    r'(?P<traded>\d{2}/\d{2}/\d{4})\s+(?P<notified>\d{2}/\d{2}/\d{4})\s+'
+    r'(?P<amount>(?:Spouse/DC )?Over \$[\d,]+|\$[\d,]+\s*-\s*(?:\$[\d,]+)?)'
+)
+_OWNER = re.compile(r'^(SP|JT|DC)\s+')
+_TYPE = re.compile(r'\s*\[([A-Z]{2})\]')
+_TICKER = re.compile(r'\(([A-Z][A-Z0-9.]{0,9})\)\s*\[')
+_DOLLARS = re.compile(r'\$[\d,]+')
+_KINDS = {'P': 'purchase', 'S': 'sale', 'S (partial)': 'partial_sale', 'E': 'exchange'}
+_PRICEABLE_TYPES = {'ST', 'OP'}
+
+
+@dataclass
+class ParsedTrade:
+    owner: str
+    asset: str
+    asset_type: str
+    ticker: str | None
+    kind: str
+    option: str
+    exercise: bool
+    traded_on: object
+    notified_on: object
+    amount_low: int
+    amount_high: int | None
+    priceable: bool
+
+
+@dataclass
+class ParsedReport:
+    rows: list = field(default_factory=list)
+    amended: bool = False
+    unparsed_rows: int = 0
+
+
+def pdf_text(data):
+    reader = pypdf.PdfReader(io.BytesIO(data))
+    return '\n'.join(page.extract_text() or '' for page in reader.pages).replace('\x00', ' ')
+
+
+def _body(text):
+    start = text.find(_HEADER_END)
+    body = text[start + len(_HEADER_END):] if start >= 0 else text
+    footer = _FOOTER.search(body)
+    body = body[:footer.start()] if footer else body
+    return _PAGE_BREAK.sub('', body + '\n')
+
+
+def _records(body):
+    records, current, continuing = [], [], False
+    for line in body.splitlines():
+        status = _STATUS.match(line)
+        if status:
+            records.append({'lines': current, 'status': status.group(1), 'notes': []})
+            current, continuing = [], False
+            continue
+        if records and not current:
+            label = _LABEL.match(line)
+            if label or continuing:
+                note = label.group('text') if label else line
+                records[-1]['notes'].append(note)
+                is_description = (label and label.group('key') == 'D') or (not label and continuing)
+                continuing = bool(is_description) and not note.rstrip().endswith('.')
+                continue
+        if line.strip():
+            current.append(line)
+    return records, current
+
+
+def _date(text):
+    return datetime.strptime(text, '%m/%d/%Y').date()
+
+
+def _trade(record):
+    flat = ' '.join(line.strip() for line in record['lines'])
+    core = _CORE.search(flat)
+    if core is None:
+        return None
+    head, tail = flat[:core.start()].strip(), flat[core.end():].strip()
+    amount = core.group('amount')
+    if amount.rstrip().endswith('-'):
+        closing = _DOLLARS.search(tail)
+        if closing is None:
+            return None
+        amount = f'{amount} {closing.group(0)}'
+        tail = (tail[:closing.start()] + tail[closing.end():]).strip()
+    low, high = parse_range(amount)
+    owner_match = _OWNER.match(head)
+    owner = owner_match.group(1) if owner_match else 'self'
+    head = head[owner_match.end():] if owner_match else head
+    type_match = _TYPE.search(flat)
+    asset_type = type_match.group(1) if type_match else ''
+    ticker_match = _TICKER.search(flat)
+    ticker = ticker_match.group(1) if ticker_match else None
+    asset = _TYPE.sub('', f'{head} {tail}').strip()
+    description = ' '.join(record['notes']).lower()
+    option = ''
+    if asset_type == 'OP':
+        option = 'put' if 'put' in description else 'call'
+    return ParsedTrade(
+        owner=owner,
+        asset=asset,
+        asset_type=asset_type,
+        ticker=ticker,
+        kind=_KINDS[core.group('kind')],
+        option=option,
+        exercise=description.startswith('exercised'),
+        traded_on=_date(core.group('traded')),
+        notified_on=_date(core.group('notified')),
+        amount_low=low,
+        amount_high=high,
+        priceable=bool(ticker) and asset_type in _PRICEABLE_TYPES,
+    )
+
+
+def parse_report(text):
+    records, leftover = _records(_body(text))
+    parsed = ParsedReport(amended=any(record['status'] == 'Amended' for record in records))
+    for record in records:
+        trade = _trade(record)
+        if trade is None:
+            parsed.unparsed_rows += 1
+        else:
+            parsed.rows.append(trade)
+    parsed.unparsed_rows += bool(leftover)
+    return parsed
