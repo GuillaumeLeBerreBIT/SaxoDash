@@ -11,6 +11,7 @@ import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import FundsTab from '../components/research/FundsTab'
+import CongressTab from '../components/research/CongressTab'
 import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
 import FilingsTab from '../components/research/FilingsTab'
@@ -32,6 +33,7 @@ const TABS = [
   ['peers', 'Peers', 'company'],
   ['earnings', 'Earnings', 'company'],
   ['funds', 'Funds'],
+  ['congress', 'Congress'],
   ['filings', 'Filings', 'company'],
   ['news', 'News', 'ticker'],
   ['guide', 'Guide'],
@@ -233,6 +235,7 @@ export default function Research() {
                 <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
               ) : null}
               {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+              {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
               {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
               {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
               {shown('guide') ? <GuideTab /> : null}
