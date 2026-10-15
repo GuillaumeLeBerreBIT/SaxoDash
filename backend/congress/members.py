@@ -6,6 +6,7 @@ from datetime import date
 from pathlib import Path
 
 import requests
+from django.db.models import Max
 from django.utils.text import slugify
 
 from .models import Member
@@ -82,19 +83,59 @@ def aliases():
         }
 
 
+def _free(slug):
+    return not Member.objects.filter(slug=slug).exists()
+
+
 def _unique_slug(first, last, state_district):
     base = slugify(f'{first_token(first)} {last}')
-    if not Member.objects.filter(slug=base).exists():
+    with_district = slugify(f'{base} {state_district}')
+    if _free(base):
         return base
-    return slugify(f'{base} {state_district}')
+    if _free(with_district):
+        return with_district
+    counter = 2
+    while not _free(f'{with_district}-{counter}'):
+        counter += 1
+    return f'{with_district}-{counter}'
+
+
+def _known(entry):
+    wanted_last = normalize(entry.last)
+    wanted_first = first_token(entry.first)
+    matches = [
+        member for member in Member.objects.filter(state_district__startswith=entry.state_district[:2]).order_by('pk')
+        if normalize(member.last_name) == wanted_last and first_token(member.first_name) == wanted_first
+    ]
+    exact = [member for member in matches if member.state_district == entry.state_district]
+    return next(iter(exact or matches), None)
+
+
+def _is_latest(member, filed_on):
+    latest = member.reports.aggregate(latest=Max('filed_on'))['latest']
+    return latest is None or filed_on >= latest
+
+
+def _refresh(member, entry, party=''):
+    changed = []
+    if entry.state_district != member.state_district and _is_latest(member, entry.filed_on):
+        member.state_district = entry.state_district
+        changed.append('state_district')
+    if party and not member.party:
+        member.party = party
+        changed.append('party')
+    if member.bioguide_id and not member.photo_url:
+        member.photo_url = PHOTO_URL.format(bioguide=member.bioguide_id)
+        changed.append('photo_url')
+    if changed:
+        member.save(update_fields=changed)
+    return member
 
 
 def member_for(entry, directory):
-    known = Member.objects.filter(
-        last_name=entry.last, first_name=entry.first, state_district=entry.state_district,
-    ).first()
+    known = _known(entry)
     if known:
-        return known
+        return _refresh(known, entry)
     state = entry.state_district[:2]
     bioguide = aliases().get((normalize(entry.last), first_token(entry.first), entry.state_district))
     party = ''
@@ -105,9 +146,7 @@ def member_for(entry, directory):
     if bioguide:
         existing = Member.objects.filter(bioguide_id=bioguide).first()
         if existing:
-            existing.state_district = entry.state_district
-            existing.save(update_fields=['state_district'])
-            return existing
+            return _refresh(existing, entry, party)
     else:
         logger.warning('No legislator match for %s %s (%s); add it to member_aliases.csv', entry.first, entry.last, entry.state_district)
     return Member.objects.create(
