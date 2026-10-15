@@ -154,7 +154,7 @@ def sync_positions(credential):
     # half-built list of seen tickers.
     with transaction.atomic():
         seen_tickers = []
-        for fields in _mapped_rows(saxo_positions, mapping.to_position_fields):
+        for fields in mapping.merge_lots(_mapped_rows(saxo_positions, mapping.to_position_fields)):
             synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
             Position.objects.update_or_create(
                 ticker=fields['ticker'], defaults=synced, create_defaults=fields
