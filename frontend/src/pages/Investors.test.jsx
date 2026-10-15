@@ -34,6 +34,7 @@ vi.mock('../api/queries', () => ({
   useInvestors: ({ holds } = {}) => (holds ? { data: holders, isFetching: false } : listState),
   useFollowInvestor: () => ({ mutate: follow }),
   usePrefetchInvestor: () => () => {},
+  useCongressMembers: () => ({ isLoading: false, data: { members: [], most_bought: [], window_days: 90 } }),
 }))
 vi.mock('../components/investors/AddInvestorDialog', () => ({ default: ({ onClose }) => <div role="dialog"><button onClick={onClose}>close</button></div> }))
 
@@ -53,6 +54,16 @@ const directory = () => screen.getByRole('region', { name: 'All investors' })
 const directoryNames = () => within(directory()).getAllByTestId('investor-card').map((el) => within(el).getByRole('link').textContent)
 
 describe('Investors hub', () => {
+  it('switches to the Congress directory from its tab', () => {
+    hubState = { data: hub, isLoading: false, error: null }
+    listState = { data: cards, isLoading: false, error: null }
+    renderPage()
+    fireEvent.click(screen.getByRole('tab', { name: 'Congress' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/investors?tab=congress')
+    expect(screen.getByText('No House trades imported yet')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add investor' })).not.toBeInTheDocument()
+  })
+
   beforeEach(() => {
     hubState = { data: hub, isLoading: false, error: null }
     listState = { data: cards, isLoading: false, error: null }

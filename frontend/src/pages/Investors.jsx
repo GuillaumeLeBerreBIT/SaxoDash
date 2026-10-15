@@ -1,12 +1,16 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { useInvestorHub, useInvestors } from '../api/queries'
-import { Alert, Button, PageHeader, Skeleton } from '../components/ui'
+import { Alert, Button, PageHeader, Skeleton, TabButton, TabList } from '../components/ui'
+import CongressDirectory from '../components/congress/CongressDirectory'
 import AddInvestorDialog from '../components/investors/AddInvestorDialog'
 import InvestorDirectory from '../components/investors/InvestorDirectory'
 import LimitsNote from '../components/investors/LimitsNote'
 import Shelf from '../components/investors/Shelf'
 import { hubSubtitle } from '../lib/investorHub'
+
+const TABS = [['funds', 'Funds'], ['congress', 'Congress']]
 
 const NO_SIGNALS = 'No cross-fund signals yet. They appear once investors have two quarters imported.'
 
@@ -19,6 +23,9 @@ function Shelves({ hub }) {
 
 export default function Investors() {
   const [adding, setAdding] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'congress' ? 'congress' : 'funds'
+  const pick = (key) => setParams(key === 'funds' ? {} : { tab: key }, { replace: true })
   const hub = useInvestorHub()
   const { data: cards = [], isLoading, error } = useInvestors()
 
@@ -27,11 +34,22 @@ export default function Investors() {
       <PageHeader
         title="Investors"
         subtitle={hubSubtitle(hub.data)}
-        right={<Button size="sm" onClick={() => setAdding(true)}>Add investor</Button>}
+        right={tab === 'funds' ? <Button size="sm" onClick={() => setAdding(true)}>Add investor</Button> : null}
       />
-      <Shelves hub={hub} />
-      <InvestorDirectory cards={cards} isLoading={isLoading} error={error} />
-      <LimitsNote />
+      <TabList label="Investor type">
+        {TABS.map(([key, label]) => (
+          <TabButton key={key} active={tab === key} onClick={() => pick(key)}>{label}</TabButton>
+        ))}
+      </TabList>
+      {tab === 'congress' ? (
+        <CongressDirectory />
+      ) : (
+        <>
+          <Shelves hub={hub} />
+          <InvestorDirectory cards={cards} isLoading={isLoading} error={error} />
+          <LimitsNote />
+        </>
+      )}
       {adding ? <AddInvestorDialog onClose={() => setAdding(false)} /> : null}
     </div>
   )
