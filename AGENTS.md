@@ -530,4 +530,5 @@ sale of something never seen bought is ignored and counted. Those estimated hold
 `congress/performance.py` into `investors.copying.measure` unchanged. `congress` imports `investors`, never the reverse:
 `price_feed.add_ticker_source` is how congress tickers get daily bars. The Senate's eFD site is
 geo-blocked from where the app runs, so the Senate is out until the backend is hosted in the US.
+Holdings and copy performance are rebuilt for every member on each daily sync, not only for members with a newly parsed report, so tickers priced by the nightly refresh overnight are picked up the next day. Prices reach back about 4.7 years (1,200 daily bars), so the earliest backfilled trades show as unpriced; `basis.priced_from` records where pricing starts and the member page says so.
 Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
