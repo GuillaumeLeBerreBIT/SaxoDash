@@ -15,10 +15,11 @@ def series(*closes):
 
 
 def row(ticker, kind='purchase', low=15001, high=50000, filed_on=D2, traded_on=D1, option='', exercise=False,
-        priceable=True, amended=False):
+        priceable=True, amended=False, report=None):
     return TradeRow(
         filed_on=filed_on, traded_on=traded_on, ticker=ticker, kind=kind, option=option, exercise=exercise,
         amount_low=low, amount_high=high, priceable=priceable, amended=amended, asset=f'{ticker} Inc.', owner='SP',
+        report=report or f'{filed_on}-{amended}',
     )
 
 
@@ -85,3 +86,19 @@ class DedupeTest(SimpleTestCase):
 
     def test_two_different_trades_are_both_kept(self):
         self.assertEqual(len(dedupe([row('NVDA'), row('NVDA', kind='partial_sale')])), 2)
+
+    def test_identical_purchases_in_one_report_both_survive(self):
+        kept = dedupe([row('NVDA', report='R1'), row('NVDA', report='R1')])
+        self.assertEqual(len(kept), 2)
+
+    def test_identical_purchases_restated_by_an_amendment_keep_the_amended_copies(self):
+        rows = [
+            row('NVDA', report='R1', filed_on=D2),
+            row('NVDA', report='R1', filed_on=D2),
+            row('NVDA', report='R2', filed_on=D3, amended=True),
+            row('NVDA', report='R2', filed_on=D3, amended=True),
+        ]
+        kept = dedupe(rows)
+        self.assertEqual(len(kept), 2)
+        self.assertTrue(all(found.amended for found in kept))
+        self.assertTrue(all(found.filed_on == D2 for found in kept))

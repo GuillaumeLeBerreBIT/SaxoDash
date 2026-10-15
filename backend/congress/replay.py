@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, replace
 from datetime import date
 from itertools import groupby
@@ -28,6 +28,7 @@ class TradeRow:
     amended: bool
     asset: str
     owner: str
+    report: str
 
 
 @dataclass
@@ -41,15 +42,17 @@ def _identity(row):
 
 
 def dedupe(rows):
-    kept = {}
-    for row in sorted(rows, key=lambda found: found.filed_on):
-        key = _identity(row)
-        earlier = kept.get(key)
-        if earlier is None:
-            kept[key] = row
-        elif row.amended:
-            kept[key] = replace(row, filed_on=earlier.filed_on)
-    return sorted(kept.values(), key=lambda found: (found.filed_on, found.traded_on))
+    groups = defaultdict(list)
+    for row in rows:
+        groups[_identity(row)].append(row)
+    kept = []
+    for members in groups.values():
+        copies = max(Counter(row.report for row in members).values())
+        amended = [row for row in members if row.amended]
+        pool = amended or members
+        earliest = min(row.filed_on for row in members)
+        kept.extend(replace(row, filed_on=earliest) for row in pool[:copies])
+    return sorted(kept, key=lambda found: (found.filed_on, found.traded_on))
 
 
 def _apply(row, price, stock, calls, basis):
