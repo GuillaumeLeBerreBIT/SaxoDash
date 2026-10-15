@@ -35,6 +35,6 @@ describe('CongressTab', () => {
   it('says when no member has traded the stock', () => {
     ownership.mockReturnValue({ isLoading: false, data: { window_days: 90, ticker: 'ZZZZ', stock: null, members: [] } })
     renderWithProviders(<CongressTab symbol="ZZZZ" currency="USD" />)
-    expect(screen.getByText('No House member has disclosed a ZZZZ trade since 2021')).toBeInTheDocument()
+    expect(screen.getByText('No House member has disclosed a ZZZZ trade')).toBeInTheDocument()
   })
 })

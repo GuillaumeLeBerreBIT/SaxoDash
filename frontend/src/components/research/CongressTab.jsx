@@ -25,7 +25,7 @@ export default function CongressTab({ symbol, currency }) {
   }
   const { window_days: windowDays, stock, members = [] } = ownership.data ?? {}
   if (!stock || members.length === 0) {
-    return <EmptyState title={`No House member has disclosed a ${symbol} trade since 2021`} />
+    return <EmptyState title={`No House member has disclosed a ${symbol} trade`} />
   }
   const note = `members, last ${windowDays} days`
   return (

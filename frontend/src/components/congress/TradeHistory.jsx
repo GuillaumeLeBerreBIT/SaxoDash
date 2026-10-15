@@ -42,7 +42,10 @@ export default function TradeHistory({
                     )}
                   </Td>
                 ) : null}
-                <Td edge={!showAsset} className="text-zinc-300">{tradeLabel(trade)}</Td>
+                <Td edge={!showAsset} className="text-zinc-300">
+                  {tradeLabel(trade)}
+                  {trade.amended ? <span className="ml-2 rounded border border-white/[0.08] px-1 text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500">Amended</span> : null}
+                </Td>
                 <Td className="text-zinc-400">{OWNERS[trade.owner] ?? trade.owner}</Td>
                 <Td align="right" className="num font-mono text-zinc-300">{fmtRange(trade.amount_low, trade.amount_high)}</Td>
                 <Td align="right" className="num text-zinc-400">{fmtDate(trade.traded_on)}</Td>

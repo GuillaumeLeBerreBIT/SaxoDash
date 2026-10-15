@@ -21,14 +21,17 @@ export function tradeLabel({ kind, option, exercise }) {
   return option ? `${base} (${option})` : base
 }
 
+const monthYear = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+
 export function basisNote(basis = {}) {
   if (!basis.trades) return 'No parsed trades yet.'
-  const year = (basis.since ?? '2021').slice(0, 4)
-  const parts = [`Estimated from ${plural(basis.trades, 'disclosed trade', 'disclosed trades')} since ${year} at the midpoint of each reported range`]
+  const since = basis.since ? ` since ${basis.since.slice(0, 4)}` : ''
+  const priced = basis.priced_from ? `, priced from ${monthYear(basis.priced_from)}` : ''
+  const parts = [`Estimated from ${plural(basis.trades, 'disclosed trade', 'disclosed trades')}${since}${priced} at the midpoint of each reported range`]
   if (basis.paper_reports) parts.push(`${plural(basis.paper_reports, 'paper report', 'paper reports')} not included`)
   if (basis.failed_reports) parts.push(`${plural(basis.failed_reports, 'report', 'reports')} could not be read`)
   if (basis.unparsed_rows) parts.push(`${plural(basis.unparsed_rows, 'row', 'rows')} could not be read`)
-  if (basis.unseen_sales) parts.push(`${plural(basis.unseen_sales, 'sale', 'sales')} of holdings bought before ${year} ignored`)
+  if (basis.unseen_sales) parts.push(`${plural(basis.unseen_sales, 'sale', 'sales')} of holdings not seen bought ignored`)
   if (basis.unpriced) parts.push(`${plural(basis.unpriced, 'trade', 'trades')} without a price left out`)
   return parts.join(' · ')
 }

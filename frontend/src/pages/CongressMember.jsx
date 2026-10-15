@@ -12,11 +12,11 @@ import { researchHref } from '../lib/research'
 const COPY_SUBTITLE = 'Estimated holdings after each report, bought at the close of the first trading day after it was filed and held until the next. Calls count as the stock, which understates their leverage.'
 
 function Holdings({ holdings }) {
-  if (holdings.length === 0) return <EmptyState title="No estimated holdings" hint="Nothing priceable has been bought since 2021." />
+  if (holdings.length === 0) return <EmptyState title="No estimated holdings" hint="Nothing priceable has been bought yet." />
   const max = Math.max(...holdings.map((held) => held.weight_pct))
   return (
     <Card padding={false}>
-      <div className="p-4 pb-3"><CardHeader title="Estimated holdings" subtitle="From disclosed trades since 2021" /></div>
+      <div className="p-4 pb-3"><CardHeader title="Estimated holdings" subtitle="From disclosed trades" /></div>
       <table className="w-full text-[var(--fig-sm)]">
         <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
           <tr><Th edge>Ticker</Th><Th edge align="right">Weight</Th></tr>

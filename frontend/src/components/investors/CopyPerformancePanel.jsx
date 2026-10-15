@@ -4,11 +4,10 @@ import { Card, CardHeader, MetricTile, Skeleton } from '../ui'
 import { useInvestorCopy } from '../../api/queries'
 import { AXIS_TEXT, SERIES_TOTAL, axisProps, chartTooltipProps, gridProps, seriesAxis } from '../../lib/charts'
 import { fmtDate, fmtMonthYear, fmtPct } from '../../lib/format'
-import { copyCaveat, copySeries, copyVerdict } from '../../lib/investors'
+import { copyCaveat, copySeries, copyVerdict, points } from '../../lib/investors'
 
 const wholePct = (value) => fmtPct(value, { decimals: 0 })
 const onePct = (value) => fmtPct(value, { decimals: 1 })
-const points = (value) => `${onePct(value).replace('%', '')} pts`
 
 function Legend({ benchmark }) {
   return (

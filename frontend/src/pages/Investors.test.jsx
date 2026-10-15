@@ -64,6 +64,18 @@ describe('Investors hub', () => {
     expect(screen.queryByRole('button', { name: 'Add investor' })).not.toBeInTheDocument()
   })
 
+  it('keeps other query params when switching tabs and has no fund-quarter subtitle on Congress', () => {
+    hubState = { data: hub, isLoading: false, error: null }
+    listState = { data: cards, isLoading: false, error: null }
+    renderPage('/investors?quarter=2026-03-31')
+    fireEvent.click(screen.getByRole('tab', { name: 'Congress' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/investors?quarter=2026-03-31&tab=congress')
+    expect(screen.getByText(/House members’ disclosed stock trades/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Funds' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/investors?quarter=2026-03-31')
+    expect(screen.getByTestId('where')).not.toHaveTextContent('tab=')
+  })
+
   beforeEach(() => {
     hubState = { data: hub, isLoading: false, error: null }
     listState = { data: cards, isLoading: false, error: null }

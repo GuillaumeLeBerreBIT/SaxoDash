@@ -1,13 +1,17 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useCongressMembers } from '../../api/queries'
 import { partyLabel } from '../../lib/congress'
-import { fmtDate, fmtNum, fmtPct } from '../../lib/format'
+import { fmtDate, fmtNum } from '../../lib/format'
+import { points } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
-import { Card, CardHeader, EmptyState, QueryState, Td, Th, Tr } from '../ui'
+import { nextSort, sortRows } from '../../lib/sort'
+import { Card, CardHeader, EmptyState, QueryState, SortableTh, Td, Th, Tr } from '../ui'
 import InvestorAvatar from '../investors/InvestorAvatar'
 
-const points = (value) => (value == null ? '—' : `${fmtPct(value, { decimals: 1 }).replace('%', '')} pts`)
+const ACCESSORS = { name: (member) => member.name, edge: (member) => member.excess_cagr_pct }
+const DEFAULT_SORT = { key: 'edge', direction: 'desc' }
 
 function MostBought({ items, windowDays }) {
   if (items.length === 0) return null
@@ -30,6 +34,9 @@ function MostBought({ items, windowDays }) {
 
 export default function CongressDirectory() {
   const query = useCongressMembers()
+  const [sort, setSort] = useState(DEFAULT_SORT)
+  const onSort = (key) => setSort((current) => nextSort(current, key) ?? { key, direction: 'asc' })
+  const rows = useMemo(() => sortRows(query.data?.members ?? [], sort, ACCESSORS), [query.data, sort])
   if (query.isLoading || query.error) {
     return <QueryState isLoading={query.isLoading} error={query.error} onRetry={query.refetch} label="members of Congress" />
   }
@@ -45,15 +52,15 @@ export default function CongressDirectory() {
           <table className="w-full min-w-[560px] text-[var(--fig-sm)]">
             <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
               <tr>
-                <Th edge>Member</Th>
+                <SortableTh edge sortKey="name" sort={sort} onSort={onSort}>Member</SortableTh>
                 <Th>Party</Th>
                 <Th align="right">Trades</Th>
                 <Th align="right">Last filed</Th>
-                <Th edge align="right">Copy edge / yr</Th>
+                <SortableTh edge align="right" sortKey="edge" sort={sort} onSort={onSort}>Copy edge / yr</SortableTh>
               </tr>
             </thead>
             <tbody>
-              {members.map((member) => (
+              {rows.map((member) => (
                 <Tr key={member.slug}>
                   <Td edge>
                     <span className="flex items-center gap-2.5">

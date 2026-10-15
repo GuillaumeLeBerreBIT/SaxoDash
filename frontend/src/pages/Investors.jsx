@@ -12,6 +12,8 @@ import { hubSubtitle } from '../lib/investorHub'
 
 const TABS = [['funds', 'Funds'], ['congress', 'Congress']]
 
+const CONGRESS_SUBTITLE = 'House members’ disclosed stock trades, copied at the midpoint of each reported range'
+
 const NO_SIGNALS = 'No cross-fund signals yet. They appear once investors have two quarters imported.'
 
 function Shelves({ hub }) {
@@ -25,7 +27,12 @@ export default function Investors() {
   const [adding, setAdding] = useState(false)
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'congress' ? 'congress' : 'funds'
-  const pick = (key) => setParams(key === 'funds' ? {} : { tab: key }, { replace: true })
+  const pick = (key) => {
+    const next = new URLSearchParams(params)
+    if (key === 'funds') next.delete('tab')
+    else next.set('tab', key)
+    setParams(next, { replace: true })
+  }
   const hub = useInvestorHub()
   const { data: cards = [], isLoading, error } = useInvestors()
 
@@ -33,7 +40,7 @@ export default function Investors() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Investors"
-        subtitle={hubSubtitle(hub.data)}
+        subtitle={tab === 'congress' ? CONGRESS_SUBTITLE : hubSubtitle(hub.data)}
         right={tab === 'funds' ? <Button size="sm" onClick={() => setAdding(true)}>Add investor</Button> : null}
       />
       <TabList label="Investor type">

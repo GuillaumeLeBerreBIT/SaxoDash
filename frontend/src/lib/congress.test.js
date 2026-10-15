@@ -30,7 +30,11 @@ describe('tradeLabel', () => {
 describe('basisNote', () => {
   it('lists only the caveats that apply', () => {
     expect(basisNote({ trades: 40, paper_reports: 2, failed_reports: 0, unparsed_rows: 0, unseen_sales: 3, unpriced: 0, since: '2021-01-01' }))
-      .toBe('Estimated from 40 disclosed trades since 2021 at the midpoint of each reported range · 2 paper reports not included · 3 sales of holdings bought before 2021 ignored')
+      .toBe('Estimated from 40 disclosed trades since 2021 at the midpoint of each reported range · 2 paper reports not included · 3 sales of holdings not seen bought ignored')
+  })
+  it('says from when prices reach back', () => {
+    expect(basisNote({ trades: 40, since: '2021-01-01', priced_from: '2021-12-07' }))
+      .toBe('Estimated from 40 disclosed trades since 2021, priced from Dec 2021 at the midpoint of each reported range')
   })
   it('says nothing is known yet for an empty basis', () => {
     expect(basisNote({})).toBe('No parsed trades yet.')

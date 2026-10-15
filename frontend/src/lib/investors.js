@@ -48,6 +48,8 @@ export function alertSummary(counts) {
   return parts.length ? parts.join(' · ') : 'No position changes'
 }
 
+export const points = (value) => (value == null ? '—' : `${fmtPct(value, { decimals: 1 }).replace('%', '')} pts`)
+
 export function copySeries(series) {
   return (series ?? []).map(([date, clone, benchmark]) => ({
     date, clone: Number((clone - 100).toFixed(2)), benchmark: Number((benchmark - 100).toFixed(2)),
