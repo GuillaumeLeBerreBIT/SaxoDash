@@ -49,9 +49,13 @@ def rebuild(member):
     prices = copying.price_series(wanted | {copying.BENCHMARK_TICKER})
     result = replay(rows, prices)
     _store_holdings(member, result.periods)
-    member.basis = {**result.basis, **_report_counts(member), 'since': BACKFILL_SINCE}
+    benchmark = prices.get(copying.BENCHMARK_TICKER)
+    member.basis = {
+        **result.basis, **_report_counts(member), 'since': BACKFILL_SINCE,
+        'priced_from': benchmark.days[0].isoformat() if benchmark else None,
+    }
     member.save(update_fields=['basis'])
-    measured = copying.measure(result.periods, prices, prices.get(copying.BENCHMARK_TICKER) or Series([], []))
+    measured = copying.measure(result.periods, prices, benchmark or Series([], []))
     if measured is None:
         CopyPerformance.objects.filter(member=member).delete()
         return False

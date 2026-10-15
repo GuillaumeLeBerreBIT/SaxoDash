@@ -17,8 +17,12 @@ class Member(models.Model):
     class Meta:
         ordering = ['last_name', 'first_name']
 
+    @property
+    def name(self):
+        return f'{self.first_name} {self.last_name}'
+
     def __str__(self):
-        return f'{self.first_name} {self.last_name} ({self.state_district})'
+        return f'{self.name} ({self.state_district})'
 
 
 class Report(models.Model):

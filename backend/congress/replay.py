@@ -57,7 +57,7 @@ def dedupe(rows):
 
 def _apply(row, price, stock, calls, basis):
     shares = size(row.amount_low, row.amount_high) / price
-    book = calls if row.option == CALL else stock
+    book = calls if row.option == CALL and not row.exercise else stock
     if row.kind == PURCHASE:
         if row.exercise:
             calls.pop(row.ticker, None)

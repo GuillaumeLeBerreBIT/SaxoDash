@@ -4,7 +4,6 @@ from django.utils import timezone
 from saxo.tasks import SyncReport, synced
 
 from . import house, performance
-from .models import Member
 
 SYNC_TASK = 'sync_house'
 
@@ -15,8 +14,7 @@ def _sync():
     years = {now.year} | ({now.year - 1} if now.month == 1 else set())
     created = sum(house.sync_index(year, now) for year in sorted(years))
     result = house.parse_pending()
-    for member in Member.objects.filter(pk__in=result.member_ids):
-        performance.rebuild(member)
+    performance.rebuild_all()
     return SyncReport(rows=result.parsed, detail=f'{created} new reports, {result.failed} failed to parse')
 
 

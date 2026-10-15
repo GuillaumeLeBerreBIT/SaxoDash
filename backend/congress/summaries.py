@@ -1,4 +1,4 @@
-from django.db.models import Count, Max
+from django.db.models import Max
 
 from investors.copying import edge
 
@@ -8,11 +8,15 @@ from .models import CopyPerformance, Report, Trade
 
 def trade_row(trade):
     return {
-        'asset': trade.asset, 'ticker': trade.ticker, 'asset_type': trade.asset_type, 'owner': trade.owner,
+        'amended': trade.report.amended, 'asset': trade.asset, 'ticker': trade.ticker, 'asset_type': trade.asset_type, 'owner': trade.owner,
         'kind': trade.kind, 'option': trade.option, 'exercise': trade.exercise,
         'traded_on': trade.traded_on.isoformat(), 'filed_on': trade.report.filed_on.isoformat(),
         'amount_low': trade.amount_low, 'amount_high': trade.amount_high, 'priceable': trade.priceable,
     }
+
+
+def identity(member):
+    return {'slug': member.slug, 'name': member.name, 'party': member.party, 'state_district': member.state_district}
 
 
 def _edges(member_ids):
@@ -24,23 +28,16 @@ def _edges(member_ids):
 
 def cards(members):
     ids = [member.pk for member in members]
-    trade_counts = dict(
-        Trade.objects.filter(report__status=Report.PARSED, report__member_id__in=ids)
-        .values('report__member').annotate(total=Count('id')).values_list('report__member', 'total')
-    )
     last_filed = dict(
         Report.objects.filter(member_id__in=ids).values('member').annotate(last=Max('filed_on')).values_list('member', 'last')
     )
     edges = _edges(ids)
-    return [card(member, trade_counts.get(member.pk, 0), last_filed.get(member.pk), edges.get(member.pk)) for member in members]
+    return [card(member, member.basis.get('trades', 0), last_filed.get(member.pk), edges.get(member.pk)) for member in members]
 
 
 def card(member, trades, last_filed, excess_cagr_pct):
     return {
-        'slug': member.slug,
-        'name': f'{member.first_name} {member.last_name}',
-        'party': member.party,
-        'state_district': member.state_district,
+        **identity(member),
         'photo_url': member.photo_url,
         'trades': trades,
         'last_filed': last_filed.isoformat() if last_filed else None,

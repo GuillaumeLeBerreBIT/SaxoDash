@@ -52,6 +52,29 @@ class EntriesTest(TestCase):
         self.assertEqual(found[0].state_district, 'CA11')
 
 
+BAD_ROWS_XML = b'''<?xml version="1.0" encoding="utf-8"?>
+<FinancialDisclosure>
+  <Member><Last>A</Last><First>B</First><FilingType>P</FilingType><StateDst>CA11</StateDst><Year>2025</Year><FilingDate>1/17/2025</FilingDate></Member>
+  <Member><Last>A</Last><First>B</First><FilingType>P</FilingType><StateDst>CA11</StateDst><Year>2025</Year><FilingDate>nope</FilingDate><DocID>20000001</DocID></Member>
+  <Member><Last>A</Last><First>B</First><FilingType>P</FilingType><StateDst>CA11</StateDst><FilingDate>1/17/2025</FilingDate><DocID>20000002</DocID></Member>
+  <Member><Last>Pelosi</Last><First>Nancy</First><FilingType>P</FilingType><StateDst>CA11</StateDst><Year>2025</Year><FilingDate>1/17/2025</FilingDate><DocID>20026590</DocID></Member>
+  <Member><Last>Pelosi</Last><First>Nancy</First><FilingType>P</FilingType><StateDst>CA11</StateDst><Year>2025</Year><FilingDate>1/17/2025</FilingDate><DocID>20026590</DocID></Member>
+</FinancialDisclosure>'''
+
+
+class MalformedIndexTest(TestCase):
+    def test_bad_rows_are_skipped_and_logged(self):
+        with self.assertLogs('congress.house', level='WARNING') as logs:
+            found = house.entries(BAD_ROWS_XML)
+        self.assertEqual([entry.doc_id for entry in found], ['20026590', '20026590'])
+        self.assertEqual(len(logs.records), 3)
+
+    def test_a_duplicate_doc_id_in_one_index_is_created_once(self):
+        with mock.patch.object(house, '_get', return_value=response(content=zipped(BAD_ROWS_XML))):
+            created = house.sync_index(2025, NOW, directory=DIRECTORY)
+        self.assertEqual(created, 1)
+
+
 class SyncIndexTest(TestCase):
     def test_creates_reports_and_marks_paper_ones(self):
         with mock.patch.object(house, '_get', return_value=response(content=zipped(INDEX_XML), headers={'ETag': '"a"', 'Last-Modified': 'Tue'})):
@@ -93,12 +116,24 @@ class ParsePendingTest(TestCase):
         self.assertEqual((self.report.status, self.report.attempts), (Report.PARSED, 1))
         self.assertEqual(Trade.objects.filter(report=self.report).count(), 9)
 
-    def test_a_failure_is_recorded_retried_and_then_left(self):
-        with mock.patch.object(house, '_get', side_effect=house.HouseError('boom')):
+    def test_a_parse_failure_is_recorded_retried_and_then_left(self):
+        with mock.patch.object(house, '_get', return_value=response(content=b'x')), \
+                mock.patch.object(house, 'pdf_text', side_effect=ValueError('boom')):
             for _ in range(4):
                 house.parse_pending(pause=lambda _: None)
         self.report.refresh_from_db()
         self.assertEqual((self.report.status, self.report.attempts, self.report.error), (Report.FAILED, 3, 'boom'))
+
+    def test_a_network_error_costs_no_attempt_and_stops_the_run(self):
+        Report.objects.create(doc_id='20026591', member=self.member, year=2025, filed_on=date(2025, 1, 18))
+        with mock.patch.object(house, '_get', side_effect=house.HouseError('down')) as get:
+            result = house.parse_pending(pause=lambda _: None)
+        self.assertEqual(get.call_count, 1)
+        self.assertEqual((result.parsed, result.failed), (0, 0))
+        self.assertEqual(
+            list(Report.objects.filter(doc_id__startswith='2002659').values_list('status', 'attempts')),
+            [(Report.PENDING, 0), (Report.PENDING, 0)],
+        )
 
     def test_reparsing_replaces_the_previous_trades(self):
         pdf = (TESTDATA / '20026590.pdf').read_bytes()

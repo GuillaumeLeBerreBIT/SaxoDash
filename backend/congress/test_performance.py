@@ -37,8 +37,14 @@ class CopyTest(TestCase):
         self.member.refresh_from_db()
         self.assertEqual(self.member.basis, {
             'trades': 1, 'unseen_sales': 0, 'unpriced': 0, 'paper_reports': 1, 'failed_reports': 1, 'unparsed_rows': 0,
-            'since': '2021-01-01',
+            'since': '2021-01-01', 'priced_from': START.isoformat(),
         })
+
+    def test_without_a_benchmark_series_priced_from_is_none(self):
+        PriceHistory.objects.filter(ticker='SPY').delete()
+        performance.rebuild(self.member)
+        self.member.refresh_from_db()
+        self.assertIsNone(self.member.basis['priced_from'])
 
     def test_only_parsed_reports_contribute(self):
         Report.objects.filter(doc_id='1').update(status=Report.FAILED)

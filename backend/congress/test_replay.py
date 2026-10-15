@@ -65,6 +65,11 @@ class ReplayTest(SimpleTestCase):
         ]
         self.assertAlmostEqual(holdings(replay(rows, PRICES).periods[-1])['NVDA'], 1000)
 
+    def test_an_exercise_row_flagged_as_a_call_still_goes_to_the_stock_book(self):
+        rows = [row('NVDA', option='call', exercise=True, low=1000, high=1000)]
+        self.assertAlmostEqual(holdings(replay(rows, PRICES).periods[-1])['NVDA'], 1000)
+        self.assertEqual(replay(rows, PRICES).basis['unseen_sales'], 0)
+
     def test_unpriceable_and_unpriced_trades_are_counted(self):
         rows = [row(None, priceable=False), row('ZZZZ')]
         basis = replay(rows, PRICES).basis

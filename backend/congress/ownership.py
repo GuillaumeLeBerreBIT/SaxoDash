@@ -2,7 +2,7 @@ from collections import Counter
 from datetime import timedelta
 
 from .models import Holding, Member, Report, Trade
-from .summaries import trade_row
+from .summaries import identity, trade_row
 
 WINDOW_DAYS = 90
 MOST_BOUGHT = 10
@@ -67,8 +67,7 @@ def detail(ticker, today):
         'stock': stock,
         'members': [
             {
-                'slug': member.slug, 'name': f'{member.first_name} {member.last_name}', 'party': member.party,
-                'state_district': member.state_district, 'holds_weight_pct': weights.get(member.pk),
+                **identity(member), 'holds_weight_pct': weights.get(member.pk),
                 'trades': [trade_row(trade) for trade in by_member.get(member.pk, [])],
             }
             for member in ordered

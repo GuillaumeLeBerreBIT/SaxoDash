@@ -18,3 +18,6 @@ class Command(BaseCommand):
         result = house.parse_pending()
         self.stdout.write(f'parsed {result.parsed}, failed {result.failed}')
         self.stdout.write(f'measured {performance.rebuild_all()} members')
+        self.stdout.write(
+            'Copy performance fills in after the nightly price refresh and the next daily sync; no manual rebuild is needed.'
+        )

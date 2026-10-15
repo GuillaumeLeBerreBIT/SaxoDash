@@ -15,18 +15,40 @@ class SyncHouseTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(slug='nancy-pelosi', first_name='Nancy', last_name='Pelosi', state_district='CA11')
 
-    def test_syncs_the_index_parses_and_rebuilds_touched_members(self):
+    def test_syncs_the_index_parses_and_rebuilds_every_member(self):
         now = datetime(2026, 10, 15, 14, 0, tzinfo=tz.utc)
         with mock.patch.object(tasks.timezone, 'now', return_value=now), \
                 mock.patch.object(tasks.house, 'sync_index', return_value=2) as sync_index, \
                 mock.patch.object(tasks.house, 'parse_pending', return_value=ParseResult(1, 0, {self.member.pk})), \
-                mock.patch.object(tasks.performance, 'rebuild') as rebuild:
+                mock.patch.object(tasks.performance, 'rebuild_all') as rebuild_all:
             tasks.sync_house()
         self.assertEqual([call.args[0] for call in sync_index.call_args_list], [2026])
-        rebuild.assert_called_once_with(self.member)
+        rebuild_all.assert_called_once_with()
         run = SyncRun.objects.get(task='sync_house')
         self.assertEqual((run.outcome, run.rows), ('ok', 1))
         self.assertEqual(run.detail, '2 new reports, 0 failed to parse')
+
+    def test_a_ticker_priced_after_the_parse_enters_holdings_on_the_next_run(self):
+        from datetime import timedelta
+        from investors.models import PriceHistory
+        from .models import Holding, Trade
+        start = date(2025, 1, 2)
+        rows = lambda base, step: [[(start + timedelta(days=n)).isoformat(), base + step * n] for n in range(400)]
+        report = Report.objects.create(
+            doc_id='1', member=self.member, year=2025, filed_on=start + timedelta(days=10), status=Report.PARSED,
+        )
+        Trade.objects.create(
+            report=report, owner='SP', asset='NVIDIA Corporation (NVDA)', asset_type='ST', ticker='NVDA',
+            kind=Trade.PURCHASE, traded_on=start + timedelta(days=2), amount_low=15001, amount_high=50000, priceable=True,
+        )
+        PriceHistory.objects.create(ticker='SPY', status=PriceHistory.OK, closes=rows(500, 0.5))
+        with mock.patch.object(tasks.house, 'sync_index', return_value=0), \
+                mock.patch.object(tasks.house, 'parse_pending', return_value=ParseResult()):
+            tasks.sync_house()
+            self.assertFalse(Holding.objects.filter(member=self.member).exists())
+            PriceHistory.objects.create(ticker='NVDA', status=PriceHistory.OK, closes=rows(100, 1))
+            tasks.sync_house()
+        self.assertEqual(list(Holding.objects.filter(member=self.member).values_list('ticker', flat=True)), ['NVDA'])
 
     def test_in_january_the_previous_year_is_checked_too(self):
         now = datetime(2027, 1, 5, 14, 0, tzinfo=tz.utc)

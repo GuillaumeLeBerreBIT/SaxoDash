@@ -50,6 +50,7 @@ class CongressApiTest(APITestCase):
         self.assertEqual(len(body['trades']), 2)
         self.assertEqual(body['trades'][0]['amount_low'], 15001)
         self.assertEqual(body['basis'], {'trades': 2})
+        self.assertIn('amended', body['trades'][0])
         self.assertFalse(body['copy']['available'])
 
     def test_unknown_member_is_404(self):

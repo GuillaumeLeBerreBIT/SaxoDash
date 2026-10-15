@@ -54,14 +54,17 @@ def entries(xml_bytes):
     for node in ET.fromstring(xml_bytes).iter('Member'):
         if (node.findtext('FilingType') or '').strip() != PERIODIC_TRANSACTION:
             continue
-        found.append(IndexEntry(
-            doc_id=node.findtext('DocID').strip(),
-            first=(node.findtext('First') or '').strip(),
-            last=(node.findtext('Last') or '').strip(),
-            state_district=(node.findtext('StateDst') or '').strip(),
-            filed_on=datetime.strptime(node.findtext('FilingDate').strip(), '%m/%d/%Y').date(),
-            year=int(node.findtext('Year')),
-        ))
+        try:
+            found.append(IndexEntry(
+                doc_id=node.findtext('DocID').strip(),
+                first=(node.findtext('First') or '').strip(),
+                last=(node.findtext('Last') or '').strip(),
+                state_district=(node.findtext('StateDst') or '').strip(),
+                filed_on=datetime.strptime(node.findtext('FilingDate').strip(), '%m/%d/%Y').date(),
+                year=int(node.findtext('Year')),
+            ))
+        except (AttributeError, TypeError, ValueError):
+            logger.warning('Skipped a malformed House index row: %s', ET.tostring(node, encoding='unicode')[:200])
     return found
 
 
@@ -93,6 +96,7 @@ def sync_index(year, now, directory=None):
             doc_id=entry.doc_id, member=member, year=year, filed_on=entry.filed_on,
             status=Report.PAPER if entry.doc_id.startswith(PAPER_PREFIXES) else Report.PENDING,
         )
+        known.add(entry.doc_id)
         created += 1
     state.etag = answer.headers.get('ETag', '')
     state.last_modified = answer.headers.get('Last-Modified', '')
@@ -118,9 +122,13 @@ def parse_pending(pause=time.sleep):
         Q(status=Report.PENDING) | Q(status=Report.FAILED, attempts__lt=MAX_ATTEMPTS),
     ).order_by('filed_on', 'doc_id')
     for report in due:
-        report.attempts += 1
         try:
             data = _get(PDF_URL.format(year=report.year, doc_id=report.doc_id)).content
+        except HouseError:
+            logger.warning('House host unreachable while fetching %s; stopping this run', report.doc_id, exc_info=True)
+            break
+        report.attempts += 1
+        try:
             _store(report, parse_report(pdf_text(data)))
             result.parsed += 1
             result.member_ids.add(report.member_id)
