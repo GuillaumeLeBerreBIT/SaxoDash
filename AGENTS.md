@@ -518,3 +518,16 @@ both calling Finnhub: the first takes a short lock (`<key>:filling`, 30s) and fi
 the second polls for up to five seconds and returns that answer, or fills itself if
 the first gave up. Budget counting in `finnhub._spend_call` is the one cache use
 outside it, because it counts calls rather than caching answers.
+
+**House trades are parsed from the Clerk's PDFs, not bought.** `congress` downloads the House Clerk's
+yearly index ZIP (ETag-conditional, daily at 14:00 UTC) and parses each e-filed PTR PDF with `pypdf`;
+paper reports (DocID `8…`/`9…`) have no text and are counted, never downloaded. pypdf drops the bold
+header letters, so "Filing Status: New" reads `F      S     : New`; rows wrap, page headers interrupt
+rows and descriptions wrap — `congress/parse.py` handles all three and is pinned by real PDFs in
+`congress/testdata`. A member's portfolio is an estimate: each trade is the midpoint of its range (an
+open range its lower bound), calls count as the stock, an exercise replaces the call position, and a
+sale of something never seen bought is ignored and counted. Those estimated holdings go through
+`congress/performance.py` into `investors.copying.measure` unchanged. `congress` imports `investors`, never the reverse:
+`price_feed.add_ticker_source` is how congress tickers get daily bars. The Senate's eFD site is
+geo-blocked from where the app runs, so the Senate is out until the backend is hosted in the US.
+Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
