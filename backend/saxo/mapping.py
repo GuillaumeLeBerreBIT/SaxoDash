@@ -84,6 +84,36 @@ def to_position_fields(saxo_position):
     }
 
 
+PRICE_SOURCE_STRENGTH = {'cost': 0, 'derived': 1, 'live': 2}
+
+
+def _weighted(lots, key, qty):
+    total = sum(lot['qty'] * lot[key] for lot in lots) / qty
+    return total.quantize(CENTS, rounding=ROUND_HALF_UP)
+
+
+def _merge(lots):
+    if len(lots) == 1:
+        return lots[0]
+    qty = sum(lot['qty'] for lot in lots)
+    merged = {
+        **lots[0],
+        'qty': qty,
+        'price_source': min((lot['price_source'] for lot in lots), key=PRICE_SOURCE_STRENGTH.get),
+    }
+    if qty:
+        merged['avg_cost'] = _weighted(lots, 'avg_cost', qty)
+        merged['current_price'] = _weighted(lots, 'current_price', qty)
+    return merged
+
+
+def merge_lots(position_fields):
+    by_ticker = {}
+    for fields in position_fields:
+        by_ticker.setdefault(fields['ticker'], []).append(fields)
+    return [_merge(lots) for lots in by_ticker.values()]
+
+
 def _currency_and_rate(display, rate):
     currency = display.get('Currency')
     if rate:

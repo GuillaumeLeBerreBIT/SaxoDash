@@ -103,6 +103,54 @@ class ToPositionFieldsTest(TestCase):
         self.assertIsNone(mapping.to_position_fields(SAMPLE_POSITION)['uic'])
 
 
+def _lot(position_id, amount, open_price, profit_loss):
+    return {
+        **UNENTITLED_POSITION,
+        'PositionId': position_id,
+        'PositionBase': {**UNENTITLED_POSITION['PositionBase'], 'Amount': amount, 'OpenPrice': open_price},
+        'PositionView': {**UNENTITLED_POSITION['PositionView'], 'ProfitLossOnTrade': profit_loss},
+    }
+
+
+class MergeLotsTest(TestCase):
+    def merged(self, *lots):
+        return mapping.merge_lots(mapping.to_position_fields(lot) for lot in lots)
+
+    def test_one_lot_passes_through_unchanged(self):
+        fields = mapping.to_position_fields(UNENTITLED_POSITION)
+        self.assertEqual(mapping.merge_lots([fields]), [fields])
+
+    def test_lots_of_one_instrument_become_one_position(self):
+        merged = self.merged(_lot('1', 10, 100, 500), _lot('2', 30, 140, 300))
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]['ticker'], 'MSFT')
+
+    def test_quantity_is_the_sum_of_the_lots(self):
+        [position] = self.merged(_lot('1', 10, 100, 500), _lot('2', 30, 140, 300))
+        self.assertEqual(position['qty'], Decimal('40'))
+
+    def test_average_cost_is_weighted_by_lot_size(self):
+        [position] = self.merged(_lot('1', 10, 100, 500), _lot('2', 30, 140, 300))
+        self.assertEqual(position['avg_cost'], Decimal('130.00'))
+
+    def test_value_equals_the_sum_of_the_lots_values(self):
+        [position] = self.merged(_lot('1', 10, 100, 500), _lot('2', 30, 140, 300))
+        self.assertEqual(position['current_price'], Decimal('150.00'))
+        self.assertEqual(position['qty'] * position['current_price'], Decimal('6000.00'))
+
+    def test_the_weakest_price_source_describes_the_position(self):
+        live = {**_lot('1', 10, 100, 500), 'PositionView': {'CurrentPrice': 150.0}}
+        [position] = self.merged(live, _lot('2', 30, 140, 300))
+        self.assertEqual(position['price_source'], 'derived')
+
+    def test_different_instruments_stay_apart(self):
+        merged = mapping.merge_lots([
+            mapping.to_position_fields(UNENTITLED_POSITION),
+            mapping.to_position_fields(SAMPLE_POSITION),
+        ])
+        self.assertEqual(sorted(p['ticker'] for p in merged), ['MSFT', 'NVDA'])
+
+
 class UnentitledPositionPricingTest(TestCase):
     """The account has no market-data entitlement, which is the normal case here.
 
