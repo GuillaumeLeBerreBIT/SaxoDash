@@ -1,6 +1,6 @@
 function niceStep(raw) {
   const magnitude = 10 ** Math.floor(Math.log10(raw))
-  const fraction = raw / magnitude
+  const fraction = Number((raw / magnitude).toPrecision(12))
   const factor = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10
   return factor * magnitude
 }
