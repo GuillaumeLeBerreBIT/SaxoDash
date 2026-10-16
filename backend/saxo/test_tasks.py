@@ -221,6 +221,22 @@ class SyncPositionsTaskTest(TestCase):
         tasks.sync_positions()
         self.assertEqual(Transaction.objects.count(), 1)
 
+    @patch('saxo.tasks.client.get_positions')
+    def test_several_lots_of_one_stock_hold_their_combined_quantity(self, mock_get_positions):
+        second_lot = {
+            **SAMPLE_POSITION,
+            'PositionId': '5027270999',
+            'PositionBase': {**SAMPLE_POSITION['PositionBase'], 'Amount': 5, 'OpenPrice': 512.30},
+        }
+        mock_get_positions.return_value = [SAMPLE_POSITION, second_lot]
+        tasks.sync_positions()
+
+        position = Position.objects.get(ticker='NVDA')
+        self.assertEqual(position.qty, Decimal('20'))
+        self.assertEqual(position.avg_cost, Decimal('437.30'))
+        self.assertEqual(Transaction.objects.count(), 2)
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').rows, 1)
+
 
 class SyncClosedPositionsTaskTest(TestCase):
     def setUp(self):
