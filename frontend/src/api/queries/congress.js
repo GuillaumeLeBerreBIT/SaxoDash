@@ -1,10 +1,11 @@
-import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { getCongressMember, getCongressMembers, getCongressOwnership, getCongressOwnershipSummary } from '../client'
 
 export const congressKeys = {
   members: ['congress-members'],
   member: (slug) => ['congress-member', slug],
+  ownershipSummaries: ['congress-ownership', 'summary'],
   ownershipSummary: (tickers) => ['congress-ownership', 'summary', tickers.join(',')],
   ownership: (ticker) => ['congress-ownership', 'detail', ticker],
 }
@@ -25,24 +26,27 @@ function chunked(items, size) {
   return chunks
 }
 
+function merged(summaries) {
+  if (summaries.length === 0) return undefined
+  return { window_days: summaries[0].window_days, stocks: Object.assign({}, ...summaries.map((summary) => summary.stocks)) }
+}
+
 const mergeSummaries = (results) => {
   const answered = results.filter((result) => result.data)
   if (answered.length === 0) return { data: undefined, isLoading: results.some((result) => result.isLoading) }
-  return {
-    data: {
-      window_days: answered[0].data.window_days,
-      stocks: Object.assign({}, ...answered.map((result) => result.data.stocks)),
-    },
-    isLoading: false,
-  }
+  return { data: merged(answered.map((result) => result.data)), isLoading: false }
 }
 
 export function useCongressOwnershipSummary(tickers) {
+  const queryClient = useQueryClient()
+  const cachedSummaries = () => merged(
+    queryClient.getQueriesData({ queryKey: congressKeys.ownershipSummaries }).map(([, data]) => data).filter(Boolean),
+  )
   return useQueries({
     queries: chunked(tickers, MAX_SUMMARY_TICKERS).map((chunk) => ({
       queryKey: congressKeys.ownershipSummary(chunk),
       queryFn: () => getCongressOwnershipSummary(chunk),
-      placeholderData: keepPreviousData,
+      placeholderData: cachedSummaries,
     })),
     combine: mergeSummaries,
   })

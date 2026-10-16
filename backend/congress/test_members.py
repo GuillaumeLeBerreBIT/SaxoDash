@@ -117,6 +117,20 @@ class MemberForTest(TestCase):
         with self.assertRaises(requests.RequestException):
             member_for(entry('Nobody', 'Known', 'ZZ01'), unreachable)
 
+    def test_a_known_member_without_a_party_gets_one_and_an_outage_leaves_it_empty(self):
+        Member.objects.create(slug='nan-pelosi', bioguide_id='P000197', first_name='Nan', last_name='Pelosi', state_district='CA11')
+
+        def unreachable():
+            raise requests.RequestException('dataset down')
+
+        self.assertEqual(member_for(entry('Nan', 'Pelosi', 'CA11'), unreachable).party, '')
+        self.assertEqual(member_for(entry('Nan', 'Pelosi', 'CA11', doc_id='20000002'), self.provider).party, 'Democrat')
+
+    def test_a_known_member_with_a_party_does_not_fetch_the_dataset(self):
+        member_for(entry('Nancy', 'Pelosi', 'CA11'), self.provider)
+        member_for(entry('Nancy', 'Pelosi', 'CA11', doc_id='20000002'), self.provider)
+        self.assertEqual(self.calls, 1)
+
     def test_two_smiths_in_different_states_are_two_members_with_distinct_slugs(self):
         adam = member_for(entry('Adam', 'Smith', 'WA09'), self.provider)
         jason = member_for(entry('Jason', 'Smith', 'MO08'), self.provider)
@@ -125,7 +139,12 @@ class MemberForTest(TestCase):
     def test_an_alias_answers_a_name_the_dataset_cannot_match(self):
         with mock.patch.object(members, 'aliases', return_value={('pelosi', 'nan', 'CA11'): 'P000197'}):
             member = member_for(entry('Nan', 'Pelosi', 'CA11'), self.provider)
-        self.assertEqual(member.bioguide_id, 'P000197')
+        self.assertEqual((member.bioguide_id, member.party), ('P000197', 'Democrat'))
+
+    def test_an_alias_to_someone_the_dataset_does_not_list_still_creates_the_member(self):
+        with mock.patch.object(members, 'aliases', return_value={('gone', 'long', 'OH01'): 'G000999'}):
+            member = member_for(entry('Long', 'Gone', 'OH01'), self.provider)
+        self.assertEqual((member.bioguide_id, member.party), ('G000999', ''))
 
     def test_an_unmatched_member_is_created_without_party(self):
         with self.assertLogs('congress.members', level='WARNING'):

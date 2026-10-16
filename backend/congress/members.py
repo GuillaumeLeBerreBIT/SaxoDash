@@ -43,11 +43,13 @@ def first_token(name):
 class Directory:
     def __init__(self, legislators):
         self.by_key = {}
+        self.parties = {}
         for person in legislators:
             terms = [term for term in person.get('terms', []) if term.get('type') == 'rep' and term.get('end', '') >= SINCE.isoformat()]
             if not terms:
                 continue
             latest = terms[-1]
+            self.parties[person['id']['bioguide']] = latest.get('party', '')
             key = (normalize(person['name'].get('last')), latest['state'])
             self.by_key.setdefault(key, []).append({
                 'bioguide': person['id']['bioguide'],
@@ -73,6 +75,9 @@ class Directory:
         if len(candidates) != 1:
             return None
         return {'bioguide': candidates[0]['bioguide'], 'party': candidates[0]['party']}
+
+    def party_of(self, bioguide):
+        return self.parties.get(bioguide, '')
 
 
 def aliases():
@@ -132,10 +137,20 @@ def _refresh(member, entry, party=''):
     return member
 
 
+def _missing_party(member, directory):
+    if member.party or not member.bioguide_id:
+        return ''
+    try:
+        return directory().party_of(member.bioguide_id)
+    except requests.RequestException:
+        logger.info('Legislator dataset unreachable; party for %s stays empty for now', member.slug)
+        return ''
+
+
 def member_for(entry, directory):
     known = _known(entry)
     if known:
-        return _refresh(known, entry)
+        return _refresh(known, entry, _missing_party(known, directory))
     state = entry.state_district[:2]
     bioguide = aliases().get((normalize(entry.last), first_token(entry.first), entry.state_district))
     party = ''
@@ -143,6 +158,8 @@ def member_for(entry, directory):
         found = directory().find(entry.last, entry.first, state)
         if found:
             bioguide, party = found['bioguide'], found['party']
+    else:
+        party = directory().party_of(bioguide)
     if bioguide:
         existing = Member.objects.filter(bioguide_id=bioguide).first()
         if existing:

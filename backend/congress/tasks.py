@@ -1,9 +1,10 @@
 from celery import shared_task
 from django.utils import timezone
 
+from saxo.models import SyncRun
 from saxo.tasks import SyncReport, synced
 
-from . import house, performance
+from . import house, performance, run_lock
 
 SYNC_TASK = 'sync_house'
 
@@ -22,4 +23,9 @@ def _sync():
 
 @shared_task
 def sync_house():
-    return _sync()
+    try:
+        with run_lock.exclusive('daily sync'):
+            return _sync()
+    except run_lock.Busy as busy:
+        SyncRun.objects.create(task=SYNC_TASK, outcome='skipped', detail=f'A House {busy.holder} was already running.')
+        return None

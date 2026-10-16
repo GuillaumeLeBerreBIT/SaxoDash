@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from congress import house, performance
+from congress import house, performance, run_lock
 from congress.models import Member, Report
 
 
@@ -18,6 +18,13 @@ class Command(BaseCommand):
             reports = Report.objects.filter(status=Report.FAILED)
         else:
             raise CommandError('Pass --doc-id ID or --failed.')
+        try:
+            with run_lock.exclusive('reparse'):
+                self._reparse(reports)
+        except run_lock.Busy as busy:
+            raise CommandError(f'A House {busy.holder} is already running; try again when it finishes.')
+
+    def _reparse(self, reports):
         reset = reports.exclude(status=Report.PAPER).update(status=Report.PENDING, attempts=0, retry_after=None, error='')
         result = house.parse_pending()
         for member in Member.objects.filter(pk__in=result.member_ids):

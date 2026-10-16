@@ -55,19 +55,22 @@ def dedupe(rows):
     return sorted(kept, key=lambda found: (found.filed_on, found.traded_on))
 
 
+def _shares(row, price):
+    return size(row.amount_low, row.amount_high) / price
+
+
 def _apply(row, price, stock, calls, basis):
-    shares = size(row.amount_low, row.amount_high) / price
     book = calls if row.option == CALL and not row.exercise else stock
     if row.kind == PURCHASE:
         if row.exercise:
             calls.pop(row.ticker, None)
-        book[row.ticker] += shares
+        book[row.ticker] += _shares(row, price)
         return
     held = book.get(row.ticker, 0.0)
     if held <= 0:
         basis['unseen_sales'] += 1
         return
-    remaining = 0.0 if row.kind == SALE else max(0.0, held - shares)
+    remaining = 0.0 if row.kind == SALE else max(0.0, held - _shares(row, price))
     if remaining > 0:
         book[row.ticker] = remaining
     else:
@@ -96,7 +99,7 @@ def replay(rows, prices):
                 continue
             series = prices.get(row.ticker) if row.priceable else None
             price = series.at(row.traded_on) if series else None
-            if not price:
+            if not price and not (row.kind == SALE and row.ticker):
                 basis['unpriced'] += 1
                 continue
             _apply(row, price, stock, calls, basis)

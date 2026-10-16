@@ -1,16 +1,21 @@
+import io
 from datetime import date, datetime, timezone as tz
 from unittest import mock
 
-from django.core.management import call_command
-from django.test import TestCase
+from django.core.management import CommandError, call_command
+from django.test import TestCase, override_settings
 
 from saxo.models import SyncRun
 
-from . import tasks
+from . import run_lock, tasks
 from .house import ParseResult
 from .models import Member, Report
 
 
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
+
+
+@override_settings(CACHES=LOCMEM)
 class SyncHouseTest(TestCase):
     def setUp(self):
         self.member = Member.objects.create(slug='nancy-pelosi', first_name='Nancy', last_name='Pelosi', state_district='CA11')
@@ -76,7 +81,53 @@ class SyncHouseTest(TestCase):
         self.assertEqual((run.outcome, run.detail), ('failed', 'Clerk unreachable, 5 reports waiting'))
 
 
+    def test_a_run_already_holding_the_lock_skips_the_sync(self):
+        with run_lock.exclusive('backfill'), \
+                mock.patch.object(tasks.house, 'sync_index') as sync_index:
+            self.assertIsNone(tasks.sync_house())
+        sync_index.assert_not_called()
+        run = SyncRun.objects.get(task='sync_house')
+        self.assertEqual((run.outcome, run.detail), ('skipped', 'A House backfill was already running.'))
+
+    def test_the_lock_is_released_after_a_failed_sync(self):
+        with mock.patch.object(tasks.house, 'sync_index', side_effect=tasks.house.HouseError('down')):
+            with self.assertRaises(tasks.house.HouseError):
+                tasks.sync_house()
+        with run_lock.exclusive('backfill'):
+            pass
+
+
+@override_settings(CACHES=LOCMEM)
+class BackfillCommandTest(TestCase):
+    def test_refuses_to_start_while_the_daily_sync_runs(self):
+        with run_lock.exclusive('daily sync'), \
+                mock.patch('congress.management.commands.backfill_house.house.sync_index') as sync_index:
+            with self.assertRaisesMessage(CommandError, 'A House daily sync is already running'):
+                call_command('backfill_house', '--since', '2026')
+        sync_index.assert_not_called()
+
+    def test_holds_the_lock_while_it_runs(self):
+        def sync_index(year, now):
+            with self.assertRaises(run_lock.Busy):
+                with run_lock.exclusive('daily sync'):
+                    pass
+            return 0
+
+        with mock.patch('congress.management.commands.backfill_house.house.sync_index', side_effect=sync_index), \
+                mock.patch('congress.management.commands.backfill_house.house.parse_pending', return_value=ParseResult()), \
+                mock.patch('congress.management.commands.backfill_house.performance.rebuild_all', return_value=0):
+            call_command('backfill_house', '--since', '2026', stdout=io.StringIO())
+        with run_lock.exclusive('daily sync'):
+            pass
+
+
+@override_settings(CACHES=LOCMEM)
 class ReparseCommandTest(TestCase):
+    def test_refuses_to_start_while_another_run_holds_the_lock(self):
+        with run_lock.exclusive('backfill'):
+            with self.assertRaisesMessage(CommandError, 'A House backfill is already running'):
+                call_command('reparse_reports', '--failed')
+
     def test_failed_reports_are_reset_and_parsed_again(self):
         member = Member.objects.create(slug='x', first_name='X', last_name='Y', state_district='CA01')
         report = Report.objects.create(doc_id='20000001', member=member, year=2026, filed_on=date(2026, 1, 2),

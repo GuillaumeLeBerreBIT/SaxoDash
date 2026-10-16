@@ -6,10 +6,10 @@ vi.mock('../client')
 import * as client from '../client'
 import { MAX_SUMMARY_TICKERS, useCongressOwnershipSummary } from './congress'
 
-function setup(useHook) {
+function setup(useHook, options) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  return renderHook(useHook, { wrapper })
+  return renderHook(useHook, { wrapper, ...options })
 }
 
 describe('useCongressOwnershipSummary', () => {
@@ -24,6 +24,19 @@ describe('useCongressOwnershipSummary', () => {
     await waitFor(() => expect(Object.keys(result.current.data?.stocks ?? {})).toHaveLength(tickers.length))
     expect(client.getCongressOwnershipSummary.mock.calls.map(([chunk]) => chunk.length)).toEqual([MAX_SUMMARY_TICKERS, 5])
     expect(result.current.data.window_days).toBe(90)
+  })
+
+  it('keeps showing the previous answer while a changed ticker list loads', async () => {
+    client.getCongressOwnershipSummary.mockResolvedValueOnce({ window_days: 90, stocks: { AAPL: { holders: 2, buyers: 1, sellers: 0 } } })
+    client.getCongressOwnershipSummary.mockReturnValueOnce(new Promise(() => {}))
+    const { result, rerender } = setup(({ tickers }) => useCongressOwnershipSummary(tickers), { initialProps: { tickers: ['AAPL'] } })
+    await waitFor(() => expect(result.current.data?.stocks.AAPL.holders).toBe(2))
+
+    rerender({ tickers: ['AAPL', 'MSFT'] })
+
+    await waitFor(() => expect(client.getCongressOwnershipSummary).toHaveBeenCalledTimes(2))
+    expect(result.current.data?.stocks.AAPL.holders).toBe(2)
+    expect(result.current.isLoading).toBe(false)
   })
 
   it('makes no request without tickers', () => {

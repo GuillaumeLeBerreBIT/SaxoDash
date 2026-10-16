@@ -49,6 +49,18 @@ class ReplayTest(SimpleTestCase):
         rows = [row('AAPL', low=1000, high=1000), row('AAPL', kind='sale', low=1, high=1, filed_on=D3, traded_on=D3)]
         self.assertNotIn('AAPL', holdings(replay(rows, PRICES).periods[-1]))
 
+    def test_a_full_sale_closes_the_position_even_when_it_cannot_be_priced(self):
+        rows = [row('AAPL', low=1000, high=1000), row('AAPL', kind='sale', priceable=False, filed_on=D3, traded_on=D3)]
+        result = replay(rows, PRICES)
+        self.assertNotIn('AAPL', holdings(result.periods[-1]))
+        self.assertEqual(result.basis['unpriced'], 0)
+
+    def test_a_partial_sale_that_cannot_be_priced_is_counted_and_leaves_the_position_held(self):
+        rows = [row('AAPL', low=1000, high=1000), row('AAPL', kind='partial_sale', priceable=False, filed_on=D3, traded_on=D3)]
+        result = replay(rows, PRICES)
+        self.assertIn('AAPL', holdings(result.periods[-1]))
+        self.assertEqual(result.basis['unpriced'], 1)
+
     def test_a_sale_of_something_never_seen_bought_is_counted_not_applied(self):
         result = replay([row('AAPL', kind='sale')], PRICES)
         self.assertEqual(result.basis['unseen_sales'], 1)

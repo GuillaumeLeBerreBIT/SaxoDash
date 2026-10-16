@@ -1,7 +1,7 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from congress import house, performance
+from congress import house, performance, run_lock
 
 
 class Command(BaseCommand):
@@ -11,8 +11,15 @@ class Command(BaseCommand):
         parser.add_argument('--since', type=int, default=2021)
 
     def handle(self, *args, **options):
+        try:
+            with run_lock.exclusive('backfill'):
+                self._backfill(options['since'])
+        except run_lock.Busy as busy:
+            raise CommandError(f'A House {busy.holder} is already running; try again when it finishes.')
+
+    def _backfill(self, since):
         now = timezone.now()
-        for year in range(options['since'], now.year + 1):
+        for year in range(since, now.year + 1):
             created = house.sync_index(year, now)
             self.stdout.write(f'{year}: {created} new reports')
         result = house.parse_pending()

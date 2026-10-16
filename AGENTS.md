@@ -526,10 +526,11 @@ header letters, so "Filing Status: New" reads `F      S     : New`; rows wrap, p
 rows and descriptions wrap — `congress/parse.py` handles all three and is pinned by real PDFs in
 `congress/testdata`. A member's portfolio is an estimate: each trade is the midpoint of its range (an
 open range its lower bound), calls count as the stock, an exercise replaces the call position, and a
-sale of something never seen bought is ignored and counted. Those estimated holdings go through
+sale of something never seen bought is ignored and counted. A full sale closes the position even when it cannot be priced; a partial one needs a price to size it, so it is counted and left held. Those estimated holdings go through
 `congress/performance.py` into `investors.copying.measure` unchanged. `congress` imports `investors`, never the reverse:
 `price_feed.add_ticker_source` is how congress tickers get daily bars. The Senate's eFD site is
 geo-blocked from where the app runs, so the Senate is out until the backend is hosted in the US.
 Holdings and copy performance are rebuilt for every member on each daily sync, not only for members with a newly parsed report, so tickers priced by the nightly refresh overnight are picked up the next day. Prices reach back about 4.7 years (1,200 daily bars), so the earliest backfilled trades show as unpriced; `basis.priced_from` records where pricing starts and the member page says so.
 Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
 A report's PDF is fetched through a `requests` session that retries 429/5xx three times; a 4xx marks only that report failed and retries it after one day, then three, then gives up (`Report.retry_after`), a parse error gives up at once, and a host still down after the retries stops the run with its reports untouched and records the sync as failed ("Clerk unreachable, N reports waiting"); `reparse_reports --failed` resets all of it.
+The daily sync, `backfill_house` and `reparse_reports` share one cache lock (`congress/run_lock.py`, three hours): the sync records itself as `skipped` while it is held and the two commands refuse to start. A member matched through `member_aliases.csv` takes its party from the legislator dataset by bioguide id, and a known member stored without one gets it on its next report.
