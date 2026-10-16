@@ -18,7 +18,7 @@ class Command(BaseCommand):
             reports = Report.objects.filter(status=Report.FAILED)
         else:
             raise CommandError('Pass --doc-id ID or --failed.')
-        reset = reports.exclude(status=Report.PAPER).update(status=Report.PENDING, attempts=0, error='')
+        reset = reports.exclude(status=Report.PAPER).update(status=Report.PENDING, attempts=0, retry_after=None, error='')
         result = house.parse_pending()
         for member in Member.objects.filter(pk__in=result.member_ids):
             performance.rebuild(member)

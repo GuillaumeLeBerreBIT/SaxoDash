@@ -15,6 +15,8 @@ def _sync():
     created = sum(house.sync_index(year, now) for year in sorted(years))
     result = house.parse_pending()
     performance.rebuild_all()
+    if result.waiting:
+        raise house.HouseError(f'Clerk unreachable, {result.waiting} reports waiting')
     return SyncReport(rows=result.parsed, detail=f'{created} new reports, {result.failed} failed to parse')
 
 

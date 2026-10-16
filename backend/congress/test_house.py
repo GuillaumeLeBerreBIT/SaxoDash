@@ -1,9 +1,10 @@
 import io
 import zipfile
-from datetime import date, datetime, timezone as tz
+from datetime import date, datetime, timedelta, timezone as tz
 from pathlib import Path
 from unittest import mock
 
+import requests
 from django.test import TestCase
 
 from . import house
@@ -116,29 +117,81 @@ class ParsePendingTest(TestCase):
         self.assertEqual((self.report.status, self.report.attempts), (Report.PARSED, 1))
         self.assertEqual(Trade.objects.filter(report=self.report).count(), 9)
 
-    def test_a_parse_failure_is_recorded_retried_and_then_left(self):
-        with mock.patch.object(house, '_get', return_value=response(content=b'x')), \
+    def test_a_parse_failure_is_given_up_at_once(self):
+        with mock.patch.object(house, '_get', return_value=response(content=b'x')) as get, \
                 mock.patch.object(house, 'pdf_text', side_effect=ValueError('boom')):
-            for _ in range(4):
-                house.parse_pending(pause=lambda _: None)
+            first = house.parse_pending(pause=lambda _: None, now=NOW)
+            house.parse_pending(pause=lambda _: None, now=NOW + timedelta(days=30))
+        self.assertEqual(first.failed, 1)
+        self.assertEqual(get.call_count, 1)
         self.report.refresh_from_db()
         self.assertEqual((self.report.status, self.report.attempts, self.report.error), (Report.FAILED, 3, 'boom'))
+        self.assertIsNone(self.report.retry_after)
 
-    def test_a_network_error_costs_no_attempt_and_stops_the_run(self):
+    def test_a_host_outage_costs_no_attempt_stops_the_run_and_says_how_many_wait(self):
         Report.objects.create(doc_id='20026591', member=self.member, year=2025, filed_on=date(2025, 1, 18))
         with mock.patch.object(house, '_get', side_effect=house.HouseError('down')) as get:
-            result = house.parse_pending(pause=lambda _: None)
+            result = house.parse_pending(pause=lambda _: None, now=NOW)
         self.assertEqual(get.call_count, 1)
-        self.assertEqual((result.parsed, result.failed), (0, 0))
+        self.assertEqual((result.parsed, result.failed, result.waiting), (0, 0, 2))
         self.assertEqual(
             list(Report.objects.filter(doc_id__startswith='2002659').values_list('status', 'attempts')),
             [(Report.PENDING, 0), (Report.PENDING, 0)],
         )
 
+    def test_a_missing_pdf_does_not_block_the_next_report(self):
+        second = Report.objects.create(doc_id='20026591', member=self.member, year=2025, filed_on=date(2025, 1, 18))
+        pdf = (TESTDATA / '20026590.pdf').read_bytes()
+        with mock.patch.object(house, '_get', side_effect=[house.HouseMissing('404'), response(content=pdf)]):
+            result = house.parse_pending(pause=lambda _: None, now=NOW)
+        self.assertEqual((result.parsed, result.failed, result.waiting), (1, 1, 0))
+        self.report.refresh_from_db()
+        second.refresh_from_db()
+        self.assertEqual((self.report.status, self.report.attempts, self.report.error), (Report.FAILED, 1, '404'))
+        self.assertEqual(second.status, Report.PARSED)
+
+    def test_a_missing_pdf_is_retried_after_one_then_three_days_then_given_up(self):
+        seen = []
+        with mock.patch.object(house, '_get', side_effect=house.HouseMissing('404')) as get:
+            for day in range(12):
+                calls = get.call_count
+                house.parse_pending(pause=lambda _: None, now=NOW + timedelta(days=day))
+                if get.call_count > calls:
+                    seen.append(day)
+        self.assertEqual(seen, [0, 1, 4])
+        self.report.refresh_from_db()
+        self.assertEqual((self.report.status, self.report.attempts), (Report.FAILED, 3))
+        self.assertIsNone(self.report.retry_after)
+
+    def test_a_report_waiting_out_its_backoff_is_not_due(self):
+        Report.objects.filter(pk=self.report.pk).update(status=Report.FAILED, attempts=1, retry_after=NOW + timedelta(hours=1))
+        with mock.patch.object(house, '_get') as get:
+            house.parse_pending(pause=lambda _: None, now=NOW)
+        get.assert_not_called()
+
     def test_reparsing_replaces_the_previous_trades(self):
         pdf = (TESTDATA / '20026590.pdf').read_bytes()
         with mock.patch.object(house, '_get', return_value=response(content=pdf)):
-            house.parse_pending(pause=lambda _: None)
+            house.parse_pending(pause=lambda _: None, now=NOW)
             Report.objects.filter(pk=self.report.pk).update(status=Report.PENDING)
-            house.parse_pending(pause=lambda _: None)
+            house.parse_pending(pause=lambda _: None, now=NOW)
         self.assertEqual(Trade.objects.filter(report=self.report).count(), 9)
+
+
+class GetTest(TestCase):
+    def test_a_client_error_is_a_missing_file(self):
+        with mock.patch.object(house._session(), 'get', return_value=response(status=404)):
+            with self.assertRaises(house.HouseMissing):
+                house._get('https://example.test/a.pdf')
+
+    def test_a_connection_error_is_an_outage_not_a_missing_file(self):
+        with mock.patch.object(house._session(), 'get', side_effect=requests.ConnectionError('refused')):
+            with self.assertRaises(house.HouseError) as raised:
+                house._get('https://example.test/a.pdf')
+        self.assertNotIsInstance(raised.exception, house.HouseMissing)
+
+    def test_blips_are_retried_by_the_transport(self):
+        retry = house._session().get_adapter('https://disclosures-clerk.house.gov/').max_retries
+        self.assertEqual(retry.total, 3)
+        self.assertEqual(set(retry.status_forcelist), {429, 500, 502, 503, 504})
+        self.assertTrue(retry.respect_retry_after_header)

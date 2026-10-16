@@ -39,6 +39,7 @@ class Report(models.Model):
     status = models.CharField(max_length=8, choices=STATUS_CHOICES, default=PENDING)
     amended = models.BooleanField(default=False)
     attempts = models.PositiveSmallIntegerField(default=0)
+    retry_after = models.DateTimeField(null=True, blank=True)
     unparsed_rows = models.PositiveSmallIntegerField(default=0)
     error = models.CharField(max_length=200, blank=True, default='')
 

@@ -65,13 +65,25 @@ class SyncHouseTest(TestCase):
         self.assertEqual(SyncRun.objects.get(task='sync_house').outcome, 'failed')
 
 
+    def test_an_unreachable_clerk_fails_the_run_after_rebuilding_what_was_parsed(self):
+        with mock.patch.object(tasks.house, 'sync_index', return_value=0), \
+                mock.patch.object(tasks.house, 'parse_pending', return_value=ParseResult(1, 0, {self.member.pk}, waiting=5)), \
+                mock.patch.object(tasks.performance, 'rebuild_all') as rebuild_all:
+            with self.assertRaises(tasks.house.HouseError):
+                tasks.sync_house()
+        rebuild_all.assert_called_once_with()
+        run = SyncRun.objects.get(task='sync_house')
+        self.assertEqual((run.outcome, run.detail), ('failed', 'Clerk unreachable, 5 reports waiting'))
+
+
 class ReparseCommandTest(TestCase):
     def test_failed_reports_are_reset_and_parsed_again(self):
         member = Member.objects.create(slug='x', first_name='X', last_name='Y', state_district='CA01')
         report = Report.objects.create(doc_id='20000001', member=member, year=2026, filed_on=date(2026, 1, 2),
-                                       status=Report.FAILED, attempts=3)
+                                       status=Report.FAILED, attempts=2,
+                                       retry_after=datetime(2026, 1, 9, tzinfo=tz.utc))
         with mock.patch('congress.management.commands.reparse_reports.house.parse_pending', return_value=ParseResult()), \
                 mock.patch('congress.management.commands.reparse_reports.performance.rebuild'):
             call_command('reparse_reports', '--failed')
         report.refresh_from_db()
-        self.assertEqual((report.status, report.attempts), (Report.PENDING, 0))
+        self.assertEqual((report.status, report.attempts, report.retry_after), (Report.PENDING, 0, None))

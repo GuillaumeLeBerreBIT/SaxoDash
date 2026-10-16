@@ -4,12 +4,15 @@ import time
 import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 
 import requests
 from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from . import members
 from .members import IndexEntry
@@ -24,11 +27,20 @@ USER_AGENT = 'Mozilla/5.0 (SaxoDash personal dashboard)'
 PAPER_PREFIXES = ('8', '9')
 PERIODIC_TRANSACTION = 'P'
 MAX_ATTEMPTS = 3
+MISSING_BACKOFF = (timedelta(days=1), timedelta(days=3))
 PAUSE_SECONDS = 1.0
 TIMEOUT = 30
+RETRY = Retry(
+    total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504],
+    respect_retry_after_header=True,
+)
 
 
 class HouseError(Exception):
+    pass
+
+
+class HouseMissing(HouseError):
     pass
 
 
@@ -37,16 +49,26 @@ class ParseResult:
     parsed: int = 0
     failed: int = 0
     member_ids: set = field(default_factory=set)
+    waiting: int = 0
+
+
+@cache
+def _session():
+    session = requests.Session()
+    session.mount('https://', HTTPAdapter(max_retries=RETRY))
+    return session
 
 
 def _get(url, headers=None):
     try:
-        answer = requests.get(url, headers={'User-Agent': USER_AGENT, **(headers or {})}, timeout=TIMEOUT)
+        answer = _session().get(url, headers={'User-Agent': USER_AGENT, **(headers or {})}, timeout=TIMEOUT)
     except requests.RequestException as exc:
         raise HouseError(f'{url}: {exc}') from exc
-    if answer.status_code not in (200, 304):
-        raise HouseError(f'{url} answered {answer.status_code}')
-    return answer
+    if answer.status_code in (200, 304):
+        return answer
+    if 400 <= answer.status_code < 500:
+        raise HouseMissing(f'{url} answered {answer.status_code}')
+    raise HouseError(f'{url} answered {answer.status_code}')
 
 
 def entries(xml_bytes):
@@ -113,19 +135,40 @@ def _store(report, parsed):
         report.amended = parsed.amended
         report.unparsed_rows = parsed.unparsed_rows
         report.error = ''
+        report.retry_after = None
         report.save()
 
 
-def parse_pending(pause=time.sleep):
-    result = ParseResult()
-    due = Report.objects.filter(
-        Q(status=Report.PENDING) | Q(status=Report.FAILED, attempts__lt=MAX_ATTEMPTS),
+def _due(now):
+    return Report.objects.filter(
+        Q(status=Report.PENDING)
+        | Q(status=Report.FAILED, attempts__lt=MAX_ATTEMPTS) & (Q(retry_after__isnull=True) | Q(retry_after__lte=now)),
     ).order_by('filed_on', 'doc_id')
-    for report in due:
+
+
+def _fail(report, error, now, attempts):
+    report.status = Report.FAILED
+    report.error = error[:200]
+    report.attempts = attempts
+    report.retry_after = now + MISSING_BACKOFF[attempts - 1] if attempts < MAX_ATTEMPTS else None
+    report.save(update_fields=['status', 'error', 'attempts', 'retry_after'])
+
+
+def parse_pending(pause=time.sleep, now=None):
+    now = now or timezone.now()
+    result = ParseResult()
+    for report in _due(now):
         try:
             data = _get(PDF_URL.format(year=report.year, doc_id=report.doc_id)).content
+        except HouseMissing as exc:
+            logger.warning('House report %s is missing: %s', report.doc_id, exc)
+            _fail(report, str(exc), now, report.attempts + 1)
+            result.failed += 1
+            pause(PAUSE_SECONDS)
+            continue
         except HouseError:
             logger.warning('House host unreachable while fetching %s; stopping this run', report.doc_id, exc_info=True)
+            result.waiting = _due(now).count()
             break
         report.attempts += 1
         try:
@@ -134,9 +177,7 @@ def parse_pending(pause=time.sleep):
             result.member_ids.add(report.member_id)
         except Exception as exc:
             logger.warning('Could not parse House report %s', report.doc_id, exc_info=True)
-            report.status = Report.FAILED
-            report.error = str(exc)[:200]
-            report.save(update_fields=['status', 'error', 'attempts'])
+            _fail(report, str(exc), now, MAX_ATTEMPTS)
             result.failed += 1
         pause(PAUSE_SECONDS)
     return result
