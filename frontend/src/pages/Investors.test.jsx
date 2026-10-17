@@ -36,6 +36,7 @@ vi.mock('../api/queries', () => ({
   useFollowInvestor: () => ({ mutate: follow }),
   usePrefetchInvestor: () => () => {},
   useCongressMembers: () => ({ isLoading: false, data: { members: [], most_bought: [], window_days: 90 } }),
+  useCongressOwnership: () => ({ isFetching: false, data: undefined }),
 }))
 vi.mock('../components/investors/AddInvestorDialog', () => ({ default: ({ onClose }) => <div role="dialog"><button onClick={onClose}>close</button></div> }))
 

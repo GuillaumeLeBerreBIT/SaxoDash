@@ -16,7 +16,7 @@ export function TopLogos({ holdings }) {
     <span className="flex -space-x-1.5">
       {holdings.map((h) => (
         <InstrumentLogo
-          key={h.cusip}
+          key={h.cusip ?? h.ticker}
           symbol={h.ticker}
           size={22}
           className="rounded-full ring-2 ring-zinc-900"

@@ -1,17 +1,29 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 
-import { useCongressMembers } from '../../api/queries'
-import { partyLabel } from '../../lib/congress'
-import { fmtDate, fmtNum } from '../../lib/format'
-import { points } from '../../lib/investors'
+import { useCongressMembers, useCongressOwnership } from '../../api/queries'
+import { CONGRESS_CHIPS, CONGRESS_SORTS, directoryMembers } from '../../lib/congress'
+import { looksLikeTicker } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
-import { nextSort, sortRows } from '../../lib/sort'
-import { Card, CardHeader, EmptyState, QueryState, SortableTh, Td, Th, Tr } from '../ui'
-import InvestorAvatar from '../investors/InvestorAvatar'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { Card, CardHeader, EmptyState, Input, QueryState, Select, Skeleton, TBtn } from '../ui'
+import CongressCards from './CongressCards'
+import CongressTable from './CongressTable'
 
-const ACCESSORS = { name: (member) => member.name, edge: (member) => member.excess_cagr_pct }
-const DEFAULT_SORT = { key: 'edge', direction: 'desc' }
+const DEFAULTS = { filter: 'all', order: 'edge', layout: 'cards' }
+const HEADING_ID = 'congress-directory-heading'
+
+function useDirectoryParams() {
+  const [params, setParams] = useSearchParams()
+  const read = (key) => params.get(key) ?? DEFAULTS[key]
+  const write = (key, value) => {
+    const next = new URLSearchParams(params)
+    if (value === DEFAULTS[key]) next.delete(key)
+    else next.set(key, value)
+    setParams(next, { replace: true })
+  }
+  return [read, write]
+}
 
 function MostBought({ items, windowDays }) {
   if (items.length === 0) return null
@@ -32,52 +44,85 @@ function MostBought({ items, windowDays }) {
   )
 }
 
+function useTraderSlugs(query) {
+  const debounced = useDebouncedValue(query.trim())
+  const ticker = looksLikeTicker(debounced) ? debounced.toUpperCase() : ''
+  const { data, isFetching } = useCongressOwnership(ticker)
+  const slugs = useMemo(() => new Set(ticker ? (data?.members ?? []).map((member) => member.slug) : []), [ticker, data])
+  const resolving = looksLikeTicker(query) && (debounced !== query.trim() || (ticker !== '' && isFetching))
+  return [slugs, resolving]
+}
+
+function Results({ visible, layout, order, onSort, query, waiting }) {
+  if (waiting) return <Skeleton className="h-40" />
+  if (visible.length === 0 && query.trim()) {
+    return <EmptyState title={`No member matches “${query.trim()}”.`} hint="Try a name, a state such as CA, a district such as TX02, or a ticker they traded." />
+  }
+  if (visible.length === 0) return <EmptyState title="No members in this group." />
+  return layout === 'table'
+    ? <CongressTable members={visible} sort={order} onSort={onSort} />
+    : <CongressCards members={visible} />
+}
+
 export default function CongressDirectory() {
   const query = useCongressMembers()
-  const [sort, setSort] = useState(DEFAULT_SORT)
-  const onSort = (key) => setSort((current) => nextSort(current, key) ?? { key, direction: 'asc' })
-  const rows = useMemo(() => sortRows(query.data?.members ?? [], sort, ACCESSORS), [query.data, sort])
+  const [read, write] = useDirectoryParams()
+  const [search, setSearch] = useState('')
+  const [traderSlugs, resolving] = useTraderSlugs(search)
+  const filter = read('filter')
+  const order = read('order')
+  const layout = read('layout') === 'table' ? 'table' : 'cards'
+  const members = query.data?.members
+  const visible = useMemo(
+    () => directoryMembers(members ?? [], { chip: filter, query: search, sort: order, traderSlugs }),
+    [members, filter, search, order, traderSlugs],
+  )
+
   if (query.isLoading || query.error) {
     return <QueryState isLoading={query.isLoading} error={query.error} onRetry={query.refetch} label="members of Congress" />
   }
-  const { members = [], most_bought: mostBought = [], window_days: windowDays = 90 } = query.data ?? {}
-  if (members.length === 0) {
+  const { most_bought: mostBought = [], window_days: windowDays = 90 } = query.data ?? {}
+  if (!members?.length) {
     return <EmptyState title="No House trades imported yet" hint="They load daily from the House Clerk; run backfill_house once to import history." />
   }
   return (
     <div className="flex flex-col gap-6">
       <MostBought items={mostBought} windowDays={windowDays} />
-      <Card padding={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-[var(--fig-sm)]">
-            <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
-              <tr>
-                <SortableTh edge sortKey="name" sort={sort} onSort={onSort}>Member</SortableTh>
-                <Th>Party</Th>
-                <Th align="right">Trades</Th>
-                <Th align="right">Last filed</Th>
-                <SortableTh edge align="right" sortKey="edge" sort={sort} onSort={onSort}>Copy edge / yr</SortableTh>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((member) => (
-                <Tr key={member.slug}>
-                  <Td edge>
-                    <span className="flex items-center gap-2.5">
-                      <InvestorAvatar name={member.name} size={24} />
-                      <Link to={`/investors/congress/${member.slug}`} className="font-medium text-zinc-100 hover:text-blue-300">{member.name}</Link>
-                    </span>
-                  </Td>
-                  <Td className="text-zinc-400">{partyLabel(member.party, member.state_district)}</Td>
-                  <Td align="right" className="num font-mono text-zinc-300">{fmtNum(member.trades)}</Td>
-                  <Td align="right" className="num text-zinc-400">{member.last_filed ? fmtDate(member.last_filed) : '—'}</Td>
-                  <Td edge align="right" className="num font-mono text-zinc-200">{points(member.excess_cagr_pct)}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </table>
+      <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
+        <h2 id={HEADING_ID} className="text-[var(--fig-md)] font-semibold text-zinc-100">All members</h2>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div role="group" aria-label="Show members" className="flex items-center gap-0.5 flex-wrap">
+            {CONGRESS_CHIPS.map(([key, label]) => (
+              <TBtn key={key} active={filter === key} onClick={() => write('filter', key)}>{label}</TBtn>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input
+              type="search"
+              aria-label="Search members"
+              placeholder="Name, state or ticker"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-56"
+            />
+            <Select aria-label="Sort members" value={order} onChange={(e) => write('order', e.target.value)}>
+              {CONGRESS_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+            </Select>
+            <div role="group" aria-label="Member layout" className="flex items-center gap-0.5">
+              <TBtn active={layout === 'cards'} onClick={() => write('layout', 'cards')}>Cards</TBtn>
+              <TBtn active={layout === 'table'} onClick={() => write('layout', 'table')}>Table</TBtn>
+            </div>
+          </div>
         </div>
-      </Card>
+        <Results
+          visible={visible}
+          layout={layout}
+          order={order}
+          onSort={(key) => write('order', key)}
+          query={search}
+          waiting={visible.length === 0 && resolving}
+        />
+      </section>
     </div>
   )
 }
