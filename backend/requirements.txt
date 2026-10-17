@@ -8,6 +8,7 @@ django-cors-headers==4.9.0
 django-filter==26.1
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
+pypdf==6.20.1
 python-dotenv==1.2.2
 redis==8.1.0
 requests==2.34.2

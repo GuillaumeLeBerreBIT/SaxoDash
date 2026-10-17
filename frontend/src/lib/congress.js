@@ -1,0 +1,52 @@
+import { fmtNum } from './format'
+
+const PARTY = { Democrat: 'D', Republican: 'R', Independent: 'I' }
+const KIND = { purchase: 'Bought', sale: 'Sold', partial_sale: 'Sold part', exchange: 'Exchanged' }
+
+const dollars = (value) => `$${fmtNum(value)}`
+const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`
+
+export function partyLabel(party, stateDistrict) {
+  const letter = PARTY[party] ?? (party ? party[0] : '')
+  return letter ? `${letter}-${stateDistrict}` : stateDistrict
+}
+
+export function fmtRange(low, high) {
+  return high == null ? `Over ${dollars(low)}` : `${dollars(low)}–${dollars(high)}`
+}
+
+export function tradeLabel({ kind, option, exercise }) {
+  const base = KIND[kind] ?? kind
+  if (exercise) return `${base} (exercise)`
+  return option ? `${base} (${option})` : base
+}
+
+const monthYear = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+
+export function basisNote(basis = {}) {
+  if (!basis.trades) return 'No parsed trades yet.'
+  const since = basis.since ? ` since ${basis.since.slice(0, 4)}` : ''
+  const priced = basis.priced_from ? `, priced from ${monthYear(basis.priced_from)}` : ''
+  const parts = [`Estimated from ${plural(basis.trades, 'disclosed trade', 'disclosed trades')}${since}${priced} at the midpoint of each reported range`]
+  if (basis.paper_reports) parts.push(`${plural(basis.paper_reports, 'paper report', 'paper reports')} not included`)
+  if (basis.failed_reports) parts.push(`${plural(basis.failed_reports, 'report', 'reports')} could not be read`)
+  if (basis.unparsed_rows) parts.push(`${plural(basis.unparsed_rows, 'row', 'rows')} could not be read`)
+  if (basis.unseen_sales) parts.push(`${plural(basis.unseen_sales, 'sale', 'sales')} of holdings not seen bought ignored`)
+  if (basis.unpriced) parts.push(`${plural(basis.unpriced, 'trade', 'trades')} without a price left out`)
+  return parts.join(' · ')
+}
+
+export function activity(stock) {
+  if (!stock) return null
+  if (stock.buyers || stock.sellers) return { buyers: stock.buyers, sellers: stock.sellers }
+  return stock.holders ? { holders: stock.holders } : null
+}
+
+export function activityLabel(stock, windowDays) {
+  if (!stock.buyers && !stock.sellers) {
+    const verb = stock.holders === 1 ? 'holds' : 'hold'
+    return `${plural(stock.holders, 'member', 'members')} of Congress ${verb} it (estimated); none traded it in reports filed in the last ${windowDays} days`
+  }
+  const traded = `${plural(stock.buyers, 'member', 'members')} of Congress bought and ${stock.sellers} sold in reports filed in the last ${windowDays} days`
+  return stock.holders ? `${traded} · ${plural(stock.holders, 'holds', 'hold')} it (estimated)` : traded
+}

@@ -49,6 +49,7 @@ function stub(positions = [msft]) {
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useOwnershipSummary.mockReturnValue(idle)
+  queries.useCongressOwnershipSummary.mockReturnValue(idle)
 }
 
 describe('Portfolio holdings table', () => {
@@ -88,6 +89,21 @@ describe('Portfolio holdings table', () => {
     expect(change.textContent).toBe('▼\u00a0-4.2M-1.9%')
     expect(screen.getByRole('link', { name: 'Tracked funds hold 8,000,000 shares at the end of Q2 2026' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /net (bought|sold) 0 shares/ })).not.toBeInTheDocument()
+  })
+
+  it('shows House buyers and sellers per holding, linking to the Congress tab', () => {
+    stub([msft])
+    queries.useCongressOwnershipSummary.mockReturnValue({
+      ...idle,
+      data: { window_days: 90, stocks: { MSFT: { holders: 1, buyers: 2, sellers: 1 } } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useCongressOwnershipSummary).toHaveBeenCalledWith(['MSFT'])
+    expect(screen.getByRole('columnheader', { name: 'Congress' })).toBeInTheDocument()
+    const link = screen.getByRole('link', { name: /2 members of Congress bought and 1 sold/ })
+    expect(link).toHaveAttribute('href', '/research?symbol=MSFT&tab=congress')
   })
 
   it('keeps one h1 and no skipped level while loading', () => {

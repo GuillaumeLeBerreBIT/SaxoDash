@@ -245,6 +245,7 @@ describe('Research', () => {
       'Peers',
       'Earnings',
       'Funds',
+      'Congress',
       'Filings',
       'News',
       'Guide',
@@ -410,7 +411,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=filings' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'News', 'Guide'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
     expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
     for (const hook of [queries.useFundamentals, queries.useStatements, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
       expect(hook).not.toHaveBeenCalledWith('NVDA')

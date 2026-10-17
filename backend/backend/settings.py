@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     'research',
     'analytics',
     'investors',
+    'congress',
 ]
 
 MIDDLEWARE = [

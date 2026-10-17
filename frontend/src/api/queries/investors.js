@@ -25,10 +25,11 @@ export const investorsKeys = {
 
 const importing = (cards) => Array.isArray(cards) && cards.some((card) => card.import)
 
-export function useInvestors({ holds = '' } = {}) {
+export function useInvestors({ holds = '', enabled = true } = {}) {
   return useQuery({
     queryKey: investorsKeys.list(holds),
     queryFn: () => getInvestors(holds),
+    enabled,
     refetchInterval: (query) => (importing(query.state.data) ? IMPORT_POLL_MS : false),
   })
 }
@@ -56,8 +57,8 @@ export function useInvestorCopy(slug) {
   return useQuery({ queryKey: investorsKeys.copy(slug), queryFn: () => getInvestorCopy(slug), enabled: Boolean(slug) })
 }
 
-export function useInvestorHub() {
-  return useQuery({ queryKey: investorsKeys.hub, queryFn: getInvestorHub })
+export function useInvestorHub({ enabled = true } = {}) {
+  return useQuery({ queryKey: investorsKeys.hub, queryFn: getInvestorHub, enabled })
 }
 
 export function useInvestorStocks(view, quarter) {

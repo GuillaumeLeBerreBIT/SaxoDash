@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 
-import { useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
+import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
 import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
 import { ownershipTicker, ownershipTickers } from '../lib/ownership'
 import { moveLabel, priceBasis } from '../lib/pricing'
@@ -15,6 +15,7 @@ import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import AllocationDonut from '../components/AllocationDonut'
 import { FundChange, FundShares } from '../components/investors/FundHoldings'
+import CongressActivity from '../components/congress/CongressActivity'
 import { nextSort, sortRows } from '../lib/sort'
 import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from '../lib/charts'
 
@@ -40,6 +41,7 @@ export default function Portfolio() {
   const holdings = positionsQuery.data
   const fundTickers = useMemo(() => ownershipTickers(holdings ?? []), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
+  const congress = useCongressOwnershipSummary(fundTickers).data
   const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
   const sortedHoldings = useMemo(() => sortRows(holdings ?? [], sort, HOLDING_ACCESSORS), [holdings, sort])
   const onSort = (key) => setSort((current) => nextSort(current, key))
@@ -158,6 +160,7 @@ export default function Portfolio() {
                   <SortableTh align="right" sortKey="pnl" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">P&L</SortableTh>
                   <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund shares</Th>
                   <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund change</Th>
+                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Congress</Th>
                   <SortableTh edge align="right" hideBelow="md" sortKey="weight" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Weight</SortableTh>
                 </tr>
               </thead>
@@ -213,6 +216,9 @@ export default function Portfolio() {
                     <Td align="right" hideBelow="wide">
                       <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
                     </Td>
+                    <Td align="right" hideBelow="wide">
+                      <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
+                    </Td>
                     <Td edge align="right" hideBelow="md" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
                   </Tr>
                 ))}
@@ -226,6 +232,7 @@ export default function Portfolio() {
                   <Td hideBelow="md" />
                   <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(summary.total_value)}</Td>
                   <Td align="right" className={`num font-medium ${pnlTone}`}>{fmtEur(summary.total_pnl, { sign: true })}</Td>
+                  <Td hideBelow="wide" />
                   <Td hideBelow="wide" />
                   <Td hideBelow="wide" />
                   <Td edge align="right" hideBelow="md" className="num text-zinc-300">100.0%</Td>

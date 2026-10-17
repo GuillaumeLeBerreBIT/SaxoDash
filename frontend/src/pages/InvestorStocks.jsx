@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
-import { useInvestorStocks } from '../api/queries'
+import { useCongressOwnershipSummary, useInvestorStocks } from '../api/queries'
 import { Alert, Button, Card, EmptyState, InstrumentLogo, LetterAvatar, PageHeader, Select, Skeleton, TBtn, Td, Th, Tr } from '../components/ui'
+import CongressActivity from '../components/congress/CongressActivity'
 import InvestorAvatar from '../components/investors/InvestorAvatar'
 import LimitsNote from '../components/investors/LimitsNote'
 import { STOCK_VIEWS, stockLabel } from '../lib/investorHub'
@@ -40,6 +41,9 @@ function Faces({ investors }) {
 
 function Rows({ rows }) {
   const [shown, setShown] = useState(PAGE_SIZE)
+  const visible = useMemo(() => rows.slice(0, shown), [rows, shown])
+  const tickers = useMemo(() => visible.map((row) => row.ticker).filter(Boolean), [visible])
+  const congress = useCongressOwnershipSummary(tickers).data
   return (
     <>
       <Card padding={false}>
@@ -53,11 +57,12 @@ function Rows({ rows }) {
                 <Th align="right">Sold</Th>
                 <Th align="right">New</Th>
                 <Th align="right">Held value</Th>
+                <Th align="right" hideBelow="md">Congress</Th>
                 <Th edge>Funds</Th>
               </tr>
             </thead>
             <tbody>
-              {rows.slice(0, shown).map((row) => (
+              {visible.map((row) => (
                 <Tr key={row.cusip}>
                   <Td edge><Stock row={row} /></Td>
                   <Td align="right" className="num font-mono text-zinc-200">{row.owners}</Td>
@@ -65,6 +70,9 @@ function Rows({ rows }) {
                   <Td align="right" className="num font-mono text-zinc-200">{row.sold}</Td>
                   <Td align="right" className="num font-mono text-zinc-400">{row.new}</Td>
                   <Td align="right" className="num font-mono text-zinc-400">{fmtUsdCompact(row.value)}</Td>
+                  <Td align="right" hideBelow="md">
+                    <CongressActivity ticker={row.ticker} stock={congress?.stocks?.[row.ticker]} windowDays={congress?.window_days} />
+                  </Td>
                   <Td edge><Faces investors={row.investors} /></Td>
                 </Tr>
               ))}
