@@ -119,6 +119,7 @@ class TextAnnotation(models.Model):
 TECHNICAL_FIELDS = (
     'last_close', 'change_1d', 'change_1m', 'change_3m', 'change_1y',
     'ma50', 'ma200', 'pct_vs_ma200', 'rsi14', 'pct_from_52w_high', 'rvol', 'sparkline',
+    'recent_closes',
 )
 FUNDAMENTAL_FIELDS = (
     'pe', 'forward_pe', 'roe', 'net_margin', 'eps_growth_5y',
@@ -151,6 +152,7 @@ class ScreenerRow(models.Model):
     pct_from_52w_high = models.FloatField(null=True, blank=True)
     rvol = models.FloatField(null=True, blank=True)
     sparkline = models.JSONField(default=list, blank=True)
+    recent_closes = models.JSONField(default=list, blank=True)
 
     pe = models.FloatField(null=True, blank=True)
     forward_pe = models.FloatField(null=True, blank=True)

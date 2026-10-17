@@ -2,6 +2,7 @@ RSI_PERIOD = 14
 RVOL_WINDOW = 20
 YEAR_SESSIONS = 252
 SPARKLINE_LENGTH = 63
+RECENT_CLOSES_LENGTH = 15
 CHANGE_SESSIONS = {'change_1d': 1, 'change_1m': 21, 'change_3m': 63, 'change_1y': 252}
 
 
@@ -80,6 +81,9 @@ def technical_fields(bars):
         'pct_from_52w_high': _pct(last_close, high),
         'rvol': _last(relative_volume(bars)),
         'sparkline': closes[-SPARKLINE_LENGTH:],
+        'recent_closes': [
+            {'date': bar['date'], 'close': bar['close']} for bar in bars[-RECENT_CLOSES_LENGTH:]
+        ],
     }
     for name, sessions in CHANGE_SESSIONS.items():
         fields[name] = _pct(last_close, closes[-1 - sessions]) if len(closes) > sessions else None

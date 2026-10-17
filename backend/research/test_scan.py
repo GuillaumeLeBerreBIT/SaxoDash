@@ -86,6 +86,13 @@ class ScanUniverseTest(TestCase):
     def search_for(self, search, known):
         search.side_effect = lambda ticker, _types: [instrument(ticker, known[ticker])] if ticker in known else []
 
+    def test_stores_the_recent_closes_it_already_fetched(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        stored = ScreenerRow.objects.get(ticker='AAPL').recent_closes
+        self.assertEqual(len(stored), 15)
+        self.assertEqual(stored[-1], {'date': BARS[-1]['date'], 'close': BARS[-1]['close']})
+
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.assertEqual(self.run_scan(), 2)
