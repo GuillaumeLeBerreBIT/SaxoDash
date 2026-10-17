@@ -102,6 +102,11 @@ def _monday_of(day):
     return day - timedelta(days=day.weekday())
 
 
+def current_week_start(today):
+    monday = _monday_of(today)
+    return monday + timedelta(weeks=1) if today.weekday() >= 5 else monday
+
+
 def _tracked():
     held = {s.upper() for s in Position.objects.values_list('ticker', flat=True) if s}
     watched = {s.upper() for s in WatchlistItem.objects.values_list('symbol', flat=True) if s} - held
@@ -165,14 +170,14 @@ def _week_stats(events):
     }
 
 
-def window_earnings(scope='all', week_offset=0):
+def window_earnings(scope='all', week_offset=0, today=None):
     """One week of the whole US-market calendar, tagged with the user's
     holdings/watchlists. `scope='mine'` keeps only tagged rows.
 
     The market week is cached un-tagged (one entry per calendar week), so
     'all' and 'mine' share it; tagging is per request.
     """
-    start = _monday_of(date.today()) + timedelta(weeks=week_offset)
+    start = current_week_start(today or date.today()) + timedelta(weeks=week_offset)
     end = start + timedelta(days=6)
     window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
     key = f'research:earnings-week:{CACHE_V}:{start.isoformat()}'

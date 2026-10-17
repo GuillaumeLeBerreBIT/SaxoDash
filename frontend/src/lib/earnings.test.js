@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 
-import { dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, WEEKDAYS } from './earnings'
+import { currentWeekLabel, dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, WEEKDAYS } from './earnings'
+
+describe('currentWeekLabel', () => {
+  it('is This week on a trading day', () => {
+    expect(currentWeekLabel(new Date('2026-10-19T09:00:00'))).toBe('This week')
+    expect(currentWeekLabel(new Date('2026-10-23T22:00:00'))).toBe('This week')
+  })
+
+  it('is Upcoming week on a Saturday or Sunday', () => {
+    expect(currentWeekLabel(new Date('2026-10-24T09:00:00'))).toBe('Upcoming week')
+    expect(currentWeekLabel(new Date('2026-10-25T09:00:00'))).toBe('Upcoming week')
+  })
+})
 
 describe('groupByWeekday', () => {
   it('buckets events by weekday and keeps input order', () => {

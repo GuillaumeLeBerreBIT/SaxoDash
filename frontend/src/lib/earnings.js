@@ -19,6 +19,11 @@ export function weekdayKey(date = new Date()) {
   return key === 'sat' || key === 'sun' ? 'mon' : key
 }
 
+export function currentWeekLabel(date = new Date()) {
+  const day = date.getDay()
+  return day === 0 || day === 6 ? 'Upcoming week' : 'This week'
+}
+
 /** "today" / "tomorrow" / "in 4 days" / "past" for an ISO date, relative to
  *  local midnight. Shared by the Earnings and Valuation tabs. */
 export function daysUntil(iso) {

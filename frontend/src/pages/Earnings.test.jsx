@@ -201,6 +201,8 @@ it('does not warn about duplicate keys for the same symbol and date in two quart
 })
 
 it('sizes the This week button like the week arrows', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-28T12:00:00'))
   stub()
   renderWithProviders(<Earnings />, { route: '/earnings' })
   await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
@@ -210,12 +212,27 @@ it('sizes the This week button like the week arrows', async () => {
 })
 
 it('offers a This week button only away from the current week, and it resets the week', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-28T12:00:00'))
   stub()
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
 
   await userEvent.click(screen.getByRole('button', { name: 'Next week' }))
   await userEvent.click(screen.getByRole('button', { name: 'This week' }))
+
+  expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('all', 0)
+  expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
+})
+
+it('calls the way back Upcoming week on a weekend, since week 0 is then the coming one', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-25T12:00:00'))
+  stub()
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+
+  await userEvent.click(screen.getByRole('button', { name: 'Previous week' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Upcoming week' }))
 
   expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('all', 0)
   expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()

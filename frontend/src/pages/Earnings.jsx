@@ -8,7 +8,7 @@ import { Pill } from '../components/RangePills'
 import SurpriseBars from '../components/research/SurpriseBars'
 import { Card, InfoTip, PageHeader } from '../components/ui'
 import { BEAT, MISS, PENDING, REPORTED, surpriseSign, withAlpha } from '../lib/charts'
-import { WEEKDAYS, dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, weekdayKey } from '../lib/earnings'
+import { WEEKDAYS, currentWeekLabel, dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, weekdayKey } from '../lib/earnings'
 import { fmtNum, fmtPct, pctToneClass } from '../lib/format'
 
 const SESSION = { bmo: 'BMO', amc: 'AMC', dmh: 'DMH' }
@@ -374,7 +374,7 @@ export default function Earnings() {
             onClick={resetWeek}
             className="h-11 md:h-6 px-2 rounded border border-white/[0.08] bg-[#0e0e11] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100"
           >
-            This week
+            {currentWeekLabel()}
           </button>
         )}
       </div>

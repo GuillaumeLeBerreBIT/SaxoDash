@@ -29,7 +29,33 @@ class WindowEarningsTest(TestCase):
 
     def _monday(self, week_offset=0):
         today = date.today()
-        return today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+        monday = today - timedelta(days=today.weekday())
+        if today.weekday() >= 5:
+            monday += timedelta(weeks=1)
+        return monday + timedelta(weeks=week_offset)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_weekend_opens_on_the_coming_week(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        for weekend_day in (date(2026, 10, 17), date(2026, 10, 18)):
+            with self.subTest(weekend_day=weekend_day):
+                result = earnings.window_earnings('all', 0, today=weekend_day)
+                self.assertEqual(result['window']['from'], '2026-10-19')
+                self.assertEqual(result['window']['to'], '2026-10-25')
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_weekday_stays_on_its_own_week(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        for weekday in (date(2026, 10, 12), date(2026, 10, 16)):
+            with self.subTest(weekday=weekday):
+                result = earnings.window_earnings('all', 0, today=weekday)
+                self.assertEqual(result['window']['from'], '2026-10-12')
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_the_previous_week_on_a_weekend_is_the_one_that_just_ended(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        result = earnings.window_earnings('all', -1, today=date(2026, 10, 18))
+        self.assertEqual(result['window']['from'], '2026-10-12')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_one_whole_market_call_for_the_week_no_symbol(self, mock_cal):
