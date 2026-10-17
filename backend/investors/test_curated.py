@@ -81,6 +81,11 @@ class LoadCuratedTest(TestCase):
         berkshire.refresh_from_db()
         self.assertEqual((berkshire.styles, berkshire.followed), (['Value', 'Concentrated'], True))
 
+    def test_a_photo_is_read_from_its_column_and_left_blank_when_absent(self):
+        load_curated()
+        self.assertEqual(Investor.objects.get(cik=1067983).photo, 'Warren Buffett KU Visit.jpg')
+        self.assertEqual(Investor.objects.get(slug='scion-asset-management').photo, '')
+
     def test_an_unknown_style_is_refused(self):
         import tempfile
 

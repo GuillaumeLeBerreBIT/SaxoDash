@@ -74,6 +74,21 @@ describe('Investor profile', () => {
     expect(screen.getByText('Activist')).toBeInTheDocument()
   })
 
+  it('shows the investor\'s photo with its credit', () => {
+    state = {
+      data: { ...detail, photo_url: 'https://example.test/ackman.jpg', photo_credit_url: 'https://commons.wikimedia.org/wiki/File:Ackman.jpg' },
+      isLoading: false, error: null,
+    }
+    const { container } = renderPage()
+    expect(container.querySelector('header img')).toHaveAttribute('src', 'https://example.test/ackman.jpg')
+    expect(screen.getByRole('link', { name: 'Photo: Wikimedia Commons' })).toHaveAttribute('href', 'https://commons.wikimedia.org/wiki/File:Ackman.jpg')
+  })
+
+  it('has no photo credit without a photo', () => {
+    renderPage()
+    expect(screen.queryByRole('link', { name: 'Photo: Wikimedia Commons' })).not.toBeInTheDocument()
+  })
+
   it('shows a search-added investor\'s name once in the hero', () => {
     state = { data: { ...detail, name: 'ACME CAPITAL LP', firm: 'ACME CAPITAL LP' }, isLoading: false, error: null }
     renderPage()

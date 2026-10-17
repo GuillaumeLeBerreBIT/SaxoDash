@@ -40,7 +40,7 @@ export default function InvestorCard({ investor, className = '' }) {
     <Card interactive className={`relative h-full flex flex-col gap-2 ${className}`}>
       <div data-testid="investor-card" className="contents">
         <div className="flex items-start gap-2.5">
-          <InvestorAvatar name={investor.name} />
+          <InvestorAvatar name={investor.name} photo={investor.photo_url} />
           <div className="min-w-0 flex-1">
             <Link
               to={`/investors/${investor.slug}`}

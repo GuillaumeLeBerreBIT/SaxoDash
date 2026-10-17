@@ -6,7 +6,7 @@ import { points } from '../../lib/investors'
 import { Card, SortableTh, Td, Th, Tr } from '../ui'
 import { TopLogos } from '../investors/InvestorCard'
 import { FiledLine } from './CongressCard'
-import MemberPhoto from './MemberPhoto'
+import InvestorAvatar from '../investors/InvestorAvatar'
 
 const DIRECTIONS = { name: 'asc', edge: 'desc', trades: 'desc', filed: 'desc' }
 
@@ -31,7 +31,7 @@ export default function CongressTable({ members, sort, onSort }) {
               <Tr key={member.slug}>
                 <Td edge>
                   <span className="flex items-center gap-2.5">
-                    <MemberPhoto member={member} size={24} />
+                    <InvestorAvatar name={member.name} photo={member.photo_url} size={24} />
                     <Link to={`/investors/congress/${member.slug}`} className="font-medium text-zinc-100 hover:text-blue-300">{member.name}</Link>
                   </span>
                 </Td>

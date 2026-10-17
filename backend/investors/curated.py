@@ -31,6 +31,7 @@ def load_curated(path=CURATED_CSV):
             'firm': entry['firm'].strip(),
             'styles': _styles(entry.get('styles')),
             'blurb': (entry.get('blurb') or '').strip(),
+            'photo': (entry.get('photo') or '').strip(),
             'curated': True,
         }
         investor = existing.get(cik)

@@ -1,5 +1,6 @@
 from . import changes, signals
 from .models import Investor, Security
+from .photos import photo_url
 
 MAX_TICKERS = 200
 KINDS = (changes.NEW, changes.ADDED, changes.TRIMMED, changes.SOLD_OUT, changes.UNCHANGED)
@@ -81,6 +82,7 @@ def _weight(value):
 def _fund(position, investor):
     return {
         'slug': investor.slug, 'name': investor.name, 'firm': investor.firm, 'followed': investor.followed,
+        'photo_url': photo_url(investor),
         'kind': position['kind'],
         'shares': position['shares'], 'previous_shares': position['previous_shares'],
         'change_pct': _change_pct(position),
