@@ -33,8 +33,9 @@ export default function Investors() {
     else next.set('tab', key)
     setParams(next, { replace: true })
   }
-  const hub = useInvestorHub()
-  const { data: cards = [], isLoading, error } = useInvestors()
+  const funds = tab === 'funds'
+  const hub = useInvestorHub({ enabled: funds })
+  const { data: cards = [], isLoading, error } = useInvestors({ enabled: funds })
 
   return (
     <div className="flex flex-col gap-6">

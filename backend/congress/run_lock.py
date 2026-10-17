@@ -1,9 +1,11 @@
+import time
+import uuid
 from contextlib import contextmanager
 
 from django.core.cache import cache
 
 KEY = 'congress:house-run'
-TTL = 3 * 60 * 60
+TTL = 60 * 60
 
 
 class Busy(Exception):
@@ -12,11 +14,30 @@ class Busy(Exception):
         self.holder = holder
 
 
+class Held:
+    def __init__(self, token):
+        self.token = token
+
+    def owned(self):
+        return cache.get(KEY) == self.token
+
+    def pause(self, seconds):
+        time.sleep(seconds)
+        if self.owned():
+            cache.touch(KEY, TTL)
+
+
+def _holder(token):
+    return (token or 'run').split(':')[0]
+
+
 @contextmanager
 def exclusive(holder):
-    if not cache.add(KEY, holder, TTL):
-        raise Busy(cache.get(KEY) or 'run')
+    held = Held(f'{holder}:{uuid.uuid4().hex}')
+    if not cache.add(KEY, held.token, TTL):
+        raise Busy(_holder(cache.get(KEY)))
     try:
-        yield
+        yield held
     finally:
-        cache.delete(KEY)
+        if held.owned():
+            cache.delete(KEY)

@@ -28,10 +28,11 @@ const hub = {
 let hubState
 let listState
 let holders
+let fundOptions
 const follow = vi.fn()
 vi.mock('../api/queries', () => ({
-  useInvestorHub: () => hubState,
-  useInvestors: ({ holds } = {}) => (holds ? { data: holders, isFetching: false } : listState),
+  useInvestorHub: (options) => { fundOptions.push(options); return hubState },
+  useInvestors: ({ holds, ...options } = {}) => { if (!holds) fundOptions.push(options); return holds ? { data: holders, isFetching: false } : listState },
   useFollowInvestor: () => ({ mutate: follow }),
   usePrefetchInvestor: () => () => {},
   useCongressMembers: () => ({ isLoading: false, data: { members: [], most_bought: [], window_days: 90 } }),
@@ -54,6 +55,19 @@ const directory = () => screen.getByRole('region', { name: 'All investors' })
 const directoryNames = () => within(directory()).getAllByTestId('investor-card').map((el) => within(el).getByRole('link').textContent)
 
 describe('Investors hub', () => {
+  beforeEach(() => { fundOptions = [] })
+
+  it('asks for fund data only while the Funds tab is open', () => {
+    renderPage('/investors?tab=congress')
+    expect(fundOptions.length).toBeGreaterThan(0)
+    expect(fundOptions.every((options) => options.enabled === false)).toBe(true)
+  })
+
+  it('asks for fund data on the Funds tab', () => {
+    renderPage()
+    expect(fundOptions.some((options) => options.enabled === false)).toBe(false)
+  })
+
   it('switches to the Congress directory from its tab', () => {
     hubState = { data: hub, isLoading: false, error: null }
     listState = { data: cards, isLoading: false, error: null }

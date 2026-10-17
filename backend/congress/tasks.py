@@ -10,11 +10,11 @@ SYNC_TASK = 'sync_house'
 
 
 @synced(reports_health=False, task=SYNC_TASK, needs_credential=False)
-def _sync():
+def _sync(pause):
     now = timezone.now()
     years = {now.year} | ({now.year - 1} if now.month == 1 else set())
     created = sum(house.sync_index(year, now) for year in sorted(years))
-    result = house.parse_pending()
+    result = house.parse_pending(pause=pause)
     performance.rebuild_all()
     if result.waiting:
         raise house.HouseError(f'Clerk unreachable, {result.waiting} reports waiting')
@@ -24,8 +24,8 @@ def _sync():
 @shared_task
 def sync_house():
     try:
-        with run_lock.exclusive('daily sync'):
-            return _sync()
+        with run_lock.exclusive('daily sync') as held:
+            return _sync(held.pause)
     except run_lock.Busy as busy:
         SyncRun.objects.create(task=SYNC_TASK, outcome='skipped', detail=f'A House {busy.holder} was already running.')
         return None

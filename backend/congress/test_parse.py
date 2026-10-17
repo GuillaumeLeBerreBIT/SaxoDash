@@ -85,6 +85,11 @@ class PageBreakInsideARowTest(SimpleTestCase):
         ))
         self.assertTrue(all(row.asset_type == 'GS' and row.ticker is None for row in parsed.rows))
 
+    def test_the_column_header_repeated_on_the_last_page_stays_out_of_the_last_asset(self):
+        rows = parse_report(pdf_text((TESTDATA / '20030541.pdf').read_bytes())).rows
+        self.assertEqual(rows[-1].asset, 'Wise CNTY VA Indl Dev Auth Solid Waste 3.80% Due Nov 1, 2040')
+        self.assertFalse([row.asset for row in rows if 'Notification' in row.asset or '$200?' in row.asset])
+
 
 class AmendedReportTest(SimpleTestCase):
     def test_an_amended_status_line_marks_the_report(self):
@@ -149,3 +154,18 @@ class RowHardeningTest(SimpleTestCase):
         parsed = parse_report(inline(bad, good))
         self.assertEqual(parsed.unparsed_rows, 1)
         self.assertEqual([row.ticker for row in parsed.rows], ['TSLA'])
+
+
+class AssetNameWithColonTest(SimpleTestCase):
+    def test_an_asset_name_with_a_colon_is_a_trade_not_a_label(self):
+        text = (
+            'Periodic Transaction Report\n$200?\n'
+            'SP Apple Inc. (AAPL) [ST] P 01/02/2024 01/05/2024 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'Vanguard Index Funds: S&P 500 ETF (VOO) [ST] P 01/03/2024 01/06/2024 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'D          : Bought in two fills.\n'
+        )
+        rows = parse_report(text).rows
+        self.assertEqual([row.ticker for row in rows], ['AAPL', 'VOO'])
+        self.assertEqual(rows[1].asset, 'Vanguard Index Funds: S&P 500 ETF (VOO)')

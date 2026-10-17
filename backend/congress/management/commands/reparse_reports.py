@@ -19,14 +19,14 @@ class Command(BaseCommand):
         else:
             raise CommandError('Pass --doc-id ID or --failed.')
         try:
-            with run_lock.exclusive('reparse'):
-                self._reparse(reports)
+            with run_lock.exclusive('reparse') as held:
+                self._reparse(reports, held.pause)
         except run_lock.Busy as busy:
             raise CommandError(f'A House {busy.holder} is already running; try again when it finishes.')
 
-    def _reparse(self, reports):
+    def _reparse(self, reports, pause):
         reset = reports.exclude(status=Report.PAPER).update(status=Report.PENDING, attempts=0, retry_after=None, error='')
-        result = house.parse_pending()
+        result = house.parse_pending(pause=pause)
         for member in Member.objects.filter(pk__in=result.member_ids):
             performance.rebuild(member)
         self.stdout.write(f'reset {reset}, parsed {result.parsed}, failed {result.failed}')

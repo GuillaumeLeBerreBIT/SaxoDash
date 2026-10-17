@@ -38,7 +38,7 @@ export default function TradeHistory({
                     {trade.ticker && trade.priceable ? (
                       <Link to={researchHref(trade.ticker, 'congress')} className="font-mono text-zinc-100 hover:text-blue-300">{trade.ticker}</Link>
                     ) : (
-                      <span className="text-zinc-400">{trade.asset}</span>
+                      <span className="block max-w-[22rem] truncate text-zinc-400" title={trade.asset}>{trade.asset}</span>
                     )}
                   </Td>
                 ) : null}

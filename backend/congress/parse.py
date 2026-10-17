@@ -10,8 +10,11 @@ from .amounts import parse_range
 _HEADER_END = '$200?\n'
 _FOOTER = re.compile(r'^\* For the complete list', re.M)
 _PAGE_BREAK = re.compile(r'Filing ID #\d+\n(?:.*\n)*?\$200\?\n')
+_COLUMN_HEADER = re.compile(r'^ID\s+Owner\s+Asset\s+Transaction\n(?:.*\n)*?\$200\?\n', re.M)
 _STATUS = re.compile(r'^F(?:iling)?\s+S(?:tatus)?\s*:\s*(New|Amended)\b')
-_LABEL = re.compile(r'^(?P<key>[A-Z])(?:\s{2,}|[a-z]+\s*)[A-Za-z ]*:\s*(?P<text>.*)$')
+_LABEL = re.compile(
+    r'^(?P<key>[A-Z])(?:\s{2,}[A-Z ]*|(?:escription|omments|ocation|ubholding Of|iling Status)\s*):\s*(?P<text>.*)$'
+)
 _CORE = re.compile(
     r'(?:^|(?<=\s))(?P<kind>S \(partial\)|P|S|E)\s+'
     r'(?P<traded>\d{2}/\d{2}/\d{4})\s+(?P<notified>\d{2}/\d{2}/\d{4})\s+'
@@ -59,7 +62,7 @@ def _body(text):
     body = text[start + len(_HEADER_END):] if start >= 0 else text
     footer = _FOOTER.search(body)
     body = body[:footer.start()] if footer else body
-    return _PAGE_BREAK.sub('', body + '\n')
+    return _COLUMN_HEADER.sub('', _PAGE_BREAK.sub('', body + '\n'))
 
 
 def _is_continuation(line, following):

@@ -42,9 +42,14 @@ describe('basisNote', () => {
 })
 
 describe('activity', () => {
-  it('is null for an unknown ticker and for no recent trades', () => {
+  it('is null for an unknown ticker and for a stock nobody trades or holds', () => {
     expect(activity(null)).toBeNull()
-    expect(activity({ holders: 2, buyers: 0, sellers: 0 })).toBeNull()
+    expect(activity({ holders: 0, buyers: 0, sellers: 0 })).toBeNull()
+  })
+  it('reports holders when nobody traded it recently', () => {
+    expect(activity({ holders: 2, buyers: 0, sellers: 0 })).toEqual({ holders: 2 })
+    expect(activityLabel({ holders: 1, buyers: 0, sellers: 0 }, 90)).toBe('1 member of Congress holds it (estimated); none traded it in reports filed in the last 90 days')
+    expect(activityLabel({ holders: 3, buyers: 0, sellers: 0 }, 90)).toBe('3 members of Congress hold it (estimated); none traded it in reports filed in the last 90 days')
   })
   it('reports buyers and sellers', () => {
     expect(activity({ holders: 1, buyers: 3, sellers: 1 })).toEqual({ buyers: 3, sellers: 1 })

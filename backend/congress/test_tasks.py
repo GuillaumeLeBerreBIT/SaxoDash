@@ -24,10 +24,11 @@ class SyncHouseTest(TestCase):
         now = datetime(2026, 10, 15, 14, 0, tzinfo=tz.utc)
         with mock.patch.object(tasks.timezone, 'now', return_value=now), \
                 mock.patch.object(tasks.house, 'sync_index', return_value=2) as sync_index, \
-                mock.patch.object(tasks.house, 'parse_pending', return_value=ParseResult(1, 0, {self.member.pk})), \
+                mock.patch.object(tasks.house, 'parse_pending', return_value=ParseResult(1, 0, {self.member.pk})) as parse, \
                 mock.patch.object(tasks.performance, 'rebuild_all') as rebuild_all:
             tasks.sync_house()
         self.assertEqual([call.args[0] for call in sync_index.call_args_list], [2026])
+        self.assertIsInstance(parse.call_args.kwargs['pause'].__self__, run_lock.Held)
         rebuild_all.assert_called_once_with()
         run = SyncRun.objects.get(task='sync_house')
         self.assertEqual((run.outcome, run.rows), ('ok', 1))

@@ -94,6 +94,16 @@ class SyncIndexTest(TestCase):
         self.assertEqual(get.call_args.kwargs['headers'], {'If-None-Match': '"a"'})
         self.assertFalse(Report.objects.exists())
 
+    def test_this_years_index_not_yet_published_is_no_new_reports(self):
+        with mock.patch.object(house, '_get', side_effect=house.HouseMissing('404')):
+            self.assertEqual(house.sync_index(NOW.year, NOW, directory=DIRECTORY), 0)
+        self.assertEqual(HouseIndexState.objects.get(year=NOW.year).etag, '')
+
+    def test_a_past_years_index_going_missing_is_still_an_error(self):
+        with mock.patch.object(house, '_get', side_effect=house.HouseMissing('404')):
+            with self.assertRaises(house.HouseMissing):
+                house.sync_index(NOW.year - 1, NOW, directory=DIRECTORY)
+
     def test_running_twice_creates_nothing_new(self):
         with mock.patch.object(house, '_get', return_value=response(content=zipped(INDEX_XML))):
             house.sync_index(2025, NOW, directory=DIRECTORY)
@@ -183,6 +193,18 @@ class GetTest(TestCase):
         with mock.patch.object(house._session(), 'get', return_value=response(status=404)):
             with self.assertRaises(house.HouseMissing):
                 house._get('https://example.test/a.pdf')
+
+    def test_a_gone_file_is_missing_too(self):
+        with mock.patch.object(house._session(), 'get', return_value=response(status=410)):
+            with self.assertRaises(house.HouseMissing):
+                house._get('https://example.test/a.pdf')
+
+    def test_a_refusal_is_an_outage_not_a_missing_file(self):
+        for status in (401, 403):
+            with self.subTest(status=status), mock.patch.object(house._session(), 'get', return_value=response(status=status)):
+                with self.assertRaises(house.HouseError) as raised:
+                    house._get('https://example.test/a.pdf')
+                self.assertNotIsInstance(raised.exception, house.HouseMissing)
 
     def test_a_connection_error_is_an_outage_not_a_missing_file(self):
         with mock.patch.object(house._session(), 'get', side_effect=requests.ConnectionError('refused')):

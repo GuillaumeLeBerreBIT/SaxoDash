@@ -37,11 +37,16 @@ export function basisNote(basis = {}) {
 }
 
 export function activity(stock) {
-  if (!stock || (!stock.buyers && !stock.sellers)) return null
-  return { buyers: stock.buyers, sellers: stock.sellers }
+  if (!stock) return null
+  if (stock.buyers || stock.sellers) return { buyers: stock.buyers, sellers: stock.sellers }
+  return stock.holders ? { holders: stock.holders } : null
 }
 
 export function activityLabel(stock, windowDays) {
+  if (!stock.buyers && !stock.sellers) {
+    const verb = stock.holders === 1 ? 'holds' : 'hold'
+    return `${plural(stock.holders, 'member', 'members')} of Congress ${verb} it (estimated); none traded it in reports filed in the last ${windowDays} days`
+  }
   const traded = `${plural(stock.buyers, 'member', 'members')} of Congress bought and ${stock.sellers} sold in reports filed in the last ${windowDays} days`
   return stock.holders ? `${traded} · ${plural(stock.holders, 'holds', 'hold')} it (estimated)` : traded
 }

@@ -7,7 +7,7 @@ export default function CongressActivity({ ticker, stock, windowDays }) {
   if (!traded) return <None />
   return (
     <OwnershipLink to={researchHref(ticker, 'congress')} label={activityLabel(stock, windowDays)}>
-      {`${traded.buyers} ↑ / ${traded.sellers} ↓`}
+      {traded.holders ? `${traded.holders} holding` : `${traded.buyers} ↑ / ${traded.sellers} ↓`}
     </OwnershipLink>
   )
 }

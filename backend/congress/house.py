@@ -36,6 +36,9 @@ RETRY = Retry(
 )
 
 
+MISSING_STATUSES = frozenset({404, 410})
+
+
 class HouseError(Exception):
     pass
 
@@ -66,7 +69,7 @@ def _get(url, headers=None):
         raise HouseError(f'{url}: {exc}') from exc
     if answer.status_code in (200, 304):
         return answer
-    if 400 <= answer.status_code < 500:
+    if answer.status_code in MISSING_STATUSES:
         raise HouseMissing(f'{url} answered {answer.status_code}')
     raise HouseError(f'{url} answered {answer.status_code}')
 
@@ -101,8 +104,15 @@ def _conditional(state):
 def sync_index(year, now, directory=None):
     directory = directory or cache(members.Directory.fetch)
     state, _ = HouseIndexState.objects.get_or_create(year=year)
-    answer = _get(INDEX_URL.format(year=year), headers=_conditional(state))
     state.checked_at = now
+    try:
+        answer = _get(INDEX_URL.format(year=year), headers=_conditional(state))
+    except HouseMissing:
+        if year != now.year:
+            raise
+        logger.info('House %s index is not published yet', year)
+        state.save(update_fields=['checked_at'])
+        return 0
     if answer.status_code == 304:
         state.save(update_fields=['checked_at'])
         return 0

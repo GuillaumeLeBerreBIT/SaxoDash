@@ -14,4 +14,12 @@ describe('TradeHistory', () => {
     renderWithProviders(<TradeHistory trades={[trade({ amended: true }), trade({ ticker: 'AAPL' })]} />)
     expect(screen.getAllByText('Amended')).toHaveLength(1)
   })
+
+  it('keeps a long unpriceable asset name to one truncated line with the full name on hover', () => {
+    const asset = 'Wise CNTY VA Indl Dev Auth Solid Waste 3.80% Due Nov 1, 2040'
+    renderWithProviders(<TradeHistory trades={[trade({ asset, ticker: null, priceable: false })]} />)
+    const name = screen.getByText(asset)
+    expect(name).toHaveAttribute('title', asset)
+    expect(name).toHaveClass('truncate')
+  })
 })
