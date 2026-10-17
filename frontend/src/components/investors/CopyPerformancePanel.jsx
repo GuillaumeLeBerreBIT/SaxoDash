@@ -4,11 +4,10 @@ import { Card, CardHeader, MetricTile, Skeleton } from '../ui'
 import { useInvestorCopy } from '../../api/queries'
 import { AXIS_TEXT, SERIES_TOTAL, axisProps, chartTooltipProps, gridProps, seriesAxis } from '../../lib/charts'
 import { fmtDate, fmtMonthYear, fmtPct } from '../../lib/format'
-import { copyCaveat, copySeries, copyVerdict } from '../../lib/investors'
+import { copyCaveat, copySeries, copyVerdict, points } from '../../lib/investors'
 
 const wholePct = (value) => fmtPct(value, { decimals: 0 })
 const onePct = (value) => fmtPct(value, { decimals: 1 })
-const points = (value) => `${onePct(value).replace('%', '')} pts`
 
 function Legend({ benchmark }) {
   return (
@@ -45,10 +44,7 @@ function Figures({ copy }) {
   )
 }
 
-export default function CopyPerformancePanel({ slug, name }) {
-  const { data: copy, isLoading } = useInvestorCopy(slug)
-
-  if (isLoading) return <Skeleton className="h-64" />
+export function CopyPerformanceView({ copy, name, subtitle }) {
   if (!copy) return null
 
   const title = `If you had copied ${name}`
@@ -66,10 +62,7 @@ export default function CopyPerformancePanel({ slug, name }) {
   const rows = copySeries(copy.series)
   return (
     <Card>
-      <CardHeader
-        title={title}
-        subtitle={`Top ${copy.holdings} disclosed holdings, bought at the close of the first trading day after each filing and held until the next`}
-      />
+      <CardHeader title={title} subtitle={subtitle} />
       <div className="mt-4">
         <Figures copy={copy} />
       </div>
@@ -110,5 +103,18 @@ export default function CopyPerformancePanel({ slug, name }) {
       <Legend benchmark={copy.benchmark} />
       <p className="mt-3 text-[var(--fig-xs)] text-zinc-500 max-w-[80ch]">{copyCaveat(copy)}</p>
     </Card>
+  )
+}
+
+export default function CopyPerformancePanel({ slug, name }) {
+  const { data: copy, isLoading } = useInvestorCopy(slug)
+
+  if (isLoading) return <Skeleton className="h-64" />
+  return (
+    <CopyPerformanceView
+      copy={copy}
+      name={name}
+      subtitle={copy?.available ? `Top ${copy.holdings} disclosed holdings, bought at the close of the first trading day after each filing and held until the next` : undefined}
+    />
   )
 }

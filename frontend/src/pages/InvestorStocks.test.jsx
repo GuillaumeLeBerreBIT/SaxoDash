@@ -13,6 +13,7 @@ let asked
 let state
 vi.mock('../api/queries', () => ({
   useInvestorStocks: (view, quarter) => { asked = [view, quarter]; return state },
+  useCongressOwnershipSummary: () => ({ data: { window_days: 90, stocks: { NVDA: { holders: 1, buyers: 2, sellers: 0 } } } }),
 }))
 
 function Where() {
@@ -55,6 +56,12 @@ describe('InvestorStocks', () => {
     renderPage()
     const nvda = screen.getByRole('row', { name: /NVDA/ })
     for (const count of ['7', '2']) expect(within(nvda).getByText(count).className).not.toMatch(/emerald|red-|rose/)
+  })
+
+  it('shows House buyers and sellers per stock', () => {
+    renderPage()
+    const nvda = screen.getByRole('row', { name: /NVDA/ })
+    expect(within(nvda).getByRole('link', { name: /2 members of Congress bought/ })).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
   })
 
   it('shows the issuer and no research link for an unresolved ticker', () => {

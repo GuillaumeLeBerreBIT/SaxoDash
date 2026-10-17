@@ -17,6 +17,7 @@ import Earnings from './pages/Earnings'
 import Investors from './pages/Investors'
 import Investor from './pages/Investor'
 import InvestorStocks from './pages/InvestorStocks'
+import CongressMember from './pages/CongressMember'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
@@ -42,6 +43,7 @@ function App() {
           <Route path='earnings' element={<Earnings />} />
           <Route path='investors' element={<Investors />} />
           <Route path='investors/stocks' element={<InvestorStocks />} />
+          <Route path='investors/congress/:slug' element={<CongressMember />} />
           <Route path='investors/:slug' element={<Investor />} />
         </Route>
       </Route>

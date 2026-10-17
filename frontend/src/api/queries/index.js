@@ -12,6 +12,7 @@ export * from './saxo'
 export * from './enablebanking'
 export * from './research'
 export * from './investors'
+export * from './congress'
 
 import { accountsKeys } from './accounts'
 import { analyticsKeys } from './portfolioStats'

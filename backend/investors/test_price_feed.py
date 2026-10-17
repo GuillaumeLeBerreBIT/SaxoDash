@@ -181,3 +181,26 @@ class RefreshTest(TestCase):
 
         self.refresh(NOW + timedelta(days=8))
         self.assertIn('NVDA', [call.args[0] for call in resolve.call_args_list])
+
+
+class TickerSourceTest(TestCase):
+    def setUp(self):
+        self.original = list(price_feed._ticker_sources)
+
+    def tearDown(self):
+        price_feed._ticker_sources[:] = self.original
+
+    def test_registered_sources_join_the_wanted_tickers(self):
+        price_feed.add_ticker_source(lambda: ({'NVDA'}, {'NVDA', 'TEM'}))
+        current, ever = price_feed._wanted()
+        self.assertIn('NVDA', current)
+        self.assertTrue({'NVDA', 'TEM'} <= ever)
+
+    def test_registering_twice_counts_once(self):
+        def source():
+            return set(), {'TEM'}
+
+        before = len(price_feed._ticker_sources)
+        price_feed.add_ticker_source(source)
+        price_feed.add_ticker_source(source)
+        self.assertEqual(len(price_feed._ticker_sources), before + 1)

@@ -76,6 +76,10 @@ PERIODIC_TASKS = {
         'task': 'investors.tasks.sync_investors',
         'crontab': {'minute': '15', 'hour': '6', 'day_of_week': '1', 'month_of_year': '1,3,4,6,7,9,10,12'},
     },
+    'Sync House trades': {
+        'task': 'congress.tasks.sync_house',
+        'crontab': {'minute': '0', 'hour': '14'},
+    },
 }
 
 # Celery/django-celery-beat's own built-in tasks - never declared above,
