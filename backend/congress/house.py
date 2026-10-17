@@ -17,7 +17,7 @@ from urllib3.util.retry import Retry
 from . import members
 from .members import IndexEntry
 from .models import HouseIndexState, Report, Trade
-from .parse import parse_report, pdf_text
+from .parse import read_report
 
 logger = logging.getLogger(__name__)
 
@@ -182,9 +182,14 @@ def parse_pending(pause=time.sleep, now=None):
             break
         report.attempts += 1
         try:
-            _store(report, parse_report(pdf_text(data)))
-            result.parsed += 1
-            result.member_ids.add(report.member_id)
+            parsed = read_report(data)
+            if parsed.unparsed_rows and not parsed.rows:
+                _fail(report, 'no row could be read', now, MAX_ATTEMPTS)
+                result.failed += 1
+            else:
+                _store(report, parsed)
+                result.parsed += 1
+                result.member_ids.add(report.member_id)
         except Exception as exc:
             logger.warning('Could not parse House report %s', report.doc_id, exc_info=True)
             _fail(report, str(exc), now, MAX_ATTEMPTS)

@@ -3,7 +3,7 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-from .parse import parse_report, pdf_text
+from .parse import parse_report, pdf_text, read_report
 
 TESTDATA = Path(__file__).with_name('testdata')
 
@@ -89,6 +89,61 @@ class PageBreakInsideARowTest(SimpleTestCase):
         rows = parse_report(pdf_text((TESTDATA / '20030541.pdf').read_bytes())).rows
         self.assertEqual(rows[-1].asset, 'Wise CNTY VA Indl Dev Auth Solid Waste 3.80% Due Nov 1, 2040')
         self.assertFalse([row.asset for row in rows if 'Notification' in row.asset or '$200?' in row.asset])
+
+
+class PelosiReportFromTheOlderGeneratorTest(SimpleTestCase):
+    def setUp(self):
+        self.parsed = read_report((TESTDATA / '20018011.pdf').read_bytes())
+
+    def test_every_row_is_read(self):
+        self.assertEqual(self.parsed.unparsed_rows, 0)
+        self.assertEqual([row.ticker for row in self.parsed.rows], ['AB', 'AAPL', 'TSLA', 'DIS'])
+
+    def test_a_ticker_the_font_lowercases_is_read_in_capitals(self):
+        apple = self.parsed.rows[1]
+        self.assertEqual(apple.asset, 'Apple Inc. (AAPL)')
+        self.assertEqual((apple.owner, apple.asset_type, apple.kind, apple.option), ('SP', 'OP', 'purchase', 'call'))
+        self.assertEqual((apple.amount_low, apple.amount_high), (250001, 500000))
+        self.assertEqual(apple.traded_on, date(2020, 12, 22))
+
+    def test_an_asset_name_wrapped_around_the_amount_is_joined(self):
+        alliance = self.parsed.rows[0]
+        self.assertEqual(alliance.asset, 'AllianceBernstein Holding l.P. units (AB)')
+        self.assertEqual((alliance.amount_low, alliance.amount_high), (500001, 1000000))
+
+
+class OlderGeneratorMultiPageReportTest(SimpleTestCase):
+    def setUp(self):
+        self.rows = read_report((TESTDATA / '20017909.pdf').read_bytes()).rows
+
+    def test_every_row_is_read(self):
+        self.assertEqual(len(self.rows), 21)
+
+    def test_a_ticker_on_the_line_after_its_type_code_is_still_found(self):
+        self.assertIn('MSFT', [row.ticker for row in self.rows])
+        self.assertIn('CGNX', [row.ticker for row in self.rows])
+
+    def test_a_lowercased_type_code_is_read(self):
+        bond = next(row for row in self.rows if row.asset.startswith('Virginia College'))
+        self.assertEqual((bond.asset_type, bond.ticker, bond.priceable), ('GS', None, False))
+
+    def test_the_repeated_column_header_stays_out_of_the_assets(self):
+        self.assertFalse([row.asset for row in self.rows if '$200?' in row.asset])
+
+
+class OlderGeneratorPartialSalesTest(SimpleTestCase):
+    def test_capitalised_partial_sales_and_a_lowercase_page_header_are_read(self):
+        parsed = read_report((TESTDATA / '20018606.pdf').read_bytes())
+        self.assertEqual(parsed.unparsed_rows, 0)
+        kinds = [row.kind for row in parsed.rows]
+        self.assertIn('partial_sale', kinds)
+        self.assertEqual(parsed.rows[kinds.index('partial_sale')].ticker, 'GS')
+        self.assertFalse([row.asset for row in parsed.rows if 'owner' in row.asset.lower()])
+
+
+class ReadReportTest(SimpleTestCase):
+    def test_a_report_the_plain_text_reads_does_not_need_the_layout(self):
+        self.assertEqual(len(read_report((TESTDATA / '20026590.pdf').read_bytes()).rows), 9)
 
 
 class AmendedReportTest(SimpleTestCase):

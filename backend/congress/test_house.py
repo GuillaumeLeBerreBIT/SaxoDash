@@ -10,6 +10,7 @@ from django.test import TestCase
 from . import house
 from .members import Directory
 from .models import HouseIndexState, Member, Report, Trade
+from .parse import ParsedReport
 
 TESTDATA = Path(__file__).with_name('testdata')
 NOW = datetime(2026, 10, 15, 14, 0, tzinfo=tz.utc)
@@ -129,7 +130,7 @@ class ParsePendingTest(TestCase):
 
     def test_a_parse_failure_is_given_up_at_once(self):
         with mock.patch.object(house, '_get', return_value=response(content=b'x')) as get, \
-                mock.patch.object(house, 'pdf_text', side_effect=ValueError('boom')):
+                mock.patch.object(house, 'read_report', side_effect=ValueError('boom')):
             first = house.parse_pending(pause=lambda _: None, now=NOW)
             house.parse_pending(pause=lambda _: None, now=NOW + timedelta(days=30))
         self.assertEqual(first.failed, 1)
@@ -137,6 +138,21 @@ class ParsePendingTest(TestCase):
         self.report.refresh_from_db()
         self.assertEqual((self.report.status, self.report.attempts, self.report.error), (Report.FAILED, 3, 'boom'))
         self.assertIsNone(self.report.retry_after)
+
+    def test_a_report_whose_rows_were_all_unreadable_fails_rather_than_counting_as_parsed(self):
+        with mock.patch.object(house, '_get', return_value=response(content=b'x')), \
+                mock.patch.object(house, 'read_report', return_value=ParsedReport(unparsed_rows=2)):
+            result = house.parse_pending(pause=lambda _: None, now=NOW)
+        self.assertEqual((result.parsed, result.failed), (0, 1))
+        self.report.refresh_from_db()
+        self.assertEqual((self.report.status, self.report.error), (Report.FAILED, 'no row could be read'))
+
+    def test_a_report_with_no_transactions_at_all_is_parsed(self):
+        with mock.patch.object(house, '_get', return_value=response(content=b'x')), \
+                mock.patch.object(house, 'read_report', return_value=ParsedReport()):
+            house.parse_pending(pause=lambda _: None, now=NOW)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.status, Report.PARSED)
 
     def test_a_host_outage_costs_no_attempt_stops_the_run_and_says_how_many_wait(self):
         Report.objects.create(doc_id='20026591', member=self.member, year=2025, filed_on=date(2025, 1, 18))

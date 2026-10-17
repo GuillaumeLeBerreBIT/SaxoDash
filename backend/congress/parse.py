@@ -10,11 +10,13 @@ from .amounts import parse_range
 _HEADER_END = '$200?\n'
 _FOOTER = re.compile(r'^\* For the complete list', re.M)
 _PAGE_BREAK = re.compile(r'Filing ID #\d+\n(?:.*\n)*?\$200\?\n')
-_COLUMN_HEADER = re.compile(r'^ID\s+Owner\s+Asset\s+Transaction\n(?:.*\n)*?\$200\?\n', re.M)
-_STATUS = re.compile(r'^F(?:iling)?\s+S(?:tatus)?\s*:\s*(New|Amended)\b')
+_COLUMN_HEADER = re.compile(r'^(?i:ID\s+Owner\s+Asset\s+Transaction)\b.*\n(?:.*\n)*?\$200\?\n', re.M)
+_STATUS = re.compile(r'^(?i:F(?:iling)?\s+S(?:tatus)?)\s*:\s*(New|Amended)\b')
 _LABEL = re.compile(
-    r'^(?P<key>[A-Z])(?:\s{2,}[A-Z ]*|(?:escription|omments|ocation|ubholding Of|iling Status)\s*):\s*(?P<text>.*)$'
+    r'^(?P<key>[A-Z])(?:\s{2,}[A-Z ]*|(?i:escription|omments|ocation|ubholding Of|iling Status)\s*):\s*(?P<text>.*)$'
 )
+_COLUMN_GAP = re.compile(r'\s{2,}')
+_CHECKBOX = re.compile(r'\b(?:gfedcb?|nmlkji?)\b')
 _CORE = re.compile(
     r'(?:^|(?<=\s))(?P<kind>S \(partial\)|P|S|E)\s+'
     r'(?P<traded>\d{2}/\d{2}/\d{4})\s+(?P<notified>\d{2}/\d{2}/\d{4})\s+'
@@ -23,6 +25,7 @@ _CORE = re.compile(
 _OWNER = re.compile(r'^(SP|JT|DC)\s+')
 _TYPE = re.compile(r'\s*\[([A-Z]{2})\]')
 _TICKER = re.compile(r'\(([A-Z][A-Z0-9.]{0,9})\)\s*\[')
+_MISCASED_CODE = re.compile(r'\([A-Za-z][A-Za-z0-9.]{0,9}\)|\[[A-Za-z]{2}\]')
 _DOLLARS = re.compile(r'\$[\d,]+')
 _PUT = re.compile(r'\bput\b')
 _KINDS = {'P': 'purchase', 'S': 'sale', 'S (partial)': 'partial_sale', 'E': 'exchange'}
@@ -55,6 +58,22 @@ class ParsedReport:
 def pdf_text(data):
     reader = pypdf.PdfReader(io.BytesIO(data))
     return '\n'.join(page.extract_text() or '' for page in reader.pages).replace('\x00', ' ')
+
+
+def pdf_layout_text(data):
+    reader = pypdf.PdfReader(io.BytesIO(data))
+    pages = '\n'.join(page.extract_text(extraction_mode='layout') or '' for page in reader.pages)
+    lines = (_COLUMN_GAP.sub(' ', _CHECKBOX.sub('', line)).strip() for line in pages.replace('\x00', ' ').splitlines())
+    text = '\n'.join(line for line in lines if line) + '\n'
+    return _MISCASED_CODE.sub(lambda code: code.group(0).upper(), text).replace(' (PARTIAL) ', ' (partial) ')
+
+
+def read_report(data):
+    plain = parse_report(pdf_text(data))
+    if plain.rows:
+        return plain
+    layout = parse_report(pdf_layout_text(data))
+    return layout if layout.rows else plain
 
 
 def _body(text):
@@ -126,7 +145,7 @@ def _trade(record):
     head = head[owner_match.end():] if owner_match else head
     type_match = _TYPE.search(flat)
     asset_type = type_match.group(1) if type_match else ''
-    ticker_match = _TICKER.search(flat)
+    ticker_match = _TICKER.search(f'{head} {tail}')
     ticker = ticker_match.group(1) if ticker_match else None
     asset = _TYPE.sub('', f'{head} {tail}').strip()
     description = ' '.join(record['notes']).lower()

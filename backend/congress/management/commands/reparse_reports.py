@@ -10,14 +10,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--doc-id')
         parser.add_argument('--failed', action='store_true')
+        parser.add_argument('--unread', action='store_true')
 
     def handle(self, *args, **options):
         if options['doc_id']:
             reports = Report.objects.filter(doc_id=options['doc_id'])
         elif options['failed']:
             reports = Report.objects.filter(status=Report.FAILED)
+        elif options['unread']:
+            reports = Report.objects.filter(status=Report.PARSED, unparsed_rows__gt=0, trades__isnull=True)
         else:
-            raise CommandError('Pass --doc-id ID or --failed.')
+            raise CommandError('Pass --doc-id ID, --failed or --unread.')
         try:
             with run_lock.exclusive('reparse') as held:
                 self._reparse(reports, held.pause)

@@ -9,7 +9,7 @@ from saxo.models import SyncRun
 
 from . import run_lock, tasks
 from .house import ParseResult
-from .models import Member, Report
+from .models import Member, Report, Trade
 
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -139,3 +139,21 @@ class ReparseCommandTest(TestCase):
             call_command('reparse_reports', '--failed')
         report.refresh_from_db()
         self.assertEqual((report.status, report.attempts, report.retry_after), (Report.PENDING, 0, None))
+
+    def test_unread_resets_only_parsed_reports_that_yielded_nothing_but_unreadable_rows(self):
+        member = Member.objects.create(slug='x', first_name='X', last_name='Y', state_district='CA01')
+        unread = Report.objects.create(doc_id='20000001', member=member, year=2021, filed_on=date(2021, 1, 2),
+                                       status=Report.PARSED, unparsed_rows=1)
+        empty = Report.objects.create(doc_id='20000002', member=member, year=2021, filed_on=date(2021, 1, 3),
+                                      status=Report.PARSED)
+        read = Report.objects.create(doc_id='20000003', member=member, year=2021, filed_on=date(2021, 1, 4),
+                                     status=Report.PARSED, unparsed_rows=1)
+        Trade.objects.create(report=read, asset='Apple Inc. (AAPL)', kind='purchase',
+                             traded_on=date(2021, 1, 1), amount_low=1001)
+        with mock.patch('congress.management.commands.reparse_reports.house.parse_pending', return_value=ParseResult()), \
+                mock.patch('congress.management.commands.reparse_reports.performance.rebuild'):
+            call_command('reparse_reports', '--unread', stdout=io.StringIO())
+        statuses = dict(Report.objects.values_list('doc_id', 'status'))
+        self.assertEqual(statuses, {
+            unread.doc_id: Report.PENDING, empty.doc_id: Report.PARSED, read.doc_id: Report.PARSED,
+        })
