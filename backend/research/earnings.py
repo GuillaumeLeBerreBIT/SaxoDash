@@ -132,8 +132,8 @@ def _surprise_summary(values):
 
 
 def _week_stats(events):
-    """Headline counts for the calendar's week-summary strip and its day
-    rail, reduced from the rows already in hand - no extra fetch.
+    """Headline counts for the calendar's market line, reduced from the rows
+    already in hand - no extra fetch.
     """
     summary = _surprise_summary([e['eps_surprise_pct'] for e in events])
 
