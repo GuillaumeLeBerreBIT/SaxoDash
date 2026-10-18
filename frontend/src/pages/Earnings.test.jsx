@@ -26,19 +26,24 @@ const ev = (o = {}) => ({
   held: false,
   watched: false,
   mine: false,
+  name: null,
+  market_cap: null,
+  value: null,
+  weight_pct: null,
+  move_pct: null,
+  move_basis: null,
+  pnl_impact: null,
+  also: [],
   ...o,
 })
 
-const STATS = {
-  total: 1, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0,
-  avg_surprise: null, by_day: [],
-}
+const STATS = { total: 1, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0 }
 
 const stub = (over = {}) =>
   queries.useEarningsCalendar.mockReturnValue({
     isLoading: false,
     error: null,
-    data: { events: [ev()], window: WINDOW, ok: true, stats: STATS, ...over },
+    data: { events: [ev()], window: WINDOW, ok: true, stats: STATS, next_mine: null, ...over },
   })
 
 beforeEach(() => {
@@ -61,7 +66,6 @@ describe('Earnings page', () => {
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
     expect(screen.getByText('26 – 30 Oct 2026')).toBeInTheDocument()
-    // MSFT shows in both the week-strip preview and the docket row.
     expect(screen.getAllByText('MSFT').length).toBeGreaterThan(0)
     expect(screen.getByText('Held')).toBeInTheDocument()
   })
@@ -91,26 +95,6 @@ describe('Earnings page', () => {
     expect(screen.getByText('pending')).toBeInTheDocument()
   })
 
-  it('shows the week-summary headline from the backend stats', () => {
-    stub({
-      stats: {
-        total: 40, reported: 12, beat: 8, missed: 3, inline: 1, mine: 2,
-        avg_surprise: 4.2,
-        by_day: [
-          { date: '2026-10-26', beat: 5, missed: 0, inline: 0 },
-          { date: '2026-10-27', beat: 1, missed: 2, inline: 0 },
-        ],
-      },
-    })
-    renderWithProviders(<Earnings />, { route: '/earnings' })
-
-    expect(screen.getByText('Reporting')).toBeInTheDocument()
-    expect(screen.getByText('40')).toBeInTheDocument()
-    expect(screen.getByText('8/12')).toBeInTheDocument()
-    expect(screen.getByText('+4.2%')).toBeInTheDocument()
-    expect(screen.getByText(/2 on your lists/)).toBeInTheDocument()
-  })
-
   it('opens on today’s weekday column by default, not a fixed Monday', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-28T12:00:00')) // a Wednesday in the stub window
@@ -122,20 +106,17 @@ describe('Earnings page', () => {
     })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    // Wednesday's name shows in both the rail and the open docket; Monday's
-    // only in the rail.
-    expect(screen.getAllByText('WEDCO')).toHaveLength(2)
-    expect(screen.getAllByText('MONCO')).toHaveLength(1)
+    expect(screen.getAllByText('WEDCO')).toHaveLength(1)
+    expect(screen.queryByText('MONCO')).not.toBeInTheDocument()
   })
 
   it('labels every docket column and carries a reading-guide tooltip', () => {
     stub({ events: [ev({ symbol: 'MON', date: MON })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('Symbol')).toBeInTheDocument()
-    expect(screen.getByText('EPS · est')).toBeInTheDocument()
-    expect(screen.getByText('Revenue')).toBeInTheDocument()
-    expect(screen.getByText('vs est', { exact: false })).toBeInTheDocument()
+    for (const label of ['Company', 'Mkt cap', 'Qtr', 'EPS · est', 'Revenue', 'Move']) {
+      expect(screen.getByText(label)).toBeInTheDocument()
+    }
   })
 
   it('the Mine toggle refetches with scope=mine', async () => {
@@ -238,7 +219,7 @@ it('calls the way back Upcoming week on a weekend, since week 0 is then the comi
   expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
 })
 
-it('shows the day of the month on each day card', () => {
+it('labels each grid day with its date', () => {
   stub()
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(screen.getByRole('button', { name: /^Mon 26/ })).toBeInTheDocument()
@@ -259,13 +240,61 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.getByRole('button', { name: 'Previous week' }).parentElement).toHaveClass('flex-wrap')
   })
 
-  it('collapses the docket rows to symbol, EPS and revenue on a phone', () => {
+  it('collapses the day list rows to company, EPS and move on a phone', () => {
     stub()
     const { container } = renderWithProviders(<Earnings />, { route: '/earnings' })
 
     const row = container.querySelector('button[class*="md:grid-cols-"]')
-    expect(row).toHaveClass('grid-cols-[72px_minmax(0,1fr)_96px_14px]')
+    expect(row).toHaveClass('grid-cols-[minmax(0,1fr)_96px_72px_14px]')
     const hidden = [...row.children].filter((el) => el.classList.contains('hidden'))
     expect(hidden).toHaveLength(3)
+  })
+
+  it('opens with the Your week band above the market grid', () => {
+    stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    const band = screen.getByRole('heading', { level: 2, name: 'Your week' })
+    const grid = screen.getByText('Before open')
+    expect(band.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('summarises the market week in one line', () => {
+    stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    expect(screen.getByText('412 reporting · 61% of reported beat')).toBeInTheDocument()
+  })
+
+  it('says nothing about beats before anything has reported', () => {
+    stub({ stats: { total: 40, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0 } })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    expect(screen.getByText('40 reporting')).toBeInTheDocument()
+  })
+
+  it('keeps the band when the toggle switches the list to Mine', async () => {
+    stub({ events: [ev({ symbol: 'HLD', held: true, mine: true })] })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('mine', 0)
+    expect(screen.getByRole('heading', { level: 2, name: 'Your week' })).toBeInTheDocument()
+  })
+
+  it('does not render the old summary tiles', () => {
+    stub()
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    expect(screen.queryByText('Beat rate')).not.toBeInTheDocument()
+    expect(screen.queryByText('Net by day')).not.toBeInTheDocument()
+  })
+
+  it('a grid day header switches the day list to that day', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-26T12:00:00'))
+    stub({ events: [ev({ symbol: 'MONCO', date: '2026-10-26' }), ev({ symbol: 'THUCO', date: '2026-10-29' })] })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    expect(screen.queryByText('THUCO')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /^Thu 29/ }))
+
+    expect(screen.getByText('THUCO')).toBeInTheDocument()
+    expect(screen.queryByText('MONCO')).not.toBeInTheDocument()
   })
 })
