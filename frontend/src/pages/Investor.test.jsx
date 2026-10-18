@@ -110,6 +110,12 @@ describe('Investor profile', () => {
     expect(within(tiles).getByText('14 Aug 2026')).toBeInTheDocument()
   })
 
+  it('links each move to the stock\'s Research page', () => {
+    renderPage()
+    const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })
+    expect(within(moves).getByRole('link', { name: 'AMZN' })).toHaveAttribute('href', '/research?symbol=AMZN')
+  })
+
   it('tells the quarter as moves in plain words, in story order', () => {
     renderPage()
     const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })

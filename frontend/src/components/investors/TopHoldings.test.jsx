@@ -25,6 +25,16 @@ describe('TopHoldings', () => {
     expect(screen.getByText('You own')).toBeInTheDocument()
   })
 
+  it('links a tile with a ticker to its Research page', () => {
+    renderTop(detail(3))
+    expect(screen.getByRole('link', { name: 'T0' })).toHaveAttribute('href', '/research?symbol=T0')
+  })
+
+  it('leaves a tile without a ticker unlinked', () => {
+    renderTop({ ...detail(1), holdings: [holding(0, { ticker: null })] })
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
   it('states the remaining positions', () => {
     renderTop(detail(29))
     expect(screen.getByText(/Remaining 19 positions/)).toBeInTheDocument()

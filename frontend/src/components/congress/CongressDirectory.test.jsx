@@ -26,7 +26,7 @@ vi.mock('../../api/queries', () => ({
   }),
 }))
 
-const cardNames = () => screen.getAllByTestId('congress-card').map((card) => within(card).getByRole('link').textContent)
+const cardNames = () => screen.getAllByTestId('congress-card').map((card) => within(card).getAllByRole('link')[0].textContent)
 const search = (text) => fireEvent.change(screen.getByRole('searchbox', { name: 'Search members' }), { target: { value: text } })
 
 describe('CongressDirectory', () => {
@@ -34,14 +34,20 @@ describe('CongressDirectory', () => {
     renderWithProviders(<CongressDirectory />)
     expect(cardNames()).toEqual(['Ro Khanna', 'Nancy Pelosi', 'Tom Suozzi', 'Dan Crenshaw'])
     expect(screen.getByRole('link', { name: 'Nancy Pelosi' })).toHaveAttribute('href', '/investors/congress/nancy-pelosi')
-    expect(screen.getByText('D-CA11')).toBeInTheDocument()
+    expect(screen.getByText('D-CA11 · 40 trades')).toBeInTheDocument()
     expect(screen.getByText('+12.3 pts')).toBeInTheDocument()
   })
 
   it('shows the most bought shelf with its window', () => {
     renderWithProviders(<CongressDirectory />)
     expect(screen.getByRole('heading', { name: 'Most bought by Congress, last 90 days' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /NVDA/ })).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
+    expect(screen.getByRole('link', { name: /^NVDA\s*4 ↑/ })).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
+  })
+
+  it('links a member\'s top holdings to the Congress tab of Research', () => {
+    renderWithProviders(<CongressDirectory />)
+    const pelosi = screen.getAllByTestId('congress-card').find((card) => within(card).queryByText('Nancy Pelosi'))
+    expect(within(pelosi).getByRole('link', { name: 'NVDA' })).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
   })
 
   it('narrows the list as a name is typed', () => {

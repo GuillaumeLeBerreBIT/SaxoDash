@@ -107,7 +107,7 @@ describe('directoryMembers', () => {
 
 describe('filedLine', () => {
   it('says when the member last filed', () => {
-    expect(filedLine('2026-10-01')).toBe('Last filed 01 Oct 2026')
+    expect(filedLine('2026-10-01')).toBe('Filed 01 Oct 2026')
   })
   it('handles a member with no filing', () => {
     expect(filedLine(null)).toBe('No filings imported')

@@ -36,7 +36,7 @@ export default function CongressTable({ members, sort, onSort }) {
                   </span>
                 </Td>
                 <Td className="text-zinc-400">{partyLabel(member.party, member.state_district)}</Td>
-                <Td><TopLogos holdings={member.top_holdings ?? []} /></Td>
+                <Td><TopLogos holdings={member.top_holdings ?? []} tab="congress" /></Td>
                 <Td align="right" className="num font-mono text-zinc-300">{fmtNum(member.trades)}</Td>
                 <Td align="right" className="text-[var(--fig-xs)]"><FiledLine member={member} /></Td>
                 <Td edge align="right" className="num font-mono text-zinc-200">{points(member.excess_cagr_pct)}</Td>

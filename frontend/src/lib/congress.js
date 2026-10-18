@@ -94,4 +94,4 @@ export function directoryMembers(members, { chip = 'all', query = '', sort = 'ed
     .sort((a, b) => order(a, b) || a.name.localeCompare(b.name))
 }
 
-export const filedLine = (lastFiled) => (lastFiled ? `Last filed ${fmtDate(lastFiled)}` : 'No filings imported')
+export const filedLine = (lastFiled) => (lastFiled ? `Filed ${fmtDate(lastFiled)}` : 'No filings imported')
