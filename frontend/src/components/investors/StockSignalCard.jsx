@@ -7,7 +7,7 @@ import { signalSentence, stockLabel } from '../../lib/investorHub'
 function Faces({ investors }) {
   return (
     <span className="flex -space-x-1.5" aria-label={`Held by ${investors.map((i) => i.name).join(', ')}`}>
-      {investors.map((investor) => <InvestorAvatar key={investor.slug} name={investor.name} size={22} className="ring-2 ring-zinc-900" />)}
+      {investors.map((investor) => <InvestorAvatar key={investor.slug} name={investor.name} photo={investor.photo_url} logo={investor.logo_url} size={22} className="ring-2 ring-zinc-900" />)}
     </span>
   )
 }

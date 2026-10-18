@@ -44,6 +44,16 @@ class CongressApiTest(APITestCase):
         self.assertEqual((pelosi['party'], pelosi['trades'], pelosi['excess_cagr_pct']), ('Democrat', 2, None))
         self.assertEqual(body['most_bought'][0], {'ticker': 'AAPL', 'buyers': 1, 'sellers': 0})
 
+    def test_directory_cards_carry_each_members_largest_holdings(self):
+        for rank in range(5):
+            Holding.objects.create(member=self.pelosi, ticker=f'T{rank}', value=1.0, weight_pct=10.0 - rank)
+        members = {card['slug']: card for card in self.client.get(reverse('congress-members')).json()['members']}
+        self.assertEqual(
+            [held['ticker'] for held in members['nancy-pelosi']['top_holdings']], ['NVDA', 'AAPL', 'T0', 'T1', 'T2'],
+        )
+        self.assertEqual(members['nancy-pelosi']['top_holdings'][0], {'ticker': 'NVDA', 'weight_pct': 60.0})
+        self.assertEqual(members['dan-crenshaw']['top_holdings'], [])
+
     def test_member_profile(self):
         body = self.client.get(reverse('congress-member', args=['nancy-pelosi'])).json()
         self.assertEqual([held['ticker'] for held in body['holdings']], ['NVDA', 'AAPL'])

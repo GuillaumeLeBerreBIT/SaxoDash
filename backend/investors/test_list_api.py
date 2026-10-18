@@ -56,6 +56,12 @@ class InvestorListApiTest(APITestCase):
         self.assertFalse(card['stale'])
         self.assertIsNone(card['import'])
         self.assertTrue(card['curated'])
+        self.assertIsNone(card['photo_url'])
+        self.assertIsNone(card['logo_url'])
+
+    def test_a_card_carries_the_investors_photo(self):
+        make_investor(photo='Warren Buffett KU Visit.jpg')
+        self.assertTrue(self.card('berkshire-hathaway')['photo_url'].endswith('Warren%20Buffett%20KU%20Visit.jpg?width=160'))
 
     def test_a_first_quarter_has_no_change_counts(self):
         store_quarter(make_investor(), Q2, [('037833100', 'APPLE INC', 10, 500)])

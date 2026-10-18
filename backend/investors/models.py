@@ -10,6 +10,8 @@ class Investor(models.Model):
     cik = models.PositiveIntegerField(unique=True)
     slug = models.SlugField(max_length=80, unique=True)
     blurb = models.TextField(blank=True, default='')
+    photo = models.CharField(max_length=200, blank=True, default='')
+    website = models.CharField(max_length=100, blank=True, default='')
     curated = models.BooleanField(default=False)
     added_at = models.DateTimeField(auto_now_add=True)
     last_checked_at = models.DateTimeField(null=True, blank=True)

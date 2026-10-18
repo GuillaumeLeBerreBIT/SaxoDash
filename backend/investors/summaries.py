@@ -7,6 +7,7 @@ from portfolio.models import Position
 from research.models import WatchlistItem
 
 from . import changes, copying, importer, quarters, sectors
+from .photos import logo_url, photo_credit_url, photo_url
 from .models import PositionMove, Security
 
 STALE_AFTER = timedelta(days=183)
@@ -66,6 +67,9 @@ def _header(investor, today):
         'firm': investor.firm,
         'slug': investor.slug,
         'blurb': investor.blurb,
+        'photo_url': photo_url(investor),
+        'logo_url': logo_url(investor),
+        'photo_credit_url': photo_credit_url(investor),
         'curated': investor.curated,
         'last_filing_at': investor.last_filing_at.isoformat() if investor.last_filing_at else None,
         'stale': is_stale(investor, today),

@@ -28,7 +28,7 @@ export default function InvestorHero({ detail, onQuarter }) {
   return (
     <header className="flex flex-col gap-3">
       <div className="flex items-start gap-3 flex-wrap">
-        <InvestorAvatar name={detail.name} size={52} />
+        <InvestorAvatar name={detail.name} photo={detail.photo_url} logo={detail.logo_url} size={52} />
         <div className="min-w-[11rem] flex-1">
           <h1 className="text-[var(--fig-xl)] font-semibold text-zinc-50">{detail.name}</h1>
           {detail.firm !== detail.name ? <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p> : null}
@@ -51,6 +51,11 @@ export default function InvestorHero({ detail, onQuarter }) {
       </div>
       <StyleChips styles={detail.styles} />
       {detail.blurb ? <p className="text-[var(--fig-sm)] text-zinc-400 max-w-[70ch]">{detail.blurb}</p> : null}
+      {detail.photo_credit_url ? (
+        <a href={detail.photo_credit_url} target="_blank" rel="noopener noreferrer" className="text-[var(--fig-2xs)] text-zinc-600 hover:text-zinc-400 w-fit">
+          Photo: Wikimedia Commons
+        </a>
+      ) : null}
     </header>
   )
 }

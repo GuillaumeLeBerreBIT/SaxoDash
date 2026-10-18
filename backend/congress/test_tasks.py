@@ -140,7 +140,7 @@ class ReparseCommandTest(TestCase):
         report.refresh_from_db()
         self.assertEqual((report.status, report.attempts, report.retry_after), (Report.PENDING, 0, None))
 
-    def test_unread_resets_only_parsed_reports_that_yielded_nothing_but_unreadable_rows(self):
+    def test_unread_resets_every_parsed_report_that_left_a_row_unread(self):
         member = Member.objects.create(slug='x', first_name='X', last_name='Y', state_district='CA01')
         unread = Report.objects.create(doc_id='20000001', member=member, year=2021, filed_on=date(2021, 1, 2),
                                        status=Report.PARSED, unparsed_rows=1)
@@ -155,5 +155,5 @@ class ReparseCommandTest(TestCase):
             call_command('reparse_reports', '--unread', stdout=io.StringIO())
         statuses = dict(Report.objects.values_list('doc_id', 'status'))
         self.assertEqual(statuses, {
-            unread.doc_id: Report.PENDING, empty.doc_id: Report.PARSED, read.doc_id: Report.PARSED,
+            unread.doc_id: Report.PENDING, empty.doc_id: Report.PARSED, read.doc_id: Report.PENDING,
         })

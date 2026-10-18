@@ -69,6 +69,7 @@ class HubShelvesTest(TestCase):
             ('NVDA', 'NVIDIA CORP', 3, 3, 3, 0),
         )
         self.assertEqual([face['slug'] for face in item['investors']], ['fund-1', 'fund-2', 'fund-3'])
+        self.assertEqual(item['investors'][0], {'slug': 'fund-1', 'name': item['investors'][0]['name'], 'photo_url': None, 'logo_url': None})
 
     def test_two_buyers_are_not_convergent(self):
         for investor in self.funds[:2]:

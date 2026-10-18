@@ -1,4 +1,4 @@
-import { fmtNum } from './format'
+import { fmtDate, fmtNum } from './format'
 
 const PARTY = { Democrat: 'D', Republican: 'R', Independent: 'I' }
 const KIND = { purchase: 'Bought', sale: 'Sold', partial_sale: 'Sold part', exchange: 'Exchanged' }
@@ -12,7 +12,8 @@ export function partyLabel(party, stateDistrict) {
 }
 
 export function fmtRange(low, high) {
-  return high == null ? `Over ${dollars(low)}` : `${dollars(low)}–${dollars(high)}`
+  if (high == null) return `Over ${dollars(low)}`
+  return low === high ? dollars(low) : `${dollars(low)}–${dollars(high)}`
 }
 
 export function tradeLabel({ kind, option, exercise }) {
@@ -50,3 +51,47 @@ export function activityLabel(stock, windowDays) {
   const traded = `${plural(stock.buyers, 'member', 'members')} of Congress bought and ${stock.sellers} sold in reports filed in the last ${windowDays} days`
   return stock.holders ? `${traded} · ${plural(stock.holders, 'holds', 'hold')} it (estimated)` : traded
 }
+
+export const ACTIVE_DAYS = 90
+const DAY_MS = 86_400_000
+
+export const CONGRESS_CHIPS = [
+  ['all', 'All'], ['democrat', 'Democrats'], ['republican', 'Republicans'], ['active', 'Active'], ['beating', 'Beating the market'],
+]
+export const CONGRESS_SORTS = [['edge', 'Copy edge'], ['trades', 'Trades'], ['filed', 'Last filed'], ['name', 'Name']]
+
+const daysSince = (iso, today) => (iso ? (today - new Date(`${iso}T00:00:00Z`)) / DAY_MS : Infinity)
+
+const CHIP_TESTS = {
+  all: () => true,
+  democrat: (member) => member.party === 'Democrat',
+  republican: (member) => member.party === 'Republican',
+  active: (member, today) => daysSince(member.last_filed, today) <= ACTIVE_DAYS,
+  beating: (member) => member.excess_cagr_pct != null && member.excess_cagr_pct > 0,
+}
+
+const SORT_KEYS = {
+  edge: (member) => -(member.excess_cagr_pct ?? -Infinity),
+  trades: (member) => -member.trades,
+  filed: (member) => -(member.last_filed ? Date.parse(member.last_filed) : -Infinity),
+  name: () => 0,
+}
+
+const byKey = (key) => (a, b) => {
+  const left = key(a)
+  const right = key(b)
+  return left === right ? 0 : left < right ? -1 : 1
+}
+
+export function directoryMembers(members, { chip = 'all', query = '', sort = 'edge', traderSlugs = new Set(), today = new Date() }) {
+  const q = query.trim().toLowerCase()
+  const matches = (member) =>
+    !q || member.name.toLowerCase().includes(q) || member.state_district.toLowerCase().startsWith(q) || traderSlugs.has(member.slug)
+  const inChip = CHIP_TESTS[chip] ?? CHIP_TESTS.all
+  const order = byKey(SORT_KEYS[sort] ?? SORT_KEYS.edge)
+  return members
+    .filter((member) => inChip(member, today) && matches(member))
+    .sort((a, b) => order(a, b) || a.name.localeCompare(b.name))
+}
+
+export const filedLine = (lastFiled) => (lastFiled ? `Filed ${fmtDate(lastFiled)}` : 'No filings imported')

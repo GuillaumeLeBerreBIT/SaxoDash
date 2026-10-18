@@ -1,89 +1,89 @@
-name,firm,cik,styles,blurb
-Warren Buffett,Berkshire Hathaway,1067983,Value|Concentrated,Buys wonderful businesses at fair prices and holds them for decades.
-Bill Ackman,Pershing Square Capital Management,1336528,Activist|Concentrated,Eight to twelve large positions held for years with public activist campaigns.
-Michael Burry,Scion Asset Management,1649339,Contrarian|Concentrated,Deep-value contrarian known for the 2008 housing short; the portfolio turns over fast.
-Seth Klarman,Baupost Group,1061768,Value,Margin-of-safety value investor who is comfortable holding cash.
-Stanley Druckenmiller,Duquesne Family Office,1536411,Macro,Top-down macro investor who sizes up aggressively when conviction is high.
-David Tepper,Appaloosa,1656456,Macro|Contrarian,Distressed-debt roots; buys what others are forced to sell.
-Li Lu,Himalaya Capital Management,1709323,Value|Concentrated,Munger-backed value investor with a handful of long-held positions.
-Mohnish Pabrai,"Dalal Street, LLC",1549575,Value|Concentrated,Few bets and big bets; openly clones other great investors.
-Carl Icahn,Icahn Carl C,921669,Activist|Concentrated,The original corporate raider; takes large stakes and pushes for change.
-Dan Loeb,Third Point,1040273,Activist,Event-driven activist known for sharply worded letters to boards.
-Chase Coleman,Tiger Global Management,1167483,Tech|Growth,Tiger cub focused on internet and software growth companies.
-Ray Dalio,Bridgewater Associates,1350694,Macro|Quant,Systematic global macro; hundreds of positions sized by rules.
-Howard Marks,Oaktree Capital Management,949509,Value|Contrarian,Credit and distressed specialist who writes the memos everyone reads.
-Bill & Melinda Gates Foundation Trust,Gates Foundation Trust,1166559,Concentrated,The foundation's endowment: a few very large long-term holdings.
-Cathie Wood,ARK Investment Management,1697748,Tech|Growth,Disruptive-innovation growth investor with high turnover.
-Terry Smith,Fundsmith,1569205,Growth|Concentrated,"Buy good companies, don't overpay, do nothing."
-Chuck Akre,Akre Capital Management,1112520,Growth|Concentrated,Compounding machines held for a very long time.
-Stephen Mandel,Lone Pine Capital,1061165,Growth|Tech,Tiger cub running a fundamental long-biased growth book.
-Philippe Laffont,Coatue Management,1135730,Tech|Growth,Technology specialist across public and private markets.
-David Einhorn,Greenlight Capital,1489933,Value|Contrarian,Value long-short investor known for forensic short theses.
-Richard Pzena,Pzena Investment Management,1027796,Value,Deep value: good businesses bought at depressed earnings.
-Tweedy Browne,Tweedy Browne,732905,Value,One of the oldest Graham-style value shops.
-Chris Davis,Davis Selected Advisers,1036325,Value,Third-generation value investor with a heavy financials weighting.
-Bill Nygren,Harris Associates,813917,Value,Oakmark's value manager: buys at a discount to private-market value.
-Mason Hawkins,Southeastern Asset Management,807985,Value|Concentrated,The concentrated value portfolios behind the Longleaf funds.
-Bruce Berkowitz,Fairholme Capital Management,1056831,Value|Concentrated,Ignores the crowd and holds a few very large positions.
-Tom Gayner,Markel Group,1096343,Value,Insurance float invested Buffett-style in durable compounders.
-Ruane Cunniff,"Ruane, Cunniff & Goldfarb",1720792,Value|Concentrated,The managers of the Sequoia Fund.
-Donald Yacktman,Yacktman Asset Management,905567,Value,Patient buyer of high-quality businesses at low prices.
-Wally Weitz,Weitz Investment Management,883965,Value,Omaha value investor in the Buffett tradition.
-Polen Capital,Polen Capital Management,1034524,Growth|Concentrated,Concentrated quality-growth portfolios.
-François Rochon,Giverny Capital,1641864,Growth,Owner-mindset investor in quality compounders.
-Tom Russo,Gardner Russo & Quinn,860643,Value|Concentrated,Global consumer brands held for decades.
-Nick Train,Lindsell Train,1484150,Growth|Concentrated,Very low turnover in durable brand franchises.
-Guy Spier,Aquamarine Capital,1953324,Value|Concentrated,Buffett and Pabrai disciple with a small long-held portfolio.
-Chris Bloomstran,Semper Augustus,1115373,Value,Quality-value investor known for his Berkshire deep dives.
-Norbert Lou,Punch Card Management,1631664,Value|Concentrated,Takes the punch-card idea literally: a handful of holdings.
-David Abrams,Abrams Capital Management,1358706,Value|Concentrated,Klarman protégé; concentrated and unlevered.
-Mason Morfit,ValueAct Capital,1418814,Activist|Concentrated,Constructive activist that usually takes board seats.
-Nelson Peltz,Trian Fund Management,1345471,Activist|Concentrated,Operational activist in consumer and industrial companies.
-Paul Singer,Elliott Investment Management,1791786,Activist,One of the largest and most persistent activist funds.
-Jeff Smith,Starboard Value,1517137,Activist,Activist focused on margins and capital allocation.
-Barry Rosenstein,JANA Partners,1998597,Activist|Concentrated,Event-driven activist campaigns.
-Keith Meister,Corvex Management,1535472,Activist,Icahn alumnus running an activist and event-driven book.
-Scott Ferguson,Sachem Head Capital Management,1582090,Activist|Concentrated,Pershing Square alumnus practising concentrated activism.
-Glenn Welling,Engaged Capital,1559771,Activist|Concentrated,Small- and mid-cap activist.
-George Soros,Soros Fund Management,1029160,Macro,The family office of the man who broke the Bank of England.
-John Paulson,Paulson & Co.,1035674,Contrarian|Concentrated,Made the 2007 subprime trade; now a concentrated family office.
-Andreas Halvorsen,Viking Global Investors,1103804,Growth,Tiger cub running a large fundamental long-short book.
-Lee Ainslie,Maverick Capital,934639,Growth|Tech,Tiger cub with a diversified long-short equity book.
-Dan Sundheim,D1 Capital Partners,1747057,Growth,Viking alumnus investing across public and private growth.
-Alex Sacerdote,Whale Rock Capital Management,1387322,Tech|Growth,Technology-focused long-short fund.
-Brad Gerstner,Altimeter Capital Management,1541617,Tech|Concentrated,Concentrated technology bets.
-Marc Stad,Dragoneer Investment Group,1602189,Tech|Growth,Growth investor in public and late-stage technology.
-Baillie Gifford,Baillie Gifford,1088875,Growth,Edinburgh partnership making long-horizon growth bets.
-Frank Sands,Sands Capital Management,1020066,Growth|Concentrated,Concentrated positions in secular growth leaders.
-Henry Ellenbogen,Durable Capital Partners,1798849,Growth,Looks for small companies that can compound into large ones.
-Gavin Baker,Atreides Management,1777813,Tech|Growth,Technology and consumer growth crossover investor.
-Leopold Aschenbrenner,Situational Awareness,2045724,Tech|Concentrated,AI-thesis fund built around compute and power.
-Chris Hohn,TCI Fund Management,1647251,Activist|Concentrated,Very concentrated; turns activist when owners are ignored.
-John Armitage,Egerton Capital,1581811,Growth,London long-biased stock picker.
-Julian and Felix Baker,Baker Bros. Advisors,1263508,Concentrated,Biotech specialists with long-held stakes.
-Bill Miller,Miller Value Partners,1135778,Value|Contrarian,Contrarian value investor who beat the S&P 500 fifteen years running.
-Larry Robbins,Glenview Capital Management,1138995,Value,Healthcare-heavy fundamental investor.
-Edgar Wachenheim,Greenhaven Associates,846222,Value|Concentrated,Author of Common Stocks and Common Sense.
-Duan Yongping,H&H International Investment,1759760,Value|Concentrated,Chinese entrepreneur-investor with a few very large positions.
-Zhang Lei,HHLR Advisors,1762304,Growth,The public-equity arm of Hillhouse.
-Daily Journal,Daily Journal Corp,783412,Value|Concentrated,The portfolio Charlie Munger built.
-David Rolfe,Wedgewood Partners,859804,Growth|Concentrated,Focused quality-growth portfolio.
-Pat Dorsey,Dorsey Asset Management,1671657,Growth|Concentrated,Moat-focused investing by Morningstar's former research head.
-William von Mueffling,Cantillon Capital Management,1279936,Growth,Quality global equities.
-Prem Watsa,Fairfax Financial Holdings,915191,Value|Contrarian,Canada's Buffett: insurance float invested in deep value.
-John Rogers,Ariel Investments,936753,Value|Contrarian,Patient small- and mid-cap value.
-Glenn Greenberg,Brave Warrior Advisors,1553733,Value|Concentrated,Concentrated portfolio of businesses he understands well.
-Francis Chou,Chou Associates Management,1389403,Value|Contrarian,Bargain hunter who holds cash when nothing is cheap.
-David Goel,Matrix Capital Management,1410830,Tech|Concentrated,Concentrated technology investor.
-Jonathan Auerbach,Hound Partners,1353316,Value|Concentrated,Tiger-seeded concentrated value.
-Ravenel Curry,Eagle Capital Management,945631,Value,Long-term owner of undervalued large caps.
-Thomas Kahn,Kahn Brothers Group,1039565,Value,Graham-and-Dodd deep value.
-Dennis Hong,ShawSpring Partners,1766908,Growth|Concentrated,Concentrated global internet and software.
-Bryan Lawrence,Oakcliff Capital,1657335,Value|Concentrated,Very few positions and long holding periods.
-Triple Frond Partners,Triple Frond Partners,1454502,Value|Concentrated,Low-profile concentrated compounder portfolio.
-Tom Bancroft,Makaira Partners,1540866,Value|Concentrated,Concentrated value.
-Alex Roepers,Atlantic Investment Management,1063296,Value|Activist,Concentrated industrial value with constructive activism.
-Glen Kacher,Light Street Capital Management,1569049,Tech|Growth,Tiger cub in technology growth.
-Josh Tarasoff,Greenlea Lane Capital Management,1766504,Growth|Concentrated,Very long-term owner of a few great businesses.
-First Eagle,First Eagle Investment Management,1325447,Value,Global value with a gold hedge.
-Dodge & Cox,Dodge & Cox,200217,Value,"Team-managed, low-turnover value."
+name,firm,cik,styles,blurb,photo,website
+Warren Buffett,Berkshire Hathaway,1067983,Value|Concentrated,Buys wonderful businesses at fair prices and holds them for decades.,Warren Buffett KU Visit.jpg,
+Bill Ackman,Pershing Square Capital Management,1336528,Activist|Concentrated,Eight to twelve large positions held for years with public activist campaigns.,Valeant Pharmaceuticals' Business Model (headshot).jpg,
+Michael Burry,Scion Asset Management,1649339,Contrarian|Concentrated,Deep-value contrarian known for the 2008 housing short; the portfolio turns over fast.,,scionasset.com
+Seth Klarman,Baupost Group,1061768,Value,Margin-of-safety value investor who is comfortable holding cash.,Seth Klarman at 147th Preakness Stakes.jpg,
+Stanley Druckenmiller,Duquesne Family Office,1536411,Macro,Top-down macro investor who sizes up aggressively when conviction is high.,,
+David Tepper,Appaloosa,1656456,Macro|Contrarian,Distressed-debt roots; buys what others are forced to sell.,David Tepper 01.jpg,
+Li Lu,Himalaya Capital Management,1709323,Value|Concentrated,Munger-backed value investor with a handful of long-held positions.,,
+Mohnish Pabrai,"Dalal Street, LLC",1549575,Value|Concentrated,Few bets and big bets; openly clones other great investors.,Mohnish Pabrai.jpg,
+Carl Icahn,Icahn Carl C,921669,Activist|Concentrated,The original corporate raider; takes large stakes and pushes for change.,"Carl Icahn, 1980s.jpg",
+Dan Loeb,Third Point,1040273,Activist,Event-driven activist known for sharply worded letters to boards.,,thirdpoint.com
+Chase Coleman,Tiger Global Management,1167483,Tech|Growth,Tiger cub focused on internet and software growth companies.,,tigerglobal.com
+Ray Dalio,Bridgewater Associates,1350694,Macro|Quant,Systematic global macro; hundreds of positions sized by rules.,"Web Summit 2018 - Forum - Day 2, November 7 HM1 7481 (44858045925).jpg",
+Howard Marks,Oaktree Capital Management,949509,Value|Contrarian,Credit and distressed specialist who writes the memos everyone reads.,Howard Marks 2.17.12 (cropped).jpg,
+Bill & Melinda Gates Foundation Trust,Gates Foundation Trust,1166559,Concentrated,The foundation's endowment: a few very large long-term holdings.,,gatesfoundation.org
+Cathie Wood,ARK Investment Management,1697748,Tech|Growth,Disruptive-innovation growth investor with high turnover.,Cathie Wood ARK Invest Photo.jpg,
+Terry Smith,Fundsmith,1569205,Growth|Concentrated,"Buy good companies, don't overpay, do nothing.",Terry Smith MNZM investiture.jpg,
+Chuck Akre,Akre Capital Management,1112520,Growth|Concentrated,Compounding machines held for a very long time.,,akrefund.com
+Stephen Mandel,Lone Pine Capital,1061165,Growth|Tech,Tiger cub running a fundamental long-biased growth book.,,lonepinecapital.com
+Philippe Laffont,Coatue Management,1135730,Tech|Growth,Technology specialist across public and private markets.,,coatue.com
+David Einhorn,Greenlight Capital,1489933,Value|Contrarian,Value long-short investor known for forensic short theses.,,
+Richard Pzena,Pzena Investment Management,1027796,Value,Deep value: good businesses bought at depressed earnings.,,pzena.com
+Tweedy Browne,Tweedy Browne,732905,Value,One of the oldest Graham-style value shops.,,tweedy.com
+Chris Davis,Davis Selected Advisers,1036325,Value,Third-generation value investor with a heavy financials weighting.,,davisfunds.com
+Bill Nygren,Harris Associates,813917,Value,Oakmark's value manager: buys at a discount to private-market value.,,harrisassoc.com
+Mason Hawkins,Southeastern Asset Management,807985,Value|Concentrated,The concentrated value portfolios behind the Longleaf funds.,,southeasternasset.com
+Bruce Berkowitz,Fairholme Capital Management,1056831,Value|Concentrated,Ignores the crowd and holds a few very large positions.,,fairholmefunds.com
+Tom Gayner,Markel Group,1096343,Value,Insurance float invested Buffett-style in durable compounders.,,markel.com
+Ruane Cunniff,"Ruane, Cunniff & Goldfarb",1720792,Value|Concentrated,The managers of the Sequoia Fund.,,ruanecunniff.com
+Donald Yacktman,Yacktman Asset Management,905567,Value,Patient buyer of high-quality businesses at low prices.,,yacktman.com
+Wally Weitz,Weitz Investment Management,883965,Value,Omaha value investor in the Buffett tradition.,,weitzinvestments.com
+Polen Capital,Polen Capital Management,1034524,Growth|Concentrated,Concentrated quality-growth portfolios.,,polencapital.com
+François Rochon,Giverny Capital,1641864,Growth,Owner-mindset investor in quality compounders.,,givernycapital.com
+Tom Russo,Gardner Russo & Quinn,860643,Value|Concentrated,Global consumer brands held for decades.,,
+Nick Train,Lindsell Train,1484150,Growth|Concentrated,Very low turnover in durable brand franchises.,,lindselltrain.com
+Guy Spier,Aquamarine Capital,1953324,Value|Concentrated,Buffett and Pabrai disciple with a small long-held portfolio.,"Guy Spier, Chief Executive Officer, Aquamarine Capital.jpg",
+Chris Bloomstran,Semper Augustus,1115373,Value,Quality-value investor known for his Berkshire deep dives.,,
+Norbert Lou,Punch Card Management,1631664,Value|Concentrated,Takes the punch-card idea literally: a handful of holdings.,,punchcardcapital.com
+David Abrams,Abrams Capital Management,1358706,Value|Concentrated,Klarman protégé; concentrated and unlevered.,,abramscapital.com
+Mason Morfit,ValueAct Capital,1418814,Activist|Concentrated,Constructive activist that usually takes board seats.,,valueact.com
+Nelson Peltz,Trian Fund Management,1345471,Activist|Concentrated,Operational activist in consumer and industrial companies.,,trianpartners.com
+Paul Singer,Elliott Investment Management,1791786,Activist,One of the largest and most persistent activist funds.,The Global Financial Context Paul Singer (cropped).jpg,
+Jeff Smith,Starboard Value,1517137,Activist,Activist focused on margins and capital allocation.,,starboardvalue.com
+Barry Rosenstein,JANA Partners,1998597,Activist|Concentrated,Event-driven activist campaigns.,,janapartners.com
+Keith Meister,Corvex Management,1535472,Activist,Icahn alumnus running an activist and event-driven book.,,
+Scott Ferguson,Sachem Head Capital Management,1582090,Activist|Concentrated,Pershing Square alumnus practising concentrated activism.,,sachemhead.com
+Glenn Welling,Engaged Capital,1559771,Activist|Concentrated,Small- and mid-cap activist.,,engagedcapital.com
+George Soros,Soros Fund Management,1029160,Macro,The family office of the man who broke the Bank of England.,"George Soros - May 31, 2017.jpg",
+John Paulson,Paulson & Co.,1035674,Contrarian|Concentrated,Made the 2007 subprime trade; now a concentrated family office.,,paulsonco.com
+Andreas Halvorsen,Viking Global Investors,1103804,Growth,Tiger cub running a large fundamental long-short book.,,vikingglobal.com
+Lee Ainslie,Maverick Capital,934639,Growth|Tech,Tiger cub with a diversified long-short equity book.,,maverickcap.com
+Dan Sundheim,D1 Capital Partners,1747057,Growth,Viking alumnus investing across public and private growth.,,
+Alex Sacerdote,Whale Rock Capital Management,1387322,Tech|Growth,Technology-focused long-short fund.,,
+Brad Gerstner,Altimeter Capital Management,1541617,Tech|Concentrated,Concentrated technology bets.,Brad Gerstner at the White House 2025 (54581192563).jpg,
+Marc Stad,Dragoneer Investment Group,1602189,Tech|Growth,Growth investor in public and late-stage technology.,,dragoneer.com
+Baillie Gifford,Baillie Gifford,1088875,Growth,Edinburgh partnership making long-horizon growth bets.,,bailliegifford.com
+Frank Sands,Sands Capital Management,1020066,Growth|Concentrated,Concentrated positions in secular growth leaders.,,sandscapital.com
+Henry Ellenbogen,Durable Capital Partners,1798849,Growth,Looks for small companies that can compound into large ones.,,durablecapital.com
+Gavin Baker,Atreides Management,1777813,Tech|Growth,Technology and consumer growth crossover investor.,,atreidesmgmt.com
+Leopold Aschenbrenner,Situational Awareness,2045724,Tech|Concentrated,AI-thesis fund built around compute and power.,,situational-awareness.ai
+Chris Hohn,TCI Fund Management,1647251,Activist|Concentrated,Very concentrated; turns activist when owners are ignored.,Chris Hohn GFSS 2023.jpg,
+John Armitage,Egerton Capital,1581811,Growth,London long-biased stock picker.,,egertoncapital.com
+Julian and Felix Baker,Baker Bros. Advisors,1263508,Concentrated,Biotech specialists with long-held stakes.,,
+Bill Miller,Miller Value Partners,1135778,Value|Contrarian,Contrarian value investor who beat the S&P 500 fifteen years running.,,millervalue.com
+Larry Robbins,Glenview Capital Management,1138995,Value,Healthcare-heavy fundamental investor.,,
+Edgar Wachenheim,Greenhaven Associates,846222,Value|Concentrated,Author of Common Stocks and Common Sense.,,
+Duan Yongping,H&H International Investment,1759760,Value|Concentrated,Chinese entrepreneur-investor with a few very large positions.,,
+Zhang Lei,HHLR Advisors,1762304,Growth,The public-equity arm of Hillhouse.,"Zhang Lei, 2012 (cropped).jpg",
+Daily Journal,Daily Journal Corp,783412,Value|Concentrated,The portfolio Charlie Munger built.,,dailyjournal.com
+David Rolfe,Wedgewood Partners,859804,Growth|Concentrated,Focused quality-growth portfolio.,,wedgewoodpartners.com
+Pat Dorsey,Dorsey Asset Management,1671657,Growth|Concentrated,Moat-focused investing by Morningstar's former research head.,,dorseyasset.com
+William von Mueffling,Cantillon Capital Management,1279936,Growth,Quality global equities.,,cantillon.com
+Prem Watsa,Fairfax Financial Holdings,915191,Value|Contrarian,Canada's Buffett: insurance float invested in deep value.,Prem Watsa.jpg,
+John Rogers,Ariel Investments,936753,Value|Contrarian,Patient small- and mid-cap value.,"20120721 John W. Rogers, Jr.JPG",
+Glenn Greenberg,Brave Warrior Advisors,1553733,Value|Concentrated,Concentrated portfolio of businesses he understands well.,,
+Francis Chou,Chou Associates Management,1389403,Value|Contrarian,Bargain hunter who holds cash when nothing is cheap.,,
+David Goel,Matrix Capital Management,1410830,Tech|Concentrated,Concentrated technology investor.,,
+Jonathan Auerbach,Hound Partners,1353316,Value|Concentrated,Tiger-seeded concentrated value.,,
+Ravenel Curry,Eagle Capital Management,945631,Value,Long-term owner of undervalued large caps.,,eaglecap.com
+Thomas Kahn,Kahn Brothers Group,1039565,Value,Graham-and-Dodd deep value.,,
+Dennis Hong,ShawSpring Partners,1766908,Growth|Concentrated,Concentrated global internet and software.,,shawspring.com
+Bryan Lawrence,Oakcliff Capital,1657335,Value|Concentrated,Very few positions and long holding periods.,,
+Triple Frond Partners,Triple Frond Partners,1454502,Value|Concentrated,Low-profile concentrated compounder portfolio.,,
+Tom Bancroft,Makaira Partners,1540866,Value|Concentrated,Concentrated value.,,makairapartners.com
+Alex Roepers,Atlantic Investment Management,1063296,Value|Activist,Concentrated industrial value with constructive activism.,,atlanticinvestment.net
+Glen Kacher,Light Street Capital Management,1569049,Tech|Growth,Tiger cub in technology growth.,,lightstreet.com
+Josh Tarasoff,Greenlea Lane Capital Management,1766504,Growth|Concentrated,Very long-term owner of a few great businesses.,,
+First Eagle,First Eagle Investment Management,1325447,Value,Global value with a gold hedge.,,firsteagle.com
+Dodge & Cox,Dodge & Cox,200217,Value,"Team-managed, low-turnover value.",,dodgeandcox.com

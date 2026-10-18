@@ -8,21 +8,37 @@ import InvestorAvatar from './InvestorAvatar'
 import StyleChips from './StyleChips'
 import { UNKNOWN, fmtNum } from '../../lib/format'
 import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
+import { researchHref } from '../../lib/research'
 
 const movement = (c) => (c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count, '+')}\u00a0new · ${fmtCount(c.exited_count, '−')}\u00a0exited`)
 
-export function TopLogos({ holdings }) {
+function HoldingLogo({ holding }) {
+  return (
+    <InstrumentLogo
+      symbol={holding.ticker}
+      size={22}
+      className="rounded-full ring-2 ring-zinc-900"
+      fallback={<LetterAvatar symbol={holding.ticker ?? holding.issuer} size={22} />}
+    />
+  )
+}
+
+export function TopLogos({ holdings, tab }) {
   return (
     <span className="flex -space-x-1.5">
-      {holdings.map((h) => (
-        <InstrumentLogo
-          key={h.cusip}
-          symbol={h.ticker}
-          size={22}
-          className="rounded-full ring-2 ring-zinc-900"
-          fallback={<LetterAvatar symbol={h.ticker ?? h.issuer} size={22} />}
-        />
-      ))}
+      {holdings.map((h) => (h.ticker ? (
+        <Link
+          key={h.cusip ?? h.ticker}
+          to={researchHref(h.ticker, tab)}
+          aria-label={h.ticker}
+          title={h.ticker}
+          className="relative z-10 rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-blue-500"
+        >
+          <HoldingLogo holding={h} />
+        </Link>
+      ) : (
+        <HoldingLogo key={h.cusip ?? h.issuer} holding={h} />
+      )))}
     </span>
   )
 }
@@ -40,7 +56,7 @@ export default function InvestorCard({ investor, className = '' }) {
     <Card interactive className={`relative h-full flex flex-col gap-2 ${className}`}>
       <div data-testid="investor-card" className="contents">
         <div className="flex items-start gap-2.5">
-          <InvestorAvatar name={investor.name} />
+          <InvestorAvatar name={investor.name} photo={investor.photo_url} logo={investor.logo_url} />
           <div className="min-w-0 flex-1">
             <Link
               to={`/investors/${investor.slug}`}

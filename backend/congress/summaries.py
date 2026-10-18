@@ -3,7 +3,9 @@ from django.db.models import Max
 from investors.copying import edge
 
 from . import performance
-from .models import CopyPerformance, Report, Trade
+from .models import CopyPerformance, Holding, Report, Trade
+
+TOP_HOLDINGS = 5
 
 
 def trade_row(trade):
@@ -26,22 +28,38 @@ def _edges(member_ids):
     return {member_id: edge(ours, market) for member_id, ours, market in rows}
 
 
+def _top_holdings(member_ids):
+    top = {}
+    for member_id, ticker, weight_pct in Holding.objects.filter(member_id__in=member_ids).order_by(
+        'member_id', '-weight_pct', 'ticker',
+    ).values_list('member_id', 'ticker', 'weight_pct'):
+        held = top.setdefault(member_id, [])
+        if len(held) < TOP_HOLDINGS:
+            held.append({'ticker': ticker, 'weight_pct': weight_pct})
+    return top
+
+
 def cards(members):
     ids = [member.pk for member in members]
     last_filed = dict(
         Report.objects.filter(member_id__in=ids).values('member').annotate(last=Max('filed_on')).values_list('member', 'last')
     )
     edges = _edges(ids)
-    return [card(member, member.basis.get('trades', 0), last_filed.get(member.pk), edges.get(member.pk)) for member in members]
+    top = _top_holdings(ids)
+    return [
+        card(member, member.basis.get('trades', 0), last_filed.get(member.pk), edges.get(member.pk), top.get(member.pk, []))
+        for member in members
+    ]
 
 
-def card(member, trades, last_filed, excess_cagr_pct):
+def card(member, trades, last_filed, excess_cagr_pct, top_holdings):
     return {
         **identity(member),
         'photo_url': member.photo_url,
         'trades': trades,
         'last_filed': last_filed.isoformat() if last_filed else None,
         'excess_cagr_pct': excess_cagr_pct,
+        'top_holdings': top_holdings,
     }
 
 

@@ -224,3 +224,50 @@ class AssetNameWithColonTest(SimpleTestCase):
         rows = parse_report(text).rows
         self.assertEqual([row.ticker for row in rows], ['AAPL', 'VOO'])
         self.assertEqual(rows[1].asset, 'Vanguard Index Funds: S&P 500 ETF (VOO)')
+
+
+class ExactAmountTest(SimpleTestCase):
+    def test_a_row_filed_with_an_exact_amount_is_read(self):
+        row = 'JT AT&T Inc. (T) [ST] E 04/11/2022 04/11/2022 $4,450.50\nF      S     : New\n'
+        trade = parse_report(inline(row)).rows[0]
+        self.assertEqual((trade.ticker, trade.kind, trade.amount_low, trade.amount_high), ('T', 'exchange', 4451, 4451))
+        self.assertEqual(trade.asset, 'AT&T Inc. (T)')
+
+    def test_an_exact_amount_does_not_swallow_the_text_after_it(self):
+        row = 'SP Roblox Corporation Class A (RBLX)\n[OP]\nS 01/20/2023 01/20/2023 $1.00\nF      S     : New\n'
+        trade = parse_report(inline(row)).rows[0]
+        self.assertEqual((trade.ticker, trade.option, trade.amount_low, trade.amount_high), ('RBLX', 'call', 1, 1))
+
+
+class DeletedRowTest(SimpleTestCase):
+    def test_a_deleted_row_is_neither_a_trade_nor_unreadable(self):
+        deleted = '2000075320 Abbott Laboratories (ABT) [ST] P 01/05/2021 02/08/2021 $1,001 - $15,000\nF      S     : Deleted\n'
+        tesla = 'Tesla, Inc. (TSLA) [ST] P 01/15/2025 01/15/2025 $1,001 - $15,000\nF S : New\n'
+        parsed = parse_report(inline(deleted, tesla))
+        self.assertEqual(([row.ticker for row in parsed.rows], parsed.unparsed_rows), (['TSLA'], 0))
+        self.assertEqual(parsed.deleted_rows, 1)
+
+
+class OpenAmountSplitOverLinesTest(SimpleTestCase):
+    def test_spouse_over_a_million_wrapped_onto_the_next_line_is_read(self):
+        row = 'SP Nevada Irrigation District Bonds S 01/08/2021 01/31/2021 Spouse/DC Over\n[GS] $1,000,000\nFIlINg STATuS: New\n'
+        trade = parse_report(inline(row)).rows[0]
+        self.assertEqual((trade.asset, trade.asset_type, trade.amount_low, trade.amount_high), (
+            'Nevada Irrigation District Bonds', 'GS', 1000000, None,
+        ))
+
+
+class WrappedCommentTest(SimpleTestCase):
+    def test_a_comment_wrapped_onto_a_second_line_stays_with_its_row(self):
+        row = (
+            'SP Roblox Corporation Class A (RBLX)\n[OP]\nS 01/20/2023 01/20/2023 $1.00\nF      S     : New\n'
+            'C       : 100 call options expired with\nno value for a total loss of $303,001.\n'
+        )
+        parsed = parse_report(inline(row))
+        self.assertEqual(([row.ticker for row in parsed.rows], parsed.unparsed_rows), (['RBLX'], 0))
+
+
+class OlderGeneratorDeletionsTest(SimpleTestCase):
+    def test_an_older_report_of_only_deletions_reads_as_deletions(self):
+        parsed = read_report((TESTDATA / '20019618.pdf').read_bytes())
+        self.assertEqual((len(parsed.rows), parsed.unparsed_rows, parsed.deleted_rows), (0, 0, 6))

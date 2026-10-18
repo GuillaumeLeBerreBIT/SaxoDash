@@ -36,6 +36,7 @@ vi.mock('../api/queries', () => ({
   useFollowInvestor: () => ({ mutate: follow }),
   usePrefetchInvestor: () => () => {},
   useCongressMembers: () => ({ isLoading: false, data: { members: [], most_bought: [], window_days: 90 } }),
+  useCongressOwnership: () => ({ isFetching: false, data: undefined }),
 }))
 vi.mock('../components/investors/AddInvestorDialog', () => ({ default: ({ onClose }) => <div role="dialog"><button onClick={onClose}>close</button></div> }))
 
@@ -52,10 +53,16 @@ const renderPage = (route = '/investors') =>
   )
 
 const directory = () => screen.getByRole('region', { name: 'All investors' })
-const directoryNames = () => within(directory()).getAllByTestId('investor-card').map((el) => within(el).getByRole('link').textContent)
+const directoryNames = () => within(directory()).getAllByTestId('investor-card').map((el) => within(el).getAllByRole('link')[0].textContent)
 
 describe('Investors hub', () => {
   beforeEach(() => { fundOptions = [] })
+
+  it('links a card\'s top holdings to their Research pages', () => {
+    renderPage()
+    const card = within(directory()).getAllByTestId('investor-card')[0]
+    expect(within(card).getByRole('link', { name: 'AAPL' })).toHaveAttribute('href', '/research?symbol=AAPL')
+  })
 
   it('asks for fund data only while the Funds tab is open', () => {
     renderPage('/investors?tab=congress')

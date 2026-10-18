@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import AllocationDonut from '../AllocationDonut'
 import { InstrumentLogo, LetterAvatar, TBtn } from '../ui'
@@ -10,12 +11,13 @@ import { fmtPct } from '../../lib/format'
 import {
   TOP10_VIEWS, donutSlices, fmtUsdCompact, holdingLabel, positionCount, readTop10View, remainder, topTen, writeTop10View,
 } from '../../lib/investors'
+import { researchHref } from '../../lib/research'
 
 const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
 
 function HoldingTile({ holding, max }) {
   return (
-    <div data-testid="holding-tile" className="bg-white/[0.02] border border-white/[0.06] rounded-md p-3 flex flex-col gap-2 min-w-0">
+    <div data-testid="holding-tile" className={`relative bg-white/[0.02] border border-white/[0.06] rounded-md p-3 flex flex-col gap-2 min-w-0 ${holding.ticker ? 'hover:border-white/[0.14]' : ''}`}>
       <div className="flex items-center gap-2 min-w-0">
         <InstrumentLogo
           symbol={holding.ticker}
@@ -25,7 +27,16 @@ function HoldingTile({ holding, max }) {
         />
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="font-mono font-semibold text-zinc-100 truncate">{holding.ticker ?? holding.issuer}</span>
+            {holding.ticker ? (
+              <Link
+                to={researchHref(holding.ticker)}
+                className="font-mono font-semibold text-zinc-100 truncate after:absolute after:inset-0 after:rounded-md focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-blue-500"
+              >
+                {holding.ticker}
+              </Link>
+            ) : (
+              <span className="font-mono font-semibold text-zinc-100 truncate">{holding.issuer}</span>
+            )}
             <OptionBadge putCall={holding.put_call} />
           </div>
           {holding.ticker && <div className="text-[var(--fig-2xs)] text-zinc-500 truncate">{holding.issuer}</div>}

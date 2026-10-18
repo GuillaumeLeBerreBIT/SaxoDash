@@ -11,7 +11,7 @@ _HEADER_END = '$200?\n'
 _FOOTER = re.compile(r'^\* For the complete list', re.M)
 _PAGE_BREAK = re.compile(r'Filing ID #\d+\n(?:.*\n)*?\$200\?\n')
 _COLUMN_HEADER = re.compile(r'^(?i:ID\s+Owner\s+Asset\s+Transaction)\b.*\n(?:.*\n)*?\$200\?\n', re.M)
-_STATUS = re.compile(r'^(?i:F(?:iling)?\s+S(?:tatus)?)\s*:\s*(New|Amended)\b')
+_STATUS = re.compile(r'^(?i:F(?:iling)?\s+S(?:tatus)?)\s*:\s*(New|Amended|Deleted)\b')
 _LABEL = re.compile(
     r'^(?P<key>[A-Z])(?:\s{2,}[A-Z ]*|(?i:escription|omments|ocation|ubholding Of|iling Status)\s*):\s*(?P<text>.*)$'
 )
@@ -20,7 +20,7 @@ _CHECKBOX = re.compile(r'\b(?:gfedcb?|nmlkji?)\b')
 _CORE = re.compile(
     r'(?:^|(?<=\s))(?P<kind>S \(partial\)|P|S|E)\s+'
     r'(?P<traded>\d{2}/\d{2}/\d{4})\s+(?P<notified>\d{2}/\d{2}/\d{4})\s+'
-    r'(?P<amount>(?:Spouse/DC )?Over \$[\d,]+|\$[\d,]+\s*-\s*(?:\$[\d,]+)?)'
+    r'(?P<amount>(?:Spouse/DC )?Over(?: \$[\d,]+)?|\$[\d,]+\s*-\s*(?:\$[\d,]+)?|\$[\d,]+\.\d{2})'
 )
 _OWNER = re.compile(r'^(SP|JT|DC)\s+')
 _TYPE = re.compile(r'\s*\[([A-Z]{2})\]')
@@ -28,6 +28,7 @@ _TICKER = re.compile(r'\(([A-Z][A-Z0-9.]{0,9})\)\s*\[')
 _MISCASED_CODE = re.compile(r'\([A-Za-z][A-Za-z0-9.]{0,9}\)|\[[A-Za-z]{2}\]')
 _DOLLARS = re.compile(r'\$[\d,]+')
 _PUT = re.compile(r'\bput\b')
+_WRAPPING_LABELS = {'D', 'C'}
 _KINDS = {'P': 'purchase', 'S': 'sale', 'S (partial)': 'partial_sale', 'E': 'exchange'}
 _PRICEABLE_TYPES = {'ST', 'OP'}
 
@@ -53,6 +54,7 @@ class ParsedReport:
     rows: list = field(default_factory=list)
     amended: bool = False
     unparsed_rows: int = 0
+    deleted_rows: int = 0
 
 
 def pdf_text(data):
@@ -73,7 +75,7 @@ def read_report(data):
     if plain.rows:
         return plain
     layout = parse_report(pdf_layout_text(data))
-    return layout if layout.rows else plain
+    return layout if layout.rows or layout.unparsed_rows < plain.unparsed_rows else plain
 
 
 def _body(text):
@@ -114,7 +116,7 @@ def _records(body):
             if label or (continuing and _is_continuation(line, lines[index + 1:])):
                 note = label.group('text') if label else line
                 records[-1]['notes'].append(note)
-                is_description = (label and label.group('key') == 'D') or (not label and continuing)
+                is_description = (label and label.group('key') in _WRAPPING_LABELS) or (not label and continuing)
                 continuing = bool(is_description) and not note.rstrip().endswith('.')
                 continue
         if line.strip():
@@ -133,7 +135,7 @@ def _trade(record):
         return None
     head, tail = flat[:core.start()].strip(), flat[core.end():].strip()
     amount = core.group('amount')
-    if amount.rstrip().endswith('-'):
+    if amount.rstrip().endswith(('-', 'Over')):
         closing = _DOLLARS.search(tail)
         if closing is None:
             return None
@@ -172,6 +174,9 @@ def parse_report(text):
     records, leftover = _records(_body(text))
     parsed = ParsedReport(amended=any(record['status'] == 'Amended' for record in records))
     for record in records:
+        if record['status'] == 'Deleted':
+            parsed.deleted_rows += 1
+            continue
         try:
             trade = _trade(record)
         except ValueError:

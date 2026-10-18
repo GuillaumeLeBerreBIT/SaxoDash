@@ -47,6 +47,7 @@ class InvestorDetailApiTest(APITestCase):
         self.assertEqual((data['total_value'], data['positions']), (1000, 4))
         self.assertEqual(data['top10_weight'], 100.0)
         self.assertEqual(data['name'], 'Warren Buffett')
+        self.assertEqual((data['photo_url'], data['photo_credit_url']), (None, None))
         self.assertEqual(
             [h['cusip'] for h in data['holdings']], ['037833100', '67066G104', '084670702', '67066G104'],
         )
