@@ -82,6 +82,19 @@ class EnrichTest(TestCase):
         self.assertEqual(out['weight_pct'], 10.0)
         self.assertEqual(out['pnl_impact'], 10.0)
 
+    def test_tags_come_from_my_positions_and_watchlists(self, chart, total):
+        self.hold('AAPL', 10)
+        wl = Watchlist.objects.create(name='W')
+        WatchlistItem.objects.create(watchlist=wl, symbol='AAPL', uic=211)
+        WatchlistItem.objects.create(watchlist=wl, symbol='msft', uic=300)
+        out = calendar_enrichment.enrich([event('AAPL'), event('MSFT'), event('TSLA')], TODAY)
+        tags = {e['symbol']: (e['held'], e['watched'], e['mine']) for e in out}
+        self.assertEqual(tags, {
+            'AAPL': (True, False, True),
+            'MSFT': (False, True, True),
+            'TSLA': (False, False, False),
+        })
+
     def test_watchlist_name_gets_no_money_fields(self, chart, total):
         wl = Watchlist.objects.create(name='W')
         WatchlistItem.objects.create(watchlist=wl, symbol='AAPL', uic=211)

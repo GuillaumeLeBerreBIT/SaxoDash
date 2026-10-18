@@ -27,12 +27,18 @@ def _portfolio_total():
     return total.amount
 
 
-def _instruments():
+def _instruments(positions, watch_items):
+    found = {symbol: (item.uic, item.asset_type or 'Stock') for symbol, item in watch_items.items()}
+    for symbol, position in positions.items():
+        if position.uic is not None:
+            found[symbol] = (position.uic, position.asset_type or 'Stock')
+    return found
+
+
+def _watch_items():
     found = {}
-    for item in WatchlistItem.objects.all():
-        found.setdefault(item.symbol.upper(), (item.uic, item.asset_type or 'Stock'))
-    for position in Position.objects.exclude(uic=None):
-        found[position.ticker.upper()] = (position.uic, position.asset_type or 'Stock')
+    for item in WatchlistItem.objects.order_by('pk'):
+        found.setdefault(item.symbol.upper(), item)
     return found
 
 
@@ -75,27 +81,33 @@ def _holding(position, total):
 def enrich(events, today):
     symbols = {(event['symbol'] or '').upper() for event in events}
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
-    positions = {position.ticker.upper(): position for position in Position.objects.all()}
-    total = _portfolio_total() if any(event['held'] for event in events) else None
-    instruments = _instruments()
+    positions = {position.ticker.upper(): position for position in Position.objects.all() if position.ticker}
+    watch_items = _watch_items()
+    instruments = _instruments(positions, watch_items)
+    total = _portfolio_total() if symbols & positions.keys() else None
     bars_by_symbol = {}
     today_iso = today.isoformat()
 
-    def move(event, symbol, row):
+    def move(event, symbol, mine, row):
         if event['date'] > today_iso:
             return None, None
         if symbol not in bars_by_symbol:
-            bars_by_symbol[symbol] = _bars(symbol, event['mine'], instruments, row)
+            bars_by_symbol[symbol] = _bars(symbol, mine, instruments, row)
         return reaction.move(event['date'], event['session'], bars_by_symbol[symbol])
 
     enriched = []
     for event in events:
         symbol = (event['symbol'] or '').upper()
         row = rows.get(symbol)
-        holding = _holding(positions.get(symbol) if event['held'] else None, total)
-        move_pct, basis = move(event, symbol, row)
+        held = symbol in positions
+        watched = not held and symbol in watch_items
+        holding = _holding(positions.get(symbol), total)
+        move_pct, basis = move(event, symbol, held or watched, row)
         enriched.append({
             **event,
+            'held': held,
+            'watched': watched,
+            'mine': held or watched,
             **_company(row),
             **holding,
             'move_pct': move_pct,

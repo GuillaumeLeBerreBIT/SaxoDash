@@ -1,18 +1,14 @@
 """Compose the earnings responses from Finnhub's calendar endpoint.
 
 `finnhub.py` is the thin client; this module owns the week-window fetch of
-the whole US market, shaping, the held/watchlist tagging, and the
-per-symbol history split. It reads `portfolio.models.Position` and
-`WatchlistItem` for the held/watched tagging - read-only leaf reads.
+the whole US market, shaping, and the per-symbol history split. The
+held/watched tagging and the rest of the per-request enrichment live in
+`calendar_enrichment.py`.
 """
 import logging
 from datetime import date, timedelta
 
-
-from portfolio.models import Position
-
 from . import calendar_enrichment, finnhub
-from .models import WatchlistItem
 from .provider_cache import cached
 from .providers import ProviderUnavailable
 
@@ -107,12 +103,6 @@ def current_week_start(today):
     return monday + timedelta(weeks=1) if today.weekday() >= 5 else monday
 
 
-def _tracked():
-    held = {s.upper() for s in Position.objects.values_list('ticker', flat=True) if s}
-    watched = {s.upper() for s in WatchlistItem.objects.values_list('symbol', flat=True) if s} - held
-    return held, watched
-
-
 def _market_week(start, end):
     rows = finnhub.get_earnings_calendar(
         None, start.isoformat(), end.isoformat(),
@@ -177,14 +167,7 @@ def window_earnings(scope='all', week_offset=0, today=None):
         logger.warning('market earnings calendar unavailable for week of %s: %s', start, exc)
         return {'events': [], 'window': window, 'ok': False}
 
-    held, watched = _tracked()
-    tagged = []
-    for event in events:
-        symbol = (event['symbol'] or '').upper()
-        is_held = symbol in held
-        is_watched = symbol in watched
-        tagged.append({**event, 'held': is_held, 'watched': is_watched, 'mine': is_held or is_watched})
-    tagged = calendar_enrichment.merge_share_classes(calendar_enrichment.enrich(tagged, today))
+    tagged = calendar_enrichment.merge_share_classes(calendar_enrichment.enrich(events, today))
 
     if scope == 'mine':
         events = [event for event in tagged if event['mine']]
