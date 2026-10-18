@@ -54,7 +54,7 @@ export function reportStatus(event, today = new Date()) {
 export function groupByWeekday(events) {
   const groups = {}
   for (const event of events) {
-    const key = KEY_BY_DOW[new Date(event.date + 'T00:00:00').getDay()]
+    const key = weekdayKeyOf(event.date)
     groups[key] = groups[key] || []
     groups[key].push(event)
   }
@@ -83,6 +83,12 @@ export const SESSIONS = [
 
 export const SESSION_LABEL = Object.fromEntries(SESSIONS)
 
+const UNSET_SESSION = 'Time not set'
+
+export function sessionWords(session) {
+  return SESSION_LABEL[session] || UNSET_SESSION
+}
+
 export function splitBySession(events) {
   const known = new Set(SESSIONS.map(([key]) => key))
   const sections = SESSIONS.map(([key, label]) => ({
@@ -92,7 +98,7 @@ export function splitBySession(events) {
   }))
   sections.push({
     key: 'unset',
-    label: 'Session not set',
+    label: UNSET_SESSION,
     rows: events.filter((event) => !known.has(event.session)),
   })
   return sections.filter((section) => section.rows.length > 0)
@@ -122,12 +128,6 @@ export function weekdayKeyOf(iso) {
   return KEY_BY_DOW[new Date(iso + 'T00:00:00').getDay()]
 }
 
-const SESSION_WORDS = { bmo: 'Before open', amc: 'After close', dmh: 'During hours' }
-
-export function sessionWords(session) {
-  return SESSION_WORDS[session] || 'Time not set'
-}
-
 const tier = (event) => (event.held ? 0 : event.watched ? 1 : 2)
 const desc = (a, b) => (b ?? -Infinity) - (a ?? -Infinity)
 
@@ -143,9 +143,9 @@ export function rankEvents(events) {
 }
 
 export const GRID_SESSIONS = [
-  ['bmo', 'Before open'],
-  ['amc', 'After close'],
-  ['other', 'During hours / time not set'],
+  ['bmo', SESSION_LABEL.bmo],
+  ['amc', SESSION_LABEL.amc],
+  ['other', `${SESSION_LABEL.dmh} / ${UNSET_SESSION.toLowerCase()}`],
 ]
 
 export function gridSessionKey(session) {

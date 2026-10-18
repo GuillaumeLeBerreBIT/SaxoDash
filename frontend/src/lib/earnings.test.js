@@ -117,6 +117,7 @@ describe('splitBySession', () => {
       ['amc', ['B']],
       ['unset', ['C', 'D']],
     ])
+    expect(sections.at(-1).label).toBe(sessionWords(null))
   })
 
   it('keeps during-hours as its own section and omits empty ones', () => {

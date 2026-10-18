@@ -185,7 +185,7 @@ it('files an event with no session under its own heading, not After close', () =
   })
   renderWithProviders(<Earnings />, { route: '/earnings' })
 
-  const unset = screen.getByRole('group', { name: 'Session not set' })
+  const unset = screen.getByRole('group', { name: 'Time not set' })
   expect(within(unset).getByText('NOSESS')).toBeInTheDocument()
   const after = screen.getByRole('group', { name: 'After close' })
   expect(within(after).queryByText('NOSESS')).not.toBeInTheDocument()
