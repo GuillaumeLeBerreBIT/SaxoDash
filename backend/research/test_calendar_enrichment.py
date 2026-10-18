@@ -75,6 +75,15 @@ class EnrichTest(TestCase):
         self.assertIsNone(out['move_pct'])
         chart.assert_not_called()
 
+    def test_without_moves_no_chart_is_fetched_and_moves_are_null(self, chart, total):
+        self.hold('AAPL', 100, uic=211)
+        (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY, moves=False)
+        chart.assert_not_called()
+        self.assertTrue(out['held'])
+        self.assertEqual(out['value'], 100.0)
+        for field in ('move_pct', 'move_basis', 'pnl_impact'):
+            self.assertIsNone(out[field], field)
+
     def test_holding_gets_value_weight_and_pnl_impact(self, chart, total):
         self.hold('AAPL', 100)
         (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY)
@@ -196,6 +205,20 @@ class MergeShareClassesTest(TestCase):
             enriched('GOOG', 'Alphabet Inc', 1.0, held=True, value=50.0, weight=2.0, move=9.0),
         ])
         self.assertEqual(merged['pnl_impact'], 4.0)
+
+    def test_a_held_class_leads_over_a_larger_unheld_one(self):
+        (merged,) = calendar_enrichment.merge_share_classes([
+            enriched('GOOG', 'Alphabet Inc', 9.0),
+            enriched('GOOGL', 'Alphabet Inc', 1.0, held=True),
+        ])
+        self.assertEqual((merged['symbol'], merged['also']), ('GOOGL', ['GOOG']))
+
+    def test_a_watched_class_leads_over_a_larger_unwatched_one(self):
+        (merged,) = calendar_enrichment.merge_share_classes([
+            enriched('GOOG', 'Alphabet Inc', 9.0),
+            enriched('GOOGL', 'Alphabet Inc', 1.0, watched=True),
+        ])
+        self.assertEqual(merged['symbol'], 'GOOGL')
 
     def test_nothing_merges_without_a_name(self):
         out = calendar_enrichment.merge_share_classes([enriched('BRK.A'), enriched('BRK.B')])

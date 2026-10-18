@@ -278,6 +278,14 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.getByRole('heading', { level: 2, name: 'Your week' })).toBeInTheDocument()
   })
 
+  it('shows no market line in Mine scope', async () => {
+    stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+    expect(screen.getByText(/412 reporting/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    expect(screen.queryByText(/412 reporting/)).not.toBeInTheDocument()
+  })
+
   it('does not render the old summary tiles', () => {
     stub()
     renderWithProviders(<Earnings />, { route: '/earnings' })

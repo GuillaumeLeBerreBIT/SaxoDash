@@ -39,7 +39,7 @@ def _window_earnings(week_offset):
     """Indirection so tests patch one seam. Function-level import of
     `research.earnings` breaks the portfolio <-> research module cycle."""
     from research import earnings as research_earnings
-    return research_earnings.window_earnings('mine', week_offset)
+    return research_earnings.window_earnings('mine', week_offset, moves=False)
 
 
 def _delta(anchor, end):

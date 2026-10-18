@@ -39,7 +39,17 @@ function Cell({ dayKey, dayLabel, sessionKey, sessionLabel, events, selected, on
       } ${events.length ? 'cursor-pointer' : 'opacity-40'}`}
     >
       {events.length > 0 && (
-        <span className="absolute top-1.5 right-2 text-[var(--fig-2xs)] num font-mono text-zinc-500">{events.length}</span>
+        <button
+          type="button"
+          aria-label={`Show ${dayLabel} ${sessionLabel.toLowerCase()}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSelect(dayKey, sessionKey)
+          }}
+          className="absolute top-1.5 right-2 text-[var(--fig-2xs)] num font-mono text-zinc-500 hover:text-zinc-100"
+        >
+          {events.length}
+        </button>
       )}
       <div className="flex flex-wrap gap-1.5 pr-5">
         {shown.map((event) => (

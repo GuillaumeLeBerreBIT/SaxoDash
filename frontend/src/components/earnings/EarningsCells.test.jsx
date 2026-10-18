@@ -17,6 +17,11 @@ describe('EarningsCells', () => {
     expect(screen.getByText('e')).toBeInTheDocument()
   })
 
+  it('an empty estimate is a plain dash', () => {
+    const { container } = render(<EpsCell event={ev({ eps_estimate: null })} />)
+    expect(container).toHaveTextContent(/^—$/)
+  })
+
   it('a reported EPS shows the actual and a surprise chip', () => {
     render(<EpsCell event={ev({ eps_actual: 1.8, eps_surprise_pct: 20 })} />)
     expect(screen.getByText('1.80')).toBeInTheDocument()

@@ -58,6 +58,22 @@ describe('DayList', () => {
     }
   })
 
+  it('does not scroll again when the events refetch with the same focus', () => {
+    const calls = []
+    const original = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function () {
+      calls.push(this.getAttribute('aria-label'))
+    }
+    try {
+      const props = { day: 'mon', scope: 'all', focusSession: 'bmo', onOpen: () => {}, onViewAll: () => {} }
+      const { rerender } = render(<DayList {...props} events={[ev({ symbol: 'AAA', session: 'bmo' })]} />)
+      rerender(<DayList {...props} events={[ev({ symbol: 'AAA', session: 'bmo' }), ev({ symbol: 'BBB', session: 'bmo' })]} />)
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+    expect(calls).toEqual(['Before open'])
+  })
+
   it('scrolls to the session a grid cell picked, folding during-hours and unset into one', () => {
     const scrolled = []
     const original = Element.prototype.scrollIntoView

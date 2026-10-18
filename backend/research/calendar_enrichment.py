@@ -78,7 +78,7 @@ def _holding(position, total):
     }
 
 
-def enrich(events, today):
+def enrich(events, today, moves=True):
     symbols = {(event['symbol'] or '').upper() for event in events}
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
     positions = {position.ticker.upper(): position for position in Position.objects.all() if position.ticker}
@@ -89,7 +89,7 @@ def enrich(events, today):
     today_iso = today.isoformat()
 
     def move(event, symbol, mine, row):
-        if event['date'] > today_iso:
+        if not moves or event['date'] > today_iso:
             return None, None
         if symbol not in bars_by_symbol:
             bars_by_symbol[symbol] = _bars(symbol, mine, instruments, row)
@@ -124,7 +124,7 @@ def _summed(values):
 
 
 def _merge(group):
-    lead = min(group, key=lambda e: (-(e['market_cap'] or 0), e['symbol'] or ''))
+    lead = min(group, key=lambda e: (not e['held'], not e['watched'], -(e['market_cap'] or 0), e['symbol'] or ''))
     held = any(e['held'] for e in group)
     value = _summed(e['value'] for e in group)
     return {

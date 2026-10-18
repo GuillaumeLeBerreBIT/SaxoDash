@@ -160,7 +160,7 @@ Discover Refresh button) fills it.
 ### Share-class merge
 
 Within one date, events whose `ScreenerRow.name` is identical and non-empty
-merge into the event with the larger `market_cap` (tie: alphabetical symbol).
+merge into one event led by the held class, else the watched class, else the larger `market_cap` (tie: alphabetical symbol).
 The merged-away symbols go into `also`. `held` / `watched` / `mine` are the OR of
 the group; a holding's `value` and `weight_pct` are summed across the group.
 No `ScreenerRow` name → no merge. The merge never guesses from ticker letters.

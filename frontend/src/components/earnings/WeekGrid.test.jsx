@@ -44,6 +44,13 @@ describe('WeekGrid', () => {
     expect(onSelect).toHaveBeenLastCalledWith('mon', 'bmo')
   })
 
+  it('the corner count is a button that selects the cell', async () => {
+    const onSelect = vi.fn()
+    renderGrid([ev('A'), ev('B')], { onSelect })
+    await userEvent.click(screen.getByRole('button', { name: 'Show Mon before open' }))
+    expect(onSelect).toHaveBeenCalledWith('mon', 'bmo')
+  })
+
   it('a logo opens its company', async () => {
     const onOpen = vi.fn()
     renderGrid([ev('AAPL')], { onOpen })

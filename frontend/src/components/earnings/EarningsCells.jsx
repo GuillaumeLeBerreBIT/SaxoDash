@@ -20,6 +20,9 @@ export function SurpriseChip({ sign, children }) {
 }
 
 export function EpsCell({ event }) {
+  if (event.eps_actual == null && event.eps_estimate == null) {
+    return <span className="text-[var(--fig-xs)] num font-mono text-zinc-600">—</span>
+  }
   if (event.eps_actual == null) {
     const pending = reportStatus(event) === 'pending'
     return (

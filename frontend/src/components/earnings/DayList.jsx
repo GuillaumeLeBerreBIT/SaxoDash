@@ -77,7 +77,8 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
     const section = sections.find(({ key }) => gridSessionKey(key) === focusSession)
     const target = section && refs.current[section.key]
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-  }, [focusSession, day, sections])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSession, day])
 
   return (
     <Card padding={false}>

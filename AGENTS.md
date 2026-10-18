@@ -546,4 +546,6 @@ before, labelled `2d`. Closes come from cached Saxo charts for the user's names 
 universe name older than three weeks, or outside the universe, has no move rather than a guessed one.
 Share classes merge only on an identical `ScreenerRow.name` on one date. A grid tile names its
 outcome in words (`lib/earnings.outcome`), not only by colour. On a weekend, week 0 is the coming
-week (`earnings.current_week_start`).
+week (`earnings.current_week_start`). For the user's names the Saxo chart includes today's forming
+(15-minute delayed) bar, so a report today before the open, or yesterday after the close, shows the
+move so far until the session closes, while universe names show `—` until the nightly scan.

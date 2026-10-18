@@ -26,7 +26,8 @@ describe('outcome', () => {
   it('names a result in words', () => {
     expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: 4 })).toBe('beat')
     expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: -4 })).toBe('missed')
-    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: null })).toBe('in line')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: 0 })).toBe('in line')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: null })).toBe('reported')
     expect(outcome({ date: '2000-01-03', eps_actual: null })).toBe('pending')
     expect(outcome({ date: '2999-01-03', eps_actual: null })).toBeNull()
   })
@@ -40,6 +41,10 @@ describe('outcomeColor', () => {
     expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 4 })).toBe(BEAT)
     expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: -4 })).toBe(MISS)
     expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 0 })).toBe(REPORTED)
+  })
+
+  it('colours a report with no estimate as reported, not in line', () => {
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: null })).toBe(REPORTED)
   })
 
   it('marks a passed date with no figure as pending', () => {

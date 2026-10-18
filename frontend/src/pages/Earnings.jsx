@@ -111,7 +111,7 @@ export default function Earnings() {
 
           <YourWeek events={events} nextMine={data.next_mine} onOpen={openSymbol} />
 
-          {data.stats && <p className="mb-2 text-[var(--fig-2xs)] text-zinc-500">{marketLine(data.stats)}</p>}
+          {scope === 'all' && data.stats && <p className="mb-2 text-[var(--fig-2xs)] text-zinc-500">{marketLine(data.stats)}</p>}
 
           <div className="hidden md:block">
             <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
