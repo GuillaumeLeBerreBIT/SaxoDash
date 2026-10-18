@@ -534,3 +534,16 @@ Holdings and copy performance are rebuilt for every member on each daily sync, n
 Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
 A report's PDF is fetched through a `requests` session that retries 429/5xx three times; a 4xx marks only that report failed and retries it after one day, then three, then gives up (`Report.retry_after`), a parse error gives up at once, and a host still down after the retries stops the run with its reports untouched and records the sync as failed ("Clerk unreachable, N reports waiting"); `reparse_reports --failed` resets all of it.
 The daily sync, `backfill_house` and `reparse_reports` share one cache lock (`congress/run_lock.py`): it lives an hour and every paced PDF fetch renews it, a run releases it only while it still owns it, the sync records itself as `skipped` while it is held and the two commands refuse to start. Only a 404 or 410 means a report's PDF is missing; any other refusal (a 401 or 403 from the Clerk's front door) is an outage that stops the run. This year's index answering 404 means it is not published yet (the first days of January) and is no new reports, not a failure. A member matched through `member_aliases.csv` takes its party from the legislator dataset by bioguide id, and a known member stored without one gets it on its next report. The Congress column (Portfolio, Investors stocks) shows buyers ↑ / sellers ↓ in the window, else how many members hold it, and a dash only when nobody traded or holds it — the Research Congress tab already said "holding 1" while the column showed a dash.
+
+**The Earnings page is portfolio first, and a move says which window it measured.** The calendar
+endpoint still makes one Finnhub call per week; `research/calendar_enrichment.py` is the one place
+that tags a row held or watched and adds name, market cap and sector from `ScreenerRow`, value and
+weight from `Position`, and a price move — after the cache, per request. `research/reaction.py` is the
+only definition of a move: before open or during hours, the day's close against the session before;
+after close, the next session against the day; no session, the next session against the session
+before, labelled `2d`. Closes come from cached Saxo charts for the user's names and from
+`ScreenerRow.recent_closes` (the nightly scan's last 15 sessions) for the S&P 500 ∪ Nasdaq-100, so a
+universe name older than three weeks, or outside the universe, has no move rather than a guessed one.
+Share classes merge only on an identical `ScreenerRow.name` on one date. A grid tile names its
+outcome in words (`lib/earnings.outcome`), not only by colour. On a weekend, week 0 is the coming
+week (`earnings.current_week_start`).
