@@ -653,7 +653,6 @@ def _merge(group):
     lead = min(group, key=lambda e: (-(e['market_cap'] or 0), e['symbol'] or ''))
     held = any(e['held'] for e in group)
     value = _summed(e['value'] for e in group)
-    move_pct = lead['move_pct']
     return {
         **lead,
         'also': sorted(e['symbol'] for e in group if e is not lead),
@@ -662,7 +661,7 @@ def _merge(group):
         'mine': any(e['mine'] for e in group),
         'value': value,
         'weight_pct': _summed(e['weight_pct'] for e in group),
-        'pnl_impact': round(value * move_pct / 100, 2) if value is not None and move_pct is not None else None,
+        'pnl_impact': pnl_impact(value, lead['move_pct']),
     }
 
 

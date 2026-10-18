@@ -49,6 +49,29 @@ def _bars(symbol, mine, instruments, row):
     return charted or (row.recent_closes if row else [])
 
 
+def pnl_impact(value, move_pct):
+    if value is None or move_pct is None:
+        return None
+    return round(value * move_pct / 100, 2)
+
+
+def _company(row):
+    return {
+        'name': (row.name or None) if row else None,
+        'market_cap': row.market_cap if row else None,
+        'sector': (row.sector or None) if row else None,
+    }
+
+
+def _holding(position, total):
+    if position is None:
+        return {'value': None, 'weight_pct': None}
+    return {
+        'value': float(position.value),
+        'weight_pct': float(position.weight_of(total)) if total else None,
+    }
+
+
 def enrich(events, today):
     symbols = {(event['symbol'] or '').upper() for event in events}
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
@@ -58,29 +81,26 @@ def enrich(events, today):
     bars_by_symbol = {}
     today_iso = today.isoformat()
 
+    def move(event, symbol, row):
+        if event['date'] > today_iso:
+            return None, None
+        if symbol not in bars_by_symbol:
+            bars_by_symbol[symbol] = _bars(symbol, event['mine'], instruments, row)
+        return reaction.move(event['date'], event['session'], bars_by_symbol[symbol])
+
     enriched = []
     for event in events:
         symbol = (event['symbol'] or '').upper()
         row = rows.get(symbol)
-        position = positions.get(symbol) if event['held'] else None
-
-        move_pct, basis = (None, None)
-        if event['date'] <= today_iso:
-            if symbol not in bars_by_symbol:
-                bars_by_symbol[symbol] = _bars(symbol, event['mine'], instruments, row)
-            move_pct, basis = reaction.move(event['date'], event['session'], bars_by_symbol[symbol])
-
-        value = float(position.value) if position else None
+        holding = _holding(positions.get(symbol) if event['held'] else None, total)
+        move_pct, basis = move(event, symbol, row)
         enriched.append({
             **event,
-            'name': row.name if row and row.name else None,
-            'market_cap': row.market_cap if row else None,
-            'sector': row.sector if row and row.sector else None,
-            'value': value,
-            'weight_pct': float(position.weight_of(total)) if position and total else None,
+            **_company(row),
+            **holding,
             'move_pct': move_pct,
             'move_basis': basis,
-            'pnl_impact': round(value * move_pct / 100, 2) if value is not None and move_pct is not None else None,
+            'pnl_impact': pnl_impact(holding['value'], move_pct),
             'also': [],
         })
     return enriched

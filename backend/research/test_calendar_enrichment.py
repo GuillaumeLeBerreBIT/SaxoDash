@@ -1,4 +1,3 @@
-from contextlib import nullcontext
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
@@ -119,16 +118,25 @@ class EnrichTest(TestCase):
         (out,) = calendar_enrichment.enrich([event('AAPL', day='2026-09-01')], TODAY)
         self.assertIsNone(out['move_pct'])
 
-    def test_weight_is_null_when_the_total_is_unavailable(self, chart, total):
+    def test_weight_is_null_when_the_total_cannot_be_summed(self, chart, total):
         self.hold('AAPL', 100)
-        for failure in (CurrencyMismatch('x'), None):
-            with self.subTest(failure=failure):
-                total.side_effect = failure
-                total.return_value = Money(Decimal('0'), 'EUR')
-                with self.assertLogs('research.calendar_enrichment', level='WARNING') if failure else nullcontext():
-                    (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY)
-                self.assertIsNone(out['weight_pct'])
-                self.assertEqual(out['value'], 100.0)
+        total.side_effect = CurrencyMismatch('x')
+        with self.assertLogs('research.calendar_enrichment', level='WARNING'):
+            (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY)
+        self.assertIsNone(out['weight_pct'])
+        self.assertEqual(out['value'], 100.0)
+
+    def test_weight_is_null_for_an_empty_book(self, chart, total):
+        self.hold('AAPL', 100)
+        total.return_value = Money(Decimal('0'), 'EUR')
+        (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY)
+        self.assertIsNone(out['weight_pct'])
+        self.assertEqual(out['value'], 100.0)
+
+    def test_pnl_impact_is_value_times_move(self, chart, total):
+        self.assertEqual(calendar_enrichment.pnl_impact(250.0, -4.0), -10.0)
+        self.assertIsNone(calendar_enrichment.pnl_impact(None, 4.0))
+        self.assertIsNone(calendar_enrichment.pnl_impact(250.0, None))
 
     def test_a_total_in_another_currency_gives_no_weight(self, chart, total):
         self.hold('AAPL', 100)
