@@ -57,4 +57,27 @@ describe('DayList', () => {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
+
+  it('scrolls to the session a grid cell picked, folding during-hours and unset into one', () => {
+    const scrolled = []
+    const original = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function () {
+      scrolled.push(this.getAttribute('aria-label'))
+    }
+    try {
+      render(
+        <DayList
+          day="mon"
+          events={[ev({ symbol: 'AAA', session: 'bmo' }), ev({ symbol: 'BBB', session: null })]}
+          scope="all"
+          focusSession="other"
+          onOpen={() => {}}
+          onViewAll={() => {}}
+        />,
+      )
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+    expect(scrolled).toEqual(['Time not set'])
+  })
 })

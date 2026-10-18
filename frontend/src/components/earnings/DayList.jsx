@@ -3,14 +3,13 @@ import { ChevronRight } from 'lucide-react'
 
 import { Card, InfoTip } from '../ui'
 import { REPORTED, withAlpha } from '../../lib/charts'
-import { WEEKDAYS, eventKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
+import { WEEKDAYS, eventKey, gridSessionKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
 import { fmtCompact } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 
 const ROW_GRID =
   'grid-cols-[minmax(0,1fr)_96px_72px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_64px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
-const FOCUS_SECTION = { bmo: ['bmo'], amc: ['amc'], other: ['dmh', 'unset'] }
 const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1]
 
 function edge(event) {
@@ -75,9 +74,10 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
 
   useEffect(() => {
     if (!focusSession) return
-    const target = FOCUS_SECTION[focusSession].map((key) => refs.current[key]).find(Boolean)
+    const section = sections.find(({ key }) => gridSessionKey(key) === focusSession)
+    const target = section && refs.current[section.key]
     target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-  }, [focusSession, day])
+  }, [focusSession, day, sections])
 
   return (
     <Card padding={false}>
