@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import TradeHistory from './TradeHistory'
@@ -13,6 +13,20 @@ describe('TradeHistory', () => {
   it('marks only trades from an amended report', () => {
     renderWithProviders(<TradeHistory trades={[trade({ amended: true }), trade({ ticker: 'AAPL' })]} />)
     expect(screen.getAllByText('Amended')).toHaveLength(1)
+  })
+
+  it('shows the stock\'s logo inside its ticker link', () => {
+    renderWithProviders(<TradeHistory trades={[trade()]} />)
+    const link = screen.getByRole('link', { name: 'NVDA' })
+    expect(link).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
+    expect(link.querySelector('img')).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/NVDA')
+  })
+
+  it('gives an asset without a ticker a letter mark instead of a logo', () => {
+    renderWithProviders(<TradeHistory trades={[trade({ asset: 'Vidant bonds', ticker: null, priceable: false })]} />)
+    const cell = screen.getByText('Vidant bonds').closest('td')
+    expect(cell.querySelector('img')).toBeNull()
+    expect(within(cell).getByText('V')).toBeInTheDocument()
   })
 
   it('keeps a long unpriceable asset name to one truncated line with the full name on hover', () => {

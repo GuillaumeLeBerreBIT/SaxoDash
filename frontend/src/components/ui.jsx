@@ -421,6 +421,8 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
       src={src}
       alt=""
       referrerPolicy="no-referrer"
+      loading="lazy"
+      decoding="async"
       onError={() => setFailedSymbol(symbol)}
       style={{ width: size, height: size }}
       className={`object-contain bg-white shrink-0 ${className}`}

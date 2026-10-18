@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 
 import { useCongressMember } from '../api/queries'
 import { Card, CardHeader, EmptyState, PageHeader, QueryState, Td, Th, Tr } from '../components/ui'
+import StockLogo from '../components/StockLogo'
 import { CopyPerformanceView } from '../components/investors/CopyPerformancePanel'
 import WeightBar from '../components/investors/WeightBar'
 import TradeHistory from '../components/congress/TradeHistory'
@@ -17,14 +18,19 @@ function Holdings({ holdings }) {
   return (
     <Card padding={false}>
       <div className="p-4 pb-3"><CardHeader title="Estimated holdings" subtitle="From disclosed trades" /></div>
-      <table className="w-full text-[var(--fig-sm)]">
+      <table aria-label="Estimated holdings" className="w-full text-[var(--fig-sm)]">
         <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
           <tr><Th edge>Ticker</Th><Th edge align="right">Weight</Th></tr>
         </thead>
         <tbody>
           {holdings.map((held) => (
             <Tr key={held.ticker}>
-              <Td edge><Link to={researchHref(held.ticker, 'congress')} className="font-mono font-semibold text-zinc-100 hover:text-blue-300">{held.ticker}</Link></Td>
+              <Td edge>
+                <Link to={researchHref(held.ticker, 'congress')} className="inline-flex items-center gap-2 font-mono font-semibold text-zinc-100 hover:text-blue-300">
+                  <StockLogo ticker={held.ticker} />
+                  {held.ticker}
+                </Link>
+              </Td>
               <Td edge align="right">
                 <div className="flex items-center justify-end gap-2">
                   <span className="num font-mono text-zinc-200">{fmtPct(held.weight_pct, { sign: false, decimals: 1 })}</span>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import { Route, Routes } from 'react-router-dom'
 
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -34,6 +34,13 @@ describe('CongressMember', () => {
     expect(screen.getByText(/Estimated from 2 disclosed trades since 2021/)).toBeInTheDocument()
     expect(screen.getByText(/1 paper report not included/)).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'NVDA' })[0]).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
+  })
+
+  it('shows each holding with its logo', () => {
+    render()
+    const holdings = screen.getByRole('table', { name: 'Estimated holdings' })
+    const link = within(holdings).getByRole('link', { name: 'NVDA' })
+    expect(link.querySelector('img')).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/NVDA')
   })
 
   it('lists trades with owner, label and range', () => {

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { fmtRange, tradeLabel } from '../../lib/congress'
 import { fmtDate } from '../../lib/format'
 import { researchHref } from '../../lib/research'
+import StockLogo from '../StockLogo'
 import { Card, CardHeader, Td, Th, Tr } from '../ui'
 
 const OWNERS = { self: 'Member', SP: 'Spouse', JT: 'Joint', DC: 'Child' }
@@ -36,9 +37,15 @@ export default function TradeHistory({
                 {showAsset ? (
                   <Td edge>
                     {trade.ticker && trade.priceable ? (
-                      <Link to={researchHref(trade.ticker, 'congress')} className="font-mono text-zinc-100 hover:text-blue-300">{trade.ticker}</Link>
+                      <Link to={researchHref(trade.ticker, 'congress')} className="inline-flex items-center gap-2 font-mono text-zinc-100 hover:text-blue-300">
+                        <StockLogo ticker={trade.ticker} />
+                        {trade.ticker}
+                      </Link>
                     ) : (
-                      <span className="block max-w-[22rem] truncate text-zinc-400" title={trade.asset}>{trade.asset}</span>
+                      <span className="flex items-center gap-2 min-w-0">
+                        <StockLogo label={trade.asset} />
+                        <span className="block max-w-[22rem] truncate text-zinc-400" title={trade.asset}>{trade.asset}</span>
+                      </span>
                     )}
                   </Td>
                 ) : null}

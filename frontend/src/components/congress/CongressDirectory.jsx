@@ -6,6 +6,7 @@ import { CONGRESS_CHIPS, CONGRESS_SORTS, directoryMembers } from '../../lib/cong
 import { looksLikeTicker } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import StockLogo from '../StockLogo'
 import { Card, CardHeader, EmptyState, Input, QueryState, Select, Skeleton, TBtn } from '../ui'
 import CongressCards from './CongressCards'
 import CongressTable from './CongressTable'
@@ -33,7 +34,8 @@ function MostBought({ items, windowDays }) {
       <ul className="mt-3 flex flex-wrap gap-2">
         {items.map((item) => (
           <li key={item.ticker}>
-            <Link to={researchHref(item.ticker, 'congress')} className="inline-flex items-baseline gap-2 rounded-md border border-white/[0.06] px-2.5 py-1.5 hover:border-blue-400/40">
+            <Link to={researchHref(item.ticker, 'congress')} className="inline-flex items-center gap-2 rounded-md border border-white/[0.06] px-2.5 py-1.5 hover:border-blue-400/40">
+              <StockLogo ticker={item.ticker} size={18} />
               <span className="font-mono text-zinc-100">{item.ticker}</span>
               <span className="num text-[var(--fig-xs)] text-zinc-400">{`${item.buyers} ↑ / ${item.sellers} ↓`}</span>
             </Link>

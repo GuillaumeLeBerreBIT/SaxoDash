@@ -50,6 +50,12 @@ describe('CongressDirectory', () => {
     expect(within(pelosi).getByRole('link', { name: 'NVDA' })).toHaveAttribute('href', '/research?symbol=NVDA&tab=congress')
   })
 
+  it('shows each most bought stock with its logo', () => {
+    renderWithProviders(<CongressDirectory />)
+    const chip = screen.getByRole('link', { name: /^NVDA\s*4 ↑/ })
+    expect(chip.querySelector('img')).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/NVDA')
+  })
+
   it('narrows the list as a name is typed', () => {
     renderWithProviders(<CongressDirectory />)
     search('pelo')
