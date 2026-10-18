@@ -448,6 +448,25 @@ class UpcomingEarningsTest(TestCase):
         self.assertEqual([r['ticker'] for r in rows], ['MSFT'])
         self.assertEqual(rows[0]['days_until'], 3)
 
+    @patch('portfolio.insights._window_earnings')
+    def test_a_held_share_class_survives_the_merge(self, mock_win):
+        from research import calendar_enrichment
+        base = {'date': '2026-09-12', 'session': 'amc', 'eps_estimate': 1.0, 'eps_actual': None,
+                'name': 'Alphabet Inc', 'market_cap': 2.0, 'mine': True, 'watched': False, 'also': [],
+                'value': None, 'weight_pct': None, 'move_pct': None, 'pnl_impact': None}
+        merged = calendar_enrichment.merge_share_classes([
+            {**base, 'symbol': 'GOOG', 'held': False, 'mine': False},
+            {**base, 'symbol': 'GOOGL', 'held': True},
+        ])
+        mock_win.side_effect = [self._win(merged), self._win([])]
+        rows = insights._upcoming_earnings({'GOOGL'}, date(2026, 9, 10))
+        self.assertEqual([r['ticker'] for r in rows], ['GOOGL'])
+
+    @patch('research.earnings.window_earnings', return_value={'events': []})
+    def test_the_dashboard_asks_for_no_moves(self, mock_window):
+        insights._window_earnings(0)
+        mock_window.assert_called_once_with('mine', 0, moves=False)
+
     @patch('portfolio.insights._window_earnings', side_effect=RuntimeError('feed down'))
     def test_a_feed_failure_yields_none(self, _mock):
         self.assertIsNone(insights._upcoming_earnings({'MSFT'}, date(2026, 9, 10)))

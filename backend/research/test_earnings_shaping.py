@@ -138,25 +138,9 @@ class WeekStatsTest(TestCase):
         self.assertEqual(stats['total'], 4)
         self.assertEqual(stats['reported'], 3)
         self.assertEqual((stats['beat'], stats['missed'], stats['inline']), (1, 1, 1))
-        self.assertEqual(stats['avg_surprise'], round((4.0 - 2.0 + 0.0) / 3, 2))
 
-    def test_by_day_carries_the_split_per_date_oldest_first(self):
-        stats = earnings._week_stats([
-            self._ev('2026-10-27', 5.0),
-            self._ev('2026-10-26', 5.0),
-            self._ev('2026-10-26', 5.0),
-            self._ev('2026-10-26', -5.0),
-            self._ev('2026-10-26', 0.0),
-        ])
-        self.assertEqual(stats['by_day'], [
-            {'date': '2026-10-26', 'beat': 2, 'missed': 1, 'inline': 1},
-            {'date': '2026-10-27', 'beat': 1, 'missed': 0, 'inline': 0},
-        ])
-
-    def test_empty_week_has_no_average_and_no_days(self):
+    def test_empty_week_has_no_reports(self):
         stats = earnings._week_stats([])
-        self.assertIsNone(stats['avg_surprise'])
-        self.assertEqual(stats['by_day'], [])
         self.assertEqual((stats['reported'], stats['mine']), (0, 0))
 
     def test_counts_tagged_rows(self):

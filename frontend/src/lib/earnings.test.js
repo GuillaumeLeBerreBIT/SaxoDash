@@ -1,6 +1,72 @@
 import { describe, expect, it } from 'vitest'
 
-import { dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, WEEKDAYS } from './earnings'
+import {
+  buildWeekGrid,
+  currentWeekLabel,
+  dayDate,
+  eventKey,
+  fmtRevenue,
+  gridSessionKey,
+  groupByWeekday,
+  moveLabel,
+  outcome,
+  outcomeColor,
+  rankEvents,
+  reportStatus,
+  sessionWords,
+  splitBySession,
+  weekdayKeyOf,
+  weekLabel,
+  WEEKDAYS,
+  yourWeekTally,
+} from './earnings'
+import { BEAT, MISS, PENDING, REPORTED } from './charts'
+
+describe('outcome', () => {
+  it('names a result in words', () => {
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: 4 })).toBe('beat')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: -4 })).toBe('missed')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: 0 })).toBe('in line')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: null })).toBe('reported')
+    expect(outcome({ date: '2000-01-03', eps_actual: null })).toBe('pending')
+    expect(outcome({ date: '2999-01-03', eps_actual: null })).toBeNull()
+  })
+})
+
+describe('outcomeColor', () => {
+  const past = '2000-01-03'
+  const future = '2999-01-03'
+
+  it('colours a reported result by its surprise', () => {
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 4 })).toBe(BEAT)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: -4 })).toBe(MISS)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 0 })).toBe(REPORTED)
+  })
+
+  it('colours a report with no estimate as reported, not in line', () => {
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: null })).toBe(REPORTED)
+  })
+
+  it('marks a passed date with no figure as pending', () => {
+    expect(outcomeColor({ date: past, eps_actual: null })).toBe(PENDING)
+  })
+
+  it('has no colour for an upcoming report', () => {
+    expect(outcomeColor({ date: future, eps_actual: null })).toBeNull()
+  })
+})
+
+describe('currentWeekLabel', () => {
+  it('is This week on a trading day', () => {
+    expect(currentWeekLabel(new Date('2026-10-19T09:00:00'))).toBe('This week')
+    expect(currentWeekLabel(new Date('2026-10-23T22:00:00'))).toBe('This week')
+  })
+
+  it('is Upcoming week on a Saturday or Sunday', () => {
+    expect(currentWeekLabel(new Date('2026-10-24T09:00:00'))).toBe('Upcoming week')
+    expect(currentWeekLabel(new Date('2026-10-25T09:00:00'))).toBe('Upcoming week')
+  })
+})
 
 describe('groupByWeekday', () => {
   it('buckets events by weekday and keeps input order', () => {
@@ -88,6 +154,7 @@ describe('splitBySession', () => {
       ['amc', ['B']],
       ['unset', ['C', 'D']],
     ])
+    expect(sections.at(-1).label).toBe(sessionWords(null))
   })
 
   it('keeps during-hours as its own section and omits empty ones', () => {
@@ -124,5 +191,116 @@ describe('dayDate', () => {
   it('answers null without a window or for an unknown key', () => {
     expect(dayDate(undefined, 'mon')).toBeNull()
     expect(dayDate('2026-10-26', 'xyz')).toBeNull()
+  })
+})
+
+const e = (o = {}) => ({
+  symbol: 'X', date: '2026-10-26', session: 'amc', held: false, watched: false, mine: false,
+  weight_pct: null, market_cap: null, revenue_estimate: null, eps_actual: null, eps_surprise_pct: null,
+  move_pct: null, move_basis: null, ...o,
+})
+
+describe('sessionWords', () => {
+  it('says each session in words and admits an unset time', () => {
+    expect(sessionWords('bmo')).toBe('Before open')
+    expect(sessionWords('amc')).toBe('After close')
+    expect(sessionWords('dmh')).toBe('During hours')
+    expect(sessionWords(null)).toBe('Time not set')
+  })
+})
+
+describe('rankEvents', () => {
+  it('puts holdings by weight, then watchlist, then the market by cap', () => {
+    const ranked = rankEvents([
+      e({ symbol: 'BIG', market_cap: 9e6 }),
+      e({ symbol: 'W', watched: true, mine: true, market_cap: 1 }),
+      e({ symbol: 'H1', held: true, mine: true, weight_pct: 2 }),
+      e({ symbol: 'H2', held: true, mine: true, weight_pct: 8 }),
+    ])
+    expect(ranked.map((r) => r.symbol)).toEqual(['H2', 'H1', 'W', 'BIG'])
+  })
+
+  it('ranks unknown caps last and falls back to revenue estimate', () => {
+    const ranked = rankEvents([
+      e({ symbol: 'NOCAP_SMALL', revenue_estimate: 1 }),
+      e({ symbol: 'CAP', market_cap: 5 }),
+      e({ symbol: 'NOCAP_BIG', revenue_estimate: 9 }),
+    ])
+    expect(ranked.map((r) => r.symbol)).toEqual(['CAP', 'NOCAP_BIG', 'NOCAP_SMALL'])
+  })
+
+  it('does not mutate its input', () => {
+    const input = [e({ symbol: 'B', market_cap: 1 }), e({ symbol: 'A', market_cap: 2 })]
+    rankEvents(input)
+    expect(input[0].symbol).toBe('B')
+  })
+})
+
+describe('buildWeekGrid', () => {
+  it('lays a week out by session and weekday', () => {
+    const grid = buildWeekGrid([
+      e({ symbol: 'A', date: '2026-10-26', session: 'bmo' }),
+      e({ symbol: 'B', date: '2026-10-28', session: 'amc' }),
+    ])
+    expect(grid.days.map(([k]) => k)).toEqual(['mon', 'tue', 'wed', 'thu', 'fri'])
+    expect(grid.sessions.map(([k]) => k)).toEqual(['bmo', 'amc'])
+    expect(grid.cells.bmo.mon.map((r) => r.symbol)).toEqual(['A'])
+    expect(grid.cells.amc.wed.map((r) => r.symbol)).toEqual(['B'])
+    expect(grid.cells.amc.mon).toEqual([])
+  })
+
+  it('adds the during-hours row only when the week has one', () => {
+    const grid = buildWeekGrid([e({ session: 'dmh' }), e({ symbol: 'Y', session: null })])
+    expect(grid.sessions.map(([k]) => k)).toEqual(['bmo', 'amc', 'other'])
+    expect(grid.cells.other.mon).toHaveLength(2)
+  })
+
+  it('adds a weekend column only when it carries a report', () => {
+    const grid = buildWeekGrid([e({ date: '2026-10-31' })])
+    expect(grid.days.map(([k]) => k)).toEqual(['mon', 'tue', 'wed', 'thu', 'fri', 'sat'])
+  })
+
+  it('ranks each cell', () => {
+    const grid = buildWeekGrid([e({ symbol: 'S', market_cap: 1 }), e({ symbol: 'L', market_cap: 9 })])
+    expect(grid.cells.amc.mon.map((r) => r.symbol)).toEqual(['L', 'S'])
+  })
+})
+
+describe('gridSessionKey', () => {
+  it('folds during-hours and unset into one row', () => {
+    expect(gridSessionKey('bmo')).toBe('bmo')
+    expect(gridSessionKey('dmh')).toBe('other')
+    expect(gridSessionKey(undefined)).toBe('other')
+  })
+})
+
+describe('weekdayKeyOf', () => {
+  it('names the weekday of an ISO date', () => {
+    expect(weekdayKeyOf('2026-10-26')).toBe('mon')
+    expect(weekdayKeyOf('2026-11-01')).toBe('sun')
+  })
+})
+
+describe('moveLabel', () => {
+  it('is the signed move and its window', () => {
+    expect(moveLabel(e({ move_pct: 3.21, move_basis: '1d' }))).toEqual({ text: '+3.2%', basis: '1d' })
+    expect(moveLabel(e({ move_pct: -4, move_basis: '2d' }))).toEqual({ text: '-4.0%', basis: '2d' })
+  })
+
+  it('is null without a move', () => {
+    expect(moveLabel(e())).toBeNull()
+  })
+})
+
+describe('yourWeekTally', () => {
+  it('counts only my names, reported and beating', () => {
+    expect(
+      yourWeekTally([
+        e({ mine: true, eps_actual: 1, eps_surprise_pct: 5 }),
+        e({ mine: true, eps_actual: 1, eps_surprise_pct: -2 }),
+        e({ mine: true }),
+        e({ eps_actual: 1, eps_surprise_pct: 9 }),
+      ]),
+    ).toEqual({ count: 3, reported: 2, beat: 1 })
   })
 })

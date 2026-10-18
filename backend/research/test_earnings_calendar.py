@@ -7,7 +7,7 @@ from django.test import TestCase, override_settings
 from portfolio.models import Position
 
 from . import earnings, finnhub
-from .models import Watchlist, WatchlistItem
+from .models import ScreenerRow, Watchlist, WatchlistItem
 from .providers import ProviderUnavailable
 
 # Redis is the real cache; these tests must not need it running, and must not
@@ -29,7 +29,33 @@ class WindowEarningsTest(TestCase):
 
     def _monday(self, week_offset=0):
         today = date.today()
-        return today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+        monday = today - timedelta(days=today.weekday())
+        if today.weekday() >= 5:
+            monday += timedelta(weeks=1)
+        return monday + timedelta(weeks=week_offset)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_weekend_opens_on_the_coming_week(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        for weekend_day in (date(2026, 10, 17), date(2026, 10, 18)):
+            with self.subTest(weekend_day=weekend_day):
+                result = earnings.window_earnings('all', 0, today=weekend_day)
+                self.assertEqual(result['window']['from'], '2026-10-19')
+                self.assertEqual(result['window']['to'], '2026-10-25')
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_a_weekday_stays_on_its_own_week(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        for weekday in (date(2026, 10, 12), date(2026, 10, 16)):
+            with self.subTest(weekday=weekday):
+                result = earnings.window_earnings('all', 0, today=weekday)
+                self.assertEqual(result['window']['from'], '2026-10-12')
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_the_previous_week_on_a_weekend_is_the_one_that_just_ended(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        result = earnings.window_earnings('all', -1, today=date(2026, 10, 18))
+        self.assertEqual(result['window']['from'], '2026-10-12')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_one_whole_market_call_for_the_week_no_symbol(self, mock_cal):
@@ -128,7 +154,34 @@ class WindowEarningsTest(TestCase):
 
         self.assertEqual((stats['total'], stats['reported']), (3, 2))
         self.assertEqual((stats['beat'], stats['missed']), (1, 1))
-        self.assertEqual(stats['by_day'], [{'date': mon, 'beat': 1, 'missed': 1, 'inline': 0}])
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_events_carry_the_enrichment_fields(self, mock_cal):
+        ScreenerRow.objects.create(ticker='AAPL', name='Apple Inc', indexes='SP500', market_cap=3.5e6)
+        mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', self._monday().isoformat())]}
+        (only,) = earnings.window_earnings('all', 0)['events']
+        self.assertEqual((only['name'], only['market_cap'], only['also']), ('Apple Inc', 3.5e6, []))
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_share_classes_are_one_event_and_counted_once(self, mock_cal):
+        ScreenerRow.objects.create(ticker='GOOGL', name='Alphabet Inc', indexes='SP500', market_cap=2.1e6)
+        ScreenerRow.objects.create(ticker='GOOG', name='Alphabet Inc', indexes='NDX', market_cap=2.0e6)
+        mon = self._monday().isoformat()
+        mock_cal.return_value = {'earningsCalendar': [self._row('GOOGL', mon), self._row('GOOG', mon)]}
+        result = earnings.window_earnings('all', 0)
+        self.assertEqual([e['symbol'] for e in result['events']], ['GOOGL'])
+        self.assertEqual(result['stats']['total'], 1)
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_stats_drop_the_tile_only_fields(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        stats = earnings.window_earnings('all', 0)['stats']
+        self.assertEqual(set(stats), {'total', 'reported', 'beat', 'missed', 'inline', 'mine'})
+
+    @patch('research.earnings.finnhub.get_earnings_calendar')
+    def test_response_names_the_next_holding_report(self, mock_cal):
+        mock_cal.return_value = {'earningsCalendar': []}
+        self.assertIn('next_mine', earnings.window_earnings('all', 0))
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_dateless_rows_are_dropped(self, mock_cal):

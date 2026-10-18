@@ -116,16 +116,6 @@ class TextAnnotation(models.Model):
         return f'"{self.text}" at {self.price}@{self.bar_date} on {self.uic}:{self.asset_type}'
 
 
-TECHNICAL_FIELDS = (
-    'last_close', 'change_1d', 'change_1m', 'change_3m', 'change_1y',
-    'ma50', 'ma200', 'pct_vs_ma200', 'rsi14', 'pct_from_52w_high', 'rvol', 'sparkline',
-)
-FUNDAMENTAL_FIELDS = (
-    'pe', 'forward_pe', 'roe', 'net_margin', 'eps_growth_5y',
-    'debt_to_equity', 'dividend_yield', 'market_cap', 'revenue_growth_5y', 'payout_ratio',
-)
-
-
 class ScreenerRow(models.Model):
     OK = 'ok'
     UNMATCHED = 'unmatched'
@@ -151,6 +141,7 @@ class ScreenerRow(models.Model):
     pct_from_52w_high = models.FloatField(null=True, blank=True)
     rvol = models.FloatField(null=True, blank=True)
     sparkline = models.JSONField(default=list, blank=True)
+    recent_closes = models.JSONField(default=list, blank=True)
 
     pe = models.FloatField(null=True, blank=True)
     forward_pe = models.FloatField(null=True, blank=True)

@@ -1,4 +1,5 @@
-import { fmtCompact, fmtDate } from './format'
+import { BEAT, MISS, PENDING, REPORTED, surpriseSign } from './charts'
+import { fmtCompact, fmtDate, fmtPct } from './format'
 
 export const WEEKDAYS = [
   ['mon', 'Mon'],
@@ -17,6 +18,11 @@ const KEY_BY_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 export function weekdayKey(date = new Date()) {
   const key = KEY_BY_DOW[date.getDay()]
   return key === 'sat' || key === 'sun' ? 'mon' : key
+}
+
+export function currentWeekLabel(date = new Date()) {
+  const day = date.getDay()
+  return day === 0 || day === 6 ? 'Upcoming week' : 'This week'
 }
 
 /** "today" / "tomorrow" / "in 4 days" / "past" for an ISO date, relative to
@@ -49,7 +55,7 @@ export function reportStatus(event, today = new Date()) {
 export function groupByWeekday(events) {
   const groups = {}
   for (const event of events) {
-    const key = KEY_BY_DOW[new Date(event.date + 'T00:00:00').getDay()]
+    const key = weekdayKeyOf(event.date)
     groups[key] = groups[key] || []
     groups[key].push(event)
   }
@@ -78,6 +84,12 @@ export const SESSIONS = [
 
 export const SESSION_LABEL = Object.fromEntries(SESSIONS)
 
+const UNSET_SESSION = 'Time not set'
+
+export function sessionWords(session) {
+  return SESSION_LABEL[session] || UNSET_SESSION
+}
+
 export function splitBySession(events) {
   const known = new Set(SESSIONS.map(([key]) => key))
   const sections = SESSIONS.map(([key, label]) => ({
@@ -87,7 +99,7 @@ export function splitBySession(events) {
   }))
   sections.push({
     key: 'unset',
-    label: 'Session not set',
+    label: UNSET_SESSION,
     rows: events.filter((event) => !known.has(event.session)),
   })
   return sections.filter((section) => section.rows.length > 0)
@@ -111,4 +123,74 @@ export function dayDate(windowFrom, key) {
   const date = new Date(windowFrom + 'T00:00:00')
   date.setDate(date.getDate() + offset)
   return date.getDate()
+}
+
+export function weekdayKeyOf(iso) {
+  return KEY_BY_DOW[new Date(iso + 'T00:00:00').getDay()]
+}
+
+const tier = (event) => (event.held ? 0 : event.watched ? 1 : 2)
+const desc = (a, b) => (b ?? -Infinity) - (a ?? -Infinity)
+
+export function rankEvents(events) {
+  return [...events].sort(
+    (a, b) =>
+      tier(a) - tier(b) ||
+      (tier(a) === 0 ? desc(a.weight_pct, b.weight_pct) : 0) ||
+      desc(a.market_cap, b.market_cap) ||
+      desc(a.revenue_estimate, b.revenue_estimate) ||
+      String(a.symbol).localeCompare(String(b.symbol)),
+  )
+}
+
+export const GRID_SESSIONS = [
+  ['bmo', SESSION_LABEL.bmo],
+  ['amc', SESSION_LABEL.amc],
+  ['other', `${SESSION_LABEL.dmh} / ${UNSET_SESSION.toLowerCase()}`],
+]
+
+export function gridSessionKey(session) {
+  return session === 'bmo' || session === 'amc' ? session : 'other'
+}
+
+export function buildWeekGrid(events) {
+  const busyDays = new Set(events.map((event) => weekdayKeyOf(event.date)))
+  const days = WEEKDAYS.filter(([key], index) => index < 5 || busyDays.has(key))
+  const busySessions = new Set(events.map((event) => gridSessionKey(event.session)))
+  const sessions = GRID_SESSIONS.filter(([key]) => key !== 'other' || busySessions.has('other'))
+
+  const cells = Object.fromEntries(sessions.map(([s]) => [s, Object.fromEntries(days.map(([d]) => [d, []]))]))
+  for (const event of events) cells[gridSessionKey(event.session)][weekdayKeyOf(event.date)].push(event)
+  for (const [s] of sessions) for (const [d] of days) cells[s][d] = rankEvents(cells[s][d])
+  return { days, sessions, cells }
+}
+
+export function moveLabel(event) {
+  if (event.move_pct == null) return null
+  return { text: fmtPct(event.move_pct, { decimals: 1 }), basis: event.move_basis }
+}
+
+export function yourWeekTally(events) {
+  const mine = events.filter((event) => event.mine)
+  const reported = mine.filter((event) => event.eps_actual != null)
+  return {
+    count: mine.length,
+    reported: reported.length,
+    beat: reported.filter((event) => event.eps_surprise_pct > 0).length,
+  }
+}
+
+const REPORTED_OUTCOMES = ['missed', 'in line', 'beat']
+const OUTCOME_COLOR = { missed: MISS, 'in line': REPORTED, reported: REPORTED, beat: BEAT, pending: PENDING }
+
+export function outcome(event) {
+  const status = reportStatus(event)
+  if (status === 'reported' && event.eps_surprise_pct == null) return 'reported'
+  if (status === 'reported') return REPORTED_OUTCOMES[surpriseSign(event.eps_surprise_pct) + 1]
+  if (status === 'pending') return 'pending'
+  return null
+}
+
+export function outcomeColor(event) {
+  return OUTCOME_COLOR[outcome(event)] ?? null
 }

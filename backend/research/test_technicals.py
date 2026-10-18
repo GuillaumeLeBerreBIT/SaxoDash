@@ -73,7 +73,22 @@ class TechnicalFieldsTest(SimpleTestCase):
         fields = technicals.technical_fields(bars_from([float(i) for i in range(100)]))
         self.assertEqual(fields['sparkline'], [float(i) for i in range(37, 100)])
 
+    def test_recent_closes_keep_the_last_fifteen_sessions_with_dates(self):
+        bars = [
+            {'date': f'2026-09-{day:02d}', 'open': 1.0, 'high': 1.0, 'low': 1.0, 'close': float(day), 'volume': 1}
+            for day in range(1, 21)
+        ]
+        fields = technicals.technical_fields(bars)
+        self.assertEqual(len(fields['recent_closes']), 15)
+        self.assertEqual(fields['recent_closes'][0], {'date': '2026-09-06', 'close': 6.0})
+        self.assertEqual(fields['recent_closes'][-1], {'date': '2026-09-20', 'close': 20.0})
+
+    def test_no_bars_means_no_recent_closes(self):
+        self.assertEqual(technicals.technical_fields([])['recent_closes'], [])
+
     def test_no_bars_gives_every_field_null(self):
         fields = technicals.technical_fields([])
         self.assertEqual(fields['sparkline'], [])
-        self.assertTrue(all(value is None for key, value in fields.items() if key != 'sparkline'))
+        self.assertTrue(
+            all(value is None for key, value in fields.items() if key not in ('sparkline', 'recent_closes'))
+        )
