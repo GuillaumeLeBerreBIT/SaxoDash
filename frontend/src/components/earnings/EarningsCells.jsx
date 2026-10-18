@@ -1,4 +1,4 @@
-import { InstrumentLogo } from '../ui'
+import { InstrumentLogo, LetterAvatar } from '../ui'
 import { surpriseSign } from '../../lib/charts'
 import { fmtRevenue, moveLabel, reportStatus } from '../../lib/earnings'
 import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
@@ -67,17 +67,6 @@ export function MoveCell({ event }) {
     <span className="flex items-baseline gap-1 justify-end">
       <span className={`text-[var(--fig-xs)] num font-mono ${pctToneClass(event.move_pct, 1)}`}>{move.text}</span>
       <span className="text-[var(--fig-2xs)] text-zinc-600">{move.basis}</span>
-    </span>
-  )
-}
-
-function LetterAvatar({ symbol, size }) {
-  return (
-    <span
-      className="shrink-0 rounded bg-white/[0.06] text-zinc-400 text-[var(--fig-2xs)] font-semibold flex items-center justify-center"
-      style={{ width: size, height: size }}
-    >
-      {(symbol || '?').slice(0, 1)}
     </span>
   )
 }
