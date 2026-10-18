@@ -1,3 +1,4 @@
+import { BEAT, MISS, PENDING, REPORTED, surpriseSign } from './charts'
 import { fmtCompact, fmtDate, fmtPct } from './format'
 
 export const WEEKDAYS = [
@@ -177,4 +178,13 @@ export function yourWeekTally(events) {
     reported: reported.length,
     beat: reported.filter((event) => event.eps_surprise_pct > 0).length,
   }
+}
+
+const OUTCOME = [MISS, REPORTED, BEAT]
+
+export function outcomeColor(event) {
+  const status = reportStatus(event)
+  if (status === 'reported') return OUTCOME[surpriseSign(event.eps_surprise_pct) + 1]
+  if (status === 'pending') return PENDING
+  return null
 }

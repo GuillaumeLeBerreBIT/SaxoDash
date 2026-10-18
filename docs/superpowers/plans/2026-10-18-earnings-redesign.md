@@ -1639,7 +1639,7 @@ git commit -m "feat(earnings): day by session logo grid and phone day strip"
 - Test: `frontend/src/components/earnings/DayList.test.jsx`
 
 **Interfaces:**
-- Consumes: `rankEvents`, `splitBySession`, `eventKey`, `WEEKDAYS` (lib/earnings); `EpsCell`, `RevenueCell`, `MoveCell`, `CompanyCell` (Task 6); `fmtCompact` (lib/format); `Card`, `InfoTip` (ui); `BEAT`, `MISS`, `REPORTED`, `PENDING`, `surpriseSign`, `withAlpha` (lib/charts).
+- Consumes: `rankEvents`, `splitBySession`, `eventKey`, `WEEKDAYS` (lib/earnings); `EpsCell`, `RevenueCell`, `MoveCell`, `CompanyCell` (Task 6); `fmtCompact` (lib/format); `Card`, `InfoTip` (ui); `REPORTED`, `withAlpha` (lib/charts); `outcomeColor` (lib/earnings, added in Task 8's review).
 - Produces: default export `DayList({ day, events, scope, focusSession, onOpen, onViewAll })` — `events` are the selected day's; `focusSession` is `'bmo' | 'amc' | 'other' | null`; `onViewAll()` switches scope to all.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1721,12 +1721,11 @@ import { memo, useEffect, useMemo, useRef } from 'react'
 import { ChevronRight } from 'lucide-react'
 
 import { Card, InfoTip } from '../ui'
-import { BEAT, MISS, PENDING, REPORTED, surpriseSign, withAlpha } from '../../lib/charts'
-import { WEEKDAYS, eventKey, rankEvents, reportStatus, splitBySession } from '../../lib/earnings'
+import { REPORTED, withAlpha } from '../../lib/charts'
+import { WEEKDAYS, eventKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
 import { fmtCompact } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 
-const EDGE = [withAlpha(MISS, 0.45), withAlpha(REPORTED, 0.45), withAlpha(BEAT, 0.45)]
 const ROW_GRID =
   'grid-cols-[minmax(0,1fr)_96px_72px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_64px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
@@ -1734,10 +1733,8 @@ const FOCUS_SECTION = { bmo: ['bmo'], amc: ['amc'], other: ['dmh', 'unset'] }
 const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1]
 
 function edge(event) {
-  const status = reportStatus(event)
-  if (status === 'reported') return `inset 3px 0 0 ${EDGE[surpriseSign(event.eps_surprise_pct) + 1]}`
-  if (status === 'pending') return `inset 3px 0 0 ${withAlpha(PENDING, 0.45)}`
-  return 'none'
+  const color = outcomeColor(event)
+  return color ? `inset 3px 0 0 ${withAlpha(color, 0.45)}` : 'none'
 }
 
 const DayRow = memo(function DayRow({ event, onOpen }) {

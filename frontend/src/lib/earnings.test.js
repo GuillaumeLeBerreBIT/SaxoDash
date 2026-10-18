@@ -9,6 +9,7 @@ import {
   gridSessionKey,
   groupByWeekday,
   moveLabel,
+  outcomeColor,
   rankEvents,
   reportStatus,
   sessionWords,
@@ -18,6 +19,26 @@ import {
   WEEKDAYS,
   yourWeekTally,
 } from './earnings'
+import { BEAT, MISS, PENDING, REPORTED } from './charts'
+
+describe('outcomeColor', () => {
+  const past = '2000-01-03'
+  const future = '2999-01-03'
+
+  it('colours a reported result by its surprise', () => {
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 4 })).toBe(BEAT)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: -4 })).toBe(MISS)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 0 })).toBe(REPORTED)
+  })
+
+  it('marks a passed date with no figure as pending', () => {
+    expect(outcomeColor({ date: past, eps_actual: null })).toBe(PENDING)
+  })
+
+  it('has no colour for an upcoming report', () => {
+    expect(outcomeColor({ date: future, eps_actual: null })).toBeNull()
+  })
+})
 
 describe('currentWeekLabel', () => {
   it('is This week on a trading day', () => {

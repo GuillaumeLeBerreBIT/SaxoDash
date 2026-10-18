@@ -1,17 +1,7 @@
 import { InstrumentLogo, LetterAvatar } from '../ui'
-import { BEAT, MISS, PENDING, REPORTED, surpriseSign } from '../../lib/charts'
-import { dayDate, eventKey, reportStatus } from '../../lib/earnings'
+import { dayDate, eventKey, outcomeColor } from '../../lib/earnings'
 
 export const CELL_LIMIT = 6
-const EDGE = [MISS, REPORTED, BEAT]
-
-function edgeColor(event) {
-  const status = reportStatus(event)
-  if (status === 'reported') return EDGE[surpriseSign(event.eps_surprise_pct) + 1]
-  if (status === 'pending') return PENDING
-  return 'transparent'
-}
-
 function LogoTile({ event, onOpen }) {
   return (
     <button
@@ -25,7 +15,7 @@ function LogoTile({ event, onOpen }) {
       className={`relative w-8 h-8 rounded-md bg-[#141418] border flex items-center justify-center overflow-hidden ${
         event.mine ? 'border-blue-500/60' : 'border-white/[0.06]'
       }`}
-      style={{ boxShadow: `inset 0 -2px 0 ${edgeColor(event)}` }}
+      style={{ boxShadow: `inset 0 -2px 0 ${outcomeColor(event) ?? 'transparent'}` }}
     >
       <InstrumentLogo
         symbol={event.symbol}
