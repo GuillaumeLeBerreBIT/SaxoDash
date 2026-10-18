@@ -1,11 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
-import process from 'node:process'
 import { describe, expect, it } from 'vitest'
 
+import html from '../index.html?raw'
 import { instrumentLogoUrl } from './lib/logos'
 
-const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8')
 const policy = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1] ?? ''
 const directives = Object.fromEntries(policy.split(';').map((part) => part.trim().split(/\s+/)).filter((part) => part[0]).map(([name, ...values]) => [name, values]))
 
