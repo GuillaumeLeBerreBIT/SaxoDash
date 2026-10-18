@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest'
 
-import { currentWeekLabel, dayDate, eventKey, fmtRevenue, groupByWeekday, reportStatus, splitBySession, weekLabel, WEEKDAYS } from './earnings'
+import {
+  buildWeekGrid,
+  currentWeekLabel,
+  dayDate,
+  eventKey,
+  fmtRevenue,
+  gridSessionKey,
+  groupByWeekday,
+  moveLabel,
+  rankEvents,
+  reportStatus,
+  sessionWords,
+  splitBySession,
+  weekdayKeyOf,
+  weekLabel,
+  WEEKDAYS,
+  yourWeekTally,
+} from './earnings'
 
 describe('currentWeekLabel', () => {
   it('is This week on a trading day', () => {
@@ -136,5 +153,116 @@ describe('dayDate', () => {
   it('answers null without a window or for an unknown key', () => {
     expect(dayDate(undefined, 'mon')).toBeNull()
     expect(dayDate('2026-10-26', 'xyz')).toBeNull()
+  })
+})
+
+const e = (o = {}) => ({
+  symbol: 'X', date: '2026-10-26', session: 'amc', held: false, watched: false, mine: false,
+  weight_pct: null, market_cap: null, revenue_estimate: null, eps_actual: null, eps_surprise_pct: null,
+  move_pct: null, move_basis: null, ...o,
+})
+
+describe('sessionWords', () => {
+  it('says each session in words and admits an unset time', () => {
+    expect(sessionWords('bmo')).toBe('Before open')
+    expect(sessionWords('amc')).toBe('After close')
+    expect(sessionWords('dmh')).toBe('During hours')
+    expect(sessionWords(null)).toBe('Time not set')
+  })
+})
+
+describe('rankEvents', () => {
+  it('puts holdings by weight, then watchlist, then the market by cap', () => {
+    const ranked = rankEvents([
+      e({ symbol: 'BIG', market_cap: 9e6 }),
+      e({ symbol: 'W', watched: true, mine: true, market_cap: 1 }),
+      e({ symbol: 'H1', held: true, mine: true, weight_pct: 2 }),
+      e({ symbol: 'H2', held: true, mine: true, weight_pct: 8 }),
+    ])
+    expect(ranked.map((r) => r.symbol)).toEqual(['H2', 'H1', 'W', 'BIG'])
+  })
+
+  it('ranks unknown caps last and falls back to revenue estimate', () => {
+    const ranked = rankEvents([
+      e({ symbol: 'NOCAP_SMALL', revenue_estimate: 1 }),
+      e({ symbol: 'CAP', market_cap: 5 }),
+      e({ symbol: 'NOCAP_BIG', revenue_estimate: 9 }),
+    ])
+    expect(ranked.map((r) => r.symbol)).toEqual(['CAP', 'NOCAP_BIG', 'NOCAP_SMALL'])
+  })
+
+  it('does not mutate its input', () => {
+    const input = [e({ symbol: 'B', market_cap: 1 }), e({ symbol: 'A', market_cap: 2 })]
+    rankEvents(input)
+    expect(input[0].symbol).toBe('B')
+  })
+})
+
+describe('buildWeekGrid', () => {
+  it('lays a week out by session and weekday', () => {
+    const grid = buildWeekGrid([
+      e({ symbol: 'A', date: '2026-10-26', session: 'bmo' }),
+      e({ symbol: 'B', date: '2026-10-28', session: 'amc' }),
+    ])
+    expect(grid.days.map(([k]) => k)).toEqual(['mon', 'tue', 'wed', 'thu', 'fri'])
+    expect(grid.sessions.map(([k]) => k)).toEqual(['bmo', 'amc'])
+    expect(grid.cells.bmo.mon.map((r) => r.symbol)).toEqual(['A'])
+    expect(grid.cells.amc.wed.map((r) => r.symbol)).toEqual(['B'])
+    expect(grid.cells.amc.mon).toEqual([])
+  })
+
+  it('adds the during-hours row only when the week has one', () => {
+    const grid = buildWeekGrid([e({ session: 'dmh' }), e({ symbol: 'Y', session: null })])
+    expect(grid.sessions.map(([k]) => k)).toEqual(['bmo', 'amc', 'other'])
+    expect(grid.cells.other.mon).toHaveLength(2)
+  })
+
+  it('adds a weekend column only when it carries a report', () => {
+    const grid = buildWeekGrid([e({ date: '2026-10-31' })])
+    expect(grid.days.map(([k]) => k)).toEqual(['mon', 'tue', 'wed', 'thu', 'fri', 'sat'])
+  })
+
+  it('ranks each cell', () => {
+    const grid = buildWeekGrid([e({ symbol: 'S', market_cap: 1 }), e({ symbol: 'L', market_cap: 9 })])
+    expect(grid.cells.amc.mon.map((r) => r.symbol)).toEqual(['L', 'S'])
+  })
+})
+
+describe('gridSessionKey', () => {
+  it('folds during-hours and unset into one row', () => {
+    expect(gridSessionKey('bmo')).toBe('bmo')
+    expect(gridSessionKey('dmh')).toBe('other')
+    expect(gridSessionKey(undefined)).toBe('other')
+  })
+})
+
+describe('weekdayKeyOf', () => {
+  it('names the weekday of an ISO date', () => {
+    expect(weekdayKeyOf('2026-10-26')).toBe('mon')
+    expect(weekdayKeyOf('2026-11-01')).toBe('sun')
+  })
+})
+
+describe('moveLabel', () => {
+  it('is the signed move and its window', () => {
+    expect(moveLabel(e({ move_pct: 3.21, move_basis: '1d' }))).toEqual({ text: '+3.2%', basis: '1d' })
+    expect(moveLabel(e({ move_pct: -4, move_basis: '2d' }))).toEqual({ text: '-4.0%', basis: '2d' })
+  })
+
+  it('is null without a move', () => {
+    expect(moveLabel(e())).toBeNull()
+  })
+})
+
+describe('yourWeekTally', () => {
+  it('counts only my names, reported and beating', () => {
+    expect(
+      yourWeekTally([
+        e({ mine: true, eps_actual: 1, eps_surprise_pct: 5 }),
+        e({ mine: true, eps_actual: 1, eps_surprise_pct: -2 }),
+        e({ mine: true }),
+        e({ eps_actual: 1, eps_surprise_pct: 9 }),
+      ]),
+    ).toEqual({ count: 3, reported: 2, beat: 1 })
   })
 })
