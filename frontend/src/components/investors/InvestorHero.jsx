@@ -28,7 +28,7 @@ export default function InvestorHero({ detail, onQuarter }) {
   return (
     <header className="flex flex-col gap-3">
       <div className="flex items-start gap-3 flex-wrap">
-        <InvestorAvatar name={detail.name} photo={detail.photo_url} size={52} />
+        <InvestorAvatar name={detail.name} photo={detail.photo_url} logo={detail.logo_url} size={52} />
         <div className="min-w-[11rem] flex-1">
           <h1 className="text-[var(--fig-xl)] font-semibold text-zinc-50">{detail.name}</h1>
           {detail.firm !== detail.name ? <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p> : null}

@@ -288,6 +288,16 @@ resolve to an empty string; that machinery was reverted (migrations
 ticker every instrument already carries is the identifier that actually
 works, for both a stock and an ETF, with no Saxo call at all.
 
+**Investor avatars are a photo, else the firm's logo, else initials, all
+hand-kept in `investors/curated.csv`.** `photo` is a Wikimedia Commons file
+name (18 freely licensed portraits, each matched by hand against Wikidata or
+Wikipedia, because a name search returns namesakes: an actor Chase Coleman, a
+rabbi David Einhorn); the profile credits it. `website` is the firm's domain,
+drawn as its favicon from Google's keyless favicon service on a white disc. A
+domain is listed only when that service returns a real icon and the icon is
+plausibly the firm's. Like elbstream, both are fetched by the browser
+directly. Investors added by search get initials.
+
 **The Research price scale is the bars', not the annotations'.** `priceGeometry`
 takes a `yScale` the user sets by dragging the price axis, but never widens its
 automatic domain to fit a target, stop or `PriceLine` — a target 3× the price

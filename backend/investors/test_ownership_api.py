@@ -158,7 +158,7 @@ class OwnershipApiTest(APITestCase):
             response.data['funds'][1],
             {
                 'slug': 'berkshire-hathaway', 'name': 'Warren Buffett', 'firm': 'Berkshire Hathaway',
-                'followed': True, 'photo_url': None, 'kind': 'new', 'shares': 1, 'previous_shares': None, 'change_pct': None,
+                'followed': True, 'photo_url': None, 'logo_url': None, 'kind': 'new', 'shares': 1, 'previous_shares': None, 'change_pct': None,
                 'value': 400, 'weight': 25.0, 'previous_weight': None,
             },
         )

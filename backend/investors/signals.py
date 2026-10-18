@@ -2,7 +2,7 @@ from django.db.models import Count
 
 from . import changes, sectors, summaries
 from .models import Investor, PositionMove, Security
-from .photos import photo_url
+from .photos import logo_url, photo_url
 
 MIN_FUNDS = 3
 SHELF_LIMIT = 12
@@ -128,7 +128,7 @@ def _stocks(quarter_end):
 
 
 def _face(investor):
-    return {'slug': investor.slug, 'name': investor.name, 'photo_url': photo_url(investor)}
+    return {'slug': investor.slug, 'name': investor.name, 'photo_url': photo_url(investor), 'logo_url': logo_url(investor)}
 
 
 def _faces(pairs, investors):

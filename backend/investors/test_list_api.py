@@ -57,6 +57,7 @@ class InvestorListApiTest(APITestCase):
         self.assertIsNone(card['import'])
         self.assertTrue(card['curated'])
         self.assertIsNone(card['photo_url'])
+        self.assertIsNone(card['logo_url'])
 
     def test_a_card_carries_the_investors_photo(self):
         make_investor(photo='Warren Buffett KU Visit.jpg')

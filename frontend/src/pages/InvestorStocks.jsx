@@ -32,7 +32,7 @@ function Faces({ investors }) {
     <span className="flex -space-x-1.5">
       {investors.map((investor) => (
         <Link key={investor.slug} to={`/investors/${investor.slug}`} title={investor.name} aria-label={investor.name}>
-          <InvestorAvatar name={investor.name} photo={investor.photo_url} size={22} className="ring-2 ring-zinc-900" />
+          <InvestorAvatar name={investor.name} photo={investor.photo_url} logo={investor.logo_url} size={22} className="ring-2 ring-zinc-900" />
         </Link>
       ))}
     </span>

@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase
 
 from .models import Investor
-from .photos import photo_credit_url, photo_url
+from .photos import logo_url, photo_credit_url, photo_url
 
 
 class PhotoUrlTest(SimpleTestCase):
@@ -15,6 +15,12 @@ class PhotoUrlTest(SimpleTestCase):
             photo_credit_url(investor),
             'https://commons.wikimedia.org/wiki/File:Valeant_Pharmaceuticals%27_Business_Model_%28headshot%29.jpg',
         )
+
+    def test_a_website_becomes_its_logo(self):
+        self.assertEqual(
+            logo_url(Investor(website='scionasset.com')), 'https://www.google.com/s2/favicons?domain=scionasset.com&sz=128',
+        )
+        self.assertIsNone(logo_url(Investor()))
 
     def test_no_photo_is_none(self):
         self.assertIsNone(photo_url(Investor()))

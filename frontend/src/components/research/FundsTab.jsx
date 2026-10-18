@@ -28,7 +28,7 @@ const shownWeight = (fund) => (fund.kind === SOLD_OUT ? fund.previous_weight : f
 function Fund({ fund }) {
   return (
     <span className="flex items-center gap-2.5 min-w-0">
-      <InvestorAvatar name={fund.name} photo={fund.photo_url} size={24} />
+      <InvestorAvatar name={fund.name} photo={fund.photo_url} logo={fund.logo_url} size={24} />
       <span className="min-w-0">
         <span className="flex items-center gap-1.5">
           <Link to={`/investors/${fund.slug}`} className="font-medium text-zinc-100 hover:text-blue-300 truncate max-w-[190px]">

@@ -86,6 +86,11 @@ class LoadCuratedTest(TestCase):
         self.assertEqual(Investor.objects.get(cik=1067983).photo, 'Warren Buffett KU Visit.jpg')
         self.assertEqual(Investor.objects.get(slug='scion-asset-management').photo, '')
 
+    def test_a_website_is_read_from_its_column(self):
+        load_curated()
+        self.assertEqual(Investor.objects.get(slug='scion-asset-management').website, 'scionasset.com')
+        self.assertEqual(Investor.objects.get(cik=1067983).website, '')
+
     def test_an_unknown_style_is_refused(self):
         import tempfile
 
