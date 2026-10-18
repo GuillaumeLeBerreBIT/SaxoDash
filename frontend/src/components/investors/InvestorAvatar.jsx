@@ -18,6 +18,7 @@ export default function InvestorAvatar({ name, photo, logo, size = 36, className
         key={src}
         src={src}
         alt=""
+        referrerPolicy="no-referrer"
         loading="lazy"
         onError={() => setFailed((current) => new Set(current).add(src))}
         style={{ width: size, height: size, padding: kind === 'logo' ? Math.round(size * LOGO_INSET) : 0 }}

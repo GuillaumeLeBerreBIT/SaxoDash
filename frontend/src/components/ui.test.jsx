@@ -58,6 +58,7 @@ describe('ui primitives', () => {
     )
     const img = container.querySelector('img')
     expect(img).toHaveAttribute('src', 'https://api.elbstream.com/logos/symbol/AAPL')
+    expect(img).toHaveAttribute('referrerpolicy', 'no-referrer')
     expect(screen.queryByText('AA')).not.toBeInTheDocument()
   })
 

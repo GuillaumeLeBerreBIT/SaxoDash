@@ -12,6 +12,7 @@ describe('InvestorAvatar', () => {
   it('shows the photo when there is one', () => {
     const { container } = render(<InvestorAvatar name="Warren Buffett" photo="https://example.test/buffett.jpg" />)
     expect(container.querySelector('img')).toHaveAttribute('src', 'https://example.test/buffett.jpg')
+    expect(container.querySelector('img')).toHaveAttribute('referrerpolicy', 'no-referrer')
     expect(screen.queryByText('WB')).not.toBeInTheDocument()
   })
 
