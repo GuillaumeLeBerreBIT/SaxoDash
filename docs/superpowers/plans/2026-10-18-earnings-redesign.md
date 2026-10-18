@@ -64,7 +64,7 @@ Docs: `AGENTS.md` (one "Decided" paragraph).
 - Test: `backend/research/test_reaction.py`
 
 **Interfaces:**
-- Produces: `reaction.move(report_date: str, session: str | None, closes: list[tuple[str, float]]) -> tuple[float | None, str | None]` — closes are `(iso_date, close)` oldest first; returns `(pct rounded to 2dp, '1d' | '2d')` or `(None, None)`.
+- Produces: `reaction.move(report_date: str, session: str | None, bars: list[{'date': str, 'close': float, ...}]) -> tuple[float | None, str | None]` — bars oldest first, the shape `market.chart()` returns and `ScreenerRow.recent_closes` stores (extra keys ignored); returns `(pct rounded to 2dp, '1d' | '2d')` or `(None, None)`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -450,34 +450,17 @@ def _instruments():
     return found
 
 
-def _chart_closes(instrument):
+def _chart_bars(instrument):
     try:
-        bars = market.chart(*instrument, DAILY_HORIZON, MINE_CHART_BARS)
+        return market.chart(*instrument, DAILY_HORIZON, MINE_CHART_BARS)
     except ProviderError:
         logger.info('earnings move: no Saxo chart for %s', instrument)
         return []
-    return [(bar['date'], bar['close']) for bar in bars]
 
 
-def _row_closes(row):
-    if row is None:
-        return []
-    return [(entry['date'], entry['close']) for entry in row.recent_closes or []]
-
-
-class _Closes:
-    def __init__(self, rows):
-        self.rows = rows
-        self.instruments = _instruments()
-        self.memo = {}
-
-    def for_event(self, symbol, mine):
-        if symbol not in self.memo:
-            closes = []
-            if mine and symbol in self.instruments:
-                closes = _chart_closes(self.instruments[symbol])
-            self.memo[symbol] = closes or _row_closes(self.rows.get(symbol))
-        return self.memo[symbol]
+def _bars(symbol, mine, instruments, row):
+    charted = _chart_bars(instruments[symbol]) if mine and symbol in instruments else []
+    return charted or (row.recent_closes if row else [])
 
 
 def enrich(events, today):
@@ -485,7 +468,8 @@ def enrich(events, today):
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
     positions = {position.ticker.upper(): position for position in Position.objects.all()}
     total = _portfolio_total() if any(event['held'] for event in events) else None
-    closes = _Closes(rows)
+    instruments = _instruments()
+    bars_by_symbol = {}
     today_iso = today.isoformat()
 
     enriched = []
@@ -496,7 +480,9 @@ def enrich(events, today):
 
         move_pct, basis = (None, None)
         if event['date'] <= today_iso:
-            move_pct, basis = reaction.move(event['date'], event['session'], closes.for_event(symbol, event['mine']))
+            if symbol not in bars_by_symbol:
+                bars_by_symbol[symbol] = _bars(symbol, event['mine'], instruments, row)
+            move_pct, basis = reaction.move(event['date'], event['session'], bars_by_symbol[symbol])
 
         value = float(position.value) if position else None
         enriched.append({

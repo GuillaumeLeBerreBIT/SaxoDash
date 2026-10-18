@@ -7,10 +7,10 @@ def _pct(after, before):
     return round((after - before) / before * 100, 2)
 
 
-def move(report_date, session, closes):
-    previous = next((close for day, close in reversed(closes) if day < report_date), None)
-    same_day = next((close for day, close in closes if day == report_date), None)
-    following = next((close for day, close in closes if day > report_date), None)
+def move(report_date, session, bars):
+    previous = next((bar['close'] for bar in reversed(bars) if bar['date'] < report_date), None)
+    same_day = next((bar['close'] for bar in bars if bar['date'] == report_date), None)
+    following = next((bar['close'] for bar in bars if bar['date'] > report_date), None)
 
     if session in SAME_DAY_SESSIONS:
         pct, basis = _pct(same_day, previous), '1d'

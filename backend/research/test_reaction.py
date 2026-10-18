@@ -3,10 +3,10 @@ from django.test import SimpleTestCase
 from . import reaction
 
 CLOSES = [
-    ('2026-10-15', 100.0),
-    ('2026-10-16', 110.0),
-    ('2026-10-19', 99.0),
-    ('2026-10-20', 121.0),
+    {'date': '2026-10-15', 'close': 100.0},
+    {'date': '2026-10-16', 'close': 110.0},
+    {'date': '2026-10-19', 'close': 99.0},
+    {'date': '2026-10-20', 'close': 121.0},
 ]
 
 
@@ -36,12 +36,12 @@ class MoveTest(SimpleTestCase):
         self.assertEqual(reaction.move('2026-10-15', 'bmo', CLOSES), (None, None))
 
     def test_a_zero_base_close_is_unknown(self):
-        closes = [('2026-10-15', 0.0), ('2026-10-16', 5.0)]
+        closes = [{'date': '2026-10-15', 'close': 0.0}, {'date': '2026-10-16', 'close': 5.0}]
         self.assertEqual(reaction.move('2026-10-16', 'bmo', closes), (None, None))
 
     def test_empty_closes_are_unknown(self):
         self.assertEqual(reaction.move('2026-10-16', 'bmo', []), (None, None))
 
     def test_bmo_today_uses_the_forming_bar(self):
-        closes = [('2026-10-19', 100.0), ('2026-10-20', 103.0)]
+        closes = [{'date': '2026-10-19', 'close': 100.0}, {'date': '2026-10-20', 'close': 103.0}]
         self.assertEqual(reaction.move('2026-10-20', 'bmo', closes), (3.0, '1d'))
