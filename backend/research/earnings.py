@@ -11,7 +11,7 @@ from datetime import date, timedelta
 
 from portfolio.models import Position
 
-from . import finnhub
+from . import calendar_enrichment, finnhub
 from .models import WatchlistItem
 from .provider_cache import cached
 from .providers import ProviderUnavailable
@@ -144,19 +144,8 @@ def _surprise_summary(values):
 def _week_stats(events):
     """Headline counts for the calendar's week-summary strip and its day
     rail, reduced from the rows already in hand - no extra fetch.
-
-    `by_day` is the beat / miss / in-line split per date, oldest-first;
-    the summary chart and the day cards both read off it.
     """
     summary = _surprise_summary([e['eps_surprise_pct'] for e in events])
-
-    per_day = {}
-    for event in events:
-        surprise = event['eps_surprise_pct']
-        if surprise is None:
-            continue
-        slot = per_day.setdefault(event['date'], {'beat': 0, 'missed': 0, 'inline': 0})
-        slot['beat' if surprise > 0 else 'missed' if surprise < 0 else 'inline'] += 1
 
     return {
         'total': len(events),
@@ -165,8 +154,6 @@ def _week_stats(events):
         'missed': summary['missed'],
         'inline': summary['inline'],
         'mine': sum(1 for e in events if e.get('mine')),
-        'avg_surprise': summary['avg'],
-        'by_day': [{'date': d, **counts} for d, counts in sorted(per_day.items())],
     }
 
 
@@ -177,7 +164,8 @@ def window_earnings(scope='all', week_offset=0, today=None):
     The market week is cached un-tagged (one entry per calendar week), so
     'all' and 'mine' share it; tagging is per request.
     """
-    start = current_week_start(today or date.today()) + timedelta(weeks=week_offset)
+    today = today or date.today()
+    start = current_week_start(today) + timedelta(weeks=week_offset)
     end = start + timedelta(days=6)
     window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
     key = f'research:earnings-week:{CACHE_V}:{start.isoformat()}'
@@ -196,6 +184,7 @@ def window_earnings(scope='all', week_offset=0, today=None):
         is_held = symbol in held
         is_watched = symbol in watched
         tagged.append({**event, 'held': is_held, 'watched': is_watched, 'mine': is_held or is_watched})
+    tagged = calendar_enrichment.merge_share_classes(calendar_enrichment.enrich(tagged, today))
 
     if scope == 'mine':
         events = [event for event in tagged if event['mine']]
@@ -205,7 +194,13 @@ def window_earnings(scope='all', week_offset=0, today=None):
         # Held/watched rows stay in regardless.
         events = [event for event in tagged if event['eps_estimate'] is not None or event['mine']]
 
-    return {'events': events, 'window': window, 'stats': _week_stats(events), 'ok': True}
+    return {
+        'events': events,
+        'window': window,
+        'stats': _week_stats(events),
+        'next_mine': calendar_enrichment.next_mine(end),
+        'ok': True,
+    }
 
 
 def _eps_history(symbol):

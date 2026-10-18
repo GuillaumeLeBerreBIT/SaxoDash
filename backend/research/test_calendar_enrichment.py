@@ -143,3 +143,71 @@ class EnrichTest(TestCase):
         total.return_value = Money(Decimal('1000'), 'USD')
         (out,) = calendar_enrichment.enrich([event('AAPL', held=True)], TODAY)
         self.assertIsNone(out['weight_pct'])
+
+
+def enriched(symbol, name=None, market_cap=None, held=False, watched=False, value=None, weight=None, move=None):
+    return {
+        **event(symbol, held=held, watched=watched),
+        'name': name, 'market_cap': market_cap, 'sector': None,
+        'value': value, 'weight_pct': weight, 'move_pct': move, 'move_basis': '1d' if move is not None else None,
+        'pnl_impact': None, 'also': [],
+    }
+
+
+class MergeShareClassesTest(TestCase):
+    def test_identical_names_on_one_date_merge_into_the_larger_class(self):
+        out = calendar_enrichment.merge_share_classes([
+            enriched('GOOG', 'Alphabet Inc', 2_000_000.0),
+            enriched('GOOGL', 'Alphabet Inc', 2_100_000.0),
+        ])
+        self.assertEqual([(e['symbol'], e['also']) for e in out], [('GOOGL', ['GOOG'])])
+
+    def test_equal_caps_break_the_tie_alphabetically(self):
+        out = calendar_enrichment.merge_share_classes([
+            enriched('GOOGL', 'Alphabet Inc', 1.0), enriched('GOOG', 'Alphabet Inc', 1.0),
+        ])
+        self.assertEqual(out[0]['symbol'], 'GOOG')
+
+    def test_flags_are_or_ed_and_holdings_summed(self):
+        out = calendar_enrichment.merge_share_classes([
+            enriched('GOOGL', 'Alphabet Inc', 2.0, watched=True),
+            enriched('GOOG', 'Alphabet Inc', 1.0, held=True, value=100.0, weight=4.0, move=10.0),
+        ])
+        (merged,) = out
+        self.assertEqual((merged['held'], merged['watched'], merged['mine']), (True, False, True))
+        self.assertEqual((merged['value'], merged['weight_pct']), (100.0, 4.0))
+
+    def test_merged_pnl_impact_uses_the_lead_move_and_summed_value(self):
+        (merged,) = calendar_enrichment.merge_share_classes([
+            enriched('GOOGL', 'Alphabet Inc', 2.0, held=True, value=50.0, weight=2.0, move=4.0),
+            enriched('GOOG', 'Alphabet Inc', 1.0, held=True, value=50.0, weight=2.0, move=9.0),
+        ])
+        self.assertEqual(merged['pnl_impact'], 4.0)
+
+    def test_nothing_merges_without_a_name(self):
+        out = calendar_enrichment.merge_share_classes([enriched('BRK.A'), enriched('BRK.B')])
+        self.assertEqual(len(out), 2)
+
+    def test_different_names_stay_apart(self):
+        out = calendar_enrichment.merge_share_classes([enriched('A', 'One'), enriched('B', 'Two')])
+        self.assertEqual(len(out), 2)
+
+
+class NextMineTest(TestCase):
+    def hold(self, ticker):
+        Position.objects.create(
+            ticker=ticker, name=ticker, qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff',
+        )
+
+    def test_the_soonest_holding_report_after_the_window(self):
+        self.hold('AAPL')
+        self.hold('MSFT')
+        ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500', next_earnings_date=date(2026, 10, 30))
+        ScreenerRow.objects.create(ticker='MSFT', name='Microsoft', indexes='SP500', next_earnings_date=date(2026, 10, 28))
+        ScreenerRow.objects.create(ticker='NVDA', name='Nvidia', indexes='SP500', next_earnings_date=date(2026, 10, 27))
+        self.assertEqual(calendar_enrichment.next_mine(date(2026, 10, 25)), {'symbol': 'MSFT', 'date': '2026-10-28'})
+
+    def test_none_when_no_holding_has_a_date(self):
+        self.hold('ZZZZ')
+        self.assertIsNone(calendar_enrichment.next_mine(date(2026, 10, 25)))

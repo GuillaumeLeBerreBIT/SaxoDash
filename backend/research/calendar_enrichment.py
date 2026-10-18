@@ -104,3 +104,46 @@ def enrich(events, today):
             'also': [],
         })
     return enriched
+
+
+def _summed(values):
+    present = [value for value in values if value is not None]
+    return round(sum(present), 2) if present else None
+
+
+def _merge(group):
+    lead = min(group, key=lambda e: (-(e['market_cap'] or 0), e['symbol'] or ''))
+    held = any(e['held'] for e in group)
+    value = _summed(e['value'] for e in group)
+    return {
+        **lead,
+        'also': sorted(e['symbol'] for e in group if e is not lead),
+        'held': held,
+        'watched': not held and any(e['watched'] for e in group),
+        'mine': any(e['mine'] for e in group),
+        'value': value,
+        'weight_pct': _summed(e['weight_pct'] for e in group),
+        'pnl_impact': pnl_impact(value, lead['move_pct']),
+    }
+
+
+def merge_share_classes(events):
+    grouped = {}
+    singles = []
+    for event in events:
+        if event.get('name'):
+            grouped.setdefault((event['date'], event['name']), []).append(event)
+        else:
+            singles.append(event)
+    merged = [group[0] if len(group) == 1 else _merge(group) for group in grouped.values()]
+    return sorted(merged + singles, key=lambda e: (e['date'], e['symbol'] or ''))
+
+
+def next_mine(after):
+    held = [ticker.upper() for ticker in Position.objects.values_list('ticker', flat=True) if ticker]
+    row = (
+        ScreenerRow.objects.filter(ticker__in=held, next_earnings_date__gt=after)
+        .order_by('next_earnings_date', 'ticker')
+        .first()
+    )
+    return {'symbol': row.ticker, 'date': row.next_earnings_date.isoformat()} if row else None
