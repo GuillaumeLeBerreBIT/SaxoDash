@@ -17,6 +17,9 @@ describe('fmtRange', () => {
     expect(fmtRange(15001, 50000)).toBe('$15,001–$50,000')
     expect(fmtRange(50000000, null)).toBe('Over $50,000,000')
   })
+  it('shows an exact amount once', () => {
+    expect(fmtRange(474, 474)).toBe('$474')
+  })
 })
 
 describe('tradeLabel', () => {

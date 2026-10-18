@@ -12,7 +12,8 @@ export function partyLabel(party, stateDistrict) {
 }
 
 export function fmtRange(low, high) {
-  return high == null ? `Over ${dollars(low)}` : `${dollars(low)}–${dollars(high)}`
+  if (high == null) return `Over ${dollars(low)}`
+  return low === high ? dollars(low) : `${dollars(low)}–${dollars(high)}`
 }
 
 export function tradeLabel({ kind, option, exercise }) {

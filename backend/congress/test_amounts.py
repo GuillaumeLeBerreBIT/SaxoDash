@@ -14,6 +14,13 @@ class AmountsTest(SimpleTestCase):
         self.assertEqual(parse_range('Over $50,000,000'), (50000000, None))
         self.assertEqual(parse_range('Spouse/DC Over $1,000,000'), (1000000, None))
 
+    def test_an_exact_amount_is_both_bounds_in_whole_dollars(self):
+        self.assertEqual(parse_range('$474.06'), (474, 474))
+        self.assertEqual(parse_range('$4,450.50'), (4451, 4451))
+
+    def test_an_exact_amount_under_a_dollar_still_counts_as_one(self):
+        self.assertEqual(parse_range('$0.40'), (1, 1))
+
     def test_unreadable_text_is_refused(self):
         with self.assertRaises(ValueError):
             parse_range('None disclosed')

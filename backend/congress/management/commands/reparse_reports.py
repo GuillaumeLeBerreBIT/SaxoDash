@@ -18,7 +18,7 @@ class Command(BaseCommand):
         elif options['failed']:
             reports = Report.objects.filter(status=Report.FAILED)
         elif options['unread']:
-            reports = Report.objects.filter(status=Report.PARSED, unparsed_rows__gt=0, trades__isnull=True)
+            reports = Report.objects.filter(status=Report.PARSED, unparsed_rows__gt=0)
         else:
             raise CommandError('Pass --doc-id ID, --failed or --unread.')
         try:
