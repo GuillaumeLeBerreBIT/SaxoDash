@@ -245,7 +245,7 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     const { container } = renderWithProviders(<Earnings />, { route: '/earnings' })
 
     const row = container.querySelector('button[class*="md:grid-cols-"]')
-    expect(row).toHaveClass('grid-cols-[minmax(0,1fr)_96px_72px_14px]')
+    expect(row).toHaveClass('grid-cols-[minmax(0,1fr)_112px_64px_14px]')
     const hidden = [...row.children].filter((el) => el.classList.contains('hidden'))
     expect(hidden).toHaveLength(3)
   })

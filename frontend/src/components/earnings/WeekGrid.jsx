@@ -1,13 +1,13 @@
 import { InstrumentLogo, LetterAvatar } from '../ui'
-import { dayDate, eventKey, outcomeColor } from '../../lib/earnings'
+import { dayDate, eventKey, outcome, outcomeColor } from '../../lib/earnings'
 
 export const CELL_LIMIT = 6
 function LogoTile({ event, onOpen }) {
   return (
     <button
       type="button"
-      aria-label={`Open ${event.symbol}`}
-      title={event.name ? `${event.symbol} · ${event.name}` : event.symbol}
+      aria-label={[`Open ${event.symbol}`, outcome(event)].filter(Boolean).join(', ')}
+      title={[event.symbol, event.name, outcome(event)].filter(Boolean).join(' · ')}
       onClick={(e) => {
         e.stopPropagation()
         onOpen(event.symbol)

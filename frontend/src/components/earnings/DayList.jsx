@@ -8,7 +8,7 @@ import { fmtCompact } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 
 const ROW_GRID =
-  'grid-cols-[minmax(0,1fr)_96px_72px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_64px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
+  'grid-cols-[minmax(0,1fr)_112px_64px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_76px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
 const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1]
 
@@ -32,7 +32,7 @@ const DayRow = memo(function DayRow({ event, onOpen }) {
       <span className={`${PHONE_HIDDEN} text-right text-[var(--fig-2xs)] num font-mono text-zinc-500`}>
         {event.market_cap == null ? '—' : fmtCompact(event.market_cap)}
       </span>
-      <span className={`${PHONE_HIDDEN} text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap`}>
+      <span className={`${PHONE_HIDDEN} pl-3 text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap`}>
         {event.quarter ? `Q${event.quarter} ${event.year ?? ''}`.trim() : ''}
       </span>
       <span className="text-right">
@@ -54,12 +54,12 @@ const DayRow = memo(function DayRow({ event, onOpen }) {
 function ColumnHeader() {
   return (
     <div
-      className={`grid items-center ${ROW_GRID} gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600`}
+      className={`grid items-center ${ROW_GRID} gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600 whitespace-nowrap`}
       style={{ borderLeft: '2px solid transparent' }}
     >
       <span>Company</span>
       <span className={`${PHONE_HIDDEN} text-right`}>Mkt cap</span>
-      <span className={PHONE_HIDDEN}>Qtr</span>
+      <span className={`${PHONE_HIDDEN} pl-3`}>Qtr</span>
       <span className="text-right">EPS · est</span>
       <span className={`${PHONE_HIDDEN} text-right`}>Revenue</span>
       <span className="text-right">Move</span>

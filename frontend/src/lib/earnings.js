@@ -180,11 +180,16 @@ export function yourWeekTally(events) {
   }
 }
 
-const OUTCOME = [MISS, REPORTED, BEAT]
+const REPORTED_OUTCOMES = ['missed', 'in line', 'beat']
+const OUTCOME_COLOR = { missed: MISS, 'in line': REPORTED, beat: BEAT, pending: PENDING }
+
+export function outcome(event) {
+  const status = reportStatus(event)
+  if (status === 'reported') return REPORTED_OUTCOMES[surpriseSign(event.eps_surprise_pct) + 1]
+  if (status === 'pending') return 'pending'
+  return null
+}
 
 export function outcomeColor(event) {
-  const status = reportStatus(event)
-  if (status === 'reported') return OUTCOME[surpriseSign(event.eps_surprise_pct) + 1]
-  if (status === 'pending') return PENDING
-  return null
+  return OUTCOME_COLOR[outcome(event)] ?? null
 }

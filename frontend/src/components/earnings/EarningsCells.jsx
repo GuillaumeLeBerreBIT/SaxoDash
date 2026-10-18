@@ -13,7 +13,7 @@ export function SurpriseChip({ sign, children }) {
         ? 'text-red-400 bg-red-500/10'
         : 'text-zinc-400 bg-white/[0.06]'
   return (
-    <span className={`text-[var(--fig-2xs)] num font-mono rounded-[3px] px-1 ${tone}`}>
+    <span className={`text-[var(--fig-2xs)] num font-mono rounded-[3px] px-1 whitespace-nowrap ${tone}`}>
       {sign > 0 ? '▲' : sign < 0 ? '▼' : '▬'} {children}
     </span>
   )
@@ -35,7 +35,7 @@ export function EpsCell({ event }) {
       <span className="text-[var(--fig-xs)] num font-mono text-zinc-100">{fmtNum(event.eps_actual, 2)}</span>
       {surprise != null && <SurpriseChip sign={surpriseSign(surprise)}>{absPct(surprise)}</SurpriseChip>}
       {event.eps_estimate != null && (
-        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
+        <span className="hidden md:inline text-[var(--fig-2xs)] num font-mono text-zinc-600">est {fmtNum(event.eps_estimate, 2)}</span>
       )}
     </span>
   )

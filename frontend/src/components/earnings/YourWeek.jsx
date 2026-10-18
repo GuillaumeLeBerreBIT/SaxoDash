@@ -4,7 +4,7 @@ import { fmtDayMonth, fmtEur, fmtPct, pctToneClass } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell } from './EarningsCells'
 
 const ROW_GRID =
-  'grid-cols-[minmax(0,1fr)_88px_72px] md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_64px_minmax(0,1fr)_80px_88px]'
+  'grid-cols-[minmax(0,1fr)_112px_64px] md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_64px_minmax(0,1fr)_80px_88px]'
 const weekday = (iso) => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short' })
 
 function headline({ count, reported, beat }) {
@@ -30,7 +30,7 @@ function YourRow({ event, onOpen }) {
     >
       <span className="flex items-center gap-2 min-w-0">
         <CompanyCell event={event} />
-        <span className={`text-[var(--fig-2xs)] ${event.held ? 'text-blue-500' : 'text-zinc-600'}`}>
+        <span className={`hidden md:inline text-[var(--fig-2xs)] ${event.held ? 'text-blue-500' : 'text-zinc-600'}`}>
           {event.held ? 'Held' : 'Watching'}
         </span>
       </span>
@@ -59,7 +59,7 @@ export default function YourWeek({ events, nextMine, onOpen }) {
   return (
     <Card padding={false} className="mb-4">
       <div className="flex items-baseline justify-between gap-3 px-3.5 py-3 border-b border-white/[0.06]">
-        <h2 className="text-[var(--fig-sm)] font-semibold text-zinc-100">Your week</h2>
+        <h2 className="text-[var(--fig-sm)] font-semibold text-zinc-100 whitespace-nowrap">Your week</h2>
         {mine.length > 0 && <span className="text-[var(--fig-2xs)] text-zinc-500">{headline(tally)}</span>}
       </div>
       {mine.length === 0 ? (

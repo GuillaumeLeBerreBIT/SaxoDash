@@ -55,4 +55,9 @@ describe('WeekGrid', () => {
     renderGrid([ev('A')])
     expect(screen.getByRole('button', { name: /^Mon 26/ })).toHaveAttribute('aria-pressed', 'true')
   })
+
+  it('names a reported outcome, not only its colour', () => {
+    renderGrid([ev('WIN', { date: '2000-01-03', eps_actual: 2, eps_surprise_pct: 5 })])
+    expect(screen.getByRole('button', { name: 'Open WIN, beat' })).toBeInTheDocument()
+  })
 })

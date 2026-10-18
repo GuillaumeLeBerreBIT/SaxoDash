@@ -9,6 +9,7 @@ import {
   gridSessionKey,
   groupByWeekday,
   moveLabel,
+  outcome,
   outcomeColor,
   rankEvents,
   reportStatus,
@@ -20,6 +21,16 @@ import {
   yourWeekTally,
 } from './earnings'
 import { BEAT, MISS, PENDING, REPORTED } from './charts'
+
+describe('outcome', () => {
+  it('names a result in words', () => {
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: 4 })).toBe('beat')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: -4 })).toBe('missed')
+    expect(outcome({ date: '2000-01-03', eps_actual: 1, eps_surprise_pct: null })).toBe('in line')
+    expect(outcome({ date: '2000-01-03', eps_actual: null })).toBe('pending')
+    expect(outcome({ date: '2999-01-03', eps_actual: null })).toBeNull()
+  })
+})
 
 describe('outcomeColor', () => {
   const past = '2000-01-03'
