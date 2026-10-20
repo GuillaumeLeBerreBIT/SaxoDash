@@ -1,19 +1,36 @@
 import { RANGE_COUNTS, WIDEST_RANGE_COUNT } from './research'
 
 export const MIN_VISIBLE_BARS = 5
+export const FUTURE_SLOTS = 11
 export const LATEST_TIME_VIEW = { offset: 0, barCount: null }
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value))
 
+export function rightMargin(slots) {
+  return Math.min(FUTURE_SLOTS, Math.floor(slots / 4))
+}
+
+export function slotsForBars(bars) {
+  return bars + Math.min(FUTURE_SLOTS, Math.floor(bars / 3))
+}
+
 export function resolveTimeWindow(view, { total, range }) {
-  const count = Math.min(total, view.barCount ?? RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT)
-  const maxOffset = total - count
+  if (total === 0) {
+    return { start: 0, end: 0, pad: 0, slots: 0, offset: 0, total, maxOffset: 0, zoomed: view.barCount != null }
+  }
+  const wanted = view.barCount ?? slotsForBars(Math.min(total, RANGE_COUNTS[range] ?? WIDEST_RANGE_COUNT))
+  const slots = Math.min(slotsForBars(total), wanted)
+  const margin = rightMargin(slots)
+  const maxOffset = total + margin - slots
   const offset = clamp(Math.round(view.offset) || 0, 0, maxOffset)
+  const edge = total + margin - offset
+  const end = Math.min(total, edge)
   return {
-    start: maxOffset - offset,
-    end: total - offset,
+    start: edge - slots,
+    end,
+    pad: edge - end,
+    slots,
     offset,
-    count,
     total,
     maxOffset,
     zoomed: view.barCount != null,
@@ -27,15 +44,27 @@ export function panTimeView(view, history, next) {
 }
 
 export function zoomTimeView(view, history, barCount) {
-  const count = Math.min(history.total, Math.max(MIN_VISIBLE_BARS, Math.round(barCount)))
+  const slots = Math.min(slotsForBars(history.total), Math.max(MIN_VISIBLE_BARS, Math.round(barCount)))
   const { offset } = resolveTimeWindow(view, history)
-  return { offset: clamp(offset, 0, history.total - count), barCount: count }
+  return { offset: clamp(offset, 0, history.total + rightMargin(slots) - slots), barCount: slots }
 }
 
 export function windowToDates(window, bars) {
   const first = bars[window.start]
   const last = bars[window.end - 1]
-  return first && last ? { from: first.date, to: last.date } : null
+  return first && last ? { from: first.date, to: last.date, pad: window.pad } : null
+}
+
+export function futureSessionDates(after, count) {
+  const day = new Date(`${after}T00:00:00Z`)
+  if (Number.isNaN(day.getTime())) return []
+  const dates = []
+  while (dates.length < count) {
+    day.setUTCDate(day.getUTCDate() + 1)
+    const weekday = day.getUTCDay()
+    if (weekday !== 0 && weekday !== 6) dates.push(day.toISOString().slice(0, 10))
+  }
+  return dates
 }
 
 export function barIndexAtOrBefore(bars, date) {
@@ -60,15 +89,16 @@ export function barIndexAtOrAfter(bars, date) {
   return before + 1 < bars.length ? before + 1 : -1
 }
 
-export function timeViewForDates({ from, to }, bars) {
+export function timeViewForDates({ from, to, pad = 0 }, bars) {
   const total = bars.length
   if (total === 0) return LATEST_TIME_VIEW
   const last = barIndexAtOrBefore(bars, to)
   if (last === -1) return { offset: total, barCount: null }
   const first = barIndexAtOrAfter(bars, from)
   if (first === -1) return LATEST_TIME_VIEW
-  const width = Math.min(total, Math.max(MIN_VISIBLE_BARS, last - first + 1))
-  return { offset: clamp(total - 1 - last, 0, total - width), barCount: width }
+  const slots = Math.min(slotsForBars(total), Math.max(MIN_VISIBLE_BARS, last - first + 1 + pad))
+  const margin = rightMargin(slots)
+  return { offset: clamp(total + margin - (last + 1 + pad), 0, total + margin - slots), barCount: slots }
 }
 
 export function matchBarByDate(bars, date) {

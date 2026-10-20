@@ -30,6 +30,8 @@ export function chartPalette({ theme, moves }) {
     flat: pick('flat'),
     warn: pick('warn'),
     earn: pick('earn'),
+    earnSubtle: pick('earn-subtle'),
+    pane: pick('pane'),
     grid: pick('grid'),
     ink: pick('ink'),
     accent: pick('accent'),

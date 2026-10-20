@@ -130,7 +130,7 @@ describe('useChartData linked window', () => {
 
   it('shows its own time view when it is not following', () => {
     const { result } = render({ timeView: { offset: 5, barCount: 10 } })
-    expect(result.current.bars.map((b) => b.date)[0]).toBe('2026-08-16')
+    expect(result.current.bars.map((b) => b.date)[0]).toBe('2026-08-18')
     expect(result.current.timeView).toEqual({ offset: 5, barCount: 10 })
   })
 
@@ -142,7 +142,7 @@ describe('useChartData linked window', () => {
     expect(result.current.bars.map((b) => b.date)).toEqual(
       bars.slice(4, 14).map((b) => b.date),
     )
-    expect(result.current.timeView).toEqual({ offset: 16, barCount: 10 })
+    expect(result.current.timeView).toEqual({ offset: 18, barCount: 10 })
   })
 
   it('exposes every fetched bar', () => {

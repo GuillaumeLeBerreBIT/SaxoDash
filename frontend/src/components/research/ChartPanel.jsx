@@ -22,6 +22,7 @@ export default function ChartPanel({
   symbol,
   unresolved,
   earningsMarkers = [],
+  futureDates,
   lines,
   onMoveLine,
   onCreateLine,
@@ -77,6 +78,7 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
+        futureDates={futureDates}
         lines={lines}
         onMoveLine={onMoveLine}
         onCreateLine={onCreateLine}

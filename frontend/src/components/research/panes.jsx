@@ -15,6 +15,7 @@ import { RVOL_ELEVATED } from '../../lib/indicators'
 import { usePointerDrag } from './usePointerDrag'
 
 const AXIS_FONT = { fontVariantNumeric: 'tabular-nums' }
+const NO_DATES = []
 
 /** The lower panes of the Research chart: volume, RSI and MACD.
  *
@@ -55,10 +56,10 @@ const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth,
   })
 })
 
-export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = false, height = 74 }) {
+export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = false, height = 74, slots }) {
   const c = useChartColors()
   const [ref, width] = useWidth()
-  const { slot, barWidth, xAt } = paneGeometry(width, data.length)
+  const { slot, barWidth, xAt } = paneGeometry(width, data.length, slots)
 
   const max = useMemo(() => {
     let highest = 0
@@ -134,10 +135,10 @@ const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height, c })
   )
 })
 
-export function RsiPane({ values, hover, setHover, hoverDimmed = false, height = 92 }) {
+export function RsiPane({ values, hover, setHover, hoverDimmed = false, height = 92, slots }) {
   const c = useChartColors()
   const [ref, width] = useWidth()
-  const { slot, chartW, xAt } = paneGeometry(width, values.length)
+  const { slot, chartW, xAt } = paneGeometry(width, values.length, slots)
 
   if (values.length === 0) return null
 
@@ -185,10 +186,10 @@ const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height, c }) 
   )
 })
 
-export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 92 }) {
+export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 92, slots }) {
   const c = useChartColors()
   const [ref, width] = useWidth()
-  const { slot, chartW, xAt } = paneGeometry(width, macd.line.length)
+  const { slot, chartW, xAt } = paneGeometry(width, macd.line.length, slots)
 
   if (macd.line.length === 0) return null
 
@@ -202,15 +203,16 @@ export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 
   )
 }
 
-export function TimeAxis({ data, onBarCountChange, onReset }) {
+export function TimeAxis({ data, futureDates = NO_DATES, onBarCountChange, onReset }) {
   const c = useChartColors()
   const [ref, width] = useWidth()
-  const { chartW, xAt } = paneGeometry(width, data.length)
+  const dates = useMemo(() => [...data.map((bar) => bar.date), ...futureDates], [data, futureDates])
+  const { chartW, xAt } = paneGeometry(width, data.length, dates.length)
   const drag = usePointerDrag({
-    onStart: () => (onBarCountChange ? { count: data.length } : null),
+    onStart: () => (onBarCountChange ? { count: dates.length } : null),
     onDrag: ({ dx, context }) => onBarCountChange(barCountFromDrag(context.count, dx)),
   })
-  const count = Math.min(7, data.length)
+  const count = Math.min(7, dates.length)
 
   if (data.length === 0) return null
 
@@ -218,7 +220,7 @@ export function TimeAxis({ data, onBarCountChange, onReset }) {
   const indexes =
     count === 1
       ? [0]
-      : Array.from({ length: count }, (_, i) => Math.floor(((data.length - 1) * i) / (count - 1)))
+      : Array.from({ length: count }, (_, i) => Math.floor(((dates.length - 1) * i) / (count - 1)))
   const cursor = onBarCountChange ? 'ew-resize' : undefined
 
   return (
@@ -241,7 +243,7 @@ export function TimeAxis({ data, onBarCountChange, onReset }) {
             textAnchor="middle"
             style={AXIS_FONT}
           >
-            {formatTimeLabel(data[i].date, style)}
+            {formatTimeLabel(dates[i], style)}
           </text>
         ))}
       </svg>

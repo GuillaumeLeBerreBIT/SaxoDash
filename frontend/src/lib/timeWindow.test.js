@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest'
 import { WIDEST_RANGE_COUNT } from './research'
 import {
   LATEST_TIME_VIEW,
+  FUTURE_SLOTS,
   MIN_VISIBLE_BARS,
   barIndexAtOrAfter,
   barIndexAtOrBefore,
+  futureSessionDates,
   matchBarByDate,
   panTimeView,
   resolveTimeViewChange,
   resolveTimeWindow,
+  rightMargin,
+  slotsForBars,
   timeViewForDates,
   windowToDates,
   zoomTimeView,
@@ -18,32 +22,34 @@ import {
 const history = { total: 1200, range: '1M' }
 
 describe('resolveTimeWindow', () => {
-  it('shows the newest bars of the range when not panned or zoomed', () => {
+  it('shows the whole range followed by empty future slots when not panned or zoomed', () => {
     expect(resolveTimeWindow(LATEST_TIME_VIEW, history)).toEqual({
       start: 1178,
       end: 1200,
+      pad: 7,
+      slots: 29,
       offset: 0,
-      count: 22,
       total: 1200,
       maxOffset: 1178,
       zoomed: false,
     })
   })
 
-  it('moves the window back by the offset', () => {
-    expect(resolveTimeWindow({ offset: 100, barCount: null }, history)).toMatchObject({ start: 1078, end: 1100 })
+  it('fills the future slots with real bars as it pans back, keeping the width', () => {
+    expect(resolveTimeWindow({ offset: 3, barCount: null }, history)).toMatchObject({ start: 1175, end: 1200, pad: 4, slots: 29 })
+    expect(resolveTimeWindow({ offset: 100, barCount: null }, history)).toMatchObject({ start: 1078, end: 1107, pad: 0 })
   })
 
-  it('stops at the oldest bar and never pans into the future', () => {
-    expect(resolveTimeWindow({ offset: 5000, barCount: null }, history)).toMatchObject({ start: 0, end: 22, offset: 1178 })
-    expect(resolveTimeWindow({ offset: -3, barCount: null }, history)).toMatchObject({ start: 1178, offset: 0 })
+  it('stops at the oldest bar and never pans past the margin', () => {
+    expect(resolveTimeWindow({ offset: 5000, barCount: null }, history)).toMatchObject({ start: 0, end: 29, offset: 1178 })
+    expect(resolveTimeWindow({ offset: -3, barCount: null }, history)).toMatchObject({ start: 1178, pad: 7, offset: 0 })
   })
 
-  it('shows the zoomed number of bars instead of the range', () => {
+  it('shows the zoomed number of slots instead of the range', () => {
     expect(resolveTimeWindow({ offset: 50, barCount: 100 }, history)).toMatchObject({
-      start: 1050,
-      end: 1150,
-      count: 100,
+      start: 1061,
+      end: 1161,
+      slots: 100,
       zoomed: true,
     })
   })
@@ -52,11 +58,13 @@ describe('resolveTimeWindow', () => {
     expect(resolveTimeWindow({ offset: 40, barCount: null }, { total: 1200, range: 'ALL' })).toMatchObject({
       start: 0,
       end: 1200,
+      pad: 11,
       maxOffset: 0,
     })
     expect(resolveTimeWindow({ offset: 4, barCount: 5000 }, { total: 10, range: '1M' })).toMatchObject({
       start: 0,
       end: 10,
+      pad: 3,
       offset: 0,
     })
   })
@@ -65,13 +73,31 @@ describe('resolveTimeWindow', () => {
     expect(resolveTimeWindow({ offset: 3, barCount: 9 }, { total: 0, range: '1M' })).toMatchObject({
       start: 0,
       end: 0,
+      pad: 0,
       offset: 0,
       maxOffset: 0,
     })
   })
 
   it('falls back to the widest range for an unknown key', () => {
-    expect(resolveTimeWindow(LATEST_TIME_VIEW, { total: 5000, range: 'nonsense' }).count).toBe(WIDEST_RANGE_COUNT)
+    const window = resolveTimeWindow(LATEST_TIME_VIEW, { total: 5000, range: 'nonsense' })
+    expect(window.end - window.start).toBe(WIDEST_RANGE_COUNT)
+  })
+})
+
+describe('the right margin', () => {
+  it('is about fifteen calendar days of weekdays, at most a quarter of the width', () => {
+    expect(rightMargin(5)).toBe(1)
+    expect(rightMargin(29)).toBe(7)
+    expect(rightMargin(77)).toBe(FUTURE_SLOTS)
+    expect(rightMargin(1211)).toBe(FUTURE_SLOTS)
+  })
+
+  it('adds to a bar count so that many bars still show', () => {
+    for (const bars of [5, 7, 22, 66, 130, 252, 1200]) {
+      const slots = slotsForBars(bars)
+      expect(slots - rightMargin(slots)).toBe(bars)
+    }
   })
 })
 
@@ -91,12 +117,12 @@ describe('panTimeView', () => {
 describe('zoomTimeView', () => {
   it('keeps a readable minimum and never exceeds what was fetched', () => {
     expect(zoomTimeView(LATEST_TIME_VIEW, history, 2).barCount).toBe(MIN_VISIBLE_BARS)
-    expect(zoomTimeView(LATEST_TIME_VIEW, history, 5000).barCount).toBe(1200)
-    expect(zoomTimeView(LATEST_TIME_VIEW, { total: 3, range: '1M' }, 2).barCount).toBe(3)
+    expect(zoomTimeView(LATEST_TIME_VIEW, history, 5000).barCount).toBe(1211)
+    expect(zoomTimeView(LATEST_TIME_VIEW, { total: 3, range: '1M' }, 2).barCount).toBe(4)
   })
 
   it('pulls a panned window back inside the history when zooming out', () => {
-    expect(zoomTimeView({ offset: 1150, barCount: null }, history, 100)).toEqual({ offset: 1100, barCount: 100 })
+    expect(zoomTimeView({ offset: 1150, barCount: null }, history, 100)).toEqual({ offset: 1111, barCount: 100 })
   })
 
   it('keeps the pan when it still fits', () => {
@@ -111,7 +137,12 @@ const run = (from, to) => barsOn(Array.from({ length: to - from + 1 }, (_, i) =>
 describe('windowToDates', () => {
   it('names the first and last visible bar', () => {
     const window = resolveTimeWindow({ offset: 10, barCount: 20 }, { total: 100, range: '1M' })
-    expect(windowToDates(window, run(0, 99))).toEqual({ from: day(70), to: day(89) })
+    expect(windowToDates(window, run(0, 99))).toEqual({ from: day(75), to: day(94), pad: 0 })
+  })
+
+  it('carries the empty slots after the latest bar', () => {
+    const window = resolveTimeWindow(LATEST_TIME_VIEW, { total: 100, range: '1M' })
+    expect(windowToDates(window, run(0, 99))).toEqual({ from: day(78), to: day(99), pad: 7 })
   })
 
   it('has no dates when there are no bars', () => {
@@ -145,20 +176,24 @@ describe('timeViewForDates', () => {
   const dates = { from: day(70), to: day(89) }
 
   it('round-trips a window on the same calendar', () => {
-    expect(timeViewForDates(dates, run(0, 99))).toEqual({ offset: 10, barCount: 20 })
+    expect(timeViewForDates(dates, run(0, 99))).toEqual({ offset: 15, barCount: 20 })
+  })
+
+  it('round-trips the empty slots after the latest bar', () => {
+    expect(timeViewForDates({ from: day(78), to: day(99), pad: 7 }, run(0, 99))).toEqual({ offset: 0, barCount: 29 })
   })
 
   it('follows a symbol that ends earlier', () => {
-    expect(timeViewForDates(dates, run(0, 89))).toEqual({ offset: 0, barCount: 20 })
+    expect(timeViewForDates(dates, run(0, 89))).toEqual({ offset: 5, barCount: 20 })
   })
 
   it('counts bars, not days, across a missing day', () => {
     const holiday = barsOn(Array.from({ length: 100 }, (_, i) => i).filter((n) => n !== 75))
-    expect(timeViewForDates(dates, holiday)).toEqual({ offset: 10, barCount: 19 })
+    expect(timeViewForDates(dates, holiday)).toEqual({ offset: 14, barCount: 19 })
   })
 
   it('shows what a shorter history has when the window starts before its first bar', () => {
-    expect(timeViewForDates(dates, run(80, 99))).toEqual({ offset: 10, barCount: 10 })
+    expect(timeViewForDates(dates, run(80, 99))).toEqual({ offset: 12, barCount: 10 })
   })
 
   it('clamps to the oldest bars when the window ends before the data starts', () => {
@@ -171,13 +206,13 @@ describe('timeViewForDates', () => {
 
   it('never shows fewer than the minimum number of bars', () => {
     expect(timeViewForDates({ from: day(10), to: day(11) }, run(0, 99))).toEqual({
-      offset: 88,
+      offset: 89,
       barCount: MIN_VISIBLE_BARS,
     })
   })
 
   it('never asks for more bars than exist', () => {
-    expect(timeViewForDates({ from: day(0), to: day(99) }, run(0, 9))).toEqual({ offset: 0, barCount: 10 })
+    expect(timeViewForDates({ from: day(0), to: day(99) }, run(0, 9))).toEqual({ offset: 2, barCount: 10 })
   })
 
   it('shows the latest view when there are no bars', () => {
@@ -214,7 +249,7 @@ describe('resolveTimeViewChange', () => {
   it('commits a value as given, with the dates of its window', () => {
     expect(resolveTimeViewChange({ offset: 10, barCount: 20 }, LATEST_TIME_VIEW, context)).toEqual({
       timeView: { offset: 10, barCount: 20 },
-      dates: { from: day(70), to: day(89) },
+      dates: { from: day(75), to: day(94), pad: 0 },
     })
   })
 
@@ -222,10 +257,22 @@ describe('resolveTimeViewChange', () => {
     const displayed = { offset: 30, barCount: 20 }
     const result = resolveTimeViewChange((view) => ({ ...view, offset: view.offset + 5 }), displayed, context)
     expect(result.timeView).toEqual({ offset: 35, barCount: 20 })
-    expect(result.dates).toEqual({ from: day(45), to: day(64) })
+    expect(result.dates).toEqual({ from: day(50), to: day(69), pad: 0 })
   })
 
   it('has no dates when the pane has no bars', () => {
     expect(resolveTimeViewChange(LATEST_TIME_VIEW, LATEST_TIME_VIEW, { bars: [], range: '1M' }).dates).toBeNull()
+  })
+})
+
+describe('futureSessionDates', () => {
+  it('lists the weekdays after a date, skipping the weekend', () => {
+    expect(futureSessionDates('2026-10-15', 4)).toEqual(['2026-10-16', '2026-10-19', '2026-10-20', '2026-10-21'])
+  })
+
+  it('lists nothing without a date or a count', () => {
+    expect(futureSessionDates(null, 3)).toEqual([])
+    expect(futureSessionDates('2026-10-15', 0)).toEqual([])
+    expect(futureSessionDates('2026-07-35', 3)).toEqual([])
   })
 })

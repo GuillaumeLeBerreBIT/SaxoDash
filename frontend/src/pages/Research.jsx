@@ -77,6 +77,7 @@ export default function Research() {
     timeWindow,
     earnings,
     earningsMarkers,
+    futureDates,
     note,
     priceLines,
     quote,
@@ -155,6 +156,7 @@ export default function Research() {
       symbol={symbol}
       unresolved={!instrument && !chart.isLoading}
       earningsMarkers={earningsMarkers}
+      futureDates={futureDates}
       lines={priceLines.lines}
       onMoveLine={priceLines.move}
       onCreateLine={priceLines.create}

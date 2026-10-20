@@ -245,7 +245,7 @@ export function chartHref(symbol, instrument) {
 /** Past earnings dates mapped onto the currently-loaded bars, for the
  *  price-chart markers. A history date absent from `bars` (a provider date
  *  landing on a non-trading day) is skipped, not fuzzy-matched. */
-export function earningsMarkersForBars(bars = [], history = []) {
+export function earningsMarkersForBars(bars = [], history = [], { upcoming = [], futureDates = [] } = {}) {
   const indexByDate = new Map(bars.map((b, i) => [b.date, i]))
   const markers = []
   for (const e of history) {
@@ -253,8 +253,14 @@ export function earningsMarkersForBars(bars = [], history = []) {
     if (index == null) continue
     markers.push({
       index, date: e.date, sign: surpriseSign(e.eps_surprise_pct),
-      actual: e.eps_actual, estimate: e.eps_estimate,
+      actual: e.eps_actual, estimate: e.eps_estimate, surprise: e.eps_surprise_pct,
     })
+  }
+  futureDates.forEach((date, i) => indexByDate.set(date, bars.length + i))
+  for (const e of upcoming) {
+    const index = indexByDate.get(e.date)
+    if (index == null) continue
+    markers.push({ index, date: e.date, upcoming: true, estimate: e.eps_estimate, session: e.session })
   }
   return markers
 }
