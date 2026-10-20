@@ -1,6 +1,6 @@
-name,firm,cik,styles,blurb,photo,website
+name,firm,cik,styles,blurb,photo,website,successor_cik,successor_from
 Warren Buffett,Berkshire Hathaway,1067983,Value|Concentrated,Buys wonderful businesses at fair prices and holds them for decades.,Warren Buffett KU Visit.jpg,
-Bill Ackman,Pershing Square Capital Management,1336528,Activist|Concentrated,Eight to twelve large positions held for years with public activist campaigns.,Valeant Pharmaceuticals' Business Model (headshot).jpg,
+Bill Ackman,Pershing Square Capital Management,1336528,Activist|Concentrated,Eight to twelve large positions held for years with public activist campaigns.,Valeant Pharmaceuticals' Business Model (headshot).jpg,,2026053,2026-06-30
 Michael Burry,Scion Asset Management,1649339,Contrarian|Concentrated,Deep-value contrarian known for the 2008 housing short; the portfolio turns over fast.,,scionasset.com
 Seth Klarman,Baupost Group,1061768,Value,Margin-of-safety value investor who is comfortable holding cash.,Seth Klarman at 147th Preakness Stakes.jpg,
 Stanley Druckenmiller,Duquesne Family Office,1536411,Macro,Top-down macro investor who sizes up aggressively when conviction is high.,,

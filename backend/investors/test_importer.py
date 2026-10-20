@@ -41,6 +41,43 @@ ALLY = ('02005N100', 'ALLY FINL INC', 5, 500)
 @patch('investors.importer.figi.resolve', return_value=iter([]))
 @patch('investors.importer.edgar.filing_documents')
 @patch('investors.importer.edgar.filings')
+class SuccessorFilerTest(TestCase):
+    FUND_CIK = 1336528
+    PARENT_CIK = 2026053
+
+    def setUp(self):
+        self.investor = make_investor(
+            name='Bill Ackman', firm='Pershing Square Capital Management', cik=self.FUND_CIK,
+            slug='pershing-square-capital-management', successor_cik=self.PARENT_CIK, successor_from=Q2,
+        )
+
+    def test_the_successor_files_the_book_from_its_first_quarter_on(self, filings, documents, resolve):
+        filings.side_effect = lambda cik, since: {
+            self.FUND_CIK: [OLDER],
+            self.PARENT_CIK: [NEWEST, listing('P-1', Q1, date(2026, 5, 15))],
+        }[cik]
+        documents.side_effect = lambda cik, accession: (primary(), table(APPLE))
+
+        importer.sync_investor(self.investor, date(2021, 10, 5))
+
+        self.assertEqual(sorted(Filing.objects.values_list('accession', flat=True)), ['A-1', 'A-2'])
+        self.assertEqual([c.args for c in documents.call_args_list], [(self.PARENT_CIK, 'A-2'), (self.FUND_CIK, 'A-1')])
+
+    def test_the_successor_quarters_before_its_start_never_replace_the_fund_quarters(self, filings, documents, resolve):
+        filings.side_effect = lambda cik, since: {
+            self.FUND_CIK: [OLDER],
+            self.PARENT_CIK: [listing('P-1', Q1, date(2026, 5, 15))],
+        }[cik]
+        documents.return_value = (primary(), table(APPLE))
+
+        importer.sync_investor(self.investor, date(2021, 10, 5))
+
+        self.assertEqual(list(Filing.objects.values_list('accession', flat=True)), ['A-1'])
+
+
+@patch('investors.importer.figi.resolve', return_value=iter([]))
+@patch('investors.importer.edgar.filing_documents')
+@patch('investors.importer.edgar.filings')
 class SyncInvestorTest(TestCase):
     def setUp(self):
         self.investor = make_investor()

@@ -25,7 +25,7 @@ def history_start(today=None):
 
 
 def _import_filing(investor, entry):
-    primary, table = edgar.filing_documents(investor.cik, entry['accession'])
+    primary, table = edgar.filing_documents(entry['cik'], entry['accession'])
     amendment_type = parse.parse_amendment_type(primary) if entry['form'] == '13F-HR/A' else Filing.ORIGINAL
     rows = parse.aggregate(parse.parse_information_table(table, entry['filed_on']))
     try:
@@ -60,8 +60,24 @@ def _moves_are_behind(investor):
     return newest_filing != newest_move
 
 
+def _listings(investor, since):
+    own = [dict(entry, cik=investor.cik) for entry in edgar.filings(investor.cik, since)]
+    if investor.successor_cik is None:
+        return own
+    own = [entry for entry in own if entry['quarter_end'] < investor.successor_from]
+    successor = [
+        dict(entry, cik=investor.successor_cik)
+        for entry in edgar.filings(investor.successor_cik, since)
+        if entry['quarter_end'] >= investor.successor_from
+    ]
+    return sorted(
+        own + successor,
+        key=lambda entry: (-entry['quarter_end'].toordinal(), entry['filed_on'], entry['accession']),
+    )
+
+
 def sync_investor(investor, since, *, track_progress=False, resolve=True):
-    entries = edgar.filings(investor.cik, since)
+    entries = _listings(investor, since)
     stored = set(
         Filing.objects.filter(accession__in=[e['accession'] for e in entries]).values_list('accession', flat=True)
     )

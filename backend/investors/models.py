@@ -19,6 +19,8 @@ class Investor(models.Model):
     quarters_expected = models.PositiveSmallIntegerField(null=True, blank=True)
     styles = models.JSONField(default=list, blank=True)
     followed = models.BooleanField(default=False)
+    successor_cik = models.PositiveIntegerField(null=True, blank=True)
+    successor_from = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ['name']

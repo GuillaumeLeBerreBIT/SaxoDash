@@ -1,5 +1,8 @@
 import csv
+from datetime import date
 from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from django.core.management import CommandError, call_command
@@ -45,6 +48,27 @@ class LoadCuratedTest(TestCase):
         make_investor(curated=False)
         load_curated()
         self.assertTrue(Investor.objects.get(cik=1067983).curated)
+
+    def test_the_shipped_list_hands_pershing_square_over_to_its_public_parent(self):
+        load_curated()
+        ackman = Investor.objects.get(cik=1336528)
+        self.assertEqual((ackman.successor_cik, ackman.successor_from), (2026053, date(2026, 6, 30)))
+
+    def test_a_row_names_its_successor_and_the_quarter_it_takes_over(self):
+        with TemporaryDirectory() as folder:
+            path = Path(folder) / 'curated.csv'
+            path.write_text(
+                'name,firm,cik,styles,blurb,photo,website,successor_cik,successor_from\n'
+                'Bill Ackman,Pershing Square Capital Management,1336528,Activist,Blurb,,,2026053,2026-06-30\n'
+            )
+            load_curated(path)
+        ackman = Investor.objects.get(cik=1336528)
+        self.assertEqual((ackman.successor_cik, ackman.successor_from), (2026053, date(2026, 6, 30)))
+
+    def test_a_row_without_a_successor_leaves_both_fields_empty(self):
+        load_curated()
+        berkshire = Investor.objects.get(cik=1067983)
+        self.assertEqual((berkshire.successor_cik, berkshire.successor_from), (None, None))
 
     def test_the_shipped_list_has_unique_ciks(self):
         with open(CURATED_CSV, newline='') as handle:

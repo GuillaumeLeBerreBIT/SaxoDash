@@ -1,4 +1,5 @@
 import csv
+from datetime import date
 from pathlib import Path
 
 from django.db import transaction
@@ -7,6 +8,14 @@ from django.utils.text import slugify
 from .models import STYLES, Investor
 
 CURATED_CSV = Path(__file__).resolve().parent / 'curated.csv'
+
+
+def _optional_cik(raw):
+    return int(raw) if (raw or '').strip() else None
+
+
+def _optional_date(raw):
+    return date.fromisoformat(raw.strip()) if (raw or '').strip() else None
 
 
 def _styles(raw):
@@ -34,6 +43,8 @@ def load_curated(path=CURATED_CSV):
             'photo': (entry.get('photo') or '').strip(),
             'website': (entry.get('website') or '').strip(),
             'curated': True,
+            'successor_cik': _optional_cik(entry.get('successor_cik')),
+            'successor_from': _optional_date(entry.get('successor_from')),
         }
         investor = existing.get(cik)
         if investor is None:
