@@ -90,7 +90,6 @@ so the journal write is visible.
 |---|---|---|
 | `get_portfolio` | `/portfolio/summary`, `/positions`, `/insights` | total value, cost, P/L, cash, each position (qty, avg cost and price in its currency, value/cost/P/L in EUR, weight, price source, thesis flag), insights |
 | `get_performance` | `/analytics/performance`, `/risk` | return vs benchmark, volatility, drawdown, beta, Sharpe |
-| `get_net_worth_history` | `/core/net-worth-history` | investment value over time (Saxo accounts only) |
 | `get_transactions` | `/transactions` | trades, newest first, with currency and FX |
 
 ### Company research (Research, Advanced View)
