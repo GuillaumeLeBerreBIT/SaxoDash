@@ -238,8 +238,9 @@ script reuses it and says so on exit:
 the assistant answers from the same database, Redis cache and Saxo credential as the
 app. It is not a service in `scripts/dev.sh`: Claude Desktop starts it as a child
 process and stops it with the chat. It needs Redis running (the caches and the
-Finnhub call budget live there; with Redis down every tool answers with a warning)
-and the Celery stack for a fresh Saxo token. It listens on no port.
+Finnhub call budget live there; with Redis down a tool that needs the cache answers with a warning and
+`data: null` instead of an error, while tools that read only the database still
+answer) and the Celery stack for a fresh Saxo token. It listens on no port.
 
 Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` and
 restart Claude Desktop:
