@@ -129,6 +129,21 @@ class CompanyToolsTest(APITestCase):
         self.assertEqual(float(result['data']['target_price']), 200.0)
         self.assertEqual(float(result['data']['stop_price']), 90.0)
 
+    def test_unnoted_symbol_is_read_without_creating_a_row(self):
+        result = get_my_notes('TYPO')
+        self.assertEqual(SymbolNote.objects.count(), 0)
+        self.assertEqual(result['data']['symbol'], 'TYPO')
+        self.assertIsNone(result['data']['target_price'])
+
+    def test_foreign_listing_refuses_filings_and_news(self):
+        with patch('mcp_server.tools.research.resolve', return_value=instrument('EUR', symbol='ASML')), \
+                patch('research.finnhub._get', side_effect=AssertionError('finnhub called')):
+            filings = get_filings_and_insiders('ASML')
+            news = get_news('ASML')
+        for result in (filings, news):
+            self.assertIsNone(result['data'])
+            self.assertEqual(result['warnings'], [company_data.refusal('foreign')])
+
     def test_watchlists_keep_identity_only(self):
         watchlist = Watchlist.objects.create(name='Core')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=1, asset_type='Stock', description='NVIDIA')

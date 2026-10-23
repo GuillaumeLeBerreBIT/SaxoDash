@@ -1,6 +1,7 @@
 from portfolio.models import Position
 from research.technicals import rsi, sma
-from research.models import Watchlist
+from research.models import SymbolNote, Watchlist
+from research.serializers import SymbolNoteSerializer
 from research.views import (
     ChartView,
     CompanyNewsView,
@@ -13,7 +14,6 @@ from research.views import (
     QuotesView,
     StatementsView,
     SymbolEarningsView,
-    SymbolNoteView,
 )
 
 from .. import company_data
@@ -300,7 +300,7 @@ def get_financial_statements(symbol, period='annual'):
     warnings = []
     if period == 'quarterly' and payload.get('partial'):
         warnings.append('Quarterly statements are unavailable right now; try again later.')
-    data = {'period': period, 'periods': payload[period]}
+    data = {'period': period, 'periods': payload.get(period)}
     return answer(data, sources=[FINNHUB, 'sec'], warnings=warnings)
 
 
@@ -336,11 +336,9 @@ def get_news(symbol, limit=15):
 
 @tool("Your own notes for a ticker: thesis, risks, target and stop prices.")
 def get_my_notes(symbol):
-    result = call_view(SymbolNoteView, kwargs={'symbol': _bare(symbol)})
-    message = problem(result)
-    if message:
-        return answer(None, sources=['notes'], warnings=[message])
-    return answer(dict(result.data), sources=['notes'])
+    ticker = _bare(symbol)
+    note = SymbolNote.objects.filter(symbol=ticker).first() or SymbolNote(symbol=ticker)
+    return answer(dict(SymbolNoteSerializer(note).data), sources=['notes'])
 
 
 @tool('Your watchlists and the instruments in each.')
