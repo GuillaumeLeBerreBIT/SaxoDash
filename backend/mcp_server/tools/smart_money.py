@@ -16,7 +16,7 @@ from ..envelope import answer
 from ..shaping import capped, without
 from ..views import call_view, problem
 from . import tool
-from .research import resolve
+from .research import _bare, resolve
 
 EDGAR = '13f'
 CONGRESS = 'house-clerk'
@@ -27,6 +27,7 @@ STOCK_ROWS_LIMIT = 50
 TRADES_LIMIT = 50
 MEMBER_HOLDINGS_LIMIT = 30
 OWNERS_LIMIT = 30
+DIRECTORY_LIMIT = 25
 
 
 def _capped_keys(payload, limits):
@@ -41,13 +42,13 @@ def _failed(sources, *messages):
     return answer(None, sources=sources, warnings=[m for m in messages if m])
 
 
-@tool('Tracked 13F funds: the directory with each fund latest quarter, value, turnover and copy-performance edge.')
-def list_investors():
+@tool('Tracked 13F funds: the directory with each fund latest quarter, value, turnover and copy-performance edge, capped at limit.')
+def list_investors(limit: int = DIRECTORY_LIMIT):
     result = call_view(InvestorListView)
     message = problem(result)
     if message:
         return _failed([EDGAR], message)
-    return answer({'investors': without(result.data)}, sources=[EDGAR])
+    return answer({'investors': capped(without(result.data), limit)}, sources=[EDGAR])
 
 
 @tool('Cross-fund signals from the newest quarter most funds have filed: what several funds bought, sold or opened.')
@@ -97,13 +98,8 @@ def get_fund_stocks(view: str = 'bought'):
 
 @tool('Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.')
 def get_ticker_ownership(symbol: str):
-    ticker = symbol.split(':')[0].strip().upper()
-    instrument = resolve(ticker)
-    listing = company_data.status(
-        asset_type=instrument['asset_type'] if instrument else None,
-        currency=instrument['currency'] if instrument else None,
-        resolved=instrument is not None,
-    )
+    ticker = _bare(symbol)
+    listing = company_data.status_of(resolve(ticker))
     if listing in (company_data.FOREIGN, company_data.UNVERIFIED):
         return _failed([EDGAR, CONGRESS], company_data.refusal(listing))
     kwargs = {'ticker': ticker}
@@ -123,13 +119,13 @@ def get_ticker_ownership(symbol: str):
     )
 
 
-@tool('House members tracked from Clerk filings: directory with estimated portfolio performance and the most-bought tickers.')
-def list_congress_members():
+@tool('House members tracked from Clerk filings: directory with estimated portfolio performance (capped at limit) and the most-bought tickers.')
+def list_congress_members(limit: int = DIRECTORY_LIMIT):
     result = call_view(MemberListView)
     message = problem(result)
     if message:
         return _failed([CONGRESS], message)
-    return answer(without(result.data), sources=[CONGRESS])
+    return answer(_capped_keys(without(result.data), {'members': limit}), sources=[CONGRESS])
 
 
 @tool('One House member by slug: estimated holdings, recent trades and copy performance.')

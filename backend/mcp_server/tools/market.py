@@ -19,6 +19,7 @@ MAX_LIMIT = 100
 STALE_AFTER = timedelta(hours=36)
 DROPPED = frozenset({'sparkline', 'recent_closes', 'error'})
 SOURCE = 'discover'
+EARNINGS_UNAVAILABLE = 'Earnings calendar unavailable (Finnhub busy?), try again in a minute.'
 
 
 def _bounds(filters, warnings):
@@ -84,6 +85,8 @@ def get_discover_shelves(key: str = ''):
 def get_earnings_calendar(week: int = 0, scope: str = 'all'):
     result = call_view(EarningsCalendarView, query={'week': week, 'scope': scope})
     message = problem(result)
+    if message is None and result.data.get('ok') is False:
+        message = EARNINGS_UNAVAILABLE
     if message:
         return answer(None, sources=['finnhub'], warnings=[message])
     return answer(without(result.data), sources=['finnhub'])

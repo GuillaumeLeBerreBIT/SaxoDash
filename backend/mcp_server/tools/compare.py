@@ -112,11 +112,7 @@ def _prefixed(symbol, result):
 def _compare_one(symbol):
     ticker = _bare(symbol)
     instrument = resolve(symbol)
-    status = company_data.status(
-        asset_type=instrument['asset_type'] if instrument else None,
-        currency=instrument['currency'] if instrument else None,
-        resolved=instrument is not None,
-    )
+    status = company_data.status_of(instrument)
     name = instrument['name'] if instrument else None
     ownership = get_ticker_ownership(ticker)
     warnings = _prefixed(ticker, ownership)

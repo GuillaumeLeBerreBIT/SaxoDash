@@ -256,12 +256,7 @@ FINNHUB = 'finnhub'
 
 
 def _gate(symbol, *, allow_fund=False):
-    instrument = resolve(symbol)
-    status = company_data.status(
-        asset_type=instrument['asset_type'] if instrument else None,
-        currency=instrument['currency'] if instrument else None,
-        resolved=instrument is not None,
-    )
+    status = company_data.status_of(resolve(symbol))
     if status == company_data.ELIGIBLE or (allow_fund and status == company_data.FUND):
         return _bare(symbol), None
     return None, answer(None, sources=[FINNHUB], warnings=[company_data.refusal(status)])

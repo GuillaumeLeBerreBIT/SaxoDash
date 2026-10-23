@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 
 from investors.models import FilingAlert, Investor
 
+from .views import ViewResult
 from .tools.smart_money import (
     get_congress_member,
     get_filing_alerts,
@@ -62,8 +63,23 @@ class SmartMoneyToolsTest(APITestCase):
         self.assertTrue(result['warnings'])
 
     def test_list_investors_and_signals_answer(self):
-        self.assertEqual(len(list_investors()['data']['investors']), 1)
+        self.assertEqual(len(list_investors()['data']['investors']['items']), 1)
         self.assertIsNotNone(get_fund_signals()['data'])
+
+    def test_directories_are_capped(self):
+        funds = [{'slug': f'f{i}'} for i in range(40)]
+        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, funds)):
+            data = list_investors(limit=10)['data']['investors']
+        self.assertEqual(len(data['items']), 10)
+        self.assertEqual(data['truncated'], 30)
+        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, funds)):
+            self.assertEqual(len(list_investors()['data']['investors']['items']), 25)
+        members = {'members': [{'slug': f'm{i}'} for i in range(40)], 'most_bought': [], 'window_days': 90}
+        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, members)):
+            data = list_congress_members(limit=5)['data']
+        self.assertEqual(len(data['members']['items']), 5)
+        self.assertEqual(data['members']['truncated'], 35)
+        self.assertEqual(data['window_days'], 90)
 
     def test_fund_stocks_rejects_unknown_view(self):
         result = get_fund_stocks('banana')

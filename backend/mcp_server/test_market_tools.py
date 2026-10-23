@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
@@ -8,7 +10,8 @@ from rest_framework.test import APITestCase
 
 from research.models import ScreenerRow
 
-from .tools.market import get_discover_shelves, get_earnings_calendar, screen_universe
+from .views import ViewResult
+from .tools.market import EARNINGS_UNAVAILABLE, get_discover_shelves, get_earnings_calendar, screen_universe
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -109,3 +112,10 @@ class ShelvesAndCalendarTest(APITestCase):
         result = get_earnings_calendar(scope='banana')
         self.assertIsNone(result['data'])
         self.assertTrue(result['warnings'])
+
+    def test_unavailable_calendar_is_a_warning_not_an_empty_week(self):
+        body = {'events': [], 'window': {'from': '2026-10-19', 'to': '2026-10-25', 'week': 0}, 'ok': False}
+        with patch('mcp_server.tools.market.call_view', return_value=ViewResult(200, body)):
+            result = get_earnings_calendar()
+        self.assertIsNone(result['data'])
+        self.assertEqual(result['warnings'], [EARNINGS_UNAVAILABLE])

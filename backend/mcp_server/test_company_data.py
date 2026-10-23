@@ -26,3 +26,10 @@ class CompanyDataStatusTest(SimpleTestCase):
         self.assertIn('non-US', company_data.refusal('foreign'))
         self.assertIn('ETF', company_data.refusal('fund'))
         self.assertIn('currency is unknown', company_data.refusal('unverified'))
+
+    def test_status_of_an_instrument(self):
+        self.assertEqual(company_data.status_of(None), company_data.ELIGIBLE)
+        self.assertEqual(company_data.status_of({'asset_type': 'Stock', 'currency': 'EUR'}), company_data.FOREIGN)
+        self.assertEqual(company_data.status_of({'asset_type': 'Etf', 'currency': 'USD'}), company_data.FUND)
+        self.assertEqual(company_data.status_of({'asset_type': 'Stock', 'currency': None}), company_data.UNVERIFIED)
+        self.assertEqual(company_data.status_of({'asset_type': 'Stock', 'currency': 'USD'}), company_data.ELIGIBLE)
