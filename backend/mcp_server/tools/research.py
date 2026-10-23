@@ -1,5 +1,7 @@
 from datetime import date
 
+from django.core.cache import cache
+
 from portfolio.models import Position
 from research import finnhub
 from research.providers import ProviderUnavailable
@@ -35,6 +37,8 @@ DAILY_FETCH = 1200
 YEAR_SESSIONS = 252
 CHANGE_SESSIONS = {'change_1m_pct': 21, 'change_3m_pct': 63, 'change_1y_pct': 252}
 SEARCH_ASSET_TYPES = 'Stock,Etf'
+RESOLVE_CACHE_PREFIX = 'mcp:resolve:v1:'
+RESOLVE_CACHE_TTL = 600
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 
 
@@ -79,6 +83,17 @@ def resolve(symbol):
     held = _held(wanted)
     if held is not None:
         return held
+    key = f'{RESOLVE_CACHE_PREFIX}{wanted}'
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    instrument = _search(wanted)
+    if instrument is not None:
+        cache.set(key, instrument, RESOLVE_CACHE_TTL)
+    return instrument
+
+
+def _search(wanted):
     result = call_view(InstrumentSearchView, query={'q': wanted, 'asset_types': SEARCH_ASSET_TYPES})
     if problem(result) or not isinstance(result.data, list):
         return None
