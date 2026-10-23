@@ -12,3 +12,4 @@ def tool(description):
 
 from . import system  # noqa: E402,F401
 from . import portfolio  # noqa: E402,F401
+from . import research  # noqa: E402,F401
