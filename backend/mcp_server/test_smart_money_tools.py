@@ -1,5 +1,6 @@
 import json
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -34,6 +35,14 @@ class SmartMoneyToolsTest(APITestCase):
         result = get_filing_alerts()
         self.assertEqual(result['data']['unread'], 1)
         self.assertEqual(FilingAlert.objects.filter(read_at__isnull=True).count(), 1)
+
+    def test_foreign_listing_ownership_is_refused(self):
+        eur = {'symbol': 'ASML', 'name': 'ASML', 'uic': 1, 'asset_type': 'Stock', 'currency': 'EUR', 'exchange': 'X'}
+        with patch('mcp_server.tools.smart_money.resolve', return_value=eur), \
+                patch('mcp_server.tools.smart_money.call_view', side_effect=AssertionError('view called')):
+            result = get_ticker_ownership('ASML')
+        self.assertIsNone(result['data'])
+        self.assertTrue(result['warnings'])
 
     def test_unknown_ticker_ownership_is_null(self):
         data = get_ticker_ownership('zzzz')['data']

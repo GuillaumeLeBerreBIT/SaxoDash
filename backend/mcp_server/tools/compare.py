@@ -123,7 +123,7 @@ def _compare_one(symbol):
     entry = {'symbol': ticker, 'name': name, 'status': status, 'pillars': None, 'ownership': ownership['data']}
     if status != company_data.ELIGIBLE:
         reason = company_data.refusal(status)
-        if reason:
+        if reason and f'{ticker}: {reason}' not in warnings:
             warnings.append(f'{ticker}: {reason}')
         return entry, warnings
 
@@ -161,4 +161,8 @@ def compare_companies(symbols):
         entry, entry_warnings = _compare_one(symbol)
         companies.append(entry)
         warnings.extend(entry_warnings)
-    return answer({'companies': companies}, sources=[FINNHUB, 'saxo', '13f', 'house-clerk'], warnings=warnings)
+    return answer(
+        {'companies': companies},
+        sources=[FINNHUB, 'saxo', '13f', 'house-clerk'],
+        warnings=list(dict.fromkeys(warnings)),
+    )

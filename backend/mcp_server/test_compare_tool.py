@@ -50,6 +50,15 @@ def ownership():
     return answer({'ticker': 'X', 'investors': {'stock': {'owners': 3}}, 'congress': None}, sources=['13f'])
 
 
+def ownership_for(symbol):
+    if symbol in FOREIGN_SYMBOLS:
+        return answer(None, sources=['13f'], warnings=['A non-US listing.'])
+    return ownership()
+
+
+FOREIGN_SYMBOLS = {'ASML'}
+
+
 def refused(reason):
     return answer(None, sources=['finnhub'], warnings=[reason])
 
@@ -61,7 +70,7 @@ class Patched:
             patch('mcp_server.tools.compare.get_company', side_effect=comp or (lambda s: company())),
             patch('mcp_server.tools.compare.get_valuation_history', side_effect=val or (lambda s: valuation())),
             patch('mcp_server.tools.compare.get_price_history', side_effect=price or (lambda s, **k: prices())),
-            patch('mcp_server.tools.compare.get_ticker_ownership', side_effect=lambda s: ownership()),
+            patch('mcp_server.tools.compare.get_ticker_ownership', side_effect=ownership_for),
         ]
 
     def __enter__(self):
@@ -106,6 +115,7 @@ class CompareToolTest(APITestCase):
         by = {c['symbol']: c for c in data['companies']}
         self.assertEqual(by['ASML']['status'], 'foreign')
         self.assertIsNone(by['ASML']['pillars'])
+        self.assertIsNone(by['ASML']['ownership'])
         self.assertEqual(by['NVDA']['status'], 'eligible')
         self.assertEqual(by['NVDA']['name'], 'Acme Corp')
 
