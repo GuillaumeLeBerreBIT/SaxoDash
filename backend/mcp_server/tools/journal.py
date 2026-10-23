@@ -1,7 +1,9 @@
 from django.utils import timezone
 
-from advisor import journal
+from advisor import journal, scoring
 from advisor.models import Recommendation
+from investors.copying import BENCHMARK_TICKER, price_series
+from investors.prices import Series
 
 from ..envelope import answer
 from ..shaping import capped
@@ -40,6 +42,17 @@ def _row(rec):
         'decision': rec.decision,
         'closed_at': rec.closed_at.isoformat() if rec.closed_at else None,
         'close_reason': rec.close_reason or None,
+    }
+
+
+def _serialised(result):
+    def point(entry):
+        return None if entry is None else {**entry, 'day': entry['day'].isoformat()}
+
+    return {
+        'entry_day': result['entry_day'].isoformat() if result['entry_day'] else None,
+        'checkpoints': {name: point(entry) for name, entry in result['checkpoints'].items()},
+        'latest': point(result['latest']),
     }
 
 
@@ -138,5 +151,18 @@ def list_recommendations(status: str = 'open', limit: int = 50):
         rows = rows.filter(closed_at__isnull=True)
     elif status == 'closed':
         rows = rows.filter(closed_at__isnull=False)
-    items = [_row(rec) for rec in rows]
-    return answer(capped(items, limit), sources=['journal'])
+    recs = list(rows)
+    prices = price_series({rec.ticker for rec in recs} | {BENCHMARK_TICKER})
+    benchmark = prices.get(BENCHMARK_TICKER) or Series([], [])
+    today = timezone.localdate()
+    items = []
+    for rec in recs:
+        item = _row(rec)
+        item['score'] = scoring.score(rec, prices, benchmark, today)
+        items.append(item)
+    summary = scoring.summary(items)
+    for item in items:
+        item['score'] = _serialised(item['score'])
+    warnings = [] if benchmark else [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.']
+    data = {**capped(items, limit), 'summary': summary}
+    return answer(data, sources=['journal', 'price history'], warnings=warnings)

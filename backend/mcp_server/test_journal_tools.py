@@ -1,9 +1,13 @@
 import inspect
+from datetime import timedelta
 from unittest.mock import patch
+
+from django.utils import timezone
 
 from rest_framework.test import APITestCase
 
 from advisor.models import Recommendation
+from investors.models import PriceHistory
 from mcp_server.views import ViewResult
 
 from .tools import journal as tools
@@ -94,3 +98,36 @@ class JournalToolTests(APITestCase):
         row_id = log()['data']['id']
         tools.close_recommendation(row_id, 'sold')
         self.assertEqual(tools.set_decision(row_id, 'accepted')['data']['decision'], 'accepted')
+
+
+class ListScoresTests(APITestCase):
+    def prices(self, ticker, first, last, today):
+        entry = today - timedelta(days=100) + timedelta(days=1)
+        PriceHistory.objects.create(
+            ticker=ticker,
+            status=PriceHistory.OK,
+            closes=[[entry.isoformat(), first], [(entry + timedelta(days=91)).isoformat(), last]],
+        )
+
+    def test_rows_carry_a_score_and_the_list_a_summary(self):
+        log()
+        today = timezone.localdate()
+        Recommendation.objects.update(recorded_at=timezone.now() - timedelta(days=100))
+        self.prices('NEWCO', 100.0, 120.0, today)
+        self.prices('SPY', 100.0, 105.0, today)
+        with patch('mcp_server.tools.journal.timezone.localdate', return_value=today):
+            result = tools.list_recommendations()
+        row = result['data']['items'][0]
+        self.assertEqual(row['score']['checkpoints']['3m']['excess_pct'], 15.0)
+        self.assertIsInstance(row['score']['entry_day'], str)
+        self.assertEqual(result['data']['summary']['overall']['3m'], {'mean_excess_pct': 15.0, 'n': 1})
+        self.assertEqual(result['warnings'], [])
+
+    def test_missing_benchmark_warns_once_and_scores_null(self):
+        log()
+        log()
+        result = tools.list_recommendations()
+        self.assertEqual(len(result['warnings']), 1)
+        self.assertIn('SPY', result['warnings'][0])
+        for row in result['data']['items']:
+            self.assertIsNone(row['score']['entry_day'])
