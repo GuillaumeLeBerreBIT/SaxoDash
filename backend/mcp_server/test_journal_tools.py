@@ -76,3 +76,21 @@ class JournalToolTests(APITestCase):
         everything = tools.list_recommendations('all', limit=1)['data']
         self.assertEqual((len(everything['items']), everything['truncated']), (1, 1))
         self.assertIsNone(tools.list_recommendations('weird')['data'])
+
+    def test_non_integer_id_is_a_warning(self):
+        self.assertEqual(tools.set_decision('abc', 'accepted')['warnings'], ['No recommendation abc.'])
+        self.assertEqual(tools.close_recommendation('abc', 'sold')['warnings'], ['No recommendation abc.'])
+
+    def test_closing_twice_keeps_the_first_close(self):
+        row_id = log()['data']['id']
+        tools.close_recommendation(row_id, 'sold')
+        first = Recommendation.objects.get()
+        result = tools.close_recommendation(row_id, 'invalidated')
+        self.assertEqual(result['warnings'], [f'Recommendation {row_id} is already closed.'])
+        after = Recommendation.objects.get()
+        self.assertEqual((after.close_reason, after.closed_at), ('sold', first.closed_at))
+
+    def test_decision_can_be_recorded_on_a_closed_row(self):
+        row_id = log()['data']['id']
+        tools.close_recommendation(row_id, 'sold')
+        self.assertEqual(tools.set_decision(row_id, 'accepted')['data']['decision'], 'accepted')

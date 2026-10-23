@@ -32,15 +32,31 @@ def _entry(instrument):
     return closes[-1]
 
 
+def _number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _range_ok(value):
+    return isinstance(value, dict) and _number(value.get('low')) and _number(value.get('high'))
+
+
 def _validate(fields):
     if not (fields.get('thesis') or '').strip():
         raise Refused('A recommendation needs a thesis.')
-    if len(fields.get('bear_case') or []) < MIN_RISKS:
-        raise Refused(f'A recommendation needs at least {MIN_RISKS} bear-case risks.')
-    if not fields.get('invalidation'):
-        raise Refused('A recommendation needs an invalidation.')
-    if fields.get('action') in TARGET_REQUIRED and not fields.get('target'):
+    risks = fields.get('bear_case')
+    if not isinstance(risks, list) or sum(isinstance(r, str) and bool(r.strip()) for r in risks) < MIN_RISKS or not all(isinstance(r, str) for r in risks):
+        raise Refused(f'A recommendation needs at least {MIN_RISKS} bear-case risks, each a non-blank string.')
+    invalidation = fields.get('invalidation')
+    if not isinstance(invalidation, dict) or not (invalidation.get('price') is not None or invalidation.get('conditions')):
+        raise Refused('An invalidation must be an object with a price or conditions.')
+    target = fields.get('target')
+    if target is not None and not isinstance(target, dict):
+        raise Refused('A target must be an object with a price and condition.')
+    if fields.get('action') in TARGET_REQUIRED and not target:
         raise Refused(f"A {fields['action']} needs a target.")
+    for name in ('buy_range', 'sell_range'):
+        if fields.get(name) is not None and not _range_ok(fields[name]):
+            raise Refused(f'{name} must be an object with numeric low and high.')
 
 
 def log(**fields):

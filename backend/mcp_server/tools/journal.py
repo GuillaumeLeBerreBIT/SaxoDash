@@ -52,7 +52,10 @@ def _invalid(field, value):
 
 
 def _find(rec_id):
-    return Recommendation.objects.filter(pk=rec_id).first()
+    try:
+        return Recommendation.objects.filter(pk=int(rec_id)).first()
+    except (TypeError, ValueError):
+        return None
 
 
 @tool('Log a recommendation to the decision journal. The entry price is filled from Saxo; a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.')
@@ -118,6 +121,8 @@ def close_recommendation(id, reason):
     rec = _find(id)
     if rec is None:
         return _refuse(f'No recommendation {id}.')
+    if rec.closed_at is not None:
+        return _refuse(f'Recommendation {id} is already closed.')
     rec.closed_at = timezone.now()
     rec.close_reason = reason
     rec.save(update_fields=['closed_at', 'close_reason'])

@@ -93,3 +93,34 @@ class LogTests(TestCase):
         row.save()
         row.refresh_from_db()
         self.assertEqual(row.decision, 'declined')
+
+
+class ShapeTests(TestCase):
+    def refused(self, **over):
+        with self.assertRaises(journal.Refused):
+            logged(**over)
+        self.assertEqual(Recommendation.objects.count(), 0)
+
+    def test_bear_case_must_be_a_list(self):
+        self.refused(bear_case='abc')
+
+    def test_bear_case_items_must_be_non_blank_strings(self):
+        self.refused(bear_case=['', ' ', 'x'])
+        self.refused(bear_case=['a', 'b', 3])
+
+    def test_invalidation_must_be_a_dict_with_price_or_conditions(self):
+        self.refused(invalidation='x')
+        self.refused(invalidation={'price': None, 'conditions': []})
+
+    def test_invalidation_with_conditions_only_is_accepted(self):
+        self.assertEqual(logged(invalidation={'conditions': ['Margin below 20%']}).action, 'buy_new')
+
+    def test_target_must_be_a_dict(self):
+        self.refused(target='60')
+        self.refused(action='sell', target=[60])
+
+    def test_ranges_must_be_numeric_dicts(self):
+        self.refused(buy_range='10-20')
+        self.refused(sell_range={'low': 'a', 'high': 2})
+        self.refused(buy_range={'low': 1})
+        self.assertEqual(logged(buy_range={'low': 1, 'high': 2.5}).buy_range, {'low': 1, 'high': 2.5})
