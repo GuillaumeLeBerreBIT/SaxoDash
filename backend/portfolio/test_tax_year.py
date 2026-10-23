@@ -14,12 +14,15 @@ def position(ticker='AAA', qty=10, avg_cost=90, current_price=120, fx_rate='0.9'
     )
 
 
-def closed(symbol, closed_at, pnl, amount=5, **extra):
+def closed(symbol, closed_at, pnl, amount=5, opened_at='2026-02-01T10:00:00.000000Z', **extra):
     base = {
         'BuyOrSell': 'Buy',
         'Amount': amount,
+        'ExecutionTimeOpen': opened_at,
         'ExecutionTimeClose': closed_at,
         'ClosingPrice': 10.0,
+        'Uic': 7,
+        'AssetType': 'Stock',
     }
     if pnl is not None:
         base['ProfitLossOnTradeInBaseCurrency'] = pnl
@@ -31,33 +34,56 @@ def closed(symbol, closed_at, pnl, amount=5, **extra):
     }
 
 
+def lots(*entries):
+    return {'AAA': [(day, Decimal(str(qty)), Decimal(str(price))) for day, qty, price in entries]}
+
+
 class UnrealisedTests(SimpleTestCase):
     def test_pre_2026_position_uses_dec_31_close(self):
-        rows = tax_year.unrealised([position()], {'AAA': 100.0}, {'AAA': date(2025, 6, 1)})
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, lots((date(2025, 6, 1), 10, 90)))
         self.assertEqual(rows[0]['basis'], 100.0)
         self.assertEqual(rows[0]['basis_source'], 'dec_31_2025')
 
     def test_basis_day_itself_counts_as_pre_2026(self):
-        rows = tax_year.unrealised([position()], {'AAA': 100.0}, {'AAA': tax_year.BASIS_DAY})
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, lots((tax_year.BASIS_DAY, 10, 90)))
         self.assertEqual(rows[0]['basis_source'], 'dec_31_2025')
 
     def test_2026_position_uses_avg_cost(self):
-        rows = tax_year.unrealised([position()], {'AAA': 100.0}, {'AAA': date(2026, 2, 1)})
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, lots((date(2026, 2, 1), 10, 90)))
         self.assertEqual(rows[0]['basis'], 90.0)
         self.assertEqual(rows[0]['basis_source'], 'avg_cost')
 
     def test_unknown_opening_date_uses_avg_cost(self):
-        rows = tax_year.unrealised([position()], {}, {'AAA': None})
+        rows = tax_year.unrealised([position()], {}, {})
         self.assertEqual(rows[0]['basis_source'], 'avg_cost')
 
     def test_unrealised_is_converted_with_fx_rate(self):
-        rows = tax_year.unrealised([position()], {'AAA': 100.0}, {'AAA': date(2025, 6, 1)})
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, lots((date(2025, 6, 1), 10, 90)))
         self.assertEqual(rows[0]['unrealised_eur'], Decimal('180.00'))
 
     def test_missing_basis_close_is_null(self):
-        rows = tax_year.unrealised([position()], {'AAA': None}, {'AAA': date(2025, 6, 1)})
+        rows = tax_year.unrealised([position()], {'AAA': None}, lots((date(2025, 6, 1), 10, 90)))
         self.assertIsNone(rows[0]['unrealised_eur'])
         self.assertIsNone(rows[0]['basis'])
+
+    def test_lots_on_both_sides_are_based_separately(self):
+        held = lots((date(2025, 6, 1), 6, 80), (date(2026, 2, 1), 4, 110))
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, held)
+        self.assertEqual(rows[0]['basis_source'], 'dec_31_2025_and_cost')
+        self.assertEqual(rows[0]['basis'], 104.0)
+        self.assertEqual(rows[0]['unrealised_eur'], Decimal('144.00'))
+
+    def test_mixed_lots_with_a_sale_since_cannot_be_split(self):
+        held = lots((date(2025, 6, 1), 6, 80), (date(2026, 2, 1), 6, 110))
+        rows = tax_year.unrealised([position()], {'AAA': 100.0}, held)
+        self.assertEqual(rows[0]['basis_source'], 'unsplit')
+        self.assertIsNone(rows[0]['basis'])
+        self.assertIsNone(rows[0]['unrealised_eur'])
+
+    def test_mixed_lots_without_a_dec_31_close_are_null(self):
+        held = lots((date(2025, 6, 1), 6, 80), (date(2026, 2, 1), 4, 110))
+        rows = tax_year.unrealised([position()], {'AAA': None}, held)
+        self.assertIsNone(rows[0]['unrealised_eur'])
 
 
 class RealisedTests(SimpleTestCase):
@@ -67,27 +93,75 @@ class RealisedTests(SimpleTestCase):
             closed('BBB', '2025-12-30T10:00:00.000000Z', 999.0),
             closed('CCC', '2026-07-01T09:00:00.000000Z', -20.0),
         ]
-        rows = tax_year.realised(payload, 2026)
+        rows, reason = tax_year.realised(payload, 2026, {})
+        self.assertIsNone(reason)
         self.assertEqual(
             rows,
             [
-                {'ticker': 'AAA', 'closed_on': date(2026, 3, 4), 'qty': Decimal('5'), 'realised_eur': Decimal('123.46')},
-                {'ticker': 'CCC', 'closed_on': date(2026, 7, 1), 'qty': Decimal('5'), 'realised_eur': Decimal('-20.00')},
+                {'ticker': 'AAA', 'closed_on': date(2026, 3, 4), 'qty': Decimal('5'), 'basis_source': 'saxo', 'realised_eur': Decimal('123.46')},
+                {'ticker': 'CCC', 'closed_on': date(2026, 7, 1), 'qty': Decimal('5'), 'basis_source': 'saxo', 'realised_eur': Decimal('-20.00')},
             ],
         )
 
+    def test_pre_2026_lot_is_rebased_on_the_dec_31_close(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00Z', 160 * 5 * 0.9, opened_at='2023-05-01T14:00:00Z',
+                          ClosingPrice=180.0, ConversionRateClose=0.9)]
+        rows, reason = tax_year.realised(payload, 2026, {(7, 'Stock'): 140.0})
+        self.assertIsNone(reason)
+        self.assertEqual(rows[0]['realised_eur'], Decimal('180.00'))
+        self.assertEqual(rows[0]['basis_source'], 'dec_31_2025')
+
+    def test_pre_2026_short_is_rebased_the_other_way(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00Z', 0.0, opened_at='2025-05-01T14:00:00Z',
+                          BuyOrSell='Sell', ClosingPrice=120.0, ConversionRateClose=1.0)]
+        rows, _ = tax_year.realised(payload, 2026, {(7, 'Stock'): 140.0})
+        self.assertEqual(rows[0]['realised_eur'], Decimal('100.00'))
+
+    def test_pre_2026_lot_without_a_dec_31_close_is_unknown(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z', ConversionRateClose=0.9)]
+        rows, reason = tax_year.realised(payload, 2026, {(7, 'Stock'): None})
+        self.assertIsNone(rows)
+        self.assertIn('AAA', reason)
+        self.assertIn('31 December 2025', reason)
+
+    def test_pre_2026_lot_without_a_conversion_rate_is_unknown(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z')]
+        rows, reason = tax_year.realised(payload, 2026, {(7, 'Stock'): 140.0})
+        self.assertIsNone(rows)
+        self.assertIn('AAA', reason)
+
+    def test_basis_instruments_are_the_pre_2026_lots_closed_this_year(self):
+        payload = [
+            closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z'),
+            closed('BBB', '2026-03-04T10:00:00Z', 5.0, Uic=8),
+            closed('CCC', '2025-03-04T10:00:00Z', 5.0, opened_at='2024-05-01T14:00:00Z', Uic=9),
+        ]
+        self.assertEqual(tax_year.basis_instruments(payload, 2026), {(7, 'Stock'): 'AAA'})
+
+    def test_days_are_brussels_days_not_utc(self):
+        payload = [closed('AAA', '2025-12-31T23:30:00Z', 42.0, opened_at='2025-12-31T23:15:00Z')]
+        rows, reason = tax_year.realised(payload, 2026, {})
+        self.assertIsNone(reason)
+        self.assertEqual(rows[0]['closed_on'], date(2026, 1, 1))
+        self.assertEqual(rows[0]['basis_source'], 'saxo')
+        self.assertEqual(tax_year.realised(payload, 2025, {}), ([], None))
+
     def test_missing_account_currency_pnl_is_none_not_zero(self):
         payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', None)]
-        self.assertIsNone(tax_year.realised(payload, 2026))
+        rows, reason = tax_year.realised(payload, 2026, {})
+        self.assertIsNone(rows)
+        self.assertIn('account-currency P/L', reason)
 
-    def test_missing_close_time_is_none_not_an_error(self):
+    def test_missing_close_time_is_none_and_says_so(self):
         payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', 5.0)]
         del payload[0]['ClosedPosition']['ExecutionTimeClose']
-        self.assertIsNone(tax_year.realised(payload, 2026))
+        rows, reason = tax_year.realised(payload, 2026, {})
+        self.assertIsNone(rows)
+        self.assertIn('close time', reason)
 
     def test_missing_field_on_an_other_year_row_is_ignored(self):
         payload = [closed('AAA', '2025-03-04T10:00:00.000000Z', None)]
-        self.assertEqual(tax_year.realised(payload, 2026), [])
+        self.assertEqual(tax_year.realised(payload, 2026, {}), ([], None))
 
 
 def gains(*amounts):

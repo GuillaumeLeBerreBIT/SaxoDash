@@ -1,7 +1,5 @@
 from datetime import date
 
-from django.db.models import Min
-
 from portfolio import tax_year
 from portfolio.models import Position
 from research.views import ChartView
@@ -27,44 +25,47 @@ def _number(value):
     return None if value is None else float(value)
 
 
-def _opened_on():
-    rows = Transaction.objects.filter(type='BUY').values('ticker').annotate(first=Min('date'))
-    return {row['ticker']: row['first'] for row in rows}
+def _lots():
+    lots = {}
+    for row in Transaction.objects.filter(type='BUY').values('ticker', 'date', 'qty', 'price'):
+        lots.setdefault(row['ticker'], []).append((row['date'], row['qty'], row['price']))
+    return lots
 
 
-def _basis_close(position):
-    if position.uic is None or not position.asset_type:
-        return None, f'{position.ticker} has no Saxo identity, so no 31 December close.'
+def _basis_close(ticker, uic, asset_type):
+    if uic is None or not asset_type:
+        return None, f'{ticker} has no Saxo identity, so no 31 December close.'
     result = call_view(
         ChartView,
-        query={
-            'uic': position.uic,
-            'asset_type': position.asset_type,
-            'horizon': DAILY,
-            'count': CHART_BARS,
-        },
+        query={'uic': uic, 'asset_type': asset_type, 'horizon': DAILY, 'count': CHART_BARS},
     )
     message = problem(result)
     if message:
-        return None, f'{position.ticker}: no 31 December close ({message})'
+        return None, f'{ticker}: no 31 December close ({message})'
     closes = [
         (candle['date'], candle['close'])
         for candle in result.data or []
         if candle.get('close') is not None and candle['date'] <= tax_year.BASIS_DAY.isoformat()
     ]
     if not closes:
-        return None, f'{position.ticker}: no close on or before 31 December 2025.'
+        return None, f'{ticker}: no close on or before 31 December 2025.'
     return max(closes)[1], None
 
 
-def _realised(year):
+def _realised(year, warnings):
     try:
         credential = active_credential()
-        return tax_year.realised(client.get_closed_positions(credential.access_token), year), None
+        rows = client.get_closed_positions(credential.access_token)
     except SaxoNotConnected as error:
         return None, f'Realised gains unavailable, Saxo is not connected: {error}'
     except SaxoAPIError:
         return None, 'Realised gains unavailable, Saxo did not answer.'
+    basis_closes = {}
+    for (uic, asset_type), ticker in tax_year.basis_instruments(rows, year).items():
+        basis_closes[(uic, asset_type)], message = _basis_close(ticker, uic, asset_type)
+        if message:
+            warnings.append(message)
+    return tax_year.realised(rows, year, basis_closes)
 
 
 def _entry(row):
@@ -78,26 +79,30 @@ def _entry(row):
 def get_tax_year(year: int = 0, carry_over_eur: float = 0):
     year = year or date.today().year
     warnings = saxo_warnings()
-    opened_on = _opened_on()
+    lots = _lots()
     positions = list(Position.objects.all())
 
     basis_closes = {}
     for position in positions:
-        opened = opened_on.get(position.ticker)
-        if opened is None:
+        held = lots.get(position.ticker)
+        if not held:
             warnings.append(f'{position.ticker} has no recorded purchase, so avg_cost is its basis.')
-        elif opened <= tax_year.BASIS_DAY:
-            basis_closes[position.ticker], message = _basis_close(position)
+        elif tax_year.needs_basis_close(held):
+            basis_closes[position.ticker], message = _basis_close(position.ticker, position.uic, position.asset_type)
             if message:
                 warnings.append(message)
 
-    realised_rows, realised_warning = _realised(year)
+    realised_rows, realised_warning = _realised(year, warnings)
     if realised_warning:
         warnings.append(realised_warning)
-    elif realised_rows is None:
-        warnings.append('A closed position this year lacks its account-currency P/L, so realised gains are unknown.')
 
-    unrealised_rows = tax_year.unrealised(positions, basis_closes, opened_on)
+    unrealised_rows = tax_year.unrealised(positions, basis_closes, lots)
+    for row in unrealised_rows:
+        if row['basis_source'] == tax_year.UNSPLIT_BASIS:
+            warnings.append(
+                f"{row['ticker']} has lots on both sides of 31 December 2025 and sales since, "
+                'so its basis cannot be split and its unrealised gain is unknown.'
+            )
     figures = tax_year.summary(realised_rows, unrealised_rows, carry_over_eur)
 
     warnings.extend([COVERAGE_NOTE, FX_NOTE, tax_year.ADVISER_NOTE])

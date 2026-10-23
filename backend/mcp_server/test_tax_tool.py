@@ -18,7 +18,8 @@ CLOSED = [
     {
         'ClosedPositionUniqueId': 'x1',
         'ClosedPosition': {
-            'BuyOrSell': 'Buy', 'Amount': 5, 'ClosingPrice': 10.0,
+            'BuyOrSell': 'Buy', 'Amount': 5, 'ClosingPrice': 10.0, 'Uic': 7, 'AssetType': 'Stock',
+            'ExecutionTimeOpen': '2026-02-01T10:00:00.000000Z',
             'ExecutionTimeClose': '2026-03-04T10:00:00.000000Z',
             'ProfitLossOnTradeInBaseCurrency': 12000.0,
         },
@@ -99,3 +100,41 @@ class TaxToolTests(APITestCase):
         self.assertIsNone(result['data']['summary']['estimated_tax_eur'])
         self.assertEqual(len(result['data']['unrealised']), 1)
         self.assertTrue(any('not connected' in w for w in result['warnings']))
+
+    def test_pre_2026_closed_lot_is_rebased_on_its_dec_31_close(self):
+        closed = [{
+            'ClosedPositionUniqueId': 'x2',
+            'ClosedPosition': {
+                'BuyOrSell': 'Buy', 'Amount': 5, 'ClosingPrice': 180.0, 'Uic': 7, 'AssetType': 'Stock',
+                'ConversionRateClose': 0.9,
+                'ExecutionTimeOpen': '2023-05-01T10:00:00Z', 'ExecutionTimeClose': '2026-03-04T10:00:00Z',
+                'ProfitLossOnTradeInBaseCurrency': 720.0,
+            },
+            'DisplayAndFormat': {'Symbol': 'OLD:xnas', 'Currency': 'USD'},
+        }]
+        data = run(year=2026, closed=closed)['data']
+        self.assertEqual(data['realised'][0]['realised_eur'], 360.0)
+        self.assertEqual(data['realised'][0]['basis_source'], 'dec_31_2025')
+
+    def test_missing_close_time_warning_names_the_close_time(self):
+        closed = [{**CLOSED[0], 'ClosedPosition': {k: v for k, v in CLOSED[0]['ClosedPosition'].items() if k != 'ExecutionTimeClose'}}]
+        result = run(year=2026, closed=closed)
+        self.assertIsNone(result['data']['realised'])
+        self.assertTrue(any('close time' in w for w in result['warnings']))
+        self.assertFalse(any('account-currency P/L' in w for w in result['warnings']))
+
+    def test_mixed_lots_are_split_at_dec_31(self):
+        make_position()
+        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
+        Transaction.objects.create(date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=4, price=110, saxo_trade_id='b')
+        row = run(year=2026)['data']['unrealised'][0]
+        self.assertEqual(row['basis_source'], 'dec_31_2025_and_cost')
+        self.assertEqual(row['unrealised_eur'], 144.0)
+
+    def test_unsplittable_lots_are_unknown_and_warned(self):
+        make_position()
+        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
+        Transaction.objects.create(date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=110, saxo_trade_id='b')
+        result = run(year=2026)
+        self.assertIsNone(result['data']['unrealised'][0]['unrealised_eur'])
+        self.assertTrue(any('AAA' in w and 'both sides' in w for w in result['warnings']))
