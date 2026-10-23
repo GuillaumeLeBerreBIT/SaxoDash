@@ -1,0 +1,44 @@
+from dataclasses import dataclass
+from typing import Any
+
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
+from rest_framework.test import APIRequestFactory, force_authenticate
+
+
+@dataclass(frozen=True)
+class ViewResult:
+    status: int
+    data: Any
+
+
+def app_user():
+    users = get_user_model().objects.filter(is_active=True)
+    if settings.MCP_USER:
+        users = users.filter(username=settings.MCP_USER)
+    user = users.order_by('id').first()
+    if user is None:
+        raise ImproperlyConfigured('No active user for the MCP server to act as.')
+    return user
+
+
+def call_view(view_class, *, kwargs=None, query=None):
+    request = APIRequestFactory().get('/', query or {})
+    force_authenticate(request, user=app_user())
+    response = view_class.as_view()(request, **(kwargs or {}))
+    return ViewResult(response.status_code, response.data)
+
+
+def problem(result):
+    if result.status == 409:
+        return 'Saxo is not connected — reconnect in the app.'
+    if result.status == 429:
+        return 'Busy — try again in a minute.'
+    if result.status == 404:
+        return 'Not found.'
+    if result.status >= 500:
+        return f'Upstream error ({result.status}).'
+    if isinstance(result.data, dict) and result.data.get('available') is False:
+        return result.data.get('reason') or result.data.get('message')
+    return None

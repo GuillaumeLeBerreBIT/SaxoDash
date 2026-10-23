@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'analytics',
     'investors',
     'congress',
+    'mcp_server',
 ]
 
 MIDDLEWARE = [
@@ -265,6 +266,8 @@ SAXO_ENVIRONMENT = os.environ.get('SAXO_ENVIRONMENT', 'sim')
 SAXO_KEY = os.environ.get('SAXO_KEY', '')
 SAXO_SECRET = os.environ.get('SAXO_SECRET', '')
 SAXO_REDIRECT_URI = os.environ.get('SAXO_REDIRECT_URI', 'http://localhost:8000/api/saxo/callback/')
+MCP_USER = os.environ.get('MCP_USER', '')
+
 SAXO_TOKEN_ENCRYPTION_KEY = os.environ.get('SAXO_TOKEN_ENCRYPTION_KEY', '')
 FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY', '')
 FINNHUB_CALLS_PER_MINUTE = max(1, int(os.environ.get('FINNHUB_CALLS_PER_MINUTE') or 58))
