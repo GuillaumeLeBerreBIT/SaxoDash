@@ -232,6 +232,67 @@ script reuses it and says so on exit:
 
 ---
 
+## The MCP server
+
+`manage.py mcp_serve` serves SaxoDash's read tools to Claude Desktop over stdio, so
+the assistant answers from the same database, Redis cache and Saxo credential as the
+app. It is not a service in `scripts/dev.sh`: Claude Desktop starts it as a child
+process and stops it with the chat. It needs Redis running (the caches and the
+Finnhub call budget live there; with Redis down every tool answers with a warning)
+and the Celery stack for a fresh Saxo token. It listens on no port.
+
+Add this to `~/Library/Application Support/Claude/claude_desktop_config.json` and
+restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "saxodash": {
+      "command": "/Users/guillaumeleberre/Develop/GuillaumesLab/WebDevelopment/SaxoDash/backend/.venv/bin/python",
+      "args": [
+        "/Users/guillaumeleberre/Develop/GuillaumesLab/WebDevelopment/SaxoDash/backend/manage.py",
+        "mcp_serve"
+      ],
+      "env": { "MCP_USER": "demo" }
+    }
+  }
+}
+```
+
+`env` is optional. The server acts as the app's single user; `MCP_USER` names which
+username when more than one account exists.
+
+Cowork: not yet verified whether Cowork tasks see local stdio servers. Claude Desktop
+chat does. If Cowork does not, the route is a desktop extension (`.mcpb`) packaging
+the same command.
+
+Tools, by group (each description names the page it mirrors):
+
+- **Portfolio**: `get_portfolio`, `get_performance`, `get_transactions`, `get_tax_year`
+- **Research**: `resolve`, `search_instruments`, `get_quotes`, `get_price_history`,
+  `get_company`, `get_financial_statements`, `get_filings_and_insiders`, `get_news`,
+  `get_valuation_history`, `get_my_notes`, `get_watchlists`, `compare_companies`
+- **Market**: `screen_universe`, `get_discover_shelves`, `get_earnings_calendar`
+- **Smart money**: `list_investors`, `get_investor`, `get_fund_signals`,
+  `get_fund_stocks`, `get_ticker_ownership`, `list_congress_members`,
+  `get_congress_member`, `get_filing_alerts`
+- **Journal**: `log_recommendation`, `set_decision`, `close_recommendation`,
+  `list_recommendations`
+- **System**: `get_data_health`
+
+Every tool answers an envelope with `warnings`; a disconnected Saxo, a lapsed token or
+a busy provider is a warning with `data: null`, never an error. Banking data is not
+exposed and no tool places an order or starts a sync. The only writes are
+`advisor.Recommendation` rows (visible in Django admin), whose entry price the server
+fills.
+
+`get_tax_year` is an estimate: 10% on gains above the EUR 10,000 exemption, with
+carry-over and a 31 December 2025 basis for older holdings, always ending "Check with
+a Belgian tax adviser." Realised gains come from Saxo's closed-positions list, and
+whether it covers the whole year is unverified.
+
+---
+
 ## Platform note
 
 macOS ships **bash 3.2** (the last GPLv2 release) and there is no newer bash
@@ -244,6 +305,7 @@ and `${var^^}`. Service death is detected by a one-second poll loop rather than
 ## Related
 
 - `scripts/dev.sh` — the script itself
+- `docs/superpowers/specs/2026-10-21-mcp-server-design.md` — the MCP server's design
 - `AGENTS.md` → "Running the stack" — the short version
 - `learning/learning-records/0004-*` — the shell gotchas found while building
   it (`set -e`/`pipefail` interactions, signal traps that never install)

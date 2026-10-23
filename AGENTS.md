@@ -559,3 +559,13 @@ outcome in words (`lib/earnings.outcome`), not only by colour. On a weekend, wee
 week (`earnings.current_week_start`). For the user's names the Saxo chart includes today's forming
 (15-minute delayed) bar, so a report today before the open, or yesterday after the close, shows the
 move so far until the session closes, while universe names show `—` until the nightly scan.
+
+**The advisor reads the app through `mcp_server`, which runs the pages' own views.**
+`manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; each one dispatches
+the matching DRF view in-process (`mcp_server/views.py::call_view`, authenticated as the
+single user) and reshapes the answer, so the assistant and the page cannot disagree about a
+number, and throttles and the Finnhub budget still apply. It never touches banking data or
+orders, and starts no sync. Its only writes are `advisor.Recommendation` rows, whose entry
+price the server fills from Saxo, not the model. Saxo down or a provider busy is a
+`warnings` entry with `data: null`, never an exception. Setup:
+`docs/running-the-stack.md` → "The MCP server".
