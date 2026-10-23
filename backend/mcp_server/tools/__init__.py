@@ -17,3 +17,4 @@ from . import market  # noqa: E402,F401
 from . import smart_money  # noqa: E402,F401
 from . import compare  # noqa: E402,F401
 from . import journal  # noqa: E402,F401
+from . import tax  # noqa: E402,F401
