@@ -37,6 +37,8 @@ def problem(result):
         return 'Busy — try again in a minute.'
     if result.status == 404:
         return 'Not found.'
+    if result.status == 400:
+        return f'Invalid request: {result.data}'
     if result.status >= 500:
         return f'Upstream error ({result.status}).'
     if isinstance(result.data, dict) and result.data.get('available') is False:
