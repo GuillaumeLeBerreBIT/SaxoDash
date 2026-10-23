@@ -160,7 +160,7 @@ def _bar(candle):
 
 
 @tool('Find stocks and ETFs on Saxo by name or ticker: symbol, name, currency, exchange.')
-def search_instruments(query):
+def search_instruments(query: str):
     warnings = saxo_warnings()
     result = call_view(InstrumentSearchView, query={'q': query, 'asset_types': SEARCH_ASSET_TYPES})
     message = problem(result)
@@ -171,7 +171,7 @@ def search_instruments(query):
 
 
 @tool('Latest prices for one or more tickers, with the day change and its basis (live or last close).')
-def get_quotes(symbols):
+def get_quotes(symbols: list[str]):
     warnings = saxo_warnings()
     by_type = {}
     for symbol in symbols:
@@ -205,7 +205,7 @@ def get_quotes(symbols):
 
 
 @tool('Price history for a ticker (daily, weekly or monthly bars) with moving averages, RSI, 52-week range and the playbook zone.')
-def get_price_history(symbol, interval='weekly', bars=104):
+def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
     warnings = saxo_warnings()
     if interval not in INTERVAL_HORIZONS:
         return answer(None, sources=['saxo'], warnings=[*warnings, f"interval must be one of {', '.join(INTERVAL_HORIZONS)}."])
@@ -220,7 +220,7 @@ def get_price_history(symbol, interval='weekly', bars=104):
     daily_candles = daily.data
 
     cap = DAILY_BAR_CAP if interval == 'daily' else BAR_CAP
-    count = max(1, min(int(bars), cap))
+    count = max(1, min(bars, cap))
     if interval == 'daily':
         series = daily_candles
     else:
@@ -281,7 +281,7 @@ def _scalar_metrics(payload):
 
 
 @tool('Company profile, valuation and growth metrics, EPS and earnings history, peers and analyst trend (US-listed stocks only).')
-def get_company(symbol):
+def get_company(symbol: str):
     ticker, refused = _gate(symbol)
     if refused:
         return refused
@@ -308,7 +308,7 @@ def get_company(symbol):
 
 
 @tool('Income statement, balance sheet and cash flow rows for a US-listed stock, annual or quarterly.')
-def get_financial_statements(symbol, period='annual'):
+def get_financial_statements(symbol: str, period: str = 'annual'):
     if period not in STATEMENT_PERIODS:
         return answer(None, sources=[FINNHUB], warnings=[f"period must be one of {', '.join(STATEMENT_PERIODS)}."])
     ticker, refused = _gate(symbol)
@@ -325,7 +325,7 @@ def get_financial_statements(symbol, period='annual'):
 
 
 @tool('Recent SEC filings (10-K, 10-Q, 8-K) and insider trades for a US-listed stock.')
-def get_filings_and_insiders(symbol):
+def get_filings_and_insiders(symbol: str):
     ticker, refused = _gate(symbol)
     if refused:
         return refused
@@ -344,18 +344,18 @@ def get_filings_and_insiders(symbol):
 
 
 @tool('Recent company headlines, newest first (US-listed stocks and ETFs).')
-def get_news(symbol, limit=15):
+def get_news(symbol: str, limit: int = 15):
     ticker, refused = _gate(symbol, allow_fund=True)
     if refused:
         return refused
     payload, message = _part(CompanyNewsView, ticker)
     if message:
         return answer(None, sources=[FINNHUB], warnings=[message])
-    return answer(capped(payload['items'], int(limit)), sources=[FINNHUB])
+    return answer(capped(payload['items'], limit), sources=[FINNHUB])
 
 
 @tool("Your own notes for a ticker: thesis, risks, target and stop prices.")
-def get_my_notes(symbol):
+def get_my_notes(symbol: str):
     ticker = _bare(symbol)
     note = SymbolNote.objects.filter(symbol=ticker).first() or SymbolNote(symbol=ticker)
     return answer(dict(SymbolNoteSerializer(note).data), sources=['notes'])
@@ -403,7 +403,7 @@ def _daily_pe(instrument, eps, warnings):
 
 
 @tool('Valuation history for a US-listed stock: P/E, P/S, P/FCF and EV/EBITDA series, a daily trailing P/E sampled weekly, and 5-year medians.')
-def get_valuation_history(symbol):
+def get_valuation_history(symbol: str):
     ticker, refused = _gate(symbol)
     if refused:
         return refused

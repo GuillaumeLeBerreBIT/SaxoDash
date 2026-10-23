@@ -47,7 +47,7 @@ def _row(row):
 
 
 @tool('Screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.')
-def screen_universe(filters=None, sort=DEFAULT_SORT, sector='', limit=25):
+def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT_SORT, sector: str = '', limit: int = 25):
     warnings = []
     bounds = _bounds(filters, warnings)
     rows = ScreenerRow.objects.filter(status=ScreenerRow.OK)
@@ -55,7 +55,7 @@ def screen_universe(filters=None, sort=DEFAULT_SORT, sector='', limit=25):
     if sector:
         rows = rows.filter(sector__iexact=sector)
     matched = rows.count()
-    limit = max(1, min(int(limit), MAX_LIMIT))
+    limit = max(1, min(limit, MAX_LIMIT))
     ordered = rows.order_by(_ordering(sort, warnings), 'ticker')[:limit]
     latest = ScreenerRow.objects.filter(technicals_at__isnull=False).order_by('-technicals_at').values_list('technicals_at', flat=True).first()
     if latest is not None and timezone.now() - latest > STALE_AFTER:
@@ -69,7 +69,7 @@ def screen_universe(filters=None, sort=DEFAULT_SORT, sector='', limit=25):
 
 
 @tool('Discover shelves: ready-made screens of the universe. Pass a shelf key for one shelf in full, or nothing for the overview.')
-def get_discover_shelves(key=''):
+def get_discover_shelves(key: str = ''):
     if key:
         result = call_view(DiscoverShelfView, kwargs={'key': key})
     else:
@@ -81,7 +81,7 @@ def get_discover_shelves(key=''):
 
 
 @tool('Earnings calendar for a week (0 = current, negative past, positive future); scope all or mine for your portfolio and watchlist.')
-def get_earnings_calendar(week=0, scope='all'):
+def get_earnings_calendar(week: int = 0, scope: str = 'all'):
     result = call_view(EarningsCalendarView, query={'week': week, 'scope': scope})
     message = problem(result)
     if message:

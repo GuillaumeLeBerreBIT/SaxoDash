@@ -73,21 +73,21 @@ def _find(rec_id):
 
 @tool('Log a recommendation to the decision journal. The entry price is filled from Saxo; a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.')
 def log_recommendation(
-    ticker,
-    action,
-    thesis,
-    bear_case,
-    invalidation,
-    horizon,
-    conviction,
-    target=None,
-    buy_range=None,
-    sell_range=None,
-    figures=None,
-    lenses=None,
-    zone='',
-    review=False,
-    uncertainties=None,
+    ticker: str,
+    action: str,
+    thesis: str,
+    bear_case: list[str],
+    invalidation: dict,
+    horizon: str,
+    conviction: str,
+    target: dict | None = None,
+    buy_range: dict | None = None,
+    sell_range: dict | None = None,
+    figures: dict | None = None,
+    lenses: list[str] | None = None,
+    zone: str = '',
+    review: bool = False,
+    uncertainties: list[str] | None = None,
 ):
     for field, value in (('action', action), ('horizon', horizon), ('conviction', conviction)):
         if value not in _choices(field):
@@ -116,7 +116,7 @@ def log_recommendation(
 
 
 @tool('Record whether a logged recommendation was accepted or declined.')
-def set_decision(id, decision):
+def set_decision(id: int, decision: str):
     if decision not in _choices('decision'):
         return _refuse(_invalid('decision', decision))
     rec = _find(id)
@@ -128,7 +128,7 @@ def set_decision(id, decision):
 
 
 @tool('Close a logged recommendation: sold, invalidated or superseded.')
-def close_recommendation(id, reason):
+def close_recommendation(id: int, reason: str):
     if reason not in _choices('close_reason'):
         return _refuse(_invalid('close_reason', reason))
     rec = _find(id)

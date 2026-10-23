@@ -80,7 +80,7 @@ def get_portfolio():
 
 
 @tool('Portfolio performance against a benchmark over trailing windows, plus risk metrics. Optional benchmark key.')
-def get_performance(benchmark=''):
+def get_performance(benchmark: str = ''):
     query = {'benchmark': benchmark} if benchmark else {}
     performance = call_view(PerformanceView, query=query)
     risk = call_view(RiskMetricsView, query=query)
@@ -97,7 +97,7 @@ def get_performance(benchmark=''):
 
 
 @tool('Recent transactions, newest first, capped at limit (default 50).')
-def get_transactions(limit=50):
+def get_transactions(limit: int = 50):
     result = call_view(TransactionListView, query={'page_size': TRANSACTION_FETCH_SIZE})
     message = problem(result)
     if message:

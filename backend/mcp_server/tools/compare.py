@@ -152,7 +152,7 @@ def _compare_one(symbol):
 
 
 @tool('Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.')
-def compare_companies(symbols):
+def compare_companies(symbols: list[str]):
     distinct = list(dict.fromkeys(_bare(s) for s in symbols))
     if not MIN_SYMBOLS <= len(distinct) <= MAX_SYMBOLS:
         return answer(None, sources=[FINNHUB], warnings=[COUNT_WARNING])

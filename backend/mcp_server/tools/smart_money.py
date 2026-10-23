@@ -60,7 +60,7 @@ def get_fund_signals():
 
 
 @tool('One 13F fund by slug: profile, top holdings, moves, quarter-over-quarter changes and copy-after-filing performance.')
-def get_investor(slug):
+def get_investor(slug: str):
     kwargs = {'slug': slug}
     detail = call_view(InvestorDetailView, kwargs=kwargs)
     message = problem(detail)
@@ -87,7 +87,7 @@ def get_investor(slug):
 
 
 @tool('Stocks ranked by fund activity in the latest signal quarter: view is bought, sold, owned or new.')
-def get_fund_stocks(view='bought'):
+def get_fund_stocks(view: str = 'bought'):
     result = call_view(InvestorStocksView, query={'view': view})
     message = problem(result)
     if message:
@@ -96,7 +96,7 @@ def get_fund_stocks(view='bought'):
 
 
 @tool('Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.')
-def get_ticker_ownership(symbol):
+def get_ticker_ownership(symbol: str):
     ticker = symbol.split(':')[0].strip().upper()
     instrument = resolve(ticker)
     listing = company_data.status(
@@ -133,7 +133,7 @@ def list_congress_members():
 
 
 @tool('One House member by slug: estimated holdings, recent trades and copy performance.')
-def get_congress_member(slug):
+def get_congress_member(slug: str):
     result = call_view(MemberDetailView, kwargs={'slug': slug})
     message = problem(result)
     if message:
