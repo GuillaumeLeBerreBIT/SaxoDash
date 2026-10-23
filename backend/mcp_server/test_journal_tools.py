@@ -1,8 +1,6 @@
 import inspect
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
-
-from django.utils import timezone
 
 from rest_framework.test import APITestCase
 
@@ -101,8 +99,8 @@ class JournalToolTests(APITestCase):
 
 
 class ListScoresTests(APITestCase):
-    def prices(self, ticker, first, last, today):
-        entry = today - timedelta(days=100) + timedelta(days=1)
+    def prices(self, ticker, first, last, recorded):
+        entry = recorded.date() + timedelta(days=1)
         PriceHistory.objects.create(
             ticker=ticker,
             status=PriceHistory.OK,
@@ -111,10 +109,11 @@ class ListScoresTests(APITestCase):
 
     def test_rows_carry_a_score_and_the_list_a_summary(self):
         log()
-        today = timezone.localdate()
-        Recommendation.objects.update(recorded_at=timezone.now() - timedelta(days=100))
-        self.prices('NEWCO', 100.0, 120.0, today)
-        self.prices('SPY', 100.0, 105.0, today)
+        recorded = datetime(2026, 1, 12, 23, 30, tzinfo=UTC)
+        today = recorded.date() + timedelta(days=100)
+        Recommendation.objects.update(recorded_at=recorded)
+        self.prices('NEWCO', 100.0, 120.0, recorded)
+        self.prices('SPY', 100.0, 105.0, recorded)
         with patch('mcp_server.tools.journal.timezone.localdate', return_value=today):
             result = tools.list_recommendations()
         row = result['data']['items'][0]

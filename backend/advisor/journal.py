@@ -4,6 +4,7 @@ MIN_RISKS = 3
 TARGET_REQUIRED = ('buy_new', 'add')
 CHART_BARS = 5
 DAILY = 1440
+SCORED_CURRENCY = 'USD'
 
 
 class Refused(Exception):
@@ -69,6 +70,8 @@ def log(**fields):
         raise Refused(f'{ticker} could not be resolved to a Saxo instrument.')
     if not instrument.get('currency'):
         raise Refused(f'{ticker} has no known listing currency.')
+    if instrument['currency'] != SCORED_CURRENCY:
+        raise Refused('Only US-dollar listings can be scored against the S&P 500.')
     entry_price = _entry(instrument)
     return Recommendation.objects.create(
         ticker=instrument['symbol'],

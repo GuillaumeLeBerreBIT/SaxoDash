@@ -71,7 +71,7 @@ def _find(rec_id):
         return None
 
 
-@tool('Log a recommendation to the decision journal. The entry price is filled from Saxo; a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.')
+@tool('Log a recommendation to the decision journal (US-dollar listings only). The entry price is filled from Saxo; a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.')
 def log_recommendation(
     ticker: str,
     action: str,

@@ -50,6 +50,12 @@ class LogTests(TestCase):
                 logged(action=action, target=None)
         self.assertEqual(Recommendation.objects.count(), 0)
 
+    def test_refuses_a_non_us_dollar_listing(self):
+        euro = {**INSTRUMENT, 'currency': 'EUR'}
+        with self.assertRaisesMessage(journal.Refused, 'Only US-dollar listings can be scored against the S&P 500.'):
+            logged(instrument=euro)
+        self.assertEqual(Recommendation.objects.count(), 0)
+
     def test_sell_needs_no_target(self):
         self.assertEqual(logged(action='sell', target=None).action, 'sell')
 
