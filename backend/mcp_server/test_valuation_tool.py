@@ -69,3 +69,29 @@ class ValuationToolTest(APITestCase):
         self.assertIsNone(result['data']['latest']['daily_pe'])
         self.assertEqual(result['data']['daily_pe'], [])
         self.assertEqual(len(result['warnings']), 2)
+
+    def test_loss_quarters_stay_out_of_latest_and_median(self):
+        losing = {**SERIES, 'quarterly': {**SERIES['quarterly'], 'pe_ttm': [
+            {'period': '2024-03-31', 'v': 20}, {'period': '2024-06-30', 'v': 30}, {'period': '2024-09-30', 'v': None}]}}
+        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+                patch('research.finnhub.valuation_series', return_value=losing), \
+                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+            data = get_valuation_history('NVDA')['data']
+        self.assertIsNone(data['latest']['pe_ttm'])
+        self.assertEqual(data['medians_5y']['pe_ttm'], 25.0)
+
+    def test_non_us_company_is_warned(self):
+        foreign = {**SERIES, 'country': 'TW'}
+        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+                patch('research.finnhub.valuation_series', return_value=foreign), \
+                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+            warnings = get_valuation_history('TSM')['warnings']
+        self.assertTrue(any('TW' in w and 'daily P/E' in w for w in warnings))
+
+    def test_us_company_is_not_warned_about_country(self):
+        domestic = {**SERIES, 'country': 'US'}
+        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+                patch('research.finnhub.valuation_series', return_value=domestic), \
+                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+            warnings = get_valuation_history('NVDA')['warnings']
+        self.assertFalse(any('daily P/E may' in w for w in warnings))

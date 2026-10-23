@@ -2,11 +2,14 @@ from research.models import ScreenerRow
 
 from .. import company_data
 from ..envelope import answer
+from research.views import FundamentalsView
+
 from . import tool
 from .research import (
     FINNHUB,
     _bare,
-    get_company,
+    _part,
+    _scalar_metrics,
     get_price_history,
     get_valuation_history,
     resolve,
@@ -105,6 +108,18 @@ def _trend(prices):
     return {'zone': (prices or {}).get('zone'), **{key: summary.get(key) for key in TREND}}
 
 
+def _company(ticker):
+    fundamentals, message = _part(FundamentalsView, ticker)
+    if message:
+        return answer(None, sources=[FINNHUB], warnings=[message])
+    data = {
+        'profile': {'name': fundamentals.get('name')},
+        'metrics': _scalar_metrics(fundamentals),
+        'ratio_history': fundamentals.get('ratio_history'),
+    }
+    return answer(data, sources=[FINNHUB])
+
+
 def _prefixed(symbol, result):
     return [f'{symbol}: {message}' for message in result['warnings']]
 
@@ -123,7 +138,7 @@ def _compare_one(symbol):
             warnings.append(f'{ticker}: {reason}')
         return entry, warnings
 
-    fundamentals = get_company(ticker)
+    fundamentals = _company(ticker)
     history = get_valuation_history(ticker)
     prices = get_price_history(ticker, interval='daily', bars=1)
     for result in (fundamentals, history, prices):

@@ -491,9 +491,21 @@ def to_fundamentals(profile, financials, recommendations, earnings, annual_rows=
     return shaped
 
 
-def fundamentals(symbol):
+def _shared_profile(symbol):
     def produce():
         profile = get_profile(symbol)
+        return profile, FUNDAMENTALS_TTL if profile.get('name') else None
+
+    return cached(f'research:profile:v1:{symbol}', produce)
+
+
+def _shared_basic_financials(symbol):
+    return cached(f'research:basic-financials:v1:{symbol}', lambda: (get_basic_financials(symbol), FUNDAMENTALS_TTL))
+
+
+def fundamentals(symbol):
+    def produce():
+        profile = _shared_profile(symbol)
         if not profile.get('name'):
             # Finnhub answers 200 with an empty/near-empty profile for a
             # ticker it doesn't recognize - raising here (before the other
@@ -511,7 +523,7 @@ def fundamentals(symbol):
             annual_rows = None
         return to_fundamentals(
             profile,
-            get_basic_financials(symbol),
+            _shared_basic_financials(symbol),
             get_recommendation_trends(symbol),
             get_earnings_history(symbol),
             annual_rows,
@@ -531,26 +543,34 @@ VALUATION_QUARTERLY = {
 }
 
 
-def _oldest_first(points):
-    rows = [{'period': p['period'], 'v': p['v']} for p in points or [] if p.get('period') and p.get('v') is not None]
+POSITIVE_MULTIPLES = frozenset({'pe', 'pfcf', 'ev_ebitda', 'pe_ttm', 'pfcf_ttm', 'ev_ebitda_ttm'})
+
+
+def _oldest_first(points, positive_only=False):
+    rows = [
+        {'period': p['period'], 'v': None if positive_only and p['v'] <= 0 else p['v']}
+        for p in points or []
+        if p.get('period') and p.get('v') is not None
+    ]
     return sorted(rows, key=lambda row: row['period'])
 
 
 def _shape_series(raw, names):
-    shaped = {key: _oldest_first(raw.get(name)) for key, name in names.items()}
+    shaped = {key: _oldest_first(raw.get(name), key in POSITIVE_MULTIPLES) for key, name in names.items()}
     return {key: rows for key, rows in shaped.items() if rows}
 
 
 def valuation_series(symbol):
     def produce():
-        series = get_basic_financials(symbol).get('series') or {}
+        series = _shared_basic_financials(symbol).get('series') or {}
         shaped = {
             'annual': _shape_series(series.get('annual') or {}, VALUATION_ANNUAL),
             'quarterly': _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY),
+            'country': _shared_profile(symbol).get('country') or None,
         }
         return shaped, FUNDAMENTALS_TTL
 
-    return cached(f'research:valuation-series:v1:{symbol}', produce, unexpected=FinnhubUnexpected)
+    return cached(f'research:valuation-series:v2:{symbol}', produce, unexpected=FinnhubUnexpected)
 
 
 def _peers_cache_key(symbol):

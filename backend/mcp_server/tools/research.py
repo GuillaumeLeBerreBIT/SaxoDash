@@ -371,6 +371,14 @@ def get_watchlists():
 VALUATION_RATIOS = ('pe_ttm', 'ps_ttm', 'pfcf_ttm', 'ev_ebitda_ttm')
 UNVERIFIED_CURRENCY_WARNING = 'The listing currency was not verified, so the symbol is assumed to be US-listed.'
 NO_DAILY_PE_WARNING = 'Daily P/E needs Saxo closes, which are unavailable for this symbol.'
+HOME_COUNTRY = 'US'
+
+
+def _foreign_issuer_warning(ticker, country):
+    return (
+        f'Finnhub lists {ticker} as a {country} company: its EPS may be in another currency '
+        'or per ordinary share rather than per ADR, so the daily P/E may be off.'
+    )
 
 
 def _points(rows):
@@ -410,6 +418,9 @@ def get_valuation_history(symbol: str):
     warnings = saxo_warnings() if instrument else []
     if instrument is None or not instrument['currency']:
         warnings.append(UNVERIFIED_CURRENCY_WARNING)
+    country = series.get('country')
+    if country and country != HOME_COUNTRY:
+        warnings.append(_foreign_issuer_warning(ticker, country))
     quarterly = series['quarterly']
     daily = _daily_pe(instrument, _points(quarterly.get('eps')), warnings)
     medians = {name: median_since(_points(quarterly.get(name))) for name in VALUATION_RATIOS}

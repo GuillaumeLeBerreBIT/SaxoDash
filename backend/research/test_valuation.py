@@ -57,7 +57,52 @@ class ValuationSeriesTest(TestCase):
         with patch('research.finnhub._get', return_value=payload) as get:
             result = finnhub.valuation_series('NVDA')
             finnhub.valuation_series('NVDA')
-        self.assertEqual(get.call_count, 1)
+        self.assertEqual([call.args[0] for call in get.call_args_list].count('/stock/metric'), 1)
         self.assertEqual(result['annual'], {'pe': [{'period': '2023-12-31', 'v': 25}, {'period': '2024-12-31', 'v': 30}]})
         self.assertEqual(result['quarterly']['pe_ttm'][0], {'period': '2024-12-31', 'v': 35})
         self.assertEqual(set(result['quarterly']), {'pe_ttm', 'eps'})
+
+    def test_non_positive_multiples_are_null_not_negative(self):
+        payload = {'series': {
+            'annual': {'pe': [{'period': '2023-12-31', 'v': -12}, {'period': '2024-12-31', 'v': 25}]},
+            'quarterly': {
+                'peTTM': [{'period': '2024-12-31', 'v': 35}, {'period': '2025-03-31', 'v': -40}],
+                'pfcfTTM': [{'period': '2025-03-31', 'v': 0}],
+                'evEbitdaTTM': [{'period': '2025-03-31', 'v': -3}],
+                'psTTM': [{'period': '2025-03-31', 'v': 4}],
+                'eps': [{'period': '2025-03-31', 'v': -1.0}],
+            },
+        }}
+        with patch('research.finnhub._get', return_value=payload):
+            result = finnhub.valuation_series('LOSS')
+        quarterly = result['quarterly']
+        self.assertEqual(quarterly['pe_ttm'], [{'period': '2024-12-31', 'v': 35}, {'period': '2025-03-31', 'v': None}])
+        self.assertEqual(quarterly['pfcf_ttm'], [{'period': '2025-03-31', 'v': None}])
+        self.assertEqual(quarterly['ev_ebitda_ttm'], [{'period': '2025-03-31', 'v': None}])
+        self.assertEqual(quarterly['ps_ttm'], [{'period': '2025-03-31', 'v': 4}])
+        self.assertEqual(quarterly['eps'], [{'period': '2025-03-31', 'v': -1.0}])
+        self.assertEqual(result['annual']['pe'][0], {'period': '2023-12-31', 'v': None})
+
+    def test_series_carries_the_profile_country(self):
+        def get(path, **params):
+            return {'name': 'Taiwan Semi', 'country': 'TW'} if path == '/stock/profile2' else {'series': {}}
+
+        with patch('research.finnhub._get', side_effect=get):
+            self.assertEqual(finnhub.valuation_series('TSM')['country'], 'TW')
+
+    def test_series_shares_the_metric_call_with_fundamentals(self):
+        def get(path, **params):
+            if path == '/stock/profile2':
+                return {'name': 'NVIDIA', 'country': 'US'}
+            if path == '/stock/metric':
+                return {'metric': {}, 'series': {'quarterly': {'peTTM': [{'period': '2025-03-31', 'v': 40}]}}}
+            if path == '/stock/financials-reported':
+                return {'data': []}
+            return []
+
+        with patch('research.finnhub._get', side_effect=get) as calls:
+            finnhub.fundamentals('NVDA')
+            finnhub.valuation_series('NVDA')
+        paths = [call.args[0] for call in calls.call_args_list]
+        self.assertEqual(paths.count('/stock/metric'), 1)
+        self.assertEqual(paths.count('/stock/profile2'), 1)

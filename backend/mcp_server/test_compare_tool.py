@@ -9,7 +9,9 @@ from research.models import ScreenerRow
 
 from .envelope import answer
 from .tools import research
-from .tools.compare import compare_companies
+from research.views import FundamentalsView, PeersView, SymbolEarningsView
+
+from .tools.compare import _company, compare_companies
 from .views import ViewResult
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -67,7 +69,7 @@ class Patched:
     def __init__(self, resolver, comp=None, val=None, price=None):
         self.patches = [
             patch('mcp_server.tools.compare.resolve', side_effect=resolver),
-            patch('mcp_server.tools.compare.get_company', side_effect=comp or (lambda s: company())),
+            patch('mcp_server.tools.compare._company', side_effect=comp or (lambda s: company())),
             patch('mcp_server.tools.compare.get_valuation_history', side_effect=val or (lambda s: valuation())),
             patch('mcp_server.tools.compare.get_price_history', side_effect=price or (lambda s, **k: prices())),
             patch('mcp_server.tools.compare.get_ticker_ownership', side_effect=ownership_for),
@@ -196,3 +198,25 @@ class ResolveCacheTest(APITestCase):
             research.resolve('ZZZZ')
             research.resolve('ZZZZ')
         self.assertEqual(view.call_count, 2)
+
+
+@override_settings(CACHES=LOCMEM)
+class CompareCallsTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        get_user_model().objects.create_user('u', password='p')
+
+    def test_compare_asks_only_for_fundamentals(self):
+        asked = []
+
+        def dispatch(view, **kwargs):
+            asked.append(view)
+            return ViewResult(200, {'available': True, 'name': 'Acme Corp', 'pe_ratio': 20.0, 'ratio_history': []})
+
+        with patch('mcp_server.tools.research.call_view', side_effect=dispatch):
+            data = _company('ACME')['data']
+        self.assertEqual(asked, [FundamentalsView])
+        self.assertNotIn(SymbolEarningsView, asked)
+        self.assertNotIn(PeersView, asked)
+        self.assertEqual(data['profile']['name'], 'Acme Corp')
+        self.assertEqual(data['metrics']['pe_ratio'], 20.0)
