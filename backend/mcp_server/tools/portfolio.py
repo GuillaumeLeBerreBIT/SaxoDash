@@ -10,7 +10,8 @@ from ..shaping import capped, without
 from ..views import call_view, problem
 from . import tool
 
-BANKING_INSIGHT_KEYS = frozenset({'bank', 'bank_only', 'net_worth', 'change', 'spark'})
+INSIGHT_KEYS = ('concentration', 'sector_exposure', 'currency_exposure', 'movers', 'contributors', 'upcoming_earnings')
+HIDDEN_ATTENTION_KINDS = frozenset({'stale_value', 'no_history'})
 TRANSACTION_FETCH_SIZE = 1000
 
 
@@ -40,9 +41,12 @@ def _position(row):
 
 
 def _insights(body):
-    value = {k: v for k, v in body.get('value', {}).items() if k not in BANKING_INSIGHT_KEYS}
-    kept = {k: v for k, v in body.items() if k not in BANKING_INSIGHT_KEYS}
-    return without({**kept, 'value': value})
+    kept = {key: body[key] for key in INSIGHT_KEYS if key in body}
+    kept['value'] = {'portfolio': body.get('value', {}).get('portfolio')}
+    kept['attention'] = [
+        item for item in body.get('attention', []) if item.get('kind') not in HIDDEN_ATTENTION_KINDS
+    ]
+    return without(kept)
 
 
 @tool('Portfolio: total value, cost and P/L in EUR, cash, every position with weight and price basis, and insights.')
@@ -51,17 +55,17 @@ def get_portfolio():
     summary = call_view(PortfolioSummaryView)
     positions = call_view(PositionListView)
     insights = call_view(PortfolioInsightsView)
-    for result in (summary, positions, insights):
-        message = problem(result)
-        if message:
-            warnings.append(message)
+    problems = [problem(result) for result in (summary, positions, insights)]
+    warnings.extend(message for message in problems if message)
+    summary_problem, positions_problem, insights_problem = problems
 
-    summary_data = summary.data if problem(summary) is None else {}
-    rows = [_position(row) for row in positions.data] if problem(positions) is None else None
+    summary_data = summary.data if summary_problem is None else {}
+    rows = [_position(row) for row in positions.data] if positions_problem is None else None
     for row in rows or []:
         if row['price_source'] != 'live':
             warnings.append(f"{row['ticker']} priced from {row['price_source']}, not live")
-    warnings.append('Prices are 15-minute delayed.')
+    if rows:
+        warnings.append('Prices are 15-minute delayed.')
 
     data = {
         'total_value_eur': summary_data.get('total_value'),
@@ -70,7 +74,7 @@ def get_portfolio():
         'total_pnl_pct': summary_data.get('total_pnl_pct'),
         'cash_eur': _cash_eur(),
         'positions': rows,
-        'insights': _insights(insights.data) if problem(insights) is None else None,
+        'insights': _insights(insights.data) if insights_problem is None else None,
     }
     return answer(data, sources=['portfolio'], warnings=warnings)
 
@@ -98,4 +102,4 @@ def get_transactions(limit=50):
     message = problem(result)
     if message:
         return answer(None, sources=['transactions'], warnings=[message])
-    return answer(capped(result.data['results'], limit), sources=['transactions'])
+    return answer(capped(result.data['results'], limit, result.data['count']), sources=['transactions'])

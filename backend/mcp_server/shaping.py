@@ -9,5 +9,7 @@ def without(obj, keys=PRESENTATION_KEYS):
     return obj
 
 
-def capped(items, limit):
-    return {'items': items[:limit], 'truncated': max(0, len(items) - limit)}
+def capped(items, limit, total=None):
+    limit = max(0, limit)
+    count = len(items) if total is None else total
+    return {'items': items[:limit], 'truncated': max(0, count - limit)}
