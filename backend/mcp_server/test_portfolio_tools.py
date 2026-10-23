@@ -1,7 +1,7 @@
 import json
 from datetime import date
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -9,7 +9,7 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from portfolio.models import PortfolioValuation, Position
-from portfolio.views import PortfolioInsightsView, PortfolioSummaryView
+from portfolio.views import PortfolioSummaryView
 from transactions.models import Transaction
 
 from .tools.portfolio import get_portfolio, get_transactions
@@ -65,27 +65,31 @@ class PortfolioToolsTest(APITestCase):
         self.assertIsNone(get_portfolio()['data']['cash_eur'])
 
     def test_insights_keep_only_whitelisted_keys(self):
-        body = {
-            'as_of': '2026-01-01', 'stale': True,
-            'value': {'net_worth': 1, 'portfolio': 2, 'bank': 3, 'bank_only': 4, 'broker_cash': 5},
-            'change': {}, 'spark': [],
-            'concentration': {'top': 1}, 'sector_exposure': [], 'currency_exposure': [],
-            'movers': [{'ticker': 'A', 'color': '#fff'}], 'contributors': [], 'upcoming_earnings': [],
-            'attention': [{'kind': 'stale_value'}, {'kind': 'no_history'}, {'kind': 'single_name'}],
-        }
-        def dispatch(view, **kwargs):
-            return ViewResult(200, body) if view is PortfolioInsightsView else call_view(view, **kwargs)
-
-        with patch('mcp_server.tools.portfolio.call_view', side_effect=dispatch):
-            insights = get_portfolio()['data']['insights']
+        make_position('AAA')
+        insights = get_portfolio()['data']['insights']
         self.assertEqual(
             set(insights),
             {'concentration', 'sector_exposure', 'currency_exposure', 'movers',
              'contributors', 'upcoming_earnings', 'value', 'attention'},
         )
-        self.assertEqual(insights['value'], {'portfolio': 2})
-        self.assertEqual([i['kind'] for i in insights['attention']], ['single_name'])
-        self.assertNotIn('color', json.dumps(insights))
+        self.assertEqual(set(insights['value']), {'portfolio'})
+        self.assertEqual(insights['concentration']['top1']['ticker'], 'AAA')
+        kinds = {item['kind'] for item in insights['attention']}
+        self.assertIn('single_name', kinds)
+        self.assertFalse(kinds & {'stale_value', 'no_history'})
+        self.assertNotIn('color', json.dumps(insights, default=str))
+
+    def test_insights_never_read_banking_or_net_worth(self):
+        make_position('AAA')
+        banking = AssertionError('banking read')
+        snapshots = Mock(objects=Mock(order_by=Mock(side_effect=banking)))
+        with patch('portfolio.insights.current_net_worth', side_effect=banking), \
+                patch('portfolio.insights.get_bank_only_balance', side_effect=banking), \
+                patch('portfolio.insights.get_broker_cash_balance', side_effect=banking), \
+                patch('portfolio.insights.NetWorthSnapshot', snapshots):
+            data = get_portfolio()['data']
+        self.assertEqual(data['insights']['concentration']['top1']['ticker'], 'AAA')
+        self.assertEqual(len(data['positions']), 1)
 
     def test_delay_note_only_with_positions(self):
         self.assertNotIn('Prices are 15-minute delayed.', get_portfolio()['warnings'])
@@ -107,6 +111,13 @@ class PortfolioToolsTest(APITestCase):
             data = get_transactions(limit=50)['data']
         self.assertEqual(len(data['items']), 50)
         self.assertEqual(data['truncated'], 2450)
+
+    def test_limit_is_clamped_to_the_fetch_size(self):
+        page = {'count': 2500, 'results': [{'id': i} for i in range(1000)]}
+        with patch('mcp_server.tools.portfolio.call_view', return_value=ViewResult(200, page)):
+            data = get_transactions(limit=5000)['data']
+        self.assertEqual(len(data['items']), 1000)
+        self.assertEqual(data['truncated'], 1500)
 
     def test_transactions_are_capped(self):
         for i in range(60):

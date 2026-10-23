@@ -23,8 +23,16 @@ def app_user():
     return user
 
 
+FALLBACK_HOST = 'localhost'
+
+
+def _host():
+    named = (host.lstrip('.') for host in settings.ALLOWED_HOSTS if host != '*')
+    return next((host for host in named if host), FALLBACK_HOST)
+
+
 def call_view(view_class, *, kwargs=None, query=None):
-    request = APIRequestFactory().get('/', query or {})
+    request = APIRequestFactory().get('/', query or {}, HTTP_HOST=_host())
     force_authenticate(request, user=app_user())
     response = view_class.as_view()(request, **(kwargs or {}))
     return ViewResult(response.status_code, response.data)

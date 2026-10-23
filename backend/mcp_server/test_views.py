@@ -4,7 +4,12 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from datetime import date
+from decimal import Decimal
+
 from portfolio.views import PortfolioSummaryView
+from transactions.models import Transaction
+from transactions.views import TransactionListView
 
 from .views import ViewResult, app_user, call_view, problem
 
@@ -21,6 +26,29 @@ class CallViewTest(APITestCase):
         result = call_view(PortfolioSummaryView)
         self.assertEqual(result.status, 200)
         self.assertIn('total_value', result.data)
+
+    @override_settings(ALLOWED_HOSTS=['saxodash.local', 'localhost'])
+    def test_paginated_view_links_on_an_allowed_host(self):
+        get_user_model().objects.create_user('u', password='p')
+        for i in range(2):
+            Transaction.objects.create(
+                date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
+                qty=Decimal('1'), price=Decimal('1'), saxo_trade_id=f't{i}',
+            )
+        result = call_view(TransactionListView, query={'page_size': 1})
+        self.assertEqual(result.status, 200)
+        self.assertIn('//saxodash.local/', result.data['next'])
+
+    @override_settings(ALLOWED_HOSTS=['*'])
+    def test_wildcard_hosts_fall_back_to_localhost(self):
+        get_user_model().objects.create_user('u', password='p')
+        for i in range(2):
+            Transaction.objects.create(
+                date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
+                qty=Decimal('1'), price=Decimal('1'), saxo_trade_id=f't{i}',
+            )
+        result = call_view(TransactionListView, query={'page_size': 1})
+        self.assertIn('//localhost/', result.data['next'])
 
     def test_no_user_is_improperly_configured(self):
         with self.assertRaises(ImproperlyConfigured):

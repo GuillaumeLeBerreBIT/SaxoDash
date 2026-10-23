@@ -2,7 +2,8 @@ from django.conf import settings
 
 from analytics.views import PerformanceView, RiskMetricsView
 from portfolio.models import PortfolioValuation
-from portfolio.views import PortfolioInsightsView, PortfolioSummaryView, PositionListView
+from portfolio.insights import build_position_insights
+from portfolio.views import PortfolioSummaryView, PositionListView
 from transactions.views import TransactionListView
 
 from ..envelope import answer, saxo_warnings
@@ -10,8 +11,6 @@ from ..shaping import capped, without
 from ..views import call_view, problem
 from . import tool
 
-INSIGHT_KEYS = ('concentration', 'sector_exposure', 'currency_exposure', 'movers', 'contributors', 'upcoming_earnings')
-HIDDEN_ATTENTION_KINDS = frozenset({'stale_value', 'no_history'})
 TRANSACTION_FETCH_SIZE = 1000
 
 
@@ -40,24 +39,14 @@ def _position(row):
     }
 
 
-def _insights(body):
-    kept = {key: body[key] for key in INSIGHT_KEYS if key in body}
-    kept['value'] = {'portfolio': body.get('value', {}).get('portfolio')}
-    kept['attention'] = [
-        item for item in body.get('attention', []) if item.get('kind') not in HIDDEN_ATTENTION_KINDS
-    ]
-    return without(kept)
-
-
 @tool('Portfolio: total value, cost and P/L in EUR, cash, every position with weight and price basis, and insights.')
 def get_portfolio():
     warnings = saxo_warnings()
     summary = call_view(PortfolioSummaryView)
     positions = call_view(PositionListView)
-    insights = call_view(PortfolioInsightsView)
-    problems = [problem(result) for result in (summary, positions, insights)]
+    problems = [problem(result) for result in (summary, positions)]
     warnings.extend(message for message in problems if message)
-    summary_problem, positions_problem, insights_problem = problems
+    summary_problem, positions_problem = problems
 
     summary_data = summary.data if summary_problem is None else {}
     rows = [_position(row) for row in positions.data] if positions_problem is None else None
@@ -74,7 +63,7 @@ def get_portfolio():
         'total_pnl_pct': summary_data.get('total_pnl_pct'),
         'cash_eur': _cash_eur(),
         'positions': rows,
-        'insights': _insights(insights.data) if insights_problem is None else None,
+        'insights': without(build_position_insights()),
     }
     return answer(data, sources=['portfolio'], warnings=warnings)
 
@@ -102,4 +91,5 @@ def get_transactions(limit: int = 50):
     message = problem(result)
     if message:
         return answer(None, sources=['transactions'], warnings=[message])
-    return answer(capped(result.data['results'], limit, result.data['count']), sources=['transactions'])
+    shown = min(limit, TRANSACTION_FETCH_SIZE)
+    return answer(capped(result.data['results'], shown, result.data['count']), sources=['transactions'])

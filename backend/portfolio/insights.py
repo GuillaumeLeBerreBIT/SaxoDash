@@ -313,3 +313,26 @@ def build_insights():
         ),
         'upcoming_earnings': upcoming,
     }
+
+
+def build_position_insights():
+    positions = list(Position.objects.all())
+    today = timezone.localdate()
+    total = sum((p.value for p in positions), Decimal('0'))
+    total_cost = sum((p.cost for p in positions), Decimal('0'))
+    concentration = _concentration(positions, total)
+    upcoming = _upcoming_earnings({p.ticker.upper() for p in positions if p.ticker}, today)
+    return {
+        'value': {'portfolio': get_portfolio_value().rounded().amount},
+        'concentration': concentration,
+        'sector_exposure': _exposure(positions, total, 'sector', 'name'),
+        'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
+        'movers': _movers(positions),
+        'contributors': _contributors(positions, total_cost, total - total_cost),
+        'attention': [
+            item
+            for item in _attention(positions, [], today, concentration, upcoming, _idle_cash_pct())
+            if item['kind'] != 'no_history'
+        ] + _thesis_attention(positions, today),
+        'upcoming_earnings': upcoming,
+    }
