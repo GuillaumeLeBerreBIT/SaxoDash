@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'analytics',
     'investors',
     'congress',
+    'advisor',
     'mcp_server',
 ]
 
