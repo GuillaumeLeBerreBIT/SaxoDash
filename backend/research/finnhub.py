@@ -521,6 +521,38 @@ def fundamentals(symbol):
     return {'available': True, **data}
 
 
+VALUATION_ANNUAL = {'pe': 'pe', 'ps': 'ps', 'pb': 'pb', 'pfcf': 'pfcf', 'ev_ebitda': 'evEbitda'}
+VALUATION_QUARTERLY = {
+    'pe_ttm': 'peTTM',
+    'ps_ttm': 'psTTM',
+    'pfcf_ttm': 'pfcfTTM',
+    'ev_ebitda_ttm': 'evEbitdaTTM',
+    'eps': 'eps',
+}
+
+
+def _oldest_first(points):
+    rows = [{'period': p['period'], 'v': p['v']} for p in points or [] if p.get('period') and p.get('v') is not None]
+    return sorted(rows, key=lambda row: row['period'])
+
+
+def _shape_series(raw, names):
+    shaped = {key: _oldest_first(raw.get(name)) for key, name in names.items()}
+    return {key: rows for key, rows in shaped.items() if rows}
+
+
+def valuation_series(symbol):
+    def produce():
+        series = get_basic_financials(symbol).get('series') or {}
+        shaped = {
+            'annual': _shape_series(series.get('annual') or {}, VALUATION_ANNUAL),
+            'quarterly': _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY),
+        }
+        return shaped, FUNDAMENTALS_TTL
+
+    return cached(f'research:valuation-series:v1:{symbol}', produce, unexpected=FinnhubUnexpected)
+
+
 def _peers_cache_key(symbol):
     return f'research:peers:v1:{symbol}'
 

@@ -1,4 +1,9 @@
+from datetime import date
+
 from portfolio.models import Position
+from research import finnhub
+from research.providers import ProviderUnavailable
+from research.valuation import median_since, trailing_pe
 from research.technicals import rsi, sma
 from research.models import SymbolNote, Watchlist
 from research.serializers import SymbolNoteSerializer
@@ -351,3 +356,61 @@ def get_watchlists():
         ]
         watchlists.append({'name': watchlist.name, 'items': items})
     return answer({'watchlists': watchlists}, sources=['watchlists'])
+
+
+VALUATION_RATIOS = ('pe_ttm', 'ps_ttm', 'pfcf_ttm', 'ev_ebitda_ttm')
+UNVERIFIED_CURRENCY_WARNING = 'The listing currency was not verified, so the symbol is assumed to be US-listed.'
+NO_DAILY_PE_WARNING = 'Daily P/E needs Saxo closes, which are unavailable for this symbol.'
+
+
+def _points(rows):
+    return [(date.fromisoformat(row['period']), row['v']) for row in rows or []]
+
+
+def _weekly(points):
+    last_of_week = {}
+    for day, value in points:
+        last_of_week[day.isocalendar()[:2]] = (day, value)
+    return [[day.isoformat(), value] for day, value in sorted(last_of_week.values())]
+
+
+def _daily_pe(instrument, eps, warnings):
+    if instrument is None:
+        warnings.append(NO_DAILY_PE_WARNING)
+        return []
+    result = _chart(instrument, INTERVAL_HORIZONS['daily'], DAILY_FETCH)
+    message = problem(result)
+    if message:
+        warnings.append(message)
+        return []
+    closes = [(date.fromisoformat(c['date']), c['close']) for c in result.data]
+    return trailing_pe(closes, eps)
+
+
+@tool('Valuation history for a US-listed stock: P/E, P/S, P/FCF and EV/EBITDA series, a daily trailing P/E sampled weekly, and 5-year medians.')
+def get_valuation_history(symbol):
+    ticker, refused = _gate(symbol)
+    if refused:
+        return refused
+    try:
+        series = finnhub.valuation_series(ticker)
+    except ProviderUnavailable as exc:
+        return answer(None, sources=[FINNHUB], warnings=[exc.reason])
+    instrument = resolve(symbol)
+    warnings = saxo_warnings() if instrument else []
+    if instrument is None or not instrument['currency']:
+        warnings.append(UNVERIFIED_CURRENCY_WARNING)
+    quarterly = series['quarterly']
+    daily = _daily_pe(instrument, _points(quarterly.get('eps')), warnings)
+    medians = {name: median_since(_points(quarterly.get(name))) for name in VALUATION_RATIOS}
+    medians['daily_pe'] = median_since(daily)
+    latest = {name: quarterly[name][-1]['v'] if quarterly.get(name) else None for name in VALUATION_RATIOS}
+    latest['daily_pe'] = daily[-1][1] if daily else None
+    data = {
+        'annual': series['annual'],
+        'quarterly': quarterly,
+        'daily_pe': _weekly(daily),
+        'medians_5y': medians,
+        'latest': latest,
+    }
+    return answer(data, sources=[FINNHUB, 'saxo'], warnings=warnings)
