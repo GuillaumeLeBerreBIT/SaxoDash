@@ -40,5 +40,5 @@ def problem(result):
     if result.status >= 500:
         return f'Upstream error ({result.status}).'
     if isinstance(result.data, dict) and result.data.get('available') is False:
-        return result.data.get('reason') or result.data.get('message')
+        return result.data.get('reason') or result.data.get('message') or 'Data unavailable.'
     return None

@@ -55,5 +55,8 @@ class CallViewTest(APITestCase):
     def test_unavailable_body_falls_back_to_message(self):
         self.assertEqual(problem(ViewResult(200, {'available': False, 'message': 'No data'})), 'No data')
 
+    def test_unavailable_body_without_text_has_a_default(self):
+        self.assertEqual(problem(ViewResult(200, {'available': False})), 'Data unavailable.')
+
     def test_success_is_not_a_problem(self):
         self.assertIsNone(problem(ViewResult(200, {'available': True})))
