@@ -567,5 +567,6 @@ single user) and reshapes the answer, so the assistant and the page cannot disag
 number, and throttles and the Finnhub budget still apply. It never touches banking data or
 orders, and starts no sync. Its only writes are `advisor.Recommendation` rows, whose entry
 price the server fills from Saxo, not the model. Saxo down or a provider busy is a
-`warnings` entry with `data: null`, never an exception. Setup:
+`warnings` entry with `data: null`, never an exception; so is Redis down (the
+tool wrapper catches the cache's connection and timeout errors). Setup:
 `docs/running-the-stack.md` → "The MCP server".

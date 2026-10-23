@@ -266,10 +266,10 @@ Cowork: not yet verified whether Cowork tasks see local stdio servers. Claude De
 chat does. If Cowork does not, the route is a desktop extension (`.mcpb`) packaging
 the same command.
 
-Tools, by group (each description names the page it mirrors):
+31 tools, by group (each description names the page it mirrors):
 
 - **Portfolio**: `get_portfolio`, `get_performance`, `get_transactions`, `get_tax_year`
-- **Research**: `resolve`, `search_instruments`, `get_quotes`, `get_price_history`,
+- **Research**: `search_instruments`, `get_quotes`, `get_price_history`,
   `get_company`, `get_financial_statements`, `get_filings_and_insiders`, `get_news`,
   `get_valuation_history`, `get_my_notes`, `get_watchlists`, `compare_companies`
 - **Market**: `screen_universe`, `get_discover_shelves`, `get_earnings_calendar`
