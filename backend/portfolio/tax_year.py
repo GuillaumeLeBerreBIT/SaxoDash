@@ -20,7 +20,10 @@ def realised(rows, year):
     entries = []
     for row in rows:
         base = row['ClosedPosition']
-        closed_on = date.fromisoformat(base['ExecutionTimeClose'][:10])
+        closed_at = base.get('ExecutionTimeClose')
+        if not closed_at:
+            return None
+        closed_on = date.fromisoformat(closed_at[:10])
         if closed_on.year != year:
             continue
         pnl = base.get('ProfitLossOnTradeInBaseCurrency')
@@ -64,12 +67,15 @@ def summary(realised_rows, unrealised_rows, carry_over_eur):
     result = {
         'realised_net_eur': None,
         'exemption_eur': exemption,
-        'exemption_left_eur': _cents(exemption),
+        'exemption_left_eur': None,
         'taxable_eur': None,
         'estimated_tax_eur': None,
-        'unrealised_gains_eur': _cents(sum((v for v in known if v > 0), Decimal('0'))),
-        'unrealised_losses_eur': _cents(sum((v for v in known if v < 0), Decimal('0'))),
+        'unrealised_gains_eur': None,
+        'unrealised_losses_eur': None,
     }
+    if known or not unrealised_rows:
+        result['unrealised_gains_eur'] = _cents(sum((v for v in known if v > 0), Decimal('0')))
+        result['unrealised_losses_eur'] = _cents(sum((v for v in known if v < 0), Decimal('0')))
     if realised_rows is None:
         return result
     net = _cents(sum((row['realised_eur'] for row in realised_rows), Decimal('0')))

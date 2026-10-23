@@ -80,6 +80,11 @@ class RealisedTests(SimpleTestCase):
         payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', None)]
         self.assertIsNone(tax_year.realised(payload, 2026))
 
+    def test_missing_close_time_is_none_not_an_error(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', 5.0)]
+        del payload[0]['ClosedPosition']['ExecutionTimeClose']
+        self.assertIsNone(tax_year.realised(payload, 2026))
+
     def test_missing_field_on_an_other_year_row_is_ignored(self):
         payload = [closed('AAA', '2025-03-04T10:00:00.000000Z', None)]
         self.assertEqual(tax_year.realised(payload, 2026), [])
@@ -117,7 +122,7 @@ class SummaryTests(SimpleTestCase):
         self.assertIsNone(result['taxable_eur'])
         self.assertIsNone(result['estimated_tax_eur'])
         self.assertEqual(result['exemption_eur'], Decimal('10000'))
-        self.assertEqual(result['exemption_left_eur'], Decimal('10000'))
+        self.assertIsNone(result['exemption_left_eur'])
 
     def test_unrealised_gains_and_losses_skip_nulls(self):
         rows = [
@@ -129,3 +134,14 @@ class SummaryTests(SimpleTestCase):
         result = tax_year.summary(gains(0), rows, Decimal('0'))
         self.assertEqual(result['unrealised_gains_eur'], Decimal('60.00'))
         self.assertEqual(result['unrealised_losses_eur'], Decimal('-20.00'))
+
+    def test_all_unknown_unrealised_totals_are_none(self):
+        rows = [{'unrealised_eur': None}, {'unrealised_eur': None}]
+        result = tax_year.summary(gains(0), rows, Decimal('0'))
+        self.assertIsNone(result['unrealised_gains_eur'])
+        self.assertIsNone(result['unrealised_losses_eur'])
+
+    def test_no_positions_means_zero_unrealised(self):
+        result = tax_year.summary(gains(0), [], Decimal('0'))
+        self.assertEqual(result['unrealised_gains_eur'], Decimal('0.00'))
+        self.assertEqual(result['unrealised_losses_eur'], Decimal('0.00'))
