@@ -1,8 +1,24 @@
 from portfolio.models import Position
 from research.technicals import rsi, sma
-from research.views import ChartView, InstrumentDetailsView, InstrumentSearchView, QuotesView
+from research.models import Watchlist
+from research.views import (
+    ChartView,
+    CompanyNewsView,
+    FilingsView,
+    FundamentalsView,
+    InsidersView,
+    InstrumentDetailsView,
+    InstrumentSearchView,
+    PeersView,
+    QuotesView,
+    StatementsView,
+    SymbolEarningsView,
+    SymbolNoteView,
+)
 
+from .. import company_data
 from ..envelope import answer, saxo_warnings
+from ..shaping import capped, without
 from ..views import call_view, problem
 from ..zones import zone
 from . import tool
@@ -33,7 +49,7 @@ def _bare(symbol):
 
 
 def _held(symbol):
-    position = Position.objects.filter(ticker__iexact=symbol, uic__isnull=False).first()
+    position = Position.objects.filter(ticker__iexact=symbol, uic__isnull=False).order_by('id').first()
     if position is None or not position.asset_type:
         return None
     return {
@@ -61,13 +77,14 @@ def resolve(symbol):
     result = call_view(InstrumentSearchView, query={'q': wanted, 'asset_types': SEARCH_ASSET_TYPES})
     if problem(result) or not isinstance(result.data, list):
         return None
-    for row in result.data:
-        if _bare(row.get('symbol') or '') == wanted:
-            instrument = _shape(row)
-            if instrument['currency'] is None:
-                instrument['currency'] = _details_currency(instrument['uic'], instrument['asset_type'])
-            return instrument
-    return None
+    matches = [row for row in result.data if _bare(row.get('symbol') or '') == wanted]
+    if not matches:
+        return None
+    row = next((r for r in matches if r.get('currency') == company_data.COMPANY_DATA_CURRENCY), matches[0])
+    instrument = _shape(row)
+    if instrument['currency'] is None:
+        instrument['currency'] = _details_currency(instrument['uic'], instrument['asset_type'])
+    return instrument
 
 
 def _chart(instrument, horizon, count):
@@ -210,3 +227,129 @@ def get_price_history(symbol, interval='weekly', bars=104):
         'zone': playbook_zone,
     }
     return answer(data, sources=['saxo'], warnings=warnings)
+
+
+PROFILE_KEYS = ('name', 'exchange', 'industry', 'country', 'ipo_date', 'market_cap', 'shares_outstanding', 'free_float')
+SERIES_KEYS = ('ratio_history', 'eps_history', 'recommendation', 'recommendation_history')
+STATEMENT_PERIODS = ('annual', 'quarterly')
+FINNHUB = 'finnhub'
+
+
+def _gate(symbol, *, allow_fund=False):
+    instrument = resolve(symbol)
+    status = company_data.status(
+        asset_type=instrument['asset_type'] if instrument else None,
+        currency=instrument['currency'] if instrument else None,
+        resolved=instrument is not None,
+    )
+    if status == company_data.ELIGIBLE or (allow_fund and status == company_data.FUND):
+        return _bare(symbol), None
+    return None, answer(None, sources=[FINNHUB], warnings=[company_data.refusal(status)])
+
+
+def _part(view_class, ticker):
+    result = call_view(view_class, kwargs={'symbol': ticker})
+    message = problem(result)
+    if message:
+        return None, message
+    return without(result.data), None
+
+
+def _scalar_metrics(payload):
+    skip = {'available', *PROFILE_KEYS, *SERIES_KEYS}
+    return {k: v for k, v in payload.items() if k not in skip and not isinstance(v, (dict, list))}
+
+
+@tool('Company profile, valuation and growth metrics, EPS and earnings history, peers and analyst trend (US-listed stocks only).')
+def get_company(symbol):
+    ticker, refused = _gate(symbol)
+    if refused:
+        return refused
+    warnings = []
+    fundamentals, message = _part(FundamentalsView, ticker)
+    if message:
+        warnings.append(message)
+    earnings, message = _part(SymbolEarningsView, ticker)
+    if message:
+        warnings.append(message)
+    peers, message = _part(PeersView, ticker)
+    if message:
+        warnings.append(message)
+    data = {
+        'profile': {k: fundamentals[k] for k in PROFILE_KEYS if k in fundamentals} if fundamentals else None,
+        'metrics': _scalar_metrics(fundamentals) if fundamentals else None,
+        'ratio_history': fundamentals.get('ratio_history') if fundamentals else None,
+        'eps_history': fundamentals.get('eps_history') if fundamentals else None,
+        'earnings': {k: v for k, v in earnings.items() if k != 'available'} if earnings else None,
+        'peers': peers['symbols'] if peers else None,
+        'recommendation_trend': fundamentals.get('recommendation_history') if fundamentals else None,
+    }
+    return answer(data, sources=[FINNHUB], warnings=warnings)
+
+
+@tool('Income statement, balance sheet and cash flow rows for a US-listed stock, annual or quarterly.')
+def get_financial_statements(symbol, period='annual'):
+    if period not in STATEMENT_PERIODS:
+        return answer(None, sources=[FINNHUB], warnings=[f"period must be one of {', '.join(STATEMENT_PERIODS)}."])
+    ticker, refused = _gate(symbol)
+    if refused:
+        return refused
+    payload, message = _part(StatementsView, ticker)
+    if message:
+        return answer(None, sources=[FINNHUB], warnings=[message])
+    warnings = []
+    if period == 'quarterly' and payload.get('partial'):
+        warnings.append('Quarterly statements are unavailable right now; try again later.')
+    data = {'period': period, 'periods': payload[period]}
+    return answer(data, sources=[FINNHUB, 'sec'], warnings=warnings)
+
+
+@tool('Recent SEC filings (10-K, 10-Q, 8-K) and insider trades for a US-listed stock.')
+def get_filings_and_insiders(symbol):
+    ticker, refused = _gate(symbol)
+    if refused:
+        return refused
+    warnings = []
+    filings, message = _part(FilingsView, ticker)
+    if message:
+        warnings.append(message)
+    insiders, message = _part(InsidersView, ticker)
+    if message:
+        warnings.append(message)
+    data = {
+        'filings': {k: v for k, v in filings.items() if k != 'available'} if filings else None,
+        'insiders': {k: v for k, v in insiders.items() if k != 'available'} if insiders else None,
+    }
+    return answer(data, sources=[FINNHUB, 'sec'], warnings=warnings)
+
+
+@tool('Recent company headlines, newest first (US-listed stocks and ETFs).')
+def get_news(symbol, limit=15):
+    ticker, refused = _gate(symbol, allow_fund=True)
+    if refused:
+        return refused
+    payload, message = _part(CompanyNewsView, ticker)
+    if message:
+        return answer(None, sources=[FINNHUB], warnings=[message])
+    return answer(capped(payload['items'], int(limit)), sources=[FINNHUB])
+
+
+@tool("Your own notes for a ticker: thesis, risks, target and stop prices.")
+def get_my_notes(symbol):
+    result = call_view(SymbolNoteView, kwargs={'symbol': _bare(symbol)})
+    message = problem(result)
+    if message:
+        return answer(None, sources=['notes'], warnings=[message])
+    return answer(dict(result.data), sources=['notes'])
+
+
+@tool('Your watchlists and the instruments in each.')
+def get_watchlists():
+    watchlists = []
+    for watchlist in Watchlist.objects.prefetch_related('items').order_by('order', 'id'):
+        items = [
+            without({'symbol': i.symbol, 'name': i.description, 'uic': i.uic, 'asset_type': i.asset_type})
+            for i in watchlist.items.all()
+        ]
+        watchlists.append({'name': watchlist.name, 'items': items})
+    return answer({'watchlists': watchlists}, sources=['watchlists'])
