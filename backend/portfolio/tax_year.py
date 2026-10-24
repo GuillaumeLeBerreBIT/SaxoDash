@@ -1,8 +1,5 @@
-from datetime import UTC, date
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
-from zoneinfo import ZoneInfo
-
-from django.utils.dateparse import parse_datetime
 
 from saxo.mapping import bare_symbol
 from transactions.models import Transaction
@@ -14,13 +11,9 @@ EXEMPTION_EUR = Decimal('10000')
 CARRY_OVER_CAP_EUR = Decimal('5000')
 BASIS_DAY = date(2025, 12, 31)
 ADVISER_NOTE = 'Check with a Belgian tax adviser.'
-TAX_ZONE = ZoneInfo('Europe/Brussels')
 FIRST_YEAR = 2026
 NOT_A_TAX_YEAR = 'Belgian capital-gains tax starts in 2026; there is no tax year before it.'
-COVERAGE_NOTE = (
-    "Realised gains come from Saxo's closed-positions list, whose coverage of the full year "
-    "is not yet verified; compare with Saxo's annual tax report."
-)
+COVERAGE_NOTE = "Realised gains come from Saxo's closed-positions report, in account currency with costs included."
 FX_NOTE = "FX: today's rate is used for both ends of an unrealised gain."
 
 SAXO_BASIS = 'saxo'
@@ -45,74 +38,57 @@ def _decimal(value):
     return Decimal(str(value))
 
 
-def local_day(stamp):
-    moment = parse_datetime(stamp) if stamp else None
-    if moment is None:
+def _day(value):
+    try:
+        return date.fromisoformat(value[:10]) if value else None
+    except ValueError:
         return None
-    if moment.tzinfo is None:
-        moment = moment.replace(tzinfo=UTC)
-    return moment.astimezone(TAX_ZONE).date()
-
-
-def _ticker(row):
-    return bare_symbol(row.get('DisplayAndFormat', {}).get('Symbol'))
-
-
-def _instrument(base):
-    return base.get('Uic'), base.get('AssetType')
 
 
 def _closed_in(rows, year):
     for row in rows:
-        base = row['ClosedPosition']
-        closed_on = local_day(base.get('ExecutionTimeClose'))
+        closed_on = _day(row.get('TradeDateClose'))
         if closed_on is None or closed_on.year == year:
-            yield row, base, closed_on
+            yield row, closed_on
 
 
-def _opened_before_basis(base):
-    opened_on = local_day(base.get('ExecutionTimeOpen'))
-    return opened_on is not None and opened_on <= BASIS_DAY
-
-
-def _rebased(base, basis_close):
-    closing = base.get('ClosingPrice')
-    rate = base.get('ConversionRateClose')
-    if basis_close is None or closing is None or rate is None:
+def _rebased(row, basis_close):
+    proceeds = row.get('TotalBookedOnClosingLegAccountCurrency')
+    closing = row.get('ClosePrice')
+    if basis_close is None or proceeds is None or not closing:
         return None
-    direction = 1 if base.get('BuyOrSell') == 'Buy' else -1
-    move = _decimal(closing) - _decimal(basis_close)
-    return _cents(direction * move * _decimal(abs(base['Amount'])) * _decimal(rate))
+    return _cents(_decimal(proceeds) * (_decimal(closing) - _decimal(basis_close)) / _decimal(closing))
 
 
 def realised(rows, year, close_on):
     entries = []
-    for row, base, closed_on in _closed_in(rows, year):
-        ticker = _ticker(row)
+    for row, closed_on in _closed_in(rows, year):
+        ticker = bare_symbol(row.get('InstrumentSymbol'))
         if closed_on is None:
-            return None, f'{ticker}: a closed position has no close time, so realised gains are unknown.'
-        if local_day(base.get('ExecutionTimeOpen')) is None:
-            return None, f'{ticker}: a closed position has no opening time, so its tax basis is unknown.'
-        if _opened_before_basis(base):
+            return None, f'{ticker}: a closed position has no close date, so realised gains are unknown.'
+        opened_on = _day(row.get('TradeDateOpen'))
+        if opened_on is None:
+            return None, f'{ticker}: a closed position has no opening date, so its tax basis is unknown.'
+        if opened_on <= BASIS_DAY:
             source = DEC_31_BASIS
-            close, why = close_on(*_instrument(base))
-            gain = _rebased(base, close)
+            close, why = close_on(row.get('Uic'), row.get('AssetType'))
+            gain = _rebased(row, close)
             if gain is None:
                 detail = f' ({why})' if why else ''
                 return None, (
-                    f'{ticker}: a lot bought before 2026 needs its 31 December 2025 close, its closing price '
-                    f'and its conversion rate, and one is missing{detail}, so realised gains are unknown.'
+                    f'{ticker}: a lot bought before 2026 needs its 31 December 2025 close and its closing '
+                    f'proceeds, and one is missing{detail}, so realised gains are unknown.'
                 )
         else:
             source = SAXO_BASIS
-            pnl = base.get('ProfitLossOnTradeInBaseCurrency')
+            pnl = row.get('PnLAccountCurrency')
             if pnl is None:
                 return None, f'{ticker}: a closed position lacks its account-currency P/L, so realised gains are unknown.'
             gain = _cents(_decimal(pnl))
         entries.append({
             'ticker': ticker,
             'closed_on': closed_on,
-            'qty': _decimal(abs(base['Amount'])),
+            'qty': _decimal(abs(row.get('AmountClose') or row.get('Amount') or 0)),
             'basis_source': source,
             'realised_eur': gain,
         })

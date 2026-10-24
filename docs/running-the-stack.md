@@ -303,7 +303,8 @@ the per-minute throttles protect the Saxo token the syncs use.
 carry-over and a 31 December 2025 basis for older holdings, always ending "Check with
 a Belgian tax adviser." It refuses years before 2026. A holding with no recorded
 purchase has an unknown basis rather than its average cost. Realised gains come from
-Saxo's closed-positions list, and whether it covers the whole year is unverified.
+Saxo's closed-positions report (`/cs/v1/reports/closedPositions`), which covers the whole year
+in account currency; see `docs/notes/2026-10-21-mcp-probes.md`.
 
 ---
 

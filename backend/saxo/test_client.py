@@ -212,3 +212,27 @@ class SaxoMarketDataClientTest(TestCase):
 
         self.assertEqual(result, [{'Uic': 211}])
         self.assertEqual(mock_get.call_args.kwargs['params']['Uics'], '211,212')
+
+
+class SaxoReportsTest(TestCase):
+    @patch('saxo.client._get')
+    def test_closed_positions_report_follows_next_links(self, get):
+        base = client._api_base_url()
+        get.side_effect = [
+            {'Data': [{'n': 1}], '__next': f'{base}/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24?$skip=1'},
+            {'Data': [{'n': 2}]},
+        ]
+        rows = client.get_closed_positions_report('token', 'K', '2026-01-01', '2026-10-24')
+        self.assertEqual(rows, [{'n': 1}, {'n': 2}])
+        self.assertEqual(get.call_args_list[0].args[1], '/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24')
+        self.assertEqual(get.call_args_list[1].args[1], '/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24?$skip=1')
+
+    @patch('saxo.client._get')
+    def test_trades_report_asks_for_the_window(self, get):
+        get.return_value = {'Data': [{'Uic': 7}]}
+        self.assertEqual(client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24'), [{'Uic': 7}])
+        self.assertEqual(get.call_args.kwargs['params'], {'FromDate': '2025-01-01', 'ToDate': '2026-10-24'})
+
+    @patch('saxo.client._get', return_value={'ClientKey': 'K', 'Name': 'x'})
+    def test_client_key(self, _get):
+        self.assertEqual(client.get_client_key('token'), 'K')

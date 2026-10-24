@@ -83,6 +83,29 @@ def _get(access_token, path, params=None):
     )
 
 
+def get_client_key(access_token):
+    return _get(access_token, '/port/v1/clients/me')['ClientKey']
+
+
+def _report(access_token, path, params=None):
+    rows = []
+    body = _get(access_token, path, params=params)
+    while True:
+        rows.extend(body.get('Data') or [])
+        following = body.get('__next')
+        if not following:
+            return rows
+        body = _get(access_token, following.removeprefix(_api_base_url()))
+
+
+def get_closed_positions_report(access_token, client_key, from_date, to_date):
+    return _report(access_token, f'/cs/v1/reports/closedPositions/{client_key}/{from_date}/{to_date}')
+
+
+def get_trades_report(access_token, client_key, from_date, to_date):
+    return _report(access_token, f'/cs/v1/reports/trades/{client_key}', params={'FromDate': from_date, 'ToDate': to_date})
+
+
 def build_authorize_url(state):
     query = urlencode({
         'response_type': 'code',

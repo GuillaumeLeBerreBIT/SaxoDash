@@ -15,24 +15,20 @@ def position(ticker='AAA', qty=10, avg_cost=90, current_price=120, fx_rate='0.9'
     )
 
 
-def closed(symbol, closed_at, pnl, amount=5, opened_at='2026-02-01T10:00:00.000000Z', **extra):
-    base = {
-        'BuyOrSell': 'Buy',
-        'Amount': amount,
-        'ExecutionTimeOpen': opened_at,
-        'ExecutionTimeClose': closed_at,
-        'ClosingPrice': 10.0,
-        'Uic': 7,
+def closed(symbol, closed_on, pnl, qty=5, opened_on='2026-02-01', **extra):
+    row = {
+        'InstrumentSymbol': f'{symbol}:xnas',
         'AssetType': 'Stock',
+        'Uic': 7,
+        'TradeDateOpen': opened_on,
+        'TradeDateClose': closed_on,
+        'AmountClose': -qty,
+        'ClosePrice': 10.0,
     }
     if pnl is not None:
-        base['ProfitLossOnTradeInBaseCurrency'] = pnl
-    base.update(extra)
-    return {
-        'ClosedPositionUniqueId': f'{symbol}-{closed_at}',
-        'ClosedPosition': base,
-        'DisplayAndFormat': {'Symbol': f'{symbol}:xnas', 'Currency': 'USD'},
-    }
+        row['PnLAccountCurrency'] = pnl
+    row.update(extra)
+    return row
 
 
 def lots(*entries):
@@ -97,11 +93,11 @@ class UnrealisedTests(SimpleTestCase):
 
 
 class RealisedTests(SimpleTestCase):
-    def test_realised_rows_from_saxo_payload(self):
+    def test_realised_rows_from_the_closed_positions_report(self):
         payload = [
-            closed('AAA', '2026-03-04T10:00:00.000000Z', 123.456, amount=-5),
-            closed('BBB', '2025-12-30T10:00:00.000000Z', 999.0),
-            closed('CCC', '2026-07-01T09:00:00.000000Z', -20.0),
+            closed('AAA', '2026-03-04', 123.456),
+            closed('BBB', '2025-12-30', 999.0),
+            closed('CCC', '2026-07-01', -20.0),
         ]
         rows, reason = tax_year.realised(payload, 2026, closes({}))
         self.assertIsNone(reason)
@@ -114,61 +110,69 @@ class RealisedTests(SimpleTestCase):
         )
 
     def test_pre_2026_lot_is_rebased_on_the_dec_31_close(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00Z', 160 * 5 * 0.9, opened_at='2023-05-01T14:00:00Z',
-                          ClosingPrice=180.0, ConversionRateClose=0.9)]
+        payload = [closed('AAA', '2026-03-04', 160 * 5 * 0.9, opened_on='2023-05-01',
+                          ClosePrice=180.0, TotalBookedOnClosingLegAccountCurrency=180 * 5 * 0.9)]
         rows, reason = tax_year.realised(payload, 2026, closes({(7, 'Stock'): 140.0}))
         self.assertIsNone(reason)
         self.assertEqual(rows[0]['realised_eur'], Decimal('180.00'))
         self.assertEqual(rows[0]['basis_source'], 'dec_31_2025')
 
     def test_pre_2026_short_is_rebased_the_other_way(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00Z', 0.0, opened_at='2025-05-01T14:00:00Z',
-                          BuyOrSell='Sell', ClosingPrice=120.0, ConversionRateClose=1.0)]
+        payload = [closed('AAA', '2026-03-04', 0.0, opened_on='2025-05-01', CloseType='Buy',
+                          ClosePrice=120.0, TotalBookedOnClosingLegAccountCurrency=-600.0)]
         rows, _ = tax_year.realised(payload, 2026, closes({(7, 'Stock'): 140.0}))
         self.assertEqual(rows[0]['realised_eur'], Decimal('100.00'))
 
+    def test_the_basis_day_itself_counts_as_pre_2026(self):
+        payload = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-12-31', TotalBookedOnClosingLegAccountCurrency=50.0)]
+        rows, _ = tax_year.realised(payload, 2026, closes({(7, 'Stock'): 8.0}))
+        self.assertEqual(rows[0]['basis_source'], 'dec_31_2025')
+
     def test_pre_2026_lot_without_a_dec_31_close_is_unknown(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z', ConversionRateClose=0.9)]
+        payload = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01', TotalBookedOnClosingLegAccountCurrency=50.0)]
         rows, reason = tax_year.realised(payload, 2026, closes({(7, 'Stock'): None}))
         self.assertIsNone(rows)
         self.assertIn('AAA', reason)
         self.assertIn('31 December 2025', reason)
 
     def test_a_missing_dec_31_close_says_why(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z', ConversionRateClose=0.9)]
+        payload = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01', TotalBookedOnClosingLegAccountCurrency=50.0)]
         _, reason = tax_year.realised(payload, 2026, lambda uic, asset_type: (None, 'Saxo is not connected'))
         self.assertIn('(Saxo is not connected)', reason)
 
-    def test_pre_2026_lot_without_a_conversion_rate_is_unknown(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z')]
+    def test_pre_2026_lot_without_its_closing_proceeds_is_unknown(self):
+        payload = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01')]
         rows, reason = tax_year.realised(payload, 2026, closes({(7, 'Stock'): 140.0}))
         self.assertIsNone(rows)
         self.assertIn('AAA', reason)
 
-    def test_days_are_brussels_days_not_utc(self):
-        payload = [closed('AAA', '2025-12-31T23:30:00Z', 42.0, opened_at='2025-12-31T23:15:00Z')]
-        rows, reason = tax_year.realised(payload, 2026, closes({}))
-        self.assertIsNone(reason)
-        self.assertEqual(rows[0]['closed_on'], date(2026, 1, 1))
-        self.assertEqual(rows[0]['basis_source'], 'saxo')
-        self.assertEqual(tax_year.realised(payload, 2025, closes({})), ([], None))
+    def test_pre_2026_lot_without_a_uic_is_unknown(self):
+        payload = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01', Uic=None, TotalBookedOnClosingLegAccountCurrency=50.0)]
+        rows, reason = tax_year.realised(payload, 2026, lambda uic, asset_type: (None, 'no Saxo identity') if uic is None else (9.0, None))
+        self.assertIsNone(rows)
+        self.assertIn('no Saxo identity', reason)
 
     def test_missing_account_currency_pnl_is_none_not_zero(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', None)]
-        rows, reason = tax_year.realised(payload, 2026, closes({}))
+        rows, reason = tax_year.realised([closed('AAA', '2026-03-04', None)], 2026, closes({}))
         self.assertIsNone(rows)
         self.assertIn('account-currency P/L', reason)
 
-    def test_missing_close_time_is_none_and_says_so(self):
-        payload = [closed('AAA', '2026-03-04T10:00:00.000000Z', 5.0)]
-        del payload[0]['ClosedPosition']['ExecutionTimeClose']
+    def test_missing_close_date_is_none_and_says_so(self):
+        payload = [closed('AAA', '2026-03-04', 5.0)]
+        del payload[0]['TradeDateClose']
         rows, reason = tax_year.realised(payload, 2026, closes({}))
         self.assertIsNone(rows)
-        self.assertIn('close time', reason)
+        self.assertIn('close date', reason)
+
+    def test_missing_open_date_is_none_and_says_so(self):
+        payload = [closed('AAA', '2026-03-04', 5.0)]
+        del payload[0]['TradeDateOpen']
+        rows, reason = tax_year.realised(payload, 2026, closes({}))
+        self.assertIsNone(rows)
+        self.assertIn('opening date', reason)
 
     def test_missing_field_on_an_other_year_row_is_ignored(self):
-        payload = [closed('AAA', '2025-03-04T10:00:00.000000Z', None)]
-        self.assertEqual(tax_year.realised(payload, 2026, closes({})), ([], None))
+        self.assertEqual(tax_year.realised([closed('AAA', '2025-03-04', None)], 2026, closes({})), ([], None))
 
 
 def gains(*amounts):
@@ -267,7 +271,7 @@ class ReportTests(TestCase):
     def test_a_close_is_looked_up_once_per_instrument(self):
         make_position(uic=7)
         bought('AAA', date(2025, 5, 1), 10, 90, 'a')
-        rows = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z', ConversionRateClose=1.0)]
+        rows = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01', TotalBookedOnClosingLegAccountCurrency=50.0)]
         tax_year.report(2026, 0, closed_rows=rows, close_on=self.lookup({(7, 'Stock'): 9.0}))
         self.assertEqual(self.asked, [(7, 'Stock')])
 

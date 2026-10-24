@@ -16,18 +16,16 @@ from .tools import tax as tools
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
-CLOSED = [
-    {
-        'ClosedPositionUniqueId': 'x1',
-        'ClosedPosition': {
-            'BuyOrSell': 'Buy', 'Amount': 5, 'ClosingPrice': 10.0, 'Uic': 7, 'AssetType': 'Stock',
-            'ExecutionTimeOpen': '2026-02-01T10:00:00.000000Z',
-            'ExecutionTimeClose': '2026-03-04T10:00:00.000000Z',
-            'ProfitLossOnTradeInBaseCurrency': 12000.0,
-        },
-        'DisplayAndFormat': {'Symbol': 'ZZZ:xnas', 'Currency': 'USD'},
-    }
-]
+CLOSED = [{
+    'InstrumentSymbol': 'ZZZ:xnas', 'AssetType': 'Stock', 'TradeDateOpen': '2026-02-01',
+    'TradeDateClose': '2026-03-04', 'AmountClose': -5.0, 'ClosePrice': 10.0, 'PnLAccountCurrency': 12000.0,
+}]
+OLD_LOT = {
+    'InstrumentSymbol': 'OLD:xnas', 'AssetType': 'Stock', 'TradeDateOpen': '2023-05-01',
+    'TradeDateClose': '2026-03-04', 'AmountClose': -5.0, 'ClosePrice': 180.0,
+    'TotalBookedOnClosingLegAccountCurrency': 810.0, 'PnLAccountCurrency': 720.0,
+}
+TRADES = [{'InstrumentSymbol': 'OLD:xnas', 'AssetType': 'Stock', 'Uic': 7}]
 CANDLES = [
     {'date': '2025-12-30', 'close': 99.0},
     {'date': '2025-12-31', 'close': 100.0},
@@ -43,13 +41,17 @@ def make_position(ticker='AAA', uic=1):
     )
 
 
-def run(closed=CLOSED, candles=CANDLES, credential=True, **kwargs):
+def run(closed=CLOSED, candles=CANDLES, credential=True, trades=TRADES, **kwargs):
     state = patch('mcp_server.tools.tax.active_credential', return_value=SimpleNamespace(access_token='t')) if credential \
         else patch('mcp_server.tools.tax.active_credential', side_effect=SaxoNotConnected('Saxo is not connected.'))
     with state, \
-            patch('mcp_server.tools.tax.client.get_closed_positions', return_value=closed), \
+            patch('mcp_server.tools.tax.client.get_client_key', return_value='K'), \
+            patch('mcp_server.tools.tax.client.get_closed_positions_report', return_value=closed) as report, \
+            patch('mcp_server.tools.tax.client.get_trades_report', return_value=trades) as traded, \
             patch('research.market.chart', return_value=candles):
-        return tools.get_tax_year(**kwargs)
+        result = tools.get_tax_year(**kwargs)
+    run.report, run.traded = report, traded
+    return result
 
 
 @override_settings(CACHES=LOCMEM)
@@ -62,9 +64,9 @@ class TaxToolTests(APITestCase):
         self.assertIn(ADVISER_NOTE, warnings)
         self.assertIn("FX: today's rate is used for both ends of an unrealised gain.", warnings)
 
-    def test_coverage_warning_always_present(self):
+    def test_source_note_always_present(self):
         warnings = run(year=2026)['warnings']
-        self.assertTrue(any('whose coverage of the full year is not yet verified' in w for w in warnings))
+        self.assertIn("Realised gains come from Saxo's closed-positions report, in account currency with costs included.", warnings)
 
     def test_never_suggests_sell_and_rebuy(self):
         make_position()
@@ -118,25 +120,27 @@ class TaxToolTests(APITestCase):
         self.assertTrue(any('not connected' in w for w in result['warnings']))
 
     def test_pre_2026_closed_lot_is_rebased_on_its_dec_31_close(self):
-        closed = [{
-            'ClosedPositionUniqueId': 'x2',
-            'ClosedPosition': {
-                'BuyOrSell': 'Buy', 'Amount': 5, 'ClosingPrice': 180.0, 'Uic': 7, 'AssetType': 'Stock',
-                'ConversionRateClose': 0.9,
-                'ExecutionTimeOpen': '2023-05-01T10:00:00Z', 'ExecutionTimeClose': '2026-03-04T10:00:00Z',
-                'ProfitLossOnTradeInBaseCurrency': 720.0,
-            },
-            'DisplayAndFormat': {'Symbol': 'OLD:xnas', 'Currency': 'USD'},
-        }]
-        data = run(year=2026, closed=closed)['data']
+        data = run(year=2026, closed=[OLD_LOT])['data']
         self.assertEqual(data['realised'][0]['realised_eur'], 360.0)
         self.assertEqual(data['realised'][0]['basis_source'], 'dec_31_2025')
+        run.traded.assert_called_once_with('t', 'K', '2023-05-01', date.today().isoformat())
 
-    def test_missing_close_time_warning_names_the_close_time(self):
-        closed = [{**CLOSED[0], 'ClosedPosition': {k: v for k, v in CLOSED[0]['ClosedPosition'].items() if k != 'ExecutionTimeClose'}}]
+    def test_a_future_year_is_refused_without_asking_saxo(self):
+        with patch('mcp_server.tools.tax._closed_rows', side_effect=AssertionError('asked Saxo')):
+            result = tools.get_tax_year(year=date.today().year + 1)
+        self.assertIsNone(result['data'])
+        self.assertIn('has not started yet', result['warnings'][-1])
+
+    def test_the_report_covers_the_tax_year(self):
+        run(year=2026)
+        self.assertEqual(run.report.call_args.args, ('t', 'K', '2026-01-01', min(date(2026, 12, 31), date.today()).isoformat()))
+        run.traded.assert_not_called()
+
+    def test_missing_close_date_warning_names_the_close_date(self):
+        closed = [{k: v for k, v in CLOSED[0].items() if k != 'TradeDateClose'}]
         result = run(year=2026, closed=closed)
         self.assertIsNone(result['data']['realised'])
-        self.assertTrue(any('close time' in w for w in result['warnings']))
+        self.assertTrue(any('close date' in w for w in result['warnings']))
         self.assertFalse(any('account-currency P/L' in w for w in result['warnings']))
 
     def test_mixed_lots_are_split_at_dec_31(self):
