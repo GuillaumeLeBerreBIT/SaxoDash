@@ -214,9 +214,8 @@ def _idle_cash_pct():
     return float(valuation.cash_balance / total * 100)
 
 
-def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=None):
+def _concentration_attention(c):
     items = []
-    c = concentration
     if c['top1'] and c['top1']['pct'] >= SINGLE_NAME_PCT:
         items.append({'kind': 'single_name', 'severity': 'warn',
                       'text': f"{c['top1']['ticker']} alone is {c['top1']['pct']:.0f}% "
@@ -224,12 +223,22 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
     if c['top3_pct'] is not None and c['top3_pct'] >= TOP3_PCT:
         items.append({'kind': 'concentration', 'severity': 'warn',
                       'text': f"Top 3 holdings are {c['top3_pct']:.0f}% of the portfolio."})
-    if pairs:
-        age = (today - pairs[-1][0]).days
-        if age > STALE_DAYS:
-            items.append({'kind': 'stale_value', 'severity': 'warn',
-                          'text': f"Portfolio value is {age} days old "
-                                  f"(last {pairs[-1][0].strftime('%b %d')})."})
+    return items
+
+
+def _stale_attention(pairs, today):
+    if not pairs:
+        return []
+    age = (today - pairs[-1][0]).days
+    if age <= STALE_DAYS:
+        return []
+    return [{'kind': 'stale_value', 'severity': 'warn',
+             'text': f"Portfolio value is {age} days old "
+                     f"(last {pairs[-1][0].strftime('%b %d')})."}]
+
+
+def _holding_attention(positions, upcoming, idle_cash_pct):
+    items = []
     unpriced = [p for p in positions if p.price_source != 'live']
     if unpriced:
         n = len(unpriced)
@@ -247,10 +256,36 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
         items.append({'kind': 'idle_cash', 'severity': 'info',
                       'text': f"{idle_cash_pct:.0f}% of your Saxo account is cash, "
                               f"not invested."})
-    if len(pairs) < 2:
-        items.append({'kind': 'no_history', 'severity': 'info',
-                      'text': 'Not enough history yet for change metrics.'})
     return items
+
+
+def _history_attention(pairs):
+    if len(pairs) >= 2:
+        return []
+    return [{'kind': 'no_history', 'severity': 'info',
+             'text': 'Not enough history yet for change metrics.'}]
+
+
+def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=None):
+    return (
+        _concentration_attention(concentration)
+        + _stale_attention(pairs, today)
+        + _holding_attention(positions, upcoming, idle_cash_pct)
+        + _history_attention(pairs)
+    )
+
+
+def _position_sections(positions, today):
+    total = sum((p.value for p in positions), Decimal('0'))
+    total_cost = sum((p.cost for p in positions), Decimal('0'))
+    return {
+        'concentration': _concentration(positions, total),
+        'sector_exposure': _exposure(positions, total, 'sector', 'name'),
+        'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
+        'movers': _movers(positions),
+        'contributors': _contributors(positions, total_cost, total - total_cost),
+        'upcoming_earnings': _upcoming_earnings({p.ticker.upper() for p in positions if p.ticker}, today),
+    }
 
 
 def build_insights():
@@ -272,17 +307,9 @@ def build_insights():
     if pairs and pairs[-1][0] == today:
         pairs[-1] = (today, net_worth_value)
 
-    total = sum((p.value for p in positions), Decimal('0'))
-    total_cost = sum((p.cost for p in positions), Decimal('0'))
-    total_pnl = total - total_cost
-
     portfolio_value = get_portfolio_value().rounded().amount
     bank = latest.bank_total if latest else Decimal('0')
-
-    concentration = _concentration(positions, total)
-    held_upper = {p.ticker.upper() for p in positions if p.ticker}
-    upcoming = _upcoming_earnings(held_upper, today)
-    idle_cash_pct = _idle_cash_pct()
+    sections = _position_sections(positions, today)
 
     return {
         'as_of': pairs[-1][0].isoformat() if pairs else None,
@@ -302,37 +329,24 @@ def build_insights():
             'all_time': _all_time(pairs),
         },
         'spark': [{'date': d.isoformat(), 'value': float(v)} for d, v in pairs[-SPARK_POINTS:]],
-        'concentration': concentration,
-        'sector_exposure': _exposure(positions, total, 'sector', 'name'),
-        'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
-        'movers': _movers(positions),
-        'contributors': _contributors(positions, total_cost, total_pnl),
+        **sections,
         'attention': (
-            _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct)
+            _attention(positions, pairs, today, sections['concentration'], sections['upcoming_earnings'], _idle_cash_pct())
             + _thesis_attention(positions, today)
         ),
-        'upcoming_earnings': upcoming,
     }
 
 
 def build_position_insights():
     positions = list(Position.objects.all())
     today = timezone.localdate()
-    total = sum((p.value for p in positions), Decimal('0'))
-    total_cost = sum((p.cost for p in positions), Decimal('0'))
-    concentration = _concentration(positions, total)
-    upcoming = _upcoming_earnings({p.ticker.upper() for p in positions if p.ticker}, today)
+    sections = _position_sections(positions, today)
     return {
         'value': {'portfolio': get_portfolio_value().rounded().amount},
-        'concentration': concentration,
-        'sector_exposure': _exposure(positions, total, 'sector', 'name'),
-        'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
-        'movers': _movers(positions),
-        'contributors': _contributors(positions, total_cost, total - total_cost),
-        'attention': [
-            item
-            for item in _attention(positions, [], today, concentration, upcoming, _idle_cash_pct())
-            if item['kind'] != 'no_history'
-        ] + _thesis_attention(positions, today),
-        'upcoming_earnings': upcoming,
+        **sections,
+        'attention': (
+            _concentration_attention(sections['concentration'])
+            + _holding_attention(positions, sections['upcoming_earnings'], _idle_cash_pct())
+            + _thesis_attention(positions, today)
+        ),
     }
