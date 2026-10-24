@@ -41,7 +41,7 @@ class SmartMoneyToolsTest(APITestCase):
     def test_foreign_listing_ownership_is_refused(self):
         eur = Listing(ticker='ASML', symbol='ASML', name='ASML', uic=1, asset_type='Stock', currency='EUR', exchange='X')
         with patch('mcp_server.tools.smart_money.look_up', return_value=eur), \
-                patch('mcp_server.tools.smart_money.call_view', side_effect=AssertionError('view called')):
+                patch('mcp_server.views.call_view', side_effect=AssertionError('view called')):
             result = get_ticker_ownership('ASML')
         self.assertIsNone(result['data'])
         self.assertTrue(result['warnings'])
@@ -69,14 +69,14 @@ class SmartMoneyToolsTest(APITestCase):
 
     def test_directories_are_capped(self):
         funds = [{'slug': f'f{i}'} for i in range(40)]
-        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, funds)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, funds)):
             data = list_investors(limit=10)['data']['investors']
         self.assertEqual(len(data['items']), 10)
         self.assertEqual(data['truncated'], 30)
-        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, funds)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, funds)):
             self.assertEqual(len(list_investors()['data']['investors']['items']), 25)
         members = {'members': [{'slug': f'm{i}'} for i in range(40)], 'most_bought': [], 'window_days': 90}
-        with patch('mcp_server.tools.smart_money.call_view', return_value=ViewResult(200, members)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, members)):
             data = list_congress_members(limit=5)['data']
         self.assertEqual(len(data['members']['items']), 5)
         self.assertEqual(data['members']['truncated'], 35)

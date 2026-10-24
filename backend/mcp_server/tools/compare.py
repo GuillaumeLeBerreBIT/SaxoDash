@@ -3,15 +3,10 @@ from research.listings import bare, look_up
 from research.models import ScreenerRow
 from research.views import FundamentalsView
 
-from ..envelope import answer
+from ..envelope import Reply, Unavailable, answer
+from ..views import fetch_optional
 from . import tool
-from .research import (
-    FINNHUB,
-    _part,
-    _scalar_metrics,
-    get_price_history,
-    get_valuation_history,
-)
+from .research import FINNHUB, _scalar_metrics, get_price_history, get_valuation_history
 from .smart_money import get_ticker_ownership
 
 MIN_SYMBOLS = 2
@@ -107,9 +102,10 @@ def _trend(prices):
 
 
 def _company(ticker):
-    fundamentals, message = _part(FundamentalsView, ticker)
-    if message:
-        return answer(None, sources=[FINNHUB], warnings=[message])
+    warnings = []
+    fundamentals = fetch_optional(FundamentalsView, warnings, kwargs={'symbol': ticker})
+    if fundamentals is None:
+        return answer(None, sources=[FINNHUB], warnings=warnings)
     data = {
         'profile': {'name': fundamentals.get('name')},
         'metrics': _scalar_metrics(fundamentals),
@@ -160,18 +156,17 @@ def _compare_one(symbol):
     return entry, warnings
 
 
-@tool('Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.')
+@tool(
+    'Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.',
+    sources=[FINNHUB, 'saxo', '13f', 'house-clerk'],
+)
 def compare_companies(symbols: list[str]):
     distinct = list(dict.fromkeys(bare(s) for s in symbols))
     if not MIN_SYMBOLS <= len(distinct) <= MAX_SYMBOLS:
-        return answer(None, sources=[FINNHUB], warnings=[COUNT_WARNING])
+        raise Unavailable(COUNT_WARNING)
     companies, warnings = [], []
     for symbol in distinct:
         entry, entry_warnings = _compare_one(symbol)
         companies.append(entry)
         warnings.extend(entry_warnings)
-    return answer(
-        {'companies': companies},
-        sources=[FINNHUB, 'saxo', '13f', 'house-clerk'],
-        warnings=list(dict.fromkeys(warnings)),
-    )
+    return Reply({'companies': companies}, list(dict.fromkeys(warnings)))

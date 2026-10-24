@@ -6,9 +6,8 @@ from django.utils import timezone
 from research.models import ScreenerRow
 from research.views import DiscoverShelfView, DiscoverView, EarningsCalendarView
 
-from ..envelope import answer
-from ..shaping import without
-from ..views import call_view, problem
+from ..envelope import Reply, Unavailable
+from ..views import fetch
 from . import tool
 
 SCREEN_FIELDS = tuple(
@@ -47,7 +46,10 @@ def _row(row):
     return {key: value for key, value in row.items() if key not in DROPPED}
 
 
-@tool('Screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.')
+@tool(
+    'Screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.',
+    sources=[SOURCE],
+)
 def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT_SORT, sector: str = '', limit: int = 25):
     warnings = []
     bounds = _bounds(filters, warnings)
@@ -66,27 +68,26 @@ def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT
         'fields': list(SCREEN_FIELDS),
         'rows': [_row(row) for row in ordered.values()],
     }
-    return answer(data, sources=[SOURCE], warnings=warnings, as_of=latest)
+    return Reply(data, warnings, as_of=latest)
 
 
-@tool('Discover shelves: ready-made screens of the universe. Pass a shelf key for one shelf in full, or nothing for the overview.')
+@tool(
+    'Discover shelves: ready-made screens of the universe. Pass a shelf key for one shelf in full, or nothing for the overview.',
+    sources=[SOURCE],
+)
 def get_discover_shelves(key: str = ''):
     if key:
-        result = call_view(DiscoverShelfView, kwargs={'key': key})
-    else:
-        result = call_view(DiscoverView)
-    message = problem(result)
-    if message:
-        return answer(None, sources=[SOURCE], warnings=[message])
-    return answer(without(result.data), sources=[SOURCE])
+        return fetch(DiscoverShelfView, kwargs={'key': key})
+    return fetch(DiscoverView)
 
 
-@tool('Earnings calendar for a week (0 = current, negative past, positive future); scope all or mine for your portfolio and watchlist.')
+@tool(
+    'Earnings calendar for a week (0 = current, negative past, positive future); scope all or mine for your portfolio and watchlist.',
+    sources=['finnhub', 'saxo'],
+    saxo=True,
+)
 def get_earnings_calendar(week: int = 0, scope: str = 'all'):
-    result = call_view(EarningsCalendarView, query={'week': week, 'scope': scope})
-    message = problem(result)
-    if message is None and result.data.get('ok') is False:
-        message = EARNINGS_UNAVAILABLE
-    if message:
-        return answer(None, sources=['finnhub'], warnings=[message])
-    return answer(without(result.data), sources=['finnhub'])
+    calendar = fetch(EarningsCalendarView, query={'week': week, 'scope': scope})
+    if calendar.get('ok') is False:
+        raise Unavailable(EARNINGS_UNAVAILABLE)
+    return calendar

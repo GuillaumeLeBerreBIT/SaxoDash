@@ -8,7 +8,7 @@ from saxo.client import SaxoAPIError
 from saxo.credentials import SaxoNotConnected, active_credential
 from transactions.models import Transaction
 
-from ..envelope import answer, saxo_warnings
+from ..envelope import Reply
 from ..views import call_view, problem
 from . import tool
 
@@ -75,10 +75,14 @@ def _entry(row):
     }
 
 
-@tool('Belgian tax year: realised gains from Saxo, unrealised gains per position, exemption left and estimated 10% tax.')
+@tool(
+    'Belgian tax year: realised gains from Saxo, unrealised gains per position, exemption left and estimated 10% tax.',
+    sources=['saxo', 'portfolio'],
+    saxo=True,
+)
 def get_tax_year(year: int = 0, carry_over_eur: float = 0):
     year = year or date.today().year
-    warnings = saxo_warnings()
+    warnings = []
     lots = _lots()
     positions = list(Position.objects.all())
 
@@ -112,4 +116,4 @@ def get_tax_year(year: int = 0, carry_over_eur: float = 0):
         'unrealised': [_entry(row) for row in unrealised_rows],
         'summary': {key: _number(value) for key, value in figures.items()},
     }
-    return answer(data, sources=['saxo', 'portfolio'], warnings=warnings)
+    return Reply(data, warnings)

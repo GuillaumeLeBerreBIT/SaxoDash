@@ -192,7 +192,7 @@ class CompareCallsTest(APITestCase):
             asked.append(view)
             return ViewResult(200, {'available': True, 'name': 'Acme Corp', 'pe_ratio': 20.0, 'ratio_history': []})
 
-        with patch('mcp_server.tools.research.call_view', side_effect=dispatch):
+        with patch('mcp_server.views.call_view', side_effect=dispatch):
             data = _company('ACME')['data']
         self.assertEqual(asked, [FundamentalsView])
         self.assertNotIn(SymbolEarningsView, asked)

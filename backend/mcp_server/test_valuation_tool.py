@@ -48,7 +48,7 @@ class ValuationToolTest(APITestCase):
     def test_weekly_sampling_medians_and_latest(self):
         with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=SERIES), \
-                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+                patch('mcp_server.views.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
         self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
         self.assertEqual(data['latest']['pe_ttm'], 40)
@@ -60,7 +60,7 @@ class ValuationToolTest(APITestCase):
             {'period': p, 'v': -1.0} for p in ('2024-03-31', '2024-06-30', '2024-09-30', '2024-12-31')]}}
         with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=losing), \
-                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+                patch('mcp_server.views.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
         self.assertIsNone(data['latest']['daily_pe'])
 
@@ -70,14 +70,15 @@ class ValuationToolTest(APITestCase):
             result = get_valuation_history('NVDA')
         self.assertIsNone(result['data']['latest']['daily_pe'])
         self.assertEqual(result['data']['daily_pe'], [])
-        self.assertEqual(len(result['warnings']), 2)
+        self.assertIn('NVDA could not be matched to a Saxo listing, so it is assumed to be US-listed.', result['warnings'])
+        self.assertIn('Daily P/E needs Saxo closes, which are unavailable for this symbol.', result['warnings'])
 
     def test_loss_quarters_stay_out_of_latest_and_median(self):
         losing = {**SERIES, 'quarterly': {**SERIES['quarterly'], 'pe_ttm': [
             {'period': '2024-03-31', 'v': 20}, {'period': '2024-06-30', 'v': 30}, {'period': '2024-09-30', 'v': None}]}}
         with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=losing), \
-                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+                patch('mcp_server.views.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
         self.assertIsNone(data['latest']['pe_ttm'])
         self.assertEqual(data['medians_5y']['pe_ttm'], 25.0)
@@ -86,7 +87,7 @@ class ValuationToolTest(APITestCase):
         foreign = {**SERIES, 'country': 'TW'}
         with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=foreign), \
-                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+                patch('mcp_server.views.call_view', return_value=ViewResult(200, candles())):
             warnings = get_valuation_history('TSM')['warnings']
         self.assertTrue(any('TW' in w and 'daily P/E' in w for w in warnings))
 
@@ -94,6 +95,6 @@ class ValuationToolTest(APITestCase):
         domestic = {**SERIES, 'country': 'US'}
         with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=domestic), \
-                patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
+                patch('mcp_server.views.call_view', return_value=ViewResult(200, candles())):
             warnings = get_valuation_history('NVDA')['warnings']
         self.assertFalse(any('daily P/E may' in w for w in warnings))

@@ -115,7 +115,7 @@ class ShelvesAndCalendarTest(APITestCase):
 
     def test_unavailable_calendar_is_a_warning_not_an_empty_week(self):
         body = {'events': [], 'window': {'from': '2026-10-19', 'to': '2026-10-25', 'week': 0}, 'ok': False}
-        with patch('mcp_server.tools.market.call_view', return_value=ViewResult(200, body)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, body)):
             result = get_earnings_calendar()
         self.assertIsNone(result['data'])
-        self.assertEqual(result['warnings'], [EARNINGS_UNAVAILABLE])
+        self.assertEqual(result['warnings'][-1], EARNINGS_UNAVAILABLE)

@@ -6,6 +6,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from .envelope import Unavailable
+from .shaping import without
+
 
 @dataclass(frozen=True)
 class ViewResult:
@@ -52,3 +55,19 @@ def problem(result):
     if isinstance(result.data, dict) and result.data.get('available') is False:
         return result.data.get('reason') or result.data.get('message') or 'Data unavailable.'
     return None
+
+
+def fetch(view_class, *, kwargs=None, query=None):
+    result = call_view(view_class, kwargs=kwargs, query=query)
+    message = problem(result)
+    if message:
+        raise Unavailable(message)
+    return without(result.data)
+
+
+def fetch_optional(view_class, warnings, *, kwargs=None, query=None):
+    try:
+        return fetch(view_class, kwargs=kwargs, query=query)
+    except Unavailable as missing:
+        warnings.extend(missing.warnings)
+        return None

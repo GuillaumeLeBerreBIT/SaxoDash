@@ -2,7 +2,6 @@ from investors.models import PriceHistory
 from research.models import ScreenerRow
 from saxo.credentials import connection_state, latest_run_per_task
 
-from ..envelope import answer, saxo_warnings
 from . import tool
 
 
@@ -15,7 +14,11 @@ def _latest(model, field):
     return getattr(row, field) if row else None
 
 
-@tool('Saxo connection state, each sync task\'s latest outcome, the last Discover scan and the last price refresh.')
+@tool(
+    'Saxo connection state, each sync task\'s latest outcome, the last Discover scan and the last price refresh.',
+    sources=['saxo', 'discover', 'prices'],
+    saxo=True,
+)
 def get_data_health():
     state = connection_state()
     tasks = {
@@ -30,4 +33,4 @@ def get_data_health():
         'discover_scanned_at': _iso(_latest(ScreenerRow, 'technicals_at')),
         'prices_refreshed_at': _iso(_latest(PriceHistory, 'checked_at')),
     }
-    return answer(data, sources=['saxo', 'discover', 'prices'], warnings=saxo_warnings())
+    return data

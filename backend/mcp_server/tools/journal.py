@@ -5,7 +5,7 @@ from advisor.models import Recommendation
 from investors.copying import BENCHMARK_TICKER, price_series
 from investors.prices import Series
 
-from ..envelope import answer
+from ..envelope import Reply, Unavailable
 from ..shaping import capped
 from . import tool
 
@@ -56,10 +56,6 @@ def _serialised(result):
     }
 
 
-def _refuse(reason):
-    return answer(None, sources=['journal'], warnings=[reason])
-
-
 def _invalid(field, value):
     return f'Unknown {field} {value!r}; use one of: {", ".join(sorted(_choices(field)))}.'
 
@@ -71,7 +67,12 @@ def _find(rec_id):
         return None
 
 
-@tool('Log a recommendation to the decision journal (US-dollar listings only). The entry price is filled from Saxo; a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.')
+@tool(
+    'Log a recommendation to the decision journal (US-dollar listings only). The entry price is filled from Saxo; '
+    'a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.',
+    sources=['journal', 'saxo'],
+    saxo=True,
+)
 def log_recommendation(
     ticker: str,
     action: str,
@@ -91,7 +92,7 @@ def log_recommendation(
 ):
     for field, value in (('action', action), ('horizon', horizon), ('conviction', conviction)):
         if value not in _choices(field):
-            return _refuse(_invalid(field, value))
+            raise Unavailable(_invalid(field, value))
     try:
         rec = journal.log(
             ticker=ticker,
@@ -111,41 +112,41 @@ def log_recommendation(
             uncertainties=uncertainties or [],
         )
     except journal.Refused as refused:
-        return _refuse(str(refused))
-    return answer(_row(rec), sources=['journal', 'saxo'])
+        raise Unavailable(str(refused)) from refused
+    return _row(rec)
 
 
-@tool('Record whether a logged recommendation was accepted or declined.')
+@tool('Record whether a logged recommendation was accepted or declined.', sources=['journal'])
 def set_decision(id: int, decision: str):
     if decision not in _choices('decision'):
-        return _refuse(_invalid('decision', decision))
+        raise Unavailable(_invalid('decision', decision))
     rec = _find(id)
     if rec is None:
-        return _refuse(f'No recommendation {id}.')
+        raise Unavailable(f'No recommendation {id}.')
     rec.decision = decision
     rec.save(update_fields=['decision'])
-    return answer(_row(rec), sources=['journal'])
+    return _row(rec)
 
 
-@tool('Close a logged recommendation: sold, invalidated or superseded.')
+@tool('Close a logged recommendation: sold, invalidated or superseded.', sources=['journal'])
 def close_recommendation(id: int, reason: str):
     if reason not in _choices('close_reason'):
-        return _refuse(_invalid('close_reason', reason))
+        raise Unavailable(_invalid('close_reason', reason))
     rec = _find(id)
     if rec is None:
-        return _refuse(f'No recommendation {id}.')
+        raise Unavailable(f'No recommendation {id}.')
     if rec.closed_at is not None:
-        return _refuse(f'Recommendation {id} is already closed.')
+        raise Unavailable(f'Recommendation {id} is already closed.')
     rec.closed_at = timezone.now()
     rec.close_reason = reason
     rec.save(update_fields=['closed_at', 'close_reason'])
-    return answer(_row(rec), sources=['journal'])
+    return _row(rec)
 
 
-@tool('List logged recommendations, newest first: open, closed or all.')
+@tool('List logged recommendations, newest first: open, closed or all.', sources=['journal', 'price history'])
 def list_recommendations(status: str = 'open', limit: int = 50):
     if status not in STATUSES:
-        return _refuse(f'Unknown status {status!r}; use one of: {", ".join(STATUSES)}.')
+        raise Unavailable(f'Unknown status {status!r}; use one of: {", ".join(STATUSES)}.')
     rows = Recommendation.objects.all()
     if status == 'open':
         rows = rows.filter(closed_at__isnull=True)
@@ -164,5 +165,4 @@ def list_recommendations(status: str = 'open', limit: int = 50):
     for item in items:
         item['score'] = _serialised(item['score'])
     warnings = [] if benchmark else [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.']
-    data = {**capped(items, limit), 'summary': summary}
-    return answer(data, sources=['journal', 'price history'], warnings=warnings)
+    return Reply({**capped(items, limit), 'summary': summary}, warnings)

@@ -6,9 +6,9 @@ from portfolio.insights import build_position_insights
 from portfolio.views import PortfolioSummaryView, PositionListView
 from transactions.views import TransactionListView
 
-from ..envelope import answer, saxo_warnings
+from ..envelope import Reply
 from ..shaping import capped, without
-from ..views import call_view, problem
+from ..views import fetch, fetch_optional
 from . import tool
 
 TRANSACTION_FETCH_SIZE = 1000
@@ -39,57 +39,48 @@ def _position(row):
     }
 
 
-@tool('Portfolio: total value, cost and P/L in EUR, cash, every position with weight and price basis, and insights.')
+@tool(
+    'Portfolio: total value, cost and P/L in EUR, cash, every position with weight and price basis, and insights.',
+    sources=['portfolio'],
+    saxo=True,
+)
 def get_portfolio():
-    warnings = saxo_warnings()
-    summary = call_view(PortfolioSummaryView)
-    positions = call_view(PositionListView)
-    problems = [problem(result) for result in (summary, positions)]
-    warnings.extend(message for message in problems if message)
-    summary_problem, positions_problem = problems
-
-    summary_data = summary.data if summary_problem is None else {}
-    rows = [_position(row) for row in positions.data] if positions_problem is None else None
+    warnings = []
+    summary = fetch_optional(PortfolioSummaryView, warnings) or {}
+    listed = fetch_optional(PositionListView, warnings)
+    rows = None if listed is None else [_position(row) for row in listed]
     for row in rows or []:
         if row['price_source'] != 'live':
             warnings.append(f"{row['ticker']} priced from {row['price_source']}, not live")
     if rows:
         warnings.append('Prices are 15-minute delayed.')
-
     data = {
-        'total_value_eur': summary_data.get('total_value'),
-        'total_cost_eur': summary_data.get('total_cost'),
-        'total_pnl_eur': summary_data.get('total_pnl'),
-        'total_pnl_pct': summary_data.get('total_pnl_pct'),
+        'total_value_eur': summary.get('total_value'),
+        'total_cost_eur': summary.get('total_cost'),
+        'total_pnl_eur': summary.get('total_pnl'),
+        'total_pnl_pct': summary.get('total_pnl_pct'),
         'cash_eur': _cash_eur(),
         'positions': rows,
         'insights': without(build_position_insights()),
     }
-    return answer(data, sources=['portfolio'], warnings=warnings)
+    return Reply(data, warnings)
 
 
-@tool('Portfolio performance against a benchmark over trailing windows, plus risk metrics. Optional benchmark key.')
+@tool(
+    'Portfolio performance against a benchmark over trailing windows, plus risk metrics. Optional benchmark key.',
+    sources=['analytics'],
+)
 def get_performance(benchmark: str = ''):
     query = {'benchmark': benchmark} if benchmark else {}
-    performance = call_view(PerformanceView, query=query)
-    risk = call_view(RiskMetricsView, query=query)
     warnings = []
-    for result in (performance, risk):
-        message = problem(result)
-        if message:
-            warnings.append(message)
     data = {
-        'performance': without(performance.data) if problem(performance) is None else None,
-        'risk': without(risk.data) if problem(risk) is None else None,
+        'performance': fetch_optional(PerformanceView, warnings, query=query),
+        'risk': fetch_optional(RiskMetricsView, warnings, query=query),
     }
-    return answer(data, sources=['analytics'], warnings=warnings)
+    return Reply(data, warnings)
 
 
-@tool('Recent transactions, newest first, capped at limit (default 50).')
+@tool('Recent transactions, newest first, capped at limit (default 50).', sources=['transactions'], saxo=True)
 def get_transactions(limit: int = 50):
-    result = call_view(TransactionListView, query={'page_size': TRANSACTION_FETCH_SIZE})
-    message = problem(result)
-    if message:
-        return answer(None, sources=['transactions'], warnings=[message])
-    shown = min(limit, TRANSACTION_FETCH_SIZE)
-    return answer(capped(result.data['results'], shown, result.data['count']), sources=['transactions'])
+    page = fetch(TransactionListView, query={'page_size': TRANSACTION_FETCH_SIZE})
+    return capped(page['results'], min(limit, TRANSACTION_FETCH_SIZE), page['count'])

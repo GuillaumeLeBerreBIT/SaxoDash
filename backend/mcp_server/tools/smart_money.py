@@ -13,9 +13,9 @@ from investors.views import OwnershipDetailView as InvestorOwnershipView
 
 from research.listings import look_up
 
-from ..envelope import answer
-from ..shaping import capped, without
-from ..views import call_view, problem
+from ..envelope import Reply, Unavailable
+from ..shaping import capped
+from ..views import fetch, fetch_optional
 from . import tool
 
 EDGAR = '13f'
@@ -30,121 +30,99 @@ OWNERS_LIMIT = 30
 DIRECTORY_LIMIT = 25
 
 
-def _capped_keys(payload, limits):
+def _capped_lists(payload, limits=None, default=None):
     shaped = dict(payload)
-    for key, limit in limits.items():
-        if isinstance(shaped.get(key), list):
-            shaped[key] = capped(shaped[key], limit)
+    for key, value in payload.items():
+        limit = (limits or {}).get(key, default)
+        if isinstance(value, list) and limit is not None:
+            shaped[key] = capped(value, limit)
     return shaped
 
 
-def _failed(sources, *messages):
-    return answer(None, sources=sources, warnings=[m for m in messages if m])
+def _without_series(copy):
+    if not isinstance(copy, dict):
+        return copy
+    return {key: value for key, value in copy.items() if key != 'series'}
 
 
-@tool('Tracked 13F funds: the directory with each fund latest quarter, value, turnover and copy-performance edge, capped at limit.')
+@tool(
+    'Tracked 13F funds: the directory with each fund latest quarter, value, turnover and copy-performance edge, capped at limit.',
+    sources=[EDGAR],
+)
 def list_investors(limit: int = DIRECTORY_LIMIT):
-    result = call_view(InvestorListView)
-    message = problem(result)
-    if message:
-        return _failed([EDGAR], message)
-    return answer({'investors': capped(without(result.data), limit)}, sources=[EDGAR])
+    return {'investors': capped(fetch(InvestorListView), limit)}
 
 
-@tool('Cross-fund signals from the newest quarter most funds have filed: what several funds bought, sold or opened.')
+@tool('Cross-fund signals from the newest quarter most funds have filed: what several funds bought, sold or opened.', sources=[EDGAR])
 def get_fund_signals():
-    result = call_view(InvestorHubView)
-    message = problem(result)
-    if message:
-        return _failed([EDGAR], message)
-    return answer(without(result.data), sources=[EDGAR])
+    return fetch(InvestorHubView)
 
 
-@tool('One 13F fund by slug: profile, top holdings, moves, quarter-over-quarter changes and copy-after-filing performance.')
+@tool(
+    'One 13F fund by slug: profile, top holdings, moves, quarter-over-quarter changes and copy-after-filing performance.',
+    sources=[EDGAR],
+)
 def get_investor(slug: str):
     kwargs = {'slug': slug}
-    detail = call_view(InvestorDetailView, kwargs=kwargs)
-    message = problem(detail)
-    if message:
-        return _failed([EDGAR], message)
-    changes = call_view(InvestorChangesView, kwargs=kwargs)
-    copy = call_view(InvestorCopyView, kwargs=kwargs)
-    warnings = [m for m in (problem(changes), problem(copy)) if m]
-    data = _capped_keys(without(detail.data), {'holdings': HOLDINGS_LIMIT, 'moves': MOVES_LIMIT})
-    if problem(changes) is None:
-        data['changes'] = {
-            key: capped(value, CHANGES_LIMIT) if isinstance(value, list) else value
-            for key, value in without(changes.data).items()
-        }
-    else:
-        data['changes'] = None
-    if problem(copy) is None:
-        copy_data = without(copy.data)
-        copy_data.pop('series', None)
-        data['copy'] = copy_data
-    else:
-        data['copy'] = None
-    return answer(data, sources=[EDGAR], warnings=warnings)
+    data = _capped_lists(fetch(InvestorDetailView, kwargs=kwargs), {'holdings': HOLDINGS_LIMIT, 'moves': MOVES_LIMIT})
+    warnings = []
+    changes = fetch_optional(InvestorChangesView, warnings, kwargs=kwargs)
+    data['changes'] = None if changes is None else _capped_lists(changes, default=CHANGES_LIMIT)
+    data['copy'] = _without_series(fetch_optional(InvestorCopyView, warnings, kwargs=kwargs))
+    return Reply(data, warnings)
 
 
-@tool('Stocks ranked by fund activity in the latest signal quarter: view is bought, sold, owned or new.')
+@tool('Stocks ranked by fund activity in the latest signal quarter: view is bought, sold, owned or new.', sources=[EDGAR])
 def get_fund_stocks(view: str = 'bought'):
-    result = call_view(InvestorStocksView, query={'view': view})
-    message = problem(result)
-    if message:
-        return _failed([EDGAR], message)
-    return answer(_capped_keys(without(result.data), {'rows': STOCK_ROWS_LIMIT}), sources=[EDGAR])
+    return _capped_lists(fetch(InvestorStocksView, query={'view': view}), {'rows': STOCK_ROWS_LIMIT})
 
 
-@tool('Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.')
-def get_ticker_ownership(symbol: str):
-    listing = look_up(symbol)
+def _known(payload, owners_key):
+    if payload is None or payload.get('stock') is None:
+        return None
+    return _capped_lists(payload, {owners_key: OWNERS_LIMIT})
+
+
+def ownership(listing):
     reason = listing.refusal(allow_fund=True)
     if reason:
-        return _failed([EDGAR, CONGRESS], reason)
-    ticker = listing.ticker
-    kwargs = {'ticker': ticker}
-    funds = call_view(InvestorOwnershipView, kwargs=kwargs)
-    members = call_view(CongressOwnershipView, kwargs=kwargs)
-    fund_problem, member_problem = problem(funds), problem(members)
-    investors = None
-    if fund_problem is None and funds.data.get('stock') is not None:
-        investors = _capped_keys(without(funds.data), {'funds': OWNERS_LIMIT})
-    congress = None
-    if member_problem is None and members.data.get('stock') is not None:
-        congress = _capped_keys(without(members.data), {'members': OWNERS_LIMIT})
-    return answer(
-        {'ticker': ticker, 'investors': investors, 'congress': congress},
-        sources=[EDGAR, CONGRESS],
-        warnings=[m for m in (fund_problem, member_problem) if m],
-    )
+        raise Unavailable(reason)
+    kwargs = {'ticker': listing.ticker}
+    warnings = []
+    data = {
+        'ticker': listing.ticker,
+        'investors': _known(fetch_optional(InvestorOwnershipView, warnings, kwargs=kwargs), 'funds'),
+        'congress': _known(fetch_optional(CongressOwnershipView, warnings, kwargs=kwargs), 'members'),
+    }
+    return Reply(data, warnings)
 
 
-@tool('House members tracked from Clerk filings: directory with estimated portfolio performance (capped at limit) and the most-bought tickers.')
+@tool(
+    'Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.',
+    sources=[EDGAR, CONGRESS],
+)
+def get_ticker_ownership(symbol: str):
+    return ownership(look_up(symbol))
+
+
+@tool(
+    'House members tracked from Clerk filings: directory with estimated portfolio performance (capped at limit) and the most-bought tickers.',
+    sources=[CONGRESS],
+)
 def list_congress_members(limit: int = DIRECTORY_LIMIT):
-    result = call_view(MemberListView)
-    message = problem(result)
-    if message:
-        return _failed([CONGRESS], message)
-    return answer(_capped_keys(without(result.data), {'members': limit}), sources=[CONGRESS])
+    return _capped_lists(fetch(MemberListView), {'members': limit})
 
 
-@tool('One House member by slug: estimated holdings, recent trades and copy performance.')
+@tool('One House member by slug: estimated holdings, recent trades and copy performance.', sources=[CONGRESS])
 def get_congress_member(slug: str):
-    result = call_view(MemberDetailView, kwargs={'slug': slug})
-    message = problem(result)
-    if message:
-        return _failed([CONGRESS], message)
-    data = _capped_keys(without(result.data), {'holdings': MEMBER_HOLDINGS_LIMIT, 'trades': TRADES_LIMIT})
-    if isinstance(data.get('copy'), dict):
-        data['copy'] = {key: value for key, value in data['copy'].items() if key != 'series'}
-    return answer(data, sources=[CONGRESS])
+    data = _capped_lists(
+        fetch(MemberDetailView, kwargs={'slug': slug}),
+        {'holdings': MEMBER_HOLDINGS_LIMIT, 'trades': TRADES_LIMIT},
+    )
+    data['copy'] = _without_series(data.get('copy'))
+    return data
 
 
-@tool('Filing alerts for followed funds that filed a new quarter. Read-only: does not mark anything read.')
+@tool('Filing alerts for followed funds that filed a new quarter. Read-only: does not mark anything read.', sources=[EDGAR])
 def get_filing_alerts():
-    result = call_view(InvestorAlertsView)
-    message = problem(result)
-    if message:
-        return _failed([EDGAR], message)
-    return answer(without(result.data), sources=[EDGAR])
+    return fetch(InvestorAlertsView)

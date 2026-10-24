@@ -42,6 +42,20 @@ class PortfolioToolsTest(APITestCase):
         self.assertEqual(data['total_pnl_eur'], summary['total_pnl'])
         self.assertEqual(len(data['positions']), 2)
 
+    def test_money_is_a_json_number(self):
+        make_position('AAA')
+        result = get_portfolio()
+        self.assertIsInstance(result['data']['total_value_eur'], float)
+        self.assertIsInstance(result['data']['positions'][0]['value_eur'], float)
+        json.dumps(result)
+
+    def test_transactions_carry_the_saxo_warning(self):
+        state = Mock(usable=False, reason='Saxo needs re-authentication.')
+        with patch('mcp_server.envelope.connection_state', return_value=state), \
+                patch('mcp_server.envelope.worst_recent_outcome', return_value='ok'):
+            result = get_transactions()
+        self.assertEqual(result['warnings'][0], 'Saxo needs re-authentication.')
+
     def test_no_positions_keeps_pnl_null(self):
         self.assertIsNone(get_portfolio()['data']['total_pnl_eur'])
 
@@ -107,14 +121,14 @@ class PortfolioToolsTest(APITestCase):
 
     def test_truncated_uses_the_true_count(self):
         page = {'count': 2500, 'results': [{'id': i} for i in range(1000)]}
-        with patch('mcp_server.tools.portfolio.call_view', return_value=ViewResult(200, page)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, page)):
             data = get_transactions(limit=50)['data']
         self.assertEqual(len(data['items']), 50)
         self.assertEqual(data['truncated'], 2450)
 
     def test_limit_is_clamped_to_the_fetch_size(self):
         page = {'count': 2500, 'results': [{'id': i} for i in range(1000)]}
-        with patch('mcp_server.tools.portfolio.call_view', return_value=ViewResult(200, page)):
+        with patch('mcp_server.views.call_view', return_value=ViewResult(200, page)):
             data = get_transactions(limit=5000)['data']
         self.assertEqual(len(data['items']), 1000)
         self.assertEqual(data['truncated'], 1500)
