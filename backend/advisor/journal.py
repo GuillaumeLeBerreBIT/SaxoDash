@@ -6,9 +6,8 @@ from research import daily, market
 
 from . import scoring
 from .models import Recommendation
+from .serializers import RecommendationInput, problems
 
-MIN_RISKS = 3
-TARGET_REQUIRED = ('buy_new', 'add')
 SCORED_CURRENCY = 'USD'
 STATUSES = ('open', 'closed', 'all')
 
@@ -23,33 +22,11 @@ def _choice(field, value):
         raise Refused(f'Unknown {field} {value!r}; use one of: {", ".join(sorted(allowed))}.')
 
 
-def _number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
-
-
-def _range_ok(value):
-    return isinstance(value, dict) and _number(value.get('low')) and _number(value.get('high'))
-
-
-def _validate(fields):
-    for field in ('action', 'horizon', 'conviction'):
-        _choice(field, fields.get(field))
-    if not (fields.get('thesis') or '').strip():
-        raise Refused('A recommendation needs a thesis.')
-    risks = fields.get('bear_case')
-    if not isinstance(risks, list) or sum(isinstance(r, str) and bool(r.strip()) for r in risks) < MIN_RISKS or not all(isinstance(r, str) for r in risks):
-        raise Refused(f'A recommendation needs at least {MIN_RISKS} bear-case risks, each a non-blank string.')
-    invalidation = fields.get('invalidation')
-    if not isinstance(invalidation, dict) or not (invalidation.get('price') is not None or invalidation.get('conditions')):
-        raise Refused('An invalidation must be an object with a price or conditions.')
-    target = fields.get('target')
-    if target is not None and not isinstance(target, dict):
-        raise Refused('A target must be an object with a price and condition.')
-    if fields.get('action') in TARGET_REQUIRED and not target:
-        raise Refused(f"A {fields['action']} needs a target.")
-    for name in ('buy_range', 'sell_range'):
-        if fields.get(name) is not None and not _range_ok(fields[name]):
-            raise Refused(f'{name} must be an object with numeric low and high.')
+def _validated(fields):
+    given = RecommendationInput(data=fields)
+    if not given.is_valid():
+        raise Refused(problems(given.errors))
+    return given.validated_data
 
 
 def _scorable(listing):
@@ -73,7 +50,7 @@ def _entry_price(listing, saxo):
 
 
 def log(*, listing, saxo=market, **fields):
-    _validate(fields)
+    values = _validated(fields)
     _scorable(listing)
     price = _entry_price(listing, saxo)
     return Recommendation.objects.create(
@@ -82,7 +59,7 @@ def log(*, listing, saxo=market, **fields):
         asset_type=listing.asset_type,
         entry_price=price,
         entry_currency=listing.currency,
-        **fields,
+        **values,
     )
 
 

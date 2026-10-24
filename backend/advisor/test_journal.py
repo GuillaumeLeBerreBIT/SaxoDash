@@ -205,3 +205,40 @@ class ShapeTests(TestCase):
         self.refused(sell_range={'low': 'a', 'high': 2})
         self.refused(buy_range={'low': 1})
         self.assertEqual(logged(buy_range={'low': 1, 'high': 2.5}).buy_range, {'low': 1, 'high': 2.5})
+
+    def test_text_has_length_limits(self):
+        self.refused(thesis='x' * 4001)
+        self.refused(bear_case=['a', 'b', 'x' * 501])
+        self.refused(zone='z' * 21)
+
+    def test_lists_have_size_limits(self):
+        self.refused(bear_case=[f'risk {n}' for n in range(11)])
+        self.refused(lenses=[f'lens {n}' for n in range(11)])
+        self.refused(uncertainties=[f'doubt {n}' for n in range(11)])
+        self.refused(lenses=[1, 2])
+
+    def test_prices_are_positive_finite_numbers(self):
+        for price in ('abc', float('nan'), float('inf'), -5, 0, True):
+            self.refused(invalidation={'price': price})
+            self.refused(target={'price': price, 'condition': 'x'})
+
+    def test_a_target_needs_a_price(self):
+        self.refused(target={'condition': 'Reaches fair value'})
+
+    def test_a_range_runs_low_to_high(self):
+        self.refused(buy_range={'low': 3, 'high': 2})
+        self.refused(buy_range={'low': float('nan'), 'high': 2})
+
+    def test_figures_are_a_small_object(self):
+        self.refused(figures=['pe', 20])
+        self.refused(figures={'note': 'x' * 4001})
+        self.refused(figures={'pe': float('nan')})
+        self.assertEqual(logged(figures={'pe': 20.5}).figures, {'pe': 20.5})
+
+    def test_a_refusal_names_the_field(self):
+        with self.assertRaisesMessage(journal.Refused, 'thesis'):
+            logged(thesis='x' * 4001)
+
+    def test_unknown_choices_still_list_the_allowed_values(self):
+        with self.assertRaisesMessage(journal.Refused, "Unknown horizon '1y'; use one of: 12m, 3m, 6m."):
+            logged(horizon='1y')
