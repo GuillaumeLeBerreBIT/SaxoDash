@@ -1,13 +1,15 @@
-from research import company_data
+from research import daily, finnhub, valuation
 from research.listings import bare, look_up
 from research.models import ScreenerRow
+from research.price_summary import summarise
+from research.providers import ProviderUnavailable
 from research.views import FundamentalsView
 
-from ..envelope import Reply, Unavailable, answer
+from ..envelope import Reply, Unavailable
 from ..views import fetch_optional
 from . import tool
-from .research import FINNHUB, _scalar_metrics, get_price_history, get_valuation_history
-from .smart_money import get_ticker_ownership
+from .research import FINNHUB, SAXO, _scalar_metrics
+from .smart_money import CONGRESS, EDGAR, ownership
 
 MIN_SYMBOLS = 2
 MAX_SYMBOLS = 5
@@ -33,7 +35,6 @@ HEALTH = {
     'net_debt_to_equity': None,
 }
 TREND = ('change_3m_pct', 'change_1y_pct', 'pct_from_52w_high', 'rsi14')
-HISTORY_RATIOS = ('pe_ttm', 'ps_ttm', 'pfcf_ttm', 'ev_ebitda_ttm')
 SCREENER_FALLBACKS = {'eps_growth_5y_pct': 'eps_growth_5y', 'revenue_growth_5y_pct': 'revenue_growth_5y'}
 
 
@@ -71,19 +72,12 @@ def _latest_roic(company):
 
 
 def _valuation(metrics, history):
-    latest = (history or {}).get('latest') or {}
-    medians = (history or {}).get('medians_5y') or {}
-    metrics = metrics or {}
-    pe = latest.get('pe_ttm')
-    if pe is None:
-        pe = metrics.get('pe_ratio')
-    eps = metrics.get('eps_ttm')
-    if pe is not None and (pe <= 0 or (eps is not None and eps <= 0)):
-        pe = None
+    latest = history['latest'] if history else {}
+    medians = history['medians_5y'] if history else {}
     current = {
-        'pe_ttm': pe,
-        'forward_pe': metrics.get('forward_pe'),
-        'peg': metrics.get('peg_ratio'),
+        'pe_ttm': valuation.current_pe(latest.get('pe_ttm'), metrics),
+        'forward_pe': (metrics or {}).get('forward_pe'),
+        'peg': (metrics or {}).get('peg_ratio'),
         'ps_ttm': latest.get('ps_ttm'),
         'pfcf_ttm': latest.get('pfcf_ttm'),
         'ev_ebitda_ttm': latest.get('ev_ebitda_ttm'),
@@ -91,74 +85,78 @@ def _valuation(metrics, history):
     figures = {}
     for name, value in current.items():
         figures[name] = value
-        median = medians.get(name) if name in HISTORY_RATIOS else None
+        median = medians.get(name) if name in valuation.VALUATION_RATIOS else None
         figures[f'{name}_vs_5y_median'] = _ratio_vs_median(value, median)
     return figures
 
 
-def _trend(prices):
-    summary = (prices or {}).get('summary') or {}
-    return {'zone': (prices or {}).get('zone'), **{key: summary.get(key) for key in TREND}}
+def _trend(bars):
+    if bars is None:
+        return {'zone': None, **{key: None for key in TREND}}
+    result = summarise(bars)
+    return {'zone': result['zone'], **{key: result['summary'][key] for key in TREND}}
 
 
-def _company(ticker):
-    warnings = []
-    fundamentals = fetch_optional(FundamentalsView, warnings, kwargs={'symbol': ticker})
-    if fundamentals is None:
-        return answer(None, sources=[FINNHUB], warnings=warnings)
-    data = {
-        'profile': {'name': fundamentals.get('name')},
-        'metrics': _scalar_metrics(fundamentals),
-        'ratio_history': fundamentals.get('ratio_history'),
-    }
-    return answer(data, sources=[FINNHUB])
+def _history(listing, bars, warnings):
+    try:
+        series = finnhub.valuation_series(listing.ticker)
+    except ProviderUnavailable as exc:
+        warnings.append(exc.reason)
+        return None
+    data, notes = valuation.history(listing.ticker, series, bars)
+    warnings.extend(notes)
+    return data
 
 
-def _prefixed(symbol, result):
-    return [f'{symbol}: {message}' for message in result['warnings']]
+def _ownership(listing, warnings):
+    try:
+        reply = ownership(listing)
+    except Unavailable as missing:
+        warnings.extend(missing.warnings)
+        return None
+    warnings.extend(reply.warnings)
+    return reply.data
 
 
-def _compare_one(symbol):
-    listing = look_up(symbol)
-    ticker = listing.ticker
-    status = listing.company_status
-    name = listing.name
-    ownership = get_ticker_ownership(ticker)
-    warnings = _prefixed(ticker, ownership)
-    entry = {'symbol': ticker, 'name': name, 'status': status, 'pillars': None, 'ownership': ownership['data']}
-    if status != company_data.ELIGIBLE:
-        reason = company_data.refusal(status)
-        if reason and f'{ticker}: {reason}' not in warnings:
-            warnings.append(f'{ticker}: {reason}')
-        return entry, warnings
-
-    fundamentals = _company(ticker)
-    history = get_valuation_history(ticker)
-    prices = get_price_history(ticker, interval='daily', bars=1)
-    for result in (fundamentals, history, prices):
-        warnings.extend(_prefixed(ticker, result))
-    company = fundamentals['data']
-    metrics = company['metrics'] if company else None
-    if company and company.get('profile'):
-        entry['name'] = company['profile'].get('name') or name
-    growth = _fill_from_screener(_pick(metrics, GROWTH), ticker)
+def _pillars(listing, warnings):
+    fundamentals = fetch_optional(FundamentalsView, warnings, kwargs={'symbol': listing.ticker})
+    bars, reason = daily.available(listing)
+    if reason:
+        warnings.append(reason)
+    history = _history(listing, bars, warnings)
+    metrics = _scalar_metrics(fundamentals) if fundamentals else None
     profitability = _pick(metrics, PROFITABILITY)
-    annual_roic = _latest_roic(company)
+    annual_roic = _latest_roic(fundamentals)
     if annual_roic is not None:
         profitability['roic_pct'] = annual_roic
-    entry['pillars'] = {
-        'growth': growth,
+    pillars = {
+        'growth': _fill_from_screener(_pick(metrics, GROWTH), listing.ticker),
         'profitability': profitability,
         'health': _pick(metrics, HEALTH),
-        'valuation': _valuation(metrics, history['data']),
-        'trend': _trend(prices['data']),
+        'valuation': _valuation(metrics, history),
+        'trend': _trend(bars),
     }
+    return (fundamentals or {}).get('name'), pillars
+
+
+def _compare_one(listing):
+    warnings = [listing.unverified_warning] if listing.unverified_warning else []
+    entry = {'symbol': listing.ticker, 'name': listing.name, 'status': listing.company_status, 'pillars': None, 'ownership': None}
+    refusal = listing.refusal()
+    if refusal and listing.refusal(allow_fund=True):
+        return entry, [*warnings, refusal]
+    entry['ownership'] = _ownership(listing, warnings)
+    if refusal:
+        return entry, [*warnings, refusal]
+    name, entry['pillars'] = _pillars(listing, warnings)
+    entry['name'] = name or entry['name']
     return entry, warnings
 
 
 @tool(
     'Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.',
-    sources=[FINNHUB, 'saxo', '13f', 'house-clerk'],
+    sources=[FINNHUB, SAXO, EDGAR, CONGRESS],
+    saxo=True,
 )
 def compare_companies(symbols: list[str]):
     distinct = list(dict.fromkeys(bare(s) for s in symbols))
@@ -166,7 +164,7 @@ def compare_companies(symbols: list[str]):
         raise Unavailable(COUNT_WARNING)
     companies, warnings = [], []
     for symbol in distinct:
-        entry, entry_warnings = _compare_one(symbol)
+        entry, notes = _compare_one(look_up(symbol))
         companies.append(entry)
-        warnings.extend(entry_warnings)
-    return Reply({'companies': companies}, list(dict.fromkeys(warnings)))
+        warnings.extend(f'{entry["symbol"]}: {note}' for note in notes)
+    return Reply({'companies': companies}, warnings)

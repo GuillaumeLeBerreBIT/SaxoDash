@@ -1,10 +1,7 @@
-from datetime import date
-
-from research import finnhub
+from research import daily, finnhub, valuation
 from research.listings import SEARCH_ASSET_TYPES, bare, look_up
-from research.providers import ProviderUnavailable
-from research.technicals import rsi, sma
-from research.valuation import median_since, trailing_pe
+from research.price_summary import summarise
+from research.providers import ProviderError, ProviderUnavailable
 from research.models import SymbolNote, Watchlist
 from research.serializers import SymbolNoteSerializer
 from research.views import (
@@ -23,14 +20,9 @@ from research.views import (
 from ..envelope import Reply, Unavailable
 from ..shaping import capped, without
 from ..views import fetch, fetch_optional
-from ..zones import zone
 from . import tool
 
-DAILY = 1440
-DAILY_FETCH = 1200
-INTERVALS = {'daily': (DAILY, 260), 'weekly': (10080, 1200), 'monthly': (43200, 1200)}
-YEAR_SESSIONS = 252
-CHANGE_SESSIONS = {'change_1m_pct': 21, 'change_3m_pct': 63, 'change_1y_pct': 252}
+INTERVALS = {'daily': (daily.HORIZON, 260), 'weekly': (10080, 1200), 'monthly': (43200, 1200)}
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 SAXO = 'saxo'
 
@@ -53,47 +45,18 @@ def _chart(listing, horizon, count):
     )
 
 
+def _daily_bars(listing):
+    try:
+        return daily.candles(listing)
+    except ProviderError as error:
+        raise Unavailable(daily.reason(error)) from error
+
+
 def _resolved(symbol):
     listing = look_up(symbol)
     if not listing.resolved:
         raise Unavailable(f'{symbol} could not be resolved to a Saxo instrument.')
     return listing
-
-
-def _change_pct(closes, sessions):
-    if len(closes) <= sessions or not closes[-1 - sessions]:
-        return None
-    return round((closes[-1] / closes[-1 - sessions] - 1) * 100, 2)
-
-
-def _last(series):
-    return series[-1] if series else None
-
-
-def _summary(candles):
-    closes = [c['close'] for c in candles]
-    last_close = _last(closes)
-    ma20, ma50, ma200 = (_last(sma(closes, period)) for period in (20, 50, 200))
-    rsi14 = _last(rsi(closes))
-    year = candles[-YEAR_SESSIONS:]
-    high_52w = max((c['high'] for c in year), default=None)
-    low_52w = min((c['low'] for c in year), default=None)
-    pct_from_high = None
-    if last_close is not None and high_52w:
-        pct_from_high = round((last_close / high_52w - 1) * 100, 2)
-    summary = {
-        'last_close': last_close,
-        'ma20': ma20,
-        'ma50': ma50,
-        'ma200': ma200,
-        'rsi14': rsi14,
-        'high_52w': high_52w,
-        'low_52w': low_52w,
-        'pct_from_52w_high': pct_from_high,
-    }
-    for key, sessions in CHANGE_SESSIONS.items():
-        summary[key] = _change_pct(closes, sessions)
-    return summary
 
 
 def _bar(candle):
@@ -147,23 +110,11 @@ def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
     horizon, cap = INTERVALS[interval]
     count = max(1, min(bars, cap))
     listing = _resolved(symbol)
-    daily = _chart(listing, DAILY, DAILY_FETCH)
-    series = daily if horizon == DAILY else _chart(listing, horizon, count)
-    summary = _summary(daily)
-    playbook_zone = zone(
-        last_close=summary['last_close'],
-        ma20=summary['ma20'],
-        ma50=summary['ma50'],
-        ma200=summary['ma200'],
-        rsi14=summary['rsi14'],
-    )
-    data = {
-        'instrument': listing.as_dict(),
-        'bars': [_bar(c) for c in series[-count:]],
-        'summary': summary,
-        'zone': playbook_zone,
-    }
-    return Reply(data, [PULLBACK_WARNING] if playbook_zone == 'pullback' else [])
+    bars = _daily_bars(listing)
+    series = bars if horizon == daily.HORIZON else _chart(listing, horizon, count)
+    trend = summarise(bars)
+    data = {'instrument': listing.as_dict(), 'bars': [_bar(c) for c in series[-count:]], **trend}
+    return Reply(data, [PULLBACK_WARNING] if trend['zone'] == 'pullback' else [])
 
 
 PROFILE_KEYS = ('name', 'exchange', 'industry', 'country', 'ipo_date', 'market_cap', 'shares_outstanding', 'free_float')
@@ -265,42 +216,6 @@ def get_watchlists():
     return {'watchlists': watchlists}
 
 
-VALUATION_RATIOS = ('pe_ttm', 'ps_ttm', 'pfcf_ttm', 'ev_ebitda_ttm')
-NO_DAILY_PE_WARNING = 'Daily P/E needs Saxo closes, which are unavailable for this symbol.'
-HOME_COUNTRY = 'US'
-
-
-def _foreign_issuer_warning(ticker, country):
-    return (
-        f'Finnhub lists {ticker} as a {country} company: its EPS may be in another currency '
-        'or per ordinary share rather than per ADR, so the daily P/E may be off.'
-    )
-
-
-def _points(rows):
-    return [(date.fromisoformat(row['period']), row['v']) for row in rows or []]
-
-
-def _weekly(points):
-    last_of_week = {}
-    for day, value in points:
-        last_of_week[day.isocalendar()[:2]] = (day, value)
-    return [[day.isoformat(), value] for day, value in sorted(last_of_week.values())]
-
-
-def _daily_pe(listing, eps, warnings):
-    if not listing.resolved:
-        warnings.append(NO_DAILY_PE_WARNING)
-        return []
-    try:
-        candles = _chart(listing, DAILY, DAILY_FETCH)
-    except Unavailable as missing:
-        warnings.extend(missing.warnings)
-        return []
-    closes = [(date.fromisoformat(c['date']), c['close']) for c in candles]
-    return trailing_pe(closes, eps)
-
-
 @tool(
     'Valuation history for a US-listed stock: P/E, P/S, P/FCF and EV/EBITDA series, a daily trailing P/E sampled weekly, and 5-year medians.',
     sources=[FINNHUB, SAXO],
@@ -308,25 +223,10 @@ def _daily_pe(listing, eps, warnings):
 )
 def get_valuation_history(symbol: str):
     listing, warnings = _gate(symbol)
-    ticker = listing.ticker
     try:
-        series = finnhub.valuation_series(ticker)
+        series = finnhub.valuation_series(listing.ticker)
     except ProviderUnavailable as exc:
         raise Unavailable(*warnings, exc.reason) from exc
-    country = series.get('country')
-    if country and country != HOME_COUNTRY:
-        warnings.append(_foreign_issuer_warning(ticker, country))
-    quarterly = series['quarterly']
-    daily = _daily_pe(listing, _points(quarterly.get('eps')), warnings)
-    medians = {name: median_since(_points(quarterly.get(name))) for name in VALUATION_RATIOS}
-    medians['daily_pe'] = median_since(daily)
-    latest = {name: quarterly[name][-1]['v'] if quarterly.get(name) else None for name in VALUATION_RATIOS}
-    latest['daily_pe'] = daily[-1][1] if daily else None
-    data = {
-        'annual': series['annual'],
-        'quarterly': quarterly,
-        'daily_pe': _weekly(daily),
-        'medians_5y': medians,
-        'latest': latest,
-    }
-    return Reply(data, warnings)
+    bars, reason = daily.available(listing)
+    data, notes = valuation.history(listing.ticker, series, bars)
+    return Reply(data, [*warnings, *([reason] if reason else []), *notes])

@@ -5,7 +5,7 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
-from research.valuation import median_since, trailing_pe
+from research.valuation import NO_DAILY_PE_WARNING, current_pe, history, median_since, trailing_pe
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -106,3 +106,59 @@ class ValuationSeriesTest(TestCase):
         paths = [call.args[0] for call in calls.call_args_list]
         self.assertEqual(paths.count('/stock/metric'), 1)
         self.assertEqual(paths.count('/stock/profile2'), 1)
+
+    def test_a_busy_profile_only_loses_the_country(self):
+        def get(path, **params):
+            if path == '/stock/profile2':
+                raise finnhub.FinnhubBusy()
+            return {'series': {'quarterly': {'peTTM': [{'period': '2025-03-31', 'v': 40}]}}}
+
+        with patch('research.finnhub._get', side_effect=get):
+            result = finnhub.valuation_series('NVDA')
+        self.assertIsNone(result['country'])
+        self.assertEqual(result['quarterly']['pe_ttm'], [{'period': '2025-03-31', 'v': 40}])
+
+
+SERIES = {
+    'annual': {'pe': [{'period': '2023-12-31', 'v': 25}]},
+    'quarterly': {
+        'pe_ttm': [{'period': '2024-06-30', 'v': 30}, {'period': '2024-09-30', 'v': 40}],
+        'eps': [{'period': '2024-03-31', 'v': 1.0}, {'period': '2024-06-30', 'v': 1.0},
+                {'period': '2024-09-30', 'v': 1.0}, {'period': '2024-12-31', 'v': 1.0}],
+    },
+    'country': 'US',
+}
+BARS = [{'date': d, 'close': 40.0} for d in ('2025-01-06', '2025-01-07', '2025-01-10', '2025-01-13')]
+
+
+class HistoryTest(SimpleTestCase):
+    def test_daily_pe_is_sampled_weekly_with_medians_and_latest(self):
+        data, warnings = history('NVDA', SERIES, BARS, today=date(2025, 6, 1))
+        self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
+        self.assertEqual(data['latest'], {'pe_ttm': 40, 'ps_ttm': None, 'pfcf_ttm': None, 'ev_ebitda_ttm': None, 'daily_pe': 10.0})
+        self.assertEqual(data['medians_5y']['pe_ttm'], 35)
+        self.assertEqual(warnings, [])
+
+    def test_no_bars_means_no_daily_pe_with_a_reason(self):
+        data, warnings = history('NVDA', SERIES, None)
+        self.assertEqual(data['daily_pe'], [])
+        self.assertIsNone(data['latest']['daily_pe'])
+        self.assertEqual(warnings, [NO_DAILY_PE_WARNING])
+
+    def test_a_foreign_issuer_is_warned(self):
+        _, warnings = history('TSM', {**SERIES, 'country': 'TW'}, BARS)
+        self.assertIn('TW company', warnings[0])
+
+
+class CurrentPeTest(SimpleTestCase):
+    def test_the_series_value_wins(self):
+        self.assertEqual(current_pe(30.0, {'pe_ratio': 99.0, 'eps_ttm': 2.0}), 30.0)
+
+    def test_a_loss_maker_has_no_pe_even_from_the_series(self):
+        self.assertIsNone(current_pe(30.0, {'eps_ttm': -2.0}))
+
+    def test_falls_back_to_the_metric_unless_a_loss(self):
+        self.assertEqual(current_pe(None, {'pe_ratio': 20.0, 'eps_ttm': 2.0}), 20.0)
+        self.assertIsNone(current_pe(None, {'pe_ratio': 20.0, 'eps_ttm': -1.0}))
+        self.assertIsNone(current_pe(None, {'pe_ratio': -5.0}))
+        self.assertIsNone(current_pe(None, None))

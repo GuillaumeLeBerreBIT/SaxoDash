@@ -18,7 +18,7 @@ from django.core.cache import cache
 
 from core.http_client import request_json
 
-from .provider_cache import cached
+from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual
 
@@ -560,17 +560,21 @@ def _shape_series(raw, names):
     return {key: rows for key, rows in shaped.items() if rows}
 
 
-def valuation_series(symbol):
-    def produce():
-        series = _shared_basic_financials(symbol).get('series') or {}
-        shaped = {
-            'annual': _shape_series(series.get('annual') or {}, VALUATION_ANNUAL),
-            'quarterly': _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY),
-            'country': _shared_profile(symbol).get('country') or None,
-        }
-        return shaped, FUNDAMENTALS_TTL
+def _country(symbol):
+    try:
+        return _shared_profile(symbol).get('country') or None
+    except ProviderUnavailable:
+        return None
 
-    return cached(f'research:valuation-series:v2:{symbol}', produce, unexpected=FinnhubUnexpected)
+
+def valuation_series(symbol):
+    series = _shared_basic_financials(symbol).get('series') or {}
+    try:
+        annual = _shape_series(series.get('annual') or {}, VALUATION_ANNUAL)
+        quarterly = _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY)
+    except SHAPING_ERRORS as exc:
+        raise FinnhubUnexpected() from exc
+    return {'annual': annual, 'quarterly': quarterly, 'country': _country(symbol)}
 
 
 def _peers_cache_key(symbol):

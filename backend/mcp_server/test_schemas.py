@@ -5,6 +5,8 @@ import anyio
 from django.test import SimpleTestCase
 from mcp.server.fastmcp.exceptions import ToolError
 
+from research.listings import Listing
+
 from .server import build_server
 from .tools import REGISTRY
 
@@ -67,11 +69,13 @@ class ToolSchemaTest(SimpleTestCase):
     def test_a_json_list_reaches_compare_as_a_list(self):
         called = []
 
-        def entry(symbol):
-            called.append(symbol)
-            return {'symbol': symbol}, []
+        def entry(listing):
+            called.append(listing.ticker)
+            return {'symbol': listing.ticker}, []
 
-        with patch('mcp_server.tools.compare._compare_one', side_effect=entry):
+        with patch('mcp_server.tools.compare._compare_one', side_effect=entry), \
+                patch('mcp_server.tools.compare.look_up', side_effect=Listing.unresolved), \
+                patch('mcp_server.tools.saxo_warnings', return_value=[]):
             call('compare_companies', {'symbols': ['AMD', 'MU']})
         self.assertEqual(called, ['AMD', 'MU'])
 
