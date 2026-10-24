@@ -30,7 +30,7 @@
 
 ---
 
-### Task R1: `research/listings.py` — one resolved `Listing` (A1, F4, #2)
+### Task 1: `research/listings.py` — one resolved `Listing` (A1, F4, #2)
 
 **Files:** Create `backend/research/listings.py`, `backend/research/test_listings.py`. Move `backend/mcp_server/company_data.py` → `backend/research/company_data.py` and its test (`git mv`; the parity fixture path stays). Modify every caller: `mcp_server/tools/research.py`, `compare.py`, `smart_money.py`, `advisor/journal.py`, and tests that patch `mcp_server.tools.research.resolve`.
 
@@ -41,7 +41,7 @@
 
 - [ ] Steps: failing `research/test_listings.py` (held position wins with no Saxo call; USD row preferred; details completes a missing currency; cache hit = one search; unresolved → `Listing` with `resolved False`, `company_status 'eligible'`, `unverified_warning` set; `refusal` per status incl. `allow_fund`) → RED → implement → move company_data → rewrite callers to take a `Listing` (`_gate` becomes `listing.refusal(...)`; compare resolves once; ownership uses `listing.refusal(allow_fund=True)`; advisor imports `research.listings` at module top) → every company tool (company, statements, filings/insiders, news, valuation) adds `listing.unverified_warning` to its warnings (#2) with one test → full `research`, `mcp_server`, `advisor` suites green → commit `refactor(research): one Listing decides what a symbol is and who may ask about it`.
 
-### Task R2: one `@tool` decorator owns the envelope (F2, A6, F8, #3, #4)
+### Task 2: one `@tool` decorator owns the envelope (F2, A6, F8, #3, #4)
 
 **Files:** `backend/mcp_server/tools/__init__.py`, `envelope.py`, `views.py`, `server.py`, every `tools/*.py`; tests `test_envelope.py`, `test_server.py`, per-tool tests where sources per path were asserted.
 
@@ -55,7 +55,7 @@
 
 - [ ] Steps: failing `test_envelope.py`/`test_server.py` cases for the decorator (data, (data, warnings), Unavailable, Redis, saxo flag ordering, Decimal/date serialisation) → RED → implement → rewrite tools one file at a time keeping each file's tests green → add a test that `get_portfolio` and `get_tax_year` both return floats for money (#3) and that `get_transactions` carries Saxo warnings (#4) → suites green → commit `refactor(mcp): the tool decorator owns sources, refusals and JSON-safe money`.
 
-### Task R3: data functions under the tools; compare composes them (A2, A4, F3, F7, #8)
+### Task 3: data functions under the tools; compare composes them (A2, A4, F3, F7, #8)
 
 **Files:** Create `backend/research/daily.py`, `backend/research/price_summary.py` (absorbs `mcp_server/zones.py`, deleted; `test_zones.py` → `research/test_price_summary.py`), extend `backend/research/valuation.py`, `backend/research/finnhub.py`; modify `mcp_server/tools/research.py`, `compare.py`, `smart_money.py`.
 
@@ -69,7 +69,7 @@
 
 - [ ] Steps: failing tests for `daily`, `price_summary`, `valuation.history`, `valuation_series` with a failing profile (#8), compare making one chart call per symbol → RED → implement → tools become thin → suites green → commit `refactor(research): price summary, valuation history and ownership are data functions the tools share`.
 
-### Task R4: `tax_year.report` owns the tax orchestration (A3, F5, #1, #9)
+### Task 4: `tax_year.report` owns the tax orchestration (A3, F5, #1, #9)
 
 **Files:** `backend/portfolio/tax_year.py`, `backend/mcp_server/tools/tax.py`, `backend/saxo/client.py` or `saxo/credentials.py` (one saxo-owned closed-positions fetch), tests `portfolio/test_tax_year.py`, `mcp_server/test_tax_tool.py`.
 
@@ -81,7 +81,7 @@
 
 - [ ] Steps: failing `report()`-level tests (I3/I4 regressions, #1, #9, uic-keyed closes) → RED → implement → shrink the tool and its tests to adapter cases → suites green → commit `refactor(portfolio): tax_year.report owns the tax year; the tool only fetches and serialises`.
 
-### Task R5: `advisor.journal` owns the journal lifecycle (A5, F1)
+### Task 5: `advisor.journal` owns the journal lifecycle (A5, F1)
 
 **Files:** `backend/advisor/journal.py`, `backend/advisor/scoring.py`, `backend/mcp_server/tools/journal.py`, tests `advisor/test_journal.py`, `advisor/test_scoring.py`, `mcp_server/test_journal_tools.py`.
 
@@ -89,7 +89,7 @@
 
 - [ ] Steps: move validation/transition/review tests to `advisor/test_journal.py` (failing first) → implement → tool test keeps round-trip + `Refused` → warning + "no entry_price parameter" → suites green → commit `refactor(advisor): the journal owns logging, decisions, closing and review`.
 
-### Task R6: insights without the copy (F6)
+### Task 6: insights without the copy (F6)
 
 **Files:** `backend/portfolio/insights.py`, its tests.
 
@@ -97,7 +97,7 @@
 
 - [ ] Steps: RED test pinning both builders share sections → refactor → `portfolio`, `mcp_server` suites green → commit `refactor(portfolio): one set of position insights for the Dashboard and the advisor`.
 
-### Task R7: remaining open issues (#5, #6, #7) and docs
+### Task 7: remaining open issues (#5, #6, #7) and docs
 
 **Files:** `mcp_server/tools/research.py` (notes), every tool description, `mcp_server/test_protocol.py` (new), parity tests, `docs/running-the-stack.md`, `AGENTS.md` (the MCP "Decided" entry).
 
