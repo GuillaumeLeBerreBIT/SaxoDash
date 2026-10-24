@@ -1,10 +1,10 @@
 from dataclasses import replace
-from unittest.mock import patch
+from datetime import date, timedelta
 
 from django.test import TestCase
 from django.utils import timezone
 
-from mcp_server.views import ViewResult
+from investors.models import PriceHistory
 from research.listings import Listing
 
 from . import journal
@@ -32,11 +32,14 @@ def fields(**over):
     return base
 
 
-def logged(instrument=INSTRUMENT, chart=None, **over):
-    chart = ViewResult(200, CANDLES) if chart is None else chart
-    with patch('advisor.journal.look_up', return_value=instrument), \
-            patch('mcp_server.views.call_view', return_value=chart):
-        return journal.log(**fields(**over))
+def priced(price=42.25, reason=None):
+    return lambda listing: (price, reason)
+
+
+def logged(instrument=INSTRUMENT, entry_price=None, **over):
+    values = fields(**over)
+    values.pop('ticker')
+    return journal.log(listing=instrument, entry_price=entry_price or priced(), **values)
 
 
 class LogTests(TestCase):
@@ -72,15 +75,22 @@ class LogTests(TestCase):
             logged(invalidation=None)
 
     def test_refuses_unresolvable_ticker(self):
-        with patch('advisor.journal.look_up', return_value=Listing.unresolved('NEWCO')):
-            with self.assertRaises(journal.Refused):
-                journal.log(**fields())
+        with self.assertRaises(journal.Refused):
+            logged(instrument=Listing.unresolved('NEWCO'))
 
-    def test_refuses_when_chart_fails(self):
+    def test_refuses_when_there_is_no_entry_price(self):
         with self.assertRaises(journal.Refused) as caught:
-            logged(chart=ViewResult(409, {}))
+            logged(entry_price=priced(None, 'Saxo is not connected — reconnect in the app.'))
         self.assertIn('not connected', str(caught.exception))
         self.assertEqual(Recommendation.objects.count(), 0)
+
+    def test_bad_input_is_refused_before_any_price_is_asked(self):
+        def never(listing):
+            raise AssertionError('asked for a price')
+
+        for over in ({'action': 'yolo'}, {'horizon': '5y'}, {'conviction': 'max'}, {'bear_case': ['a']}):
+            with self.assertRaises(journal.Refused):
+                logged(entry_price=never, **over)
 
     def test_ticker_without_price_history_is_logged_and_wanted(self):
         logged()
@@ -95,12 +105,62 @@ class LogTests(TestCase):
         self.assertNotIn('NEWCO', current)
         self.assertIn('NEWCO', ever)
 
-    def test_decline_is_recorded(self):
+
+
+class LifecycleTests(TestCase):
+    def test_decide_records_a_decision(self):
         row = logged()
-        row.decision = 'declined'
-        row.save()
+        journal.decide(row.id, 'declined')
         row.refresh_from_db()
         self.assertEqual(row.decision, 'declined')
+
+    def test_decide_refuses_an_unknown_choice_or_id(self):
+        row = logged()
+        with self.assertRaisesMessage(journal.Refused, "Unknown decision 'maybe'"):
+            journal.decide(row.id, 'maybe')
+        with self.assertRaisesMessage(journal.Refused, 'No recommendation 999.'):
+            journal.decide(999, 'accepted')
+        with self.assertRaisesMessage(journal.Refused, 'No recommendation abc.'):
+            journal.decide('abc', 'accepted')
+
+    def test_close_sets_the_reason_once(self):
+        row = logged()
+        journal.close(row.id, 'sold')
+        first = Recommendation.objects.get().closed_at
+        with self.assertRaisesMessage(journal.Refused, f'Recommendation {row.id} is already closed.'):
+            journal.close(row.id, 'invalidated')
+        row.refresh_from_db()
+        self.assertEqual((row.close_reason, row.closed_at), ('sold', first))
+
+    def test_a_closed_recommendation_can_still_be_decided(self):
+        row = logged()
+        journal.close(row.id, 'sold')
+        self.assertEqual(journal.decide(row.id, 'accepted').decision, 'accepted')
+
+    def test_review_filters_by_status(self):
+        open_row, closed_row = logged(), logged()
+        journal.close(closed_row.id, 'sold')
+        self.assertEqual([r.id for r, _ in journal.review('open')['recommendations']], [open_row.id])
+        self.assertEqual([r.id for r, _ in journal.review('closed')['recommendations']], [closed_row.id])
+        self.assertEqual(len(journal.review('all')['recommendations']), 2)
+        with self.assertRaises(journal.Refused):
+            journal.review('someday')
+
+    def test_review_says_when_the_benchmark_is_missing(self):
+        logged()
+        result = journal.review('open', today=date(2026, 10, 24))
+        self.assertTrue(result['benchmark_missing'])
+        self.assertIn('overall', result['summary'])
+
+    def test_review_scores_against_the_benchmark(self):
+        row = logged()
+        recorded = row.recorded_at.date()
+        for ticker, close in (('NEWCO', 100.0), ('SPY', 100.0)):
+            PriceHistory.objects.create(ticker=ticker, status=PriceHistory.OK, closes=[[(recorded + timedelta(days=1)).isoformat(), close]])
+        result = journal.review('open', today=recorded + timedelta(days=2))
+        self.assertFalse(result['benchmark_missing'])
+        _, score = result['recommendations'][0]
+        self.assertEqual(score['entry_day'], recorded + timedelta(days=1))
 
 
 class ShapeTests(TestCase):

@@ -117,12 +117,8 @@ class ScoreTests(SimpleTestCase):
 
 def scored(conviction, excess, decision='accepted', action='buy_new'):
     point = None if excess is None else {'excess_pct': excess}
-    return {
-        'conviction': conviction,
-        'action': action,
-        'decision': decision,
-        'score': {'checkpoints': {'3m': point, '6m': None, '12m': None}},
-    }
+    recommendation = SimpleNamespace(conviction=conviction, action=action, decision=decision)
+    return recommendation, {'checkpoints': {'3m': point, '6m': None, '12m': None}}
 
 
 class SummaryTests(SimpleTestCase):

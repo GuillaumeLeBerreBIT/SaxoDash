@@ -6,7 +6,6 @@ from rest_framework.test import APITestCase
 
 from advisor.models import Recommendation
 from investors.models import PriceHistory
-from mcp_server.views import ViewResult
 from research.listings import Listing
 
 from .tools import journal as tools
@@ -27,8 +26,8 @@ def log(**over):
         'target': {'price': 60, 'condition': 'fair value'},
     }
     args.update(over)
-    with patch('advisor.journal.look_up', return_value=INSTRUMENT), \
-            patch('mcp_server.views.call_view', return_value=ViewResult(200, CANDLES)):
+    with patch('mcp_server.tools.journal.look_up', return_value=INSTRUMENT), \
+            patch('research.market.chart', return_value=CANDLES):
         return tools.log_recommendation(**args)
 
 
@@ -115,7 +114,7 @@ class ListScoresTests(APITestCase):
         Recommendation.objects.update(recorded_at=recorded)
         self.prices('NEWCO', 100.0, 120.0, recorded)
         self.prices('SPY', 100.0, 105.0, recorded)
-        with patch('mcp_server.tools.journal.timezone.localdate', return_value=today):
+        with patch('advisor.journal.timezone.localdate', return_value=today):
             result = tools.list_recommendations()
         row = result['data']['items'][0]
         self.assertEqual(row['score']['checkpoints']['3m']['excess_pct'], 15.0)

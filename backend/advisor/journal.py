@@ -1,38 +1,25 @@
-from research.listings import look_up
+from django.utils import timezone
 
+from investors.copying import BENCHMARK_TICKER, price_series
+from investors.prices import Series
+
+from . import scoring
 from .models import Recommendation
 
 MIN_RISKS = 3
 TARGET_REQUIRED = ('buy_new', 'add')
-CHART_BARS = 5
-DAILY = 1440
 SCORED_CURRENCY = 'USD'
+STATUSES = ('open', 'closed', 'all')
 
 
 class Refused(Exception):
     pass
 
 
-def _entry(listing):
-    from mcp_server import views
-    from research.views import ChartView
-
-    result = views.call_view(
-        ChartView,
-        query={
-            'uic': listing.uic,
-            'asset_type': listing.asset_type,
-            'horizon': DAILY,
-            'count': CHART_BARS,
-        },
-    )
-    message = views.problem(result)
-    if message:
-        raise Refused(f'No entry price, so nothing was logged: {message}')
-    closes = [c['close'] for c in result.data or [] if c.get('close') is not None]
-    if not closes:
-        raise Refused('No entry price, so nothing was logged: the chart has no closes.')
-    return closes[-1]
+def _choice(field, value):
+    allowed = [choice for choice, _ in Recommendation._meta.get_field(field).choices]
+    if value not in allowed:
+        raise Refused(f'Unknown {field} {value!r}; use one of: {", ".join(sorted(allowed))}.')
 
 
 def _number(value):
@@ -44,6 +31,8 @@ def _range_ok(value):
 
 
 def _validate(fields):
+    for field in ('action', 'horizon', 'conviction'):
+        _choice(field, fields.get(field))
     if not (fields.get('thesis') or '').strip():
         raise Refused('A recommendation needs a thesis.')
     risks = fields.get('bear_case')
@@ -62,25 +51,76 @@ def _validate(fields):
             raise Refused(f'{name} must be an object with numeric low and high.')
 
 
-def log(**fields):
-    _validate(fields)
-    ticker = fields.pop('ticker')
-    listing = look_up(ticker)
+def _scorable(listing):
     if not listing.resolved:
-        raise Refused(f'{ticker} could not be resolved to a Saxo instrument.')
+        raise Refused(f'{listing.ticker} could not be resolved to a Saxo instrument.')
     if not listing.currency:
-        raise Refused(f'{ticker} has no known listing currency.')
+        raise Refused(f'{listing.ticker} has no known listing currency.')
     if listing.currency != SCORED_CURRENCY:
         raise Refused('Only US-dollar listings can be scored against the S&P 500.')
-    entry_price = _entry(listing)
+
+
+def log(*, listing, entry_price, **fields):
+    _validate(fields)
+    _scorable(listing)
+    price, reason = entry_price(listing)
+    if price is None:
+        raise Refused(f'No entry price, so nothing was logged: {reason}')
     return Recommendation.objects.create(
         ticker=listing.symbol,
         uic=listing.uic,
         asset_type=listing.asset_type,
-        entry_price=entry_price,
+        entry_price=price,
         entry_currency=listing.currency,
         **fields,
     )
+
+
+def _find(rec_id):
+    try:
+        found = Recommendation.objects.filter(pk=int(rec_id)).first()
+    except (TypeError, ValueError):
+        found = None
+    if found is None:
+        raise Refused(f'No recommendation {rec_id}.')
+    return found
+
+
+def decide(rec_id, decision):
+    _choice('decision', decision)
+    rec = _find(rec_id)
+    rec.decision = decision
+    rec.save(update_fields=['decision'])
+    return rec
+
+
+def close(rec_id, reason):
+    _choice('close_reason', reason)
+    rec = _find(rec_id)
+    if rec.closed_at is not None:
+        raise Refused(f'Recommendation {rec_id} is already closed.')
+    rec.closed_at = timezone.now()
+    rec.close_reason = reason
+    rec.save(update_fields=['closed_at', 'close_reason'])
+    return rec
+
+
+def review(status, today=None):
+    if status not in STATUSES:
+        raise Refused(f'Unknown status {status!r}; use one of: {", ".join(STATUSES)}.')
+    rows = Recommendation.objects.all()
+    if status != 'all':
+        rows = rows.filter(closed_at__isnull=status == 'open')
+    recs = list(rows)
+    prices = price_series({rec.ticker for rec in recs} | {BENCHMARK_TICKER})
+    benchmark = prices.get(BENCHMARK_TICKER) or Series([], [])
+    today = today or timezone.localdate()
+    scored = [(rec, scoring.score(rec, prices, benchmark, today)) for rec in recs]
+    return {
+        'recommendations': scored,
+        'summary': scoring.summary(scored),
+        'benchmark_missing': bool(recs) and not benchmark,
+    }
 
 
 def wanted_tickers():

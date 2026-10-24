@@ -1,19 +1,13 @@
-from django.utils import timezone
-
-from advisor import journal, scoring
-from advisor.models import Recommendation
-from investors.copying import BENCHMARK_TICKER, price_series
-from investors.prices import Series
+from advisor import journal
+from investors.copying import BENCHMARK_TICKER
+from research import daily
+from research.listings import look_up
 
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
 from . import tool
 
-STATUSES = ('open', 'closed', 'all')
-
-
-def _choices(field):
-    return {value for value, _ in Recommendation._meta.get_field(field).choices}
+NO_CLOSES = 'the chart has no closes.'
 
 
 def _row(rec):
@@ -38,33 +32,24 @@ def _row(rec):
         'uncertainties': rec.uncertainties,
         'entry_price': rec.entry_price,
         'entry_currency': rec.entry_currency,
-        'recorded_at': rec.recorded_at.isoformat(),
+        'recorded_at': rec.recorded_at,
         'decision': rec.decision,
-        'closed_at': rec.closed_at.isoformat() if rec.closed_at else None,
+        'closed_at': rec.closed_at,
         'close_reason': rec.close_reason or None,
     }
 
 
-def _serialised(result):
-    def point(entry):
-        return None if entry is None else {**entry, 'day': entry['day'].isoformat()}
-
-    return {
-        'entry_day': result['entry_day'].isoformat() if result['entry_day'] else None,
-        'checkpoints': {name: point(entry) for name, entry in result['checkpoints'].items()},
-        'latest': point(result['latest']),
-    }
+def _entry_price(listing):
+    bars, reason = daily.available(listing)
+    price = daily.latest_close(bars or [])
+    return price, None if price is not None else reason or NO_CLOSES
 
 
-def _invalid(field, value):
-    return f'Unknown {field} {value!r}; use one of: {", ".join(sorted(_choices(field)))}.'
-
-
-def _find(rec_id):
+def _refusing(step, *args, **kwargs):
     try:
-        return Recommendation.objects.filter(pk=int(rec_id)).first()
-    except (TypeError, ValueError):
-        return None
+        return step(*args, **kwargs)
+    except journal.Refused as refused:
+        raise Unavailable(str(refused)) from refused
 
 
 @tool(
@@ -90,79 +75,41 @@ def log_recommendation(
     review: bool = False,
     uncertainties: list[str] | None = None,
 ):
-    for field, value in (('action', action), ('horizon', horizon), ('conviction', conviction)):
-        if value not in _choices(field):
-            raise Unavailable(_invalid(field, value))
-    try:
-        rec = journal.log(
-            ticker=ticker,
-            action=action,
-            thesis=thesis,
-            bear_case=bear_case,
-            invalidation=invalidation,
-            horizon=horizon,
-            conviction=conviction,
-            target=target,
-            buy_range=buy_range,
-            sell_range=sell_range,
-            figures=figures or {},
-            lenses=lenses or [],
-            zone=zone,
-            review=review,
-            uncertainties=uncertainties or [],
-        )
-    except journal.Refused as refused:
-        raise Unavailable(str(refused)) from refused
+    rec = _refusing(
+        journal.log,
+        listing=look_up(ticker),
+        entry_price=_entry_price,
+        action=action,
+        thesis=thesis,
+        bear_case=bear_case,
+        invalidation=invalidation,
+        horizon=horizon,
+        conviction=conviction,
+        target=target,
+        buy_range=buy_range,
+        sell_range=sell_range,
+        figures=figures or {},
+        lenses=lenses or [],
+        zone=zone,
+        review=review,
+        uncertainties=uncertainties or [],
+    )
     return _row(rec)
 
 
 @tool('Record whether a logged recommendation was accepted or declined.', sources=['journal'])
 def set_decision(id: int, decision: str):
-    if decision not in _choices('decision'):
-        raise Unavailable(_invalid('decision', decision))
-    rec = _find(id)
-    if rec is None:
-        raise Unavailable(f'No recommendation {id}.')
-    rec.decision = decision
-    rec.save(update_fields=['decision'])
-    return _row(rec)
+    return _row(_refusing(journal.decide, id, decision))
 
 
 @tool('Close a logged recommendation: sold, invalidated or superseded.', sources=['journal'])
 def close_recommendation(id: int, reason: str):
-    if reason not in _choices('close_reason'):
-        raise Unavailable(_invalid('close_reason', reason))
-    rec = _find(id)
-    if rec is None:
-        raise Unavailable(f'No recommendation {id}.')
-    if rec.closed_at is not None:
-        raise Unavailable(f'Recommendation {id} is already closed.')
-    rec.closed_at = timezone.now()
-    rec.close_reason = reason
-    rec.save(update_fields=['closed_at', 'close_reason'])
-    return _row(rec)
+    return _row(_refusing(journal.close, id, reason))
 
 
 @tool('List logged recommendations, newest first: open, closed or all.', sources=['journal', 'price history'])
 def list_recommendations(status: str = 'open', limit: int = 50):
-    if status not in STATUSES:
-        raise Unavailable(f'Unknown status {status!r}; use one of: {", ".join(STATUSES)}.')
-    rows = Recommendation.objects.all()
-    if status == 'open':
-        rows = rows.filter(closed_at__isnull=True)
-    elif status == 'closed':
-        rows = rows.filter(closed_at__isnull=False)
-    recs = list(rows)
-    prices = price_series({rec.ticker for rec in recs} | {BENCHMARK_TICKER})
-    benchmark = prices.get(BENCHMARK_TICKER) or Series([], [])
-    today = timezone.localdate()
-    items = []
-    for rec in recs:
-        item = _row(rec)
-        item['score'] = scoring.score(rec, prices, benchmark, today)
-        items.append(item)
-    summary = scoring.summary(items)
-    for item in items:
-        item['score'] = _serialised(item['score'])
-    warnings = [] if benchmark else [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.']
-    return Reply({**capped(items, limit), 'summary': summary}, warnings)
+    result = _refusing(journal.review, status)
+    items = [{**_row(rec), 'score': score} for rec, score in result['recommendations']]
+    warnings = [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.'] if result['benchmark_missing'] else []
+    return Reply({**capped(items, limit), 'summary': result['summary']}, warnings)

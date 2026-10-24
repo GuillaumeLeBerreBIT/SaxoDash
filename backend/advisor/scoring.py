@@ -70,13 +70,13 @@ def score(rec, prices, benchmark, today):
     }
 
 
-def _means(rows):
+def _means(pairs):
     result = {}
     for name in CHECKPOINTS:
         values = [
-            row['score']['checkpoints'][name]['excess_pct']
-            for row in rows
-            if row['score']['checkpoints'][name] is not None
+            score['checkpoints'][name]['excess_pct']
+            for _, score in pairs
+            if score['checkpoints'][name] is not None
         ]
         result[name] = {
             'mean_excess_pct': round(sum(values) / len(values), 2) if values else None,
@@ -85,18 +85,18 @@ def _means(rows):
     return result
 
 
-def _grouped(rows, key):
+def _grouped(pairs, field):
     groups = defaultdict(list)
-    for row in rows:
-        groups[row[key]].append(row)
+    for rec, score in pairs:
+        groups[getattr(rec, field)].append((rec, score))
     return {value: _means(group) for value, group in groups.items()}
 
 
 def summary(scored):
-    rows = [row for row in scored if row['action'] in DIRECTION]
+    pairs = [(rec, score) for rec, score in scored if rec.action in DIRECTION]
     return {
-        'overall': _means(rows),
-        'by_conviction': _grouped(rows, 'conviction'),
-        'by_action': _grouped(rows, 'action'),
-        'declined': _means([row for row in rows if row['decision'] == 'declined']),
+        'overall': _means(pairs),
+        'by_conviction': _grouped(pairs, 'conviction'),
+        'by_action': _grouped(pairs, 'action'),
+        'declined': _means([(rec, score) for rec, score in pairs if rec.decision == 'declined']),
     }
