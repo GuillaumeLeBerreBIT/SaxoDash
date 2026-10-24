@@ -1,13 +1,11 @@
 from advisor import journal
 from investors.copying import BENCHMARK_TICKER
-from research import daily
-from research.listings import look_up
 
+from .. import throttled
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
+from ..throttled import look_up
 from . import tool
-
-NO_CLOSES = 'the chart has no closes.'
 
 
 def _row(rec):
@@ -37,12 +35,6 @@ def _row(rec):
         'closed_at': rec.closed_at,
         'close_reason': rec.close_reason or None,
     }
-
-
-def _entry_price(listing):
-    bars, reason = daily.available(listing)
-    price = daily.latest_close(bars or [])
-    return price, None if price is not None else reason or NO_CLOSES
 
 
 def _refusing(step, *args, **kwargs):
@@ -78,7 +70,7 @@ def log_recommendation(
     rec = _refusing(
         journal.log,
         listing=look_up(ticker),
-        entry_price=_entry_price,
+        saxo=throttled.PAGES,
         action=action,
         thesis=thesis,
         bear_case=bear_case,

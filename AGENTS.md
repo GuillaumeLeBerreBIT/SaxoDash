@@ -563,7 +563,10 @@ move so far until the session closes, while universe names show `—` until the 
 **The advisor reads the app through `mcp_server`, which runs the pages' own views.**
 `manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; a page-backed tool
 dispatches the matching DRF view in-process (`mcp_server/views.py::fetch`, authenticated as
-the single user), so the assistant and the page cannot disagree about a number. It never
+the single user), so the assistant and the page cannot disagree about a number, and the
+pages' throttles and the Finnhub budget still apply: even the domain modules' own Saxo
+calls (symbol lookup, daily closes) reach Saxo through the pages' views, passed in as a port
+(`mcp_server/throttled.py::PAGES`), and `get_quotes` takes at most 20 symbols. It never
 touches banking data or orders, and starts no sync. Its only writes are
 `advisor.Recommendation` rows, whose entry price the server fills from Saxo, not the model.
 `mcp_server` only translates: one `@tool` decorator owns the envelope (Saxo warnings,
@@ -571,5 +574,6 @@ touches banking data or orders, and starts no sync. Its only writes are
 the apps that own them — `research/listings.py` decides what a symbol is and who may ask
 Finnhub about it, `research/daily.py` is the one daily-close fetch (1,200 bars, so one cache
 key per instrument), `portfolio/tax_year.py::report` runs the tax year, `advisor/journal.py`
-the whole journal. No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
+the whole journal, entry price included (it reads the Saxo chart itself, so no caller can
+supply one). No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
 "The MCP server".

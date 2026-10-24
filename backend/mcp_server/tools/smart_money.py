@@ -11,10 +11,9 @@ from investors.views import (
 )
 from investors.views import OwnershipDetailView as InvestorOwnershipView
 
-from research.listings import look_up
-
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
+from ..throttled import look_up
 from ..views import fetch, fetch_optional
 from . import tool
 

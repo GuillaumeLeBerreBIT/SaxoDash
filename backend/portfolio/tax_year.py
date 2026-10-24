@@ -95,11 +95,13 @@ def realised(rows, year, close_on):
             return None, f'{ticker}: a closed position has no opening time, so its tax basis is unknown.'
         if _opened_before_basis(base):
             source = DEC_31_BASIS
-            gain = _rebased(base, close_on(*_instrument(base))[0])
+            close, why = close_on(*_instrument(base))
+            gain = _rebased(base, close)
             if gain is None:
+                detail = f' ({why})' if why else ''
                 return None, (
                     f'{ticker}: a lot bought before 2026 needs its 31 December 2025 close, its closing price '
-                    'and its conversion rate, and one is missing, so realised gains are unknown.'
+                    f'and its conversion rate, and one is missing{detail}, so realised gains are unknown.'
                 )
         else:
             source = SAXO_BASIS
@@ -213,9 +215,13 @@ def _memoised(close_on):
     return lookup
 
 
-def report(year, carry_over_eur, *, closed_rows, close_on, closed_reason=None):
+def ensure_tax_year(year):
     if year < FIRST_YEAR:
         raise NotATaxYear(NOT_A_TAX_YEAR)
+
+
+def report(year, carry_over_eur, *, closed_rows, close_on, closed_reason=None):
+    ensure_tax_year(year)
     close_on = _memoised(close_on)
     warnings = []
     realised_rows = None

@@ -294,7 +294,10 @@ them: `research/listings.py` (what a symbol is and whether US company data may b
 for), `research/daily.py` (one 1,200-bar daily fetch per instrument), `research/price_summary.py`
 (moving averages, RSI, 52-week range and the playbook zone), `research/valuation.py`
 (trailing P/E and 5-year medians), `portfolio/tax_year.py::report` and `advisor/journal.py`
-(log, decide, close, review). `advisor` imports neither `mcp_server` nor `research`.
+(log, decide, close, review; it reads the entry price from the Saxo chart itself).
+`advisor` never imports `mcp_server`. The domain modules' Saxo calls take a port, and the MCP
+server passes `mcp_server/throttled.py::PAGES`, which goes through the pages' own views, so
+the per-minute throttles protect the Saxo token the syncs use.
 
 `get_tax_year` is an estimate: 10% on gains above the EUR 10,000 exemption, with
 carry-over and a 31 December 2025 basis for older holdings, always ending "Check with

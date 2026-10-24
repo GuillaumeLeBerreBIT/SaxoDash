@@ -8,12 +8,12 @@ NOT_CONNECTED = 'Saxo is not connected — reconnect in the app.'
 UPSTREAM = 'Upstream error (502).'
 
 
-def bars(uic, asset_type):
-    return market.chart(uic, asset_type, HORIZON, client.CHART_MAX_COUNT)
+def bars(uic, asset_type, saxo=market):
+    return saxo.chart(uic, asset_type, HORIZON, client.CHART_MAX_COUNT)
 
 
-def candles(listing):
-    return bars(listing.uic, listing.asset_type)
+def candles(listing, saxo=market):
+    return bars(listing.uic, listing.asset_type, saxo)
 
 
 def _closes(bars):
@@ -31,13 +31,15 @@ def close_on_or_before(bars, day):
 
 
 def reason(error):
-    return NOT_CONNECTED if isinstance(error, ProviderNotConnected) else UPSTREAM
+    if isinstance(error, ProviderNotConnected):
+        return NOT_CONNECTED
+    return str(error) or UPSTREAM
 
 
-def available(listing):
+def available(listing, saxo=market):
     if not listing.resolved:
         return None, None
     try:
-        return candles(listing), None
+        return candles(listing, saxo), None
     except ProviderError as error:
         return None, reason(error)

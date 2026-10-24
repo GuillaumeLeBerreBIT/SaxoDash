@@ -6,6 +6,8 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from rest_framework.test import APIRequestFactory, force_authenticate
 
+from research.daily import NOT_CONNECTED
+
 from .envelope import Unavailable
 from .shaping import without
 
@@ -43,7 +45,7 @@ def call_view(view_class, *, kwargs=None, query=None):
 
 def problem(result):
     if result.status == 409:
-        return 'Saxo is not connected — reconnect in the app.'
+        return NOT_CONNECTED
     if result.status == 429:
         return 'Busy — try again in a minute.'
     if result.status == 404:

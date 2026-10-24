@@ -7,6 +7,7 @@ from saxo import client
 from saxo.client import SaxoAPIError
 from saxo.credentials import SaxoNotConnected, active_credential
 
+from .. import throttled
 from ..envelope import Reply, Unavailable
 from . import tool
 
@@ -24,7 +25,7 @@ def _basis_close(uic, asset_type):
     if uic is None or not asset_type:
         return None, 'no Saxo identity'
     try:
-        bars = daily.bars(uic, asset_type)
+        bars = throttled.bars(uic, asset_type)
     except ProviderError as error:
         return None, daily.reason(error)
     close = daily.close_on_or_before(bars, tax_year.BASIS_DAY)
@@ -38,10 +39,11 @@ def _basis_close(uic, asset_type):
 )
 def get_tax_year(year: int = 0, carry_over_eur: float = 0):
     year = year or date.today().year
-    rows, reason = _closed_rows()
     try:
-        result = tax_year.report(year, carry_over_eur, closed_rows=rows, closed_reason=reason, close_on=_basis_close)
+        tax_year.ensure_tax_year(year)
     except tax_year.NotATaxYear as refused:
         raise Unavailable(str(refused)) from refused
+    rows, reason = _closed_rows()
+    result = tax_year.report(year, carry_over_eur, closed_rows=rows, closed_reason=reason, close_on=_basis_close)
     warnings = result.pop('warnings')
     return Reply({'year': year, **result}, warnings)

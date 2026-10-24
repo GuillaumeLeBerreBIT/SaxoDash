@@ -568,8 +568,9 @@ def _country(symbol):
 
 
 def valuation_series(symbol):
-    series = _shared_basic_financials(symbol).get('series') or {}
+    payload = _shared_basic_financials(symbol)
     try:
+        series = payload.get('series') or {}
         annual = _shape_series(series.get('annual') or {}, VALUATION_ANNUAL)
         quarterly = _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY)
     except SHAPING_ERRORS as exc:

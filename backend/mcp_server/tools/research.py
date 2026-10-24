@@ -1,5 +1,5 @@
 from research import daily, finnhub, valuation
-from research.listings import SEARCH_ASSET_TYPES, bare, look_up
+from research.listings import SEARCH_ASSET_TYPES, bare
 from research.price_summary import summarise
 from research.providers import ProviderError, ProviderUnavailable
 from research.models import PriceLine, SymbolNote, Watchlist
@@ -17,14 +17,17 @@ from research.views import (
     SymbolEarningsView,
 )
 
+from .. import throttled
 from ..envelope import Reply, Unavailable
 from ..shaping import capped, numbers, without
+from ..throttled import look_up
 from ..views import fetch, fetch_optional
 from . import tool
 
 INTERVALS = {'daily': (daily.HORIZON, 260), 'weekly': (10080, 1200), 'monthly': (43200, 1200)}
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 SAXO = 'saxo'
+QUOTE_LIMIT = 20
 NOTE_NUMBERS = ('target_price', 'stop_price')
 
 
@@ -48,7 +51,7 @@ def _chart(listing, horizon, count):
 
 def _daily_bars(listing):
     try:
-        return daily.candles(listing)
+        return throttled.candles(listing)
     except ProviderError as error:
         raise Unavailable(daily.reason(error)) from error
 
@@ -73,8 +76,10 @@ def search_instruments(query: str):
 @tool('Research: latest prices for one or more tickers, with the day change and its basis (live or last close).', sources=[SAXO], saxo=True)
 def get_quotes(symbols: list[str]):
     warnings = []
+    if len(symbols) > QUOTE_LIMIT:
+        warnings.append(f'Quotes are limited to {QUOTE_LIMIT} symbols; the rest were left out.')
     by_type = {}
-    for symbol in symbols:
+    for symbol in symbols[:QUOTE_LIMIT]:
         listing = look_up(symbol)
         if not listing.resolved:
             warnings.append(f'{symbol} could not be resolved to a Saxo instrument.')
@@ -232,6 +237,6 @@ def get_valuation_history(symbol: str):
         series = finnhub.valuation_series(listing.ticker)
     except ProviderUnavailable as exc:
         raise Unavailable(*warnings, exc.reason) from exc
-    bars, reason = daily.available(listing)
+    bars, reason = throttled.available(listing)
     data, notes = valuation.history(listing.ticker, series, bars)
     return Reply(data, [*warnings, *([reason] if reason else []), *notes])

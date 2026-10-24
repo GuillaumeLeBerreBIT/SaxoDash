@@ -134,6 +134,11 @@ class RealisedTests(SimpleTestCase):
         self.assertIn('AAA', reason)
         self.assertIn('31 December 2025', reason)
 
+    def test_a_missing_dec_31_close_says_why(self):
+        payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z', ConversionRateClose=0.9)]
+        _, reason = tax_year.realised(payload, 2026, lambda uic, asset_type: (None, 'Saxo is not connected'))
+        self.assertIn('(Saxo is not connected)', reason)
+
     def test_pre_2026_lot_without_a_conversion_rate_is_unknown(self):
         payload = [closed('AAA', '2026-03-04T10:00:00Z', 5.0, opened_at='2025-05-01T14:00:00Z')]
         rows, reason = tax_year.realised(payload, 2026, closes({(7, 'Stock'): 140.0}))

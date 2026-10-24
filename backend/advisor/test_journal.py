@@ -1,11 +1,15 @@
+import inspect
 from dataclasses import replace
 from datetime import date, timedelta
+
+from types import SimpleNamespace
 
 from django.test import TestCase
 from django.utils import timezone
 
 from investors.models import PriceHistory
 from research.listings import Listing
+from research.providers import ProviderNotConnected
 
 from . import journal
 from .models import Recommendation
@@ -32,14 +36,19 @@ def fields(**over):
     return base
 
 
-def priced(price=42.25, reason=None):
-    return lambda listing: (price, reason)
+def charts(bars=CANDLES, error=None):
+    def chart(*args):
+        if error is not None:
+            raise error
+        return bars
+
+    return SimpleNamespace(chart=chart)
 
 
-def logged(instrument=INSTRUMENT, entry_price=None, **over):
+def logged(instrument=INSTRUMENT, saxo=None, **over):
     values = fields(**over)
     values.pop('ticker')
-    return journal.log(listing=instrument, entry_price=entry_price or priced(), **values)
+    return journal.log(listing=instrument, saxo=saxo or charts(), **values)
 
 
 class LogTests(TestCase):
@@ -80,17 +89,21 @@ class LogTests(TestCase):
 
     def test_refuses_when_there_is_no_entry_price(self):
         with self.assertRaises(journal.Refused) as caught:
-            logged(entry_price=priced(None, 'Saxo is not connected — reconnect in the app.'))
+            logged(saxo=charts(error=ProviderNotConnected('x')))
         self.assertIn('not connected', str(caught.exception))
         self.assertEqual(Recommendation.objects.count(), 0)
 
     def test_bad_input_is_refused_before_any_price_is_asked(self):
-        def never(listing):
-            raise AssertionError('asked for a price')
-
         for over in ({'action': 'yolo'}, {'horizon': '5y'}, {'conviction': 'max'}, {'bear_case': ['a']}):
             with self.assertRaises(journal.Refused):
-                logged(entry_price=never, **over)
+                logged(saxo=charts(error=AssertionError('asked for a price')), **over)
+
+    def test_a_chart_without_closes_is_refused(self):
+        with self.assertRaisesMessage(journal.Refused, 'the chart has no closes'):
+            logged(saxo=charts(bars=[]))
+
+    def test_log_takes_no_price_from_its_caller(self):
+        self.assertNotIn('entry_price', inspect.signature(journal.log).parameters)
 
     def test_ticker_without_price_history_is_logged_and_wanted(self):
         logged()

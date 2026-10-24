@@ -71,23 +71,23 @@ def _held(ticker):
     )
 
 
-def _details_currency(uic, asset_type):
+def _details_currency(saxo, uic, asset_type):
     try:
-        return market.details(uic, asset_type).get('currency') or None
+        return saxo.details(uic, asset_type).get('currency') or None
     except ProviderError:
         return None
 
 
-def _searched(ticker):
+def _searched(ticker, saxo):
     try:
-        rows = market.search(ticker, SEARCH_ASSET_TYPES)
+        rows = saxo.search(ticker, SEARCH_ASSET_TYPES)
     except ProviderError:
         return None
     matches = [row for row in rows if bare(row.get('symbol') or '') == ticker]
     if not matches:
         return None
     row = next((r for r in matches if r.get('currency') == company_data.COMPANY_DATA_CURRENCY), matches[0])
-    currency = row.get('currency') or _details_currency(row['uic'], row['asset_type'])
+    currency = row.get('currency') or _details_currency(saxo, row['uic'], row['asset_type'])
     return Listing(
         ticker=ticker,
         symbol=row['symbol'],
@@ -99,7 +99,7 @@ def _searched(ticker):
     )
 
 
-def look_up(symbol):
+def look_up(symbol, saxo=market):
     ticker = bare(symbol)
     held = _held(ticker)
     if held is not None:
@@ -107,7 +107,7 @@ def look_up(symbol):
     key = f'{CACHE_PREFIX}{ticker}'
     found = cache.get(key)
     if found is None:
-        found = _searched(ticker)
+        found = _searched(ticker, saxo)
         if found is not None:
             cache.set(key, found, CACHE_TTL)
     return found or Listing.unresolved(ticker)

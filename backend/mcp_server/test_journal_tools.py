@@ -2,6 +2,8 @@ import inspect
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from advisor.models import Recommendation
@@ -9,6 +11,8 @@ from investors.models import PriceHistory
 from research.listings import Listing
 
 from .tools import journal as tools
+
+LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 INSTRUMENT = Listing(ticker='NEWCO', symbol='NEWCO', name='NewCo', uic=77, asset_type='Stock', currency='USD', exchange='X')
 CANDLES = [{'date': '2026-10-21', 'open': 1, 'high': 2, 'low': 1, 'close': 42.25, 'volume': 1}]
@@ -31,7 +35,11 @@ def log(**over):
         return tools.log_recommendation(**args)
 
 
+@override_settings(CACHES=LOCMEM)
 class JournalToolTests(APITestCase):
+    def setUp(self):
+        get_user_model().objects.create_user('u', password='p')
+
     def test_entry_price_comes_from_saxo_not_the_caller(self):
         self.assertNotIn('entry_price', inspect.signature(tools.log_recommendation).parameters)
         result = log()
@@ -98,7 +106,11 @@ class JournalToolTests(APITestCase):
         self.assertEqual(tools.set_decision(row_id, 'accepted')['data']['decision'], 'accepted')
 
 
+@override_settings(CACHES=LOCMEM)
 class ListScoresTests(APITestCase):
+    def setUp(self):
+        get_user_model().objects.create_user('u', password='p')
+
     def prices(self, ticker, first, last, recorded):
         entry = recorded.date() + timedelta(days=1)
         PriceHistory.objects.create(

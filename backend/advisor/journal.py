@@ -2,6 +2,7 @@ from django.utils import timezone
 
 from investors.copying import BENCHMARK_TICKER, price_series
 from investors.prices import Series
+from research import daily, market
 
 from . import scoring
 from .models import Recommendation
@@ -60,12 +61,21 @@ def _scorable(listing):
         raise Refused('Only US-dollar listings can be scored against the S&P 500.')
 
 
-def log(*, listing, entry_price, **fields):
+NO_CLOSES = 'the chart has no closes.'
+
+
+def _entry_price(listing, saxo):
+    bars, reason = daily.available(listing, saxo)
+    price = daily.latest_close(bars or [])
+    if price is None:
+        raise Refused(f'No entry price, so nothing was logged: {reason or NO_CLOSES}')
+    return price
+
+
+def log(*, listing, saxo=market, **fields):
     _validate(fields)
     _scorable(listing)
-    price, reason = entry_price(listing)
-    if price is None:
-        raise Refused(f'No entry price, so nothing was logged: {reason}')
+    price = _entry_price(listing, saxo)
     return Recommendation.objects.create(
         ticker=listing.symbol,
         uic=listing.uic,

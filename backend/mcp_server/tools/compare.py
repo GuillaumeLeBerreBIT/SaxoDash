@@ -1,11 +1,13 @@
-from research import daily, finnhub, valuation
-from research.listings import bare, look_up
+from research import finnhub, valuation
+from research.listings import bare
 from research.models import ScreenerRow
 from research.price_summary import summarise
 from research.providers import ProviderUnavailable
 from research.views import FundamentalsView
 
+from .. import throttled
 from ..envelope import Reply, Unavailable
+from ..throttled import look_up
 from ..views import fetch_optional
 from . import tool
 from .research import FINNHUB, SAXO, _scalar_metrics
@@ -120,7 +122,7 @@ def _ownership(listing, warnings):
 
 def _pillars(listing, warnings):
     fundamentals = fetch_optional(FundamentalsView, warnings, kwargs={'symbol': listing.ticker})
-    bars, reason = daily.available(listing)
+    bars, reason = throttled.available(listing)
     if reason:
         warnings.append(reason)
     history = _history(listing, bars, warnings)

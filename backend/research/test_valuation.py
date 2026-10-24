@@ -107,6 +107,11 @@ class ValuationSeriesTest(TestCase):
         self.assertEqual(paths.count('/stock/metric'), 1)
         self.assertEqual(paths.count('/stock/profile2'), 1)
 
+    def test_an_unreadable_metric_payload_is_unavailable(self):
+        with patch('research.finnhub._get', return_value=['not', 'a', 'dict']):
+            with self.assertRaises(finnhub.FinnhubUnexpected):
+                finnhub.valuation_series('NVDA')
+
     def test_a_busy_profile_only_loses_the_country(self):
         def get(path, **params):
             if path == '/stock/profile2':

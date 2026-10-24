@@ -35,7 +35,8 @@ class DailyTest(SimpleTestCase):
 
     def test_reason_uses_the_tool_wording(self):
         self.assertEqual(daily.reason(ProviderNotConnected('x')), 'Saxo is not connected — reconnect in the app.')
-        self.assertEqual(daily.reason(ProviderError('x')), 'Upstream error (502).')
+        self.assertEqual(daily.reason(ProviderError('Saxo could not serve this request.')), 'Saxo could not serve this request.')
+        self.assertEqual(daily.reason(ProviderError()), 'Upstream error (502).')
 
     def test_available_turns_a_provider_failure_into_a_reason(self):
         with patch('research.market.chart', side_effect=ProviderNotConnected('x')):
