@@ -32,7 +32,7 @@ def _basis_close(uic, asset_type):
 
 
 @tool(
-    'Belgian tax year: realised gains from Saxo, unrealised gains per position, exemption left and estimated 10% tax.',
+    'Advisor: the Belgian tax year (realised gains from Saxo, unrealised gains per position, exemption left and estimated 10% tax).',
     sources=['saxo', 'portfolio'],
     saxo=True,
 )

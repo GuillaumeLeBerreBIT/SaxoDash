@@ -2,8 +2,8 @@ from research import daily, finnhub, valuation
 from research.listings import SEARCH_ASSET_TYPES, bare, look_up
 from research.price_summary import summarise
 from research.providers import ProviderError, ProviderUnavailable
-from research.models import SymbolNote, Watchlist
-from research.serializers import SymbolNoteSerializer
+from research.models import PriceLine, SymbolNote, Watchlist
+from research.serializers import PriceLineSerializer, SymbolNoteSerializer
 from research.views import (
     ChartView,
     CompanyNewsView,
@@ -18,13 +18,14 @@ from research.views import (
 )
 
 from ..envelope import Reply, Unavailable
-from ..shaping import capped, without
+from ..shaping import capped, numbers, without
 from ..views import fetch, fetch_optional
 from . import tool
 
 INTERVALS = {'daily': (daily.HORIZON, 260), 'weekly': (10080, 1200), 'monthly': (43200, 1200)}
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 SAXO = 'saxo'
+NOTE_NUMBERS = ('target_price', 'stop_price')
 
 
 def _shape(row):
@@ -63,13 +64,13 @@ def _bar(candle):
     return {key: candle[key] for key in ('date', 'open', 'high', 'low', 'close', 'volume')}
 
 
-@tool('Find stocks and ETFs on Saxo by name or ticker: symbol, name, currency, exchange.', sources=[SAXO], saxo=True)
+@tool('Research: find stocks and ETFs on Saxo by name or ticker (symbol, name, currency, exchange).', sources=[SAXO], saxo=True)
 def search_instruments(query: str):
     rows = fetch(InstrumentSearchView, query={'q': query, 'asset_types': SEARCH_ASSET_TYPES})
     return {'query': query, 'matches': [_shape(row) for row in rows]}
 
 
-@tool('Latest prices for one or more tickers, with the day change and its basis (live or last close).', sources=[SAXO], saxo=True)
+@tool('Research: latest prices for one or more tickers, with the day change and its basis (live or last close).', sources=[SAXO], saxo=True)
 def get_quotes(symbols: list[str]):
     warnings = []
     by_type = {}
@@ -100,7 +101,7 @@ def get_quotes(symbols: list[str]):
 
 
 @tool(
-    'Price history for a ticker (daily, weekly or monthly bars) with moving averages, RSI, 52-week range and the playbook zone.',
+    'Research › Chart: price history for a ticker (daily, weekly or monthly bars) with moving averages, RSI, 52-week range and the playbook zone.',
     sources=[SAXO],
     saxo=True,
 )
@@ -141,7 +142,7 @@ def _without_flag(payload):
 
 
 @tool(
-    'Company profile, valuation and growth metrics, EPS and earnings history, peers and analyst trend (US-listed stocks only).',
+    'Research › Overview: company profile, valuation and growth metrics, EPS and earnings history, peers and analyst trend (US-listed stocks only).',
     sources=[FINNHUB],
 )
 def get_company(symbol: str):
@@ -162,7 +163,7 @@ def get_company(symbol: str):
     return Reply(data, warnings)
 
 
-@tool('Income statement, balance sheet and cash flow rows for a US-listed stock, annual or quarterly.', sources=[FINNHUB, 'sec'])
+@tool('Research › Financials: income statement, balance sheet and cash flow rows for a US-listed stock, annual or quarterly.', sources=[FINNHUB, 'sec'])
 def get_financial_statements(symbol: str, period: str = 'annual'):
     if period not in STATEMENT_PERIODS:
         raise Unavailable(f"period must be one of {', '.join(STATEMENT_PERIODS)}.")
@@ -176,7 +177,7 @@ def get_financial_statements(symbol: str, period: str = 'annual'):
     return Reply({'period': period, 'periods': payload.get(period)}, warnings)
 
 
-@tool('Recent SEC filings (10-K, 10-Q, 8-K) and insider trades for a US-listed stock.', sources=[FINNHUB, 'sec'])
+@tool('Research › Filings: recent SEC filings (10-K, 10-Q, 8-K) and insider trades for a US-listed stock.', sources=[FINNHUB, 'sec'])
 def get_filings_and_insiders(symbol: str):
     listing, warnings = _gate(symbol)
     kwargs = {'symbol': listing.ticker}
@@ -187,7 +188,7 @@ def get_filings_and_insiders(symbol: str):
     return Reply(data, warnings)
 
 
-@tool('Recent company headlines, newest first (US-listed stocks and ETFs).', sources=[FINNHUB])
+@tool('Research › News: recent company headlines, newest first (US-listed stocks and ETFs).', sources=[FINNHUB])
 def get_news(symbol: str, limit: int = 15):
     listing, warnings = _gate(symbol, allow_fund=True)
     try:
@@ -197,14 +198,18 @@ def get_news(symbol: str, limit: int = 15):
     return Reply(capped(payload['items'], limit), warnings)
 
 
-@tool("Your own notes for a ticker: thesis, risks, target and stop prices.", sources=['notes'])
+@tool("Research: your own notes for a ticker (thesis, risks, target and stop prices) and the price lines drawn on its chart.", sources=['notes'])
 def get_my_notes(symbol: str):
-    ticker = bare(symbol)
-    note = SymbolNote.objects.filter(symbol=ticker).first() or SymbolNote(symbol=ticker)
-    return dict(SymbolNoteSerializer(note).data)
+    listing = look_up(symbol)
+    note = SymbolNote.objects.filter(symbol=listing.ticker).first() or SymbolNote(symbol=listing.ticker)
+    lines = PriceLine.objects.filter(uic=listing.uic, asset_type=listing.asset_type) if listing.resolved else []
+    return {
+        **numbers(SymbolNoteSerializer(note).data, NOTE_NUMBERS),
+        'price_lines': [numbers(line, ('price',)) for line in PriceLineSerializer(lines, many=True).data],
+    }
 
 
-@tool('Your watchlists and the instruments in each.', sources=['watchlists'])
+@tool('Watchlist: your watchlists and the instruments in each.', sources=['watchlists'])
 def get_watchlists():
     watchlists = []
     for watchlist in Watchlist.objects.prefetch_related('items').order_by('order', 'id'):
@@ -217,7 +222,7 @@ def get_watchlists():
 
 
 @tool(
-    'Valuation history for a US-listed stock: P/E, P/S, P/FCF and EV/EBITDA series, a daily trailing P/E sampled weekly, and 5-year medians.',
+    'Research › Statistics: valuation history for a US-listed stock (P/E, P/S, P/FCF and EV/EBITDA series), a daily trailing P/E sampled weekly, and 5-year medians.',
     sources=[FINNHUB, SAXO],
     saxo=True,
 )

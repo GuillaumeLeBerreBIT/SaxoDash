@@ -46,20 +46,20 @@ def _without_series(copy):
 
 
 @tool(
-    'Tracked 13F funds: the directory with each fund latest quarter, value, turnover and copy-performance edge, capped at limit.',
+    'Investors: tracked 13F funds, with each fund\'s latest quarter, value, turnover and copy-performance edge, capped at limit.',
     sources=[EDGAR],
 )
 def list_investors(limit: int = DIRECTORY_LIMIT):
     return {'investors': capped(fetch(InvestorListView), limit)}
 
 
-@tool('Cross-fund signals from the newest quarter most funds have filed: what several funds bought, sold or opened.', sources=[EDGAR])
+@tool('Investors: cross-fund signals from the newest quarter most funds have filed (what several funds bought, sold or opened).', sources=[EDGAR])
 def get_fund_signals():
     return fetch(InvestorHubView)
 
 
 @tool(
-    'One 13F fund by slug: profile, top holdings, moves, quarter-over-quarter changes and copy-after-filing performance.',
+    'Investors › Fund: one 13F fund by slug (profile, top holdings, moves, quarter-over-quarter changes and copy-after-filing performance).',
     sources=[EDGAR],
 )
 def get_investor(slug: str):
@@ -72,7 +72,7 @@ def get_investor(slug: str):
     return Reply(data, warnings)
 
 
-@tool('Stocks ranked by fund activity in the latest signal quarter: view is bought, sold, owned or new.', sources=[EDGAR])
+@tool('Investors › Stocks: stocks ranked by fund activity in the latest signal quarter; view is bought, sold, owned or new.', sources=[EDGAR])
 def get_fund_stocks(view: str = 'bought'):
     return _capped_lists(fetch(InvestorStocksView, query={'view': view}), {'rows': STOCK_ROWS_LIMIT})
 
@@ -98,7 +98,7 @@ def ownership(listing):
 
 
 @tool(
-    'Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.',
+    'Research: which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.',
     sources=[EDGAR, CONGRESS],
 )
 def get_ticker_ownership(symbol: str):
@@ -106,14 +106,14 @@ def get_ticker_ownership(symbol: str):
 
 
 @tool(
-    'House members tracked from Clerk filings: directory with estimated portfolio performance (capped at limit) and the most-bought tickers.',
+    'Congress: House members tracked from Clerk filings, with estimated portfolio performance (capped at limit) and the most-bought tickers.',
     sources=[CONGRESS],
 )
 def list_congress_members(limit: int = DIRECTORY_LIMIT):
     return _capped_lists(fetch(MemberListView), {'members': limit})
 
 
-@tool('One House member by slug: estimated holdings, recent trades and copy performance.', sources=[CONGRESS])
+@tool('Congress › Member: one House member by slug (estimated holdings, recent trades and copy performance).', sources=[CONGRESS])
 def get_congress_member(slug: str):
     data = _capped_lists(
         fetch(MemberDetailView, kwargs={'slug': slug}),
@@ -123,6 +123,6 @@ def get_congress_member(slug: str):
     return data
 
 
-@tool('Filing alerts for followed funds that filed a new quarter. Read-only: does not mark anything read.', sources=[EDGAR])
+@tool('Investors › Alerts: filing alerts for followed funds that filed a new quarter. Read-only; nothing is marked read.', sources=[EDGAR])
 def get_filing_alerts():
     return fetch(InvestorAlertsView)

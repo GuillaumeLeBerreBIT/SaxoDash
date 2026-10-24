@@ -53,7 +53,7 @@ def _refusing(step, *args, **kwargs):
 
 
 @tool(
-    'Log a recommendation to the decision journal (US-dollar listings only). The entry price is filled from Saxo; '
+    'Advisor: log a recommendation to the decision journal (US-dollar listings only). The entry price is filled from Saxo; '
     'a thesis, three bear-case risks, an invalidation and (for buy_new or add) a target are required.',
     sources=['journal', 'saxo'],
     saxo=True,
@@ -97,17 +97,17 @@ def log_recommendation(
     return _row(rec)
 
 
-@tool('Record whether a logged recommendation was accepted or declined.', sources=['journal'])
+@tool('Advisor: record whether a logged recommendation was accepted or declined.', sources=['journal'])
 def set_decision(id: int, decision: str):
     return _row(_refusing(journal.decide, id, decision))
 
 
-@tool('Close a logged recommendation: sold, invalidated or superseded.', sources=['journal'])
+@tool('Advisor: close a logged recommendation as sold, invalidated or superseded.', sources=['journal'])
 def close_recommendation(id: int, reason: str):
     return _row(_refusing(journal.close, id, reason))
 
 
-@tool('List logged recommendations, newest first: open, closed or all.', sources=['journal', 'price history'])
+@tool('Advisor: logged recommendations, newest first, with 3/6/12-month scores against the S&P 500; status is open, closed or all.', sources=['journal', 'price history'])
 def list_recommendations(status: str = 'open', limit: int = 50):
     result = _refusing(journal.review, status)
     items = [{**_row(rec), 'score': score} for rec, score in result['recommendations']]

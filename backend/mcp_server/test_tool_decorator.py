@@ -8,6 +8,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from .envelope import Reply, Unavailable
+from .shaping import numbers
 from .tools import answering
 
 
@@ -78,3 +79,8 @@ class AnsweringTest(SimpleTestCase):
 
         wrapped = answering(tool_fn, sources=[], saxo=False)
         self.assertEqual(list(inspect.signature(wrapped).parameters), ['symbol', 'limit'])
+
+
+class NumbersTest(SimpleTestCase):
+    def test_named_decimal_strings_become_decimals_and_blanks_stay_none(self):
+        self.assertEqual(numbers({'price': '12.50', 'qty': None, 'ticker': '0001'}, ('price', 'qty')), {'price': Decimal('12.50'), 'qty': None, 'ticker': '0001'})

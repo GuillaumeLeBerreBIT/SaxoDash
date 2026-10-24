@@ -154,7 +154,7 @@ def _compare_one(listing):
 
 
 @tool(
-    'Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.',
+    'Advisor: compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.',
     sources=[FINNHUB, SAXO, EDGAR, CONGRESS],
     saxo=True,
 )

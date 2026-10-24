@@ -84,3 +84,19 @@ class ToolSchemaTest(SimpleTestCase):
             with self.assertRaises(ToolError):
                 call('compare_companies', {'symbols': 'AMD,MU'})
         compare_one.assert_not_called()
+
+
+PAGES = {
+    'Advisor', 'Portfolio', 'Analytics', 'Transactions', 'Research', 'Research › Chart', 'Research › Overview',
+    'Research › Financials', 'Research › Filings', 'Research › News', 'Research › Statistics', 'Watchlist',
+    'Discover', 'Earnings', 'Investors', 'Investors › Fund', 'Investors › Stocks', 'Investors › Alerts',
+    'Congress', 'Congress › Member',
+}
+
+
+class DescriptionTest(SimpleTestCase):
+    def test_every_description_names_the_page_it_mirrors(self):
+        for fn in REGISTRY:
+            page, _, rest = fn.description.partition(': ')
+            self.assertIn(page, PAGES, fn.__name__)
+            self.assertTrue(rest, fn.__name__)

@@ -561,13 +561,15 @@ week (`earnings.current_week_start`). For the user's names the Saxo chart includ
 move so far until the session closes, while universe names show `—` until the nightly scan.
 
 **The advisor reads the app through `mcp_server`, which runs the pages' own views.**
-`manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; each one dispatches
-the matching DRF view in-process (`mcp_server/views.py::call_view`, authenticated as the
-single user) and reshapes the answer, so the assistant and the page cannot disagree about a
-number, and throttles and the Finnhub budget still apply. It never touches banking data or
-orders, and starts no sync. Its only writes are `advisor.Recommendation` rows, whose entry
-price the server fills from Saxo, not the model. Saxo down or a provider busy is a
-`warnings` entry with `data: null`, never an exception; so is Redis down for a tool
-that needs the cache (the wrapper catches its connection and timeout errors); tools
-reading only the database still answer. Setup:
-`docs/running-the-stack.md` → "The MCP server".
+`manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; a page-backed tool
+dispatches the matching DRF view in-process (`mcp_server/views.py::fetch`, authenticated as
+the single user), so the assistant and the page cannot disagree about a number. It never
+touches banking data or orders, and starts no sync. Its only writes are
+`advisor.Recommendation` rows, whose entry price the server fills from Saxo, not the model.
+`mcp_server` only translates: one `@tool` decorator owns the envelope (Saxo warnings,
+`Unavailable` refusals, Redis down, Decimal money as JSON numbers), and the rules live in
+the apps that own them — `research/listings.py` decides what a symbol is and who may ask
+Finnhub about it, `research/daily.py` is the one daily-close fetch (1,200 bars, so one cache
+key per instrument), `portfolio/tax_year.py::report` runs the tax year, `advisor/journal.py`
+the whole journal. No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
+"The MCP server".

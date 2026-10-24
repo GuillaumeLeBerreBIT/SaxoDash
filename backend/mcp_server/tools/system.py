@@ -15,7 +15,7 @@ def _latest(model, field):
 
 
 @tool(
-    'Saxo connection state, each sync task\'s latest outcome, the last Discover scan and the last price refresh.',
+    'Advisor: Saxo connection state, each sync task\'s latest outcome, the last Discover scan and the last price refresh.',
     sources=['saxo', 'discover', 'prices'],
     saxo=True,
 )

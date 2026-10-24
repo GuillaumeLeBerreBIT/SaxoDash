@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
-from research.models import SymbolNote, Watchlist, WatchlistItem
+from research.models import PriceLine, SymbolNote, Watchlist, WatchlistItem
 
 from research import company_data
 from research.listings import Listing
@@ -137,8 +137,20 @@ class CompanyToolsTest(APITestCase):
         SymbolNote.objects.create(symbol='NVDA', bull_case='AI', target_price=Decimal('200'), stop_price=Decimal('90'))
         result = get_my_notes('nvda')
         self.assertEqual(result['data']['bull_case'], 'AI')
-        self.assertEqual(float(result['data']['target_price']), 200.0)
-        self.assertEqual(float(result['data']['stop_price']), 90.0)
+        self.assertEqual(result['data']['target_price'], 200.0)
+        self.assertEqual(result['data']['stop_price'], 90.0)
+
+    def test_notes_carry_the_instrument_price_lines(self):
+        PriceLine.objects.create(uic=1, asset_type='Stock', price=Decimal('150'), label='breakout')
+        PriceLine.objects.create(uic=2, asset_type='Stock', price=Decimal('9'), label='other')
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()):
+            result = get_my_notes('NVDA')
+        self.assertEqual([(line['price'], line['label']) for line in result['data']['price_lines']], [(150.0, 'breakout')])
+        self.assertEqual(PriceLine.objects.count(), 2)
+
+    def test_an_unmatched_symbol_has_no_price_lines(self):
+        with patch('mcp_server.tools.research.look_up', return_value=Listing.unresolved('NVDA')):
+            self.assertEqual(get_my_notes('NVDA')['data']['price_lines'], [])
 
     def test_unnoted_symbol_is_read_without_creating_a_row(self):
         result = get_my_notes('TYPO')

@@ -142,3 +142,21 @@ class PortfolioToolsTest(APITestCase):
         data = get_transactions(limit=50)['data']
         self.assertEqual(len(data['items']), 50)
         self.assertEqual(data['truncated'], 10)
+
+
+@override_settings(CACHES=LOCMEM)
+class SerializedMoneyTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        get_user_model().objects.create_user('u', password='p')
+
+    def test_position_prices_are_numbers(self):
+        make_position('AAA')
+        row = get_portfolio()['data']['positions'][0]
+        for key in ('qty', 'avg_cost', 'current_price'):
+            self.assertIsInstance(row[key], float, key)
+
+    def test_transaction_quantities_and_prices_are_numbers(self):
+        Transaction.objects.create(date=date(2026, 1, 2), type='BUY', instrument='A', ticker='A', qty=Decimal('3'), price=Decimal('12.50'))
+        item = get_transactions()['data']['items'][0]
+        self.assertEqual((item['qty'], item['price']), (3.0, 12.5))

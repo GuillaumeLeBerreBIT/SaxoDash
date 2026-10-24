@@ -287,10 +287,20 @@ exposed and no tool places an order or starts a sync. The only writes are
 `advisor.Recommendation` rows (visible in Django admin), whose entry price the server
 fills.
 
+How it is built: `mcp_server` is a thin adapter. One `@tool(description, sources=…,
+saxo=…)` decorator owns the envelope (Saxo warnings, refusals, Redis down, money as JSON
+numbers); a tool returns data or raises `Unavailable`. The rules live in the apps that own
+them: `research/listings.py` (what a symbol is and whether US company data may be asked
+for), `research/daily.py` (one 1,200-bar daily fetch per instrument), `research/price_summary.py`
+(moving averages, RSI, 52-week range and the playbook zone), `research/valuation.py`
+(trailing P/E and 5-year medians), `portfolio/tax_year.py::report` and `advisor/journal.py`
+(log, decide, close, review). `advisor` imports neither `mcp_server` nor `research`.
+
 `get_tax_year` is an estimate: 10% on gains above the EUR 10,000 exemption, with
 carry-over and a 31 December 2025 basis for older holdings, always ending "Check with
-a Belgian tax adviser." Realised gains come from Saxo's closed-positions list, and
-whether it covers the whole year is unverified.
+a Belgian tax adviser." It refuses years before 2026. A holding with no recorded
+purchase has an unknown basis rather than its average cost. Realised gains come from
+Saxo's closed-positions list, and whether it covers the whole year is unverified.
 
 ---
 

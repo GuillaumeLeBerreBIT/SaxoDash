@@ -47,7 +47,7 @@ def _row(row):
 
 
 @tool(
-    'Screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.',
+    'Discover: screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.',
     sources=[SOURCE],
 )
 def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT_SORT, sector: str = '', limit: int = 25):
@@ -72,7 +72,7 @@ def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT
 
 
 @tool(
-    'Discover shelves: ready-made screens of the universe. Pass a shelf key for one shelf in full, or nothing for the overview.',
+    'Discover: ready-made shelves of the universe. Pass a shelf key for one shelf in full, or nothing for the overview.',
     sources=[SOURCE],
 )
 def get_discover_shelves(key: str = ''):
@@ -82,7 +82,7 @@ def get_discover_shelves(key: str = ''):
 
 
 @tool(
-    'Earnings calendar for a week (0 = current, negative past, positive future); scope all or mine for your portfolio and watchlist.',
+    'Earnings: the calendar for a week (0 = current, negative past, positive future); scope all or mine for your portfolio and watchlist.',
     sources=['finnhub', 'saxo'],
     saxo=True,
 )

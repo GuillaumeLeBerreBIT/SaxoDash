@@ -7,7 +7,7 @@ from portfolio.views import PortfolioSummaryView, PositionListView
 from transactions.views import TransactionListView
 
 from ..envelope import Reply
-from ..shaping import capped, without
+from ..shaping import capped, numbers, without
 from ..views import fetch, fetch_optional
 from . import tool
 
@@ -21,7 +21,12 @@ def _cash_eur():
     return valuation.cash_balance
 
 
+POSITION_NUMBERS = ('qty', 'avg_cost', 'current_price')
+TRANSACTION_NUMBERS = ('qty', 'price', 'fx_rate')
+
+
 def _position(row):
+    row = numbers(row, POSITION_NUMBERS)
     return {
         'ticker': row['ticker'],
         'name': row['name'],
@@ -67,7 +72,7 @@ def get_portfolio():
 
 
 @tool(
-    'Portfolio performance against a benchmark over trailing windows, plus risk metrics. Optional benchmark key.',
+    'Analytics: portfolio performance against a benchmark over trailing windows, plus risk metrics. Optional benchmark key.',
     sources=['analytics'],
 )
 def get_performance(benchmark: str = ''):
@@ -80,7 +85,8 @@ def get_performance(benchmark: str = ''):
     return Reply(data, warnings)
 
 
-@tool('Recent transactions, newest first, capped at limit (default 50).', sources=['transactions'], saxo=True)
+@tool('Transactions: recent transactions, newest first, capped at limit (default 50).', sources=['transactions'], saxo=True)
 def get_transactions(limit: int = 50):
     page = fetch(TransactionListView, query={'page_size': TRANSACTION_FETCH_SIZE})
-    return capped(page['results'], min(limit, TRANSACTION_FETCH_SIZE), page['count'])
+    rows = [numbers(row, TRANSACTION_NUMBERS) for row in page['results']]
+    return capped(rows, min(limit, TRANSACTION_FETCH_SIZE), page['count'])
