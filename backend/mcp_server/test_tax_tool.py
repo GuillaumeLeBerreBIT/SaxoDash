@@ -10,7 +10,6 @@ from portfolio.tax_year import ADVISER_NOTE
 from saxo.credentials import SaxoNotConnected
 from transactions.models import Transaction
 
-from mcp_server.views import ViewResult
 
 from .tools import tax as tools
 
@@ -46,7 +45,7 @@ def run(closed=CLOSED, candles=CANDLES, credential=True, **kwargs):
         else patch('mcp_server.tools.tax.active_credential', side_effect=SaxoNotConnected('Saxo is not connected.'))
     with state, \
             patch('mcp_server.tools.tax.client.get_closed_positions', return_value=closed), \
-            patch('mcp_server.tools.tax.call_view', return_value=ViewResult(200, candles)):
+            patch('research.market.chart', return_value=candles):
         return tools.get_tax_year(**kwargs)
 
 
@@ -72,11 +71,20 @@ class TaxToolTests(APITestCase):
         self.assertEqual(row['basis'], 100.0)
         self.assertEqual(row['unrealised_eur'], 180.0)
 
-    def test_position_without_transactions_uses_avg_cost_and_says_so(self):
+    def test_position_without_transactions_is_unknown_and_says_so(self):
         make_position()
         result = run(year=2026)
-        self.assertEqual(result['data']['unrealised'][0]['basis_source'], 'avg_cost')
-        self.assertTrue(any('AAA' in w and 'avg_cost' in w for w in result['warnings']))
+        self.assertIsNone(result['data']['unrealised'][0]['unrealised_eur'])
+        self.assertTrue(any('AAA' in w and 'no recorded purchase' in w for w in result['warnings']))
+
+    def test_a_year_before_2026_is_refused(self):
+        result = run(year=2025)
+        self.assertIsNone(result['data'])
+        self.assertIn('Belgian capital-gains tax starts in 2026; there is no tax year before it.', result['warnings'])
+
+    def test_money_is_a_json_number(self):
+        data = run(year=2026, carry_over_eur=8000)['data']
+        self.assertIsInstance(data['summary']['exemption_eur'], float)
 
     def test_missing_dec_31_close_is_null_and_warned(self):
         make_position()

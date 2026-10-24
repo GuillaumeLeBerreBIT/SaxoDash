@@ -8,8 +8,12 @@ NOT_CONNECTED = 'Saxo is not connected — reconnect in the app.'
 UPSTREAM = 'Upstream error (502).'
 
 
+def bars(uic, asset_type):
+    return market.chart(uic, asset_type, HORIZON, client.CHART_MAX_COUNT)
+
+
 def candles(listing):
-    return market.chart(listing.uic, listing.asset_type, HORIZON, client.CHART_MAX_COUNT)
+    return bars(listing.uic, listing.asset_type)
 
 
 def _closes(bars):
