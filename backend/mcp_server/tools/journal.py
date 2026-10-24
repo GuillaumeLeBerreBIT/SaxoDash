@@ -2,10 +2,13 @@ from advisor import journal
 from investors.copying import BENCHMARK_TICKER
 
 from .. import throttled
+from ..bounds import RowId, at_most
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
 from ..throttled import look_up
 from . import tool
+
+MAX_LISTED = 500
 
 
 def _row(rec):
@@ -90,17 +93,17 @@ def log_recommendation(
 
 
 @tool('Advisor: record whether a logged recommendation was accepted or declined.', sources=['journal'])
-def set_decision(id: int, decision: str):
+def set_decision(id: RowId, decision: str):
     return _row(_refusing(journal.decide, id, decision))
 
 
 @tool('Advisor: close a logged recommendation as sold, invalidated or superseded.', sources=['journal'])
-def close_recommendation(id: int, reason: str):
+def close_recommendation(id: RowId, reason: str):
     return _row(_refusing(journal.close, id, reason))
 
 
 @tool('Advisor: logged recommendations, newest first, with 3/6/12-month scores against the S&P 500; status is open, closed or all.', sources=['journal', 'price history'])
-def list_recommendations(status: str = 'open', limit: int = 50):
+def list_recommendations(status: str = 'open', limit: at_most(MAX_LISTED) = 50):
     result = _refusing(journal.review, status)
     items = [{**_row(rec), 'score': score} for rec, score in result['recommendations']]
     warnings = [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.'] if result['benchmark_missing'] else []

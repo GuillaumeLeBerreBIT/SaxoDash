@@ -63,6 +63,45 @@ class ToolSchemaTest(SimpleTestCase):
         self.assertEqual(self.tools['get_transactions']['limit']['type'], 'integer')
         self.assertEqual(self.tools['get_price_history']['bars']['type'], 'integer')
 
+    def test_counts_carry_their_bounds(self):
+        for tool_name, param, maximum in (
+            ('get_news', 'limit', 100),
+            ('get_transactions', 'limit', 1000),
+            ('get_price_history', 'bars', 1200),
+            ('list_recommendations', 'limit', 500),
+            ('screen_universe', 'limit', 100),
+            ('list_investors', 'limit', 100),
+            ('list_congress_members', 'limit', 100),
+        ):
+            prop = self.tools[tool_name][param]
+            self.assertEqual((prop['minimum'], prop['maximum']), (1, maximum), f'{tool_name}.{param}')
+
+    def test_ids_are_positive(self):
+        self.assertEqual(self.tools['set_decision']['id']['minimum'], 1)
+        self.assertEqual(self.tools['close_recommendation']['id']['minimum'], 1)
+
+    def test_earnings_week_matches_the_page(self):
+        prop = self.tools['get_earnings_calendar']['week']
+        self.assertEqual((prop['minimum'], prop['maximum']), (-8, 12))
+
+    def test_tax_arguments_are_bounded(self):
+        props = self.tools['get_tax_year']
+        self.assertEqual(props['carry_over_eur']['minimum'], 0)
+        self.assertEqual(props['year']['minimum'], 0)
+
+    def test_a_non_finite_or_out_of_range_number_is_refused_before_the_tool_runs(self):
+        with patch('mcp_server.tools.tax.tax_year.report') as report:
+            for arguments in ({'carry_over_eur': float('nan')}, {'carry_over_eur': float('inf')}, {'carry_over_eur': -1}):
+                with self.assertRaises(ToolError, msg=arguments):
+                    call('get_tax_year', arguments)
+        report.assert_not_called()
+        with self.assertRaises(ToolError):
+            call('list_recommendations', {'limit': 0})
+
+    def test_screen_filter_values_must_be_finite(self):
+        with self.assertRaises(ToolError):
+            call('screen_universe', {'filters': {'min_rsi14': float('nan')}})
+
     def test_screen_filters_are_an_object(self):
         self.assertIn('object', kinds(self.tools['screen_universe']['filters']))
 

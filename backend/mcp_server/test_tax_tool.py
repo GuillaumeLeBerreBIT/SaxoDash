@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
@@ -42,12 +43,12 @@ def make_position(ticker='AAA', uic=1):
 
 
 def run(closed=CLOSED, candles=CANDLES, credential=True, trades=TRADES, **kwargs):
-    state = patch('mcp_server.tools.tax.active_credential', return_value=SimpleNamespace(access_token='t')) if credential \
-        else patch('mcp_server.tools.tax.active_credential', side_effect=SaxoNotConnected('Saxo is not connected.'))
+    state = patch('portfolio.closed_positions.active_credential', return_value=SimpleNamespace(access_token='t')) if credential \
+        else patch('portfolio.closed_positions.active_credential', side_effect=SaxoNotConnected('Saxo is not connected.'))
     with state, \
-            patch('mcp_server.tools.tax.client.get_client_key', return_value='K'), \
-            patch('mcp_server.tools.tax.client.get_closed_positions_report', return_value=closed) as report, \
-            patch('mcp_server.tools.tax.client.get_trades_report', return_value=trades) as traded, \
+            patch('saxo.client.get_client_key', return_value='K'), \
+            patch('saxo.client.get_closed_positions_report', return_value=closed) as report, \
+            patch('saxo.client.get_trades_report', return_value=trades) as traded, \
             patch('research.market.chart', return_value=candles):
         result = tools.get_tax_year(**kwargs)
     run.report, run.traded = report, traded
@@ -57,6 +58,7 @@ def run(closed=CLOSED, candles=CANDLES, credential=True, trades=TRADES, **kwargs
 @override_settings(CACHES=LOCMEM)
 class TaxToolTests(APITestCase):
     def setUp(self):
+        cache.clear()
         get_user_model().objects.create_user('u', password='p')
 
     def test_adviser_note_and_fx_note_always_present(self):
@@ -87,7 +89,7 @@ class TaxToolTests(APITestCase):
         self.assertTrue(any('AAA' in w and 'no recorded purchase' in w for w in result['warnings']))
 
     def test_a_year_before_2026_is_refused_without_asking_saxo(self):
-        with patch('mcp_server.tools.tax._closed_rows', side_effect=AssertionError('asked Saxo')):
+        with patch('portfolio.closed_positions.for_year', side_effect=AssertionError('asked Saxo')):
             result = tools.get_tax_year(year=2025)
         self.assertIsNone(result['data'])
         self.assertIn('Belgian capital-gains tax starts in 2026; there is no tax year before it.', result['warnings'])
@@ -126,7 +128,7 @@ class TaxToolTests(APITestCase):
         run.traded.assert_called_once_with('t', 'K', '2023-05-01', date.today().isoformat())
 
     def test_a_future_year_is_refused_without_asking_saxo(self):
-        with patch('mcp_server.tools.tax._closed_rows', side_effect=AssertionError('asked Saxo')):
+        with patch('portfolio.closed_positions.for_year', side_effect=AssertionError('asked Saxo')):
             result = tools.get_tax_year(year=date.today().year + 1)
         self.assertIsNone(result['data'])
         self.assertIn('has not started yet', result['warnings'][-1])

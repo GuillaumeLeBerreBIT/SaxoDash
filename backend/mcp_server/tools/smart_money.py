@@ -11,6 +11,7 @@ from investors.views import (
 )
 from investors.views import OwnershipDetailView as InvestorOwnershipView
 
+from ..bounds import at_most
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
 from ..throttled import look_up
@@ -27,6 +28,7 @@ TRADES_LIMIT = 50
 MEMBER_HOLDINGS_LIMIT = 30
 OWNERS_LIMIT = 30
 DIRECTORY_LIMIT = 25
+MAX_DIRECTORY = 100
 
 
 def _capped_lists(payload, limits=None, default=None):
@@ -48,7 +50,7 @@ def _without_series(copy):
     'Investors: tracked 13F funds, with each fund\'s latest quarter, value, turnover and copy-performance edge, capped at limit.',
     sources=[EDGAR],
 )
-def list_investors(limit: int = DIRECTORY_LIMIT):
+def list_investors(limit: at_most(MAX_DIRECTORY) = DIRECTORY_LIMIT):
     return {'investors': capped(fetch(InvestorListView), limit)}
 
 
@@ -108,7 +110,7 @@ def get_ticker_ownership(symbol: str):
     'Congress: House members tracked from Clerk filings, with estimated portfolio performance (capped at limit) and the most-bought tickers.',
     sources=[CONGRESS],
 )
-def list_congress_members(limit: int = DIRECTORY_LIMIT):
+def list_congress_members(limit: at_most(MAX_DIRECTORY) = DIRECTORY_LIMIT):
     return _capped_lists(fetch(MemberListView), {'members': limit})
 
 

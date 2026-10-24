@@ -18,6 +18,7 @@ from research.views import (
 )
 
 from .. import throttled
+from ..bounds import at_most
 from ..envelope import Reply, Unavailable
 from ..shaping import capped, numbers, without
 from ..throttled import look_up
@@ -28,6 +29,8 @@ INTERVALS = {'daily': (daily.HORIZON, 260), 'weekly': (10080, 1200), 'monthly': 
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 SAXO = 'saxo'
 QUOTE_LIMIT = 20
+MAX_BARS = 1200
+MAX_NEWS = 100
 NOTE_NUMBERS = ('target_price', 'stop_price')
 
 
@@ -110,11 +113,11 @@ def get_quotes(symbols: list[str]):
     sources=[SAXO],
     saxo=True,
 )
-def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
+def get_price_history(symbol: str, interval: str = 'weekly', bars: at_most(MAX_BARS) = 104):
     if interval not in INTERVALS:
         raise Unavailable(f"interval must be one of {', '.join(INTERVALS)}.")
     horizon, cap = INTERVALS[interval]
-    count = max(1, min(bars, cap))
+    count = min(bars, cap)
     listing = _resolved(symbol)
     bars = _daily_bars(listing)
     series = bars if horizon == daily.HORIZON else _chart(listing, horizon, count)
@@ -194,7 +197,7 @@ def get_filings_and_insiders(symbol: str):
 
 
 @tool('Research › News: recent company headlines, newest first (US-listed stocks and ETFs).', sources=[FINNHUB])
-def get_news(symbol: str, limit: int = 15):
+def get_news(symbol: str, limit: at_most(MAX_NEWS) = 15):
     listing, warnings = _gate(symbol, allow_fund=True)
     try:
         payload = fetch(CompanyNewsView, kwargs={'symbol': listing.ticker})

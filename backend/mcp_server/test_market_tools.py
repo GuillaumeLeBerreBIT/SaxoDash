@@ -47,10 +47,10 @@ class ScreenUniverseTest(APITestCase):
         self.assertTrue(any('min_banana' in w for w in result['warnings']))
         self.assertEqual(len(result['data']['rows']), 2)
 
-    def test_limit_capped_at_100(self):
+    def test_matched_counts_past_the_limit(self):
         for index in range(105):
             self.row(f'T{index:03d}', market_cap=index)
-        result = screen_universe(limit=500)
+        result = screen_universe(limit=100)
         self.assertEqual(len(result['data']['rows']), 100)
         self.assertEqual(result['data']['matched'], 105)
 

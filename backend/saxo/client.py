@@ -22,6 +22,8 @@ CHART_MAX_COUNT = 1200
 
 INFOPRICE_FIELD_GROUPS = 'Quote,PriceInfo,PriceInfoDetails,InstrumentPriceDetails'
 
+MAX_REPORT_PAGES = 50
+
 
 class SaxoAuthError(Exception):
     """Raised when the OAuth token exchange or refresh fails."""
@@ -84,18 +86,30 @@ def _get(access_token, path, params=None):
 
 
 def get_client_key(access_token):
-    return _get(access_token, '/port/v1/clients/me')['ClientKey']
+    key = _get(access_token, '/port/v1/clients/me').get('ClientKey')
+    if not key:
+        raise SaxoPermanentError('GET /port/v1/clients/me returned no ClientKey')
+    return key
+
+
+def _next_path(following):
+    base = _api_base_url()
+    if not following.startswith(f'{base}/'):
+        raise SaxoPermanentError(f'A report page links outside the Saxo gateway: {following[:80]}')
+    return following.removeprefix(base)
 
 
 def _report(access_token, path, params=None):
     rows = []
     body = _get(access_token, path, params=params)
-    while True:
+    for page in range(1, MAX_REPORT_PAGES + 1):
         rows.extend(body.get('Data') or [])
         following = body.get('__next')
         if not following:
             return rows
-        body = _get(access_token, following.removeprefix(_api_base_url()))
+        if page == MAX_REPORT_PAGES:
+            raise SaxoPermanentError(f'{path} is longer than {MAX_REPORT_PAGES} pages')
+        body = _get(access_token, _next_path(following))
 
 
 def get_closed_positions_report(access_token, client_key, from_date, to_date):

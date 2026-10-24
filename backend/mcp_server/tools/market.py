@@ -1,11 +1,15 @@
 from datetime import timedelta
+from typing import Annotated
 
 from django.db.models import F, FloatField
 from django.utils import timezone
+from pydantic import Field
 
+from research.earnings import MAX_WEEK, MIN_WEEK
 from research.models import ScreenerRow
 from research.views import DiscoverShelfView, DiscoverView, EarningsCalendarView
 
+from ..bounds import Finite, at_most
 from ..envelope import Reply, Unavailable
 from ..views import fetch
 from . import tool
@@ -50,7 +54,12 @@ def _row(row):
     'Discover: screen the S&P 500 and Nasdaq-100 snapshot with min_/max_ filters on technical and fundamental fields, sorted and capped.',
     sources=[SOURCE],
 )
-def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT_SORT, sector: str = '', limit: int = 25):
+def screen_universe(
+    filters: dict[str, Finite] | None = None,
+    sort: str = DEFAULT_SORT,
+    sector: str = '',
+    limit: at_most(MAX_LIMIT) = 25,
+):
     warnings = []
     bounds = _bounds(filters, warnings)
     rows = ScreenerRow.objects.filter(status=ScreenerRow.OK)
@@ -58,7 +67,6 @@ def screen_universe(filters: dict[str, float] | None = None, sort: str = DEFAULT
     if sector:
         rows = rows.filter(sector__iexact=sector)
     matched = rows.count()
-    limit = max(1, min(limit, MAX_LIMIT))
     ordered = rows.order_by(_ordering(sort, warnings), 'ticker')[:limit]
     latest = ScreenerRow.objects.filter(technicals_at__isnull=False).order_by('-technicals_at').values_list('technicals_at', flat=True).first()
     if latest is not None and timezone.now() - latest > STALE_AFTER:
@@ -86,7 +94,7 @@ def get_discover_shelves(key: str = ''):
     sources=['finnhub', 'saxo'],
     saxo=True,
 )
-def get_earnings_calendar(week: int = 0, scope: str = 'all'):
+def get_earnings_calendar(week: Annotated[int, Field(ge=MIN_WEEK, le=MAX_WEEK)] = 0, scope: str = 'all'):
     calendar = fetch(EarningsCalendarView, query={'week': week, 'scope': scope})
     if calendar.get('ok') is False:
         raise Unavailable(EARNINGS_UNAVAILABLE)

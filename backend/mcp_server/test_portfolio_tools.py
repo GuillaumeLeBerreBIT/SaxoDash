@@ -126,10 +126,10 @@ class PortfolioToolsTest(APITestCase):
         self.assertEqual(len(data['items']), 50)
         self.assertEqual(data['truncated'], 2450)
 
-    def test_limit_is_clamped_to_the_fetch_size(self):
+    def test_truncated_counts_every_transaction_not_only_the_fetched_page(self):
         page = {'count': 2500, 'results': [{'id': i} for i in range(1000)]}
         with patch('mcp_server.views.call_view', return_value=ViewResult(200, page)):
-            data = get_transactions(limit=5000)['data']
+            data = get_transactions(limit=1000)['data']
         self.assertEqual(len(data['items']), 1000)
         self.assertEqual(data['truncated'], 1500)
 

@@ -6,6 +6,7 @@ from portfolio.insights import build_position_insights
 from portfolio.views import PortfolioSummaryView, PositionListView
 from transactions.views import TransactionListView
 
+from ..bounds import at_most
 from ..envelope import Reply
 from ..shaping import capped, numbers, without
 from ..views import fetch, fetch_optional
@@ -86,7 +87,7 @@ def get_performance(benchmark: str = ''):
 
 
 @tool('Transactions: recent transactions, newest first, capped at limit (default 50).', sources=['transactions'], saxo=True)
-def get_transactions(limit: int = 50):
+def get_transactions(limit: at_most(TRANSACTION_FETCH_SIZE) = 50):
     page = fetch(TransactionListView, query={'page_size': TRANSACTION_FETCH_SIZE})
     rows = [numbers(row, TRANSACTION_NUMBERS) for row in page['results']]
-    return capped(rows, min(limit, TRANSACTION_FETCH_SIZE), page['count'])
+    return capped(rows, limit, page['count'])
