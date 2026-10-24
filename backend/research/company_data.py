@@ -24,11 +24,5 @@ def status(*, asset_type, currency, resolved):
     return ELIGIBLE
 
 
-def status_of(instrument):
-    if instrument is None:
-        return status(asset_type=None, currency=None, resolved=False)
-    return status(asset_type=instrument['asset_type'], currency=instrument['currency'], resolved=True)
-
-
 def refusal(company_status):
     return REFUSALS.get(company_status)

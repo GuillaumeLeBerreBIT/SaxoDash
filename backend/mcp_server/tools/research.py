@@ -1,12 +1,10 @@
 from datetime import date
 
-from django.core.cache import cache
-
-from portfolio.models import Position
 from research import finnhub
+from research.listings import SEARCH_ASSET_TYPES, bare, look_up
 from research.providers import ProviderUnavailable
-from research.valuation import median_since, trailing_pe
 from research.technicals import rsi, sma
+from research.valuation import median_since, trailing_pe
 from research.models import SymbolNote, Watchlist
 from research.serializers import SymbolNoteSerializer
 from research.views import (
@@ -15,7 +13,6 @@ from research.views import (
     FilingsView,
     FundamentalsView,
     InsidersView,
-    InstrumentDetailsView,
     InstrumentSearchView,
     PeersView,
     QuotesView,
@@ -23,7 +20,6 @@ from research.views import (
     SymbolEarningsView,
 )
 
-from .. import company_data
 from ..envelope import answer, saxo_warnings
 from ..shaping import capped, without
 from ..views import call_view, problem
@@ -36,9 +32,6 @@ BAR_CAP = 1200
 DAILY_FETCH = 1200
 YEAR_SESSIONS = 252
 CHANGE_SESSIONS = {'change_1m_pct': 21, 'change_3m_pct': 63, 'change_1y_pct': 252}
-SEARCH_ASSET_TYPES = 'Stock,Etf'
-RESOLVE_CACHE_PREFIX = 'mcp:resolve:v1:'
-RESOLVE_CACHE_TTL = 600
 PULLBACK_WARNING = "Zone ignores the playbook's Value-pillar condition on pullbacks until the lens engine exists."
 
 
@@ -53,66 +46,12 @@ def _shape(row):
     }
 
 
-def _bare(symbol):
-    return symbol.split(':')[0].strip().upper()
-
-
-def _held(symbol):
-    position = Position.objects.filter(ticker__iexact=symbol, uic__isnull=False).order_by('id').first()
-    if position is None or not position.asset_type:
-        return None
-    return {
-        'symbol': position.ticker,
-        'name': position.name,
-        'uic': position.uic,
-        'asset_type': position.asset_type,
-        'currency': position.currency,
-        'exchange': None,
-    }
-
-
-def _details_currency(uic, asset_type):
-    result = call_view(InstrumentDetailsView, kwargs={'uic': uic, 'asset_type': asset_type})
-    if problem(result):
-        return None
-    return result.data.get('currency') or None
-
-
-def resolve(symbol):
-    wanted = _bare(symbol)
-    held = _held(wanted)
-    if held is not None:
-        return held
-    key = f'{RESOLVE_CACHE_PREFIX}{wanted}'
-    cached = cache.get(key)
-    if cached is not None:
-        return cached
-    instrument = _search(wanted)
-    if instrument is not None:
-        cache.set(key, instrument, RESOLVE_CACHE_TTL)
-    return instrument
-
-
-def _search(wanted):
-    result = call_view(InstrumentSearchView, query={'q': wanted, 'asset_types': SEARCH_ASSET_TYPES})
-    if problem(result) or not isinstance(result.data, list):
-        return None
-    matches = [row for row in result.data if _bare(row.get('symbol') or '') == wanted]
-    if not matches:
-        return None
-    row = next((r for r in matches if r.get('currency') == company_data.COMPANY_DATA_CURRENCY), matches[0])
-    instrument = _shape(row)
-    if instrument['currency'] is None:
-        instrument['currency'] = _details_currency(instrument['uic'], instrument['asset_type'])
-    return instrument
-
-
-def _chart(instrument, horizon, count):
+def _chart(listing, horizon, count):
     return call_view(
         ChartView,
         query={
-            'uic': instrument['uic'],
-            'asset_type': instrument['asset_type'],
+            'uic': listing.uic,
+            'asset_type': listing.asset_type,
             'horizon': horizon,
             'count': count,
         },
@@ -175,11 +114,11 @@ def get_quotes(symbols: list[str]):
     warnings = saxo_warnings()
     by_type = {}
     for symbol in symbols:
-        instrument = resolve(symbol)
-        if instrument is None:
+        listing = look_up(symbol)
+        if not listing.resolved:
             warnings.append(f'{symbol} could not be resolved to a Saxo instrument.')
             continue
-        by_type.setdefault(instrument['asset_type'], {})[instrument['uic']] = instrument
+        by_type.setdefault(listing.asset_type, {})[listing.uic] = listing
     rows = []
     for asset_type, instruments in by_type.items():
         result = call_view(QuotesView, query={'uics': ','.join(str(u) for u in instruments), 'asset_type': asset_type})
@@ -188,13 +127,13 @@ def get_quotes(symbols: list[str]):
             warnings.append(message)
             continue
         for quote in result.data:
-            instrument = instruments.get(quote['uic'])
-            if instrument is None:
+            listing = instruments.get(quote['uic'])
+            if listing is None:
                 continue
             rows.append({
-                'symbol': instrument['symbol'],
-                'name': instrument['name'],
-                'currency': instrument['currency'],
+                'symbol': listing.symbol,
+                'name': listing.name,
+                'currency': listing.currency,
                 'price': quote['price'],
                 'change_pct': quote['change_pct'],
                 'change_basis': quote['change_basis'],
@@ -209,11 +148,11 @@ def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
     warnings = saxo_warnings()
     if interval not in INTERVAL_HORIZONS:
         return answer(None, sources=['saxo'], warnings=[*warnings, f"interval must be one of {', '.join(INTERVAL_HORIZONS)}."])
-    instrument = resolve(symbol)
-    if instrument is None:
+    listing = look_up(symbol)
+    if not listing.resolved:
         return answer(None, sources=['saxo'], warnings=[*warnings, f'{symbol} could not be resolved to a Saxo instrument.'])
 
-    daily = _chart(instrument, INTERVAL_HORIZONS['daily'], DAILY_FETCH)
+    daily = _chart(listing, INTERVAL_HORIZONS['daily'], DAILY_FETCH)
     message = problem(daily)
     if message:
         return answer(None, sources=['saxo'], warnings=[*warnings, message])
@@ -224,7 +163,7 @@ def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
     if interval == 'daily':
         series = daily_candles
     else:
-        other = _chart(instrument, INTERVAL_HORIZONS[interval], count)
+        other = _chart(listing, INTERVAL_HORIZONS[interval], count)
         message = problem(other)
         if message:
             return answer(None, sources=['saxo'], warnings=[*warnings, message])
@@ -241,7 +180,7 @@ def get_price_history(symbol: str, interval: str = 'weekly', bars: int = 104):
     if playbook_zone == 'pullback':
         warnings.append(PULLBACK_WARNING)
     data = {
-        'instrument': instrument,
+        'instrument': listing.as_dict(),
         'bars': [_bar(c) for c in series[-count:]],
         'summary': summary,
         'zone': playbook_zone,
@@ -256,10 +195,15 @@ FINNHUB = 'finnhub'
 
 
 def _gate(symbol, *, allow_fund=False):
-    status = company_data.status_of(resolve(symbol))
-    if status == company_data.ELIGIBLE or (allow_fund and status == company_data.FUND):
-        return _bare(symbol), None
-    return None, answer(None, sources=[FINNHUB], warnings=[company_data.refusal(status)])
+    listing = look_up(symbol)
+    reason = listing.refusal(allow_fund=allow_fund)
+    if reason:
+        return listing, answer(None, sources=[FINNHUB], warnings=[reason])
+    return listing, None
+
+
+def _listing_warnings(listing):
+    return [listing.unverified_warning] if listing.unverified_warning else []
 
 
 def _part(view_class, ticker):
@@ -277,10 +221,11 @@ def _scalar_metrics(payload):
 
 @tool('Company profile, valuation and growth metrics, EPS and earnings history, peers and analyst trend (US-listed stocks only).')
 def get_company(symbol: str):
-    ticker, refused = _gate(symbol)
+    listing, refused = _gate(symbol)
     if refused:
         return refused
-    warnings = []
+    ticker = listing.ticker
+    warnings = _listing_warnings(listing)
     fundamentals, message = _part(FundamentalsView, ticker)
     if message:
         warnings.append(message)
@@ -306,13 +251,13 @@ def get_company(symbol: str):
 def get_financial_statements(symbol: str, period: str = 'annual'):
     if period not in STATEMENT_PERIODS:
         return answer(None, sources=[FINNHUB], warnings=[f"period must be one of {', '.join(STATEMENT_PERIODS)}."])
-    ticker, refused = _gate(symbol)
+    listing, refused = _gate(symbol)
     if refused:
         return refused
-    payload, message = _part(StatementsView, ticker)
+    warnings = _listing_warnings(listing)
+    payload, message = _part(StatementsView, listing.ticker)
     if message:
-        return answer(None, sources=[FINNHUB], warnings=[message])
-    warnings = []
+        return answer(None, sources=[FINNHUB], warnings=[*warnings, message])
     if period == 'quarterly' and payload.get('partial'):
         warnings.append('Quarterly statements are unavailable right now; try again later.')
     data = {'period': period, 'periods': payload.get(period)}
@@ -321,10 +266,11 @@ def get_financial_statements(symbol: str, period: str = 'annual'):
 
 @tool('Recent SEC filings (10-K, 10-Q, 8-K) and insider trades for a US-listed stock.')
 def get_filings_and_insiders(symbol: str):
-    ticker, refused = _gate(symbol)
+    listing, refused = _gate(symbol)
     if refused:
         return refused
-    warnings = []
+    ticker = listing.ticker
+    warnings = _listing_warnings(listing)
     filings, message = _part(FilingsView, ticker)
     if message:
         warnings.append(message)
@@ -340,18 +286,19 @@ def get_filings_and_insiders(symbol: str):
 
 @tool('Recent company headlines, newest first (US-listed stocks and ETFs).')
 def get_news(symbol: str, limit: int = 15):
-    ticker, refused = _gate(symbol, allow_fund=True)
+    listing, refused = _gate(symbol, allow_fund=True)
     if refused:
         return refused
-    payload, message = _part(CompanyNewsView, ticker)
+    warnings = _listing_warnings(listing)
+    payload, message = _part(CompanyNewsView, listing.ticker)
     if message:
-        return answer(None, sources=[FINNHUB], warnings=[message])
-    return answer(capped(payload['items'], limit), sources=[FINNHUB])
+        return answer(None, sources=[FINNHUB], warnings=[*warnings, message])
+    return answer(capped(payload['items'], limit), sources=[FINNHUB], warnings=warnings)
 
 
 @tool("Your own notes for a ticker: thesis, risks, target and stop prices.")
 def get_my_notes(symbol: str):
-    ticker = _bare(symbol)
+    ticker = bare(symbol)
     note = SymbolNote.objects.filter(symbol=ticker).first() or SymbolNote(symbol=ticker)
     return answer(dict(SymbolNoteSerializer(note).data), sources=['notes'])
 
@@ -369,7 +316,6 @@ def get_watchlists():
 
 
 VALUATION_RATIOS = ('pe_ttm', 'ps_ttm', 'pfcf_ttm', 'ev_ebitda_ttm')
-UNVERIFIED_CURRENCY_WARNING = 'The listing currency was not verified, so the symbol is assumed to be US-listed.'
 NO_DAILY_PE_WARNING = 'Daily P/E needs Saxo closes, which are unavailable for this symbol.'
 HOME_COUNTRY = 'US'
 
@@ -392,11 +338,11 @@ def _weekly(points):
     return [[day.isoformat(), value] for day, value in sorted(last_of_week.values())]
 
 
-def _daily_pe(instrument, eps, warnings):
-    if instrument is None:
+def _daily_pe(listing, eps, warnings):
+    if not listing.resolved:
         warnings.append(NO_DAILY_PE_WARNING)
         return []
-    result = _chart(instrument, INTERVAL_HORIZONS['daily'], DAILY_FETCH)
+    result = _chart(listing, INTERVAL_HORIZONS['daily'], DAILY_FETCH)
     message = problem(result)
     if message:
         warnings.append(message)
@@ -407,22 +353,21 @@ def _daily_pe(instrument, eps, warnings):
 
 @tool('Valuation history for a US-listed stock: P/E, P/S, P/FCF and EV/EBITDA series, a daily trailing P/E sampled weekly, and 5-year medians.')
 def get_valuation_history(symbol: str):
-    ticker, refused = _gate(symbol)
+    listing, refused = _gate(symbol)
     if refused:
         return refused
+    ticker = listing.ticker
     try:
         series = finnhub.valuation_series(ticker)
     except ProviderUnavailable as exc:
-        return answer(None, sources=[FINNHUB], warnings=[exc.reason])
-    instrument = resolve(symbol)
-    warnings = saxo_warnings() if instrument else []
-    if instrument is None or not instrument['currency']:
-        warnings.append(UNVERIFIED_CURRENCY_WARNING)
+        return answer(None, sources=[FINNHUB], warnings=[*_listing_warnings(listing), exc.reason])
+    warnings = saxo_warnings() if listing.resolved else []
+    warnings.extend(_listing_warnings(listing))
     country = series.get('country')
     if country and country != HOME_COUNTRY:
         warnings.append(_foreign_issuer_warning(ticker, country))
     quarterly = series['quarterly']
-    daily = _daily_pe(instrument, _points(quarterly.get('eps')), warnings)
+    daily = _daily_pe(listing, _points(quarterly.get('eps')), warnings)
     medians = {name: median_since(_points(quarterly.get(name))) for name in VALUATION_RATIOS}
     medians['daily_pe'] = median_since(daily)
     latest = {name: quarterly[name][-1]['v'] if quarterly.get(name) else None for name in VALUATION_RATIOS}

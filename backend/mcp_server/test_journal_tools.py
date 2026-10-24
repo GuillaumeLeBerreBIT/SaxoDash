@@ -7,10 +7,11 @@ from rest_framework.test import APITestCase
 from advisor.models import Recommendation
 from investors.models import PriceHistory
 from mcp_server.views import ViewResult
+from research.listings import Listing
 
 from .tools import journal as tools
 
-INSTRUMENT = {'symbol': 'NEWCO', 'name': 'NewCo', 'uic': 77, 'asset_type': 'Stock', 'currency': 'USD', 'exchange': 'X'}
+INSTRUMENT = Listing(ticker='NEWCO', symbol='NEWCO', name='NewCo', uic=77, asset_type='Stock', currency='USD', exchange='X')
 CANDLES = [{'date': '2026-10-21', 'open': 1, 'high': 2, 'low': 1, 'close': 42.25, 'volume': 1}]
 
 
@@ -26,7 +27,7 @@ def log(**over):
         'target': {'price': 60, 'condition': 'fair value'},
     }
     args.update(over)
-    with patch('mcp_server.tools.research.resolve', return_value=INSTRUMENT), \
+    with patch('advisor.journal.look_up', return_value=INSTRUMENT), \
             patch('mcp_server.views.call_view', return_value=ViewResult(200, CANDLES)):
         return tools.log_recommendation(**args)
 

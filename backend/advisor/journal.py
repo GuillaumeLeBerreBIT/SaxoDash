@@ -1,3 +1,5 @@
+from research.listings import look_up
+
 from .models import Recommendation
 
 MIN_RISKS = 3
@@ -11,15 +13,15 @@ class Refused(Exception):
     pass
 
 
-def _entry(instrument):
+def _entry(listing):
     from mcp_server import views
     from research.views import ChartView
 
     result = views.call_view(
         ChartView,
         query={
-            'uic': instrument['uic'],
-            'asset_type': instrument['asset_type'],
+            'uic': listing.uic,
+            'asset_type': listing.asset_type,
             'horizon': DAILY,
             'count': CHART_BARS,
         },
@@ -61,24 +63,22 @@ def _validate(fields):
 
 
 def log(**fields):
-    from mcp_server.tools.research import resolve
-
     _validate(fields)
     ticker = fields.pop('ticker')
-    instrument = resolve(ticker)
-    if instrument is None:
+    listing = look_up(ticker)
+    if not listing.resolved:
         raise Refused(f'{ticker} could not be resolved to a Saxo instrument.')
-    if not instrument.get('currency'):
+    if not listing.currency:
         raise Refused(f'{ticker} has no known listing currency.')
-    if instrument['currency'] != SCORED_CURRENCY:
+    if listing.currency != SCORED_CURRENCY:
         raise Refused('Only US-dollar listings can be scored against the S&P 500.')
-    entry_price = _entry(instrument)
+    entry_price = _entry(listing)
     return Recommendation.objects.create(
-        ticker=instrument['symbol'],
-        uic=instrument['uic'],
-        asset_type=instrument['asset_type'],
+        ticker=listing.symbol,
+        uic=listing.uic,
+        asset_type=listing.asset_type,
         entry_price=entry_price,
-        entry_currency=instrument['currency'],
+        entry_currency=listing.currency,
         **fields,
     )
 

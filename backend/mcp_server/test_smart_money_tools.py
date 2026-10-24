@@ -8,6 +8,7 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from investors.models import FilingAlert, Investor
+from research.listings import Listing
 
 from .views import ViewResult
 from .tools.smart_money import (
@@ -38,8 +39,8 @@ class SmartMoneyToolsTest(APITestCase):
         self.assertEqual(FilingAlert.objects.filter(read_at__isnull=True).count(), 1)
 
     def test_foreign_listing_ownership_is_refused(self):
-        eur = {'symbol': 'ASML', 'name': 'ASML', 'uic': 1, 'asset_type': 'Stock', 'currency': 'EUR', 'exchange': 'X'}
-        with patch('mcp_server.tools.smart_money.resolve', return_value=eur), \
+        eur = Listing(ticker='ASML', symbol='ASML', name='ASML', uic=1, asset_type='Stock', currency='EUR', exchange='X')
+        with patch('mcp_server.tools.smart_money.look_up', return_value=eur), \
                 patch('mcp_server.tools.smart_money.call_view', side_effect=AssertionError('view called')):
             result = get_ticker_ownership('ASML')
         self.assertIsNone(result['data'])

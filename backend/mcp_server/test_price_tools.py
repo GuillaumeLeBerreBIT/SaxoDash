@@ -1,5 +1,4 @@
 from datetime import date, timedelta
-from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -7,11 +6,10 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
-from portfolio.models import Position
 from research.providers import ProviderNotConnected
 from research.technicals import sma
 
-from .tools.research import get_price_history, get_quotes, resolve, search_instruments
+from .tools.research import get_price_history, get_quotes, search_instruments
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -40,30 +38,6 @@ class PriceToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
         get_user_model().objects.create_user('u', password='p')
-
-    def test_held_position_resolves_without_saxo(self):
-        Position.objects.create(
-            ticker='GOOGL', name='Alphabet', qty=Decimal('1'), avg_cost=Decimal('1'),
-            current_price=Decimal('1'), sector='Tech', type='STOCK', color='#000',
-            uic=4711, asset_type='Stock', currency='USD',
-        )
-        with patch('saxo.client._get', side_effect=RuntimeError('no saxo')):
-            found = resolve('googl')
-        self.assertEqual(found['uic'], 4711)
-        self.assertEqual(found['asset_type'], 'Stock')
-        self.assertEqual(found['currency'], 'USD')
-
-    def test_search_match_without_currency_is_completed_from_details(self):
-        row = instrument('ASML', 99, currency='')
-        with patch('research.market.search', return_value=[instrument('ASMLF', 1), row]), \
-                patch('research.market.details', return_value={'currency': 'EUR'}):
-            found = resolve('ASML:xams')
-        self.assertEqual(found['uic'], 99)
-        self.assertEqual(found['currency'], 'EUR')
-
-    def test_unmatched_symbol_is_none(self):
-        with patch('research.market.search', return_value=[instrument('ABC', 1)]):
-            self.assertIsNone(resolve('XYZ'))
 
     def test_search_instruments_lists_matches(self):
         with patch('research.market.search', return_value=[instrument('NVDA', 5)]):

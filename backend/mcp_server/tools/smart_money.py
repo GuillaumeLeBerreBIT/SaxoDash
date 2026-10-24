@@ -11,12 +11,12 @@ from investors.views import (
 )
 from investors.views import OwnershipDetailView as InvestorOwnershipView
 
-from .. import company_data
+from research.listings import look_up
+
 from ..envelope import answer
 from ..shaping import capped, without
 from ..views import call_view, problem
 from . import tool
-from .research import _bare, resolve
 
 EDGAR = '13f'
 CONGRESS = 'house-clerk'
@@ -98,10 +98,11 @@ def get_fund_stocks(view: str = 'bought'):
 
 @tool('Which tracked funds and which House members hold or trade a ticker; either side is null when the ticker is unknown to it.')
 def get_ticker_ownership(symbol: str):
-    ticker = _bare(symbol)
-    listing = company_data.status_of(resolve(ticker))
-    if listing in (company_data.FOREIGN, company_data.UNVERIFIED):
-        return _failed([EDGAR, CONGRESS], company_data.refusal(listing))
+    listing = look_up(symbol)
+    reason = listing.refusal(allow_fund=True)
+    if reason:
+        return _failed([EDGAR, CONGRESS], reason)
+    ticker = listing.ticker
     kwargs = {'ticker': ticker}
     funds = call_view(InvestorOwnershipView, kwargs=kwargs)
     members = call_view(CongressOwnershipView, kwargs=kwargs)

@@ -1,14 +1,16 @@
+from dataclasses import replace
 from unittest.mock import patch
 
 from django.test import TestCase
 from django.utils import timezone
 
 from mcp_server.views import ViewResult
+from research.listings import Listing
 
 from . import journal
 from .models import Recommendation
 
-INSTRUMENT = {'symbol': 'NEWCO', 'name': 'NewCo', 'uic': 77, 'asset_type': 'Stock', 'currency': 'USD', 'exchange': 'X'}
+INSTRUMENT = Listing(ticker='NEWCO', symbol='NEWCO', name='NewCo', uic=77, asset_type='Stock', currency='USD', exchange='X')
 CANDLES = [
     {'date': '2026-10-20', 'open': 1, 'high': 2, 'low': 1, 'close': 41.5, 'volume': 1},
     {'date': '2026-10-21', 'open': 1, 'high': 2, 'low': 1, 'close': 42.25, 'volume': 1},
@@ -32,7 +34,7 @@ def fields(**over):
 
 def logged(instrument=INSTRUMENT, chart=None, **over):
     chart = ViewResult(200, CANDLES) if chart is None else chart
-    with patch('mcp_server.tools.research.resolve', return_value=instrument), \
+    with patch('advisor.journal.look_up', return_value=instrument), \
             patch('mcp_server.views.call_view', return_value=chart):
         return journal.log(**fields(**over))
 
@@ -51,7 +53,7 @@ class LogTests(TestCase):
         self.assertEqual(Recommendation.objects.count(), 0)
 
     def test_refuses_a_non_us_dollar_listing(self):
-        euro = {**INSTRUMENT, 'currency': 'EUR'}
+        euro = replace(INSTRUMENT, currency='EUR')
         with self.assertRaisesMessage(journal.Refused, 'Only US-dollar listings can be scored against the S&P 500.'):
             logged(instrument=euro)
         self.assertEqual(Recommendation.objects.count(), 0)
@@ -70,7 +72,7 @@ class LogTests(TestCase):
             logged(invalidation=None)
 
     def test_refuses_unresolvable_ticker(self):
-        with patch('mcp_server.tools.research.resolve', return_value=None):
+        with patch('advisor.journal.look_up', return_value=Listing.unresolved('NEWCO')):
             with self.assertRaises(journal.Refused):
                 journal.log(**fields())
 

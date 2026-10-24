@@ -1,18 +1,16 @@
+from research import company_data
+from research.listings import bare, look_up
 from research.models import ScreenerRow
-
-from .. import company_data
-from ..envelope import answer
 from research.views import FundamentalsView
 
+from ..envelope import answer
 from . import tool
 from .research import (
     FINNHUB,
-    _bare,
     _part,
     _scalar_metrics,
     get_price_history,
     get_valuation_history,
-    resolve,
 )
 from .smart_money import get_ticker_ownership
 
@@ -125,10 +123,10 @@ def _prefixed(symbol, result):
 
 
 def _compare_one(symbol):
-    ticker = _bare(symbol)
-    instrument = resolve(symbol)
-    status = company_data.status_of(instrument)
-    name = instrument['name'] if instrument else None
+    listing = look_up(symbol)
+    ticker = listing.ticker
+    status = listing.company_status
+    name = listing.name
     ownership = get_ticker_ownership(ticker)
     warnings = _prefixed(ticker, ownership)
     entry = {'symbol': ticker, 'name': name, 'status': status, 'pillars': None, 'ownership': ownership['data']}
@@ -164,7 +162,7 @@ def _compare_one(symbol):
 
 @tool('Compare two to five companies side by side on growth, profitability, health, valuation versus their own 5-year median and trend, plus fund and Congress ownership.')
 def compare_companies(symbols: list[str]):
-    distinct = list(dict.fromkeys(_bare(s) for s in symbols))
+    distinct = list(dict.fromkeys(bare(s) for s in symbols))
     if not MIN_SYMBOLS <= len(distinct) <= MAX_SYMBOLS:
         return answer(None, sources=[FINNHUB], warnings=[COUNT_WARNING])
     companies, warnings = [], []

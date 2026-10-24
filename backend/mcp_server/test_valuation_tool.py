@@ -5,6 +5,8 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from research.listings import Listing
+
 from .tools.research import get_valuation_history
 from .views import ViewResult
 
@@ -12,7 +14,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 
 
 def instrument(currency='USD'):
-    return {'symbol': 'NVDA', 'name': 'NVDA Inc', 'uic': 1, 'asset_type': 'Stock', 'currency': currency, 'exchange': 'X'}
+    return Listing(ticker='NVDA', symbol='NVDA', name='NVDA Inc', uic=1, asset_type='Stock', currency=currency, exchange='X')
 
 
 SERIES = {
@@ -37,14 +39,14 @@ class ValuationToolTest(APITestCase):
         get_user_model().objects.create_user('u', password='p')
 
     def test_tool_withholds_non_usd(self):
-        with patch('mcp_server.tools.research.resolve', return_value=instrument('EUR')), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument('EUR')), \
                 patch('research.finnhub.valuation_series', side_effect=AssertionError('called')):
             result = get_valuation_history('ASML')
         self.assertIsNone(result['data'])
         self.assertTrue(result['warnings'])
 
     def test_weekly_sampling_medians_and_latest(self):
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=SERIES), \
                 patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
@@ -56,14 +58,14 @@ class ValuationToolTest(APITestCase):
     def test_loss_making_company_has_null_pe(self):
         losing = {**SERIES, 'quarterly': {**SERIES['quarterly'], 'eps': [
             {'period': p, 'v': -1.0} for p in ('2024-03-31', '2024-06-30', '2024-09-30', '2024-12-31')]}}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=losing), \
                 patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
         self.assertIsNone(data['latest']['daily_pe'])
 
     def test_unresolved_symbol_keeps_finnhub_series_with_warning(self):
-        with patch('mcp_server.tools.research.resolve', return_value=None), \
+        with patch('mcp_server.tools.research.look_up', return_value=Listing.unresolved('NVDA')), \
                 patch('research.finnhub.valuation_series', return_value=SERIES):
             result = get_valuation_history('NVDA')
         self.assertIsNone(result['data']['latest']['daily_pe'])
@@ -73,7 +75,7 @@ class ValuationToolTest(APITestCase):
     def test_loss_quarters_stay_out_of_latest_and_median(self):
         losing = {**SERIES, 'quarterly': {**SERIES['quarterly'], 'pe_ttm': [
             {'period': '2024-03-31', 'v': 20}, {'period': '2024-06-30', 'v': 30}, {'period': '2024-09-30', 'v': None}]}}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=losing), \
                 patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
             data = get_valuation_history('NVDA')['data']
@@ -82,7 +84,7 @@ class ValuationToolTest(APITestCase):
 
     def test_non_us_company_is_warned(self):
         foreign = {**SERIES, 'country': 'TW'}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=foreign), \
                 patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
             warnings = get_valuation_history('TSM')['warnings']
@@ -90,7 +92,7 @@ class ValuationToolTest(APITestCase):
 
     def test_us_company_is_not_warned_about_country(self):
         domestic = {**SERIES, 'country': 'US'}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.valuation_series', return_value=domestic), \
                 patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, candles())):
             warnings = get_valuation_history('NVDA')['warnings']

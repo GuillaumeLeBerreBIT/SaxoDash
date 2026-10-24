@@ -6,10 +6,10 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
-from portfolio.models import Position
 from research.models import SymbolNote, Watchlist, WatchlistItem
 
-from . import company_data
+from research import company_data
+from research.listings import Listing
 from .tools.research import (
     get_company,
     get_filings_and_insiders,
@@ -17,17 +17,16 @@ from .tools.research import (
     get_my_notes,
     get_news,
     get_watchlists,
-    resolve,
 )
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 
 def instrument(currency='USD', asset_type='Stock', symbol='NVDA'):
-    return {
-        'symbol': symbol, 'name': f'{symbol} Inc', 'uic': 1, 'asset_type': asset_type,
-        'currency': currency, 'exchange': 'NASDAQ',
-    }
+    return Listing(
+        ticker=symbol, symbol=symbol, name=f'{symbol} Inc', uic=1, asset_type=asset_type,
+        currency=currency, exchange='NASDAQ',
+    )
 
 
 def fundamentals_payload():
@@ -46,7 +45,7 @@ class CompanyToolsTest(APITestCase):
         get_user_model().objects.create_user('u', password='p')
 
     def test_foreign_listing_is_refused_without_calling_finnhub(self):
-        with patch('mcp_server.tools.research.resolve', return_value=instrument('EUR', symbol='ASML')), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument('EUR', symbol='ASML')), \
                 patch('research.finnhub._get', side_effect=AssertionError('finnhub called')):
             result = get_company('ASML')
         self.assertIsNone(result['data'])
@@ -54,7 +53,7 @@ class CompanyToolsTest(APITestCase):
 
     def test_etf_gets_news_but_not_statements(self):
         news = {'available': True, 'items': [{'headline': 'h', 'url': 'u', 'datetime': 1}]}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument(asset_type='Etf', symbol='SPY')), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument(asset_type='Etf', symbol='SPY')), \
                 patch('research.finnhub.news', return_value=news), \
                 patch('research.statements.statements', side_effect=AssertionError('called')):
             refused = get_financial_statements('SPY')
@@ -63,9 +62,21 @@ class CompanyToolsTest(APITestCase):
         self.assertEqual(refused['warnings'], [company_data.refusal('fund')])
         self.assertEqual(len(allowed['data']['items']), 1)
 
+    def test_unmatched_symbol_is_answered_with_an_assumption_warning(self):
+        items = [{'headline': 'h', 'url': 'u', 'datetime': 1}]
+        with patch('mcp_server.tools.research.look_up', return_value=Listing.unresolved('NVDA')), \
+                patch('research.finnhub.news', return_value={'available': True, 'items': items}), \
+                patch('research.statements.statements', return_value={'available': True, 'annual': [], 'quarterly': []}):
+            news = get_news('NVDA')
+            statements = get_financial_statements('NVDA')
+        warning = 'NVDA could not be matched to a Saxo listing, so it is assumed to be US-listed.'
+        self.assertIn(warning, news['warnings'])
+        self.assertIn(warning, statements['warnings'])
+        self.assertIsNotNone(news['data'])
+
     def test_news_is_capped_at_limit(self):
         items = [{'headline': str(i), 'url': 'u', 'datetime': i} for i in range(5)]
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.news', return_value={'available': True, 'items': items}):
             result = get_news('NVDA', limit=2)
         self.assertEqual(len(result['data']['items']), 2)
@@ -74,7 +85,7 @@ class CompanyToolsTest(APITestCase):
     def test_company_merges_views_and_drops_presentation_keys(self):
         earnings = {'available': True, 'history': [], 'next': None, 'upcoming': [], 'score': None}
         peers = {'available': True, 'symbols': ['AMD']}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.fundamentals', return_value=fundamentals_payload()), \
                 patch('research.earnings.symbol_earnings', return_value=earnings), \
                 patch('research.finnhub.peers', return_value=peers):
@@ -92,7 +103,7 @@ class CompanyToolsTest(APITestCase):
     def test_unavailable_part_is_null_with_reason(self):
         earnings = {'available': True, 'history': [], 'next': None, 'upcoming': [], 'score': None}
         peers = {'available': False, 'reason': 'x'}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.finnhub.fundamentals', return_value=fundamentals_payload()), \
                 patch('research.earnings.symbol_earnings', return_value=earnings), \
                 patch('research.finnhub.peers', return_value=peers):
@@ -103,7 +114,7 @@ class CompanyToolsTest(APITestCase):
 
     def test_statements_quarterly_param_reaches_the_view(self):
         payload = {'available': True, 'annual': [{'label': 'A'}], 'quarterly': [{'label': 'Q'}], 'partial': False}
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.statements.statements', return_value=payload):
             quarterly = get_financial_statements('NVDA', period='quarterly')
             annual = get_financial_statements('NVDA')
@@ -114,7 +125,7 @@ class CompanyToolsTest(APITestCase):
         self.assertIsNone(bad['data'])
 
     def test_filings_and_insiders_are_combined(self):
-        with patch('mcp_server.tools.research.resolve', return_value=instrument()), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
                 patch('research.filings.filings', return_value={'available': True, 'items': [1]}), \
                 patch('research.filings.insiders', return_value={'available': False, 'reason': 'busy'}):
             result = get_filings_and_insiders('NVDA')
@@ -136,7 +147,7 @@ class CompanyToolsTest(APITestCase):
         self.assertIsNone(result['data']['target_price'])
 
     def test_foreign_listing_refuses_filings_and_news(self):
-        with patch('mcp_server.tools.research.resolve', return_value=instrument('EUR', symbol='ASML')), \
+        with patch('mcp_server.tools.research.look_up', return_value=instrument('EUR', symbol='ASML')), \
                 patch('research.finnhub._get', side_effect=AssertionError('finnhub called')):
             filings = get_filings_and_insiders('ASML')
             news = get_news('ASML')
@@ -151,36 +162,3 @@ class CompanyToolsTest(APITestCase):
         [row] = result['data']['watchlists']
         self.assertEqual(row['name'], 'Core')
         self.assertEqual(row['items'], [{'symbol': 'NVDA', 'name': 'NVIDIA', 'uic': 1, 'asset_type': 'Stock'}])
-
-
-@override_settings(CACHES=LOCMEM)
-class ResolveDeterminismTest(APITestCase):
-    def setUp(self):
-        cache.clear()
-        get_user_model().objects.create_user('u', password='p')
-
-    def row(self, currency, exchange, uic):
-        return {
-            'symbol': 'NVDA', 'uic': uic, 'asset_type': 'Stock',
-            'description': 'NVIDIA', 'exchange': exchange, 'currency': currency,
-        }
-
-    def test_usd_listing_wins_over_an_earlier_foreign_one(self):
-        rows = [self.row('EUR', 'xetr', 1), self.row('USD', 'xnas', 2)]
-        with patch('research.market.search', return_value=rows):
-            found = resolve('NVDA')
-        self.assertEqual(found['uic'], 2)
-
-    def test_first_match_when_none_is_usd(self):
-        rows = [self.row('EUR', 'xetr', 1), self.row('GBP', 'xlon', 2)]
-        with patch('research.market.search', return_value=rows):
-            self.assertEqual(resolve('NVDA')['uic'], 1)
-
-    def test_held_lookup_picks_the_lowest_id(self):
-        for ticker, uic in (('nvda', 20), ('NVDA', 10)):
-            Position.objects.create(
-                ticker=ticker, name='n', qty=Decimal('1'), avg_cost=Decimal('1'),
-                current_price=Decimal('1'), sector='T', type='STOCK', color='#000',
-                uic=uic, asset_type='Stock', currency='USD',
-            )
-        self.assertEqual(resolve('NVDA')['uic'], 20)

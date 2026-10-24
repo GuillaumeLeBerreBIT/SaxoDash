@@ -5,10 +5,10 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from research.listings import Listing
 from research.models import ScreenerRow
 
 from .envelope import answer
-from .tools import research
 from research.views import FundamentalsView, PeersView, SymbolEarningsView
 
 from .tools.compare import _company, compare_companies
@@ -18,7 +18,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 
 
 def instrument(symbol, currency='USD'):
-    return {'symbol': symbol, 'name': f'{symbol} Inc', 'uic': 1, 'asset_type': 'Stock', 'currency': currency, 'exchange': 'X'}
+    return Listing(ticker=symbol, symbol=symbol, name=f'{symbol} Inc', uic=1, asset_type='Stock', currency=currency, exchange='X')
 
 
 def company(**metrics):
@@ -68,7 +68,7 @@ def refused(reason):
 class Patched:
     def __init__(self, resolver, comp=None, val=None, price=None):
         self.patches = [
-            patch('mcp_server.tools.compare.resolve', side_effect=resolver),
+            patch('mcp_server.tools.compare.look_up', side_effect=resolver),
             patch('mcp_server.tools.compare._company', side_effect=comp or (lambda s: company())),
             patch('mcp_server.tools.compare.get_valuation_history', side_effect=val or (lambda s: valuation())),
             patch('mcp_server.tools.compare.get_price_history', side_effect=price or (lambda s, **k: prices())),
@@ -177,27 +177,6 @@ class CompareToolTest(APITestCase):
         valuation_pillar = data['companies'][0]['pillars']['valuation']
         self.assertIsNone(valuation_pillar['pe_ttm'])
         self.assertIsNone(valuation_pillar['pe_ttm_vs_5y_median'])
-
-
-@override_settings(CACHES=LOCMEM)
-class ResolveCacheTest(APITestCase):
-    def setUp(self):
-        cache.clear()
-        get_user_model().objects.create_user('u', password='p')
-
-    def test_second_resolve_does_not_search_again(self):
-        row = {'symbol': 'NVDA', 'uic': 1, 'asset_type': 'Stock', 'description': 'N', 'exchange': 'X', 'currency': 'USD'}
-        with patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, [row])) as view:
-            first = research.resolve('NVDA')
-            second = research.resolve('nvda')
-        self.assertEqual(first, second)
-        self.assertEqual(view.call_count, 1)
-
-    def test_a_miss_is_not_cached(self):
-        with patch('mcp_server.tools.research.call_view', return_value=ViewResult(200, [])) as view:
-            research.resolve('ZZZZ')
-            research.resolve('ZZZZ')
-        self.assertEqual(view.call_count, 2)
 
 
 @override_settings(CACHES=LOCMEM)
