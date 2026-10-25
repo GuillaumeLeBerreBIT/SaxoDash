@@ -683,6 +683,27 @@ class BuildInsightsTest(TestCase):
         self.assertEqual(Decimal(value['bank_only']), Decimal('2500.00'))
 
 
+class PositionInsightsTest(TestCase):
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_the_advisor_sees_the_dashboard_sections_without_history(self, _mock):
+        _pos('NVDA', '10', '100', '600')
+        _pos('MSFT', '1', '100', '90', price_source='derived')
+        _snap(date(2026, 9, 1), '5000')
+        dashboard = insights.build_insights()
+        advisor = insights.build_position_insights()
+        for key in ('concentration', 'sector_exposure', 'currency_exposure', 'movers', 'contributors', 'upcoming_earnings'):
+            self.assertEqual(advisor[key], dashboard[key], key)
+        history_kinds = {'stale_value', 'no_history'}
+        self.assertEqual(
+            advisor['attention'],
+            [item for item in dashboard['attention'] if item['kind'] not in history_kinds],
+        )
+        self.assertEqual(set(advisor), {
+            'value', 'concentration', 'sector_exposure', 'currency_exposure', 'movers',
+            'contributors', 'attention', 'upcoming_earnings',
+        })
+
+
 class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
     """insights.value.net_worth and insights.change.* must describe the same
     quantity - both now read net_worth (portfolio_value + bank_total).

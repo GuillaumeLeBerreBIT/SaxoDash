@@ -212,3 +212,47 @@ class SaxoMarketDataClientTest(TestCase):
 
         self.assertEqual(result, [{'Uic': 211}])
         self.assertEqual(mock_get.call_args.kwargs['params']['Uics'], '211,212')
+
+
+class SaxoReportsTest(TestCase):
+    @patch('saxo.client._get')
+    def test_closed_positions_report_follows_next_links(self, get):
+        base = client._api_base_url()
+        get.side_effect = [
+            {'Data': [{'n': 1}], '__next': f'{base}/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24?$skip=1'},
+            {'Data': [{'n': 2}]},
+        ]
+        rows = client.get_closed_positions_report('token', 'K', '2026-01-01', '2026-10-24')
+        self.assertEqual(rows, [{'n': 1}, {'n': 2}])
+        self.assertEqual(get.call_args_list[0].args[1], '/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24')
+        self.assertEqual(get.call_args_list[1].args[1], '/cs/v1/reports/closedPositions/K/2026-01-01/2026-10-24?$skip=1')
+
+    @patch('saxo.client._get')
+    def test_trades_report_asks_for_the_window(self, get):
+        get.return_value = {'Data': [{'Uic': 7}]}
+        self.assertEqual(client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24'), [{'Uic': 7}])
+        self.assertEqual(get.call_args.kwargs['params'], {'FromDate': '2025-01-01', 'ToDate': '2026-10-24'})
+
+    @patch('saxo.client._get', return_value={'ClientKey': 'K', 'Name': 'x'})
+    def test_client_key(self, _get):
+        self.assertEqual(client.get_client_key('token'), 'K')
+
+    @patch('saxo.client._get')
+    def test_report_paging_stops_at_the_page_cap(self, get):
+        base = client._api_base_url()
+        get.return_value = {'Data': [{'n': 1}], '__next': f'{base}/cs/v1/reports/trades/K?$skip=1'}
+        with self.assertRaises(client.SaxoPermanentError):
+            client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24')
+        self.assertEqual(get.call_count, client.MAX_REPORT_PAGES)
+
+    @patch('saxo.client._get')
+    def test_report_refuses_a_next_link_off_the_gateway(self, get):
+        get.return_value = {'Data': [], '__next': 'https://elsewhere.example/steal'}
+        with self.assertRaises(client.SaxoPermanentError):
+            client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24')
+        self.assertEqual(get.call_count, 1)
+
+    @patch('saxo.client._get', return_value={'Name': 'x'})
+    def test_missing_client_key_is_a_saxo_error(self, _get):
+        with self.assertRaises(client.SaxoPermanentError):
+            client.get_client_key('token')

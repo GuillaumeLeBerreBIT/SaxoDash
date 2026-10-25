@@ -18,7 +18,7 @@ from django.core.cache import cache
 
 from core.http_client import request_json
 
-from .provider_cache import cached
+from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
 from .statement_shaping import to_annual
 
@@ -491,9 +491,21 @@ def to_fundamentals(profile, financials, recommendations, earnings, annual_rows=
     return shaped
 
 
-def fundamentals(symbol):
+def _shared_profile(symbol):
     def produce():
         profile = get_profile(symbol)
+        return profile, FUNDAMENTALS_TTL if profile.get('name') else None
+
+    return cached(f'research:profile:v1:{symbol}', produce)
+
+
+def _shared_basic_financials(symbol):
+    return cached(f'research:basic-financials:v1:{symbol}', lambda: (get_basic_financials(symbol), FUNDAMENTALS_TTL))
+
+
+def fundamentals(symbol):
+    def produce():
+        profile = _shared_profile(symbol)
         if not profile.get('name'):
             # Finnhub answers 200 with an empty/near-empty profile for a
             # ticker it doesn't recognize - raising here (before the other
@@ -511,7 +523,7 @@ def fundamentals(symbol):
             annual_rows = None
         return to_fundamentals(
             profile,
-            get_basic_financials(symbol),
+            _shared_basic_financials(symbol),
             get_recommendation_trends(symbol),
             get_earnings_history(symbol),
             annual_rows,
@@ -519,6 +531,51 @@ def fundamentals(symbol):
 
     data = cached(_cache_key(symbol), lambda: (produce(), FUNDAMENTALS_TTL), unexpected=FinnhubUnexpected)
     return {'available': True, **data}
+
+
+VALUATION_ANNUAL = {'pe': 'pe', 'ps': 'ps', 'pb': 'pb', 'pfcf': 'pfcf', 'ev_ebitda': 'evEbitda'}
+VALUATION_QUARTERLY = {
+    'pe_ttm': 'peTTM',
+    'ps_ttm': 'psTTM',
+    'pfcf_ttm': 'pfcfTTM',
+    'ev_ebitda_ttm': 'evEbitdaTTM',
+    'eps': 'eps',
+}
+
+
+POSITIVE_MULTIPLES = frozenset({'pe', 'pfcf', 'ev_ebitda', 'pe_ttm', 'pfcf_ttm', 'ev_ebitda_ttm'})
+
+
+def _oldest_first(points, positive_only=False):
+    rows = [
+        {'period': p['period'], 'v': None if positive_only and p['v'] <= 0 else p['v']}
+        for p in points or []
+        if p.get('period') and p.get('v') is not None
+    ]
+    return sorted(rows, key=lambda row: row['period'])
+
+
+def _shape_series(raw, names):
+    shaped = {key: _oldest_first(raw.get(name), key in POSITIVE_MULTIPLES) for key, name in names.items()}
+    return {key: rows for key, rows in shaped.items() if rows}
+
+
+def _country(symbol):
+    try:
+        return _shared_profile(symbol).get('country') or None
+    except ProviderUnavailable:
+        return None
+
+
+def valuation_series(symbol):
+    payload = _shared_basic_financials(symbol)
+    try:
+        series = payload.get('series') or {}
+        annual = _shape_series(series.get('annual') or {}, VALUATION_ANNUAL)
+        quarterly = _shape_series(series.get('quarterly') or {}, VALUATION_QUARTERLY)
+    except SHAPING_ERRORS as exc:
+        raise FinnhubUnexpected() from exc
+    return {'annual': annual, 'quarterly': quarterly, 'country': _country(symbol)}
 
 
 def _peers_cache_key(symbol):

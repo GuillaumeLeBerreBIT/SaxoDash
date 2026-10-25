@@ -1,0 +1,8 @@
+[
+  {"name": "USD stock", "instrument": {"assetType": "Stock"}, "currency": "USD", "expected": "eligible"},
+  {"name": "EUR stock", "instrument": {"assetType": "Stock"}, "currency": "EUR", "expected": "foreign"},
+  {"name": "USD ETF", "instrument": {"assetType": "Etf"}, "currency": "USD", "expected": "fund"},
+  {"name": "EUR ETF", "instrument": {"assetType": "Etf"}, "currency": "EUR", "expected": "foreign"},
+  {"name": "stock without currency", "instrument": {"assetType": "Stock"}, "currency": null, "expected": "unverified"},
+  {"name": "unresolved ticker", "instrument": null, "currency": null, "expected": "eligible"}
+]
