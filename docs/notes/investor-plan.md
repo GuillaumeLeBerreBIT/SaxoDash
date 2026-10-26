@@ -1,6 +1,6 @@
 # My investor plan
 
-Draft, 2026-10-26. One page on purpose: when something is not in here, it is not a rule.
+Agreed 2026-10-26. One page on purpose: when something is not in here, it is not a rule.
 
 **The plan in one sentence:** own 8–12 high-quality growth companies from the S&P 500 and
 Nasdaq-100, and hold each one for as long as its story holds.
@@ -69,8 +69,6 @@ override the plan:
 
 Fund 13F holdings and Congress trades are background only.
 
-## Open questions
+## Who decides
 
-- Is 8–12 stocks the right number?
-- Is 15% the right cap per stock?
-- Does the advisor pick stocks against rule 1, or bring ideas that I judge myself?
+The advisor brings ideas and candid reviews; I judge them and I decide. It never places orders.
