@@ -40,6 +40,24 @@ A price drop on its own is a review, not a sell. The same rules apply to favouri
 In December, look at realised gains against the €10,000 yearly exemption, and harvest gains or
 losses within the same year. Saxo withholds nothing; I declare it myself.
 
+## How a stock is looked at
+
+The same way I would on the Research page, tab by tab, from the same data:
+
+| Research page | Question it answers for the plan |
+|---|---|
+| Overview + chart | What does it do, and where is the price against its buy range and its 50- and 200-day averages? |
+| Financials | Are revenue, profit and free cash flow growing? Is debt under control? (rule 1) |
+| Statistics | Are margins strong, and is the valuation extreme against its own history? (rule 1) |
+| Peers | Is it better or cheaper than the companies it competes with? (rule 4, better use of money) |
+| Earnings | Did the last reports beat or miss, and is growth holding? (check-ins, story broke?) |
+| News, filings, insiders | Has anything changed the story? |
+| My notes (target, stop, thesis) | What was my reason for owning it, and is it still true? |
+| Funds and Congress | Who else owns it. Background only. |
+
+An analysis that skips a tab says so, and a figure the data does not have is shown as missing,
+never guessed.
+
 ## Ways of thinking (not rules)
 
 The advisor may look at a company the way great investors would, to sharpen the story, never to
