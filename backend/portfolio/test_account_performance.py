@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -96,3 +97,27 @@ class GrowthSeriesTests(SimpleTestCase):
         (growth, warning), _ = self.read({'Balance': {}})
         self.assertEqual(growth, [])
         self.assertIsNone(warning)
+
+
+@override_settings(CACHES=LOCMEM)
+class AccountDaysTests(SimpleTestCase):
+    def test_each_day_carries_the_account_value_and_its_cash(self):
+        body = {'Balance': {
+            'AccountValue': [{'Date': '2026-10-27', 'Value': 45000.12}, {'Date': '2026-10-28', 'Value': 45010.96}],
+            'CashBalance': [{'Date': '2026-10-27', 'Value': 30.5}, {'Date': '2026-10-28', 'Value': 38.79}],
+        }}
+        with connected(), \
+                patch('saxo.client.get_client_key', return_value='K'), \
+                patch('saxo.client.get_performance_timeseries', return_value=body):
+            days = account_performance.account_days(user=OWNER)
+        self.assertEqual(days, [
+            account_performance.AccountDay(date(2026, 10, 27), Decimal('45000.12'), Decimal('30.5')),
+            account_performance.AccountDay(date(2026, 10, 28), Decimal('45010.96'), Decimal('38.79')),
+        ])
+
+    def test_a_day_without_its_cash_is_left_out(self):
+        body = {'Balance': {'AccountValue': [{'Date': '2026-10-27', 'Value': 1.0}], 'CashBalance': []}}
+        with connected(), \
+                patch('saxo.client.get_client_key', return_value='K'), \
+                patch('saxo.client.get_performance_timeseries', return_value=body):
+            self.assertEqual(account_performance.account_days(user=OWNER), [])

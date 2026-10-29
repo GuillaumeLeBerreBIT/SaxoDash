@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from typing import NamedTuple
 
 from django.core.cache import cache
@@ -17,6 +18,12 @@ class GrowthSeries(NamedTuple):
     warning: str | None
 
 
+class AccountDay(NamedTuple):
+    date: date
+    value: Decimal
+    cash: Decimal
+
+
 def _cache_key(user):
     return f'portfolio:account-performance:v1:{user.pk}'
 
@@ -31,9 +38,20 @@ def _growth(body):
     return [(day, value) for day, value in dated if day.weekday() < WEEKEND_FROM]
 
 
-def _fetched(user):
+def _balance(body, name):
+    points = (body.get('Balance') or {}).get(name) or []
+    return {date.fromisoformat(point['Date'][:10]): Decimal(str(point['Value'])) for point in points}
+
+
+def _timeseries(user):
     token = active_credential(user).access_token
-    return _growth(client.get_performance_timeseries(token, client.get_client_key(token)))
+    return client.get_performance_timeseries(token, client.get_client_key(token))
+
+
+def account_days(*, user):
+    body = _timeseries(user)
+    values, cash = _balance(body, 'AccountValue'), _balance(body, 'CashBalance')
+    return [AccountDay(day, values[day], cash[day]) for day in sorted(values) if day in cash]
 
 
 def _fallback(reason, user):
@@ -49,7 +67,7 @@ def growth_series(*, user):
     if growth is not None:
         return GrowthSeries(growth, None)
     try:
-        growth = _fetched(user)
+        growth = _growth(_timeseries(user))
     except SaxoNotConnected as error:
         return _fallback(f'Saxo is not connected: {error}', user)
     except SaxoAPIError:
