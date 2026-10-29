@@ -16,7 +16,7 @@ from research.providers import ProviderError
 logger = logging.getLogger(__name__)
 
 EURUSD_UIC = 21
-CHART_COUNT = 500
+CHART_COUNT = 1200
 
 
 class BenchmarkUnavailable(Exception):

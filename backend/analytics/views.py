@@ -1,39 +1,21 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.models import NetWorthSnapshot
+from portfolio import account_performance
 
 from . import report
 
-WEEKEND = (1, 7)
 
-
-def _portfolio_dated_values(user):
-    """The series risk/performance metrics are computed from.
-
-    saxo_account_value (Saxo's reconciled cash+positions total), not
-    portfolio_value (positions only) - a BUY/SELL only reallocates within
-    the same Saxo account and leaves the former unchanged, while the latter
-    drops every time a position is sold, reading as a loss that never
-    happened. Days with no usable Saxo valuation (saxo_account_value is
-    null - see portfolio.services.get_saxo_account_value) are excluded
-    rather than treated as a zero.
-    """
-    return list(
-        NetWorthSnapshot.objects
-        .filter(user=user)
-        .exclude(saxo_account_value__isnull=True)
-        .exclude(date__week_day__in=WEEKEND)
-        .order_by('date')
-        .values_list('date', 'saxo_account_value')
-    )
+def _with_history(build, request):
+    growth, warning = account_performance.growth_series(user=request.user)
+    body = build(growth, request.query_params.get('benchmark', ''), user=request.user)
+    body['history_warning'] = warning
+    return Response(body)
 
 
 class RiskMetricsView(APIView):
     def get(self, request):
-        return Response(report.risk_report(
-            _portfolio_dated_values(request.user), request.query_params.get('benchmark', ''), user=request.user,
-        ))
+        return _with_history(report.risk_report, request)
 
 
 class PerformanceView(APIView):
@@ -44,6 +26,4 @@ class PerformanceView(APIView):
     """
 
     def get(self, request):
-        return Response(report.performance_report(
-            _portfolio_dated_values(request.user), request.query_params.get('benchmark', ''), user=request.user,
-        ))
+        return _with_history(report.performance_report, request)

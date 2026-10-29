@@ -13,25 +13,25 @@ describe('performanceSentence', () => {
   it('uses the longest period that has both figures and says ahead', () => {
     const periods = [period('1 month', 4.2, 2.1), period('3 months', 9, 5.5), period('1 year', null, null)]
     expect(performanceSentence(periods, 'World Index')).toBe(
-      'Over 3 months your portfolio returned +9.0%, 3.5 points ahead of World Index (+5.5%).',
+      'Over 3 months your Investment Return was +9.0%, 3.5 points ahead of World Index (+5.5%).',
     )
   })
 
   it('says behind when the index did better', () => {
     expect(performanceSentence([period('Since inception', -2, 3.4)], 'S&P 500')).toBe(
-      'Since inception your portfolio returned -2.0%, 5.4 points behind S&P 500 (+3.4%).',
+      'Since inception your Investment Return was -2.0%, 5.4 points behind S&P 500 (+3.4%).',
     )
   })
 
   it('says in line when the gap rounds to nothing', () => {
     expect(performanceSentence([period('Year to date', 3.02, 3.0)], 'World Index')).toBe(
-      'Year to date your portfolio returned +3.0%, in line with World Index (+3.0%).',
+      'Year to date your Investment Return was +3.0%, in line with World Index (+3.0%).',
     )
   })
 
   it('gives the portfolio return alone when the index has no figure', () => {
     expect(performanceSentence([period('1 month', 4.2, null)], 'World Index')).toBe(
-      'Over 1 month your portfolio returned +4.2%. World Index has no figure for that period.',
+      'Over 1 month your Investment Return was +4.2%. World Index has no figure for that period.',
     )
   })
 

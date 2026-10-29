@@ -242,6 +242,13 @@ class SaxoReportsTest(TestCase):
         self.assertEqual(client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24'), [{'Uic': 7}])
         self.assertEqual(get.call_args.kwargs['params'], {'FromDate': '2025-01-01', 'ToDate': '2026-10-24'})
 
+    @patch('saxo.client._get')
+    def test_performance_timeseries_asks_for_the_whole_account_history(self, get):
+        get.return_value = {'TimeWeighted': {'Accumulated': []}}
+        self.assertEqual(client.get_performance_timeseries('token', 'K'), {'TimeWeighted': {'Accumulated': []}})
+        self.assertEqual(get.call_args.args[1], '/hist/v4/performance/timeseries')
+        self.assertEqual(get.call_args.kwargs['params'], {'ClientKey': 'K', 'StandardPeriod': 'AllTime'})
+
     @patch('saxo.client._get', return_value={'ClientKey': 'K', 'Name': 'x'})
     def test_client_key(self, _get):
         self.assertEqual(client.get_client_key('token'), 'K')
