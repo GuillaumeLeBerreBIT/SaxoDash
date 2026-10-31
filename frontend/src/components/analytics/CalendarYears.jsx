@@ -1,11 +1,13 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { Card, CardHeader, EmptyState } from '../ui'
 import { chartTooltipProps, gridProps, axisProps, seriesAxis, OTHER_SLICE, REPORTED } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 
 const SERIES_LABEL = { portfolio_pct: 'Portfolio', benchmark_pct: 'benchmark' }
 
 export default function CalendarYears({ years, benchmarkName }) {
+  const c = useChartColors()
   const partialYears = new Set(years.filter((y) => y.partial).map((y) => y.year))
   if (years.length === 0) {
     return (
@@ -30,12 +32,12 @@ export default function CalendarYears({ years, benchmarkName }) {
       <div className="mt-4 h-[230px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={years} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
-            <YAxis {...axisProps} width={54} {...seriesAxis(years, ['portfolio_pct', 'benchmark_pct'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
+            <YAxis {...axisProps(c)} width={54} {...seriesAxis(years, ['portfolio_pct', 'benchmark_pct'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               formatter={(v, key) => [fmtPct(v, { decimals: 1 }), key === 'portfolio_pct' ? 'Portfolio' : benchmarkName]}
             />
             <Bar dataKey="portfolio_pct" name={SERIES_LABEL.portfolio_pct} fill={REPORTED} radius={[3, 3, 0, 0]} barSize={22} />

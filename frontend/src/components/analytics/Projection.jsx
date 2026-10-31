@@ -6,12 +6,14 @@ import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
 import { yearTicks } from '../../lib/portfolioStats'
 import { CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, axisProps, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
 const MONTHLY_OPTIONS = [500, 1000, 1500, 2000, 2500]
 const YEAR_OPTIONS = [5, 10, 20, 30]
 const fmtK = (v) => `€${(v / 1000).toFixed(0)}k`
 
 export default function Projection({ start, expectedReturnPct, volatilityPct }) {
+  const c = useChartColors()
   const [monthly, setMonthly] = useState(1000)
   const [years, setYears] = useState(10)
 
@@ -85,11 +87,11 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
       <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={bands} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="month" ticks={yearTicks(rows)} interval={0} tickFormatter={(m) => `${Math.round(m / 12)}y`} />
-            <YAxis {...axisProps} width={52} tickFormatter={fmtK} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="month" ticks={yearTicks(rows)} interval={0} tickFormatter={(m) => `${Math.round(m / 12)}y`} />
+            <YAxis {...axisProps(c)} width={52} tickFormatter={fmtK} />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               labelFormatter={(m) => `Year ${(m / 12).toFixed(1)}`}
               formatter={(v, key, entry) => {
                 const label = { lowBand: 'P10', midBand: 'P25', hiBand: 'P75', topBand: 'P90', p50: 'Median', invested: 'Contributed' }[key]

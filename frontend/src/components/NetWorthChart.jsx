@@ -2,27 +2,23 @@ import { useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import {
-  chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate, seriesAxis,
-  SERIES_BANK, SERIES_INVESTMENTS, SERIES_TOTAL,
-} from '../lib/charts'
+import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate, seriesAxis } from '../lib/charts'
+import { useChartColors } from '../theme/useChartColors'
 import { Pill, RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
-const SERIES = [
-  { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: SERIES_INVESTMENTS },
-  { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: SERIES_BANK },
-  { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: SERIES_TOTAL },
+const seriesFor = (c) => [
+  { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: c.up },
+  { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: c.warn },
+  { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: c.primary },
 ]
-
-const VIEWS = [{ key: 'ALL', name: 'All' }, ...SERIES]
 
 function SeriesLegend({ series, dimmed }) {
   return (
     <ul aria-label="Chart series" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
       {series.map((s) => (
-        <li key={s.key} className="flex items-center gap-1.5 text-[var(--fig-xs)] text-zinc-400">
+        <li key={s.key} className="flex items-center gap-1.5 text-[var(--fig-xs)] text-ink-2">
           <span
             className="w-4 border-t-2"
             style={{ borderColor: s.color, borderStyle: dimmed && s.key !== 'TOTAL' ? 'dashed' : 'solid' }}
@@ -35,6 +31,9 @@ function SeriesLegend({ series, dimmed }) {
 }
 
 export default function NetWorthChart() {
+  const c = useChartColors()
+  const SERIES = seriesFor(c)
+  const VIEWS = [{ key: 'ALL', name: 'All' }, ...SERIES]
   const [range, setRange] = useState('6M')
   const [view, setView] = useState('ALL')
   const { data, isLoading, error, refetch } = useNetWorthHistory(range)
@@ -56,7 +55,7 @@ export default function NetWorthChart() {
         className="flex-wrap"
         right={
           <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-zinc-900/60 rounded-md p-0.5 border border-white/[0.06]">
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-pill rounded-md p-0.5 border border-line">
               {VIEWS.map((v) => (
                 <Pill key={v.key} active={view === v.key} onClick={() => setView(v.key)}>
                   {v.name}
@@ -71,16 +70,16 @@ export default function NetWorthChart() {
         {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...dateAxisProps} />
-            <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], visible.map((s) => s.dataKey))} />
-            <Tooltip {...chartTooltipProps} labelFormatter={formatAxisDate} formatter={(v, n) => [fmtEur(v), n]} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...dateAxisProps(c)} />
+            <YAxis {...moneyAxisProps(c)} {...seriesAxis(data ?? [], visible.map((s) => s.dataKey))} />
+            <Tooltip {...chartTooltipProps(c)} labelFormatter={formatAxisDate} formatter={(v, n) => [fmtEur(v), n]} />
             {showInvestments && (
               <Line
                 type="monotone"
                 dataKey={SERIES[0].dataKey}
                 name={SERIES[0].name}
-                stroke={SERIES_INVESTMENTS}
+                stroke={SERIES[0].color}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
                 strokeDasharray={showTotal ? '4 3' : undefined}
@@ -93,7 +92,7 @@ export default function NetWorthChart() {
                 type="monotone"
                 dataKey={SERIES[1].dataKey}
                 name={SERIES[1].name}
-                stroke={SERIES_BANK}
+                stroke={SERIES[1].color}
                 strokeWidth={showTotal ? 1.5 : 2}
                 strokeOpacity={showTotal ? 0.5 : 1}
                 strokeDasharray={showTotal ? '4 3' : undefined}
@@ -106,7 +105,7 @@ export default function NetWorthChart() {
                 type="monotone"
                 dataKey={SERIES[2].dataKey}
                 name={SERIES[2].name}
-                stroke={SERIES_TOTAL}
+                stroke={SERIES[2].color}
                 strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}

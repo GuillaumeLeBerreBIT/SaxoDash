@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FLAT_FILL, HEALTH_SERIES, NEGATIVE, PENDING, PERFORMANCE_CAPS, POSITIVE, REPORTED, SERIES_BANK, SERIES_TOTAL, colorForCategory, performanceFill, seriesAxis, withAlpha } from './charts'
+import { FLAT_FILL, HEALTH_SERIES, NEGATIVE, PENDING, PERFORMANCE_CAPS, POSITIVE, REPORTED, SERIES_BANK, SERIES_TOTAL, chartPalette, colorForCategory, performanceFill, seriesAxis, withAlpha } from './charts'
 
 describe('colorForCategory', () => {
   it('gives TRANSFER and SAVINGS a distinct neutral color, not a budgetable category color', () => {
@@ -138,5 +138,25 @@ describe('HEALTH_SERIES', () => {
       current_liabilities: SERIES_BANK,
       long_term_liabilities: PENDING,
     })
+  })
+})
+
+describe('chartPalette', () => {
+  it('maps roles from the active theme', () => {
+    const c = chartPalette({ theme: 'republic', moves: 'green-red' })
+    expect(c.up).toBe('#5BC860')
+    expect(c.series[0]).toBe('#3987e5')
+    expect(c.series).toHaveLength(8)
+    expect(c.heat).toHaveLength(7)
+    expect(c.tooltip).toEqual({ bg: '#1A1A1A', text: '#FFFFFF', border: '#1A1A1A' })
+  })
+
+  it('uses the colour-blind pair for moves', () => {
+    expect(chartPalette({ theme: 'republic', moves: 'cvd' }).down).toBe('#FF9A3C')
+  })
+
+  it('tints performance fills with the palette when given one', () => {
+    const c = chartPalette({ theme: 'blue', moves: 'green-red' })
+    expect(performanceFill(1.5, { cap: 3 }, c)).toBe(withAlpha(c.up, 0.12 + 0.5 * 0.65))
   })
 })

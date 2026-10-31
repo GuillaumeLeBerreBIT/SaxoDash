@@ -14,7 +14,7 @@ describe('HeatTile', () => {
   it('shows a dash for an unknown move, never 0%', () => {
     render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
     expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe('rgba(255, 255, 255, 0.06)')
+    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe('rgb(29, 27, 25)')
   })
 
   it('drops the move when only the ticker fits', () => {

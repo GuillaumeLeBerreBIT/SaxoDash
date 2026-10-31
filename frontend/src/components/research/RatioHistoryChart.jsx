@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { SERIES_TOTAL, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtRatio, periodLabels, ratiosWithHistory } from '../../lib/ratioHistory'
 import { Select } from '../ui'
 
 const MIN_POINTS = 2
 
 export default function RatioHistoryChart({ history }) {
+  const c = useChartColors()
   const ratios = ratiosWithHistory(history).filter(
     (ratio) => history.filter((point) => point[ratio.key] != null).length >= MIN_POINTS,
   )
@@ -34,10 +36,10 @@ export default function RatioHistoryChart({ history }) {
       <div className="mt-3 h-[var(--chart-h-sm)]" role="img" aria-label={`${ratio.label} by fiscal year`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="year" />
-            <YAxis {...axisProps} width={52} tickFormatter={(value) => fmtRatio(value, ratio.format)} />
-            <Tooltip {...chartTooltipProps} formatter={(value) => [fmtRatio(value, ratio.format), ratio.label]} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="year" />
+            <YAxis {...axisProps(c)} width={52} tickFormatter={(value) => fmtRatio(value, ratio.format)} />
+            <Tooltip {...chartTooltipProps(c)} formatter={(value) => [fmtRatio(value, ratio.format), ratio.label]} />
             <Line dataKey="value" stroke={SERIES_TOTAL} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>

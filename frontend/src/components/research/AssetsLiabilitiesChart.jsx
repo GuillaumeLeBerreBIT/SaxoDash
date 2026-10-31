@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { HEALTH_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { balanceRows } from '../../lib/financialHealth'
 import { Card, CardHeader } from '../ui'
 
@@ -13,6 +14,7 @@ const SERIES = [
 ]
 
 export default function AssetsLiabilitiesChart({ annual }) {
+  const c = useChartColors()
   const rows = balanceRows(annual)
   if (!rows.length) return null
 
@@ -34,12 +36,12 @@ export default function AssetsLiabilitiesChart({ annual }) {
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="label" />
-            <YAxis {...axisProps} width={56} tickFormatter={fmtAxisDollars} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="label" />
+            <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
             <Tooltip
-              {...chartTooltipProps}
-              cursor={{ fill: gridProps.stroke }}
+              {...chartTooltipProps(c)}
+              cursor={{ fill: gridProps(c).stroke }}
               formatter={(value, name) => [fmtTooltipDollars(value), name]}
             />
             {SERIES.map(({ key, label, stackId }) => (

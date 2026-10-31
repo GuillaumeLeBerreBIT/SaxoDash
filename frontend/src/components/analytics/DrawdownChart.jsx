@@ -1,11 +1,13 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Card, CardHeader, EmptyState } from '../ui'
 import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis, NEGATIVE } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 import { drawdownDomain } from '../../lib/portfolioStats'
 
 /** Decline from the running peak of the portfolio's own value - no benchmark. */
 export default function DrawdownChart({ series, maxDrawdown }) {
+  const c = useChartColors()
   return (
     <Card>
       <CardHeader
@@ -25,11 +27,11 @@ export default function DrawdownChart({ series, maxDrawdown }) {
                 <stop offset="100%" stopColor={NEGATIVE} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...dateAxisProps} />
-            <YAxis {...axisProps} width={54} {...seriesAxis([...series, { dd: drawdownDomain(series)[0] }], ['dd'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...dateAxisProps(c)} />
+            <YAxis {...axisProps(c)} width={54} {...seriesAxis([...series, { dd: drawdownDomain(series)[0] }], ['dd'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               labelFormatter={formatAxisDate}
               formatter={(v) => [fmtPct(v, { decimals: 1 }), 'Drawdown']}
             />

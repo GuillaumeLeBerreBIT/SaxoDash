@@ -1,10 +1,12 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer } from 'recharts'
 import { fmtPct } from '../lib/format'
-import { AXIS_TEXT, CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, NEGATIVE, POSITIVE } from '../lib/charts'
+import { chartTooltipProps, gridProps } from '../lib/charts'
+import { useChartColors } from '../theme/useChartColors'
 import { toGainersLosersData } from '../lib/performance'
 import { Card, CardHeader, ChartPlaceholder } from './ui'
 
 export default function GainersLosersChart({ positions }) {
+  const c = useChartColors()
   const data = toGainersLosersData(positions)
 
   if (data.length === 0) {
@@ -22,10 +24,10 @@ export default function GainersLosersChart({ positions }) {
       <div className="mt-4 h-[var(--chart-h-lg)] max-w-2xl mx-auto">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
-            <CartesianGrid {...gridProps} horizontal={false} />
+            <CartesianGrid {...gridProps(c)} horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fill: AXIS_TEXT, fontSize: 11 }}
+              tick={{ fill: c.axis, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => `${v}%`}
@@ -33,15 +35,15 @@ export default function GainersLosersChart({ positions }) {
             <YAxis
               type="category"
               dataKey="ticker"
-              tick={{ fill: CATEGORY_AXIS_TEXT, fontSize: 11 }}
+              tick={{ fill: c.axisCategory, fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={56}
             />
-            <Tooltip {...chartTooltipProps} formatter={(v) => [fmtPct(v), 'P&L']} />
+            <Tooltip {...chartTooltipProps(c)} formatter={(v) => [fmtPct(v), 'P&L']} />
             <Bar dataKey="pnlPct" radius={[0, 3, 3, 0]} isAnimationActive={false}>
               {data.map((d) => (
-                <Cell key={d.ticker} fill={d.pnlPct >= 0 ? POSITIVE : NEGATIVE} />
+                <Cell key={d.ticker} fill={d.pnlPct >= 0 ? c.up : c.down} />
               ))}
             </Bar>
           </BarChart>

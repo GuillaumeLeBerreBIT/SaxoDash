@@ -1,9 +1,10 @@
-import { NEGATIVE, POSITIVE } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
 const WIDTH = 120
 const HEIGHT = 32
 
 export default function Sparkline({ values }) {
+  const c = useChartColors()
   if (!values || values.length < 2) return <div style={{ height: HEIGHT }} />
   const min = Math.min(...values)
   const max = Math.max(...values)
@@ -11,7 +12,7 @@ export default function Sparkline({ values }) {
   const points = values
     .map((v, i) => `${((i / (values.length - 1)) * WIDTH).toFixed(1)},${(HEIGHT - ((v - min) / span) * HEIGHT).toFixed(1)}`)
     .join(' ')
-  const stroke = values[values.length - 1] >= values[0] ? POSITIVE : NEGATIVE
+  const stroke = values[values.length - 1] >= values[0] ? c.up : c.down
 
   return (
     <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} preserveAspectRatio="none" aria-hidden="true">

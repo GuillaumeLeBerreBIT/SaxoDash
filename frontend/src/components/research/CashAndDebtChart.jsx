@@ -2,6 +2,7 @@ import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveConta
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { HEALTH_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { cashAndDebtRows } from '../../lib/financialHealth'
 import { Card, CardHeader, InfoTip } from '../ui'
 
@@ -12,6 +13,7 @@ const SERIES = [
 ]
 
 export default function CashAndDebtChart({ annual }) {
+  const c = useChartColors()
   const rows = cashAndDebtRows(annual)
   if (!rows.length) return null
   const series = SERIES.filter(({ key }) => rows.some((row) => row[key] != null))
@@ -40,13 +42,13 @@ export default function CashAndDebtChart({ annual }) {
       <div className="mt-3 h-[var(--chart-h-md)]" role="img" aria-label={title}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="label" />
-            <YAxis {...axisProps} width={56} tickFormatter={fmtAxisDollars} />
-            <ReferenceLine y={0} stroke={gridProps.stroke} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="label" />
+            <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
+            <ReferenceLine y={0} stroke={gridProps(c).stroke} />
             <Tooltip
-              {...chartTooltipProps}
-              cursor={{ fill: gridProps.stroke }}
+              {...chartTooltipProps(c)}
+              cursor={{ fill: gridProps(c).stroke }}
               formatter={(value, name) => [fmtTooltipDollars(value), name]}
             />
             {series.map(({ key, label, kind }) =>

@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 
 import { axisProps, gridProps, chartTooltipProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { Card, CardHeader, InfoTip } from '../ui'
 
 const MIN_POINTS = 2
@@ -25,16 +26,17 @@ const DOMAIN = [-PAD, 100 + PAD]
 const TICKS = [0, 25, 50, 75, 100]
 
 function QuadrantTooltip({ active, payload }) {
+  const c = useChartColors()
   if (!active || !payload?.length) return null
   const p = payload[0].payload
   return (
     <div
-      style={chartTooltipProps.contentStyle}
+      style={chartTooltipProps(c).contentStyle}
       className="text-[var(--fig-xs)]"
     >
       <div className="font-medium text-zinc-100 mb-1">{p.symbol}</div>
-      <div style={chartTooltipProps.itemStyle}>Quality: {p.quality}</div>
-      <div style={chartTooltipProps.itemStyle}>Valuation: {p.valuation} (higher = pricier)</div>
+      <div style={chartTooltipProps(c).itemStyle}>Quality: {p.quality}</div>
+      <div style={chartTooltipProps(c).itemStyle}>Valuation: {p.valuation} (higher = pricier)</div>
     </div>
   )
 }
@@ -44,6 +46,7 @@ function QuadrantTooltip({ active, payload }) {
  *  inference across the ratios table above. `points`: `[{symbol, quality,
  *  valuation, isSelf}]`, 0-100 each, from lib/quadrant.js. */
 export default function QualityValuationQuadrant({ points }) {
+  const c = useChartColors()
   if (!points || points.length < MIN_POINTS) return null
 
   const self = points.filter((p) => p.isSelf)
@@ -73,12 +76,12 @@ export default function QualityValuationQuadrant({ points }) {
         <div className="h-[var(--chart-h-md)] flex-1 min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <ScatterChart margin={{ top: 14, right: 20, left: 4, bottom: 4 }}>
-              <CartesianGrid {...gridProps} />
+              <CartesianGrid {...gridProps(c)} />
               <ReferenceArea x1={50} x2={100 + PAD} y1={50} y2={100 + PAD} fill="#f87171" fillOpacity={0.04} />
               <ReferenceArea x1={-PAD} x2={50} y1={-PAD} y2={50} fill="#f87171" fillOpacity={0.04} />
               <ReferenceArea x1={-PAD} x2={50} y1={50} y2={100 + PAD} fill="#34d399" fillOpacity={0.05} />
               <XAxis
-                {...axisProps}
+                {...axisProps(c)}
                 type="number"
                 dataKey="valuation"
                 domain={DOMAIN}
@@ -86,7 +89,7 @@ export default function QualityValuationQuadrant({ points }) {
                 allowDataOverflow
               />
               <YAxis
-                {...axisProps}
+                {...axisProps(c)}
                 type="number"
                 dataKey="quality"
                 domain={DOMAIN}

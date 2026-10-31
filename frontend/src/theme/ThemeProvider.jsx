@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { DENSITY, readAppearance, themeVars } from '../lib/theme.js'
+import { DEFAULT_APPEARANCE, DENSITY, readAppearance, themeVars } from '../lib/theme.js'
 
 const STORAGE_KEY = 'saxodash:appearance'
 
@@ -59,4 +59,9 @@ export function useAppearance() {
   const value = useContext(AppearanceContext)
   if (!value) throw new Error('useAppearance needs ThemeProvider')
   return value
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useAppearanceOrDefault() {
+  return useContext(AppearanceContext) ?? DEFAULT_APPEARANCE
 }

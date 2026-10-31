@@ -3,6 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { Card, CardHeader, MetricTile, Skeleton } from '../ui'
 import { useInvestorCopy } from '../../api/queries'
 import { AXIS_TEXT, SERIES_TOTAL, axisProps, chartTooltipProps, gridProps, seriesAxis } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtDate, fmtMonthYear, fmtPct } from '../../lib/format'
 import { copyCaveat, copySeries, copyVerdict, points } from '../../lib/investors'
 
@@ -45,6 +46,7 @@ function Figures({ copy }) {
 }
 
 export function CopyPerformanceView({ copy, name, subtitle }) {
+  const c = useChartColors()
   if (!copy) return null
 
   const title = `If you had copied ${name}`
@@ -69,15 +71,15 @@ export function CopyPerformanceView({ copy, name, subtitle }) {
       <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="date" tickFormatter={fmtMonthYear} minTickGap={48} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="date" tickFormatter={fmtMonthYear} minTickGap={48} />
             <YAxis
-              {...axisProps}
+              {...axisProps(c)}
               width={56}
               tickFormatter={wholePct}
               {...seriesAxis(rows, ['clone', 'benchmark'], { includeZero: true })}
             />
-            <Tooltip {...chartTooltipProps} labelFormatter={fmtDate} formatter={(value, label) => [onePct(value), label]} />
+            <Tooltip {...chartTooltipProps(c)} labelFormatter={fmtDate} formatter={(value, label) => [onePct(value), label]} />
             <Line
               type="monotone"
               dataKey="benchmark"

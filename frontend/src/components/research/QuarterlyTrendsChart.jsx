@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtAxisPct } from '../../lib/axisFormat'
 import { fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
@@ -15,6 +16,7 @@ const SERIES = [
  *  text (`quarterly_trends`, oldest-first). A margin missing at one period
  *  breaks its own line rather than being guessed. */
 export default function QuarterlyTrendsChart({ trends }) {
+  const c = useChartColors()
   if (!trends?.length) return null
 
   return (
@@ -23,17 +25,17 @@ export default function QuarterlyTrendsChart({ trends }) {
       <div className="mt-4 h-[var(--chart-h-sm)]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={trends} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="period" />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="period" />
             <YAxis
-              {...axisProps}
+              {...axisProps(c)}
               width={44}
               allowDecimals={false}
               domain={[(min) => Math.floor(min), (max) => Math.ceil(max)]}
               tickFormatter={fmtAxisPct}
             />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               formatter={(value, name) => [fmtPct(value, { sign: false, decimals: 1 }), name]}
             />
             {SERIES.map((s) => (

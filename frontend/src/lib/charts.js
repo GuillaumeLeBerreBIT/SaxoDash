@@ -1,5 +1,6 @@
 import { fmtDayMonth, fmtEur } from './format'
 import { niceAxis } from './niceTicks'
+import { THEMES, themeVars } from './theme'
 
 // This file is the ONLY source of chart color in the app - a component that
 // needs a gain/loss/warning/neutral hex for an SVG, canvas, or recharts prop
@@ -76,27 +77,51 @@ export const PERFORMANCE_CAPS = { day: 3, sincePurchase: 30, month: 9 }
 export const FLAT_MOVE = 0.1
 export const FLAT_FILL = withAlpha(AXIS_TEXT, 0.18)
 
-export function performanceFill(pct, { cap, flat = FLAT_MOVE }) {
-  if (pct == null || Number.isNaN(Number(pct))) return null
-  const n = Number(pct)
-  if (Math.abs(n) < flat) return FLAT_FILL
-  const intensity = Math.min(1, Math.abs(n) / cap)
-  return withAlpha(n >= 0 ? POSITIVE : NEGATIVE, 0.12 + intensity * 0.65)
+export function chartPalette({ theme, moves }) {
+  const roles = themeVars(THEMES[theme] ? theme : 'republic', moves)
+  const pick = (name) => roles[`--sd-${name}`]
+  return {
+    up: pick('up'),
+    down: pick('down'),
+    flat: pick('flat'),
+    warn: pick('warn'),
+    earn: pick('earn'),
+    grid: pick('grid'),
+    axis: pick('ink-3'),
+    axisCategory: pick('ink-2'),
+    crosshair: pick('crosshair'),
+    bench: pick('bench'),
+    primary: pick('primary-line'),
+    estimate: pick('ink-3'),
+    track: pick('pill'),
+    series: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => pick(`s${i}`)),
+    heat: ['heat-d3', 'heat-d2', 'heat-d1', 'heat-0', 'heat-u1', 'heat-u2', 'heat-u3'].map(pick),
+    tooltip: { bg: pick('raised'), text: pick('ink'), border: pick('line') },
+  }
 }
 
-export const chartTooltipProps = {
+export function performanceFill(pct, { cap, flat = FLAT_MOVE }, c) {
+  if (pct == null || Number.isNaN(Number(pct))) return null
+  const n = Number(pct)
+  if (Math.abs(n) < flat) return c ? withAlpha(c.flat, 0.18) : FLAT_FILL
+  const intensity = Math.min(1, Math.abs(n) / cap)
+  const base = c ? (n >= 0 ? c.up : c.down) : n >= 0 ? POSITIVE : NEGATIVE
+  return withAlpha(base, 0.12 + intensity * 0.65)
+}
+
+export const chartTooltipProps = (c) => ({
   contentStyle: {
-    background: '#18181b',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: c.tooltip.bg,
+    border: `1px solid ${c.tooltip.border}`,
     borderRadius: '8px',
     boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.5)',
     fontSize: '12px',
     padding: '8px 12px',
   },
-  labelStyle: { color: '#a1a1aa', fontSize: '11px', marginBottom: '4px' },
-  itemStyle: { color: '#fafafa', padding: '1px 0' },
-  cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
-}
+  labelStyle: { color: c.axisCategory, fontSize: '11px', marginBottom: '4px' },
+  itemStyle: { color: c.tooltip.text, padding: '1px 0' },
+  cursor: { stroke: c.crosshair, fill: withAlpha(c.crosshair, 0.12) },
+})
 
 // Blue-family ramp for sector / category breakdowns. Lifted here so the
 // Portfolio sector bars and the Dashboard exposure donut share one.
@@ -119,14 +144,16 @@ export const HOLDINGS_PALETTE = [
 /** Deterministic color per ticker from HOLDINGS_PALETTE - same ticker always
  *  gets the same color across the app, without the backend's per-position
  *  hash-to-raw-hex color (which produces arbitrary, sometimes muddy hues). */
-export function colorForTicker(ticker) {
+export function colorForTicker(ticker, c) {
+  const palette = c ? c.series : HOLDINGS_PALETTE
   let hash = 0
   for (let i = 0; i < (ticker || '').length; i++) hash = (hash * 31 + ticker.charCodeAt(i)) >>> 0
-  return HOLDINGS_PALETTE[hash % HOLDINGS_PALETTE.length]
+  return palette[hash % palette.length]
 }
 
-export function colorForRank(index) {
-  return HOLDINGS_PALETTE[index % HOLDINGS_PALETTE.length]
+export function colorForRank(index, c) {
+  const palette = c ? c.series : HOLDINGS_PALETTE
+  return palette[index % palette.length]
 }
 
 // Fixed order (not hashed) so the same category always gets the same color
@@ -149,23 +176,23 @@ export function colorForCategory(category) {
   return idx === -1 ? NEUTRAL_CATEGORY_COLOR : HOLDINGS_PALETTE[idx % HOLDINGS_PALETTE.length]
 }
 
-export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
+export const gridProps = (c) => ({ stroke: c.grid, vertical: false })
 
-export const axisProps = {
-  tick: { fill: AXIS_TEXT, fontSize: 11 },
+export const axisProps = (c) => ({
+  tick: { fill: c.axis, fontSize: 11 },
   axisLine: false,
   tickLine: false,
-}
+})
 
 export const formatAxisDate = fmtDayMonth
 
-export const dateAxisProps = { ...axisProps, dataKey: 'date', tickFormatter: formatAxisDate }
+export const dateAxisProps = (c) => ({ ...axisProps(c), dataKey: 'date', tickFormatter: formatAxisDate })
 
-export const moneyAxisProps = {
-  ...axisProps,
+export const moneyAxisProps = (c) => ({
+  ...axisProps(c),
   width: 70,
   tickFormatter: (value) => fmtEur(value, { decimals: 0 }),
-}
+})
 
 function paddedDomain([min, max]) {
   const span = max - min

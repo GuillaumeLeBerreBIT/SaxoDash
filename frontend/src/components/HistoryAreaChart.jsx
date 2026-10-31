@@ -3,11 +3,13 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, seriesAxis, formatAxisDate } from '../lib/charts'
+import { useChartColors } from '../theme/useChartColors'
 import { RangePills } from './RangePills'
 import { Card, CardHeader } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
 export default function HistoryAreaChart({ title, subtitle, dataKey, name, color }) {
+  const c = useChartColors()
   const [range, setRange] = useState('6M')
   const { data: history, isLoading, error, refetch } = useNetWorthHistory(range)
   const data = history?.filter((row) => row[dataKey] != null)
@@ -32,11 +34,11 @@ export default function HistoryAreaChart({ title, subtitle, dataKey, name, color
                   <stop offset="100%" stopColor={color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid {...gridProps} />
-              <XAxis {...dateAxisProps} />
-              <YAxis {...moneyAxisProps} {...seriesAxis(data ?? [], [dataKey])} />
+              <CartesianGrid {...gridProps(c)} />
+              <XAxis {...dateAxisProps(c)} />
+              <YAxis {...moneyAxisProps(c)} {...seriesAxis(data ?? [], [dataKey])} />
               <Tooltip
-                {...chartTooltipProps}
+                {...chartTooltipProps(c)}
                 labelFormatter={formatAxisDate}
                 formatter={(value) => [fmtEur(value), name]}
               />

@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 
 import { axisProps, BEAT, chartTooltipProps, ESTIMATE, gridProps, MISS, REPORTED, surpriseColor, TRACK } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 import { Card, CardHeader } from '../ui'
 
@@ -24,6 +25,7 @@ const surpriseTag = (v) => (v == null ? '' : fmtPct(v, { decimals: 1 }))
  *  labelled with the surprise %. `data`: `[{ period, actual, estimate,
  *  surprise }]`; `format` renders the Y axis and tooltip values. */
 export default function EpsBarChart({ title, subtitle, data, format }) {
+  const c = useChartColors()
   if (!data?.length) return null
 
   const forward = data.filter((row) => row.forward)
@@ -49,15 +51,15 @@ export default function EpsBarChart({ title, subtitle, data, format }) {
       <div className="mt-4 h-[var(--chart-h-md)]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(c)} />
             {forward.length > 0 && (
               <ReferenceArea x1={forward[0].period} x2={forward.at(-1).period} fill={TRACK} strokeOpacity={0} />
             )}
-            <XAxis {...axisProps} dataKey="period" />
-            <YAxis {...axisProps} width={52} tickFormatter={format} />
+            <XAxis {...axisProps(c)} dataKey="period" />
+            <YAxis {...axisProps(c)} width={52} tickFormatter={format} />
             <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               cursor={{ fill: 'rgba(255,255,255,0.03)' }}
               formatter={(value, name) => [format(value), name]}
             />
