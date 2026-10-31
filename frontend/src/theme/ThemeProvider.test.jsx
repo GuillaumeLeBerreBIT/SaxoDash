@@ -57,6 +57,16 @@ describe('ThemeProvider', () => {
     expect(root.style.getPropertyValue('--sd-accent')).toBe('#7FB2FF')
   })
 
+  it('still applies a change when storage refuses writes', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota')
+    })
+    mount()
+    act(() => probe.current.setAppearance({ theme: 'blue' }))
+    expect(root.dataset.theme).toBe('blue')
+    expect(root.style.getPropertyValue('--sd-accent')).toBe('#7FB2FF')
+  })
+
   it('writes density sizes', () => {
     mount()
     expect(root.style.getPropertyValue('--sd-row-h')).toBe('46px')

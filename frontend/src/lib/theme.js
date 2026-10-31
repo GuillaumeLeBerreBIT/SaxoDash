@@ -140,7 +140,7 @@ export function contrastRatio(hexA, hexB) {
 }
 
 export function readAppearance(raw) {
-  let parsed = null
+  let parsed
   try {
     parsed = JSON.parse(raw)
   } catch {

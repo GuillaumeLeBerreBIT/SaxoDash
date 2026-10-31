@@ -1,24 +1,24 @@
-import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DENSITY, readAppearance, themeVars } from '../lib/theme.js'
 
 const STORAGE_KEY = 'saxodash:appearance'
 
 const AppearanceContext = createContext(null)
 
-function load() {
+function tryStorage(action, fallback) {
   try {
-    return readAppearance(localStorage.getItem(STORAGE_KEY))
+    return action()
   } catch {
-    return readAppearance(null)
+    return fallback
   }
 }
 
+function load() {
+  return readAppearance(tryStorage(() => localStorage.getItem(STORAGE_KEY), null))
+}
+
 function persist(appearance) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appearance))
-  } catch {
-    return
-  }
+  tryStorage(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(appearance)), null)
 }
 
 function apply({ theme, moves, density }) {
@@ -41,12 +41,12 @@ export function ThemeProvider({ children }) {
     apply(appearance)
   }, [appearance])
 
+  useEffect(() => {
+    persist(appearance)
+  }, [appearance])
+
   const setAppearance = useCallback((patch) => {
-    setState((current) => {
-      const next = readAppearance(JSON.stringify({ ...current, ...patch }))
-      persist(next)
-      return next
-    })
+    setState((current) => readAppearance(JSON.stringify({ ...current, ...patch })))
   }, [])
 
   const value = useMemo(() => ({ ...appearance, setAppearance }), [appearance, setAppearance])

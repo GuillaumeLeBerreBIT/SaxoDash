@@ -16,9 +16,11 @@
   --color-red-300: var(--sd-down);
   --color-red-400: var(--sd-down);
   --color-red-500: var(--sd-down);
+  --color-red-600: var(--sd-down);
   --color-amber-300: var(--sd-warn);
   --color-amber-400: var(--sd-warn);
   --color-amber-500: var(--sd-warn);
+  --color-amber-600: var(--sd-warn);
   --color-blue-300: var(--sd-accent);
   --color-blue-400: var(--sd-accent);
   --color-blue-500: var(--sd-accent);
