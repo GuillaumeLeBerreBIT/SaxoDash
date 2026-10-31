@@ -1,11 +1,39 @@
 @import "tailwindcss";
+@import "./theme/bridge.css";
+
+@theme inline {
+  --color-page: var(--sd-page);
+  --color-pane: var(--sd-pane);
+  --color-raised: var(--sd-raised);
+  --color-hover: var(--sd-hover);
+  --color-selected: var(--sd-selected);
+  --color-tile: var(--sd-tile);
+  --color-pill: var(--sd-pill);
+  --color-track: var(--sd-track);
+  --color-bar: var(--sd-bar);
+  --color-ink: var(--sd-ink);
+  --color-ink-2: var(--sd-ink-2);
+  --color-ink-3: var(--sd-ink-3);
+  --color-on-accent: var(--sd-on-accent);
+  --color-up: var(--sd-up);
+  --color-down: var(--sd-down);
+  --color-flat: var(--sd-flat);
+  --color-warn: var(--sd-warn);
+  --color-earn: var(--sd-earn);
+  --color-held: var(--sd-held);
+  --color-up-subtle: var(--sd-up-subtle);
+  --color-down-subtle: var(--sd-down-subtle);
+  --color-earn-subtle: var(--sd-earn-subtle);
+  --color-accent: var(--sd-accent);
+  --color-accent-subtle: var(--sd-accent-subtle);
+  --color-line: var(--sd-line);
+  --color-line-input: var(--sd-line-input);
+  --color-focus: var(--sd-focus);
+}
 
 @theme {
-  --font-sans: 'Geist', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', monospace;
-  /* Past Tailwind's largest default (2xl = 1536px, a common laptop
-     resolution) for genuinely large monitors, where cards/tables/rows
-     get more breathing room via 3xl: variants. */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --breakpoint-3xl: 1920px;
   --animate-pagein: pagein 200ms ease-out both;
   @keyframes pagein {
@@ -14,16 +42,6 @@
   }
 }
 
-/* Documented type scale for new components. Plain custom properties, not
-   Tailwind @theme tokens, so nothing existing is overridden - reference these
-   as text-[var(--fig-lg)] where a component wants to stay on the scale.
-   2xs 11 · xs 12 · sm 13 · md 15 · lg 19 · xl 22 · 2xl 24 (px)
-
-   This scale was audited (2026-09) against the "feels 150% zoomed in"
-   complaint and confirmed NOT to be the cause - it's already restrained.
-   Do not introduce a new size outside this list; where a page needs a
-   bigger "hero" figure, reuse StatRow's `lead` clamp() rather than adding
-   an --fig-3xl. */
 :root {
   --fig-2xs: 0.6875rem;
   --fig-xs: 0.75rem;
@@ -33,59 +51,24 @@
   --fig-xl: 1.375rem;
   --fig-2xl: 1.5rem;
 
-  /* Chart heights, so density decisions live in one place instead of a
-     literal per component. Values match the sizes already in near-universal
-     use across the app - sm: donut/small panel · md: standard panel · lg: primary chart. */
   --chart-h-sm: 200px;
   --chart-h-md: 220px;
   --chart-h-lg: 260px;
 
-  /* Semantic color reference - this is the canonical mapping from a role to
-     an existing Tailwind class. Components should reach for the Tailwind
-     class, not a new hex value; these custom properties exist for the few
-     places (below) that can't use a Tailwind class at all. For SVG/canvas/
-     recharts contexts (which can't use Tailwind classes either), use
-     lib/charts.js's exported constants instead - never inline a hex there.
-       background        -> bg-zinc-950           (#09090b)
-       surface (card)     -> bg-zinc-900 (gradiented, see Card in ui.jsx)
-       elevated surface   -> bg-zinc-900 + shadow-lg/2xl (menus, modals)
-       border             -> border-white/[0.06]
-       border (emphasis)  -> border-white/[0.10]
-       text primary       -> text-zinc-50 / text-zinc-100
-       text secondary     -> text-zinc-400
-       text muted         -> text-zinc-500 / text-zinc-600
-       positive           -> text-emerald-400  (also lib/charts.js BEAT/POSITIVE)
-       negative           -> text-red-400      (also lib/charts.js MISS/NEGATIVE)
-       warning            -> text-amber-400    (also lib/charts.js PENDING)
-       info / accent      -> text-blue-400     (also lib/charts.js REPORTED)
-     Financial state must never be color-only: pair with a +/- sign, an icon,
-     or a text label (see BudgetProgressBar for the one remaining gap). */
-  --color-border: rgba(255, 255, 255, 0.06);
-  --color-focus-ring: rgba(59, 130, 246, 0.5);
-
-  /* Motion - two durations cover every transition in the app. Don't add a
-     third without tying it to what's being communicated (state feedback vs.
-     navigation), per the audit's animation-philosophy finding. */
-  --motion-fast: 150ms;  /* hover/focus feedback - buttons, rows, inputs */
-  --motion-page: 200ms;  /* route change fade, expand/collapse */
+  --motion-fast: 150ms;
+  --motion-page: 200ms;
 }
 
 html, body {
-  background: #09090b;
-  color: #fafafa;
-  font-family: 'Geist', sans-serif;
+  background-color: var(--sd-page);
+  color: var(--sd-ink);
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 body {
   margin: 0;
-}
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background: radial-gradient(900px 420px at 62% -80px, rgba(59, 130, 246, 0.055), transparent 70%);
+  background-image: linear-gradient(180deg, var(--sd-page-top) 0, var(--sd-page) 560px);
+  background-repeat: no-repeat;
 }
 #root {
   position: relative;
@@ -97,7 +80,7 @@ button, a, [role="button"], tr, input, select {
 }
 button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible, select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 2px var(--sd-focus);
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -108,9 +91,9 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focu
 
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: #27272a; border-radius: 6px; }
-*::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+*::-webkit-scrollbar-thumb { background: var(--sd-pill); border-radius: 6px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--sd-line-input); }
 
 .num { font-variant-numeric: tabular-nums; }
-.recharts-cartesian-axis-tick-value { fill: #71717a !important; font-size: 11px; }
+.recharts-cartesian-axis-tick-value { fill: var(--sd-ink-3) !important; font-size: 11px; }
 .recharts-tooltip-wrapper { outline: none; }
