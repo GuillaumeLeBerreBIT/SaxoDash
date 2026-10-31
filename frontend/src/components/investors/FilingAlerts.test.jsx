@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('../../api/queries')
@@ -87,10 +88,11 @@ describe('FilingAlerts', () => {
     expect(mutate).toHaveBeenCalledTimes(1)
   })
 
-  it('closes on a click outside and when a filing is picked', () => {
+  it('closes on a click outside and when a filing is picked', async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
     renderBell({ unread: 1, alerts: [berkshire] })
     openPanel('Filing alerts, 1 unread')
-    fireEvent.pointerDown(document.body)
+    await user.click(document.body)
     expect(screen.queryByRole('dialog')).toBeNull()
     openPanel('Filing alerts, 1 unread')
     fireEvent.click(screen.getByRole('link'))
@@ -103,7 +105,7 @@ describe('FilingAlerts', () => {
     queries.useMarkAlertsRead.mockReturnValue({ mutate })
     render(<MemoryRouter><FilingAlerts side="right" panelLeft={228} /></MemoryRouter>)
     openPanel('Filing alerts')
-    expect(screen.getByRole('dialog').style.left).toBe('228px')
+    expect(screen.getByRole('dialog')).toHaveAttribute('data-side', 'right')
   })
 
   it('does not write when there was nothing unread', () => {

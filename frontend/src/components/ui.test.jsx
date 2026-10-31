@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import {
@@ -148,16 +149,17 @@ describe('ui primitives', () => {
     expect(screen.getByText('Form goes here')).toBeInTheDocument()
   })
 
-  it('Modal calls onClose when the backdrop is clicked, not when the panel is', () => {
+  it('Modal calls onClose when the backdrop is clicked, not when the panel is', async () => {
     const onClose = vi.fn()
     render(
       <Modal title="Label an account" onClose={onClose}>
         <p>Form goes here</p>
       </Modal>,
     )
-    fireEvent.click(screen.getByText('Form goes here'))
+    const user = userEvent.setup({ pointerEventsCheck: 0 })
+    await user.click(screen.getByText('Form goes here'))
     expect(onClose).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('dialog').parentElement)
+    await user.click(document.body)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -212,6 +214,18 @@ describe('Card', () => {
     expect(screen.getByRole('heading', { name: 'Positions' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Positions options' })).toBeInTheDocument()
     expect(screen.getByText('rows')).toBeInTheDocument()
+  })
+
+  it('opens its options menu from the menu items', async () => {
+    const onSelect = vi.fn()
+    render(
+      <Card title="Positions" menu={[{ label: 'Export CSV', onSelect }]}>
+        rows
+      </Card>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Positions options' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Export CSV' }))
+    expect(onSelect).toHaveBeenCalledTimes(1)
   })
 
   it('renders a bare panel without context or title', () => {

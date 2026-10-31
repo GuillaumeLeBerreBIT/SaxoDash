@@ -68,6 +68,9 @@
 }
 
 @layer components {
+  .sd-overlay {
+    box-shadow: 0 16px 40px -12px rgb(0 0 0 / 0.8);
+  }
   [data-theme="light"] .sd-panel,
   [data-theme="light"] .sd-raised {
     box-shadow: 0 0 0 1px var(--sd-line);

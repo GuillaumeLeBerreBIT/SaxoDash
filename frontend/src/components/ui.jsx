@@ -1,7 +1,8 @@
-import { useId, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Info, MoreHorizontal, X } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, MoreHorizontal } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
+import { Dialog, Menu, Tooltip } from './overlays'
 
 const STATUS_DOT_TONES = {
   ok: 'bg-ok',
@@ -18,6 +19,18 @@ export function StatusDot({ tone = 'ok', className = '' }) {
       className={`inline-block w-[7px] h-[7px] rounded-full shrink-0 ${STATUS_DOT_TONES[tone] || STATUS_DOT_TONES.ok} ${className}`}
     />
   )
+}
+
+const PANEL_MENU_BUTTON =
+  'w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink'
+
+function PanelMenu({ label, items }) {
+  const button = (
+    <button type="button" aria-label={label} className={PANEL_MENU_BUTTON}>
+      <MoreHorizontal size={16} aria-hidden="true" />
+    </button>
+  )
+  return Array.isArray(items) ? <Menu trigger={button} items={items} /> : button
 }
 
 function PanelHead({ context, dot, title, right, menu, as: Heading = 'h2', className = '' }) {
@@ -40,15 +53,7 @@ function PanelHead({ context, dot, title, right, menu, as: Heading = 'h2', class
       {(right || menu) && (
         <div className="flex items-center gap-1.5 min-w-0 max-w-full">
           {right}
-          {menu && (
-            <button
-              type="button"
-              aria-label={menuLabel}
-              className="w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink"
-            >
-              <MoreHorizontal size={16} aria-hidden="true" />
-            </button>
-          )}
+          {menu && <PanelMenu label={menuLabel} items={menu} />}
         </div>
       )}
     </div>
@@ -283,31 +288,15 @@ export function EmptyState({ title, hint, className = '' }) {
  *  CommandPalette already uses, generalized. Reach for this instead of a
  *  bespoke overlay whenever a page needs to collect input in a focused
  *  surface (a form, a confirmation) rather than inline on the page. */
+/** The one modal/dialog primitive - same backdrop+panel pattern
+ *  CommandPalette already uses, generalized. Reach for this instead of a
+ *  bespoke overlay whenever a page needs to collect input in a focused
+ *  surface (a form, a confirmation) rather than inline on the page. */
 export function Modal({ title, children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.key === 'Escape' && onClose()}
-        className="sd-raised w-[min(420px,92vw)] rounded-xl bg-raised shadow-2xl shadow-black/50"
-      >
-        <div className="flex items-center justify-between px-[18px] h-12 border-b border-line">
-          <span className="text-[14px] font-semibold text-ink">{title}</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="w-7 h-7 rounded-[7px] text-ink-3 hover:text-ink hover:bg-hover flex items-center justify-center"
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <div className="p-[18px]">{children}</div>
-      </div>
-    </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()} title={title}>
+      {children}
+    </Dialog>
   )
 }
 
@@ -318,52 +307,12 @@ export function Modal({ title, children, onClose }) {
  *  target: nothing else on the page depends on it opening or closing.
  */
 export function InfoTip({ children, label }) {
-  const [open, setOpen] = useState(false)
-  // Opens upward by default (the common case: a trigger below the fold with
-  // room above it) but flips below when there genuinely isn't room - a long
-  // explanation on a trigger near the top of a card otherwise renders with
-  // its opening lines pushed off the top of the viewport, unreadable. 160px
-  // is a rough "a few lines of tooltip" budget, not an exact measurement of
-  // this tip's actual height (which varies per caller and isn't known until
-  // it renders) - good enough to catch the real failure case.
-  const [openBelow, setOpenBelow] = useState(false)
-  const triggerRef = useRef(null)
-  const id = useId()
-
-  const show = () => {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    setOpenBelow(rect ? rect.top < 160 : false)
-    setOpen(true)
-  }
-  const hide = () => setOpen(false)
-
   return (
-    <span className="relative inline-flex">
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label={label}
-        aria-describedby={id}
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        className="text-ink-3 hover:text-ink rounded-full"
-      >
+    <Tooltip content={children}>
+      <button type="button" aria-label={label} className="text-ink-3 hover:text-ink rounded-full">
         <Info size={13} />
       </button>
-      {open && (
-        <span
-          id={id}
-          role="tooltip"
-          className={`sd-raised absolute z-20 left-1/2 -translate-x-1/2 w-64 rounded-[10px] bg-raised px-3 py-2 text-[12px] leading-snug text-ink-2 shadow-lg shadow-black/40 ${
-            openBelow ? 'top-full mt-2' : 'bottom-full mb-2'
-          }`}
-        >
-          {children}
-        </span>
-      )}
-    </span>
+    </Tooltip>
   )
 }
 

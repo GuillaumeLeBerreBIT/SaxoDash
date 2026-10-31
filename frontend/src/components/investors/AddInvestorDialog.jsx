@@ -11,7 +11,7 @@ const HINT = 'Type at least 3 characters of a fund or manager name.'
 
 function Action({ filer, onAdd, pending }) {
   if (filer.tracked) {
-    return <Link to={`/investors/${filer.slug}`} className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">Open</Link>
+    return <Link to={`/investors/${filer.slug}`} className="text-[12px] text-accent hover:text-ink">Open</Link>
   }
   if (!filer.last_13f) return null
   return <Button size="sm" disabled={pending} aria-label={`Add ${filer.name}`} onClick={() => onAdd(filer.cik)}>Add</Button>
@@ -28,8 +28,8 @@ function Filer({ filer, onAdd, pending }) {
   return (
     <li className="py-2 flex items-center justify-between gap-3">
       <span className="min-w-0">
-        <span className="block truncate text-[var(--fig-sm)] text-zinc-100">{filer.name}</span>
-        <span className={`block text-[var(--fig-2xs)] ${filer.stale && !filer.tracked ? 'text-amber-400' : 'text-zinc-500'}`}>
+        <span className="block truncate text-[13px] text-ink">{filer.name}</span>
+        <span className={`block text-[11px] ${filer.stale && !filer.tracked ? 'text-warn' : 'text-ink-3'}`}>
           {filerNote(filer)}
         </span>
       </span>
@@ -39,12 +39,12 @@ function Filer({ filer, onAdd, pending }) {
 }
 
 function Results({ query, search, onAdd, pending }) {
-  if (query.length < MIN_QUERY) return <p className="text-[var(--fig-xs)] text-zinc-500">{HINT}</p>
+  if (query.length < MIN_QUERY) return <p className="text-[12px] text-ink-3">{HINT}</p>
   if (search.error) return <Alert>{search.error.message}</Alert>
   if (search.isFetching || !search.data) return <Skeleton className="h-24" />
-  if (search.data.length === 0) return <p className="text-[var(--fig-xs)] text-zinc-500">{`No 13F filer matches “${query}”.`}</p>
+  if (search.data.length === 0) return <p className="text-[12px] text-ink-3">{`No 13F filer matches “${query}”.`}</p>
   return (
-    <ul className="divide-y divide-white/[0.06] max-h-72 overflow-y-auto">
+    <ul className="divide-y divide-line max-h-72 overflow-y-auto">
       {search.data.map((filer) => <Filer key={filer.cik} filer={filer} onAdd={onAdd} pending={pending} />)}
     </ul>
   )
@@ -78,7 +78,7 @@ export default function AddInvestorDialog({ onClose }) {
         />
         {add.error ? <Alert>{add.error.message}</Alert> : null}
         <Results query={query} search={search} onAdd={addFiler} pending={add.isPending} />
-        <p className="text-[var(--fig-2xs)] text-zinc-500">
+        <p className="text-[11px] text-ink-3">
           Searches SEC EDGAR for institutional managers that file form 13F. Five years of filings are imported in the background.
         </p>
       </div>

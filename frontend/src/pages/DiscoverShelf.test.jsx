@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import DiscoverShelf from './DiscoverShelf'
@@ -90,10 +91,10 @@ describe('DiscoverShelf', () => {
     )
   })
 
-  it('adds a stock to a watchlist without leaving the page', () => {
+  it('adds a stock to a watchlist without leaving the page', async () => {
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Add FICO to a list' }))
-    fireEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Ideas/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Add FICO to a list' }))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Ideas/ }))
     expect(toggleList).toHaveBeenCalledWith({ id: 1, name: 'Ideas', items: [] })
     expect(screen.queryByText('Research page')).not.toBeInTheDocument()
   })
