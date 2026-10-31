@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import {
   Alert,
   Button,
+  Card,
   CardHeader,
   EmptyState,
   InstrumentLogo,
@@ -25,6 +26,11 @@ import {
   TBtn,
   Chip,
   QueryState,
+  Segmented,
+  Tag,
+  Tile,
+  StatusDot,
+  Move,
 } from './ui'
 
 describe('ui primitives', () => {
@@ -183,15 +189,105 @@ describe('DayChange', () => {
     render(<DayChange value={-0.003} />)
     render(<DayChange value={0} />)
     const [negative, zero] = screen.getAllByText('0.00%')
-    expect(negative.className).toContain('text-zinc-500')
-    expect(negative.className).not.toContain('text-red-400')
-    expect(zero.className).toContain('text-zinc-500')
-    expect(zero.className).not.toContain('text-emerald-400')
+    expect(negative.className).toContain('text-flat')
+    expect(negative.className).not.toContain('text-down')
+    expect(zero.className).toContain('text-flat')
+    expect(zero.className).not.toContain('text-up')
   })
 
-  it('keeps colour for real moves', () => {
+  it('keeps colour and an arrow for real moves', () => {
     render(<DayChange value={1.2} />)
-    expect(screen.getByText('+1.20%').className).toContain('text-emerald-400')
+    expect(screen.getByText('▲ 1.20%').className).toContain('text-up')
+  })
+})
+
+describe('Card', () => {
+  it('Card renders context row, title and menu button', () => {
+    render(
+      <Card context="Saxo · 30 Oct" dot="ok" title="Positions" menu>
+        rows
+      </Card>,
+    )
+    expect(screen.getByText('Saxo · 30 Oct')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Positions' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Positions options' })).toBeInTheDocument()
+    expect(screen.getByText('rows')).toBeInTheDocument()
+  })
+
+  it('renders a bare panel without context or title', () => {
+    const { container } = render(<Card>body</Card>)
+    expect(container.firstChild).toHaveClass('bg-pane', 'rounded-xl', 'sd-panel')
+    expect(screen.queryByRole('heading')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('drops side padding when flush', () => {
+    const { container } = render(<Card flush title="Holdings">table</Card>)
+    expect(container.firstChild).not.toHaveClass('px-[18px]')
+  })
+
+  it('keeps old interactive callers clickable', () => {
+    const onClick = vi.fn()
+    render(<Card interactive onClick={onClick}>open</Card>)
+    fireEvent.click(screen.getByText('open'))
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Segmented', () => {
+  const options = [
+    { value: '3M', label: '3M' },
+    { value: '6M', label: '6M' },
+  ]
+
+  it('Segmented reports the picked value and marks it pressed', () => {
+    const onChange = vi.fn()
+    render(<Segmented label="Range" options={options} value="6M" onChange={onChange} />)
+    expect(screen.getByRole('group', { name: 'Range' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '6M' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '3M' })).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(screen.getByRole('button', { name: '3M' }))
+    expect(onChange).toHaveBeenCalledWith('3M')
+  })
+})
+
+describe('Move', () => {
+  it('Move shows arrow and sign', () => {
+    const { container } = render(<Move value={-1.4} />)
+    expect(container).toHaveTextContent('▼ 1.40%')
+    expect(container.firstChild.className).toContain('text-down')
+  })
+
+  it('shows an up arrow for a gain and honours digits', () => {
+    const { container } = render(<Move value={2.345} digits={1} />)
+    expect(container).toHaveTextContent('▲ 2.3%')
+    expect(container.firstChild.className).toContain('text-up')
+  })
+
+  it('Move renders absent as a dash', () => {
+    const { container } = render(<Move value={null} />)
+    expect(container).toHaveTextContent('—')
+    expect(container.firstChild.className).toContain('text-ink-3')
+  })
+})
+
+describe('Tag, Tile and StatusDot', () => {
+  it('Tag example', () => {
+    render(<Tag tone="example">Example</Tag>)
+    expect(screen.getByText('Example')).toHaveClass('text-warn')
+  })
+
+  it('Tile shows label, value and sub-line', () => {
+    render(<Tile label="Win rate" value="62%" sub="last 12 months" />)
+    expect(screen.getByText('Win rate')).toBeInTheDocument()
+    expect(screen.getByText('62%')).toHaveClass('num')
+    expect(screen.getByText('last 12 months')).toBeInTheDocument()
+  })
+
+  it('StatusDot is decorative and toned', () => {
+    const { container } = render(<StatusDot tone="warn" />)
+    expect(container.firstChild).toHaveAttribute('aria-hidden', 'true')
+    expect(container.firstChild.className).toContain('bg-warn')
   })
 })
 

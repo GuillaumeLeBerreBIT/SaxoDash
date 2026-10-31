@@ -33,7 +33,7 @@ describe('DiscoverCard', () => {
 
   it('shows the change with its sign, not colour alone', () => {
     renderCard()
-    expect(screen.getByText('-1.25%')).toBeInTheDocument()
+    expect(screen.getByText('▼ 1.25%')).toBeInTheDocument()
   })
 
   it('opens Research on the overview for the exact instrument', () => {

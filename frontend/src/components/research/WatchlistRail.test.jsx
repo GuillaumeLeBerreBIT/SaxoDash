@@ -61,7 +61,7 @@ describe('WatchlistRail', () => {
     recordLook('NVDA', 750)
     render()
 
-    expect(screen.getByTitle('Since you last looked')).toHaveTextContent('+16.72%')
+    expect(screen.getByTitle('Since you last looked')).toHaveTextContent('▲ 16.72%')
   })
 
   it('stacks the since-last-look change under the day change, outside the symbol cell', () => {
@@ -70,7 +70,7 @@ describe('WatchlistRail', () => {
 
     const badge = screen.getByTitle('Since you last looked')
     expect(screen.getByText('NVDA').parentElement).not.toContainElement(badge)
-    expect(screen.getByText('+1.42%').parentElement).toContainElement(badge)
+    expect(screen.getByText('▲ 1.42%').parentElement).toContainElement(badge)
   })
 
   it('lets the symbol keep its width and the exchange take the squeeze', () => {
@@ -90,7 +90,7 @@ describe('WatchlistRail', () => {
 
     expect(screen.getByText('NVDA')).toBeInTheDocument()
     expect(screen.getByText('875.40')).toBeInTheDocument()
-    expect(screen.getByText('+1.42%')).toBeInTheDocument()
+    expect(screen.getByText('▲ 1.42%')).toBeInTheDocument()
   })
 
   it('shows a dash for a row whose quote has not arrived', () => {

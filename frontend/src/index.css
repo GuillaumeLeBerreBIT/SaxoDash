@@ -19,12 +19,16 @@
   --color-down: var(--sd-down);
   --color-flat: var(--sd-flat);
   --color-warn: var(--sd-warn);
+  --color-warn-text: var(--sd-warn-text);
+  --color-ok: var(--sd-ok);
+  --color-error: var(--sd-error);
   --color-earn: var(--sd-earn);
   --color-held: var(--sd-held);
   --color-up-subtle: var(--sd-up-subtle);
   --color-down-subtle: var(--sd-down-subtle);
   --color-earn-subtle: var(--sd-earn-subtle);
   --color-accent: var(--sd-accent);
+  --color-accent-hover: var(--sd-accent-hover);
   --color-accent-subtle: var(--sd-accent-subtle);
   --color-line: var(--sd-line);
   --color-line-input: var(--sd-line-input);
@@ -57,6 +61,20 @@
 
   --motion-fast: 150ms;
   --motion-page: 200ms;
+  --sd-row-h: 46px;
+}
+[data-density="compact"] {
+  --sd-row-h: 38px;
+}
+
+@layer components {
+  [data-theme="light"] .sd-panel,
+  [data-theme="light"] .sd-raised {
+    box-shadow: 0 0 0 1px var(--sd-line);
+  }
+}
+[data-theme="republic"] .sd-tab {
+  border-bottom-color: transparent;
 }
 
 html, body {
