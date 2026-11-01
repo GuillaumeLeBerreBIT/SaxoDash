@@ -1,12 +1,18 @@
 import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
-import { Card, CardHeader } from '../ui'
+import { Card } from '../ui'
+
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const COLUMN = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
+const SPAN_5 = `${COLUMN} min-[1100px]:col-span-5`
+const SPAN_7 = `${COLUMN} min-[1100px]:col-span-7`
+const ROW = 'py-3 border-t border-line first:border-t-0 first:pt-0 last:pb-0'
 
 function GuideGroup({ label, meaning, read }) {
   return (
-    <div className="py-3 first:pt-0 last:pb-0">
-      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
-      <p className="mt-1.5 text-[var(--fig-sm)] text-zinc-500 leading-relaxed">{meaning}</p>
-      <p className="mt-1.5 text-[var(--fig-sm)] text-zinc-300 leading-relaxed">{read}</p>
+    <div className={ROW}>
+      <div className="text-[14px] font-bold text-ink">{label}</div>
+      <p className="mt-1 text-[13.5px] text-ink-2 leading-relaxed">{meaning}</p>
+      <p className="mt-1 text-[13.5px] text-ink leading-relaxed">{read}</p>
     </div>
   )
 }
@@ -14,70 +20,93 @@ function GuideGroup({ label, meaning, read }) {
 function GuideMetric({ name, text }) {
   return (
     <div>
-      <div className="text-[var(--fig-sm)] font-medium text-zinc-200">{name}</div>
-      <p className="mt-1 text-[var(--fig-xs)] text-zinc-400 leading-relaxed">{text}</p>
+      <div className="text-[13.5px] font-semibold text-ink">{name}</div>
+      <p className="mt-0.5 text-[13px] text-ink-2 leading-relaxed">{text}</p>
     </div>
+  )
+}
+
+function Snapshot() {
+  return (
+    <Card context="What each group reads, and what counts as good, ok, or caution" dot="off" title="Investment snapshot">
+      {SNAPSHOT_GUIDE.map((g) => (
+        <GuideGroup key={g.key} label={g.label} meaning={g.meaning} read={g.read} />
+      ))}
+    </Card>
+  )
+}
+
+function Ratios() {
+  return (
+    <Card context="What each ratio measures, and where it's most useful" dot="off" title="Ratios">
+      {RATIO_GUIDE.map((group) => (
+        <div key={group.label} className={ROW}>
+          <div className="text-[14px] font-bold text-ink">{group.label}</div>
+          <div className="mt-2 space-y-3">
+            {group.metrics.map((m) => (
+              <GuideMetric key={m.name} name={m.name} text={m.text} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </Card>
+  )
+}
+
+function Playbooks() {
+  return (
+    <Card context="Worked combinations, not single metrics in isolation" dot="off" title="Putting it together">
+      <ul>
+        {PLAYBOOKS.map((p) => (
+          <li key={p} className={`${ROW} text-[13.5px] text-ink-2 leading-relaxed`}>
+            {p}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+function Quadrant() {
+  return (
+    <Card context="How the two axes are built, and what each corner means" dot="off" title="Quality vs. valuation quadrant">
+      <p className="text-[13.5px] text-ink-2 leading-relaxed">{QUADRANT_GUIDE.meaning}</p>
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {QUADRANT_GUIDE.corners.map((c) => (
+          <div key={c.label} className="rounded-[10px] bg-tile px-3.5 py-3">
+            <div className="text-[13px] font-semibold text-ink">{c.label}</div>
+            <p className="mt-1 text-[13px] text-ink-2 leading-relaxed">{c.text}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function EarningsSignals() {
+  return (
+    <Card context="What the surprise bars and quarterly trend calls actually flag" dot="off" title="Earnings signals">
+      <div className="space-y-3">
+        {EARNINGS_GUIDE.map((e) => (
+          <GuideMetric key={e.name} name={e.name} text={e.text} />
+        ))}
+      </div>
+    </Card>
   )
 }
 
 export default function GuideTab() {
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader title="Investment snapshot" subtitle="What each group reads, and what counts as good, ok, or caution" />
-        <div className="mt-2 divide-y divide-white/[0.06]">
-          {SNAPSHOT_GUIDE.map((g) => (
-            <GuideGroup key={g.key} label={g.label} meaning={g.meaning} read={g.read} />
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Ratios" subtitle="What each ratio measures, and where it's most useful" />
-        <div className="mt-2 divide-y divide-white/[0.06]">
-          {RATIO_GUIDE.map((group) => (
-            <div key={group.label} className="py-3 first:pt-0 last:pb-0">
-              <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</div>
-              <div className="mt-2 space-y-3">
-                {group.metrics.map((m) => (
-                  <GuideMetric key={m.name} name={m.name} text={m.text} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Quality vs. valuation quadrant" subtitle="How the two axes are built, and what each corner means" />
-        <p className="mt-2 text-[var(--fig-sm)] text-zinc-500 leading-relaxed">{QUADRANT_GUIDE.meaning}</p>
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {QUADRANT_GUIDE.corners.map((c) => (
-            <div key={c.label} className="rounded-lg border border-white/[0.06] p-3">
-              <div className="text-[var(--fig-xs)] font-medium text-zinc-200">{c.label}</div>
-              <p className="mt-1 text-[var(--fig-xs)] text-zinc-400 leading-relaxed">{c.text}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Earnings signals" subtitle="What the surprise bars and quarterly trend calls actually flag" />
-        <div className="mt-2 space-y-3">
-          {EARNINGS_GUIDE.map((e) => (
-            <GuideMetric key={e.name} name={e.name} text={e.text} />
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Putting it together" subtitle="Worked combinations, not single metrics in isolation" />
-        <ul className="mt-2 space-y-2.5 list-disc list-inside text-[var(--fig-sm)] text-zinc-300 leading-relaxed">
-          {PLAYBOOKS.map((p) => (
-            <li key={p}>{p}</li>
-          ))}
-        </ul>
-      </Card>
+    <div className={BOARD}>
+      <div className={SPAN_7}>
+        <Snapshot />
+        <Ratios />
+      </div>
+      <div className={SPAN_5}>
+        <Playbooks />
+        <Quadrant />
+        <EarningsSignals />
+      </div>
     </div>
   )
 }

@@ -49,7 +49,7 @@ describe('InsiderTransactions', () => {
     expect(within(row).getByText('12 Sep 2026')).toBeInTheDocument()
     expect(within(row).getByText('Coxe Tench')).toBeInTheDocument()
     expect(within(row).getByText('Sell')).toBeInTheDocument()
-    expect(within(row).getByText('-1,500')).toHaveClass('text-red-400')
+    expect(within(row).getByText('-1,500')).toHaveClass('text-down')
     expect(within(row).getByText('US$120.50')).toBeInTheDocument()
     expect(within(row).getByText('$180.75K')).toBeInTheDocument()
     expect(within(row).getByText('40,000')).toBeInTheDocument()
@@ -58,7 +58,7 @@ describe('InsiderTransactions', () => {
   it('colours a purchase by its sign', () => {
     render(<InsiderTransactions transactions={[trade({ code: 'P', shares: 800, value: 96400 })]} />)
 
-    expect(screen.getByText('+800')).toHaveClass('text-emerald-400')
+    expect(screen.getByText('+800')).toHaveClass('text-up')
   })
 
   it('prints dashes for a missing price and value', () => {

@@ -43,6 +43,22 @@ describe('FilingsList', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://www.sec.gov/report.htm')
   })
 
+  it('filings links leave only for sec.gov', () => {
+    render(
+      <FilingsList
+        filings={[
+          ...filings,
+          filing('8-K', '2026-01-10', { url: 'https://evil.example/x', report_url: 'https://www.sec.gov/r.htm' }),
+          filing('10-Q', '2025-11-01', { url: 'http://www.sec.gov/plain.htm', report_url: '' }),
+        ]}
+      />,
+    )
+
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(4)
+    for (const link of links) expect(link.getAttribute('href')).toMatch(/^https:\/\/www\.sec\.gov\//)
+  })
+
   it('renders no link when neither url is on sec.gov', () => {
     render(<FilingsList filings={[filing('10-K', '2026-02-26', { url: 'https://evil.example/x', report_url: 'javascript:alert(1)' })]} />)
 

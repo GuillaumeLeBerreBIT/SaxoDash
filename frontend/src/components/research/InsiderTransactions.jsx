@@ -3,17 +3,17 @@ import { useState } from 'react'
 import { fmtStatement } from '../../lib/statements'
 import { UNKNOWN, fmtDate, fmtMoney, fmtNum } from '../../lib/format'
 import { filterTransactions, insiderName, transactionLabel } from '../../lib/insiders'
-import { TBtn } from '../ui'
+import { Button, Segmented, Td, Tr } from '../ui'
 
 const VISIBLE = 15
 const SCOPES = [
-  ['open', 'Open market'],
-  ['all', 'All'],
+  { value: 'open', label: 'Open market' },
+  { value: 'all', label: 'All' },
 ]
 
 const fmtTradeValue = (value) => (value == null ? UNKNOWN : `$${fmtStatement(value)}`)
 const signedShares = (shares) => `${shares > 0 ? '+' : ''}${fmtNum(shares)}`
-const shareTone = (shares) => (shares > 0 ? 'text-emerald-400' : shares < 0 ? 'text-red-400' : 'text-zinc-300')
+const shareTone = (shares) => (shares > 0 ? 'text-up' : shares < 0 ? 'text-down' : 'text-ink')
 
 const HEADERS = [
   ['Date', 'left'],
@@ -34,25 +34,25 @@ export default function InsiderTransactions({ transactions, counts }) {
 
   return (
     <div>
-      <div className="flex items-center gap-0.5">
-        {SCOPES.map(([key, label]) => (
-          <TBtn key={key} active={scope === key} onClick={() => setScope(key)}>
-            {label}
-          </TBtn>
-        ))}
-      </div>
+      <Segmented label="Transactions shown" options={SCOPES} value={scope} onChange={setScope} />
       {rows.length === 0 ? (
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        <p className="mt-3 text-[13px] text-ink-3">
           {scope === 'open' ? 'No open-market trades in this period.' : 'No transactions in this period.'}
         </p>
       ) : (
         <>
           <div className="mt-3 overflow-x-auto">
-            <table aria-label="Insider transactions" className="w-full border-collapse text-[var(--fig-xs)]">
+            <table aria-label="Insider transactions" className="w-full border-collapse">
               <thead>
-                <tr className="text-zinc-500">
-                  {HEADERS.map(([label, align]) => (
-                    <th key={label} scope="col" className={`font-medium py-2 px-2 whitespace-nowrap text-${align}`}>
+                <tr>
+                  {HEADERS.map(([label, align], index) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className={`h-[30px] px-2.5 text-[12px] font-medium text-ink-3 whitespace-nowrap text-${align} ${
+                        index === 0 ? 'pl-0' : index === HEADERS.length - 1 ? 'pr-0' : ''
+                      }`}
+                    >
                       {label}
                     </th>
                   ))}
@@ -60,27 +60,25 @@ export default function InsiderTransactions({ transactions, counts }) {
               </thead>
               <tbody>
                 {shown.map((row, index) => (
-                  <tr key={`${row.date}-${row.name}-${row.code}-${index}`} className="border-t border-white/[0.06]">
-                    <td className="py-2 px-2 whitespace-nowrap text-zinc-300">{fmtDate(row.date)}</td>
-                    <td className="py-2 px-2 text-zinc-100">{insiderName(row.name)}</td>
-                    <td className="py-2 px-2 whitespace-nowrap text-zinc-300">{transactionLabel(row.code)}</td>
-                    <td className={`py-2 px-2 text-right num font-mono ${shareTone(row.shares)}`}>{signedShares(row.shares)}</td>
-                    <td className="py-2 px-2 text-right num font-mono text-zinc-300">
-                      {row.price == null ? UNKNOWN : fmtMoney(row.price, 'USD')}
-                    </td>
-                    <td className="py-2 px-2 text-right num font-mono text-zinc-300">{fmtTradeValue(row.value)}</td>
-                    <td className="py-2 px-2 text-right num font-mono text-zinc-400">{fmtNum(row.holdings)}</td>
-                  </tr>
+                  <Tr key={`${row.date}-${row.name}-${row.code}-${index}`}>
+                    <Td className="pl-0 num text-ink-2">{fmtDate(row.date)}</Td>
+                    <Td className="whitespace-normal font-semibold text-ink">{insiderName(row.name)}</Td>
+                    <Td className="text-ink-2">{transactionLabel(row.code)}</Td>
+                    <Td align="right" className={shareTone(row.shares)}>{signedShares(row.shares)}</Td>
+                    <Td align="right" className="text-ink">{row.price == null ? UNKNOWN : fmtMoney(row.price, 'USD')}</Td>
+                    <Td align="right" className="text-ink">{fmtTradeValue(row.value)}</Td>
+                    <Td align="right" className="pr-0 text-ink-2">{fmtNum(row.holdings)}</Td>
+                  </Tr>
                 ))}
               </tbody>
             </table>
           </div>
           {atSource > rows.length && (
-            <p className="mt-2 text-[var(--fig-2xs)] text-zinc-500">{`Showing the newest ${rows.length} of ${atSource}.`}</p>
+            <p className="mt-2 text-[12px] text-ink-3">{`Showing the newest ${rows.length} of ${atSource}.`}</p>
           )}
           {!expanded && rows.length > VISIBLE && (
             <div className="mt-3">
-              <TBtn onClick={() => setExpanded(true)}>{`Show all ${rows.length}`}</TBtn>
+              <Button size="sm" onClick={() => setExpanded(true)}>{`Show all ${rows.length}`}</Button>
             </div>
           )}
         </>

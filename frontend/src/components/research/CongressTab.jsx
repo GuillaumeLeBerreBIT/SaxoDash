@@ -4,10 +4,14 @@ import { useCongressOwnership } from '../../api/queries'
 import { partyLabel } from '../../lib/congress'
 import { fmtPct } from '../../lib/format'
 import { ownershipTicker } from '../../lib/ownership'
-import { EmptyState, QueryState, StatRow, StatStrip } from '../ui'
+import { Card, EmptyState, QueryState } from '../ui'
 import TradeHistory from '../congress/TradeHistory'
+import SummaryTiles from './SummaryTiles'
 
 const US_ONLY = 'House disclosures are matched by US ticker, so only US-dollar listings are looked up.'
+
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const SPAN_12 = 'min-[1100px]:col-span-12'
 
 const memberSubtitle = (member) => {
   const party = partyLabel(member.party, member.state_district)
@@ -29,20 +33,35 @@ export default function CongressTab({ symbol, currency }) {
   }
   const note = `members, last ${windowDays} days`
   return (
-    <div className="space-y-3">
-      <StatStrip>
-        <StatRow label="Bought" value={String(stock.buyers)} note={note} lead />
-        <StatRow label="Sold" value={String(stock.sellers)} note={note} />
-        <StatRow label="Holding" value={String(stock.holders)} note="members (estimated)" />
-      </StatStrip>
-      {members.map((member) => (
-        <TradeHistory
-          key={member.slug}
-          trades={member.trades}
-          showAsset={false}
-          title={<Link to={`/investors/congress/${member.slug}`} className="hover:text-blue-300">{member.name}</Link>}
-          subtitle={memberSubtitle(member)}
+    <div className={BOARD}>
+      <Card
+        className={SPAN_12}
+        context={`House reports · trades in the last ${windowDays} days, holdings estimated`}
+        dot="ok"
+        title={`Congress and ${symbol}`}
+      >
+        <SummaryTiles
+          label={`House members and ${symbol}`}
+          tiles={[
+            { label: 'Bought', value: String(stock.buyers), sub: note },
+            { label: 'Sold', value: String(stock.sellers), sub: note },
+            { label: 'Holding', value: String(stock.holders), sub: 'members (estimated)' },
+          ]}
         />
+      </Card>
+      {members.map((member) => (
+        <div key={member.slug} className={SPAN_12}>
+          <TradeHistory
+            trades={member.trades}
+            showAsset={false}
+            title={
+              <Link to={`/investors/congress/${member.slug}`} className="hover:underline">
+                {member.name}
+              </Link>
+            }
+            subtitle={memberSubtitle(member)}
+          />
+        </div>
       ))}
     </div>
   )

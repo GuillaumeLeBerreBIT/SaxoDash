@@ -7,7 +7,8 @@ import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { quadrantPoint } from '../../lib/quadrant'
 import { nextEmptySlot, resolvePeerSlots } from '../../lib/research'
 import { valuationVerdict } from '../../lib/snapshot'
-import { Card, CardHeader, Skeleton } from '../ui'
+import { QUADRANT_GUIDE } from '../../lib/guide'
+import { Card, Input, InstrumentLogo, Skeleton } from '../ui'
 import { usePortalMenuRect } from '../usePortalMenuRect'
 import FundamentalsGate from './FundamentalsGate'
 import QualityValuationQuadrant from './QualityValuationQuadrant'
@@ -59,17 +60,17 @@ function AddPeerSearch({ onPick }) {
 
   return (
     <div ref={wrapperRef} className="relative">
-      <input
+      <Input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Add peer"
         aria-label="Add peer"
-        className="w-full h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+        className="w-full h-7! px-2! text-[12px]! font-normal"
       />
       {menuRect && isError && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-zinc-900 border border-white/10 rounded shadow-lg px-2 py-1.5 text-[var(--fig-2xs)] text-amber-400"
+          className="z-50 bg-raised border border-line rounded-lg shadow-lg px-2.5 py-1.5 text-[12px] text-warn"
         >
           Search unavailable — reconnect Saxo
         </div>,
@@ -78,7 +79,7 @@ function AddPeerSearch({ onPick }) {
       {menuRect && !isError && results.length > 0 && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 max-h-56 overflow-y-auto bg-zinc-900 border border-white/10 rounded shadow-lg"
+          className="z-50 max-h-56 overflow-y-auto bg-raised border border-line rounded-lg shadow-lg py-1"
         >
           {results.map((result) => (
             <button
@@ -88,16 +89,51 @@ function AddPeerSearch({ onPick }) {
                 onPick(result.symbol)
                 setQuery('')
               }}
-              className="flex items-baseline gap-1.5 w-full text-left px-2.5 py-1.5 text-[var(--fig-sm)] text-zinc-100 hover:bg-white/[0.06]"
+              className="flex items-baseline gap-1.5 w-full text-left px-2.5 py-1.5 text-[13px] text-ink hover:bg-hover"
             >
-              <span className="shrink-0 font-medium">{result.symbol}</span>
-              <span className="text-zinc-500 truncate">{result.description}</span>
+              <span className="shrink-0 font-semibold">{result.symbol}</span>
+              <span className="text-ink-3 truncate">{result.description}</span>
             </button>
           ))}
         </div>,
         document.body,
       )}
     </div>
+  )
+}
+
+const SPAN_5 = 'min-[1100px]:col-span-5'
+const SPAN_7 = 'min-[1100px]:col-span-7'
+const SPAN_12 = 'min-[1100px]:col-span-12'
+const HEAD = 'h-[38px] min-w-[132px] px-2.5 text-right align-middle text-[12px] font-medium text-ink-3 whitespace-nowrap'
+const LABEL = 'h-[var(--sd-row-h)] px-2.5 text-[13.5px] text-ink-2 whitespace-nowrap'
+const CELL = 'h-[var(--sd-row-h)] px-2.5 text-[13.5px] text-right whitespace-nowrap'
+
+function PeerHead({ symbol, note, action }) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <InstrumentLogo symbol={symbol} size={20} />
+      <span className="text-left leading-tight">
+        <span className="block text-[13.5px] font-bold text-ink">{symbol}</span>
+        {note ? <span className="block text-[12px] font-normal text-ink-3">{note}</span> : null}
+      </span>
+      {action}
+    </div>
+  )
+}
+
+function Corners({ className }) {
+  return (
+    <Card className={className} context="Corners of the quadrant" dot="off" title="How to read it">
+      <ul>
+        {QUADRANT_GUIDE.corners.map((corner) => (
+          <li key={corner.label} className="py-2.5 border-t border-line first:border-t-0 first:pt-0">
+            <div className="text-[13.5px] font-semibold text-ink">{corner.label}</div>
+            <p className="mt-0.5 text-[13px] text-ink-2">{corner.text}</p>
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }
 
@@ -130,72 +166,81 @@ export default function PeersTab({ symbol, fundamentals }) {
           }),
         ].filter(Boolean)
 
+        const unscored = [
+          ...(quadrantPoint(symbol, currentData) ? [] : [symbol]),
+          ...slots.filter((s, i) => peerResults[i]?.data?.available && !quadrantPoint(s.symbol, peerResults[i].data)).map((s) => s.symbol),
+        ]
+
         return (
-          <div className="space-y-4">
-            <Card padding={false}>
-              <div className="px-4 py-3 border-b border-white/[0.06]">
-                <CardHeader title="Peer comparison" subtitle="Valuation, growth and quality, side by side" />
-              </div>
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+            <Card
+              flush
+              className={SPAN_12}
+              context="Finnhub · valuation, growth and quality, side by side"
+              dot="ok"
+              title="Peer comparison"
+            >
               <div className="overflow-x-auto">
-                <table className="w-full text-[var(--fig-xs)]">
+                <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/[0.06]">
-                      {/* Empty - aligns with the row-label column each body row leads with. */}
-                      <th className="px-4 py-2" />
-                      <th className="text-right px-3 py-2 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 font-medium">
-                        {symbol}
+                    <tr>
+                      <th className={`${HEAD} pl-[18px] w-[180px]`} />
+                      <th className={`${HEAD} bg-selected rounded-t-lg`}>
+                        <PeerHead symbol={symbol} note="this company" />
                       </th>
                       {slots.map((s, i) => (
-                        <th key={s.symbol} className="text-right px-3 py-2 font-medium">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <span className="text-zinc-100">{s.symbol}</span>
-                            <button
-                              type="button"
-                              onClick={() => setOverride(s.slot, null)}
-                              aria-label={`Remove ${s.symbol}`}
-                              className="text-zinc-600 hover:text-red-400"
-                            >
-                              <X size={11} />
-                            </button>
-                          </div>
+                        <th key={s.symbol} className={HEAD}>
+                          <PeerHead
+                            symbol={s.symbol}
+                            action={
+                              <button
+                                type="button"
+                                onClick={() => setOverride(s.slot, null)}
+                                aria-label={`Remove ${s.symbol}`}
+                                className="grid place-items-center w-5 h-5 rounded text-ink-3 hover:text-down hover:bg-hover"
+                              >
+                                <X size={12} aria-hidden="true" />
+                              </button>
+                            }
+                          />
                           {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
                         </th>
                       ))}
                       {emptySlot !== -1 ? (
-                        <th className="text-right px-3 py-2 w-40">
+                        <th className={`${HEAD} w-40 pr-[18px]`}>
                           <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
                         </th>
                       ) : null}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-white/[0.04]">
-                      <td className="px-4 py-2 text-zinc-500">Verdict</td>
-                      <td className="px-3 py-2 text-right">
+                    <tr className="border-t border-line">
+                      <td className={`${LABEL} pl-[18px]`}>Verdict</td>
+                      <td className={`${CELL} bg-selected`}>
                         <VerdictBadge {...valuationVerdict(currentData)} className="justify-end" />
                       </td>
                       {slots.map((s, i) => {
                         const peerData = peerResults[i]?.data
                         const unavailable = !peerData || peerData.available === false
                         return (
-                          <td key={s.symbol} className="px-3 py-2 text-right">
-                            {unavailable ? '—' : <VerdictBadge {...valuationVerdict(peerData)} className="justify-end" />}
+                          <td key={s.symbol} className={CELL}>
+                            {unavailable ? <span className="text-ink-3">—</span> : <VerdictBadge {...valuationVerdict(peerData)} className="justify-end" />}
                           </td>
                         )
                       })}
                       {emptySlot !== -1 ? <td /> : null}
                     </tr>
                     {METRIC_ROWS.map((row) => (
-                      <tr key={row.key} className="border-b border-white/[0.04] last:border-0">
-                        <td className="px-4 py-2 text-zinc-500">{row.label}</td>
-                        <td className="px-3 py-2 num font-mono text-right text-zinc-100">
+                      <tr key={row.key} className="border-t border-line">
+                        <td className={`${LABEL} pl-[18px]`}>{row.label}</td>
+                        <td className={`${CELL} num font-semibold text-ink bg-selected`}>
                           {row.format(currentData[row.key])}
                         </td>
                         {slots.map((s, i) => {
                           const peerData = peerResults[i]?.data
                           const unavailable = peerData && peerData.available === false
                           return (
-                            <td key={s.symbol} className="px-3 py-2 num font-mono text-right text-zinc-300">
+                            <td key={s.symbol} className={`${CELL} num text-ink-2`}>
                               {unavailable ? '—' : row.format(peerData?.[row.key])}
                             </td>
                           )
@@ -208,7 +253,8 @@ export default function PeersTab({ symbol, fundamentals }) {
               </div>
             </Card>
 
-            <QualityValuationQuadrant points={quadrantPoints} />
+            <QualityValuationQuadrant points={quadrantPoints} unscored={unscored} className={SPAN_7} />
+            {quadrantPoints.length >= 2 ? <Corners className={SPAN_5} /> : null}
           </div>
         )
       }}

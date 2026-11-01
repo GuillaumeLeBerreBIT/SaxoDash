@@ -1,12 +1,13 @@
+import { withAlpha } from '../../lib/charts'
 import { ratingBand } from '../../lib/ratingBand'
-import { RATING_SEGMENTS } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
-const SEGMENTS = RATING_SEGMENTS
+const SEGMENT_COUNT = 5
 const CENTER_X = 100
 const CENTER_Y = 96
 const RADIUS = 80
 const NEEDLE = 62
-const SWEEP = 180 / SEGMENTS.length
+const SWEEP = 180 / SEGMENT_COUNT
 const GAP = 1.5
 
 function pointAt(degrees, radius) {
@@ -18,19 +19,28 @@ const clamp = (value) => Math.min(1, Math.max(0, Number(value) || 0))
 
 function toneClass(fraction) {
   const band = ratingBand(fraction)
-  if (band >= 3) return 'text-emerald-400'
-  if (band <= 1) return 'text-red-400'
-  return 'text-zinc-300'
+  if (band >= 3) return 'text-up'
+  if (band <= 1) return 'text-down'
+  return 'text-ink-2'
 }
 
+const segmentColors = (c) => [
+  withAlpha(c.down, 0.75),
+  withAlpha(c.down, 0.35),
+  c.estimate,
+  withAlpha(c.up, 0.4),
+  withAlpha(c.up, 0.85),
+]
+
 export default function RatingGauge({ title, fraction, label }) {
+  const segments = segmentColors(useChartColors())
   const position = clamp(fraction)
   const [needleX, needleY] = pointAt(180 - position * 180, NEEDLE)
 
   return (
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 200 104" className="w-full max-w-[210px]" role="img" aria-label={`${title}: ${label}`}>
-        {SEGMENTS.map((color, index) => {
+        {segments.map((color, index) => {
           const from = pointAt(180 - index * SWEEP - GAP, RADIUS)
           const to = pointAt(180 - (index + 1) * SWEEP + GAP, RADIUS)
           return (
@@ -48,13 +58,13 @@ export default function RatingGauge({ title, fraction, label }) {
           y1={CENTER_Y}
           x2={needleX}
           y2={needleY}
-          className="stroke-zinc-100"
+          className="stroke-ink"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
-        <circle cx={CENTER_X} cy={CENTER_Y} r="5" className="fill-zinc-100" />
+        <circle cx={CENTER_X} cy={CENTER_Y} r="5" className="fill-ink" />
       </svg>
-      <div className={`text-[var(--fig-md)] font-medium ${toneClass(position)}`}>{label}</div>
+      <div className={`text-[15px] font-semibold ${toneClass(position)}`}>{label}</div>
     </div>
   )
 }
