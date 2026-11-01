@@ -188,6 +188,19 @@ describe('WatchlistRail', () => {
     expect(onSelectSymbol).toHaveBeenCalledWith('IWDA', { uic: 500, assetType: 'Etf' })
   })
 
+  it('opens a row from the keyboard with Enter or Space', async () => {
+    const onSelectSymbol = vi.fn()
+    render({ onSelectSymbol })
+
+    screen.getByRole('button', { name: /^IWDA/ }).focus()
+    await userEvent.keyboard(' ')
+    screen.getByRole('button', { name: /^NVDA/ }).focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(onSelectSymbol).toHaveBeenNthCalledWith(1, 'IWDA', { uic: 500, assetType: 'Etf' })
+    expect(onSelectSymbol).toHaveBeenNthCalledWith(2, 'NVDA', { uic: 211, assetType: 'Stock' })
+  })
+
   it('invites the user to create a list when there are none', () => {
     stub({ watchlists: [] })
     render()

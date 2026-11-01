@@ -4,7 +4,7 @@ import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
 import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
 import { Link } from 'react-router-dom'
-import { Badge } from './ui'
+import { Tag } from './ui'
 
 export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
@@ -37,10 +37,10 @@ export default function SaxoConnectionStatus({ compact = false }) {
   if (derived.kind === 'not_connected') {
     return (
       <div className="flex items-center gap-2">
-        {error && <Badge tone="red">Connection failed</Badge>}
+        {error && <Tag tone="down">Connection failed</Tag>}
         <button
           onClick={connectSaxo}
-          className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
+          className="h-8 px-3.5 text-[13px] rounded-lg bg-accent hover:bg-accent-hover text-on-accent font-semibold transition-colors"
         >
           Connect Saxo
         </button>
@@ -52,7 +52,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
     return (
       <button
         onClick={connectSaxo}
-        className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
+        className="h-8 px-3.5 text-[13px] rounded-lg sd-raised bg-raised text-error font-semibold transition-colors hover:bg-hover"
       >
         Reconnect Saxo
       </button>
@@ -63,26 +63,26 @@ export default function SaxoConnectionStatus({ compact = false }) {
   // refused, so saying "connected" here would contradict the panel below.
   if (derived.kind === 'reconnecting') {
     return (
-      <Badge tone="amber">
+      <Tag tone="warn">
         <span title={status.unusable_reason ?? undefined}>Reconnecting…</span>
-      </Badge>
+      </Tag>
     )
   }
 
   return (
     <span className="flex items-center gap-2">
       {derived.kind === 'sync_degraded' && (
-        <Badge tone="amber">
+        <Tag tone="warn">
           <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
             Sync {status.last_sync_outcome}
           </span>
-        </Badge>
+        </Tag>
       )}
-      <Badge tone="emerald">
+      <Tag tone="up">
         <span title={status.last_synced_at ? `Last synced ${fmtClock(status.last_synced_at)}` : 'Never synced'}>
           Saxo connected
         </span>
-      </Badge>
+      </Tag>
     </span>
   )
 }

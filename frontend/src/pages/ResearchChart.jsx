@@ -5,10 +5,8 @@ import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
 import { RAIL_WIDTH, WATCHLIST_HEIGHT } from '../lib/railLayout'
 import { chartHref, researchHref } from '../lib/research'
-import CommandPalette from '../components/CommandPalette'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
-import { useCommandPalette } from '../components/useCommandPalette'
 import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
 import { LinkedHoverProvider } from '../components/research/LinkedHover'
@@ -17,6 +15,7 @@ import ResizeHandle from '../components/research/ResizeHandle'
 import SymbolPanel from '../components/research/SymbolPanel'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { RangeButtons } from '../components/research/chartHeader'
+import IndicatorChips from '../components/research/IndicatorChips'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useChartWorkspace } from '../components/research/useChartWorkspace'
@@ -26,7 +25,6 @@ import { usePersistedSize } from '../components/research/usePersistedSize'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, assetType: result.asset_type })
-const paletteHrefFor = (symbol, instrument) => chartHref(symbol, instrument)
 
 export default function ResearchChart() {
   const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
@@ -77,7 +75,6 @@ export default function ResearchChart() {
   })
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
-  const palette = useCommandPalette()
   const [railWidth, setRailWidth] = usePersistedSize(RAIL_WIDTH)
   const [watchlistHeight, setWatchlistHeight] = usePersistedSize(WATCHLIST_HEIGHT)
 
@@ -87,7 +84,7 @@ export default function ResearchChart() {
 
   return (
     <div
-      className="relative h-dvh overflow-hidden bg-zinc-950 text-zinc-100 grid grid-cols-[48px_minmax(0,1fr)] lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]"
+      className="relative h-[calc(100dvh-12rem)] min-[760px]:h-[calc(100dvh-8.5rem)] min-h-[480px] text-ink flex flex-col gap-3 lg:grid lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]"
       style={{ '--rail-width': `${railWidth}px` }}
     >
       <h1 className="sr-only">Chart workspace</h1>
@@ -104,7 +101,7 @@ export default function ResearchChart() {
         onLinkedChange={setLinked}
       />
 
-      <main className="flex flex-col gap-2 p-2 min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col gap-3 min-w-0 min-h-0">
         <SymbolBar
           compact
           symbol={symbol}
@@ -117,15 +114,16 @@ export default function ResearchChart() {
           onToggleList={toggleList}
         />
 
-        <div className="flex flex-wrap items-center gap-x-1 gap-y-1 px-1">
+        <div className="flex flex-wrap items-center gap-2">
           <RangeButtons controls={rangeControls} />
+          <IndicatorChips controls={controls} />
           <div className="ml-auto">
             <SaxoConnectionStatus />
           </div>
         </div>
 
         <LinkedHoverProvider enabled={linked}>
-          <div className="flex-1 min-h-0 flex flex-col gap-2 lg:grid" style={gridStyle(layout)}>
+          <div className="flex-1 min-h-0 flex flex-col gap-3 lg:grid" style={gridStyle(layout)}>
             {workspace.slots.map((slot, index) => {
               const active = index === workspace.active
               return (
@@ -149,7 +147,7 @@ export default function ResearchChart() {
             })}
           </div>
         </LinkedHoverProvider>
-      </main>
+      </div>
 
       <ResizeHandle
         label="Sidebar width"
@@ -158,13 +156,13 @@ export default function ResearchChart() {
         limits={RAIL_WIDTH}
         onResize={setRailWidth}
         invert
-        className="hidden lg:block absolute top-0 bottom-0 z-10 w-2 py-2"
-        style={{ right: `calc(var(--rail-width) - 0.25rem)` }}
+        className="hidden lg:block absolute top-0 bottom-0 z-10 w-2"
+        style={{ right: `calc(var(--rail-width) + 0.125rem)` }}
       />
 
-      <aside className="hidden lg:flex flex-col gap-1 p-2 pl-0 min-h-0 overflow-y-auto">
+      <aside className="hidden lg:flex flex-col gap-1.5 min-h-0 overflow-y-auto">
         <InstrumentSearchBar hrefFor={chartResultHref} />
-        <div className="shrink-0 mt-1" style={{ height: watchlistHeight }} data-testid="chart-watchlist">
+        <div className="shrink-0 mt-1.5" style={{ height: watchlistHeight }} data-testid="chart-watchlist">
           <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
         <ResizeHandle
@@ -185,7 +183,6 @@ export default function ResearchChart() {
         />
       </aside>
 
-      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} hrefFor={paletteHrefFor} />
     </div>
   )
 }

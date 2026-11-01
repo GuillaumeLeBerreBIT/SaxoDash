@@ -8,6 +8,7 @@ import {
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum } from '../../lib/format'
+import { activatesRow } from '../../lib/keys'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { Card, DayChange, InstrumentLogo, TBtn } from '../ui'
@@ -93,16 +94,16 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
 
   return (
     <Card padding={false} className={fill ? 'h-full min-h-0 flex flex-col' : ''}>
-      <div className="px-3 py-2.5 border-b border-white/[0.06] flex items-center gap-1.5">
+      <div className="px-3.5 py-2.5 border-b border-line flex items-center gap-1.5">
         <Menu label={active?.name ?? 'Watchlists'} icon={List} width={230}>
           {watchlists.map((list) => (
             <MenuRow key={list.id} onClick={() => setActiveId(list.id)} right={`${list.items.length}`}>
-              <span className={list.id === active?.id ? 'text-zinc-100' : ''}>{list.name}</span>
+              <span className={list.id === active?.id ? 'text-ink font-semibold' : ''}>{list.name}</span>
             </MenuRow>
           ))}
           {watchlists.length ? <MenuSeparator /> : null}
           <MenuRow onClick={() => setNaming(true)}>
-            <span className="text-blue-400">+ New list</span>
+            <span className="text-ink">+ New list</span>
           </MenuRow>
           {active ? (
             <MenuRow
@@ -111,13 +112,13 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                 setActiveId(null)
               }}
             >
-              <span className="text-red-400">Delete “{active.name}”</span>
+              <span className="text-down">Delete “{active.name}”</span>
             </MenuRow>
           ) : null}
         </Menu>
-        <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono ml-auto">{items.length}</span>
+        <span className="text-[12px] text-ink-3 num ml-auto">{items.length}</span>
         {gridView ? (
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 p-[3px] rounded-[9px] bg-track">
             <TBtn active={!showGrid} onClick={() => chooseView('list')} title="List view">
               <LayoutList size={12} />
             </TBtn>
@@ -129,7 +130,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
       </div>
 
       {naming ? (
-        <div className="px-3 py-2.5 border-b border-white/[0.06] flex gap-1.5">
+        <div className="px-3.5 py-2.5 border-b border-line flex gap-1.5">
           <input
             autoFocus
             value={newName}
@@ -140,20 +141,20 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
             }}
             placeholder="List name"
             aria-label="New list name"
-            className="flex-1 h-7 px-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+            className="flex-1 h-8 px-2.5 bg-track border border-line-input rounded-lg text-[13px] text-ink placeholder:text-ink-3 outline-none"
           />
           <button
             type="button"
             onClick={createList}
-            className="h-7 px-2.5 rounded bg-blue-500 hover:bg-blue-600 text-white text-[var(--fig-xs)] font-medium"
+            className="h-8 px-3 rounded-lg bg-accent text-on-accent text-[13px] font-semibold"
           >
             Add
           </button>
         </div>
       ) : null}
 
-      <div className="px-3 py-2.5 border-b border-white/[0.06] relative">
-        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500">
+      <div className="px-3.5 py-2.5 border-b border-line relative">
+        <span className="absolute left-6 top-1/2 -translate-y-1/2 text-ink-3">
           <Search size={12} />
         </span>
         <input
@@ -161,18 +162,18 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search symbol to add"
           aria-label="Search symbol to add"
-          className="w-full h-7 pl-7 pr-2 bg-zinc-950 border border-white/10 rounded text-[var(--fig-xs)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+          className="w-full h-8 pl-7 pr-2 bg-track border border-line-input rounded-lg text-[13px] text-ink placeholder:text-ink-3 outline-none"
         />
       </div>
 
       {results.length > 0 ? (
-        <div className="max-h-[230px] overflow-y-auto border-b border-white/[0.06]">
+        <div className="max-h-[230px] overflow-y-auto border-b border-line">
           {rankInstrumentResults(results, deferredQuery).map((result) => {
             const inList = items.some((item) => item.uic === result.uic)
             return (
               <div
                 key={`${result.uic}-${result.asset_type}`}
-                className="flex items-center gap-2 px-3 h-9 hover:bg-white/[0.04]"
+                className="flex items-center gap-2 px-3.5 h-10 hover:bg-hover"
               >
                 <button
                   type="button"
@@ -182,14 +183,9 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                   }}
                   className="flex-1 min-w-0 flex items-center gap-1.5 text-left"
                 >
-                  <InstrumentLogo
-                    symbol={result.symbol}
-                    size={14}
-                    className="rounded-sm"
-                    fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
-                  />
-                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{result.symbol}</span>
-                  <span className="text-[var(--fig-2xs)] text-zinc-500 truncate">{result.description}</span>
+                  <InstrumentLogo symbol={result.symbol} size={20} />
+                  <span className="text-[13px] font-semibold text-ink">{result.symbol}</span>
+                  <span className="text-[12px] text-ink-3 truncate">{result.description}</span>
                 </button>
                 <button
                   type="button"
@@ -197,10 +193,8 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                   disabled={inList || !active || !result.uic}
                   title={active ? undefined : 'Create a list first'}
                   aria-label={inList ? `${result.symbol} already in list` : `Add ${result.symbol}`}
-                  className={`w-5 h-5 rounded flex items-center justify-center ${
-                    inList
-                      ? 'text-blue-400'
-                      : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.08] disabled:opacity-40'
+                  className={`w-6 h-6 rounded-md flex items-center justify-center ${
+                    inList ? 'text-held' : 'text-ink-3 hover:text-ink hover:bg-hover disabled:opacity-40'
                   }`}
                 >
                   {inList ? <Check size={12} /> : <Plus size={12} />}
@@ -212,24 +206,24 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
       ) : null}
 
       {showGrid ? null : (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3 h-7 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 border-b border-white/[0.06]">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3.5 h-[30px] text-[12px] text-ink-3 border-b border-line">
           <span>Symbol</span>
           <span className="text-right">Last</span>
-          <span className="text-right w-14">Chg%</span>
+          <span className="text-right w-16">Chg%</span>
         </div>
       )}
 
       <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
-        {isLoading ? <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">Loading…</div> : null}
+        {isLoading ? <div className="px-3.5 py-6 text-center text-[13px] text-ink-3">Loading…</div> : null}
 
         {!isLoading && watchlists.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">
+          <div className="px-3.5 py-6 text-center text-[13px] text-ink-3">
             No lists yet. Create one to start tracking symbols.
           </div>
         ) : null}
 
         {!isLoading && watchlists.length > 0 && items.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[var(--fig-xs)] text-zinc-500">
+          <div className="px-3.5 py-6 text-center text-[13px] text-ink-3">
             Empty list. Search above to add symbols.
           </div>
         ) : null}
@@ -255,38 +249,34 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                 role="button"
                 tabIndex={0}
                 onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
+                aria-current={symbol === item.symbol || undefined}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
+                  if (e.target !== e.currentTarget || !activatesRow(e)) return
+                  e.preventDefault()
+                  onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
                 }}
-                className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3 h-[38px] cursor-pointer group border-l-2 ${
-                  symbol === item.symbol
-                    ? 'bg-blue-500/[0.07] border-l-blue-500'
-                    : 'border-l-transparent hover:bg-white/[0.04]'
+                className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3.5 min-h-11 cursor-pointer group ${
+                  symbol === item.symbol ? 'bg-selected' : 'hover:bg-hover'
                 }`}
               >
                 <div className="min-w-0 flex items-center gap-1.5">
-                  <InstrumentLogo
-                    symbol={item.symbol}
-                    size={16}
-                    className="rounded-sm"
-                    fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
-                  />
-                  <span className="text-[var(--fig-xs)] font-medium text-zinc-100 shrink-0">{item.symbol}</span>
+                  <InstrumentLogo symbol={item.symbol} size={24} />
+                  <span className="text-[13px] font-semibold text-ink shrink-0">{item.symbol}</span>
                   {heldSymbols.has(item.symbol) ? (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="In portfolio" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-held" title="In portfolio" />
                   ) : null}
-                  <span className="text-[var(--fig-2xs)] text-zinc-600 min-w-0 truncate">{item.exchange}</span>
+                  <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
                 </div>
-                <span className="text-[var(--fig-xs)] num font-mono text-zinc-200 text-right">
+                <span className="text-[13px] num font-semibold text-ink text-right">
                   {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
                 </span>
                 <span className="flex items-center justify-end gap-1">
                   <span className="flex flex-col items-end gap-0.5 leading-none">
-                    <DayChange value={change} className="text-[var(--fig-xs)]" />
+                    <DayChange value={change} className="text-[12px] font-semibold" />
                     {sinceLastLook != null ? (
-                      <span title="Since you last looked" className="flex items-center gap-0.5 text-zinc-600">
-                        <Eye size={9} aria-hidden="true" />
-                        <DayChange value={sinceLastLook} className="text-[var(--fig-2xs)]" />
+                      <span title="Since you last looked" className="flex items-center gap-0.5 text-ink-3">
+                        <Eye size={10} aria-hidden="true" />
+                        <DayChange value={sinceLastLook} className="text-[11px]" />
                       </span>
                     ) : null}
                   </span>
@@ -297,7 +287,7 @@ export default function WatchlistRail({ symbol, onSelectSymbol, heldSymbols, fil
                       removeItem.mutate({ id: active.id, itemId: item.id })
                     }}
                     aria-label={`Remove ${item.symbol}`}
-                    className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 -mr-1"
+                    className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-ink-3 hover:text-down -mr-1"
                   >
                     <X size={11} />
                   </button>

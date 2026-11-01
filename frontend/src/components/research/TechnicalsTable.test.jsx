@@ -41,11 +41,11 @@ describe('TechnicalsTable', () => {
     const [rsi, macd, sma] = bodyRows()
     expect(within(rsi).getByRole('rowheader')).toHaveTextContent('RSI (14)Overbought')
     expect(within(rsi).getAllByRole('cell').at(-1)).toHaveTextContent(/^Sell$/)
-    expect(within(rsi).getByText('Sell')).toHaveClass('text-red-400')
+    expect(within(rsi).getByText('Sell')).toHaveClass('text-down')
     expect(within(macd).getByRole('rowheader')).toHaveTextContent('MACD (12, 26)Above signal')
-    expect(within(macd).getByText('Buy')).toHaveClass('text-emerald-400')
+    expect(within(macd).getByText('Buy')).toHaveClass('text-up')
     expect(within(sma).getAllByRole('cell').at(-1)).toHaveTextContent(/^Neutral$/)
-    expect(within(sma).getByText('Neutral')).toHaveClass('text-zinc-400')
+    expect(within(sma).getByText('Neutral')).toHaveClass('text-ink-2')
   })
 
   it('lets the indicator column wrap so the table fits a narrow panel', () => {

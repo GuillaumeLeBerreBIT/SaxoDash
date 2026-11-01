@@ -1,9 +1,7 @@
 import { memo, useMemo } from 'react'
 
 import {
-  DOWN,
   PAD_R,
-  UP,
   barCountFromDrag,
   formatTimeLabel,
   indexFromPointer,
@@ -12,14 +10,11 @@ import {
   timeLabelStyle,
   useWidth,
 } from '../../lib/chartGeometry'
-import { AXIS_TEXT } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { RVOL_ELEVATED } from '../../lib/indicators'
 import { usePointerDrag } from './usePointerDrag'
 
-// SVG text can't take a Tailwind class, so the app's actual mono face
-// (index.css's --font-mono) is spelled out literally here rather than
-// mistakenly typed as some other mono font.
-const MONO_FONT = "'Geist Mono', monospace"
+const AXIS_FONT = { fontVariantNumeric: 'tabular-nums' }
 
 /** The lower panes of the Research chart: volume, RSI and MACD.
  *
@@ -35,15 +30,15 @@ const paneMouseProps = (slot, length, setHover) => ({
   onMouseLeave: () => setHover(null),
 })
 
-function HoverLine({ x, height, dimmed }) {
+function HoverLine({ x, height, dimmed, color }) {
   return (
-    <line x1={x} x2={x} y1={0} y2={height} stroke={AXIS_TEXT} strokeDasharray="3 3" opacity={dimmed ? 0.4 : undefined} />
+    <line x1={x} x2={x} y1={0} y2={height} stroke={color} strokeDasharray="3 3" opacity={dimmed ? 0.4 : undefined} />
   )
 }
 
 const volumeHeight = (volume, max, height) => (max === 0 ? 0 : (volume / max) * (height - 16))
 
-const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth, height, max }) {
+const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth, height, max, up, down }) {
   return data.map((bar, i) => {
     const barHeight = volumeHeight(bar.volume, max, height)
     return (
@@ -53,7 +48,7 @@ const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth,
         y={height - barHeight}
         width={barWidth}
         height={barHeight}
-        fill={bar.close >= bar.open ? UP : DOWN}
+        fill={bar.close >= bar.open ? up : down}
         opacity={rvol?.[i] >= RVOL_ELEVATED ? 0.8 : 0.4}
       />
     )
@@ -61,6 +56,7 @@ const VolumeBars = memo(function VolumeBars({ data, rvol = null, slot, barWidth,
 })
 
 export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = false, height = 74 }) {
+  const c = useChartColors()
   const [ref, width] = useWidth()
   const { slot, barWidth, xAt } = paneGeometry(width, data.length)
 
@@ -77,7 +73,7 @@ export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = f
   return (
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, data.length, setHover)}>
       <svg width={width} height={height}>
-        <VolumeBars data={data} rvol={rvol} slot={slot} barWidth={barWidth} height={height} max={max} />
+        <VolumeBars data={data} rvol={rvol} slot={slot} barWidth={barWidth} height={height} max={max} up={c.up} down={c.down} />
         {hovered ? (
           <>
             <rect
@@ -85,13 +81,13 @@ export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = f
               y={height - volumeHeight(hovered.volume, max, height)}
               width={barWidth}
               height={volumeHeight(hovered.volume, max, height)}
-              fill={hovered.close >= hovered.open ? UP : DOWN}
+              fill={hovered.close >= hovered.open ? c.up : c.down}
               opacity={0.85}
             />
-            <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} />
+            <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} color={c.crosshair} />
           </>
         ) : null}
-        <text x={width - PAD_R + 8} y={14} fill={AXIS_TEXT} fontSize="10" fontFamily={MONO_FONT}>
+        <text x={width - PAD_R + 8} y={14} fill={c.axis} fontSize="11" style={AXIS_FONT}>
           {(max / 1e6).toFixed(max >= 1e6 ? 0 : 1)}M
         </text>
       </svg>
@@ -99,7 +95,7 @@ export function VolumePane({ data, rvol = null, hover, setHover, hoverDimmed = f
   )
 }
 
-const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height }) {
+const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height, c }) {
   const scaleY = (value) => 8 + ((100 - value) / 100) * (height - 16)
 
   return (
@@ -109,7 +105,8 @@ const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height }) {
         y={scaleY(70)}
         width={chartW}
         height={scaleY(30) - scaleY(70)}
-        fill="rgba(255,255,255,0.02)"
+        fill={c.track}
+        opacity={0.4}
       />
       {[70, 30].map((level) => (
         <g key={level}>
@@ -118,26 +115,27 @@ const RsiBody = memo(function RsiBody({ values, xAt, width, chartW, height }) {
             x2={chartW}
             y1={scaleY(level)}
             y2={scaleY(level)}
-            stroke="rgba(255,255,255,0.08)"
+            stroke={c.grid}
             strokeDasharray="2 4"
           />
           <text
             x={width - PAD_R + 8}
             y={scaleY(level) + 3.5}
-            fill={AXIS_TEXT}
-            fontSize="10"
-            fontFamily={MONO_FONT}
+            fill={c.axis}
+            fontSize="11"
+            style={AXIS_FONT}
           >
             {level}
           </text>
         </g>
       ))}
-      <path d={linePath(values, xAt, scaleY)} fill="none" stroke="#c084fc" strokeWidth="1.3" />
+      <path d={linePath(values, xAt, scaleY)} fill="none" stroke={c.series[6]} strokeWidth="1.3" />
     </g>
   )
 })
 
 export function RsiPane({ values, hover, setHover, hoverDimmed = false, height = 92 }) {
+  const c = useChartColors()
   const [ref, width] = useWidth()
   const { slot, chartW, xAt } = paneGeometry(width, values.length)
 
@@ -146,14 +144,14 @@ export function RsiPane({ values, hover, setHover, hoverDimmed = false, height =
   return (
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, values.length, setHover)}>
       <svg width={width} height={height}>
-        <RsiBody values={values} xAt={xAt} width={width} chartW={chartW} height={height} />
-        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} /> : null}
+        <RsiBody values={values} xAt={xAt} width={width} chartW={chartW} height={height} c={c} />
+        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} color={c.crosshair} /> : null}
       </svg>
     </div>
   )
 }
 
-const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height }) {
+const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height, c }) {
   const scale = useMemo(() => {
     let peak = 0
     for (const value of [...macd.line, ...macd.signal, ...macd.hist]) {
@@ -167,7 +165,7 @@ const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height }) {
 
   return (
     <g>
-      <line x1={0} x2={chartW} y1={height / 2} y2={height / 2} stroke="rgba(255,255,255,0.08)" />
+      <line x1={0} x2={chartW} y1={height / 2} y2={height / 2} stroke={c.grid} />
       {macd.hist.map((value, i) =>
         value == null ? null : (
           <rect
@@ -176,18 +174,19 @@ const MacdBody = memo(function MacdBody({ macd, slot, chartW, xAt, height }) {
             y={Math.min(height / 2, scaleY(value))}
             width={barWidth}
             height={Math.abs(scaleY(value) - height / 2)}
-            fill={value >= 0 ? UP : DOWN}
+            fill={value >= 0 ? c.up : c.down}
             opacity="0.5"
           />
         ),
       )}
-      <path d={linePath(macd.line, xAt, scaleY)} fill="none" stroke="#60a5fa" strokeWidth="1.2" />
-      <path d={linePath(macd.signal, xAt, scaleY)} fill="none" stroke="#f59e0b" strokeWidth="1.2" />
+      <path d={linePath(macd.line, xAt, scaleY)} fill="none" stroke={c.primary} strokeWidth="1.2" />
+      <path d={linePath(macd.signal, xAt, scaleY)} fill="none" stroke={c.warn} strokeWidth="1.2" />
     </g>
   )
 })
 
 export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 92 }) {
+  const c = useChartColors()
   const [ref, width] = useWidth()
   const { slot, chartW, xAt } = paneGeometry(width, macd.line.length)
 
@@ -196,14 +195,15 @@ export function MacdPane({ macd, hover, setHover, hoverDimmed = false, height = 
   return (
     <div ref={ref} className="w-full h-full" {...paneMouseProps(slot, macd.line.length, setHover)}>
       <svg width={width} height={height}>
-        <MacdBody macd={macd} slot={slot} chartW={chartW} xAt={xAt} height={height} />
-        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} /> : null}
+        <MacdBody macd={macd} slot={slot} chartW={chartW} xAt={xAt} height={height} c={c} />
+        {hover != null ? <HoverLine x={xAt(hover)} height={height} dimmed={hoverDimmed} color={c.crosshair} /> : null}
       </svg>
     </div>
   )
 }
 
 export function TimeAxis({ data, onBarCountChange, onReset }) {
+  const c = useChartColors()
   const [ref, width] = useWidth()
   const { chartW, xAt } = paneGeometry(width, data.length)
   const drag = usePointerDrag({
@@ -225,7 +225,7 @@ export function TimeAxis({ data, onBarCountChange, onReset }) {
     <div
       ref={ref}
       data-testid="time-axis"
-      className="w-full border-t border-white/[0.06] select-none"
+      className="w-full border-t border-line select-none"
       style={{ height: 22, cursor }}
       {...drag.handlers}
       onDoubleClick={() => onReset?.()}
@@ -236,10 +236,10 @@ export function TimeAxis({ data, onBarCountChange, onReset }) {
             key={i}
             x={Math.min(chartW - 24, Math.max(20, xAt(i)))}
             y={14}
-            fill={AXIS_TEXT}
-            fontSize="10"
+            fill={c.axis}
+            fontSize="11"
             textAnchor="middle"
-            fontFamily={MONO_FONT}
+            style={AXIS_FONT}
           >
             {formatTimeLabel(data[i].date, style)}
           </text>

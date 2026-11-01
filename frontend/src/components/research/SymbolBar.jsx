@@ -1,24 +1,24 @@
 import { Star } from 'lucide-react'
 
-import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
+import { fmtNum } from '../../lib/format'
 import { isEtf, moveCaption } from '../../lib/research'
-import { Badge, Card, InstrumentLogo, LetterAvatar } from '../ui'
+import { Card, InstrumentLogo, Tag } from '../ui'
+import { MoveCaption } from './chartHeader'
 import { Menu, MenuRow } from './menu'
 
 function Divider() {
-  return <span className="w-px h-8 bg-white/[0.08] shrink-0" />
+  return <span className="w-px h-8 bg-line shrink-0" />
 }
 
 function Stat({ label, value }) {
   return (
     <div className="flex flex-col">
-      <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{label}</span>
-      <span className="text-[var(--fig-sm)] num font-mono text-zinc-300 whitespace-nowrap">{value}</span>
+      <span className="text-[12px] text-ink-3">{label}</span>
+      <span className="text-[13px] num font-semibold text-ink whitespace-nowrap">{value}</span>
     </div>
   )
 }
 
-/** Identity, live price, day range/volume and list membership for the symbol on screen. */
 export default function SymbolBar({
   symbol,
   instrument,
@@ -43,38 +43,27 @@ export default function SymbolBar({
 
   return (
     <Card padding={false}>
-      <div className="flex items-center gap-4 px-4 py-2.5 flex-wrap">
-        <div className="flex items-center gap-2.5">
-          <InstrumentLogo
-            symbol={symbol}
-            size={32}
-            className="rounded-lg border border-white/10"
-            fallback={<LetterAvatar symbol={symbol} size={32} chars={2} className="rounded-lg border border-white/10" />}
-          />
-          <div>
+      <div className="flex items-center gap-4 px-[18px] py-2.5 flex-wrap">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <InstrumentLogo symbol={symbol} size={36} />
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[var(--fig-md)] font-medium text-zinc-50">{symbol}</span>
-              {exchange ? <span className="text-[var(--fig-2xs)] text-zinc-500 num font-mono">{exchange}</span> : null}
-              {isEtf(instrument) ? <Badge tone="amber">ETF</Badge> : null}
-              {position ? <Badge tone="blue">Held</Badge> : null}
+              <span className="text-[17px] font-bold text-ink">{symbol}</span>
+              {exchange ? <span className="text-[12px] text-ink-3">{exchange}</span> : null}
+              {isEtf(instrument) ? <Tag tone="warn">ETF</Tag> : null}
+              {position ? <Tag tone="held">Held</Tag> : null}
             </div>
-            <div className="text-[var(--fig-xs)] text-zinc-400 mt-0.5">{name}</div>
+            <div className="text-[12px] text-ink-2 mt-0.5 truncate">{name}</div>
           </div>
         </div>
 
         <div className="flex items-baseline gap-2">
-          <span className="text-[var(--fig-lg)] font-medium num font-mono text-zinc-50">
+          <span className="text-[20px] font-bold num text-ink">
             {price == null ? '—' : fmtNum(price, 2)}
           </span>
-          {currency ? <span className="text-[var(--fig-2xs)] text-zinc-500">{currency}</span> : null}
+          {currency ? <span className="text-[12px] text-ink-3">{currency}</span> : null}
           {change == null ? null : (
-            <span
-              className={`num font-mono text-[var(--fig-xs)] font-medium ${
-                pctToneClass(change)
-              }`}
-            >
-              {fmtPct(change)}{changeSuffix ? ` ${changeSuffix}` : ''}
-            </span>
+            <MoveCaption change={change} suffix={changeSuffix} className="text-[13px] font-semibold" />
           )}
         </div>
 
@@ -99,7 +88,7 @@ export default function SymbolBar({
             align="right"
           >
             {watchlists.length === 0 ? (
-              <div className="px-2 py-2 text-[var(--fig-xs)] text-zinc-500">
+              <div className="px-2 py-2 text-[12px] text-ink-3">
                 No lists yet — create one in the rail.
               </div>
             ) : (
@@ -119,7 +108,7 @@ export default function SymbolBar({
       </div>
 
       {instrument && instrument.exact ? null : (
-        <div className="px-4 pb-3 -mt-1 text-[var(--fig-xs)] text-amber-400/90">
+        <div className="px-[18px] pb-3 -mt-1 text-[12px] text-warn">
           {instrument
             ? `No exact match for ${symbol}; showing ${name || 'the closest search result'} instead.`
             : `Could not resolve ${symbol} to a Saxo instrument.`}

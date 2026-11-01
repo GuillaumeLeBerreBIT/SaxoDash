@@ -5,7 +5,7 @@ import { Search } from 'lucide-react'
 
 import { useInstrumentSearch } from '../api/queries'
 import { ALL_ASSET_TYPES, rankInstrumentResults, researchHref } from '../lib/research'
-import { Badge, TBtn } from './ui'
+import { Tag, TBtn } from './ui'
 import { usePortalMenuRect } from './usePortalMenuRect'
 
 const FILTERS = [
@@ -71,17 +71,17 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
   return (
     <div ref={wrapperRef} className="relative flex items-center gap-2">
       <div className="relative flex-1">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search any stock or ETF…"
           aria-label="Search instruments"
-          className="w-full h-9 pl-9 pr-3 bg-zinc-950 border border-white/10 rounded-lg text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60"
+          className="w-full h-[34px] pl-9 pr-3 bg-track border border-line-input rounded-lg text-[14px] text-ink placeholder:text-ink-3 outline-none"
         />
       </div>
 
-      <div className="flex items-center gap-0.5 rounded-lg border border-white/[0.06] p-0.5 shrink-0">
+      <div className="flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0">
         {FILTERS.map(([value, label]) => (
           <TBtn key={value} active={assetTypes === value} onClick={() => setAssetTypes(value)}>
             {label}
@@ -93,7 +93,7 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-zinc-900 border border-white/10 rounded-lg shadow-lg px-3 py-2 text-[var(--fig-xs)] text-amber-400"
+          className="z-50 sd-raised bg-raised rounded-lg shadow-lg px-3 py-2 text-[13px] text-warn"
         >
           Search unavailable — reconnect Saxo
         </div>,
@@ -103,23 +103,23 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 max-h-72 overflow-y-auto bg-zinc-900 border border-white/10 rounded-lg shadow-lg"
+          className="z-50 max-h-72 overflow-y-auto sd-raised bg-raised rounded-lg shadow-lg"
         >
           {ranked.map((result) => (
             <button
               key={`${result.uic}-${result.asset_type}`}
               type="button"
               onClick={() => go(result)}
-              className="flex items-center gap-2.5 w-full text-left px-3 py-2 text-[var(--fig-sm)] text-zinc-100 hover:bg-white/[0.06]"
+              className="flex items-center gap-2.5 w-full text-left px-3 min-h-11 text-[14px] text-ink hover:bg-hover"
             >
-              <span className="shrink-0 font-medium">{result.symbol}</span>
-              <span className="text-zinc-500 truncate flex-1">{result.description}</span>
+              <span className="shrink-0 font-semibold">{result.symbol}</span>
+              <span className="text-ink-3 truncate flex-1">{result.description}</span>
               {result.exchange ? (
-                <span className="text-[var(--fig-2xs)] text-zinc-600 num font-mono shrink-0">{result.exchange}</span>
+                <span className="text-[12px] text-ink-3 shrink-0">{result.exchange}</span>
               ) : null}
-              <Badge tone={result.asset_type === 'Etf' ? 'amber' : 'zinc'} className="shrink-0">
+              <Tag tone={result.asset_type === 'Etf' ? 'warn' : 'neutral'} className="shrink-0">
                 {result.asset_type === 'Etf' ? 'ETF' : 'Stock'}
-              </Badge>
+              </Tag>
             </button>
           ))}
         </div>,

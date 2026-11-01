@@ -23,13 +23,13 @@ function groupByDay(items) {
   return groups
 }
 
-export default function NewsTab({ symbol }) {
+export default function NewsTab({ symbol, context, className = '' }) {
   const [shown, setShown] = useState(NEWS_PAGE)
   const { data, isLoading } = useCompanyNews(symbol)
 
   if (isLoading) {
     return (
-      <Card context="From Finnhub" dot="off" title="News">
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
         <div className="space-y-2">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-4 w-2/3" />
@@ -41,7 +41,7 @@ export default function NewsTab({ symbol }) {
 
   if (!data?.available) {
     return (
-      <Card context="From Finnhub" dot="off" title="News">
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
         <p className="text-[13px] text-ink-3">
           {data?.reason || `News is unavailable for ${symbol}.`}
         </p>
@@ -51,14 +51,14 @@ export default function NewsTab({ symbol }) {
 
   if (data.items.length === 0) {
     return (
-      <Card context="From Finnhub" dot="off" title="News">
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
         <p className="text-[13px] text-ink-3">No recent news for {symbol}.</p>
       </Card>
     )
   }
 
   return (
-    <Card context="Finnhub company news · last 14 days, newest first" dot="ok" title="News">
+    <Card className={className} context={context ?? 'Finnhub company news · last 14 days, newest first'} dot="ok" title="News">
       {groupByDay(data.items.slice(0, shown)).map((group) => (
         <section key={group.key} className="pt-3 first:pt-0">
           <h3 className="text-[12px] font-medium text-ink-3 num">{group.label}</h3>
