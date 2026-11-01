@@ -87,7 +87,7 @@ describe('DiscoverShelf', () => {
     renderPage()
     expect(screen.getByRole('link', { name: 'Open FICO chart' })).toHaveAttribute(
       'href',
-      '/research/chart?symbol=FICO&uic=42&assetType=Stock',
+      '/boards?symbol=FICO&uic=42&assetType=Stock',
     )
   })
 

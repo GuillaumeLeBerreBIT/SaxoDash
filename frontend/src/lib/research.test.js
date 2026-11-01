@@ -5,7 +5,6 @@ import {
   WIDEST_RANGE_COUNT,
   barChange,
   barsForRange,
-  boardHref,
   chartHref,
   earningsMarkersForBars,
   instrumentKey,
@@ -310,29 +309,17 @@ describe('researchHref', () => {
   })
 })
 
-describe('boardHref', () => {
-  it('opens the Chart board on the exact instrument', () => {
-    expect(boardHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe('/boards?symbol=NOW&uic=204300&assetType=Stock')
-  })
-
-  it('falls back to the symbol alone', () => {
-    expect(boardHref('NVDA')).toBe('/boards?symbol=NVDA')
-  })
-})
-
 describe('chartHref', () => {
-  it('builds a symbol-only advanced chart link', () => {
-    expect(chartHref('NVDA')).toBe('/research/chart?symbol=NVDA')
+  it('opens the Chart board on the symbol alone', () => {
+    expect(chartHref('NVDA')).toBe('/boards?symbol=NVDA')
   })
 
   it('pins the exact instrument, like researchHref', () => {
-    expect(chartHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe(
-      '/research/chart?symbol=NOW&uic=204300&assetType=Stock',
-    )
+    expect(chartHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe('/boards?symbol=NOW&uic=204300&assetType=Stock')
   })
 
   it('leaves out an asset type without a uic', () => {
-    expect(chartHref('NOW', { assetType: 'Stock' })).toBe('/research/chart?symbol=NOW')
+    expect(chartHref('NOW', { assetType: 'Stock' })).toBe('/boards?symbol=NOW')
   })
 })
 

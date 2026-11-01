@@ -116,9 +116,9 @@ describe('InstrumentSearchBar', () => {
 
   it('navigates wherever hrefFor points when the caller supplies it', async () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [tsla], isError: false })
-    renderWithProviders(<InstrumentSearchBar hrefFor={(r) => `/research/chart?symbol=${r.symbol}`} />)
+    renderWithProviders(<InstrumentSearchBar hrefFor={(r) => `/boards?symbol=${r.symbol}`} />)
     await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), 'tsla')
     await userEvent.click(screen.getByText('Tesla Inc'))
-    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA')
+    expect(navigate).toHaveBeenCalledWith('/boards?symbol=TSLA')
   })
 })

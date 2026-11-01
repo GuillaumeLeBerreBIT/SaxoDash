@@ -75,7 +75,7 @@ describe('CommandPalette', () => {
     renderWithProviders(<CommandPalette open onClose={onClose} hrefFor={hrefFor} />)
     await userEvent.type(screen.getByRole('combobox'), 'tsla')
     await userEvent.click(screen.getByRole('option', { name: /TSLA/ }))
-    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA&uic=9&assetType=Stock')
+    expect(navigate).toHaveBeenCalledWith('/boards?symbol=TSLA&uic=9&assetType=Stock')
     expect(onClose).toHaveBeenCalled()
   })
 

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Search, Star } from 'lucide-react'
 
 import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct } from '../../lib/format'
-import { boardHref, isEtf, moveCaption } from '../../lib/research'
+import { chartHref, isEtf, moveCaption } from '../../lib/research'
 import InstrumentSearchBar from '../InstrumentSearchBar'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
 import { Card, Chip, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
@@ -135,7 +135,7 @@ export default function ResearchHeader({
         <div className="flex flex-wrap items-center gap-1.5">
           <SaxoConnectionStatus />
           <WatchlistMenu watchlists={watchlists} instrument={instrument} onToggleList={onToggleList} />
-          <Link to={boardHref(symbol, instrument)} className={LINK_BUTTON}>
+          <Link to={chartHref(symbol, instrument)} className={LINK_BUTTON}>
             Open in Chart
           </Link>
         </div>

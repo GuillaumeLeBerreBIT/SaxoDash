@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { chartHref } from '../lib/research'
 import TopBar from './TopBar'
 import MobileNav from './MobileNav'
 import CommandPalette from './CommandPalette'
@@ -7,6 +8,7 @@ import { useCommandPalette } from './useCommandPalette'
 export default function Layout() {
   const palette = useCommandPalette()
   const openPalette = () => palette.setOpen(true)
+  const onChartBoard = useLocation().pathname === '/boards'
 
   return (
     <div className="min-h-screen text-ink">
@@ -17,7 +19,7 @@ export default function Layout() {
         </div>
       </main>
       <MobileNav onOpenPalette={openPalette} />
-      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} />
+      <CommandPalette open={palette.open} onClose={() => palette.setOpen(false)} hrefFor={onChartBoard ? chartHref : undefined} />
     </div>
   )
 }

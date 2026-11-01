@@ -13,7 +13,13 @@ vi.mock('../api/client', () => ({
   getPortfolioSummary: vi.fn(() => new Promise(() => {})),
   getNetWorth: vi.fn(() => new Promise(() => {})),
 }))
-vi.mock('./CommandPalette', () => ({ default: () => null }))
+const palette = vi.hoisted(() => ({ props: null }))
+vi.mock('./CommandPalette', () => ({
+  default: (props) => {
+    palette.props = props
+    return null
+  },
+}))
 
 describe('Layout shell', () => {
   it('has no sidebar and no rail offset', () => {
@@ -39,5 +45,13 @@ describe('Layout shell', () => {
   it('renders the phone bottom navigation', () => {
     renderWithProviders(<Layout />)
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
+  })
+
+  it('sends palette picks to the Chart board while it is open, and to Research elsewhere', () => {
+    renderWithProviders(<Layout />, { route: '/boards' })
+    expect(palette.props.hrefFor('TSLA', { uic: 9, assetType: 'Stock' })).toBe('/boards?symbol=TSLA&uic=9&assetType=Stock')
+
+    renderWithProviders(<Layout />, { route: '/boards/morning' })
+    expect(palette.props.hrefFor).toBeUndefined()
   })
 })

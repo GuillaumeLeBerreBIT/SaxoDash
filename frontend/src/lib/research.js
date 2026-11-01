@@ -239,12 +239,6 @@ export function researchHref(symbol, tab, instrument) {
 export function chartHref(symbol, instrument) {
   const params = new URLSearchParams({ symbol })
   pinInstrument(params, instrument)
-  return `/research/chart?${params.toString()}`
-}
-
-export function boardHref(symbol, instrument) {
-  const params = new URLSearchParams({ symbol })
-  pinInstrument(params, instrument)
   return `/boards?${params.toString()}`
 }
 

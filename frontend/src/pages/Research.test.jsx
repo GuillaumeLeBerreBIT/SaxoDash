@@ -562,7 +562,7 @@ describe('Research', () => {
 
     expect(screen.getByRole('link', { name: 'Open advanced chart' })).toHaveAttribute(
       'href',
-      '/research/chart?symbol=NVDA&uic=211&assetType=Stock',
+      '/boards?symbol=NVDA&uic=211&assetType=Stock',
     )
   })
 })
