@@ -16,7 +16,8 @@ import CongressMember from './pages/CongressMember'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import LegacyRedirect from './routes/LegacyRedirect'
-import { MoneyRoute, PortfolioRoute, SettingsPlaceholder } from './routes/placeholders'
+import { MoneyRoute, PortfolioRoute } from './routes/placeholders'
+import Settings from './pages/Settings'
 import { LEGACY_REDIRECTS } from './lib/navigation'
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
           <Route path='analytics' element={<Analytics />} />
           <Route path='money' element={<MoneyRoute />} />
           <Route path='money/accounts/:accountId' element={<AccountTransactions />} />
-          <Route path='settings' element={<SettingsPlaceholder />} />
+          <Route path='settings' element={<Settings />} />
           <Route path='research' element={<Research />} />
           <Route path='boards' element={<ResearchChart />} />
           <Route path='boards/:id' element={<ResearchChart />} />

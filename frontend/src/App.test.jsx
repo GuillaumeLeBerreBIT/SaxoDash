@@ -31,6 +31,7 @@ vi.mock('./pages/Investors', () => page('Investors page'))
 vi.mock('./pages/Investor', () => page('Investor page'))
 vi.mock('./pages/InvestorStocks', () => page('InvestorStocks page'))
 vi.mock('./pages/CongressMember', () => page('CongressMember page'))
+vi.mock('./pages/Settings', () => page('Settings page'))
 vi.mock('./pages/Login', () => page('Login page'))
 vi.mock('./pages/NotFound', () => page('NotFound page'))
 
@@ -88,9 +89,9 @@ describe('new routes', () => {
     expect(screen.getByTestId('frame')).toBeInTheDocument()
   })
 
-  it('renders a Settings placeholder inside the frame', () => {
+  it('renders the Settings page inside the frame', () => {
     renderAt('/settings')
-    expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByText('Settings page')).toBeInTheDocument()
     expect(screen.getByTestId('frame')).toBeInTheDocument()
   })
 })

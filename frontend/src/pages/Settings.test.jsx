@@ -1,0 +1,90 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { render } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
+
+import Settings from './Settings'
+import { ThemeProvider } from '../theme/ThemeProvider'
+
+vi.mock('../api/queries')
+import * as queries from '../api/queries'
+
+vi.mock('../api/client', () => ({
+  connectSaxo: vi.fn(),
+  connectEnableBanking: vi.fn(),
+}))
+import { connectSaxo } from '../api/client'
+
+const HEALTHY = { connected: true, usable: true, needs_reauth: false, last_sync_outcome: 'ok', failing_syncs: [] }
+
+function renderSettings(route = '/settings') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={[route]}>
+          <Settings />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  )
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  localStorage.clear()
+  queries.useSaxoStatus.mockReturnValue({ data: HEALTHY })
+  queries.useEnableBankingStatus.mockReturnValue({ data: undefined })
+})
+
+describe('Settings', () => {
+  it('theme cards switch the theme', async () => {
+    renderSettings()
+    await userEvent.click(screen.getByRole('button', { name: /Graphite Blue/ }))
+    expect(document.documentElement.dataset.theme).toBe('blue')
+    expect(screen.getByRole('button', { name: /Graphite Blue/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Republic/ })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('gain and loss colours toggle cvd', async () => {
+    renderSettings()
+    await userEvent.click(screen.getByRole('button', { name: /Blue \/ orange/ }))
+    expect(document.documentElement.dataset.moves).toBe('cvd')
+    expect(screen.getByRole('button', { name: /Blue \/ orange/ })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('density toggles compact', async () => {
+    renderSettings()
+    await userEvent.click(screen.getByRole('button', { name: 'Compact' }))
+    expect(document.documentElement.dataset.density).toBe('compact')
+  })
+
+  it('sync health lists failing tasks', async () => {
+    queries.useSaxoStatus.mockReturnValue({ data: { ...HEALTHY, last_sync_outcome: 'failed', failing_syncs: ['sync_positions'] } })
+    renderSettings('/settings?section=sync')
+    const row = screen.getByText('sync_positions').closest('li')
+    expect(row).toHaveTextContent('failing')
+    expect(row.querySelector('.bg-warn')).not.toBeNull()
+  })
+
+  it('connections show Saxo needs re-authentication with a Reconnect button', async () => {
+    queries.useSaxoStatus.mockReturnValue({ data: { ...HEALTHY, needs_reauth: true, usable: false } })
+    renderSettings('/settings?section=connections')
+    expect(screen.getByText('Saxo needs re-authentication')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Reconnect' }))
+    expect(connectSaxo).toHaveBeenCalledTimes(1)
+  })
+
+  it('clicking a section updates the view', async () => {
+    renderSettings()
+    await userEvent.click(screen.getByRole('button', { name: 'Sync health' }))
+    expect(screen.getByRole('heading', { name: 'Sync health' })).toBeInTheDocument()
+  })
+
+  it('credits the logo provider', () => {
+    renderSettings()
+    expect(screen.getByRole('link', { name: /elbstream\.com/ })).toHaveAttribute('href', 'https://elbstream.com')
+  })
+})
