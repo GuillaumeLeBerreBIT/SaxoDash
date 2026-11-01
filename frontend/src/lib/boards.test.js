@@ -4,7 +4,9 @@ import {
   MIN_H,
   MIN_W,
   PANEL_TYPES,
+  ROW_H,
   addPanel,
+  createBoard,
   defaultBoards,
   followSymbol,
   loadBoards,
@@ -14,6 +16,7 @@ import {
   resizeTo,
   saveBoards,
   settle,
+  snapTarget,
 } from './boards'
 
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
@@ -216,6 +219,19 @@ describe('operations', () => {
     expect(byId(next, 'p1').y).toBeGreaterThanOrEqual(0)
   })
 
+  it('moveTo keeps the current position for a coordinate that is not a finite number', () => {
+    const board = morning()
+    const before = byId(board, 'p6')
+    expect(byId(moveTo(board, 'p6', Number.NaN, Infinity), 'p6')).toMatchObject({ x: before.x, y: before.y })
+    expect(byId(moveTo(board, 'p6', 'x', undefined), 'p6')).toMatchObject({ x: before.x, y: before.y })
+  })
+
+  it('resizeTo keeps the current size for a dimension that is not a finite number', () => {
+    const board = morning()
+    const before = byId(board, 'p6')
+    expect(byId(resizeTo(board, 'p6', Number.NaN, -Infinity), 'p6')).toMatchObject({ w: before.w, h: before.h })
+  })
+
   it('unknown ids return the board unchanged', () => {
     const board = morning()
     expect(moveTo(board, 'nope', 1, 1)).toBe(board)
@@ -310,10 +326,60 @@ describe('loadBoards and saveBoards', () => {
     expect(boards[0].panels[0]).toMatchObject({ x: 7, w: 5 })
   })
 
+  it('drops a board whose id repeats an earlier one', () => {
+    localStorage.setItem(
+      'saxodash:boards',
+      JSON.stringify([
+        { id: 'a', name: 'First', panels: [] },
+        { id: 'a', name: 'Second', panels: [] },
+        { id: 'b', name: 'Third', panels: [] },
+      ]),
+    )
+    expect(loadBoards().map((b) => b.name)).toEqual(['First', 'Third'])
+  })
+
   it('swallows storage errors on save and reports false', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota')
     })
     expect(saveBoards(defaultBoards())).toBe(false)
+  })
+})
+
+describe('createBoard', () => {
+  it('makes an empty Untitled board whose id collides with none of the existing ones', () => {
+    const boards = [{ id: 'board-1', name: 'A', sym: '', panels: [] }, { id: 'board-2', name: 'B', sym: '', panels: [] }]
+    const board = createBoard(boards, 'NVDA')
+    expect(board).toEqual({ id: 'board-3', name: 'Untitled board', sym: 'NVDA', panels: [] })
+  })
+
+  it('never reuses the chart workspace id', () => {
+    expect(createBoard([]).id).not.toBe('chart')
+    expect(createBoard([]).sym).toBe('')
+  })
+})
+
+describe('snapTarget', () => {
+  const panel = { id: 'p1', type: 'chart', x: 2, y: 1, w: 4, h: 4 }
+  const grid = { colWidth: 88, gap: 12 }
+
+  it('uses 64 px rows', () => {
+    expect(ROW_H).toBe(64)
+  })
+
+  it('moves by whole columns of width plus gap and rows of 64 px plus gap', () => {
+    expect(snapTarget('move', panel, { dx: 200, dy: 152 }, grid)).toEqual({ ...panel, x: 4, y: 3 })
+    expect(snapTarget('move', panel, { dx: 40, dy: 30 }, grid)).toEqual(panel)
+  })
+
+  it('keeps a moved panel inside the grid', () => {
+    expect(snapTarget('move', panel, { dx: -2000, dy: -2000 }, grid)).toMatchObject({ x: 0, y: 0 })
+    expect(snapTarget('move', panel, { dx: 5000, dy: 0 }, grid)).toMatchObject({ x: COLS - panel.w })
+  })
+
+  it('resizes from the corner within the minimum size and the right edge', () => {
+    expect(snapTarget('resize', panel, { dx: 100, dy: 76 }, grid)).toEqual({ ...panel, w: 5, h: 5 })
+    expect(snapTarget('resize', panel, { dx: -5000, dy: -5000 }, grid)).toMatchObject({ w: MIN_W, h: MIN_H })
+    expect(snapTarget('resize', panel, { dx: 5000, dy: 0 }, grid)).toMatchObject({ w: COLS - panel.x })
   })
 })

@@ -1,6 +1,8 @@
 export const COLS = 12
 export const MIN_W = 2
 export const MIN_H = 3
+export const ROW_H = 64
+export const NEW_BOARD_NAME = 'Untitled board'
 
 const STORAGE_KEY = 'saxodash:boards'
 
@@ -120,16 +122,33 @@ function withPanel(board, id, change) {
 
 export function moveTo(board, id, x, y) {
   return withPanel(board, id, (p) => ({
-    x: Math.min(COLS - p.w, Math.max(0, Math.round(x))),
-    y: Math.max(0, Math.round(y)),
+    x: Math.min(COLS - p.w, Math.max(0, whole(x, p.x))),
+    y: Math.max(0, whole(y, p.y)),
   }))
 }
 
 export function resizeTo(board, id, w, h) {
   return withPanel(board, id, (p) => ({
-    w: Math.min(COLS - p.x, Math.max(MIN_W, Math.round(w))),
-    h: Math.max(MIN_H, Math.round(h)),
+    w: Math.min(COLS - p.x, Math.max(MIN_W, whole(w, p.w))),
+    h: Math.max(MIN_H, whole(h, p.h)),
   }))
+}
+
+export function snapTarget(mode, panel, { dx, dy }, { colWidth, gap }) {
+  const cols = whole(dx / (colWidth + gap), 0)
+  const rows = whole(dy / (ROW_H + gap), 0)
+  if (mode === 'resize') {
+    return {
+      ...panel,
+      w: Math.max(MIN_W, Math.min(COLS - panel.x, panel.w + cols)),
+      h: Math.max(MIN_H, panel.h + rows),
+    }
+  }
+  return {
+    ...panel,
+    x: Math.max(0, Math.min(COLS - panel.w, panel.x + cols)),
+    y: Math.max(0, panel.y + rows),
+  }
 }
 
 function nextPanelId(panels) {
@@ -157,12 +176,25 @@ export function followSymbol(board, sym) {
   return { ...board, sym }
 }
 
+export function createBoard(boards, sym = '') {
+  const taken = new Set(boards.map((b) => b.id))
+  let n = boards.length + 1
+  while (taken.has(`board-${n}`)) n += 1
+  return { id: `board-${n}`, name: NEW_BOARD_NAME, sym, panels: [] }
+}
+
 export function loadBoards() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
     if (!Array.isArray(stored)) return defaultBoards()
+    const seen = new Set()
     return stored
       .filter((b) => b && typeof b === 'object' && typeof b.id === 'string' && b.id && typeof b.name === 'string' && b.name)
+      .filter((b) => {
+        if (seen.has(b.id)) return false
+        seen.add(b.id)
+        return true
+      })
       .map(normaliseBoard)
   } catch {
     return defaultBoards()
