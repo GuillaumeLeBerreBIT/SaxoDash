@@ -609,10 +609,16 @@ describe('Research panning', () => {
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-controls', panel.id)
   })
 
-  it('keeps the watchlist rail beside the Overview', () => {
-    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+  it.each(['', '&tab=financials', '&tab=news'])('keeps the watchlist rail on every tab (%s)', (tab) => {
+    renderWithProviders(<Research />, { route: `/research?symbol=NVDA${tab}` })
 
     expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
+  })
+
+  it('puts the tab body and the rail side by side from 1440px on the other tabs', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
+
+    expect(screen.getByRole('tabpanel')).toHaveClass('min-[1440px]:col-span-9')
   })
 })
 
@@ -720,5 +726,32 @@ describe('Research header and Overview on the new design', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Funds tab' }))
     expect(screen.getByRole('tab', { name: 'Funds' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('asks nobody about fund or Congress ownership while the instrument is pending', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: true })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT' })
+
+    expect(queries.useOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useCongressOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByRole('heading', { name: 'Funds and Congress' })).toBeInTheDocument()
+  })
+
+  it('asks nobody about ownership for a listing Saxo could not confirm', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined, error: new Error('saxo down') })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&uic=9&assetType=Stock' })
+
+    expect(queries.useOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useCongressOwnership).not.toHaveBeenCalledWith('WHAT')
+  })
+
+  it('shows a dash rather than a made-up volume when the bar has none', () => {
+    stubQueries({ chart: { data: bars.map((bar) => ({ ...bar, volume: undefined })), isLoading: false, error: null } })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const line = screen.getByText(/Vol —/)
+    expect(line).not.toHaveTextContent(/NaN|0\.0M/)
   })
 })

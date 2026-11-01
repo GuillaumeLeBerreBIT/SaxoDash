@@ -192,7 +192,7 @@ export default function Research() {
               {chartPanel}
             </>
           }
-          signals={<OwnershipSignals symbol={symbol} currency={currency} onOpenTab={setTab} />}
+          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} onOpenTab={setTab} />}
           rail={<WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
       </div>
@@ -202,32 +202,37 @@ export default function Research() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       {header}
-      <div {...panelProps}>
-        {gate === TAB_GATE.pending ? (
-          <Card>
-            <p data-testid="tab-pending" className="text-[13px] text-ink-3">
-              Looking up this instrument…
-            </p>
-          </Card>
-        ) : null}
-        {gate === TAB_GATE.refused ? (
-          <Card>
-            <p data-testid="tab-refused" className="text-[13px] text-ink-3">
-              {REFUSALS[companyData]}
-            </p>
-          </Card>
-        ) : null}
-        {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-        {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
-        {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-        {shown('earnings') ? (
-          <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
-        ) : null}
-        {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
-        {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
-        {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-        {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
-        {shown('guide') ? <GuideTab /> : null}
+      <div className="grid grid-cols-1 min-[1440px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <div {...panelProps} className="min-w-0 min-[1440px]:col-span-9">
+          {gate === TAB_GATE.pending ? (
+            <Card>
+              <p data-testid="tab-pending" className="text-[13px] text-ink-3">
+                Looking up this instrument…
+              </p>
+            </Card>
+          ) : null}
+          {gate === TAB_GATE.refused ? (
+            <Card>
+              <p data-testid="tab-refused" className="text-[13px] text-ink-3">
+                {REFUSALS[companyData]}
+              </p>
+            </Card>
+          ) : null}
+          {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+          {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+          {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+          {shown('earnings') ? (
+            <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+          ) : null}
+          {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+          {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
+          {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+          {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
+          {shown('guide') ? <GuideTab /> : null}
+        </div>
+        <div className="min-w-0 min-[1440px]:col-span-3">
+          <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+        </div>
       </div>
     </div>
   )

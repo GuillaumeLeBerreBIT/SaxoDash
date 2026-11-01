@@ -1,4 +1,5 @@
 import { useCongressOwnership, useOwnership } from '../../api/queries'
+import { COMPANY_DATA } from '../../lib/companyData'
 import { quarterLabel } from '../../lib/investors'
 import { ownershipTicker } from '../../lib/ownership'
 import { Card, Skeleton } from '../ui'
@@ -52,15 +53,22 @@ function Row({ label, query, read, tab, onOpenTab }) {
   )
 }
 
-export default function OwnershipSignals({ symbol, currency, onOpenTab }) {
-  const ticker = ownershipTicker({ ticker: symbol, currency })
+const ASKABLE = new Set([COMPANY_DATA.eligible, COMPANY_DATA.fund])
+
+export default function OwnershipSignals({ symbol, currency, companyData, onOpenTab }) {
+  const askable = ASKABLE.has(companyData)
+  const ticker = askable ? ownershipTicker({ ticker: symbol, currency }) : ''
   const funds = useOwnership(ticker)
   const congress = useCongressOwnership(ticker)
 
   if (!ticker) {
     return (
       <Card context="13F filings and House reports" dot="off" title="Funds and Congress">
-        <p className="text-[13px] text-ink-2">Both are matched by US ticker, so only US-dollar listings are looked up.</p>
+        <p className="text-[13px] text-ink-2">
+          {companyData === COMPANY_DATA.pending
+            ? 'Looking up this instrument…'
+            : 'Both are matched by US ticker, so only confirmed US-dollar listings are looked up.'}
+        </p>
       </Card>
     )
   }

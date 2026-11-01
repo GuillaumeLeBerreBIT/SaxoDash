@@ -68,7 +68,7 @@ function Price({ quote, bars, currency }) {
       </div>
       {last ? (
         <div className="mt-0.5 text-[12px] text-ink-3 num">
-          Day {fmtNum(last.low, 2)}–{fmtNum(last.high, 2)} · Vol {fmtNum(last.volume / 1e6, 1)}M
+          Day {fmtNum(last.low, 2)}–{fmtNum(last.high, 2)} · Vol {last.volume == null ? '—' : `${fmtNum(last.volume / 1e6, 1)}M`}
         </div>
       ) : null}
     </div>
