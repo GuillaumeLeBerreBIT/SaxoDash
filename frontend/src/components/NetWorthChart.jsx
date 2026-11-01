@@ -4,21 +4,21 @@ import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, formatAxisDate, seriesAxis } from '../lib/charts'
 import { useChartColors } from '../theme/useChartColors'
-import { Pill, RangePills } from './RangePills'
-import { Card, CardHeader } from './ui'
+import { RANGES } from './RangePills'
+import { Segmented } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
 
 const seriesFor = (c) => [
-  { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: c.up },
-  { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: c.warn },
-  { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: c.primary },
+  { key: 'INVESTMENTS', dataKey: 'portfolio_value', name: 'Positions', color: c.series[0] },
+  { key: 'BANK', dataKey: 'bank_total', name: 'Cash (bank + Saxo)', color: c.series[1] },
+  { key: 'TOTAL', dataKey: 'net_worth', name: 'Total', color: c.series[2] },
 ]
 
 function SeriesLegend({ series, dimmed }) {
   return (
     <ul aria-label="Chart series" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
       {series.map((s) => (
-        <li key={s.key} className="flex items-center gap-1.5 text-[var(--fig-xs)] text-ink-2">
+        <li key={s.key} className="flex items-center gap-1.5 text-[12px] text-ink-2">
           <span
             className="w-4 border-t-2"
             style={{ borderColor: s.color, borderStyle: dimmed && s.key !== 'TOTAL' ? 'dashed' : 'solid' }}
@@ -48,25 +48,28 @@ export default function NetWorthChart() {
   const showTotal = isVisible('TOTAL')
 
   return (
-    <Card>
-      <CardHeader
-        title="Net worth history"
-        subtitle="Portfolio and bank accounts over time"
-        className="flex-wrap"
-        right={
-          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto bg-pill rounded-md p-0.5 border border-line">
-              {VIEWS.map((v) => (
-                <Pill key={v.key} active={view === v.key} onClick={() => setView(v.key)}>
-                  {v.name}
-                </Pill>
-              ))}
-            </div>
-            <RangePills value={range} onChange={setRange} />
-          </div>
-        }
-      />
-      <div className="mt-4 h-[var(--chart-h-lg)]">
+    <section aria-labelledby="net-worth-history">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h3 id="net-worth-history" className="text-[14px] font-bold text-ink">Net worth history</h3>
+          <p className="text-[12px] text-ink-3">Portfolio and bank accounts over time</p>
+        </div>
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <Segmented
+            label="Series"
+            options={VIEWS.map((v) => ({ value: v.key, label: v.name }))}
+            value={view}
+            onChange={setView}
+          />
+          <Segmented
+            label="Range"
+            options={RANGES.map((r) => ({ value: r, label: r }))}
+            value={range}
+            onChange={setRange}
+          />
+        </div>
+      </div>
+      <div className="mt-3 h-[var(--chart-h-lg)]">
         {placeholder ?? (
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>
@@ -116,6 +119,6 @@ export default function NetWorthChart() {
         )}
       </div>
       {!placeholder && <SeriesLegend series={visible} dimmed={view === 'ALL'} />}
-    </Card>
+    </section>
   )
 }

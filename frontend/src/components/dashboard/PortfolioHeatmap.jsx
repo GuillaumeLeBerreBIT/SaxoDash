@@ -14,7 +14,8 @@ import {
 } from '../../lib/heatmap'
 import { LAST_SESSION_NOTE, moveLabel } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
-import { Card, CardHeader, TBtn } from '../ui'
+import { Card, Segmented } from '../ui'
+import { useChartColors } from '../../theme/useChartColors'
 import HeatTile from '../heatmap/HeatTile'
 import ScaleLegend from '../heatmap/ScaleLegend'
 
@@ -33,8 +34,8 @@ function tileTitle(position, sector, move, dayLabel) {
 }
 
 function dayTone(impactEur) {
-  if (Math.round(impactEur) === 0) return 'text-zinc-300'
-  return impactEur > 0 ? 'text-emerald-400' : 'text-red-400'
+  if (Math.round(impactEur) === 0) return 'text-ink-2'
+  return impactEur > 0 ? 'text-up' : 'text-down'
 }
 
 function DayLine({ summary, label, coverage }) {
@@ -46,7 +47,7 @@ function DayLine({ summary, label, coverage }) {
         {signedEur(summary.impactEur)} ({fmtPct(summary.pct, { decimals: 1 })})
       </span>
       {' · biggest driver '}
-      <span className="text-zinc-300">
+      <span className="text-ink-2">
         {summary.driver.position.ticker} {signedEur(summary.driver.impactEur)}
       </span>
       {coverage && coverage.priced < coverage.total ? ` · ${coverage.priced} of ${coverage.total} priced` : null}
@@ -62,7 +63,7 @@ function SincePurchaseLine({ summary }) {
       {contributor ? (
         <>
           Biggest contributor{' '}
-          <span className="text-emerald-400">
+          <span className="text-up">
             {contributor.ticker} {signedEur(contributor.pnl)}
           </span>
         </>
@@ -70,7 +71,7 @@ function SincePurchaseLine({ summary }) {
       {drag ? (
         <>
           {contributor ? ' · biggest drag ' : 'Biggest drag '}
-          <span className="text-red-400">
+          <span className="text-down">
             {drag.ticker} {signedEur(drag.pnl)}
           </span>
         </>
@@ -80,6 +81,7 @@ function SincePurchaseLine({ summary }) {
 }
 
 export default function PortfolioHeatmap({ positions, quotes }) {
+  const c = useChartColors()
   const [metric, setMetric] = useState('day')
   const [ref, size] = useSize()
   const height = size.height || FALLBACK_HEIGHT
@@ -99,20 +101,24 @@ export default function PortfolioHeatmap({ positions, quotes }) {
   }
 
   return (
-    <Card>
-      <CardHeader title="Allocation & movement" subtitle="Sized by value, grouped by sector" />
-      <div className="flex flex-wrap items-center gap-3 mt-2">
+    <Card
+      context="Sized by value, grouped by sector"
+      dot={metric === 'day' && dayLabel !== 'Today' ? 'warn' : 'ok'}
+      title="Allocation & movement"
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented
+          label="Heatmap colour"
+          options={[
+            { value: 'day', label: dayLabel },
+            { value: 'sincePurchase', label: 'Since purchase' },
+          ]}
+          value={metric}
+          onChange={setMetric}
+        />
         <ScaleLegend cap={cap} />
-        <div className="flex items-center gap-0.5">
-          <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>
-            <span className="whitespace-nowrap">{dayLabel}</span>
-          </TBtn>
-          <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
-            <span className="whitespace-nowrap">Since purchase</span>
-          </TBtn>
-        </div>
       </div>
-      <p className="mt-2 text-[var(--fig-xs)] text-zinc-500 num">
+      <p className="mt-2 text-[12px] text-ink-3 num">
         {metric === 'day' ? (
           <DayLine summary={daySummary([...moves.values()])} label={dayLabel} coverage={coverage} />
         ) : (
@@ -120,19 +126,19 @@ export default function PortfolioHeatmap({ positions, quotes }) {
         )}
       </p>
       {metric === 'day' && dayLabel !== 'Today' ? (
-        <p className="mt-1 text-[var(--fig-2xs)] text-amber-400/80">{LAST_SESSION_NOTE}</p>
+        <p className="mt-1 text-[12px] text-warn">{LAST_SESSION_NOTE}</p>
       ) : null}
 
-      <div ref={ref} className="relative mt-3 h-[220px] md:h-[280px]">
+      <div ref={ref} className="relative mt-3 h-[236px]">
         {layout.tiles.length === 0 ? (
-          <p className="text-[var(--fig-xs)] text-zinc-500">No holdings yet.</p>
+          <p className="text-[13px] text-ink-3">No holdings yet.</p>
         ) : null}
         {layout.sectors
           .filter((sector) => sector.headed)
           .map((sector) => (
             <div
               key={sector.sector}
-              className="absolute px-1.5 truncate text-[var(--fig-2xs)] text-zinc-400"
+              className="absolute px-1.5 truncate text-[11px] text-ink-2"
               style={{
                 left: sector.x,
                 top: sector.y,
@@ -158,7 +164,7 @@ export default function PortfolioHeatmap({ positions, quotes }) {
               to={researchHref(position.ticker, undefined, { uic: position.uic, assetType: position.asset_type })}
               ticker={position.ticker}
               pct={pct}
-              fill={performanceFill(pct, { cap })}
+              fill={performanceFill(pct, { cap }, c)}
               level={labelLevel(width, tileHeight)}
               title={title}
               aria-label={title.replaceAll('\n', ', ')}

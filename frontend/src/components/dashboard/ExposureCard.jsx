@@ -1,20 +1,18 @@
-import { SECTOR_PALETTE } from '../../lib/charts'
-import { Card, CardHeader } from '../ui'
+import { colorForRank } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
 function Legend({ rows, nameKey }) {
+  const c = useChartColors()
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
+    <ul className="grid grid-cols-2 gap-x-4 gap-y-1 mt-2">
       {rows.map((r, i) => (
-        <div key={r[nameKey]} className="flex items-center gap-1.5 text-[var(--fig-xs)]">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ background: SECTOR_PALETTE[i % SECTOR_PALETTE.length] }}
-          />
-          <span className="text-zinc-300">{r[nameKey]}</span>
-          <span className="ml-auto text-zinc-500 num font-mono">{r.pct}%</span>
-        </div>
+        <li key={r[nameKey]} className="flex items-center gap-1.5 text-[12px]">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorForRank(i, c) }} />
+          <span className="text-ink-2">{r[nameKey]}</span>
+          <span className="ml-auto text-ink-3 num">{r.pct}%</span>
+        </li>
       ))}
-    </div>
+    </ul>
   )
 }
 
@@ -29,18 +27,19 @@ export default function ExposureCard({ currency, concentration }) {
     .join(' · ')
 
   return (
-    <Card>
-      <CardHeader title="Portfolio currency" subtitle="By value" />
-      <div className="mt-3">
+    <section aria-labelledby="portfolio-currency">
+      <h3 id="portfolio-currency" className="text-[14px] font-bold text-ink">Portfolio currency</h3>
+      <p className="text-[12px] text-ink-3">By value</p>
+      <div className="mt-2">
         {currency.length > 1 ? (
           <Legend rows={currency} nameKey="currency" />
         ) : currency.length === 1 ? (
-          <p className="text-[var(--fig-xs)] text-zinc-500">100% {currency[0].currency}</p>
+          <p className="text-[13px] text-ink-2">100% {currency[0].currency}</p>
         ) : (
-          <p className="text-[var(--fig-xs)] text-zinc-500">No holdings yet.</p>
+          <p className="text-[13px] text-ink-3">No holdings yet.</p>
         )}
       </div>
-      {caption && <p className="mt-3 text-[var(--fig-2xs)] text-zinc-500">{caption}</p>}
-    </Card>
+      {caption && <p className="mt-2 text-[12px] text-ink-3 num">{caption}</p>}
+    </section>
   )
 }

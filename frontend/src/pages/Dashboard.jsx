@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
 import {
   useBudgetProgress,
+  usePerformance,
   usePortfolioInsights,
   usePortfolioSummary,
   usePositionQuotes,
@@ -9,43 +9,104 @@ import {
   useSpendingSummary,
   useTransactions,
 } from '../api/queries'
-import { fmtDate, fmtEur, fmtNum, fmtPct, pctToneClass, fmtQty } from '../lib/format'
-import { txPrice, txTone, txTotal, txTotalClass } from '../lib/transactions'
+import { fmtDate, fmtEur, fmtQty } from '../lib/format'
+import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
-import { Badge, Card, CardHeader, EmptyState, PageHeader, Skeleton, StatRow, StatStrip, Th, Td } from '../components/ui'
+import { capBreaches } from '../lib/portfolioStats'
+import { Alert, Badge, Card, EmptyState, Skeleton, Th, Td, Tr } from '../components/ui'
 import NetWorthChart from '../components/NetWorthChart'
 import HeroValue from '../components/dashboard/HeroValue'
-import AttentionBand from '../components/dashboard/AttentionBand'
+import ThisWeek from '../components/dashboard/ThisWeek'
+import PositionsPanel from '../components/dashboard/PositionsPanel'
+import VsBenchmark from '../components/dashboard/VsBenchmark'
+import AllocationPanel from '../components/dashboard/AllocationPanel'
 import MoversCard from '../components/dashboard/MoversCard'
-import UpcomingEarnings from '../components/dashboard/UpcomingEarnings'
-import ExposureCard from '../components/dashboard/ExposureCard'
 import PortfolioHeatmap from '../components/dashboard/PortfolioHeatmap'
 
 const NO_POSITIONS = []
+const SPAN_8 = 'min-[1100px]:col-span-8'
+const SPAN_4 = 'min-[1100px]:col-span-4'
+const SPAN_12 = 'min-[1100px]:col-span-12'
 
-const ViewAllLink = ({ to }) => (
-  <Link to={to} className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1">
-    View all <ArrowRight size={12} />
-  </Link>
-)
+function currentMonthStart() {
+  // Built from local date parts, not toISOString() - that converts through
+  // UTC and can land on the previous month in the small hours in UTC+ zones.
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+const totalTone = (t) => (txSignedTotal(t) > 0 ? 'text-up' : 'text-ink')
+
+function RecentTransactions({ rows, className }) {
+  return (
+    <Card
+      flush
+      className={className}
+      context="Last 5 across all accounts"
+      dot={rows.length ? 'ok' : 'off'}
+      title="Recent transactions"
+      right={
+        <Link to="/transactions" className="text-[13px] font-semibold text-ink-2 hover:text-ink whitespace-nowrap">
+          View all →
+        </Link>
+      }
+    >
+      {rows.length === 0 ? (
+        <EmptyState title="No recent transactions" className="py-6" />
+      ) : (
+        <div className="overflow-x-auto">
+          <table aria-label="Recent transactions" className="w-full">
+            <thead>
+              <tr>
+                <Th edge>Date</Th>
+                <Th hideBelow="md">Type</Th>
+                <Th>Name</Th>
+                <Th align="right" hideBelow="md">Qty</Th>
+                <Th align="right" hideBelow="md">Price</Th>
+                <Th edge align="right">Total</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((t) => (
+                <Tr key={t.id}>
+                  <Td edge className="text-ink-2 num">{fmtDate(t.date)}</Td>
+                  <Td hideBelow="md">
+                    <Badge tone={txTone(t.type)}>{t.type}</Badge>
+                  </Td>
+                  <Td className="w-full max-w-0 md:w-auto md:max-w-none">
+                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>
+                      <span className="font-medium text-ink">{t.ticker}</span>
+                      <span className="text-ink-3 ml-2">{t.instrument}</span>
+                    </div>
+                    <span className="md:hidden block text-[12px] text-ink-3">{t.type}</span>
+                  </Td>
+                  <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(t.qty)}</Td>
+                  <Td align="right" hideBelow="md" className="text-ink-2">{txPrice(t)}</Td>
+                  <Td edge align="right" className={`font-semibold ${totalTone(t)}`}>{txTotal(t)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  )
+}
 
 export default function Dashboard() {
   const insightsQuery = usePortfolioInsights()
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const recentTxQuery = useTransactions('?page_size=5')
-  // Built from local date parts, not toISOString() - that converts through
-  // UTC and can land on the previous month in the small hours in UTC+ zones.
-  const now = new Date()
-  const firstOfMonthISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-  const spendingQuery = useSpendingSummary(`?date_from=${firstOfMonthISO}`)
+  const spendingQuery = useSpendingSummary(`?date_from=${currentMonthStart()}`)
   const budgetProgressQuery = useBudgetProgress()
+  const performanceQuery = usePerformance('sp500')
   const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
 
   const failed =
     insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error || spendingQuery.error
 
-  if (failed) return <div className="text-red-400 text-sm">Failed to load dashboard data</div>
+  if (failed) return <Alert>Failed to load dashboard data</Alert>
   if (!insightsQuery.data || !summaryQuery.data)
     return (
       <div className="space-y-4">
@@ -64,10 +125,6 @@ export default function Dashboard() {
   const recentTx = recentTxQuery.data ?? []
   const spending = spendingQuery.data
   const positions = positionsQuery.data ?? []
-  // Dashboard's job is triage, not a second Portfolio - just the one fact
-  // (which holding is largest) rather than the full ranked table Portfolio
-  // already owns.
-  const topHolding = positions.slice().sort((a, b) => Number(b.value) - Number(a.value))[0]
   const budgetAttentionItems = (budgetProgressQuery.data ?? [])
     .filter((row) => row.pct >= 100)
     .map((row) => ({
@@ -75,106 +132,50 @@ export default function Dashboard() {
       severity: 'warn',
       text: `${CATEGORY_LABELS[row.category] ?? row.category} is over budget (${fmtEur(row.spent)} of ${fmtEur(row.limit)})`,
     }))
-  const pnlPct = summary.total_pnl_pct
-  const pnlTone = pctToneClass(pnlPct)
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Dashboard" subtitle="Overview of your investments and bank accounts" />
-
-      {/* Tier 1: the two facts that matter before anything else - what you
-          have, how it's trending, and anything that needs a decision. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,28%)_1fr] gap-4">
-        <HeroValue value={insights.value} change={insights.change} spendingThisMonth={spending?.total} />
-        <NetWorthChart />
-      </div>
-      <AttentionBand items={[...insights.attention, ...budgetAttentionItems]} />
-
-      {/* Tier 2: a portfolio glance, not a second Portfolio page - three
-          numbers and a link, not a restated holdings table + allocation
-          donut (that duplication was the single largest redundancy on this
-          page; Portfolio already owns that detail). */}
-      <div>
-        <CardHeader title="Portfolio" subtitle="At a glance" className="mb-3" right={<ViewAllLink to="/portfolio" />} />
-        <StatStrip>
-          <StatRow
-            label="Portfolio value"
-            value={fmtEur(summary.total_value)}
-            note={
-              <span className={pnlTone}>
-                {pnlPct == null ? '—' : `${fmtPct(pnlPct)} since purchase`}
-              </span>
-            }
-            lead
+    <>
+      <h1 className="sr-only">Overview</h1>
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <Card
+          className={SPAN_8}
+          context={`Saxo + bank · as of ${fmtDate(insights.as_of)}${insights.stale ? ' · stale' : ''}`}
+          dot={insights.stale ? 'warn' : 'ok'}
+          title="Net worth"
+        >
+          <HeroValue
+            value={insights.value}
+            change={insights.change}
+            spendingThisMonth={spending?.total}
+            unrealised={summary.total_pnl}
           />
-          <StatRow
-            label="Top holding"
-            value={topHolding?.ticker ?? '—'}
-            note={topHolding ? `${Number(topHolding.weight).toFixed(1)}% of portfolio` : undefined}
-          />
-          <StatRow label="Holdings" value={fmtNum(positions.length)} note="Across all accounts" />
-        </StatStrip>
-        <div className="mt-4">
+          <div className="mt-5">
+            <NetWorthChart />
+          </div>
+          <p className="mt-3 text-[12px] text-ink-3">Change is end-of-day, from the daily net-worth snapshot.</p>
+        </Card>
+        <ThisWeek
+          className={SPAN_4}
+          attention={[...insights.attention, ...budgetAttentionItems]}
+          breaches={capBreaches(positions)}
+          upcomingEarnings={insights.upcoming_earnings}
+        />
+        <PositionsPanel className={SPAN_8} summary={summary} positions={positions} quotes={quotes} />
+        <div className={`${SPAN_4} min-w-0`}>
           <PortfolioHeatmap positions={positions} quotes={quotes} />
         </div>
-      </div>
-
-      {/* Tier 3: things worth a second look, not permanent standing cards -
-          Movers/Exposure/Upcoming earnings each answer a distinct glance-
-          worthy question. Contributors (per-holding contribution to return)
-          was dropped from here entirely - Analytics' Attribution already
-          computes the same thing from the same positions, and Dashboard
-          doesn't need its own independent copy of that analysis. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        <MoversCard movers={insights.movers} positions={positions} quotes={quotes} />
-        <ExposureCard
+        <VsBenchmark className={SPAN_4} data={performanceQuery.data} />
+        <div className={`${SPAN_4} min-w-0`}>
+          <MoversCard movers={insights.movers} positions={positions} quotes={quotes} />
+        </div>
+        <AllocationPanel
+          className={SPAN_4}
+          positions={positions}
           currency={insights.currency_exposure}
           concentration={insights.concentration}
         />
-        <UpcomingEarnings items={insights.upcoming_earnings} />
+        <RecentTransactions className={SPAN_12} rows={recentTx} />
       </div>
-
-      <Card padding={false}>
-        <div className="p-4 pb-2">
-          <CardHeader title="Recent transactions" subtitle="Last 5 across all accounts" right={<ViewAllLink to="/transactions" />} />
-        </div>
-        {recentTx.length === 0 ? (
-          <EmptyState title="No recent transactions" className="py-6" />
-        ) : (
-          <table className="w-full text-[var(--fig-sm)]">
-            <thead>
-              <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
-                <Th edge>Date</Th>
-                <Th hideBelow="md">Type</Th>
-                <Th>Name</Th>
-                <Th align="right" hideBelow="md">Qty</Th>
-                <Th align="right" hideBelow="md">Price</Th>
-                <Th edge align="right">Total</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentTx.map((t) => (
-                <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="text-zinc-300 num font-mono">{fmtDate(t.date)}</Td>
-                  <Td hideBelow="md">
-                    <Badge tone={txTone(t.type)}>{t.type}</Badge>
-                  </Td>
-                  <Td className="w-full max-w-0 md:w-auto md:max-w-none">
-                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>
-                      <span className="font-medium text-zinc-100">{t.ticker}</span>
-                      <span className="text-zinc-500 ml-2">{t.instrument}</span>
-                    </div>
-                    <span className="md:hidden block text-[var(--fig-2xs)] text-zinc-500">{t.type}</span>
-                  </Td>
-                  <Td align="right" hideBelow="md" className="num font-mono text-zinc-300">{fmtQty(t.qty)}</Td>
-                  <Td align="right" hideBelow="md" className="num font-mono text-zinc-300">{txPrice(t)}</Td>
-                  <Td edge align="right" className={`num font-mono font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-    </div>
+    </>
   )
 }

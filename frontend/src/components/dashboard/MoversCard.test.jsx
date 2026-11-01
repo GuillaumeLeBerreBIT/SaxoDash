@@ -13,8 +13,8 @@ describe('MoversCard', () => {
   it('splits gainers and losers and links the tickers', () => {
     renderWithProviders(<MoversCard movers={movers} />)
     expect(screen.getByRole('link', { name: /NVDA/ })).toHaveAttribute('href', '/research?symbol=NVDA')
-    expect(screen.getByText(/\+112\.3%/)).toBeInTheDocument()
-    expect(screen.getByText(/-22\.1%/)).toBeInTheDocument()
+    expect(screen.getByText('▲ 112.3%')).toBeInTheDocument()
+    expect(screen.getByText('▼ 22.1%')).toBeInTheDocument()
   })
 
   it('shows an empty state with no holdings', () => {
@@ -56,8 +56,8 @@ describe('MoversCard', () => {
     const user = userEvent.setup()
     renderWithProviders(<MoversCard movers={movers} positions={positions} quotes={live} />)
     await user.click(screen.getByRole('button', { name: 'Today' }))
-    expect(screen.getByText('+2.0%')).toBeInTheDocument()
-    expect(screen.getByText('-1.0%')).toBeInTheDocument()
+    expect(screen.getByText('▲ 2.0%')).toBeInTheDocument()
+    expect(screen.getByText('▼ 1.0%')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'KO' })).not.toBeInTheDocument()
   })
 

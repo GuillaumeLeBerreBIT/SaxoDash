@@ -1,32 +1,27 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { fmtEur, fmtPct } from '../../lib/format'
+import { fmtEur } from '../../lib/format'
 import { dayMoves, rankDayMoves } from '../../lib/heatmap'
 import { moveLabel } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
-import { Card, CardHeader, TBtn } from '../ui'
+import { Card, Move, Segmented } from '../ui'
 
 const NO_POSITIONS = []
 const NO_QUOTES = new Map()
 
 function Row({ ticker, pct, eur, instrument }) {
-  const up = Number(pct) >= 0
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
+    <div className="flex items-center justify-between gap-3 min-h-9 border-t border-line first:border-t-0">
       <Link
         to={researchHref(ticker, undefined, instrument)}
-        className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
+        className="text-[13.5px] font-semibold text-ink hover:underline"
       >
         {ticker}
       </Link>
       <div className="flex items-center gap-2">
-        <span className={`text-[var(--fig-xs)] num font-mono ${up ? 'text-emerald-400' : 'text-red-400'}`}>
-          {fmtPct(pct, { decimals: 1 })}
-        </span>
-        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
-          {fmtEur(eur, { sign: true, decimals: 0 })}
-        </span>
+        <Move value={pct} digits={1} className="text-[13px] font-semibold" />
+        <span className="text-[12px] num text-ink-3">{fmtEur(eur, { sign: true, decimals: 0 })}</span>
       </div>
     </div>
   )
@@ -36,7 +31,7 @@ function Column({ title, rows }) {
   if (rows.length === 0) return null
   return (
     <div>
-      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1">{title}</div>
+      <div className="text-[12px] font-medium text-ink-3 mb-1">{title}</div>
       {rows.map((row) => <Row key={row.ticker} {...row} />)}
     </div>
   )
@@ -68,18 +63,18 @@ export default function MoversCard({ movers, positions = NO_POSITIONS, quotes = 
         : 'Latest session, from daily bars'
 
   return (
-    <Card>
-      <CardHeader title="Movers" subtitle={subtitle} />
-      <div className="flex items-center gap-0.5 mt-2">
-        <TBtn active={metric === 'day'} onClick={() => setMetric('day')}>
-          <span className="whitespace-nowrap">{dayLabel}</span>
-        </TBtn>
-        <TBtn active={metric === 'sincePurchase'} onClick={() => setMetric('sincePurchase')}>
-          <span className="whitespace-nowrap">Since purchase</span>
-        </TBtn>
-      </div>
+    <Card context={subtitle} dot={empty ? 'off' : 'ok'} title="Movers">
+      <Segmented
+        label="Movers metric"
+        options={[
+          { value: 'day', label: dayLabel },
+          { value: 'sincePurchase', label: 'Since purchase' },
+        ]}
+        value={metric}
+        onChange={setMetric}
+      />
       {empty ? (
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+        <p className="mt-3 text-[13px] text-ink-3">
           {metric === 'day' ? 'No price moves available yet.' : 'No holdings to compare yet.'}
         </p>
       ) : (
