@@ -42,6 +42,11 @@ const smallPositions = [
   { ticker: 'BBB', name: 'Beta', currency: 'USD', uic: 3, asset_type: 'Stock', value: '400.00', pnl: '5.00', pnl_pct: 1, weight: '12.0' },
 ]
 
+const ownership = {
+  quarter: '2026-06-30',
+  stocks: { NVDA: { owners: 40, shares: 900_000_000, shares_change: 4_200_000, shares_change_pct: 0.5 } },
+}
+
 const performance = {
   history_days: 400,
   periods: [
@@ -65,6 +70,7 @@ function stub(over = {}) {
     },
   })
   queries.usePerformance.mockReturnValue({ ...idle, data: over.performance ?? performance })
+  queries.useOwnershipSummary.mockReturnValue({ ...idle, data: over.ownership ?? ownership })
   queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
   queries.useSpendingSummary.mockReturnValue({
@@ -217,10 +223,34 @@ describe('Dashboard', () => {
 
   it('lays the board out as the Overview panels', () => {
     renderWithProviders(<Dashboard />)
-    for (const name of ['Overview', 'This week', 'Vs the US 500', 'Allocation']) {
+    for (const name of ['Overview', 'This week', 'Vs the US 500', 'Smart money', 'Allocation']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument()
     }
     expect(screen.queryByText('Overview of your investments and bank accounts')).toBeNull()
+  })
+
+  it('shows the net share change tracked funds made in each held ticker', () => {
+    renderWithProviders(<Dashboard />)
+    const smart = panel('Smart money')
+    expect(within(smart).getByText('13F · Q2 2026 · net shares, tracked funds')).toBeInTheDocument()
+    const row = within(smart).getByText('NVDA').closest('a')
+    expect(row).toHaveTextContent('▲ +4.2M')
+    expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['NVDA'])
+  })
+
+  it('shows a dash in Smart money for a ticker with no ownership entry', () => {
+    stub({ ownership: { quarter: '2026-06-30', stocks: { NVDA: null } } })
+    renderWithProviders(<Dashboard />)
+    const row = within(panel('Smart money')).getByText('NVDA').closest('a')
+    expect(row).toHaveTextContent('—')
+    expect(row).not.toHaveTextContent(/\b0\b/)
+  })
+
+  it('renders a dash for the top holding when there are no positions', () => {
+    stub({ positions: [] })
+    renderWithProviders(<Dashboard />)
+    const tile = screen.getByText('Top holding').closest('div').parentElement
+    expect(tile).toHaveTextContent('—')
   })
 
   it('compares the return since inception with the S&P 500', () => {

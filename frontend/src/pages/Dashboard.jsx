@@ -1,6 +1,8 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   useBudgetProgress,
+  useOwnershipSummary,
   usePerformance,
   usePortfolioInsights,
   usePortfolioSummary,
@@ -13,6 +15,7 @@ import { fmtDate, fmtEur, fmtQty } from '../lib/format'
 import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { capBreaches } from '../lib/portfolioStats'
+import { ownershipTickers } from '../lib/ownership'
 import { Alert, Badge, Card, EmptyState, Skeleton, Th, Td, Tr } from '../components/ui'
 import NetWorthChart from '../components/NetWorthChart'
 import HeroValue from '../components/dashboard/HeroValue'
@@ -20,13 +23,13 @@ import ThisWeek from '../components/dashboard/ThisWeek'
 import PositionsPanel from '../components/dashboard/PositionsPanel'
 import VsBenchmark from '../components/dashboard/VsBenchmark'
 import AllocationPanel from '../components/dashboard/AllocationPanel'
+import SmartMoney from '../components/dashboard/SmartMoney'
 import MoversCard from '../components/dashboard/MoversCard'
 import PortfolioHeatmap from '../components/dashboard/PortfolioHeatmap'
 
 const NO_POSITIONS = []
 const SPAN_8 = 'min-[1100px]:col-span-8'
 const SPAN_4 = 'min-[1100px]:col-span-4'
-const SPAN_12 = 'min-[1100px]:col-span-12'
 
 function currentMonthStart() {
   // Built from local date parts, not toISOString() - that converts through
@@ -102,6 +105,9 @@ export default function Dashboard() {
   const budgetProgressQuery = useBudgetProgress()
   const performanceQuery = usePerformance('sp500')
   const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
+  const holdings = positionsQuery.data
+  const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
+  const ownership = useOwnershipSummary(fundTickers).data
 
   const failed =
     insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error || spendingQuery.error
@@ -165,16 +171,17 @@ export default function Dashboard() {
           <PortfolioHeatmap positions={positions} quotes={quotes} />
         </div>
         <VsBenchmark className={SPAN_4} data={performanceQuery.data} />
-        <div className={`${SPAN_4} min-w-0`}>
-          <MoversCard movers={insights.movers} positions={positions} quotes={quotes} />
-        </div>
+        <SmartMoney className={SPAN_4} positions={positions} ownership={ownership} />
         <AllocationPanel
           className={SPAN_4}
           positions={positions}
           currency={insights.currency_exposure}
           concentration={insights.concentration}
         />
-        <RecentTransactions className={SPAN_12} rows={recentTx} />
+        <RecentTransactions className={SPAN_8} rows={recentTx} />
+        <div className={`${SPAN_4} min-w-0`}>
+          <MoversCard movers={insights.movers} positions={positions} quotes={quotes} />
+        </div>
       </div>
     </>
   )
