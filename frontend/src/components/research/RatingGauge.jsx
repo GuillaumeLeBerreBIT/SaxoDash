@@ -2,12 +2,10 @@ import { withAlpha } from '../../lib/charts'
 import { ratingBand } from '../../lib/ratingBand'
 import { useChartColors } from '../../theme/useChartColors'
 
-const SEGMENT_COUNT = 5
 const CENTER_X = 100
 const CENTER_Y = 96
 const RADIUS = 80
 const NEEDLE = 62
-const SWEEP = 180 / SEGMENT_COUNT
 const GAP = 1.5
 
 function pointAt(degrees, radius) {
@@ -34,6 +32,7 @@ const segmentColors = (c) => [
 
 export default function RatingGauge({ title, fraction, label }) {
   const segments = segmentColors(useChartColors())
+  const sweep = 180 / segments.length
   const position = clamp(fraction)
   const [needleX, needleY] = pointAt(180 - position * 180, NEEDLE)
 
@@ -41,8 +40,8 @@ export default function RatingGauge({ title, fraction, label }) {
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 200 104" className="w-full max-w-[210px]" role="img" aria-label={`${title}: ${label}`}>
         {segments.map((color, index) => {
-          const from = pointAt(180 - index * SWEEP - GAP, RADIUS)
-          const to = pointAt(180 - (index + 1) * SWEEP + GAP, RADIUS)
+          const from = pointAt(180 - index * sweep - GAP, RADIUS)
+          const to = pointAt(180 - (index + 1) * sweep + GAP, RADIUS)
           return (
             <path
               key={index}

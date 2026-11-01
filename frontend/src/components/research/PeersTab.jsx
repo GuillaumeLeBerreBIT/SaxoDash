@@ -158,18 +158,15 @@ export default function PeersTab({ symbol, fundamentals }) {
   return (
     <FundamentalsGate fundamentals={fundamentals} title="Peers" fallback="Peer data is unavailable for this symbol.">
       {(currentData) => {
-        const quadrantPoints = [
-          quadrantPoint(symbol, currentData, true),
-          ...slots.map((s, i) => {
-            const peerData = peerResults[i]?.data
-            return peerData?.available ? quadrantPoint(s.symbol, peerData) : null
-          }),
-        ].filter(Boolean)
-
-        const unscored = [
-          ...(quadrantPoint(symbol, currentData) ? [] : [symbol]),
-          ...slots.filter((s, i) => peerResults[i]?.data?.available && !quadrantPoint(s.symbol, peerResults[i].data)).map((s) => s.symbol),
+        const scored = [
+          { symbol, point: quadrantPoint(symbol, currentData, true) },
+          ...slots
+            .map((s, i) => ({ symbol: s.symbol, data: peerResults[i]?.data }))
+            .filter(({ data }) => data?.available)
+            .map(({ symbol: peer, data }) => ({ symbol: peer, point: quadrantPoint(peer, data) })),
         ]
+        const quadrantPoints = scored.filter(({ point }) => point).map(({ point }) => point)
+        const unscored = scored.filter(({ point }) => !point).map(({ symbol: missing }) => missing)
 
         return (
           <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">

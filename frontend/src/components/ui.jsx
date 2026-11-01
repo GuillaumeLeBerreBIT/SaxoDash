@@ -605,26 +605,39 @@ const TILE_TONES = {
   flat: 'text-flat',
 }
 
-function TileFrame({ label, right, children, sub }) {
-  return (
-    <div className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">
+const TILE_TAGS = {
+  block: { root: 'div', list: null, term: 'span', detail: 'div' },
+  listItem: { root: 'li', list: 'dl', term: 'dt', detail: 'dd' },
+}
+
+function TileFrame({ label, right, children, sub, listItem = false }) {
+  const tags = listItem ? TILE_TAGS.listItem : TILE_TAGS.block
+  const Root = tags.root
+  const List = tags.list
+  const Term = tags.term
+  const Detail = tags.detail
+  const content = (
+    <>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[12px] text-ink-3">{label}</span>
+        <Term className="text-[12px] text-ink-3">{label}</Term>
         {right}
       </div>
-      {children}
-      {sub && <div className="mt-0.5 text-[12px] text-ink-2">{sub}</div>}
-    </div>
+      {children(Detail)}
+      {sub && <Detail className="mt-0.5 text-[12px] text-ink-2">{sub}</Detail>}
+    </>
   )
+  return <Root className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">{List ? <List>{content}</List> : content}</Root>
 }
 
 const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
 
-export function Tile({ label, value, sub, tone, right }) {
+export function Tile({ label, value, sub, tone, right, listItem = false }) {
   const absent = value == null
   return (
-    <TileFrame label={label} right={right} sub={sub}>
-      <div className={`${TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</div>
+    <TileFrame label={label} right={right} sub={sub} listItem={listItem}>
+      {(Detail) => (
+        <Detail className={`${TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
+      )}
     </TileFrame>
   )
 }
@@ -638,7 +651,7 @@ export function Tile({ label, value, sub, tone, right }) {
 export function MetricTile({ label, value, hint, tone = 'text-ink', right }) {
   return (
     <TileFrame label={label} right={right} sub={hint}>
-      {value != null && <div className={`${TILE_VALUE} ${tone}`}>{value}</div>}
+      {(Detail) => value != null && <Detail className={`${TILE_VALUE} ${tone}`}>{value}</Detail>}
     </TileFrame>
   )
 }
