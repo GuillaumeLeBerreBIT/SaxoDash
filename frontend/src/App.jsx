@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import RequireAuth from './components/RequireAuth'
 import Dashboard from './pages/Dashboard'
+import Portfolio from './pages/Portfolio'
 import Analytics from './pages/Analytics'
 import AccountTransactions from './pages/AccountTransactions'
 import Research from './pages/Research'
@@ -16,7 +17,7 @@ import CongressMember from './pages/CongressMember'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 import LegacyRedirect from './routes/LegacyRedirect'
-import { MoneyRoute, PortfolioRoute } from './routes/placeholders'
+import { MoneyRoute } from './routes/placeholders'
 import Settings from './pages/Settings'
 import { LEGACY_REDIRECTS } from './lib/navigation'
 
@@ -27,7 +28,7 @@ function App() {
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
-          <Route path='portfolio' element={<PortfolioRoute />} />
+          <Route path='portfolio' element={<Portfolio />} />
           <Route path='analytics' element={<Analytics />} />
           <Route path='money' element={<MoneyRoute />} />
           <Route path='money/accounts/:accountId' element={<AccountTransactions />} />

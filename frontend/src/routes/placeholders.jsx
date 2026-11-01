@@ -1,14 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
-import Portfolio from '../pages/Portfolio'
-import Transactions from '../pages/Transactions'
 import Accounts from '../pages/Accounts'
 import Spending from '../pages/Spending'
 import SpendingTransactions from '../pages/SpendingTransactions'
-
-export function PortfolioRoute() {
-  const [params] = useSearchParams()
-  return params.get('view') === 'transactions' ? <Transactions /> : <Portfolio />
-}
 
 const MONEY_SECTIONS = {
   accounts: Accounts,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { txPrice, txTone, txSignedTotal, txTotal, txTotalClass, txTypes } from './transactions'
+import { txDayGroups, txDayLabel, txDaySummary, txPrice, txTone, txSignedTotal, txTotal, txTotalClass, txTypes } from './transactions'
 
 const tx = (overrides) => ({
   type: 'BUY', price: '150.00', currency: 'USD', total: '1500.00', total_eur: '1290.13', ...overrides,
@@ -49,13 +49,13 @@ describe('txTotal', () => {
 
 describe('txTotalClass', () => {
   it('colours inflows green and everything else neutral', () => {
-    expect(txTotalClass(tx({ type: 'SELL' }))).toBe('text-emerald-400')
-    expect(txTotalClass(tx({ type: 'BUY' }))).toBe('text-zinc-100')
-    expect(txTotalClass(tx({ type: 'INTEREST' }))).toBe('text-zinc-100')
+    expect(txTotalClass(tx({ type: 'SELL' }))).toBe('text-up')
+    expect(txTotalClass(tx({ type: 'BUY' }))).toBe('text-ink')
+    expect(txTotalClass(tx({ type: 'INTEREST' }))).toBe('text-ink')
   })
 
   it('stays neutral for an inflow whose EUR total is unknown', () => {
-    expect(txTotalClass(tx({ type: 'SELL', total_eur: null }))).toBe('text-zinc-100')
+    expect(txTotalClass(tx({ type: 'SELL', total_eur: null }))).toBe('text-ink')
   })
 })
 
@@ -89,5 +89,42 @@ describe('txSignedTotal', () => {
 
   it('is null when the euro total is missing', () => {
     expect(txSignedTotal(tx({ total_eur: null }))).toBeNull()
+  })
+})
+
+describe('txDayLabel', () => {
+  it('names the weekday before the date', () => {
+    expect(txDayLabel('2026-09-02')).toBe('Wed 02 Sep 2026')
+  })
+
+  it('shows a dash for a missing date', () => {
+    expect(txDayLabel(null)).toBe('—')
+  })
+})
+
+describe('txDayGroups', () => {
+  it('groups consecutive rows that share a date and keeps their order', () => {
+    const rows = [{ id: 1, date: 'b' }, { id: 2, date: 'b' }, { id: 3, date: 'a' }, { id: 4, date: 'b' }]
+    expect(txDayGroups(rows).map((g) => [g.date, g.rows.map((r) => r.id)])).toEqual([
+      ['b', [1, 2]],
+      ['a', [3]],
+      ['b', [4]],
+    ])
+  })
+})
+
+describe('txDaySummary', () => {
+  it('sums buys and sells in euros', () => {
+    expect(txDaySummary([tx({ total_eur: '100' }), tx({ total_eur: '50' }), tx({ type: 'SELL', total_eur: '20' })])).toBe(
+      'Bought €150.00 · sold €20.00',
+    )
+  })
+
+  it('leaves out a side with a trade whose euro total was never reported', () => {
+    expect(txDaySummary([tx({ total_eur: null }), tx({ type: 'SELL', total_eur: '20' })])).toBe('Sold €20.00')
+  })
+
+  it('says nothing for a day without buys or sells', () => {
+    expect(txDaySummary([tx({ type: 'DIVIDEND' })])).toBeNull()
   })
 })

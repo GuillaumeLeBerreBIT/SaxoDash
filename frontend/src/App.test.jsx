@@ -17,7 +17,6 @@ const { page } = vi.hoisted(() => ({ page: (name) => ({ default: () => name }) }
 vi.mock('./pages/Dashboard', () => page('Dashboard page'))
 vi.mock('./pages/Portfolio', () => page('Portfolio page'))
 vi.mock('./pages/Analytics', () => page('Analytics page'))
-vi.mock('./pages/Transactions', () => page('Transactions page'))
 vi.mock('./pages/Accounts', () => page('Accounts page'))
 vi.mock('./pages/AccountTransactions', () => page('AccountTransactions page'))
 vi.mock('./pages/Spending', () => page('Spending page'))
@@ -53,8 +52,8 @@ function renderAt(url) {
 describe('legacy routes redirect with their query', () => {
   it.each([
     ['/research/chart?symbol=NVDA', '/boards?symbol=NVDA', 'Chart page'],
-    ['/transactions', '/portfolio?view=transactions', 'Transactions page'],
-    ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Transactions page'],
+    ['/transactions', '/portfolio?view=transactions', 'Portfolio page'],
+    ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Portfolio page'],
     ['/accounts', '/money?section=accounts', 'Accounts page'],
     ['/accounts/12', '/money/accounts/12', 'AccountTransactions page'],
     ['/spending', '/money?section=spending', 'Spending page'],
@@ -74,7 +73,7 @@ describe('legacy routes redirect with their query', () => {
 describe('new routes', () => {
   it.each([
     ['/portfolio', 'Portfolio page'],
-    ['/portfolio?view=transactions', 'Transactions page'],
+    ['/portfolio?view=transactions', 'Portfolio page'],
     ['/money', 'Spending page'],
     ['/money?section=budgets', 'Spending page'],
     ['/money?section=overview', 'Spending page'],

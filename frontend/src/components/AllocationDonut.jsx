@@ -91,7 +91,7 @@ function SliceLabel({ c, cx, cy, midAngle, innerRadius, outerRadius, payload, pe
         textAnchor={textAnchor}
         dominantBaseline="central"
         fill={c.axisCategory}
-        className="text-[11px] num font-mono font-medium"
+        className="text-[11px] num font-medium"
       >
         {(percent * 100).toFixed(0)}%
       </text>
@@ -144,9 +144,9 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
         </ResponsiveContainer>
         {readout && (
           <div data-testid="donut-center" className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[var(--fig-xs)] text-ink-3">{readout.label}</span>
-            <span className="text-[var(--fig-lg)] num font-mono text-ink">{readout.value}</span>
-            {readout.hint && <span className="text-[var(--fig-2xs)] num font-mono text-ink-3">{readout.hint}</span>}
+            <span className="text-[12px] text-ink-3">{readout.label}</span>
+            <span className="text-[20px] font-bold num text-ink">{readout.value}</span>
+            {readout.hint && <span className="text-[11px] num text-ink-3">{readout.hint}</span>}
           </div>
         )}
       </div>
@@ -158,14 +158,14 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
         <div className="grid grid-cols-1 gap-y-2 mt-3 pt-4 border-t border-line">
           {items.map((d, i) => {
             const pct = total > 0 ? (d.value / total) * 100 : 0
-            const rowClass = 'flex items-center gap-2 text-[var(--fig-xs)]'
+            const rowClass = 'flex items-center gap-2 text-[12px]'
             const content = (
               <>
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
                 <span className={`text-ink-2 font-medium truncate${d.note ? ' shrink-0 max-w-[60%]' : ''}`}>{d.name}</span>
                 {d.note && <span className="text-ink-3 truncate min-w-0">{d.note}</span>}
-                <span className="ml-auto text-ink-3 num font-mono">{formatValue(d.value)}</span>
-                <span className="text-ink-3 num font-mono w-12 text-right">{pct.toFixed(1)}%</span>
+                <span className="ml-auto text-ink-3 num">{formatValue(d.value)}</span>
+                <span className="text-ink-3 num w-12 text-right">{pct.toFixed(1)}%</span>
               </>
             )
             return d.to ? (
