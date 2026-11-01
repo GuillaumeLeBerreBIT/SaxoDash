@@ -16,17 +16,17 @@ describe('PerformanceTiles', () => {
   it('prints each window with its sign', () => {
     render(<PerformanceTiles returns={returns} />)
 
-    expect(screen.getByText('+4.20%')).toBeInTheDocument()
-    expect(screen.getByText('-7.95%')).toBeInTheDocument()
+    expect(screen.getByText('▲ 4.20%')).toBeInTheDocument()
+    expect(screen.getByText('▼ 7.95%')).toBeInTheDocument()
     expect(screen.getByText('YTD')).toBeInTheDocument()
   })
 
-  it('prints the figure in neutral text on the tinted tile', () => {
+  it('colours the figure by direction instead of tinting the tile', () => {
     render(<PerformanceTiles returns={returns} />)
 
-    const figure = screen.getByText('+56.22%')
-    expect(figure).toHaveClass('text-zinc-100')
-    expect(figure).not.toHaveClass('text-emerald-400')
+    expect(screen.getByText('▲ 56.22%')).toHaveClass('text-up')
+    expect(screen.getByText('▼ 7.95%')).toHaveClass('text-down')
+    expect(screen.getByText('YTD').closest('li')).not.toHaveAttribute('style')
   })
 
   it('shows a dash for a window the history does not reach', () => {

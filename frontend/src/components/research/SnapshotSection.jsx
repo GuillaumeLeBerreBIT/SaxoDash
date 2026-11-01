@@ -1,6 +1,6 @@
 import { fmtNum, fmtPct } from '../../lib/format'
 import { SNAPSHOT_GROUPS } from '../../lib/snapshot'
-import { Card, CardHeader, InfoTip } from '../ui'
+import { Card, InfoTip } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 import VerdictBadge from './VerdictBadge'
 
@@ -14,18 +14,18 @@ function Group({ group, data }) {
   const verdict = group.verdict(data)
   return (
     <div className="py-3 first:pt-0 last:pb-0">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{group.label}</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[13.5px] font-bold text-ink">{group.label}</span>
         <VerdictBadge {...verdict} />
       </div>
-      <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+      <dl className="mt-1.5">
         {group.metrics.map((m) => (
-          <div key={m.field}>
-            <div className="text-[var(--fig-2xs)] text-zinc-600 uppercase tracking-wide">{m.label}</div>
-            <div className="text-[var(--fig-sm)] num font-mono text-zinc-100 mt-0.5">{fmtField(data[m.field], m.fmt)}</div>
+          <div key={m.field} className="flex items-baseline justify-between gap-3 py-0.5">
+            <dt className="text-[13px] text-ink-2">{m.label}</dt>
+            <dd className="text-[13px] num text-ink">{fmtField(data[m.field], m.fmt)}</dd>
           </div>
         ))}
-      </div>
+      </dl>
     </div>
   )
 }
@@ -38,20 +38,20 @@ export default function SnapshotSection({ fundamentals }) {
       fallback="A snapshot needs company fundamentals, which are unavailable for this symbol."
     >
       {(data) => (
-        <Card>
-          <CardHeader
-            title="Investment snapshot"
-            subtitle="Grouped reads from Finnhub fundamentals"
-            right={
-              <InfoTip>
-                Growth reads TTM YoY revenue and EPS growth. Profitability reads ROE and net
-                margin. Financial health reads debt/equity, current ratio and interest coverage.
-                Valuation reads PEG and P/E against its own annual history. Momentum reads the
-                1-year and YTD price return. No composite score.
-              </InfoTip>
-            }
-          />
-          <div className="mt-2 divide-y divide-white/[0.06]">
+        <Card
+          context="Grouped reads from Finnhub fundamentals"
+          dot="ok"
+          title="Investment snapshot"
+          right={
+            <InfoTip>
+              Growth reads TTM YoY revenue and EPS growth. Profitability reads ROE and net
+              margin. Financial health reads debt/equity, current ratio and interest coverage.
+              Valuation reads PEG and P/E against its own annual history. Momentum reads the
+              1-year and YTD price return. No composite score.
+            </InfoTip>
+          }
+        >
+          <div className="divide-y divide-line">
             {SNAPSHOT_GROUPS.map((group) => (
               <Group key={group.key} group={group} data={data} />
             ))}

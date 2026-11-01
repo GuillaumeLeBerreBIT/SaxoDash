@@ -1,22 +1,30 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
-import { NEGATIVE, STATEMENT_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { CHART_SERIES, chartRows } from '../../lib/statements'
 
+const statementColors = (c) => ({
+  revenue: c.series[0],
+  gross_profit: c.series[1],
+  operating_income: c.series[3],
+  net_income: c.series[2],
+})
+
 export default function FinancialsChart({ periods }) {
   const c = useChartColors()
+  const colors = statementColors(c)
   const rows = chartRows(periods)
   if (!rows.length) return null
   const series = CHART_SERIES.filter(({ key }) => rows.some((row) => row[key] != null))
 
   return (
     <div>
-      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[var(--fig-2xs)] text-zinc-400">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
         {series.map(({ key, label }) => (
           <li key={key} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATEMENT_SERIES[key] }} />
+            <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: colors[key] }} />
             {label}
           </li>
         ))}
@@ -27,7 +35,7 @@ export default function FinancialsChart({ periods }) {
             <CartesianGrid {...gridProps(c)} />
             <XAxis {...axisProps(c)} dataKey="label" />
             <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
-            <ReferenceLine y={0} stroke={gridProps(c).stroke} />
+            <ReferenceLine y={0} stroke={c.axis} />
             <Tooltip
               {...chartTooltipProps(c)}
               cursor={{ fill: gridProps(c).stroke }}
@@ -38,13 +46,13 @@ export default function FinancialsChart({ periods }) {
                 key={key}
                 dataKey={key}
                 name={label}
-                fill={STATEMENT_SERIES[key]}
-                radius={[2, 2, 0, 0]}
+                fill={colors[key]}
+                radius={[3, 3, 0, 0]}
                 maxBarSize={14}
                 isAnimationActive={false}
               >
                 {key === 'net_income' &&
-                  rows.map((row) => <Cell key={row.label} fill={row[key] < 0 ? NEGATIVE : STATEMENT_SERIES[key]} />)}
+                  rows.map((row) => <Cell key={row.label} fill={row[key] < 0 ? c.down : colors[key]} />)}
               </Bar>
             ))}
           </BarChart>

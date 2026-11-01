@@ -58,7 +58,7 @@ describe('RatioHistoryTable', () => {
   it('keeps each group title in view while the years scroll', () => {
     render(<RatioHistoryTable history={history} current={current} />)
 
-    expect(screen.getByText('Valuation')).toHaveClass('sticky', 'left-0')
+    expect(screen.getByText('Valuation')).toHaveClass('sticky', 'left-[18px]')
   })
 
   it('renders nothing without a history', () => {
@@ -72,8 +72,8 @@ describe('RatioHistoryTable layout', () => {
   it('pins the ratio names while the years scroll', () => {
     render(<RatioHistoryTable history={history} current={current} />)
 
-    expect(screen.getByRole('columnheader', { name: 'Ratio' }).className).toMatch(/sticky left-0 bg-zinc-900/)
-    expect(screen.getByRole('rowheader', { name: 'P/E' }).className).toMatch(/sticky left-0 bg-zinc-900/)
+    expect(screen.getByRole('columnheader', { name: 'Ratio' }).className).toMatch(/sticky left-0 z-\[1\] bg-pane/)
+    expect(screen.getByRole('rowheader', { name: 'P/E' }).className).toMatch(/sticky left-0 z-\[1\] bg-pane/)
   })
 })
 

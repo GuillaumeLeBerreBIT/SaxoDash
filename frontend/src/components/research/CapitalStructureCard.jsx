@@ -1,7 +1,7 @@
 import { fmtCompact } from '../../lib/format'
-import { Card, CardHeader, InfoTip } from '../ui'
+import { Card, InfoTip } from '../ui'
 
-export default function CapitalStructureCard({ fundamentals }) {
+export default function CapitalStructureCard({ fundamentals, className = '' }) {
   const { market_cap: cap, enterprise_value: enterprise } = fundamentals
   if (cap == null || enterprise == null) return null
 
@@ -13,22 +13,23 @@ export default function CapitalStructureCard({ fundamentals }) {
   ]
 
   return (
-    <Card>
-      <CardHeader
-        title="Capital structure"
-        subtitle="Market cap plus debt, less cash, is enterprise value"
-        right={
-          <InfoTip>
-            Net debt here is enterprise value minus market cap. Finnhub reports the two figures separately and they
-            can be a day or two apart, so treat it as approximate.
-          </InfoTip>
-        }
-      />
-      <dl className="mt-4 grid grid-cols-3 gap-4">
+    <Card
+      className={className}
+      context="Market cap plus debt, less cash, is enterprise value"
+      dot="ok"
+      title="Capital structure"
+      right={
+        <InfoTip>
+          Net debt here is enterprise value minus market cap. Finnhub reports the two figures separately and they
+          can be a day or two apart, so treat it as approximate.
+        </InfoTip>
+      }
+    >
+      <dl>
         {rows.map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</dt>
-            <dd className="mt-1 text-[var(--fig-md)] num font-mono text-zinc-100">{value}</dd>
+          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line first:border-t-0">
+            <dt className="text-[13px] text-ink-2">{label}</dt>
+            <dd className="text-[13.5px] font-semibold num text-ink">{value}</dd>
           </div>
         ))}
       </dl>

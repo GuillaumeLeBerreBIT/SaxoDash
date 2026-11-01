@@ -242,6 +242,12 @@ export function chartHref(symbol, instrument) {
   return `/research/chart?${params.toString()}`
 }
 
+export function boardHref(symbol, instrument) {
+  const params = new URLSearchParams({ symbol })
+  pinInstrument(params, instrument)
+  return `/boards?${params.toString()}`
+}
+
 /** Past earnings dates mapped onto the currently-loaded bars, for the
  *  price-chart markers. A history date absent from `bars` (a provider date
  *  landing on a non-trading day) is skipped, not fuzzy-matched. */

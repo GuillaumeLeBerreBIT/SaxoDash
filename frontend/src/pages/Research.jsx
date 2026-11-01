@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
-import { Card, PageHeader, TabButton, TabList } from '../components/ui'
-import InstrumentSearchBar from '../components/InstrumentSearchBar'
-import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
+import { Card } from '../components/ui'
 import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
@@ -18,7 +16,8 @@ import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PeersTab from '../components/research/PeersTab'
-import SymbolBar from '../components/research/SymbolBar'
+import OwnershipSignals from '../components/research/OwnershipSignals'
+import ResearchHeader from '../components/research/ResearchHeader'
 import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
@@ -52,6 +51,7 @@ const REFUSALS = {
 
 export default function Research() {
   const [params] = useSearchParams()
+  const outlet = useOutletContext()
   const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
@@ -116,134 +116,118 @@ export default function Research() {
   // clamping here beats an effect that fires after a bad render.
   const safeHover = hover != null && hover < bars.length ? hover : null
 
-  return (
-    <div>
-      <PageHeader
-        title="Research"
-        subtitle="Prices, indicators and watchlists, straight from Saxo"
-        right={<SaxoConnectionStatus />}
-      />
+  const company = companyData === COMPANY_DATA.eligible && fundamentals.data?.available ? fundamentals.data : null
+  const onOverview = shown('overview')
 
-      <div className="mb-3">
-        <InstrumentSearchBar />
-      </div>
+  const header = (
+    <ResearchHeader
+      symbol={symbol}
+      instrument={instrument}
+      details={details.data}
+      position={position}
+      positions={positions}
+      quote={quote}
+      bars={rangeBars}
+      company={company}
+      currency={currency}
+      watchlists={watchlists}
+      onToggleList={toggleList}
+      tabs={visibleTabs}
+      activeTab={tab}
+      onSelectTab={setTab}
+      recentSymbols={recentSymbols}
+      onSelectSymbol={selectSymbol}
+      onOpenPalette={outlet?.openPalette}
+      showPosition={!onOverview}
+    />
+  )
 
-      {recentSymbols.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-          <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">Recent</span>
-          {recentSymbols.map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => selectSymbol(s)}
-              className="h-6 px-2 rounded border border-white/[0.06] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04]"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+  const chartPanel = (
+    <ChartPanel
+      bars={bars}
+      ind={ind}
+      timeWindow={timeWindow}
+      isLoading={chart.isLoading}
+      error={chart.error}
+      controls={controls}
+      hover={safeHover}
+      setHover={setHover}
+      symbol={symbol}
+      unresolved={!instrument && !chart.isLoading}
+      earningsMarkers={earningsMarkers}
+      lines={priceLines.lines}
+      onMoveLine={priceLines.move}
+      onCreateLine={priceLines.create}
+      onDeleteLine={priceLines.remove}
+      onEditLineLabel={priceLines.setLabel}
+      lineSaveFailed={priceLines.saveFailed}
+      expandHref={chartHref(symbol, instrument)}
+    />
+  )
 
-      <div className="space-y-4">
-        <SymbolBar
+  const panelProps = { role: 'tabpanel', id: `research-panel-${tab}`, 'aria-labelledby': `research-tab-${tab}` }
+
+  if (onOverview) {
+    return (
+      <div {...panelProps}>
+        <OverviewTab
           symbol={symbol}
-          instrument={instrument}
-          details={details.data}
           position={position}
-          quote={quote}
+          details={details.data}
+          detailsLoading={details.isLoading}
           bars={rangeBars}
-          watchlists={watchlists}
-          onToggleList={toggleList}
+          allBars={allBars}
+          range={controls.range}
+          fundamentals={fundamentals}
+          note={note}
+          onSaveNote={(patch) => noteMutation.mutate(patch)}
+          onMarkReviewed={() => reviewMutation.mutate()}
+          reviewing={reviewMutation.isPending}
+          companyData={companyData}
+          earnings={earnings}
+          onOpenTab={setTab}
+          lead={
+            <>
+              {header}
+              {chartPanel}
+            </>
+          }
+          signals={<OwnershipSignals symbol={symbol} currency={currency} onOpenTab={setTab} />}
+          rail={<WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
+      </div>
+    )
+  }
 
-        {/* The rail drops below the chart under 1280px, where 300px of it
-            would leave the candles too narrow to read. */}
-        <div className="grid gap-4 items-start grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="space-y-4 min-w-0">
-            <ChartPanel
-              bars={bars}
-              ind={ind}
-              timeWindow={timeWindow}
-              isLoading={chart.isLoading}
-              error={chart.error}
-              controls={controls}
-              hover={safeHover}
-              setHover={setHover}
-              symbol={symbol}
-              unresolved={!instrument && !chart.isLoading}
-              earningsMarkers={earningsMarkers}
-              lines={priceLines.lines}
-              onMoveLine={priceLines.move}
-              onCreateLine={priceLines.create}
-              onDeleteLine={priceLines.remove}
-              onEditLineLabel={priceLines.setLabel}
-              lineSaveFailed={priceLines.saveFailed}
-              expandHref={chartHref(symbol, instrument)}
-            />
-
-            <TabList label="Instrument sections" className="pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
-              {visibleTabs.map(([key, label]) => (
-                <TabButton
-                  key={key}
-                  id={`research-tab-${key}`}
-                  controls={`research-panel-${key}`}
-                  active={tab === key}
-                  onClick={() => setTab(key)}
-                  className="shrink-0 px-3! md:h-8!"
-                >
-                  {label}
-                </TabButton>
-              ))}
-            </TabList>
-
-            <div role="tabpanel" id={`research-panel-${tab}`} aria-labelledby={`research-tab-${tab}`}>
-              {shown('overview') ? (
-                <OverviewTab
-                  symbol={symbol}
-                  position={position}
-                  details={details.data}
-                  detailsLoading={details.isLoading}
-                  bars={rangeBars}
-                  allBars={allBars}
-                  range={controls.range}
-                  fundamentals={fundamentals}
-                  note={note}
-                  onSaveNote={(patch) => noteMutation.mutate(patch)}
-                  onMarkReviewed={() => reviewMutation.mutate()}
-                  reviewing={reviewMutation.isPending}
-                  companyData={companyData}
-                />
-              ) : null}
-              {gate === TAB_GATE.pending ? (
-                <Card>
-                  <p data-testid="tab-pending" className="text-[var(--fig-xs)] text-zinc-500">
-                    Looking up this instrument…
-                  </p>
-                </Card>
-              ) : null}
-              {gate === TAB_GATE.refused ? (
-                <Card>
-                  <p data-testid="tab-refused" className="text-[var(--fig-xs)] text-zinc-500">
-                    {REFUSALS[companyData]}
-                  </p>
-                </Card>
-              ) : null}
-              {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
-              {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-              {shown('earnings') ? (
-                <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
-              ) : null}
-              {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
-              {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
-              {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-              {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
-              {shown('guide') ? <GuideTab /> : null}
-            </div>
-          </div>
-
-          <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
-        </div>
+  return (
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
+      {header}
+      <div {...panelProps}>
+        {gate === TAB_GATE.pending ? (
+          <Card>
+            <p data-testid="tab-pending" className="text-[13px] text-ink-3">
+              Looking up this instrument…
+            </p>
+          </Card>
+        ) : null}
+        {gate === TAB_GATE.refused ? (
+          <Card>
+            <p data-testid="tab-refused" className="text-[13px] text-ink-3">
+              {REFUSALS[companyData]}
+            </p>
+          </Card>
+        ) : null}
+        {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+        {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+        {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+        {shown('earnings') ? (
+          <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+        ) : null}
+        {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+        {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
+        {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+        {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
+        {shown('guide') ? <GuideTab /> : null}
       </div>
     </div>
   )

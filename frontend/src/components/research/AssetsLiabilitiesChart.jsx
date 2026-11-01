@@ -1,30 +1,29 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
-import { HEALTH_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { balanceRows } from '../../lib/financialHealth'
-import { Card, CardHeader } from '../ui'
+import { Card } from '../ui'
 
 const SERIES = [
-  { key: 'current_assets', label: 'Current assets', stackId: 'assets' },
-  { key: 'long_term_assets', label: 'Long-term assets', stackId: 'assets' },
-  { key: 'current_liabilities', label: 'Current liabilities', stackId: 'liabilities' },
-  { key: 'long_term_liabilities', label: 'Long-term liabilities', stackId: 'liabilities' },
+  { key: 'current_assets', label: 'Current assets', stackId: 'assets', slot: 0 },
+  { key: 'long_term_assets', label: 'Long-term assets', stackId: 'assets', slot: 6 },
+  { key: 'current_liabilities', label: 'Current liabilities', stackId: 'liabilities', slot: 1 },
+  { key: 'long_term_liabilities', label: 'Long-term liabilities', stackId: 'liabilities', slot: 7 },
 ]
 
-export default function AssetsLiabilitiesChart({ annual }) {
+export default function AssetsLiabilitiesChart({ annual, className = '' }) {
   const c = useChartColors()
   const rows = balanceRows(annual)
   if (!rows.length) return null
 
   return (
-    <Card>
-      <CardHeader title="Assets against liabilities" subtitle="Short- and long-term, by fiscal year" />
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[var(--fig-2xs)] text-zinc-400">
-        {SERIES.map(({ key, label }) => (
+    <Card className={className} context="Short- and long-term, by fiscal year" dot="ok" title="Assets against liabilities">
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
+        {SERIES.map(({ key, label, slot }) => (
           <li key={key} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: HEALTH_SERIES[key] }} />
+            <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: c.series[slot] }} />
             {label}
           </li>
         ))}
@@ -44,13 +43,13 @@ export default function AssetsLiabilitiesChart({ annual }) {
               cursor={{ fill: gridProps(c).stroke }}
               formatter={(value, name) => [fmtTooltipDollars(value), name]}
             />
-            {SERIES.map(({ key, label, stackId }) => (
+            {SERIES.map(({ key, label, stackId, slot }) => (
               <Bar
                 key={key}
                 dataKey={key}
                 name={label}
                 stackId={stackId}
-                fill={HEALTH_SERIES[key]}
+                fill={c.series[slot]}
                 maxBarSize={18}
                 isAnimationActive={false}
               />

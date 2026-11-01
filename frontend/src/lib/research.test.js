@@ -5,6 +5,7 @@ import {
   WIDEST_RANGE_COUNT,
   barChange,
   barsForRange,
+  boardHref,
   chartHref,
   earningsMarkersForBars,
   instrumentKey,
@@ -306,6 +307,16 @@ describe('researchHref', () => {
 
   it('skips the pin without a uic', () => {
     expect(researchHref('NOW', undefined, {})).toBe('/research?symbol=NOW')
+  })
+})
+
+describe('boardHref', () => {
+  it('opens the Chart board on the exact instrument', () => {
+    expect(boardHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe('/boards?symbol=NOW&uic=204300&assetType=Stock')
+  })
+
+  it('falls back to the symbol alone', () => {
+    expect(boardHref('NVDA')).toBe('/boards?symbol=NVDA')
   })
 })
 

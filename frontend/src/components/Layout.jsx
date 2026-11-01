@@ -13,7 +13,7 @@ export default function Layout() {
       <TopBar onOpenPalette={openPalette} />
       <main>
         <div className="sd-gutter pt-2 pb-24 min-[760px]:pb-8 animate-pagein">
-          <Outlet />
+          <Outlet context={{ openPalette }} />
         </div>
       </main>
       <MobileNav onOpenPalette={openPalette} />

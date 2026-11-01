@@ -126,7 +126,7 @@ describe('OverviewTab fundamentals', () => {
     // gap that might fill in later, which is misleading here.
     expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
     // Freeform notes aren't fundamentals-derived, so they still make sense.
-    expect(screen.getByText('Thesis & risks')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Thesis and risks' })).toBeInTheDocument()
     expect(screen.getByText('Business')).toBeInTheDocument()
   })
 
@@ -223,3 +223,49 @@ describe('OverviewTab company view', () => {
   })
 })
 
+describe('OverviewTab on the new design', () => {
+  it('lays the cards out in two columns, chart side first', () => {
+    renderOverview({ lead: <div data-testid="lead" />, allBars: risingBars(300) })
+
+    const [left, right] = screen.getAllByTestId(/overview-col/)
+    expect(left).toHaveAttribute('data-testid', 'overview-col-main')
+    expect(left.firstChild).toBe(screen.getByTestId('lead'))
+    expect(left).toContainElement(screen.getByRole('heading', { name: 'Performance' }))
+    expect(right).toContainElement(screen.getByRole('heading', { name: 'Your position' }))
+  })
+
+  it('says when the symbol is not in the book', () => {
+    renderOverview()
+
+    expect(screen.getByText(/You don’t hold AAPL/)).toBeInTheDocument()
+  })
+
+  it('shows the next earnings date from the earnings calendar', () => {
+    renderOverview({
+      earnings: {
+        isLoading: false,
+        data: { available: true, next: { date: '2026-11-19', session: 'amc', eps_estimate: 1.25, revenue_estimate: 54_000_000_000 } },
+      },
+    })
+
+    expect(screen.getByRole('heading', { name: 'Next earnings' })).toBeInTheDocument()
+    expect(screen.getByText(/EPS est\. 1\.25/)).toBeInTheDocument()
+  })
+
+  it('collects the company facts and the Saxo reference data in one panel', () => {
+    renderOverview({
+      details: { symbol: 'AAPL', exchange_name: 'Nasdaq', currency: 'USD', isin: 'US0378331005', uic: 211 },
+      fundamentals: { isLoading: false, data: { available: true, country: 'US', industry: 'Technology' } },
+    })
+
+    const panel = screen.getByRole('heading', { name: 'Company facts' }).closest('.sd-panel')
+    expect(panel).toHaveTextContent('Technology')
+    expect(panel).toHaveTextContent('US0378331005')
+  })
+
+  it('places the funds and Congress slot in the side column', () => {
+    renderOverview({ signals: <div data-testid="side-slot" /> })
+
+    expect(screen.getByTestId('overview-col-side')).toContainElement(screen.getByTestId('side-slot'))
+  })
+})

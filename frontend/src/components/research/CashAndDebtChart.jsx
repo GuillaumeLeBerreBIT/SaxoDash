@@ -1,18 +1,18 @@
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
-import { HEALTH_SERIES, axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { cashAndDebtRows } from '../../lib/financialHealth'
-import { Card, CardHeader, InfoTip } from '../ui'
+import { Card, InfoTip } from '../ui'
 
 const SERIES = [
-  { key: 'free_cash_flow', label: 'Free cash flow', kind: 'bar' },
-  { key: 'cash', label: 'Cash', kind: 'bar' },
-  { key: 'total_debt', label: 'Total debt', kind: 'line' },
+  { key: 'free_cash_flow', label: 'Free cash flow', kind: 'bar', slot: 2 },
+  { key: 'cash', label: 'Cash', kind: 'bar', slot: 0 },
+  { key: 'total_debt', label: 'Total debt', kind: 'line', slot: 7 },
 ]
 
-export default function CashAndDebtChart({ annual }) {
+export default function CashAndDebtChart({ annual, className = '' }) {
   const c = useChartColors()
   const rows = cashAndDebtRows(annual)
   if (!rows.length) return null
@@ -20,21 +20,22 @@ export default function CashAndDebtChart({ annual }) {
   const title = 'Free cash flow, cash and total debt by fiscal year'
 
   return (
-    <Card>
-      <CardHeader
-        title="Cash and debt"
-        subtitle={title}
-        right={
-          <InfoTip>
-            Free cash flow is operating cash flow minus capital expenditure. Total debt sums commercial paper and
-            current and non-current long-term debt, where the filing reports them.
-          </InfoTip>
-        }
-      />
-      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[var(--fig-2xs)] text-zinc-400">
-        {series.map(({ key, label }) => (
+    <Card
+      className={className}
+      context={title}
+      dot="ok"
+      title="Cash and debt"
+      right={
+        <InfoTip>
+          Free cash flow is operating cash flow minus capital expenditure. Total debt sums commercial paper and
+          current and non-current long-term debt, where the filing reports them.
+        </InfoTip>
+      }
+    >
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-ink-2">
+        {series.map(({ key, label, slot }) => (
           <li key={key} className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: HEALTH_SERIES[key] }} />
+            <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: c.series[slot] }} />
             {label}
           </li>
         ))}
@@ -45,20 +46,20 @@ export default function CashAndDebtChart({ annual }) {
             <CartesianGrid {...gridProps(c)} />
             <XAxis {...axisProps(c)} dataKey="label" />
             <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
-            <ReferenceLine y={0} stroke={gridProps(c).stroke} />
+            <ReferenceLine y={0} stroke={c.axis} />
             <Tooltip
               {...chartTooltipProps(c)}
               cursor={{ fill: gridProps(c).stroke }}
               formatter={(value, name) => [fmtTooltipDollars(value), name]}
             />
-            {series.map(({ key, label, kind }) =>
+            {series.map(({ key, label, kind, slot }) =>
               kind === 'bar' ? (
                 <Bar
                   key={key}
                   dataKey={key}
                   name={label}
-                  fill={HEALTH_SERIES[key]}
-                  radius={[2, 2, 0, 0]}
+                  fill={c.series[slot]}
+                  radius={[3, 3, 0, 0]}
                   maxBarSize={14}
                   isAnimationActive={false}
                 />
@@ -67,7 +68,7 @@ export default function CashAndDebtChart({ annual }) {
                   key={key}
                   dataKey={key}
                   name={label}
-                  stroke={HEALTH_SERIES[key]}
+                  stroke={c.series[slot]}
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   connectNulls

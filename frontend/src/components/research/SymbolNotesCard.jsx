@@ -3,11 +3,13 @@ import { useState } from 'react'
 import { fmtMoney } from '../../lib/format'
 import { healthVerdict } from '../../lib/snapshot'
 import { reviewedLabel } from '../../lib/thesisReview'
-import { Button, Card, CardHeader } from '../ui'
+import { Button, Card } from '../ui'
 import VerdictBadge from './VerdictBadge'
 
 const FIELD_CLASS =
-  'w-full bg-zinc-950 border border-white/10 rounded px-2.5 py-2 text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none focus:border-blue-500/60 resize-none'
+  'w-full bg-track border border-line-input rounded-lg px-2.5 py-2 text-[14px] text-ink placeholder:text-ink-3 resize-none'
+
+const LABEL_CLASS = 'text-[12px] text-ink-3 font-medium mb-1'
 
 /** One free-text field, saved on blur so every keystroke doesn't fire a
  *  write. Local state mirrors the value until it diverges from the saved
@@ -25,7 +27,7 @@ function NoteField({ label, value, placeholder, rows = 2, onSave }) {
 
   return (
     <div>
-      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium mb-1">{label}</div>
+      <div className={LABEL_CLASS}>{label}</div>
       <textarea
         rows={rows}
         value={draft}
@@ -48,7 +50,7 @@ function PriceLevelField({ label, value, currency, onSave }) {
 
   return (
     <label className="block">
-      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium mb-1">
+      <div className={LABEL_CLASS}>
         {label} {currency ? `(${currency})` : ''}
       </div>
       <input
@@ -62,7 +64,7 @@ function PriceLevelField({ label, value, currency, onSave }) {
           const next = draft === '' ? null : draft
           if (next !== (value ?? null)) onSave(next)
         }}
-        className={`${FIELD_CLASS} num font-mono`}
+        className={`${FIELD_CLASS} num`}
       />
     </label>
   )
@@ -71,11 +73,10 @@ function PriceLevelField({ label, value, currency, onSave }) {
 /** What the company does, in the user's own words - Finnhub's free tier
  *  carries no business description, and Saxo's is a one-line instrument
  *  name, so this is the only place that gap gets filled. */
-export function BusinessSummaryCard({ note, onSave }) {
+export function BusinessSummaryCard({ note, onSave, className = '' }) {
   return (
-    <Card>
-      <CardHeader title="Business" subtitle="What this company does, in your own words" />
-      <div className="mt-3">
+    <Card className={className} context="What this company does, in your own words" dot="off" title="Business">
+      <div>
         <NoteField
           label="Summary"
           value={note?.business_summary}
@@ -91,17 +92,26 @@ export function BusinessSummaryCard({ note, onSave }) {
 /** The investment thesis and its risks, after the data-driven read above -
  *  a bull/bear case, a target price, a sell trigger, and a leverage flag
  *  reusing the same verdict the Overview snapshot already computes. */
-export default function ThesisAndRisksCard({ note, onSave, onMarkReviewed, reviewing = false, fundamentals, currency }) {
+export default function ThesisAndRisksCard({
+  note,
+  onSave,
+  onMarkReviewed,
+  reviewing = false,
+  fundamentals,
+  currency,
+  className = '',
+}) {
   const leverage = fundamentals?.data?.available ? healthVerdict(fundamentals.data) : null
 
   return (
-    <Card>
-      <CardHeader
-        title="Thesis & risks"
-        subtitle="Your own read - not fetched from anywhere"
-        right={leverage?.tone === 'caution' ? <VerdictBadge {...leverage} /> : null}
-      />
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+    <Card
+      className={className}
+      context="Your own read, not fetched from anywhere"
+      dot="off"
+      title="Thesis and risks"
+      right={leverage?.tone === 'caution' ? <VerdictBadge {...leverage} /> : null}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
         <NoteField
           label="Bull case"
           value={note?.bull_case}
@@ -146,13 +156,13 @@ export default function ThesisAndRisksCard({ note, onSave, onMarkReviewed, revie
         />
       </div>
       {note?.target_price != null && currency ? (
-        <div className="mt-2 text-[var(--fig-2xs)] text-zinc-600">
+        <div className="mt-2 text-[12px] text-ink-3 num">
           Target: {fmtMoney(note.target_price, currency)}
         </div>
       ) : null}
       {onMarkReviewed ? (
-        <div className="mt-3 pt-3 border-t border-white/[0.06] flex items-center justify-between gap-3">
-          <span className="text-[var(--fig-xs)] text-zinc-500">{reviewedLabel(note?.reviewed_at)}</span>
+        <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-3">
+          <span className="text-[13px] text-ink-3">{reviewedLabel(note?.reviewed_at)}</span>
           <Button size="sm" onClick={onMarkReviewed} disabled={reviewing}>
             Mark reviewed
           </Button>

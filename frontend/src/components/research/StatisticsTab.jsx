@@ -1,50 +1,77 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
-import { Card, CardHeader } from '../ui'
+import { Card } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 import RatioHistoryChart from './RatioHistoryChart'
 import RatioHistoryTable from './RatioHistoryTable'
 import VerdictBadge from './VerdictBadge'
 
+const SPAN_5 = 'min-[1100px]:col-span-5'
+const SPAN_7 = 'min-[1100px]:col-span-7'
+const SPAN_12 = 'min-[1100px]:col-span-12'
+
+const HISTORY_RATIOS = [
+  ['pe', 'P/E'],
+  ['ps', 'P/S'],
+  ['pb', 'P/B'],
+  ['ev_ebitda', 'EV/EBITDA'],
+]
+
+const hasRange = (stats) => Boolean(stats) && stats.min !== stats.max
+
 function Ratio({ label, value }) {
   return (
-    <div>
-      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className="text-[var(--fig-md)] num font-mono mt-1 text-zinc-100">{value}</div>
+    <div className="flex items-baseline justify-between gap-3 py-1.5 border-t border-line">
+      <span className="text-[13px] text-ink-2">{label}</span>
+      <span className="text-[13px] num text-ink">{value}</span>
     </div>
   )
 }
 
-/** One ratio against its own annual history: a min–median–max track with a
- *  marker at the latest reading. Reserves its slot even without a usable
- *  range, so a row of ratios stays level regardless of which ones have it. */
-function HistoryContext({ stats }) {
-  const valid = stats && stats.min !== stats.max
-  const pos = valid ? Math.min(100, Math.max(0, ((stats.latest - stats.min) / (stats.max - stats.min)) * 100)) : 0
+function RatioGroup({ label, children }) {
   return (
-    <div className={`mt-1.5 ${valid ? '' : 'invisible'}`}>
-      <div className="relative h-1 bg-white/[0.07] rounded-full">
+    <div>
+      <div className="text-[13.5px] font-bold text-ink mb-1">{label}</div>
+      {children}
+    </div>
+  )
+}
+
+function HistoryRange({ label, stats }) {
+  const pos = Math.min(100, Math.max(0, ((stats.latest - stats.min) / (stats.max - stats.min)) * 100))
+  const medianPos = Math.min(100, Math.max(0, ((stats.median - stats.min) / (stats.max - stats.min)) * 100))
+  return (
+    <div className="py-2 first:pt-0">
+      <div className="flex items-baseline justify-between gap-3 text-[13px]">
+        <span className="font-bold text-ink">{label}</span>
+        <span className="num text-ink-3">
+          <span className="font-semibold text-ink">{fmtNum(stats.latest, 1)}</span> now
+        </span>
+      </div>
+      <div className="relative h-3.5 mt-2">
+        <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-track" />
+        <span className="absolute top-0 h-3.5 w-0.5 bg-ink-3" style={{ left: `${medianPos}%` }} />
         <span
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-400"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-ink ring-2 ring-pane"
           style={{ left: `${pos}%` }}
         />
       </div>
-      <div className="mt-1 text-[var(--fig-2xs)] num font-mono text-zinc-600">
-        {valid ? `${fmtNum(stats.min, 1)} · median ${fmtNum(stats.median, 1)} · ${fmtNum(stats.max, 1)} over ${stats.n} yrs` : ' '}
+      <div className="mt-1 text-[12px] num text-ink-3">
+        {`${fmtNum(stats.min, 1)} · median ${fmtNum(stats.median, 1)} · ${fmtNum(stats.max, 1)} over ${stats.n} yrs`}
       </div>
     </div>
   )
 }
 
-/** A labelled row within the Ratios card - same "grouped facts under an
- *  uppercase tag" rhythm as SnapshotSection, so the two cards on this page
- *  read as one system instead of two different grids. */
-function RatioGroup({ label, children }) {
+function ValuationHistory({ history, className }) {
+  const rows = HISTORY_RATIOS.filter(([key]) => hasRange(history?.[key]))
+  if (!rows.length) return null
   return (
-    <div className="py-3 first:pt-0 last:pb-0">
-      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</div>
-      <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-4">{children}</div>
-    </div>
+    <Card className={className} context="Against its own annual range" dot="ok" title="Valuation vs its history">
+      {rows.map(([key, label]) => (
+        <HistoryRange key={key} label={label} stats={history[key]} />
+      ))}
+    </Card>
   )
 }
 
@@ -55,69 +82,64 @@ export default function StatisticsTab({ fundamentals }) {
       title="Statistics"
       fallback="Statistics are unavailable for this symbol."
     >
-      {(data) => (
-        <div className="space-y-4">
-          <Card>
-            <CardHeader
+      {(data) => {
+        const withHistory = HISTORY_RATIOS.some(([key]) => hasRange(data.valuation_history?.[key]))
+        const byYear = data.ratio_history?.length > 0
+        return (
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+            <Card
+              className={SPAN_12}
+              context="Computed in-app from Finnhub's raw fundamentals"
+              dot="ok"
               title="Ratios"
-              subtitle="Computed in-app from Finnhub's raw fundamentals"
               right={<VerdictBadge {...valuationVerdict(data)} />}
-            />
-            <div className="mt-2 divide-y divide-white/[0.06]">
-              <RatioGroup label="Market">
-                <Ratio label="Market cap" value={fmtCompact(data.market_cap)} />
-                <Ratio label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
-                <Ratio label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
-                <Ratio label="Dividend growth (5Y)" value={fmtPct(data.dividend_growth_5y, { sign: false })} />
-              </RatioGroup>
+            >
+              <div className="grid gap-x-7 gap-y-4 grid-cols-[repeat(auto-fit,minmax(250px,1fr))]">
+                <RatioGroup label="Market">
+                  <Ratio label="Market cap" value={fmtCompact(data.market_cap)} />
+                  <Ratio label="Dividend yield" value={fmtPct(data.dividend_yield, { sign: false })} />
+                  <Ratio label="52W range" value={`${fmtNum(data.week52_low, 2)} – ${fmtNum(data.week52_high, 2)}`} />
+                  <Ratio label="Dividend growth (5Y)" value={fmtPct(data.dividend_growth_5y, { sign: false })} />
+                  <Ratio label="Beta" value={fmtNum(data.beta, 2)} />
+                </RatioGroup>
 
-              <RatioGroup label="Valuation multiples">
-                <div>
+                <RatioGroup label="Valuation multiples">
                   <Ratio label="P/E" value={fmtNum(data.pe_ratio, 2)} />
-                  <HistoryContext stats={data.valuation_history?.pe} />
-                </div>
-                <div>
+                  <Ratio label="Forward P/E" value={fmtNum(data.forward_pe, 2)} />
+                  <Ratio label="PEG" value={fmtNum(data.peg_ratio, 2)} />
                   <Ratio label="P/S" value={fmtNum(data.ps_ratio, 2)} />
-                  <HistoryContext stats={data.valuation_history?.ps} />
-                </div>
-                <div>
                   <Ratio label="P/B" value={fmtNum(data.pb_ratio, 2)} />
-                  <HistoryContext stats={data.valuation_history?.pb} />
-                </div>
-                <div>
                   <Ratio label="EV/EBITDA" value={fmtNum(data.ev_ebitda, 2)} />
-                  <HistoryContext stats={data.valuation_history?.ev_ebitda} />
-                </div>
-                <Ratio label="Forward P/E" value={fmtNum(data.forward_pe, 2)} />
-                <Ratio label="PEG" value={fmtNum(data.peg_ratio, 2)} />
-                <Ratio label="EV/Revenue" value={fmtNum(data.ev_revenue, 2)} />
-                <Ratio label="Beta" value={fmtNum(data.beta, 2)} />
-              </RatioGroup>
+                  <Ratio label="EV/Revenue" value={fmtNum(data.ev_revenue, 2)} />
+                </RatioGroup>
 
-              <RatioGroup label="Profitability & health">
-                <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
-                <Ratio label="ROA" value={fmtPct(data.roa, { sign: false })} />
-                <Ratio label="ROI" value={fmtPct(data.roi, { sign: false })} />
-                <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
-                <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
-                <Ratio label="Current ratio" value={fmtNum(data.current_ratio, 2)} />
-              </RatioGroup>
-            </div>
-          </Card>
-
-          {data.ratio_history?.length > 0 && (
-            <Card>
-              <CardHeader title="Ratios by year" subtitle="Fiscal years, from Finnhub's annual series" />
-              <div className="mt-3">
-                <RatioHistoryTable history={data.ratio_history} current={data} />
+                <RatioGroup label="Profitability & health">
+                  <Ratio label="ROE" value={fmtPct(data.roe, { sign: false })} />
+                  <Ratio label="ROA" value={fmtPct(data.roa, { sign: false })} />
+                  <Ratio label="ROI" value={fmtPct(data.roi, { sign: false })} />
+                  <Ratio label="Net margin" value={fmtPct(data.net_margin, { sign: false })} />
+                  <Ratio label="Gross margin" value={fmtPct(data.gross_margin, { sign: false })} />
+                  <Ratio label="Current ratio" value={fmtNum(data.current_ratio, 2)} />
+                </RatioGroup>
               </div>
-              <div className="mt-5 pt-4 border-t border-white/[0.06]">
-                <RatioHistoryChart history={data.ratio_history} />
-              </div>
+              <p className="mt-3 text-[12px] text-ink-3">
+                A ratio Finnhub&apos;s free tier doesn&apos;t return shows as a dash, never as zero.
+              </p>
             </Card>
-          )}
-        </div>
-      )}
+
+            {withHistory && <ValuationHistory history={data.valuation_history} className={byYear ? SPAN_5 : SPAN_12} />}
+
+            {byYear && (
+              <>
+                <RatioHistoryChart history={data.ratio_history} className={withHistory ? SPAN_7 : SPAN_12} />
+                <Card flush className={SPAN_12} context="Year end, with today's figure beside it" dot="ok" title="Ratio history">
+                  <RatioHistoryTable history={data.ratio_history} current={data} />
+                </Card>
+              </>
+            )}
+          </div>
+        )
+      }}
     </FundamentalsGate>
   )
 }
