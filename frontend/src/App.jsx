@@ -6,7 +6,7 @@ import Portfolio from './pages/Portfolio'
 import Analytics from './pages/Analytics'
 import AccountTransactions from './pages/AccountTransactions'
 import Research from './pages/Research'
-import ResearchChart from './pages/ResearchChart'
+import Boards from './pages/Boards'
 import Discover from './pages/Discover'
 import DiscoverShelf from './pages/DiscoverShelf'
 import Earnings from './pages/Earnings'
@@ -34,8 +34,8 @@ function App() {
           <Route path='money/accounts/:accountId' element={<AccountTransactions />} />
           <Route path='settings' element={<Settings />} />
           <Route path='research' element={<Research />} />
-          <Route path='boards' element={<ResearchChart />} />
-          <Route path='boards/:id' element={<ResearchChart />} />
+          <Route path='boards' element={<Boards />} />
+          <Route path='boards/:id' element={<Boards />} />
           <Route path='discover' element={<Discover />} />
           <Route path='discover/:key' element={<DiscoverShelf />} />
           <Route path='earnings' element={<Earnings />} />

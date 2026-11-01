@@ -22,7 +22,7 @@ vi.mock('./pages/AccountTransactions', () => page('AccountTransactions page'))
 vi.mock('./pages/Spending', () => page('Spending page'))
 vi.mock('./pages/SpendingTransactions', () => page('SpendingTransactions page'))
 vi.mock('./pages/Research', () => page('Research page'))
-vi.mock('./pages/ResearchChart', () => page('Chart page'))
+vi.mock('./pages/Boards', () => page('Boards page'))
 vi.mock('./pages/Discover', () => page('Discover page'))
 vi.mock('./pages/DiscoverShelf', () => page('DiscoverShelf page'))
 vi.mock('./pages/Earnings', () => page('Earnings page'))
@@ -51,7 +51,7 @@ function renderAt(url) {
 
 describe('legacy routes redirect with their query', () => {
   it.each([
-    ['/research/chart?symbol=NVDA', '/boards?symbol=NVDA', 'Chart page'],
+    ['/research/chart?symbol=NVDA', '/boards?symbol=NVDA', 'Boards page'],
     ['/transactions', '/portfolio?view=transactions', 'Portfolio page'],
     ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Portfolio page'],
     ['/accounts', '/money?section=accounts', 'Accounts page'],
@@ -80,8 +80,8 @@ describe('new routes', () => {
     ['/money?section=accounts', 'Accounts page'],
     ['/money?section=transactions', 'SpendingTransactions page'],
     ['/money/accounts/3', 'AccountTransactions page'],
-    ['/boards', 'Chart page'],
-    ['/boards/b1', 'Chart page'],
+    ['/boards', 'Boards page'],
+    ['/boards/b1', 'Boards page'],
   ])('%s renders %s inside the frame', (url, rendered) => {
     renderAt(url)
     expect(screen.getByText(rendered)).toBeInTheDocument()

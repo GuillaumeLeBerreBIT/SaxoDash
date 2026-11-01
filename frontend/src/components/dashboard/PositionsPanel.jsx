@@ -15,19 +15,37 @@ function PortfolioValueSub({ pnlPct }) {
   )
 }
 
-function PositionRow({ position, change }) {
+function Identity({ position }) {
+  return (
+    <>
+      <InstrumentLogo symbol={position.ticker} />
+      <span className="min-w-0">
+        <span className="block truncate font-semibold text-ink">{position.name || position.ticker}</span>
+        <span className="block text-[12px] text-ink-3">{position.ticker}</span>
+      </span>
+    </>
+  )
+}
+
+function PositionRow({ position, change, onSelect }) {
   const href = researchHref(position.ticker, undefined, { uic: position.uic, assetType: position.asset_type })
   const over = position.weight != null && Number(position.weight) > WEIGHT_CAP_PCT
   return (
     <Tr>
       <Td edge className="w-full max-w-0 md:max-w-none">
-        <Link to={href} className="flex items-center gap-2.5 min-w-0">
-          <InstrumentLogo symbol={position.ticker} />
-          <span className="min-w-0">
-            <span className="block truncate font-semibold text-ink">{position.name || position.ticker}</span>
-            <span className="block text-[12px] text-ink-3">{position.ticker}</span>
-          </span>
-        </Link>
+        {onSelect ? (
+          <button
+            type="button"
+            onClick={() => onSelect(position.ticker)}
+            className="flex items-center gap-2.5 min-w-0 w-full text-left rounded-lg"
+          >
+            <Identity position={position} />
+          </button>
+        ) : (
+          <Link to={href} className="flex items-center gap-2.5 min-w-0">
+            <Identity position={position} />
+          </Link>
+        )}
       </Td>
       <Td align="right">
         <Move value={change} />
@@ -43,7 +61,7 @@ function PositionRow({ position, change }) {
   )
 }
 
-export default function PositionsPanel({ summary, positions, quotes, className = '' }) {
+export default function PositionsPanel({ summary, positions, quotes, className = '', onSelect }) {
   const ranked = positions.slice().sort((a, b) => Number(b.value) - Number(a.value))
   const topHolding = ranked[0]
   const dayLabel = moveLabel(quotes.values())
@@ -91,6 +109,7 @@ export default function PositionsPanel({ summary, positions, quotes, className =
                   key={position.ticker}
                   position={position}
                   change={quotes.get(position.uic)?.change_pct ?? null}
+                  onSelect={onSelect}
                 />
               ))}
             </tbody>

@@ -80,7 +80,12 @@ function SincePurchaseLine({ summary }) {
   )
 }
 
-export default function PortfolioHeatmap({ positions, quotes }) {
+function tileTarget(position, onSelect) {
+  if (onSelect) return { as: 'button', onClick: () => onSelect(position.ticker) }
+  return { as: Link, to: researchHref(position.ticker, undefined, { uic: position.uic, assetType: position.asset_type }) }
+}
+
+export default function PortfolioHeatmap({ positions, quotes, onSelect, className = '' }) {
   const c = useChartColors()
   const [metric, setMetric] = useState('day')
   const [ref, size] = useSize()
@@ -102,6 +107,7 @@ export default function PortfolioHeatmap({ positions, quotes }) {
 
   return (
     <Card
+      className={className}
       context="Sized by value, grouped by sector"
       dot={metric === 'day' && dayLabel !== 'Today' ? 'warn' : 'ok'}
       title="Allocation & movement"
@@ -160,8 +166,7 @@ export default function PortfolioHeatmap({ positions, quotes }) {
           return (
             <HeatTile
               key={position.ticker}
-              as={Link}
-              to={researchHref(position.ticker, undefined, { uic: position.uic, assetType: position.asset_type })}
+              {...tileTarget(position, onSelect)}
               ticker={position.ticker}
               pct={pct}
               fill={performanceFill(pct, { cap }, c)}
