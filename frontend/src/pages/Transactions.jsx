@@ -57,7 +57,10 @@ export default function Transactions() {
   }
 
   function applyFilters(patch) {
-    setSearchParams(writeFilters({ ...filters, ...patch }), { replace: true })
+    const next = new URLSearchParams()
+    if (searchParams.has('view')) next.set('view', searchParams.get('view'))
+    for (const [key, value] of writeFilters({ ...filters, ...patch })) next.append(key, value)
+    setSearchParams(next, { replace: true })
     setPage(1)
   }
 
@@ -122,9 +125,9 @@ export default function Transactions() {
       />
 
       <Card padding={false}>
-        <div className="p-4 border-b border-zinc-800 flex items-center gap-2 md:gap-3 flex-wrap">
+        <div className="p-4 border-b border-line flex items-center gap-2 md:gap-3 flex-wrap">
           <div className="relative flex-1 min-w-[220px] w-full md:w-auto">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3">
               <Search size={14} />
             </span>
             <Input
@@ -151,7 +154,7 @@ export default function Transactions() {
             ))}
           </div>
           {accounts.length > 1 && (
-            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-ink-3">
               Account
               <Select
                 value={account}
@@ -166,11 +169,11 @@ export default function Transactions() {
             </label>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-ink-3">
               From
               <Input type="date" value={from} onChange={(e) => applyFilters({ from: e.target.value })} className="h-11 md:h-9" />
             </label>
-            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
+            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-ink-3">
               To
               <Input type="date" value={to} onChange={(e) => applyFilters({ to: e.target.value })} className="h-11 md:h-9" />
             </label>
@@ -193,7 +196,7 @@ export default function Transactions() {
         <div className="overflow-x-auto">
           <table className="w-full text-[var(--fig-sm)]">
             <thead>
-              <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+              <tr className="text-left text-[var(--fig-2xs)] text-ink-3 uppercase tracking-wide border-b border-line">
                 <SortableTh edge sortKey="date" sort={sort} onSort={onSort}>Date</SortableTh>
                 <Th hideBelow="md">Type</Th>
                 <SortableTh sortKey="instrument" sort={sort} onSort={onSort}>Instrument</SortableTh>
@@ -206,18 +209,18 @@ export default function Transactions() {
             </thead>
             <tbody>
               {visible.map((t) => (
-                <tr key={t.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                  <Td edge className="num text-zinc-300">{fmtDate(t.date)}</Td>
+                <tr key={t.id} className="border-b border-line last:border-0 hover:bg-hover">
+                  <Td edge className="num text-ink-2">{fmtDate(t.date)}</Td>
                   <Td hideBelow="md">
                     <Badge tone={txTone(t.type)}>{t.type}</Badge>
                   </Td>
-                  <Td className="w-full max-w-0 md:w-auto md:max-w-none text-zinc-100">
+                  <Td className="w-full max-w-0 md:w-auto md:max-w-none text-ink">
                     <div className="truncate" title={`${t.instrument} (${t.ticker})`}>{t.instrument}</div>
-                    <span className="md:hidden block truncate text-[var(--fig-2xs)] text-zinc-500">
+                    <span className="md:hidden block truncate text-[var(--fig-2xs)] text-ink-3">
                       {[t.type, t.ticker, t.account].filter(Boolean).join(' · ')}
                     </span>
                   </Td>
-                  <Td hideBelow="md" className="text-zinc-400 font-medium">
+                  <Td hideBelow="md" className="text-ink-2 font-medium">
                     <span className="flex items-center gap-2">
                       <InstrumentLogo
                         symbol={t.ticker}
@@ -228,10 +231,10 @@ export default function Transactions() {
                       {t.ticker}
                     </span>
                   </Td>
-                  <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(t.qty)}</Td>
-                  <Td align="right" hideBelow="md" className="num text-zinc-300">{txPrice(t)}</Td>
+                  <Td align="right" hideBelow="md" className="num text-ink-2">{fmtQty(t.qty)}</Td>
+                  <Td align="right" hideBelow="md" className="num text-ink-2">{txPrice(t)}</Td>
                   <Td align="right" className={`num font-medium ${txTotalClass(t)}`}>{txTotal(t)}</Td>
-                  <Td edge hideBelow="md" className="text-zinc-400">{t.account}</Td>
+                  <Td edge hideBelow="md" className="text-ink-2">{t.account}</Td>
                 </tr>
               ))}
               {visible.length === 0 && (
@@ -250,8 +253,8 @@ export default function Transactions() {
           </table>
         </div>
 
-        <div className="px-4 py-2 flex items-center justify-between border-t border-zinc-800">
-          <div className="text-[var(--fig-xs)] text-zinc-500">
+        <div className="px-4 py-2 flex items-center justify-between border-t border-line">
+          <div className="text-[var(--fig-xs)] text-ink-3">
             Showing {filtered.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1">
@@ -259,7 +262,7 @@ export default function Transactions() {
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1}
               aria-label="Previous page"
-              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-ink-2 hover:bg-hover disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronLeft size={14} />
             </button>
@@ -270,7 +273,7 @@ export default function Transactions() {
                 aria-label={`Page ${n}`}
                 aria-current={n === page ? 'page' : undefined}
                 className={`h-11 w-11 md:h-8 md:w-8 text-[var(--fig-xs)] rounded font-medium ${
-                  n === page ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800'
+                  n === page ? 'bg-selected text-ink' : 'text-ink-2 hover:bg-hover'
                 }`}
               >
                 {n}
@@ -280,7 +283,7 @@ export default function Transactions() {
               onClick={() => setPage(Math.min(pageCount, page + 1))}
               disabled={page === pageCount}
               aria-label="Next page"
-              className="h-11 w-11 md:h-8 md:w-8 rounded text-zinc-400 hover:bg-zinc-800 disabled:opacity-40 flex items-center justify-center"
+              className="h-11 w-11 md:h-8 md:w-8 rounded text-ink-2 hover:bg-hover disabled:opacity-40 flex items-center justify-center"
             >
               <ChevronRight size={14} />
             </button>

@@ -95,6 +95,30 @@ body {
   position: relative;
   z-index: 1;
 }
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 40;
+  background: var(--sd-page-top);
+}
+
+:root {
+  --sd-gutter: 24px;
+}
+@media (max-width: 759.98px) {
+  :root {
+    --sd-gutter: 16px;
+  }
+}
+.sd-gutter {
+  padding-left: max(var(--sd-gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--sd-gutter), env(safe-area-inset-right, 0px));
+}
+.sd-header {
+  background: linear-gradient(180deg, var(--sd-page-top), color-mix(in srgb, var(--sd-page-top) 92%, transparent));
+}
 
 button, a, [role="button"], tr, input, select {
   transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, opacity var(--motion-fast) ease;

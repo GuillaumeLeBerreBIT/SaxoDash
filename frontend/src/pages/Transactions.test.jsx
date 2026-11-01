@@ -412,6 +412,14 @@ describe('Transactions filters', () => {
     expect(Object.fromEntries(params)).toEqual({ type: 'SELL', account: 'Bank', from: '2026-01-01', q: 'bra' })
   })
 
+  it('keeps the Portfolio view it is shown in when a filter changes', () => {
+    stub(sample())
+    renderAt('/portfolio?view=transactions')
+    fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
+    fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: 'bra' } })
+    expect(Object.fromEntries(new URLSearchParams(where()))).toEqual({ view: 'transactions', type: 'SELL', q: 'bra' })
+  })
+
   it('pre-applies filters from the URL', () => {
     stub(sample())
     renderAt('/?type=BUY&from=2026-02-01&account=Saxo')

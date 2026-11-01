@@ -1,35 +1,43 @@
 import { describe, expect, it, vi } from 'vitest'
+import { screen } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import Layout from './Layout'
 
 vi.mock('../api/client', () => ({
   getUsername: () => 'Test User',
   logout: vi.fn(),
+  connectSaxo: vi.fn(),
   getSaxoStatus: vi.fn(() => new Promise(() => {})),
   getFilingAlerts: vi.fn(() => new Promise(() => {})),
   markFilingAlertsRead: vi.fn(),
+  getPortfolioSummary: vi.fn(() => new Promise(() => {})),
+  getNetWorth: vi.fn(() => new Promise(() => {})),
 }))
 vi.mock('./CommandPalette', () => ({ default: () => null }))
 
 describe('Layout shell', () => {
-  it('hides the sidebar below md', () => {
+  it('has no sidebar and no rail offset', () => {
     const { container } = renderWithProviders(<Layout />)
-    const aside = container.querySelector('aside')
-    expect(aside).toHaveClass('hidden')
-    expect(aside).toHaveClass('md:flex')
+    expect(container.querySelector('aside')).not.toBeInTheDocument()
+    expect(container.querySelector('main').style.getPropertyValue('--rail')).toBe('')
   })
 
-  it('offsets main by the rail only from md up', () => {
+  it('puts the sticky header above the page, below the safe-area inset', () => {
     const { container } = renderWithProviders(<Layout />)
-    const main = container.querySelector('main')
-    expect(main).toHaveClass('md:ml-[var(--rail)]')
-    expect(main.style.marginLeft).toBe('')
-    expect(main.style.getPropertyValue('--rail')).toMatch(/^(64|220)px$/)
+    const header = container.querySelector('header')
+    expect(header).toHaveClass('sticky', 'top-[env(safe-area-inset-top)]')
+    expect(screen.getByRole('navigation', { name: 'Pages' })).toBeInTheDocument()
   })
 
-  it('renders the mobile top bar and bottom navigation', () => {
+  it('pads the page with the shared gutter and no narrow max width', () => {
     const { container } = renderWithProviders(<Layout />)
-    expect(container.querySelector('header')).toHaveClass('md:hidden')
-    expect(container.querySelector('nav[aria-label="Primary"]')).toBeInTheDocument()
+    const page = container.querySelector('main > div')
+    expect(page).toHaveClass('sd-gutter')
+    expect(page.style.maxWidth).toBe('')
+  })
+
+  it('renders the phone bottom navigation', () => {
+    renderWithProviders(<Layout />)
+    expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
   })
 })
