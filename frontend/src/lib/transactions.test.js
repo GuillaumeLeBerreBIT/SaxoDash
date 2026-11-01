@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { txDayGroups, txDayLabel, txDaySummary, txPrice, txTone, txSignedTotal, txTotal, txTotalClass, txTypes } from './transactions'
+import { txDayGroups, txDayLabel, txDaySummaries, txDaySummary, txPrice, txTone, txSignedTotal, txTotal, txTotalClass, txTypes } from './transactions'
 
 const tx = (overrides) => ({
   type: 'BUY', price: '150.00', currency: 'USD', total: '1500.00', total_eur: '1290.13', ...overrides,
@@ -126,5 +126,17 @@ describe('txDaySummary', () => {
 
   it('says nothing for a day without buys or sells', () => {
     expect(txDaySummary([tx({ type: 'DIVIDEND' })])).toBeNull()
+  })
+})
+
+describe('txDaySummaries', () => {
+  it('sums each date over every row on it, wherever the rows sit', () => {
+    const summaries = txDaySummaries([
+      tx({ date: 'a', total_eur: '10' }),
+      tx({ date: 'b', total_eur: '5' }),
+      tx({ date: 'a', total_eur: '20' }),
+    ])
+    expect(summaries.get('a')).toBe('Bought €30.00')
+    expect(summaries.get('b')).toBe('Bought €5.00')
   })
 })

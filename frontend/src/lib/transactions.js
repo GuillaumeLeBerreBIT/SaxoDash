@@ -72,3 +72,9 @@ export function txDaySummary(rows) {
   const text = parts.join(' · ')
   return text[0].toUpperCase() + text.slice(1)
 }
+
+export function txDaySummaries(rows) {
+  const byDate = new Map()
+  rows.forEach((t) => byDate.set(t.date, [...(byDate.get(t.date) ?? []), t]))
+  return new Map([...byDate].map(([date, dayRows]) => [date, txDaySummary(dayRows)]))
+}

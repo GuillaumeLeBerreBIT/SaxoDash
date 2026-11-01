@@ -646,3 +646,29 @@ describe('Transactions filters', () => {
     expect(text.trim().split('\n').slice(1).map((l) => l.split(',')[2])).toEqual(['Alpha', 'Charlie'])
   })
 })
+
+describe('Transactions grouped by day', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it('shows the whole day total on every page the day spans', () => {
+    stub(Array.from({ length: 11 }, (_, i) => row({ id: i + 1, date: '2026-09-02', total_eur: '100.00' })))
+    renderWithProviders(<TransactionsView />)
+    const day = () => screen.getByRole('rowgroup', { name: 'Trades on Wed 02 Sep 2026' })
+    expect(within(day()).getByText('Bought €1,100.00')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    expect(within(day()).getByText('Bought €1,100.00')).toBeInTheDocument()
+  })
+
+  it.each([/^Instrument/, /^Total/])('renders a flat list without day headers when sorted by %s', (name) => {
+    stub([
+      row({ id: 1, date: '2026-09-02', instrument: 'Bravo' }),
+      row({ id: 2, date: '2026-09-01', instrument: 'Alpha' }),
+    ])
+    renderWithProviders(<TransactionsView />)
+    expect(screen.getAllByRole('rowgroup', { name: /^Trades on/ })).toHaveLength(2)
+    fireEvent.click(within(screen.getByRole('columnheader', { name })).getByRole('button'))
+    expect(screen.queryAllByRole('rowgroup', { name: /^Trades on/ })).toHaveLength(0)
+    expect(within(screen.getByRole('table')).getByText('Alpha')).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByText('Bravo')).toBeInTheDocument()
+  })
+})

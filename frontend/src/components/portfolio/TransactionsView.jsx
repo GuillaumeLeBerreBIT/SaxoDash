@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTransactions } from '../../api/queries'
 import { fmtDate, fmtQty } from '../../lib/format'
-import { txDayGroups, txDayLabel, txDaySummary, txPrice, txSignedTotal, txTone, txTotal, txTotalClass, txTypes } from '../../lib/transactions'
+import { txDayGroups, txDayLabel, txDaySummaries, txPrice, txSignedTotal, txTone, txTotal, txTotalClass, txTypes } from '../../lib/transactions'
 import { nextSort, sortRows } from '../../lib/sort'
 import { accountsOf, DATE_PRESETS, filterByDateRange, rangeForPreset, readFilters, writeFilters } from '../../lib/transactionFilters'
 import { localToday } from '../../lib/periods'
@@ -55,7 +55,7 @@ function TradeRow({ t }) {
   )
 }
 
-function TradeGroup({ date, rows }) {
+function TradeGroup({ date, rows, summary }) {
   if (date === null) {
     return (
       <tbody>
@@ -64,7 +64,6 @@ function TradeGroup({ date, rows }) {
     )
   }
   const label = txDayLabel(date)
-  const summary = txDaySummary(rows)
   return (
     <tbody aria-label={`Trades on ${label}`}>
       <tr className="border-t border-line">
@@ -175,6 +174,7 @@ export default function TransactionsView() {
   }
 
   const groups = sort === null || sort.key === 'date' ? txDayGroups(visible) : [{ date: null, rows: visible }]
+  const daySummaries = txDaySummaries(filtered)
 
   return (
     <Card
@@ -286,7 +286,7 @@ export default function TransactionsView() {
             </tbody>
           ) : (
             groups.map((group, index) => (
-              <TradeGroup key={`${group.date}-${index}`} date={group.date} rows={group.rows} />
+              <TradeGroup key={`${group.date}-${index}`} date={group.date} rows={group.rows} summary={daySummaries.get(group.date)} />
             ))
           )}
         </table>

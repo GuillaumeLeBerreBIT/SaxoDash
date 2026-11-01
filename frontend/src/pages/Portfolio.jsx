@@ -138,7 +138,7 @@ export default function Portfolio() {
           {ready && <SummaryTiles summary={summary} netWorth={netWorth} />}
         </Card>
 
-        {!ready && (
+        {view === 'positions' && !ready && (
           <div className={`${SPAN_12} min-w-0`}>
             <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" />
           </div>

@@ -499,6 +499,15 @@ describe('Portfolio redesign', () => {
     expect(within(first).queryByText('Bravo')).not.toBeInTheDocument()
   })
 
+  it('shows the trades without the portfolio summary error in the transactions view', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: vi.fn() })
+    queries.useTransactions.mockReturnValue({ data: [trade({ instrument: 'Alpha' })], isLoading: false, error: null })
+    renderWithProviders(<Portfolio />, { route: '/portfolio?view=transactions' })
+    expect(within(screen.getByRole('table', { name: 'Transactions' })).getByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('Could not load portfolio.')).not.toBeInTheDocument()
+  })
+
   it('switches between positions and transactions with the view control', () => {
     queries.useTransactions.mockReturnValue({ data: [trade({})], isLoading: false, error: null })
     renderWithProviders(<Portfolio />)
