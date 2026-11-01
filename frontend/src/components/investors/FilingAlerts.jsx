@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 
 import ChangeBadge from './ChangeBadge'
 import { Popover } from '../overlays'
+import { panelOffset } from '../../lib/panelOffset'
 import { useFilingAlerts, useMarkAlertsRead } from '../../api/queries'
 import { alertHref, alertSummary, fmtFiledDate, holdingLabel, quarterLabel } from '../../lib/investors'
 
@@ -68,9 +69,7 @@ export default function FilingAlerts({ side = 'below', panelLeft, className = ''
   const onOpenChange = (next) => (next ? setOpen(true) : close())
 
   const measureOffset = (event) => {
-    if (panelLeft == null) return
-    const gap = panelLeft - event.currentTarget.getBoundingClientRect().right
-    setOffset(Math.max(8, gap))
+    setOffset(panelOffset(panelLeft, event.currentTarget.getBoundingClientRect().right))
   }
 
   const bell = (

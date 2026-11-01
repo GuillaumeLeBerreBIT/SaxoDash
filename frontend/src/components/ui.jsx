@@ -288,10 +288,6 @@ export function EmptyState({ title, hint, className = '' }) {
  *  CommandPalette already uses, generalized. Reach for this instead of a
  *  bespoke overlay whenever a page needs to collect input in a focused
  *  surface (a form, a confirmation) rather than inline on the page. */
-/** The one modal/dialog primitive - same backdrop+panel pattern
- *  CommandPalette already uses, generalized. Reach for this instead of a
- *  bespoke overlay whenever a page needs to collect input in a focused
- *  surface (a form, a confirmation) rather than inline on the page. */
 export function Modal({ title, children, onClose }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()} title={title}>
@@ -307,9 +303,15 @@ export function Modal({ title, children, onClose }) {
  *  target: nothing else on the page depends on it opening or closing.
  */
 export function InfoTip({ children, label }) {
+  const [open, setOpen] = useState(false)
   return (
-    <Tooltip content={children}>
-      <button type="button" aria-label={label} className="text-ink-3 hover:text-ink rounded-full">
+    <Tooltip content={children} open={open} onOpenChange={setOpen}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => setOpen(true)}
+        className="text-ink-3 hover:text-ink rounded-full"
+      >
         <Info size={13} />
       </button>
     </Tooltip>

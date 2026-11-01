@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 vi.mock('../../api/queries')
 import * as queries from '../../api/queries'
 import FilingAlerts from './FilingAlerts'
+import { panelOffset } from '../../lib/panelOffset'
 
 const berkshire = {
   id: 7,
@@ -100,7 +101,7 @@ describe('FilingAlerts', () => {
     expect(mutate).toHaveBeenCalledTimes(2)
   })
 
-  it('opens beside the sidebar when told where its edge is', () => {
+  it('opens on the right-hand side when placed beside the sidebar', () => {
     queries.useFilingAlerts.mockReturnValue({ data: { unread: 0, alerts: [] } })
     queries.useMarkAlertsRead.mockReturnValue({ mutate })
     render(<MemoryRouter><FilingAlerts side="right" panelLeft={228} /></MemoryRouter>)
@@ -113,5 +114,19 @@ describe('FilingAlerts', () => {
     openPanel('Filing alerts')
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(mutate).not.toHaveBeenCalled()
+  })
+})
+
+describe('panelOffset', () => {
+  it('is the gap between the trigger and the panel edge', () => {
+    expect(panelOffset(228, 200)).toBe(28)
+  })
+
+  it('never goes below 8', () => {
+    expect(panelOffset(205, 200)).toBe(8)
+  })
+
+  it('is 8 without a panel edge', () => {
+    expect(panelOffset(undefined, 200)).toBe(8)
   })
 })

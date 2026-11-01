@@ -91,8 +91,8 @@ export function Menu({ trigger, items, align = 'end', width }) {
     <MenuRoot>
       <MenuTrigger asChild>{trigger}</MenuTrigger>
       <MenuContent align={align} width={width}>
-        {items.map(({ label, onSelect, icon: Icon, danger }) => (
-          <MenuItem key={label} onSelect={onSelect} danger={danger}>
+        {items.map(({ label, onSelect, icon: Icon, danger }, index) => (
+          <MenuItem key={`${index}:${label}`} onSelect={onSelect} danger={danger}>
             {Icon ? <Icon size={14} aria-hidden="true" /> : null}
             {label}
           </MenuItem>
@@ -136,10 +136,10 @@ export function Popover({
   )
 }
 
-export function Tooltip({ content, children, side = 'top', className = '' }) {
+export function Tooltip({ content, children, side = 'top', className = '', open, onOpenChange }) {
   return (
     <TooltipPrimitive.Provider delayDuration={150}>
-      <TooltipPrimitive.Root>
+      <TooltipPrimitive.Root open={open} onOpenChange={onOpenChange}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content

@@ -12,6 +12,7 @@ import {
   InstrumentLogo,
   LetterAvatar,
   MetricTile,
+  InfoTip,
   Modal,
   StatStrip,
   StatRow,
@@ -172,6 +173,12 @@ describe('ui primitives', () => {
     )
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('InfoTip shows its content when the trigger is clicked', async () => {
+    render(<InfoTip label="What is Sharpe">Return per unit of risk</InfoTip>)
+    await userEvent.click(screen.getByRole('button', { name: 'What is Sharpe' }))
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Return per unit of risk')
   })
 
   it('Modal renders a close button', () => {
