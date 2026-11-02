@@ -1,4 +1,3 @@
-import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 
 export default function HeatTile({
@@ -13,7 +12,7 @@ export default function HeatTile({
   style,
   ...rest
 }) {
-  const c = useChartColors()
+  const absent = fill == null
   const buttonProps = Tag === 'button' ? { type: 'button' } : {}
   return (
     <Tag
@@ -21,9 +20,9 @@ export default function HeatTile({
       {...rest}
       aria-current={active || undefined}
       className={`overflow-hidden rounded-sm flex flex-col items-center justify-center text-center leading-tight outline-none focus-visible:ring-2 focus-visible:ring-focus hover:brightness-125 ${
-        active ? 'ring-1 ring-accent' : ''
-      } ${className}`}
-      style={{ ...style, background: fill ?? c.track }}
+        active ? 'ring-1 ring-accent' : absent ? 'ring-1 ring-inset ring-line' : ''
+      } ${absent ? 'bg-tile' : ''} ${className}`}
+      style={absent ? style : { ...style, background: fill }}
     >
       {level === 'none' ? null : (
         <span className="flex items-center gap-1 max-w-full px-1 truncate text-[var(--fig-xs)] font-medium text-ink">
@@ -32,7 +31,7 @@ export default function HeatTile({
         </span>
       )}
       {level === 'full' ? (
-        <span className="text-[var(--fig-2xs)] num font-mono text-ink">{fmtPct(pct, { decimals: 1 })}</span>
+        <span className="text-[var(--fig-2xs)] num text-ink">{fmtPct(pct, { decimals: 1 })}</span>
       ) : null}
     </Tag>
   )

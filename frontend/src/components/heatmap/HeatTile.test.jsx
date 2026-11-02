@@ -2,15 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Link, MemoryRouter } from 'react-router-dom'
 
-import { chartPalette } from '../../lib/charts'
-import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import HeatTile from './HeatTile'
-
-const asRendered = (colour) => {
-  const probe = document.createElement('span')
-  probe.style.background = colour
-  return probe.style.background
-}
 
 describe('HeatTile', () => {
   it('prints the ticker and the signed move at full size', () => {
@@ -22,7 +14,20 @@ describe('HeatTile', () => {
   it('shows a dash for an unknown move, never 0%', () => {
     render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
     expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe(asRendered(chartPalette(DEFAULT_APPEARANCE).track))
+  })
+
+  it('gives a tile with no move the tile surface and a line ring, so it shows on a white pane', () => {
+    render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
+    const tile = screen.getByRole('button', { name: 'KO' })
+    expect(tile).toHaveClass('bg-tile', 'ring-1', 'ring-inset', 'ring-line')
+    expect(tile.style.background).toBe('')
+  })
+
+  it('keeps a coloured tile on its own fill, without the neutral surface', () => {
+    render(<HeatTile ticker="NVDA" pct={1.2} fill="rgb(1, 2, 3)" aria-label="NVDA" />)
+    const tile = screen.getByRole('button', { name: 'NVDA' })
+    expect(tile.style.background).toBe('rgb(1, 2, 3)')
+    expect(tile).not.toHaveClass('bg-tile')
   })
 
   it('drops the move when only the ticker fits', () => {
