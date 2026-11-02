@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import { renderWithProviders } from '../test/renderWithProviders'
 import BudgetProgressBar from './BudgetProgressBar'
-import { NEGATIVE, PENDING, POSITIVE } from '../lib/charts'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -26,30 +25,25 @@ describe('BudgetProgressBar', () => {
     expect(mutate).toHaveBeenCalledWith({ category: 'GROCERIES', monthlyLimit: 300 })
   })
 
-  function hexToRgb(hex) {
-    const n = parseInt(hex.slice(1), 16)
-    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
-  }
-
-  it('colors the bar with the shared negative token at or over 100%', () => {
+  it('colors the bar with the Down colour at or over 100%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="120.00" limit="100" />)
     const bar = container.querySelector('.rounded-full > div')
-    expect(bar.style.background).toBe(hexToRgb(NEGATIVE))
+    expect(bar).toHaveClass('bg-down')
   })
 
-  it('colors the bar with the shared pending/warning token between 80 and 100%', () => {
+  it('colors the bar with the Warning colour between 80 and 100%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="85.00" limit="100" />)
     const bar = container.querySelector('.rounded-full > div')
-    expect(bar.style.background).toBe(hexToRgb(PENDING))
+    expect(bar).toHaveClass('bg-warn')
   })
 
-  it('colors the bar with the shared positive token under 80%', () => {
+  it('colors the bar with the Up colour under 80%', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })
     const { container } = renderWithProviders(<BudgetProgressBar category="SHOPPING" spent="40.00" limit="100" />)
     const bar = container.querySelector('.rounded-full > div')
-    expect(bar.style.background).toBe(hexToRgb(POSITIVE))
+    expect(bar).toHaveClass('bg-up')
   })
   it('stacks the limit input under the label and amount on mobile', () => {
     queries.useSetBudget.mockReturnValue({ mutate: vi.fn() })

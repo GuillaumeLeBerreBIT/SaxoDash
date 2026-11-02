@@ -87,6 +87,7 @@ export function chartPalette({ theme, moves }) {
     warn: pick('warn'),
     earn: pick('earn'),
     grid: pick('grid'),
+    ink: pick('ink'),
     axis: pick('ink-3'),
     axisCategory: pick('ink-2'),
     crosshair: pick('crosshair'),
@@ -170,10 +171,14 @@ const CATEGORY_ORDER = [
 const NEUTRAL_CATEGORY_COLOR = AXIS_TEXT
 const NEUTRAL_CATEGORIES = ['TRANSFER', 'SAVINGS']
 
-export function colorForCategory(category) {
-  if (NEUTRAL_CATEGORIES.includes(category)) return NEUTRAL_CATEGORY_COLOR
+export function colorForCategory(category, c) {
+  const palette = c?.series
+  const neutral = palette ? c.axis : NEUTRAL_CATEGORY_COLOR
+  if (NEUTRAL_CATEGORIES.includes(category)) return neutral
   const idx = CATEGORY_ORDER.indexOf(category)
-  return idx === -1 ? NEUTRAL_CATEGORY_COLOR : HOLDINGS_PALETTE[idx % HOLDINGS_PALETTE.length]
+  if (idx === -1) return neutral
+  if (!palette) return HOLDINGS_PALETTE[idx % HOLDINGS_PALETTE.length]
+  return idx < palette.length ? palette[idx] : withAlpha(palette[idx % palette.length], 0.55)
 }
 
 export const gridProps = (c) => ({ stroke: c.grid, vertical: false })

@@ -1,70 +1,87 @@
 import { useState } from 'react'
-import { useSpendingSummary, useSubscriptions, useDismissSubscription } from '../api/queries'
-import { fmtEur, fmtNum } from '../lib/format'
-import { spendingDelta } from '../lib/spendingDelta'
-import { topCategory } from '../lib/spending'
-import { CATEGORY_LABELS } from '../lib/categories'
-import { resolvePeriod } from '../lib/periods'
-import { PageHeader, StatStrip, StatRow, InfoTip } from '../components/ui'
-import PeriodSelector from '../components/PeriodSelector'
-import SpendingCategoryChart from '../components/SpendingCategoryChart'
-import BudgetSection from '../components/BudgetSection'
-import SpendingTrendChart from '../components/SpendingTrendChart'
-import ReviewQueue from '../components/ReviewQueue'
-import SubscriptionsList from '../components/SubscriptionsList'
+import { useSearchParams } from 'react-router-dom'
+import { useSpendingSummary } from '../../api/queries'
+import { fmtEur, fmtNum } from '../../lib/format'
+import { topCategory } from '../../lib/spending'
+import { CATEGORY_LABELS } from '../../lib/categories'
+import { periodKeyFromParam, periodParam, resolvePeriod } from '../../lib/periods'
+import { Card, InfoTip, Tile } from '../ui'
+import PeriodSelector from '../PeriodSelector'
+import SpendingCategoryChart from '../SpendingCategoryChart'
+import SpendingTrendChart from '../SpendingTrendChart'
+import ReviewQueue from '../ReviewQueue'
+import { BOARD, SPAN_6, SPAN_12, TILES } from './layout'
+import { SpendingDelta } from './MoneyPanels'
 
-export default function Spending() {
-  const [period, setPeriod] = useState(() => ({ key: 'this_month', ...resolvePeriod('this_month') }))
+function initialPeriod(param) {
+  const key = periodKeyFromParam(param)
+  return { key, ...resolvePeriod(key) }
+}
+
+export default function SpendingSection() {
+  const [params, setParams] = useSearchParams()
+  const [period, setPeriod] = useState(() => initialPeriod(params.get('period')))
   const { data: summary, isLoading, error, refetch } = useSpendingSummary(
     `?date_from=${period.date_from}&date_to=${period.date_to}`,
   )
-  const { data: subscriptions } = useSubscriptions()
-  const dismissSubscription = useDismissSubscription()
 
-  const total = Number(summary?.total ?? 0)
-  const prevTotal = summary?.previous_period ? Number(summary.previous_period.total) : null
-  const delta = spendingDelta({ total, previousTotal: prevTotal, comparisonLabel: summary?.comparison_label })
+  const choosePeriod = (next) => {
+    setPeriod(next)
+    if (next.key === 'custom') return
+    setParams(
+      (current) => {
+        const updated = new URLSearchParams(current)
+        const short = periodParam(next.key)
+        if (short) updated.set('period', short)
+        else updated.delete('period')
+        return updated
+      },
+      { replace: true },
+    )
+  }
+
   const top = topCategory(summary?.categories)
+  const absent = (value) => (summary ? value : null)
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Spending"
-        subtitle="Categorized bank transactions"
-        right={<PeriodSelector value={period} onChange={setPeriod} />}
-      />
+    <>
+      <h1 className="sr-only">Spending</h1>
+      <div className={BOARD}>
+        <Card
+          className={SPAN_12}
+          context={`Categorised bank transactions · ${period.label}`}
+          dot={error ? 'warn' : summary ? 'ok' : 'off'}
+          right={<PeriodSelector value={period} onChange={choosePeriod} />}
+        >
+          <div className={TILES}>
+            <Tile
+              label={`Total spending — ${period.label}`}
+              value={absent(fmtEur(summary?.total))}
+              sub={<SpendingDelta summary={summary} />}
+            />
+            <Tile label="Transactions" value={absent(fmtNum(summary?.transaction_count))} />
+            <Tile
+              label="Top category"
+              value={top ? (CATEGORY_LABELS[top.category] ?? top.category) : null}
+              sub={top ? fmtEur(top.amount) : undefined}
+            />
+            <Tile
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  Transfers
+                  <InfoTip label="About transfers">
+                    Money moved between your own accounts. It is left out of the totals above.
+                  </InfoTip>
+                </span>
+              }
+              value={absent(fmtEur(summary?.transfers))}
+              sub="Moved between your own accounts"
+            />
+          </div>
+        </Card>
 
-      <StatStrip>
-        <StatRow
-          label={`Total spending — ${period.label}`}
-          value={fmtEur(summary?.total ?? 0)}
-          lead
-          badge={delta.badge}
-          badgeTone={delta.tone}
-          note={delta.note}
-        />
-        <StatRow label="Transactions" value={fmtNum(summary?.transaction_count ?? 0)} />
-        <StatRow
-          label="Top category"
-          value={top ? (CATEGORY_LABELS[top.category] ?? top.category) : '—'}
-          note={top ? fmtEur(top.amount) : undefined}
-        />
-        <StatRow
-          label={
-            <span className="inline-flex items-center gap-1.5">
-              Transfers
-              <InfoTip label="About transfers">
-                Money moved between your own accounts. It is left out of the totals above.
-              </InfoTip>
-            </span>
-          }
-          value={fmtEur(summary?.transfers ?? 0)}
-          note="Moved between your own accounts"
-        />
-      </StatStrip>
-
-      <div className="grid gap-4 lg:grid-cols-2">
         <SpendingCategoryChart
+          className={SPAN_6}
           categories={summary?.categories}
           isLoading={isLoading}
           error={error}
@@ -72,17 +89,9 @@ export default function Spending() {
           periodLabel={period.label}
           period={period}
         />
-        <SpendingTrendChart />
+        <SpendingTrendChart className={SPAN_6} />
+        <ReviewQueue className={SPAN_12} />
       </div>
-
-      <ReviewQueue />
-
-      <BudgetSection />
-
-      <SubscriptionsList
-        subscriptions={subscriptions}
-        onDismiss={(id) => dismissSubscription.mutate({ id, dismissed: true })}
-      />
-    </div>
+    </>
   )
 }

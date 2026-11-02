@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { expectValidHeadingOutline } from '../test/headingOutline'
+import { expectValidHeadingOutline } from '../../test/headingOutline'
 import { screen, fireEvent } from '@testing-library/react'
-import { renderWithProviders } from '../test/renderWithProviders'
-import Spending from './Spending'
+import { renderWithProviders } from '../../test/renderWithProviders'
+import SpendingSection from './SpendingSection'
 
-vi.mock('../api/queries')
-import * as queries from '../api/queries'
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 function mockDefaults(overrides = {}) {
   queries.useSpendingSummary.mockReturnValue(
@@ -25,7 +25,7 @@ function mockDefaults(overrides = {}) {
   queries.useMarkTransactionReviewed.mockReturnValue({ mutate: vi.fn() })
 }
 
-describe('Spending', () => {
+describe('SpendingSection', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('has exactly one h1 and no skipped heading level', () => {
@@ -39,7 +39,7 @@ describe('Spending', () => {
         error: null,
       },
     })
-    const { container } = renderWithProviders(<Spending />)
+    const { container } = renderWithProviders(<SpendingSection />)
     expectValidHeadingOutline(container)
   })
 
@@ -55,7 +55,7 @@ describe('Spending', () => {
       },
     })
 
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     expect(screen.getByText('€50.00')).toBeInTheDocument()
   })
@@ -72,7 +72,7 @@ describe('Spending', () => {
       },
     })
 
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     expect(screen.getByText('€50.00')).toBeInTheDocument()
     expect(screen.getByText('€500.00')).toBeInTheDocument()
@@ -91,46 +91,14 @@ describe('Spending', () => {
       },
     })
 
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     expect(screen.getByText('vs €40.00 last period')).toBeInTheDocument()
   })
 
-  it('lets you dismiss a subscription', () => {
-    const mutate = vi.fn()
-    mockDefaults({
-      subscriptions: {
-        data: [{ id: 1, display_name: 'NETFLIX.COM', expected_amount: '12.99', cadence: 'monthly', dismissed: false }],
-        isLoading: false,
-        error: null,
-      },
-      dismissSubscription: { mutate },
-    })
-
-    renderWithProviders(<Spending />)
-    screen.getByText('Dismiss').click()
-
-    expect(mutate).toHaveBeenCalledWith({ id: 1, dismissed: true })
-  })
-
-  it('shows a budget progress bar for a category with a limit set', () => {
-    mockDefaults({
-      budgetProgress: {
-        data: [{ category: 'GROCERIES', limit: '100.00', spent: '40.00', pct: 40 }],
-        isLoading: false,
-        error: null,
-      },
-    })
-
-    renderWithProviders(<Spending />)
-
-    expect(screen.getByText('Groceries')).toBeInTheDocument()
-    expect(screen.getByText('€40.00 / €100.00')).toBeInTheDocument()
-  })
-
   it('switching the period selector re-requests the summary with the new date range', () => {
     mockDefaults()
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Select period' }), { target: { value: 'last_month' } })
 
@@ -154,10 +122,11 @@ describe('Spending', () => {
       },
     })
 
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
-    expect(screen.getByText('Top category').parentElement).toHaveTextContent('Groceries')
-    expect(screen.getByText('Top category').parentElement).not.toHaveTextContent('Other')
+    const tile = screen.getByText('Top category').closest('div').parentElement
+    expect(tile).toHaveTextContent('Groceries')
+    expect(tile).not.toHaveTextContent('Other')
   })
 
   it('words the comparison with the label the API gives', () => {
@@ -174,14 +143,14 @@ describe('Spending', () => {
       },
     })
 
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     expect(screen.getByText('vs €187.50 same days last month')).toBeInTheDocument()
   })
 
   it('explains Transfers through an info tip', () => {
     mockDefaults()
-    renderWithProviders(<Spending />)
+    renderWithProviders(<SpendingSection />)
 
     fireEvent.focus(screen.getByRole('button', { name: 'About transfers' }))
 

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { expectValidHeadingOutline } from '../test/headingOutline'
+import { expectValidHeadingOutline } from '../../test/headingOutline'
 import { fireEvent, screen } from '@testing-library/react'
-import { renderWithProviders } from '../test/renderWithProviders'
-import Accounts from './Accounts'
+import { renderWithProviders } from '../../test/renderWithProviders'
+import AccountsSection from './AccountsSection'
 
-vi.mock('../api/queries')
-import * as queries from '../api/queries'
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 const KBC = {
   id: 1, bank: 'KBC', type: 'Current account', iban_masked: 'BE12 •••• •••• 0001',
@@ -50,51 +50,51 @@ function mockDefaults(overrides = {}) {
   queries.useDeleteLabeledAccount.mockReturnValue({ mutate: vi.fn() })
 }
 
-describe('Accounts', () => {
+describe('AccountsSection', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('has exactly one h1 and no skipped heading level', () => {
     mockDefaults()
-    const { container } = renderWithProviders(<Accounts />)
+    const { container } = renderWithProviders(<AccountsSection />)
     expectValidHeadingOutline(container)
   })
 
   it('keeps one h1 and no skipped level while loading', () => {
     mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
-    const { container } = renderWithProviders(<Accounts />)
+    const { container } = renderWithProviders(<AccountsSection />)
     expectValidHeadingOutline(container)
   })
 
   it('keeps one h1 and no skipped level while in error', () => {
     mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() } })
-    const { container } = renderWithProviders(<Accounts />)
+    const { container } = renderWithProviders(<AccountsSection />)
     expectValidHeadingOutline(container)
   })
 
   it('shows the total balance across accounts', () => {
     mockDefaults()
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByText('€8,072.17')).toBeInTheDocument()
   })
 
   it('shows a gradient tile for each account, linking to its drill-down page', () => {
     mockDefaults()
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByText('KBC')).toBeInTheDocument()
     expect(screen.getByText('Argenta')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /KBC/ })).toHaveAttribute('href', '/accounts/1')
+    expect(screen.getByRole('link', { name: /KBC/ })).toHaveAttribute('href', '/money/accounts/1')
   })
 
   it("shows this month's spending and transfers from the Spending definitions", () => {
     mockDefaults()
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByText('€175.33')).toBeInTheDocument()
     expect(screen.getByText('€200.00')).toBeInTheDocument()
   })
 
   it('shows recent transactions with their resolved bank name', () => {
     mockDefaults()
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getAllByText('NMBS').length).toBeGreaterThan(0)
     expect(screen.getAllByText(/KBC/).length).toBeGreaterThan(0)
   })
@@ -107,7 +107,7 @@ describe('Accounts', () => {
         error: null,
       },
     })
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByText('vs €187.50 same days last month')).toBeInTheDocument()
   })
 
@@ -115,14 +115,14 @@ describe('Accounts', () => {
     mockDefaults({
       summary: { data: { total: '175.33', transfers: '200.00' }, isLoading: false, error: null },
     })
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.queryByText(/^vs /)).not.toBeInTheDocument()
   })
 
   it('keeps the heading and offers Retry when accounts fail to load', () => {
     const refetch = vi.fn()
     mockDefaults({ accounts: { data: undefined, isLoading: false, error: new Error('x'), refetch } })
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
@@ -131,7 +131,7 @@ describe('Accounts', () => {
 
   it('shows a skeleton card, not bare Loading text, while accounts load', () => {
     mockDefaults({ accounts: { data: undefined, isLoading: true, error: null } })
-    renderWithProviders(<Accounts />)
+    renderWithProviders(<AccountsSection />)
     expect(screen.getByRole('status', { name: 'Loading accounts' })).toBeInTheDocument()
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()

@@ -9,7 +9,7 @@ import {
 } from '../api/queries'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { fmtEur } from '../lib/format'
-import { Button, Card, CardHeader, EmptyState, Input, Modal, Select } from './ui'
+import { Button, Card, EmptyState, Input, Modal, Select } from './ui'
 
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS)
 
@@ -41,7 +41,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide mb-1" htmlFor="labeled-account-iban">
+        <label className="block text-[12px] font-medium text-ink-3 mb-1" htmlFor="labeled-account-iban">
           IBAN
         </label>
         <Input
@@ -53,7 +53,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
         />
       </div>
       <div>
-        <label className="block text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide mb-1" htmlFor="labeled-account-name">
+        <label className="block text-[12px] font-medium text-ink-3 mb-1" htmlFor="labeled-account-name">
           Or counterparty name
         </label>
         <Input
@@ -65,7 +65,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
         />
       </div>
       <div>
-        <label className="block text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide mb-1" htmlFor="labeled-account-label">
+        <label className="block text-[12px] font-medium text-ink-3 mb-1" htmlFor="labeled-account-label">
           Label
         </label>
         <Input
@@ -78,7 +78,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
         />
       </div>
       <div>
-        <label className="block text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide mb-1" htmlFor="labeled-account-category">
+        <label className="block text-[12px] font-medium text-ink-3 mb-1" htmlFor="labeled-account-category">
           Category
         </label>
         <Select id="labeled-account-category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full">
@@ -87,7 +87,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
           ))}
         </Select>
       </div>
-      {(clientError || error) && <p className="text-[var(--fig-xs)] text-red-400">{clientError || error}</p>}
+      {(clientError || error) && <p className="text-[12px] text-error">{clientError || error}</p>}
       <div className="flex justify-end gap-2 pt-1">
         <Button variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button variant="primary" type="submit" disabled={submitting}>Save</Button>
@@ -102,7 +102,7 @@ function LabelForm({ initial, error, onSubmit, onCancel, submitting }) {
  *  surfaced from whatever's still recurring in OTHER/REFUND_CREDIT so the
  *  user doesn't have to go hunting for an IBAN themselves. Everyone else
  *  stays a normal counterparty by default. */
-export default function LabeledAccountsSection() {
+export default function LabeledAccountsSection({ className = '' }) {
   const { data: labels = [] } = useLabeledAccounts()
   const { data: candidates = [] } = useLabeledAccountCandidates()
   const createLabel = useCreateLabeledAccount()
@@ -129,26 +129,27 @@ export default function LabeledAccountsSection() {
   }
 
   return (
-    <Card>
-      <CardHeader
-        title="Labeled accounts"
-        subtitle="Accounts and people you've identified as yours or household - everyone else stays a normal counterparty"
-        right={
-          <Button size="sm" onClick={openNew}>
-            <Plus size={13} /> Add
-          </Button>
-        }
-      />
-      <div className="mt-3">
+    <Card
+      className={className}
+      context="Yours or household · everyone else stays a normal counterparty"
+      dot={labels.length ? 'ok' : 'off'}
+      title="Labeled accounts"
+      right={
+        <Button size="sm" onClick={openNew}>
+          <Plus size={13} aria-hidden="true" /> Add
+        </Button>
+      }
+    >
+      <div>
         {labels.length === 0 ? (
           <EmptyState title="No labeled accounts yet" hint="Add one, or pick from a suggestion below" />
         ) : (
-          <ul className="divide-y divide-white/[0.04]">
+          <ul>
             {labels.map((l) => (
-              <li key={l.id} className="flex items-center justify-between py-2 gap-3">
+              <li key={l.id} className="flex items-center justify-between gap-3 min-h-11 py-1.5 border-t border-line first:border-t-0">
                 <div className="min-w-0">
-                  <div className="text-[var(--fig-sm)] text-zinc-100 truncate">{l.label}</div>
-                  <div className="text-[var(--fig-2xs)] text-zinc-500 truncate">
+                  <div className="text-[13.5px] font-semibold text-ink truncate">{l.label}</div>
+                  <div className="text-[12px] text-ink-3 truncate">
                     {l.iban || l.counterparty_name} · {CATEGORY_LABELS[l.category]}
                   </div>
                 </div>
@@ -156,9 +157,9 @@ export default function LabeledAccountsSection() {
                   type="button"
                   onClick={() => deleteLabel.mutate(l.id)}
                   aria-label={`Remove ${l.label}`}
-                  className="w-7 h-7 rounded text-zinc-500 hover:text-red-400 hover:bg-zinc-800/60 flex items-center justify-center shrink-0"
+                  className="w-11 h-11 md:w-7 md:h-7 rounded-[7px] text-ink-3 hover:text-error hover:bg-hover flex items-center justify-center shrink-0"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={13} aria-hidden="true" />
                 </button>
               </li>
             ))}
@@ -166,14 +167,14 @@ export default function LabeledAccountsSection() {
         )}
       </div>
       {candidates.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-white/[0.06]">
-          <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-2">Suggestions</div>
+        <div className="mt-4 pt-4 border-t border-line">
+          <div className="text-[12px] font-medium text-ink-3 mb-2">Suggestions</div>
           <ul className="space-y-1.5">
             {candidates.map((c) => (
               <li key={`${c.counterparty_name}:${c.counterparty_iban ?? ''}`} className="flex min-w-0 flex-col items-start gap-2 md:flex-row md:items-center md:justify-between md:gap-3">
-                <span data-testid="suggestion-text" className="flex min-w-0 max-w-full items-baseline gap-1 text-[var(--fig-xs)] text-zinc-300">
+                <span data-testid="suggestion-text" className="flex min-w-0 max-w-full items-baseline gap-1 text-[13px] text-ink-2">
                   <span className="min-w-0 truncate">{c.counterparty_name}</span>
-                  <span className="shrink-0 text-zinc-600">· {c.count}× · {fmtEur(c.total)}</span>
+                  <span className="shrink-0 text-ink-3 num">· {c.count}× · {fmtEur(c.total)}</span>
                 </span>
                 <Button size="sm" variant="secondary" onClick={() => openFromCandidate(c)}>
                   Label this

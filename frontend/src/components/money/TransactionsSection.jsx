@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
-import { fmtDate, fmtEur, fmtNum } from '../lib/format'
-import { Input, PageHeader, QueryState, Select, StatRow, StatStrip } from '../components/ui'
-import BankTransactionsTable from '../components/BankTransactionsTable'
-import { CATEGORY_LABELS } from '../lib/categories'
+import { useBankTransactions, useUpdateBankTransactionCategory } from '../../api/queries'
+import { fmtDate, fmtEur, fmtNum } from '../../lib/format'
+import { Card, Input, QueryState, Select, Tile } from '../ui'
+import BankTransactionsTable from '../BankTransactionsTable'
+import { CATEGORY_LABELS } from '../../lib/categories'
+import { BOARD, SPAN_12, TILES } from './layout'
 import {
   TRANSFER_CATEGORIES,
   filterSpending,
@@ -14,8 +15,8 @@ import {
   paginate,
   spendTotal,
   spendingCategories,
-} from '../lib/accountTransactions'
-import { validDate } from '../lib/transactionFilters'
+} from '../../lib/accountTransactions'
+import { validDate } from '../../lib/transactionFilters'
 
 function periodText(from, to) {
   const start = validDate(from) ? fmtDate(from) : null
@@ -24,7 +25,7 @@ function periodText(from, to) {
   return start ? `From ${start}` : end ? `Until ${end}` : null
 }
 
-export default function SpendingTransactions() {
+export default function TransactionsSection() {
   const [params, setParams] = useSearchParams()
   const from = params.get('from') ?? ''
   const to = params.get('to') ?? ''
@@ -73,57 +74,73 @@ export default function SpendingTransactions() {
   const net = netSpend(scope) + 0
   const credit = category !== 'ALL' && net < 0
   const period = periodText(from, to)
-  const subtitle = (
+  const ready = !isLoading && data && !error
+  const context = (
     <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-      <Link to="/spending" className="inline-flex items-center gap-1 min-h-11 md:min-h-0 text-zinc-400 hover:text-zinc-200">
-        <ChevronLeft size={14} /> Back to Spending
+      <Link to="/money?section=spending" className="inline-flex items-center gap-1 min-h-11 md:min-h-0 text-ink-2 hover:text-ink">
+        <ChevronLeft size={14} aria-hidden="true" /> Back to Spending
       </Link>
-      {period && <span>{period}</span>}
+      {period && <span className="text-ink-3 num">{period}</span>}
     </span>
+  )
+  const filters = (
+    <div className="flex flex-wrap gap-2">
+      <Input
+        aria-label="Search transactions"
+        placeholder="Search transactions"
+        value={search}
+        onChange={(e) => changeSearch(e.target.value)}
+        className="w-full sm:w-64 h-11 md:h-8"
+      />
+      <Select
+        aria-label="Filter by category"
+        value={category}
+        onChange={(e) => changeCategory(e.target.value)}
+        className="h-11 md:h-8"
+      >
+        <option value="ALL">All categories</option>
+        {presentCategories.map((code) => (
+          <option key={code} value={code}>{CATEGORY_LABELS[code] ?? code}</option>
+        ))}
+      </Select>
+    </div>
   )
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={category === 'ALL' ? 'All spending' : CATEGORY_LABELS[category]} subtitle={subtitle} />
-      <QueryState isLoading={isLoading || (!data && !error)} error={error} onRetry={refetch} label="transactions">
-        <StatStrip>
-          <StatRow label="Transactions (incl. refunds)" value={fmtNum(scope.length)} />
-          <StatRow
-            label={category === 'ALL' ? 'Total spend' : credit ? 'Net credit' : 'Net spend'}
-            value={fmtEur(category === 'ALL' ? spendTotal(scope) : Math.abs(net))}
-            lead
+    <div className={BOARD}>
+      <Card
+        className={SPAN_12}
+        context={context}
+        dot={error ? 'warn' : ready ? 'ok' : 'off'}
+        title={category === 'ALL' ? 'All spending' : CATEGORY_LABELS[category]}
+        titleAs="h1"
+      >
+        {ready && (
+          <div className={TILES}>
+            <Tile label="Transactions (incl. refunds)" value={fmtNum(scope.length)} />
+            <Tile
+              label={category === 'ALL' ? 'Total spend' : credit ? 'Net credit' : 'Net spend'}
+              value={fmtEur(category === 'ALL' ? spendTotal(scope) : Math.abs(net))}
+              tone={credit ? 'up' : undefined}
+            />
+          </div>
+        )}
+      </Card>
+      <div className={`${SPAN_12} min-w-0`}>
+        <QueryState isLoading={isLoading || (!data && !error)} error={error} onRetry={refetch} label="transactions">
+          <BankTransactionsTable
+            context="Bank transactions"
+            right={filters}
+            paged={paged}
+            hasAny={scope.length > 0}
+            filtering={filtering}
+            onClearFilters={clearFilters}
+            onPage={setPage}
+            onCategoryChange={updateCategory.mutate}
+            emptyText="No spending in this period."
           />
-        </StatStrip>
-        <div className="flex flex-wrap gap-2">
-          <Input
-            aria-label="Search transactions"
-            placeholder="Search transactions"
-            value={search}
-            onChange={(e) => changeSearch(e.target.value)}
-            className="w-full sm:w-64 h-11 md:h-9"
-          />
-          <Select
-            aria-label="Filter by category"
-            value={category}
-            onChange={(e) => changeCategory(e.target.value)}
-            className="h-11 md:h-9"
-          >
-            <option value="ALL">All categories</option>
-            {presentCategories.map((code) => (
-              <option key={code} value={code}>{CATEGORY_LABELS[code] ?? code}</option>
-            ))}
-          </Select>
-        </div>
-        <BankTransactionsTable
-          paged={paged}
-          hasAny={scope.length > 0}
-          filtering={filtering}
-          onClearFilters={clearFilters}
-          onPage={setPage}
-          onCategoryChange={updateCategory.mutate}
-          emptyText="No spending in this period."
-        />
-      </QueryState>
+        </QueryState>
+      </div>
     </div>
   )
 }

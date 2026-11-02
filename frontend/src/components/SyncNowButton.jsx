@@ -6,7 +6,7 @@ export default function SyncNowButton() {
 
   return (
     <span className="flex flex-wrap items-center justify-end gap-2">
-      {note && <span className="text-zinc-500 text-[var(--fig-xs)]">{note}</span>}
+      {note && <span className="text-ink-3 text-[12px]">{note}</span>}
       {queueError && (
         <span role="alert">
           <Alert>{queueError}</Alert>

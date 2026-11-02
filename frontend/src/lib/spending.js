@@ -1,4 +1,3 @@
-import { OTHER_SLICE } from './charts'
 import { fmtEur } from './format'
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -16,7 +15,7 @@ export function topCategory(categories) {
     .reduce((best, c) => (!best || Number(c.amount) > Number(best.amount) ? c : best), undefined)
 }
 
-export function foldSmallSlices(items, { threshold = 0.03, otherName = 'Other', otherColor = OTHER_SLICE } = {}) {
+export function foldSmallSlices(items, { threshold = 0.03, otherName = 'Other', otherColor } = {}) {
   const total = items.reduce((sum, i) => sum + i.value, 0)
   if (total <= 0) return items
 
@@ -56,6 +55,6 @@ export function trendBars(rows) {
 }
 
 export function spendingTransactionsPath(category, { date_from: from, date_to: to }) {
-  const params = new URLSearchParams(category ? { category, from, to } : { from, to })
-  return `/spending/transactions?${params}`
+  const params = new URLSearchParams(category ? { section: 'transactions', category, from, to } : { section: 'transactions', from, to })
+  return `/money?${params}`
 }

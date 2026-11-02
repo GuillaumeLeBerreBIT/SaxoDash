@@ -1,0 +1,7 @@
+export const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+export const COLUMN = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
+export const SPAN_4 = 'min-[1100px]:col-span-4'
+export const SPAN_6 = 'min-[1100px]:col-span-6'
+export const SPAN_8 = 'min-[1100px]:col-span-8'
+export const SPAN_12 = 'min-[1100px]:col-span-12'
+export const TILES = 'grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2'

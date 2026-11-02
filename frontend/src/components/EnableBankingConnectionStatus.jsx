@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { connectEnableBanking } from '../api/client'
 import { useEnableBankingStatus } from '../api/queries'
 import { bankSyncBadge } from '../lib/bankSync'
-import { Badge } from './ui'
+import { Badge, Button } from './ui'
 
 const BANK_LABELS = { kbc: 'KBC', argenta: 'Argenta' }
 
@@ -13,24 +13,18 @@ function OneBank({ bank, state, failed }) {
     return (
       <div className="flex items-center gap-2">
         {failed && <Badge tone="red">{label} connection failed</Badge>}
-        <button
-          onClick={() => connectEnableBanking(bank)}
-          className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
-        >
+        <Button size="sm" onClick={() => connectEnableBanking(bank)}>
           Connect {label}
-        </button>
+        </Button>
       </div>
     )
   }
 
   if (state.needs_reauth) {
     return (
-      <button
-        onClick={() => connectEnableBanking(bank)}
-        className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
-      >
+      <Button size="sm" variant="danger" onClick={() => connectEnableBanking(bank)}>
         Reconnect {label}
-      </button>
+      </Button>
     )
   }
 

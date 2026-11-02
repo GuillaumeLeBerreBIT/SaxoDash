@@ -22,6 +22,16 @@ describe('colorForCategory', () => {
     const colors = codes.map(colorForCategory)
     expect(new Set(colors).size).toBe(codes.length)
   })
+
+  it('draws categories from the active palette when given one', () => {
+    const c = chartPalette({ theme: 'republic', moves: 'green-red' })
+    const codes = ['GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS', 'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER']
+    const colors = codes.map((code) => colorForCategory(code, c))
+    expect(colors[0]).toBe(c.series[0])
+    expect(new Set(colors).size).toBe(codes.length)
+    expect(colorForCategory('TRANSFER', c)).toBe(c.axis)
+    expect(colorForCategory('SOME_FUTURE_CATEGORY', c)).toBe(c.axis)
+  })
 })
 
 describe('performanceFill', () => {
@@ -149,6 +159,10 @@ describe('chartPalette', () => {
     expect(c.series).toHaveLength(8)
     expect(c.heat).toHaveLength(7)
     expect(c.tooltip).toEqual({ bg: '#1A1A1A', text: '#FFFFFF', border: '#1A1A1A' })
+  })
+
+  it('names Ink for a highlighted mark such as the current period', () => {
+    expect(chartPalette({ theme: 'republic', moves: 'green-red' }).ink).toBe('#FFFFFF')
   })
 
   it('uses the colour-blind pair for moves', () => {

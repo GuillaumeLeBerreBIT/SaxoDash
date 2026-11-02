@@ -17,10 +17,12 @@ const { page } = vi.hoisted(() => ({ page: (name) => ({ default: () => name }) }
 vi.mock('./pages/Dashboard', () => page('Dashboard page'))
 vi.mock('./pages/Portfolio', () => page('Portfolio page'))
 vi.mock('./pages/Analytics', () => page('Analytics page'))
-vi.mock('./pages/Accounts', () => page('Accounts page'))
+vi.mock('./components/money/AccountsSection', () => page('Accounts section'))
 vi.mock('./pages/AccountTransactions', () => page('AccountTransactions page'))
-vi.mock('./pages/Spending', () => page('Spending page'))
-vi.mock('./pages/SpendingTransactions', () => page('SpendingTransactions page'))
+vi.mock('./components/money/SpendingSection', () => page('Spending section'))
+vi.mock('./components/money/TransactionsSection', () => page('Transactions section'))
+vi.mock('./components/money/BudgetsSection', () => page('Budgets section'))
+vi.mock('./components/money/OverviewSection', () => page('Overview section'))
 vi.mock('./pages/Research', () => page('Research page'))
 vi.mock('./pages/Boards', () => page('Boards page'))
 vi.mock('./pages/Discover', () => page('Discover page'))
@@ -54,14 +56,14 @@ describe('legacy routes redirect with their query', () => {
     ['/research/chart?symbol=NVDA', '/boards?symbol=NVDA', 'Boards page'],
     ['/transactions', '/portfolio?view=transactions', 'Portfolio page'],
     ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Portfolio page'],
-    ['/accounts', '/money?section=accounts', 'Accounts page'],
+    ['/accounts', '/money?section=accounts', 'Accounts section'],
     ['/accounts/12', '/money/accounts/12', 'AccountTransactions page'],
-    ['/spending', '/money?section=spending', 'Spending page'],
-    ['/spending?period=3m', '/money?section=spending&period=3m', 'Spending page'],
+    ['/spending', '/money?section=spending', 'Spending section'],
+    ['/spending?period=3m', '/money?section=spending&period=3m', 'Spending section'],
     [
       '/spending/transactions?category=GROCERIES&from=2026-01-01',
       '/money?section=transactions&category=GROCERIES&from=2026-01-01',
-      'SpendingTransactions page',
+      'Transactions section',
     ],
   ])('%s → %s', (from, to, rendered) => {
     expect(renderAt(from)).toBe(to)
@@ -74,11 +76,11 @@ describe('new routes', () => {
   it.each([
     ['/portfolio', 'Portfolio page'],
     ['/portfolio?view=transactions', 'Portfolio page'],
-    ['/money', 'Spending page'],
-    ['/money?section=budgets', 'Spending page'],
-    ['/money?section=overview', 'Spending page'],
-    ['/money?section=accounts', 'Accounts page'],
-    ['/money?section=transactions', 'SpendingTransactions page'],
+    ['/money', 'Overview section'],
+    ['/money?section=budgets', 'Budgets section'],
+    ['/money?section=overview', 'Overview section'],
+    ['/money?section=accounts', 'Accounts section'],
+    ['/money?section=transactions', 'Transactions section'],
     ['/money/accounts/3', 'AccountTransactions page'],
     ['/boards', 'Boards page'],
     ['/boards/b1', 'Boards page'],

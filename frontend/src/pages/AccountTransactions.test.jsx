@@ -19,9 +19,9 @@ function renderAt(id) {
   })
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/accounts/${id}`]}>
+      <MemoryRouter initialEntries={[`/money/accounts/${id}`]}>
         <Routes>
-          <Route path="/accounts/:accountId" element={<AccountTransactions />} />
+          <Route path="/money/accounts/:accountId" element={<AccountTransactions />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -70,6 +70,14 @@ describe('AccountTransactions', () => {
     expect(screen.getByRole('heading', { name: 'KBC' })).toBeInTheDocument()
     expect(screen.getByText('€1,842.17')).toBeInTheDocument()
     expect(screen.getByText('BE12 •••• •••• 0001')).toBeInTheDocument()
+  })
+
+  it('leads back to the Money accounts section', () => {
+    queries.useBankTransactions.mockReturnValue({ data: [], isLoading: false, error: null })
+
+    renderAt(5)
+
+    expect(screen.getByRole('link', { name: /Back to Accounts/ })).toHaveAttribute('href', '/money?section=accounts')
   })
 
   it('lets you correct a transaction\'s category', async () => {

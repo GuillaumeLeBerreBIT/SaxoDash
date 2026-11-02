@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { expectValidHeadingOutline } from '../test/headingOutline'
-import SpendingTransactions from './SpendingTransactions'
-import SpendingCategoryChart from '../components/SpendingCategoryChart'
+import { expectValidHeadingOutline } from '../../test/headingOutline'
+import TransactionsSection from './TransactionsSection'
+import SpendingCategoryChart from '../SpendingCategoryChart'
 
-vi.mock('../api/queries')
-import * as queries from '../api/queries'
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 const tx = (id, booking_date, effective_category, amount, counterparty_name = `Shop ${id}`) => ({
   id, booking_date, effective_category, amount, counterparty_name, description: '', currency: 'EUR',
@@ -23,7 +23,7 @@ const ROWS = [
   tx(7, '2026-10-01', 'GROCERIES', '-77.00', 'TOO LATE'),
 ]
 
-const URL = '/spending/transactions?category=GROCERIES&from=2026-09-01&to=2026-09-30'
+const URL = '/money?section=transactions&category=GROCERIES&from=2026-09-01&to=2026-09-30'
 
 function LocationProbe() {
   const location = useLocation()
@@ -36,8 +36,7 @@ function renderAt(url) {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[url]}>
         <Routes>
-          <Route path="/spending/transactions" element={<SpendingTransactions />} />
-          <Route path="/spending" element={<div>Spending page</div>} />
+          <Route path="/money" element={<TransactionsSection />} />
         </Routes>
         <LocationProbe />
       </MemoryRouter>
@@ -49,7 +48,7 @@ function stub(data) {
   queries.useBankTransactions.mockReturnValue({ data, isLoading: false, error: null, refetch: vi.fn() })
 }
 
-describe('SpendingTransactions', () => {
+describe('TransactionsSection', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
@@ -78,14 +77,14 @@ describe('SpendingTransactions', () => {
     expect(screen.getByText(/01 Sep 2026/)).toBeInTheDocument()
     expect(screen.getByText(/30 Sep 2026/)).toBeInTheDocument()
     const back = screen.getByRole('link', { name: /Back to Spending/ })
-    expect(back).toHaveAttribute('href', '/spending')
+    expect(back).toHaveAttribute('href', '/money?section=spending')
   })
 
   it('shows a count and a net total equal to what the Spending chart reports for the category', () => {
     renderAt(URL)
     const strip = screen.getByText('Net spend').closest('div').parentElement
     expect(within(strip).getByText('€45.00')).toBeInTheDocument()
-    const count = screen.getByText('Transactions (incl. refunds)').parentElement
+    const count = screen.getByText('Transactions (incl. refunds)').closest('div').parentElement
     expect(within(count).getByText('3')).toBeInTheDocument()
   })
 
@@ -114,7 +113,7 @@ describe('SpendingTransactions', () => {
   })
 
   it('leaves out transfers when the category is unknown and shows everything else', () => {
-    renderAt('/spending/transactions?category=NOPE&from=2026-09-01&to=2026-09-30')
+    renderAt('/money?section=transactions&category=NOPE&from=2026-09-01&to=2026-09-30')
     expect(screen.getByRole('heading', { level: 1, name: 'All spending' })).toBeInTheDocument()
     const table = within(screen.getByRole('table'))
     expect(table.getByText('PIZZA')).toBeInTheDocument()
@@ -146,13 +145,13 @@ describe('SpendingTransactions', () => {
 
   it('totals the all-spending view like the Spending summary: only categories with a net outflow', () => {
     stub([...ROWS, tx(8, '2026-09-20', 'INCOME', '2500.00', 'EMPLOYER')])
-    renderAt('/spending/transactions?from=2026-09-01&to=2026-09-30')
+    renderAt('/money?section=transactions&from=2026-09-01&to=2026-09-30')
     const strip = screen.getByText('Total spend').closest('div').parentElement
     expect(within(strip).getByText('€65.00')).toBeInTheDocument()
     const table = within(screen.getByRole('table'))
     expect(table.queryByText('EMPLOYER')).not.toBeInTheDocument()
     expect(table.getByText('PIZZA')).toBeInTheDocument()
-    const count = screen.getByText('Transactions (incl. refunds)').parentElement
+    const count = screen.getByText('Transactions (incl. refunds)').closest('div').parentElement
     expect(within(count).getByText('4')).toBeInTheDocument()
     const options = within(screen.getByLabelText('Filter by category')).getAllByRole('option').map((o) => o.value)
     expect(options).toEqual(expect.arrayContaining(['ALL', 'GROCERIES', 'DINING']))
@@ -161,7 +160,7 @@ describe('SpendingTransactions', () => {
 
   it('shows a category that is net positive by URL as a net credit, not a negative spend', () => {
     stub([...ROWS, tx(8, '2026-09-20', 'INCOME', '2500.00', 'EMPLOYER')])
-    renderAt('/spending/transactions?category=INCOME&from=2026-09-01&to=2026-09-30')
+    renderAt('/money?section=transactions&category=INCOME&from=2026-09-01&to=2026-09-30')
     expect(within(screen.getByRole('table')).getByText('EMPLOYER')).toBeInTheDocument()
     expect(screen.queryByText('Net spend')).not.toBeInTheDocument()
     const strip = screen.getByText('Net credit').closest('div').parentElement
@@ -169,13 +168,13 @@ describe('SpendingTransactions', () => {
   })
 
   it.each(['TRANSFER', 'SAVINGS'])('treats ?category=%s like an unknown code', (code) => {
-    renderAt(`/spending/transactions?category=${code}&from=2026-09-01&to=2026-09-30`)
+    renderAt(`/money?section=transactions&category=${code}&from=2026-09-01&to=2026-09-30`)
     expect(screen.getByRole('heading', { level: 1, name: 'All spending' })).toBeInTheDocument()
     expect(within(screen.getByRole('table')).queryByText('OWN ACCOUNT')).not.toBeInTheDocument()
   })
 
   it('treats an impossible calendar date in the URL as no bound', () => {
-    renderAt('/spending/transactions?category=GROCERIES&from=2026-13-45&to=2026-09-30')
+    renderAt('/money?section=transactions&category=GROCERIES&from=2026-13-45&to=2026-09-30')
     expect(screen.queryByText(/13 /)).not.toBeInTheDocument()
     expect(within(screen.getByRole('table')).getByText('TOO EARLY')).toBeInTheDocument()
   })
@@ -195,12 +194,12 @@ describe('SpendingTransactions', () => {
   })
 
   it('says so when there is no spending in the period', () => {
-    renderAt('/spending/transactions?category=TRAVEL&from=2026-09-01&to=2026-09-30')
+    renderAt('/money?section=transactions&category=TRAVEL&from=2026-09-01&to=2026-09-30')
     expect(screen.getByText('No spending in this period.')).toBeInTheDocument()
   })
 
   it('shows an empty list, not an error, when from is after to', () => {
-    renderAt('/spending/transactions?category=GROCERIES&from=2026-09-30&to=2026-09-01')
+    renderAt('/money?section=transactions&category=GROCERIES&from=2026-09-30&to=2026-09-01')
     expect(screen.getByText('No spending in this period.')).toBeInTheDocument()
   })
 
