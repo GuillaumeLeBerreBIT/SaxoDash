@@ -16,7 +16,7 @@ import { useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../../lib/companyData'
-import { fmtDate, fmtEur, fmtMoney } from '../../lib/format'
+import { fmtDate, fmtEur, fmtMoney, fmtNum } from '../../lib/format'
 import { activatesRow } from '../../lib/keys'
 import { ownershipTickers } from '../../lib/ownership'
 import { trailingReturns } from '../../lib/performance'
@@ -117,54 +117,35 @@ function FixedList({ board, panel, onFollow }) {
 }
 
 export function WatchlistPanel({ board, panel, onFollow }) {
-  const { positions } = usePortfolioRows()
+  const positions = usePositions().data ?? NO_POSITIONS
   const held = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   if (Array.isArray(panel.cfg?.list)) return <FixedList board={board} panel={panel} onFollow={onFollow} />
   return <WatchlistRail fill symbol={board.sym} onSelectSymbol={(symbol) => onFollow(symbol)} heldSymbols={held} />
 }
 
-function ChartBody({ symbol, instrument, resolving }) {
-  const controls = useChartControls()
-  const data = useChartData({ symbol, instrument, range: controls.range, timeView: controls.timeView, resolving })
-  const [hover, setHover] = useState(null)
-  const [ref, size] = useSize()
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex flex-wrap items-center gap-2">
-        <RangeButtons controls={controls} />
-      </div>
-      <div ref={ref} className="flex-1 min-h-0 mt-2 overflow-hidden">
-        <ChartCanvas
-          bars={data.bars}
-          ind={data.ind}
-          timeWindow={data.timeWindow}
-          controls={controls}
-          hover={hover}
-          setHover={setHover}
-          symbol={symbol}
-          isLoading={data.chart.isLoading || resolving}
-          error={data.chart.error}
-          unresolved={!instrument && !resolving}
-          earningsMarkers={data.earningsMarkers}
-          lines={data.priceLines.lines}
-          fitHeight={size.height}
-          paneHeights={DEFAULT_PANE_HEIGHTS}
-          shedToFit
-        />
-      </div>
-    </div>
-  )
+function chartDot({ error, instrument, resolving }) {
+  if (error) return 'warn'
+  if (!instrument && !resolving) return 'off'
+  return 'ok'
 }
 
-export function ChartBoardPanel({ board, panel }) {
-  const symbol = followedSymbol(board, panel)
+function FollowedChart({ board, panel, symbol }) {
   const { instrument, resolving } = useFollowedInstrument(symbol)
-  if (!symbol) return <NothingFollowed board={board} panel={panel} title="Price chart" />
+  const controls = useChartControls()
+  const data = useChartData({
+    symbol,
+    instrument,
+    range: controls.range,
+    timeView: controls.timeView,
+    resolving,
+  })
+  const [hover, setHover] = useState(null)
+  const [ref, size] = useSize()
   return (
     <Card
       className="h-full flex flex-col overflow-hidden"
       context={<FollowContext board={board} panel={panel} />}
-      dot="ok"
+      dot={chartDot({ error: data.chart.error, instrument, resolving })}
       title={symbol}
       right={
         <Link
@@ -175,29 +156,68 @@ export function ChartBoardPanel({ board, panel }) {
         </Link>
       }
     >
-      <div className="flex-1 min-h-0">
-        <ChartBody key={symbol} symbol={symbol} instrument={instrument} resolving={resolving} />
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <RangeButtons controls={controls} />
+        </div>
+        <div ref={ref} className="flex-1 min-h-0 mt-2 overflow-hidden">
+          <ChartCanvas
+            bars={data.bars}
+            ind={data.ind}
+            timeWindow={data.timeWindow}
+            controls={controls}
+            hover={hover}
+            setHover={setHover}
+            symbol={symbol}
+            isLoading={data.chart.isLoading || resolving}
+            error={data.chart.error}
+            unresolved={!instrument && !resolving}
+            earningsMarkers={data.earningsMarkers}
+            lines={data.priceLines.lines}
+            fitHeight={size.height}
+            paneHeights={DEFAULT_PANE_HEIGHTS}
+            shedToFit
+          />
+        </div>
       </div>
     </Card>
   )
 }
 
-function YearRange({ bars }) {
+export function ChartBoardPanel({ board, panel }) {
+  const symbol = followedSymbol(board, panel)
+  if (!symbol) return <NothingFollowed board={board} panel={panel} title="Price chart" />
+  return <FollowedChart key={symbol} board={board} panel={panel} symbol={symbol} />
+}
+
+const finite = (values) => values.filter((value) => Number.isFinite(value))
+const price = (value, currency) => (currency ? fmtMoney(value, currency) : fmtNum(value, 2))
+
+function YearRange({ bars, currency }) {
   const year = bars.slice(-YEAR_SESSIONS)
   if (year.length < 2) return null
+  const highs = finite(year.map((bar) => bar.high))
+  const lows = finite(year.map((bar) => bar.low))
+  const withExtremes = highs.length === year.length && lows.length === year.length
   const closes = year.map((bar) => bar.close)
-  const low = Math.min(...closes)
-  const high = Math.max(...closes)
+  const low = Math.min(...(withExtremes ? lows : closes))
+  const high = Math.max(...(withExtremes ? highs : closes))
   const last = closes[closes.length - 1]
-  const at = high === low ? 100 : ((last - low) / (high - low)) * 100
+  const at = high === low ? 100 : Math.min(100, Math.max(0, ((last - low) / (high - low)) * 100))
+  const span = year.length < YEAR_SESSIONS ? 'fetched history' : '1 year'
+  const label = withExtremes ? (span === '1 year' ? '52-week range' : 'Range of the fetched history') : `Range of closes, ${span}`
   return (
     <div className="mt-3.5">
-      <div className="text-[12px] text-ink-3">{year.length < YEAR_SESSIONS ? 'Range of the fetched history' : '52-week range'}</div>
+      <div className="text-[12px] text-ink-3">{label}</div>
       <div className="mt-1 flex justify-between text-[13px] font-semibold num text-ink">
-        <span>{low.toFixed(2)}</span>
-        <span>{high.toFixed(2)}</span>
+        <span>{price(low, currency)}</span>
+        <span>{price(high, currency)}</span>
       </div>
-      <div className="relative mt-1.5 h-1.5 rounded-full bg-track" role="img" aria-label={`Last close ${at.toFixed(0)}% of the way up the range`}>
+      <div
+        className="relative mt-1.5 h-1.5 rounded-full bg-track"
+        role="img"
+        aria-label={`Last close ${at.toFixed(0)}% of the way up the range`}
+      >
         <span className="absolute inset-y-0 left-0 rounded-full bg-ink-3" style={{ width: `${at}%` }} />
       </div>
     </div>
@@ -206,7 +226,7 @@ function YearRange({ bars }) {
 
 export function SymbolStatsPanel({ board, panel }) {
   const symbol = followedSymbol(board, panel)
-  const { instrument, position, resolving } = useFollowedInstrument(symbol)
+  const { instrument, position, resolving, currency } = useFollowedInstrument(symbol)
   const chart = useChart({
     uic: instrument?.uic,
     assetType: instrument?.assetType,
@@ -226,11 +246,16 @@ export function SymbolStatsPanel({ board, panel }) {
     unresolved: !instrument && !resolving,
   })
   return (
-    <Card className={FILL} context={<FollowContext board={board} panel={panel} />} dot="ok" title={`${symbol} at a glance`}>
+    <Card
+      className={FILL}
+      context={<FollowContext board={board} panel={panel} />}
+      dot={chartDot({ error: chart.error, instrument, resolving })}
+      title={`${symbol} at a glance`}
+    >
       {placeholder ?? (
         <>
           <PerformanceTiles returns={returns} />
-          <YearRange bars={bars} />
+          <YearRange bars={bars} currency={currency} />
         </>
       )}
       {position ? (
@@ -240,7 +265,10 @@ export function SymbolStatsPanel({ board, panel }) {
           <Move value={position.pnl_pct} digits={1} />
         </div>
       ) : null}
-      <Link to={researchHref(symbol, undefined, instrument)} className="mt-3 inline-block text-[12px] font-semibold text-ink-2 hover:text-ink">
+      <Link
+        to={researchHref(symbol, undefined, instrument)}
+        className="mt-3 inline-block text-[12px] font-semibold text-ink-2 hover:text-ink"
+      >
         Open in Research →
       </Link>
     </Card>

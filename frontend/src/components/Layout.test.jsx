@@ -51,6 +51,9 @@ describe('Layout shell', () => {
     renderWithProviders(<Layout />, { route: '/boards' })
     expect(palette.props.hrefFor('TSLA', { uic: 9, assetType: 'Stock' })).toBe('/boards?symbol=TSLA&uic=9&assetType=Stock')
 
+    renderWithProviders(<Layout />, { route: '/boards/' })
+    expect(palette.props.hrefFor('TSLA')).toBe('/boards?symbol=TSLA')
+
     renderWithProviders(<Layout />, { route: '/boards/morning' })
     expect(palette.props.hrefFor).toBeUndefined()
   })

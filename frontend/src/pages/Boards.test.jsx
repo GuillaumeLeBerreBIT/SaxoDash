@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes } from 'react-router-dom'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import { expectValidHeadingOutline } from '../test/headingOutline'
@@ -73,12 +73,19 @@ function stubQueries() {
 
 const renderBoards = (route) =>
   renderWithProviders(
-    <Routes>
-      <Route path="/boards" element={<Boards />} />
-      <Route path="/boards/:id" element={<Boards />} />
-    </Routes>,
+    <>
+      <Link to="/boards/morning">Elsewhere</Link>
+      <Routes>
+        <Route path="/boards" element={<Boards />} />
+        <Route path="/boards/:id" element={<Boards />} />
+      </Routes>
+    </>,
     { route },
   )
+const failStorage = () =>
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('blocked')
+  })
 
 const tabs = () => within(screen.getByRole('navigation', { name: 'Boards' }))
 const panel = (name) => screen.getByRole('region', { name })
@@ -88,8 +95,10 @@ const stored = () => JSON.parse(localStorage.getItem('saxodash:boards'))
 
 describe('Boards', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     localStorage.clear()
+    window.innerWidth = 1440
     stubQueries()
   })
 
@@ -244,11 +253,60 @@ describe('Boards', () => {
     expect(screen.getByRole('link', { name: /Back to the Chart board/ })).toHaveAttribute('href', '/boards')
   })
 
-  it('keeps editing off below 760 px by hiding Edit board behind a note', () => {
+  it('keeps editing off below 760 px by hiding Edit board and New board behind a note', () => {
     renderBoards('/boards/morning')
 
     expect(screen.getByRole('button', { name: 'Edit board' })).toHaveClass('hidden', 'min-[760px]:inline-flex')
+    expect(tabs().getByRole('button', { name: /New board/ })).toHaveClass('hidden', 'min-[760px]:inline-flex')
     expect(screen.getByText('Editing needs a wider screen')).toHaveClass('min-[760px]:hidden')
+  })
+
+  it('never enters edit mode at a phone width', async () => {
+    window.innerWidth = 500
+    renderBoards('/boards/morning')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit board' }))
+    await userEvent.click(tabs().getByRole('button', { name: /New board/ }))
+
+    expect(screen.queryByRole('textbox', { name: 'Board name' })).not.toBeInTheDocument()
+    expect(tabs().queryByText('Untitled board')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Remove News' })).not.toBeInTheDocument()
+  })
+
+  it('says when the browser refuses to save, and keeps the edits open', async () => {
+    renderBoards('/boards/morning')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit board' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove News' }))
+    failStorage()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save in this browser')
+    expect(screen.getByRole('textbox', { name: 'Board name' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'News' })).not.toBeInTheDocument()
+  })
+
+  it('still follows a symbol when the browser refuses to save it', async () => {
+    failStorage()
+    renderBoards('/boards/morning')
+
+    await userEvent.click(within(panel('Watchlist')).getByRole('button', { name: /^NVDA/ }))
+
+    expect(within(panel('Price chart')).getByText(followsLine('NVDA'))).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not save in this browser')
+  })
+
+  it('drops a never-saved new board when the page moves away from it', async () => {
+    renderBoards('/boards')
+    await userEvent.click(tabs().getByRole('button', { name: /New board/ }))
+
+    await userEvent.click(screen.getByRole('link', { name: 'Elsewhere' }))
+    expect(tabs().queryByText('Untitled board')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit board' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(stored().map((b) => b.name)).toEqual(['Morning check', 'Semiconductors'])
   })
 
   it('shows the honest not-connected state in a chart panel when Saxo is down', () => {

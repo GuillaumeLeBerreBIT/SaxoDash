@@ -161,7 +161,7 @@ export default function ResearchChart() {
       />
 
       <aside className="hidden lg:flex flex-col gap-1.5 min-h-0 overflow-y-auto">
-        <InstrumentSearchBar hrefFor={chartResultHref} />
+        <InstrumentSearchBar stacked hrefFor={chartResultHref} />
         <div className="shrink-0 mt-1.5" style={{ height: watchlistHeight }} data-testid="chart-watchlist">
           <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>

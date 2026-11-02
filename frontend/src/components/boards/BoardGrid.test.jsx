@@ -113,11 +113,46 @@ describe('BoardGrid', () => {
   it('moves and resizes from the keyboard with the arrow keys', () => {
     const { onChange } = renderGrid()
 
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Move News' }), { key: 'ArrowDown' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move Net worth' }), { key: 'ArrowRight' })
     fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Net worth' }), { key: 'ArrowRight' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Resize Net worth' }), { key: 'ArrowDown' })
 
-    expect(onChange.mock.calls[0][0].panels.find((p) => p.id === 'p2').y).toBeGreaterThanOrEqual(0)
+    expect(onChange.mock.calls[0][0].panels.find((p) => p.id === 'p1').x).toBe(1)
     expect(onChange.mock.calls[1][0].panels.find((p) => p.id === 'p1').w).toBe(5)
+    expect(onChange.mock.calls[2][0].panels.find((p) => p.id === 'p1').h).toBe(4)
+  })
+
+  it('steps a panel past its neighbour with ArrowDown and ArrowUp', () => {
+    const stacked = {
+      ...board,
+      panels: [
+        { id: 'p1', type: 'networth', x: 0, y: 0, w: 4, h: 3 },
+        { id: 'p2', type: 'news', x: 0, y: 3, w: 4, h: 5 },
+      ],
+    }
+    const { onChange } = renderGrid({ board: stacked })
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move Net worth' }), { key: 'ArrowDown' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move News' }), { key: 'ArrowUp' })
+
+    const down = onChange.mock.calls[0][0].panels
+    expect(down.find((p) => p.id === 'p1').y).toBe(5)
+    expect(down.find((p) => p.id === 'p2').y).toBe(0)
+    const up = onChange.mock.calls[1][0].panels
+    expect(up.find((p) => p.id === 'p2').y).toBe(0)
+    expect(up.find((p) => p.id === 'p1').y).toBe(5)
+  })
+
+  it('ignores a drag started with a button other than the primary one', () => {
+    const { onChange } = renderGrid()
+    const grip = screen.getByRole('button', { name: 'Move Net worth' })
+
+    fireEvent.pointerDown(grip, { ...pointer(0, 0), button: 2 })
+    fireEvent.pointerMove(grip, pointer(400, 0))
+    fireEvent.pointerUp(grip, pointer(400, 0))
+
+    expect(screen.queryByTestId('drop-zone')).not.toBeInTheDocument()
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('removes a panel', () => {

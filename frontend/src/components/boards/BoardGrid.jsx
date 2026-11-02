@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { COLS, moveTo, removePanel, resizeTo, snapTarget } from '../../lib/boards'
+import { COLS, moveTo, removePanel, resizeTo, snapTarget, stepVertically } from '../../lib/boards'
 import BoardPanel from './BoardPanel'
 
 const PHONE_MAX = 760
@@ -60,7 +60,7 @@ export default function BoardGrid({ board, editing = false, onChange, onFollow }
   }, [drag])
 
   const startDrag = (mode) => (event, panel) => {
-    if (!editing || window.innerWidth < PHONE_MAX || !gridRef.current) return
+    if (!editing || event.button !== 0 || window.innerWidth < PHONE_MAX || !gridRef.current) return
     event.preventDefault()
     const handle = event.currentTarget
     const metrics = gridMetrics(gridRef.current)
@@ -98,7 +98,9 @@ export default function BoardGrid({ board, editing = false, onChange, onFollow }
     if (!step) return
     event.preventDefault()
     const [dx, dy] = step
-    onChange(mode === 'move' ? moveTo(board, panel.id, panel.x + dx, panel.y + dy) : resizeTo(board, panel.id, panel.w + dx, panel.h + dy))
+    if (mode === 'resize') onChange(resizeTo(board, panel.id, panel.w + dx, panel.h + dy))
+    else if (dy) onChange(stepVertically(board, panel.id, dy))
+    else onChange(moveTo(board, panel.id, panel.x + dx, panel.y))
   }
 
   const rows = Math.max(1, ...board.panels.map((p) => p.y + p.h), drag ? drag.target.y + drag.target.h : 0)

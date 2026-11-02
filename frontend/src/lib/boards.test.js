@@ -17,6 +17,7 @@ import {
   saveBoards,
   settle,
   snapTarget,
+  stepVertically,
 } from './boards'
 
 const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
@@ -381,5 +382,37 @@ describe('snapTarget', () => {
     expect(snapTarget('resize', panel, { dx: 100, dy: 76 }, grid)).toEqual({ ...panel, w: 5, h: 5 })
     expect(snapTarget('resize', panel, { dx: -5000, dy: -5000 }, grid)).toMatchObject({ w: MIN_W, h: MIN_H })
     expect(snapTarget('resize', panel, { dx: 5000, dy: 0 }, grid)).toMatchObject({ w: COLS - panel.x })
+  })
+})
+
+describe('stepVertically', () => {
+  const stacked = () => ({
+    id: 's',
+    name: 'S',
+    sym: '',
+    panels: [
+      { id: 'top', type: 'networth', x: 0, y: 0, w: 4, h: 3 },
+      { id: 'low', type: 'news', x: 2, y: 3, w: 5, h: 5 },
+      { id: 'side', type: 'symbol', x: 8, y: 0, w: 3, h: 5 },
+    ],
+  })
+
+  it('moves a panel down past the neighbour below it, which moves up', () => {
+    const next = stepVertically(stacked(), 'top', 1)
+    expect(byId(next, 'top').y).toBe(5)
+    expect(byId(next, 'low').y).toBe(0)
+  })
+
+  it('moves a panel up past the neighbour above it, which moves down', () => {
+    const next = stepVertically(stacked(), 'low', -1)
+    expect(byId(next, 'low').y).toBe(0)
+    expect(byId(next, 'top').y).toBe(5)
+  })
+
+  it('leaves the board as it is with nothing to pass', () => {
+    const board = stacked()
+    expect(stepVertically(board, 'side', 1)).toBe(board)
+    expect(stepVertically(board, 'top', -1)).toBe(board)
+    expect(stepVertically(board, 'nope', 1)).toBe(board)
   })
 })

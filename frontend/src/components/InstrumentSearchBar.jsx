@@ -24,7 +24,7 @@ const researchResultHref = (result) =>
  *  unportaled dropdown had (1b14d3e, 0a4aa02) - but unlike that box, this one
  *  is always-visible page furniture rather than tucked in a table row, so it
  *  also dismisses on Escape or a click elsewhere. */
-export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
+export default function InstrumentSearchBar({ hrefFor = researchResultHref, stacked = false }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [assetTypes, setAssetTypes] = useState(ALL_ASSET_TYPES)
@@ -69,7 +69,11 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
   }
 
   return (
-    <div ref={wrapperRef} className="relative flex items-center gap-2">
+    <div
+      ref={wrapperRef}
+      data-testid="instrument-search"
+      className={`relative flex gap-2 ${stacked ? 'flex-col-reverse items-stretch' : 'items-center'}`}
+    >
       <div className="relative flex-1">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
         <input
@@ -81,7 +85,7 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref }) {
         />
       </div>
 
-      <div className="flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0">
+      <div className={`flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0 ${stacked ? 'self-start' : ''}`}>
         {FILTERS.map(([value, label]) => (
           <TBtn key={value} active={assetTypes === value} onClick={() => setAssetTypes(value)}>
             {label}

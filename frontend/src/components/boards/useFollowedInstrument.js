@@ -15,10 +15,7 @@ export function useFollowedInstrument(symbol) {
     [symbol, positions, results, searching],
   )
   const resolving = !instrument && Boolean(symbol) && (searching || Boolean(positionsLoading))
-  const companyData = companyDataStatus({
-    instrument,
-    currency: listingCurrency({ position, instrument }),
-    lookingUp: resolving,
-  })
-  return { instrument, position, resolving, companyData }
+  const currency = listingCurrency({ position, instrument })
+  const companyData = companyDataStatus({ instrument, currency, lookingUp: resolving })
+  return { instrument, position, resolving, companyData, currency }
 }

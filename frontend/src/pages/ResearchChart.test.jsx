@@ -199,6 +199,13 @@ describe('ResearchChart', () => {
     expect(screen.getByText('Tech')).toBeInTheDocument()
   })
 
+  it('gives the rail search its full width by stacking the asset filter on its own row', () => {
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
+
+    expect(screen.getByTestId('instrument-search')).toHaveClass('flex-col-reverse')
+    expect(screen.getByRole('textbox', { name: /search instruments/i })).toHaveAttribute('placeholder', 'Search any stock or ETF…')
+  })
+
   it('fetches the same widest-range chart as Research, so the two views share a cache entry', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 

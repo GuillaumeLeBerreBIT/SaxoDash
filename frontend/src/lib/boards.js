@@ -134,6 +134,20 @@ export function resizeTo(board, id, w, h) {
   }))
 }
 
+const sharesColumns = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w
+
+export function stepVertically(board, id, step) {
+  const panel = board.panels.find((p) => p.id === id)
+  if (!panel || !step) return board
+  const others = board.panels.filter((p) => p.id !== id && sharesColumns(p, panel))
+  if (step > 0) {
+    const below = others.filter((p) => p.y >= panel.y + panel.h).sort((a, b) => a.y - b.y)[0]
+    return below ? moveTo(board, id, panel.x, below.y + below.h) : board
+  }
+  const above = others.filter((p) => p.y + p.h <= panel.y).sort((a, b) => b.y - a.y)[0]
+  return above ? moveTo(board, id, panel.x, above.y) : board
+}
+
 export function snapTarget(mode, panel, { dx, dy }, { colWidth, gap }) {
   const cols = whole(dx / (colWidth + gap), 0)
   const rows = whole(dy / (ROW_H + gap), 0)

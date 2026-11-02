@@ -19,6 +19,7 @@ const TAB =
   'inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[15px] font-bold whitespace-nowrap transition-colors'
 const tabClass = ({ isActive }) => `${TAB} ${isActive ? 'bg-pill text-ink' : 'text-ink-3 hover:text-ink'}`
 const DISARM_MS = 3000
+const EDIT_MIN_WIDTH = 760
 
 function BoardTab({ to, editing, current = false, children }) {
   if (editing) {
@@ -47,7 +48,12 @@ function BoardTabs({ boards, currentId, editing, onNew, onEdit, canEdit }) {
             {board.name}
           </BoardTab>
         ))}
-        <button type="button" onClick={onNew} disabled={editing} className={`${TAB} text-ink-2 hover:text-ink disabled:opacity-40`}>
+        <button
+          type="button"
+          onClick={onNew}
+          disabled={editing}
+          className={`${TAB} hidden min-[760px]:inline-flex text-ink-2 hover:text-ink disabled:opacity-40`}
+        >
           <Plus size={14} aria-hidden="true" /> New board
         </button>
       </nav>
@@ -134,6 +140,7 @@ export default function Boards() {
   const navigate = useNavigate()
   const [boards, setBoards] = useState(loadBoards)
   const [edit, setEdit] = useState(null)
+  const [saveFailed, setSaveFailed] = useState(false)
   const nameRef = useRef(null)
 
   const stored = boards.find((b) => b.id === id) ?? null
@@ -146,9 +153,24 @@ export default function Boards() {
     nameRef.current?.select()
   }, [edit?.focusName, editing])
 
+  const lastId = useRef(id)
+  useEffect(() => {
+    const leftId = lastId.current
+    lastId.current = id
+    if (!edit?.unsavedId || leftId !== edit.unsavedId || id === edit.unsavedId) return
+    setBoards((current) => current.filter((b) => b.id !== edit.unsavedId))
+    setEdit(null)
+  }, [id, edit?.unsavedId])
+
+  const store = (next) => {
+    const ok = saveBoards(next)
+    setSaveFailed(!ok)
+    return ok
+  }
+
   const persist = (next) => {
     setBoards(next)
-    saveBoards(next.filter((b) => b.id !== edit?.unsavedId))
+    store(next.filter((b) => b.id !== edit?.unsavedId))
   }
 
   const follow = (symbol) => {
@@ -156,11 +178,17 @@ export default function Boards() {
     persist(boards.map((b) => (b.id === stored.id ? followSymbol(b, symbol) : b)))
   }
 
+  const canEditHere = () => window.innerWidth >= EDIT_MIN_WIDTH
+
   const startEdit = (library = false) => {
-    if (stored) setEdit({ board: stored, library, unsavedId: null, focusName: false })
+    if (!stored || !canEditHere()) return
+    const leftover = edit?.unsavedId
+    if (leftover && leftover !== stored.id) setBoards((current) => current.filter((b) => b.id !== leftover))
+    setEdit({ board: stored, library, unsavedId: null, focusName: false })
   }
 
   const newBoard = () => {
+    if (!canEditHere()) return
     const created = createBoard(boards, stored?.sym ?? boards[0]?.sym ?? '')
     setBoards([...boards, created])
     setEdit({ board: created, library: true, unsavedId: created.id, focusName: true })
@@ -182,15 +210,15 @@ export default function Boards() {
   const save = () => {
     const saved = { ...edit.board, name: edit.board.name.trim() || NEW_BOARD_NAME }
     const next = boards.map((b) => (b.id === saved.id ? saved : b))
+    if (!store(next)) return
     setBoards(next)
-    saveBoards(next)
     setEdit(null)
   }
 
   const remove = () => {
     const next = boards.filter((b) => b.id !== edit.board.id)
+    if (!store(next.filter((b) => b.id !== edit.unsavedId))) return
     setBoards(next)
-    saveBoards(next.filter((b) => b.id !== edit.unsavedId))
     setEdit(null)
     navigate('/boards')
   }
@@ -206,10 +234,17 @@ export default function Boards() {
     />
   )
 
+  const saveNote = saveFailed ? (
+    <p role="alert" className="mb-3 text-[13px] text-warn">
+      Could not save in this browser. Your changes stay on this page until you leave it.
+    </p>
+  ) : null
+
   if (!id) {
     return (
       <>
         {tabs}
+        {saveNote}
         <ResearchChart />
       </>
     )
@@ -220,6 +255,7 @@ export default function Boards() {
       <>
         <h1 className="sr-only">Boards</h1>
         {tabs}
+        {saveNote}
         <MissingBoard />
       </>
     )
@@ -229,6 +265,7 @@ export default function Boards() {
     <>
       <h1 className="sr-only">{board.name}</h1>
       {tabs}
+      {saveNote}
       {editing ? (
         <>
           <EditToolbar
