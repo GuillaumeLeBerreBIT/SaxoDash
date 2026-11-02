@@ -1,12 +1,17 @@
 import { Tag } from '../ui'
 
 const MULTIPLE_FROM_PCT = 1000
-const MULTIPLE_CAP = '>10×'
+const MULTIPLE_CAP = 100
+
+function multiple(size) {
+  const times = Math.round(size / 100 + 1)
+  return times > MULTIPLE_CAP ? `>${MULTIPLE_CAP}×` : `${times}×`
+}
 
 function wholePct(pct) {
   if (pct == null) return ''
   const size = Math.abs(pct)
-  return size >= MULTIPLE_FROM_PCT ? ` ${MULTIPLE_CAP}` : ` ${Math.round(size)}%`
+  return size >= MULTIPLE_FROM_PCT ? ` ${multiple(size)}` : ` ${Math.round(size)}%`
 }
 
 export default function ChangeBadge({ change, pct }) {

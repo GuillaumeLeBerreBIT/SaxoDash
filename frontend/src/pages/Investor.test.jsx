@@ -102,8 +102,9 @@ describe('Investor profile', () => {
   })
 
   it('investor profile tiles show value, positions, top 5/10, new/exited, shared with you', () => {
-    const shared = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
-    state = { data: { ...detail, holdings: [...detail.holdings, shared] }, isLoading: false, error: null }
+    const small = { ...detail.holdings[0], cusip: 'A', ticker: 'AAPL', issuer: 'APPLE', weight: 4, owned: true }
+    const large = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, holdings: [...detail.holdings, small, large] }, isLoading: false, error: null }
     renderPage()
     const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
     const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
@@ -113,17 +114,35 @@ describe('Investor profile', () => {
     expect(tile('Top 5 / top 10')).toHaveTextContent('78.4% / 98.0%')
     expect(tile('This quarter')).toHaveTextContent('+1 / −1')
     expect(tile('This quarter')).toHaveTextContent('new / exited · turnover 6%')
-    expect(tile('Shared with you')).toHaveTextContent('GOOGL')
-    expect(tile('Shared with you')).toHaveTextContent('15.0% of their book')
+    expect(tile('You hold today')).toHaveTextContent('2 stocks')
+    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest book')
     expect(screen.getByText('13F for Q2 2026 · filed 14 Aug 2026')).toBeInTheDocument()
   })
 
-  it('says when you share nothing and when a quarter has nothing to compare', () => {
+  it('names the one stock you hold today', () => {
+    const shared = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, holdings: [...detail.holdings, shared] }, isLoading: false, error: null }
+    renderPage()
+    const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
+    const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
+    expect(tile('You hold today')).toHaveTextContent('GOOGL')
+    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest book')
+  })
+
+  it('leaves out what you hold today when a past quarter is shown', () => {
+    const shared = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, quarter: '2026-03-31', holdings: [shared] }, isLoading: false, error: null }
+    renderPage('/investors/pershing-square?quarter=2026-03-31')
+    const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
+    expect(within(tiles).queryByText('You hold today')).not.toBeInTheDocument()
+  })
+
+  it('says when you hold none of them and when a quarter has nothing to compare', () => {
     state = { data: { ...detail, previous_quarter: null, new_count: null, exited_count: null, turnover: null }, isLoading: false, error: null }
     renderPage()
     const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
     const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
-    expect(tile('Shared with you')).toHaveTextContent('None')
+    expect(tile('You hold today')).toHaveTextContent('None in your portfolio')
     expect(tile('This quarter')).toHaveTextContent('—')
     expect(tile('This quarter')).toHaveTextContent('first stored quarter')
   })

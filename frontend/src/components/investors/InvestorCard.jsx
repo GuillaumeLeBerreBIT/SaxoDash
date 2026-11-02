@@ -40,7 +40,7 @@ export function TopLogos({ holdings, tab }) {
 
 export function LatestLine({ investor }) {
   if (!investor.latest_quarter) return <span className="text-ink-3">No filings imported yet</span>
-  if (investor.stale) return <span className="text-warn [[data-theme=light]_&]:text-warn-text">{`No 13F since ${quarterLabel(investor.latest_quarter)}`}</span>
+  if (investor.stale) return <span className="text-warn-text">{`No 13F since ${quarterLabel(investor.latest_quarter)}`}</span>
   return <span className="text-ink-3">{`${quarterLabel(investor.latest_quarter)} · filed ${fmtFiledDate(investor.last_filing_at)}`}</span>
 }
 

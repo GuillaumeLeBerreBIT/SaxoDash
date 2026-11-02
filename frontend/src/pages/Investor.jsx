@@ -48,25 +48,25 @@ function quarterMoves(detail) {
   return { value: `${fmtCount(detail.new_count, '+')} / ${fmtCount(detail.exited_count, '−')}`, sub: `new / exited${turnover}` }
 }
 
-function sharedWithYou(holdings) {
+function heldToday(holdings) {
   const shared = holdings.filter((holding) => holding.owned)
-  if (shared.length === 0) return { value: 'None', sub: 'you hold none of their stocks' }
-  const largest = shared[0]
-  const weight = `${share(largest.weight)} of their book`
+  if (shared.length === 0) return { value: 'None in your portfolio', sub: 'of their latest book' }
+  const largest = shared.reduce((top, holding) => (holding.weight > top.weight ? holding : top))
+  const weight = `${share(largest.weight)} of their latest book`
   if (shared.length === 1) return { value: holdingLabel(largest), sub: weight }
   return { value: `${shared.length} stocks`, sub: `${holdingLabel(largest)} largest · ${weight}` }
 }
 
 function Summary({ detail }) {
   const moves = quarterMoves(detail)
-  const shared = sharedWithYou(detail.holdings)
+  const today = detail.quarter === detail.quarters[0] ? heldToday(detail.holdings) : null
   return (
     <div role="group" aria-label="Portfolio summary" className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
       <Tile label="Reported value" value={fmtUsdCompact(detail.total_value)} sub={`as of ${quarterLabel(detail.quarter)} end`} />
       <Tile label="Positions" value={detail.positions == null ? null : fmtNum(detail.positions)} sub="US-listed longs + options" />
       <Tile label="Top 5 / top 10" value={topShares(detail)} sub="of reported value" />
       <Tile label="This quarter" value={moves.value} sub={moves.sub} />
-      <Tile label="Shared with you" value={shared.value} sub={shared.sub} />
+      {today ? <Tile label="You hold today" value={today.value} sub={today.sub} /> : null}
     </div>
   )
 }

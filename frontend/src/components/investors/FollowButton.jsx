@@ -15,7 +15,7 @@ export default function FollowButton({ investor, labelled = false, className = '
       aria-label={`${followed ? 'Unfollow' : 'Follow'} ${name}`}
       onClick={() => follow.mutate({ slug, followed: !followed })}
       className={`relative z-10 inline-flex items-center gap-1.5 ${labelled ? LABELLED : ICON_ONLY} font-semibold focus-visible:outline-2 focus-visible:outline-focus ${
-        followed ? 'text-warn [[data-theme=light]_&]:text-warn-text hover:text-ink' : 'text-ink-3 hover:text-ink'
+        followed ? 'text-warn-text hover:text-ink' : 'text-ink-3 hover:text-ink'
       } ${className}`}
     >
       <Star size={15} fill={followed ? 'currentColor' : 'none'} />

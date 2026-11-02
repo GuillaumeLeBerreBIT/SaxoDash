@@ -52,7 +52,7 @@ export default function InvestorHero({ detail }) {
           <h1 className="text-[22px] font-bold tracking-tight text-ink [text-wrap:balance]">{detail.name}</h1>
           {detail.firm !== detail.name ? <p className="text-[14px] text-ink-2">{detail.firm}</p> : null}
           {detail.stale && detail.quarter ? (
-            <p className="text-[12px] font-semibold text-warn [[data-theme=light]_&]:text-warn-text mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
+            <p className="text-[12px] font-semibold text-warn-text mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
           ) : null}
         </div>
         <StyleChips styles={detail.styles} />

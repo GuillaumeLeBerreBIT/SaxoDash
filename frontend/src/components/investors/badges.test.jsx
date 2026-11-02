@@ -21,9 +21,13 @@ describe('ChangeBadge', () => {
 
   it('ChangeBadge caps absurd percentages', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={76194} />)
-    expect(screen.getByText('▲ Added >10×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Added >100×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={1100} />)
+    expect(screen.getByText('▲ Added 12×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={1000} />)
-    expect(screen.getByText('▲ Added >10×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Added 11×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={9900} />)
+    expect(screen.getByText('▲ Added 100×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={999.4} />)
     expect(screen.getByText('▲ Added 999%')).toBeInTheDocument()
   })

@@ -8,7 +8,7 @@ import { MOVES_SHOWN, groupMoves, moveSentence, stockLabel } from '../../lib/inv
 import { quarterLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 
-const TONES = { new: 'text-held', added: 'text-ink-2', trimmed: 'text-ink-2', sold_out: 'text-warn [[data-theme=light]_&]:text-warn-text' }
+const TONES = { new: 'text-held', added: 'text-ink-2', trimmed: 'text-ink-2', sold_out: 'text-warn-text' }
 const FIRST_QUARTER = 'First stored quarter — there is no earlier filing to compare against.'
 const NOTHING_MOVED = 'No position changed by 1% or more this quarter.'
 
