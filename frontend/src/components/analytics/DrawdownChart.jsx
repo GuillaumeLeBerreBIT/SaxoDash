@@ -1,30 +1,37 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader, EmptyState } from '../ui'
-import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis, NEGATIVE } from '../../lib/charts'
+import { Card, EmptyState } from '../ui'
+import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 import { drawdownDomain } from '../../lib/portfolioStats'
 
 /** Decline from the running peak of the portfolio's own value - no benchmark. */
-export default function DrawdownChart({ series, maxDrawdown }) {
+export default function DrawdownChart({ series, maxDrawdown, className = '' }) {
   const c = useChartColors()
   return (
-    <Card>
-      <CardHeader
-        title="Drawdown"
-        subtitle="Decline from the running peak"
-        right={maxDrawdown != null && <span className="text-[var(--fig-2xs)] num text-red-400">Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}</span>}
-      />
+    <Card
+      className={className}
+      context="Distance below the running peak"
+      dot={series.length === 0 ? 'off' : 'warn'}
+      title="Drawdown"
+      right={
+        maxDrawdown != null && (
+          <span className="text-[13px] font-semibold num text-down">
+            Max {fmtPct(maxDrawdown, { sign: false, decimals: 1 })}
+          </span>
+        )
+      }
+    >
       {series.length === 0 ? (
         <EmptyState title="No drawdown yet" hint="It appears once the portfolio has a recorded history." />
       ) : (
-      <div className="mt-4 h-[var(--chart-h-lg)]">
+      <div className="h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="ddFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={NEGATIVE} stopOpacity={0.45} />
-                <stop offset="100%" stopColor={NEGATIVE} stopOpacity={0.05} />
+                <stop offset="0%" stopColor={c.down} stopOpacity={0.22} />
+                <stop offset="100%" stopColor={c.down} stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <CartesianGrid {...gridProps(c)} />
@@ -38,8 +45,8 @@ export default function DrawdownChart({ series, maxDrawdown }) {
             <Area
               type="monotone"
               dataKey="dd"
-              stroke={NEGATIVE}
-              strokeWidth={1.3}
+              stroke={c.down}
+              strokeWidth={1.5}
               fill="url(#ddFill)"
               dot={false}
               isAnimationActive={false}

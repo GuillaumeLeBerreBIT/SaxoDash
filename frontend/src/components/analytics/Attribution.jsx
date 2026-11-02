@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 
-import { Card, CardHeader } from '../ui'
-import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
+import { Card } from '../ui'
+import { fmtNum, fmtPct, pctTone } from '../../lib/format'
 import { researchHref } from '../../lib/research'
+
+const TONE_TEXT = { positive: 'text-up', negative: 'text-down', neutral: 'text-ink-2' }
 
 /** Each holding's share of the total gain - computed here from positions
  *  the app already fetches, not a separate backend round trip. */
-export default function Attribution({ positions }) {
+export default function Attribution({ positions, className = '' }) {
   const totalCost = positions.reduce((sum, p) => sum + Number(p.cost), 0)
   const totalPnl = positions.reduce((sum, p) => sum + Number(p.pnl), 0)
 
@@ -23,29 +25,27 @@ export default function Attribution({ positions }) {
   const top = rows[0]
 
   return (
-    <Card>
-      <CardHeader
-        title="Return attribution"
-        subtitle="Contribution of each holding to total portfolio return"
-        right={
-          <span className="text-[var(--fig-2xs)] num text-zinc-400">
-            Total {fmtPct(totalCost ? (totalPnl / totalCost) * 100 : null, { decimals: 1 })}
-          </span>
-        }
-      />
-      <div className="mt-4 space-y-3">
+    <Card
+      className={className}
+      context="Contribution of each holding to total portfolio return"
+      dot="ok"
+      title="Return attribution"
+      right={
+        <span className="text-[13px] font-semibold num text-ink-2">
+          Total {fmtPct(totalCost ? (totalPnl / totalCost) * 100 : null, { decimals: 1 })}
+        </span>
+      }
+    >
+      <div className="space-y-2.5">
         {rows.map((r) => (
           <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: '58px 1fr 74px 62px' }}>
-            <Link
-              to={researchHref(r.ticker)}
-              className="text-[var(--fig-sm)] font-medium text-zinc-100 hover:text-blue-300"
-            >
+            <Link to={researchHref(r.ticker)} className="text-[13.5px] font-semibold text-ink hover:underline">
               {r.ticker}
             </Link>
-            <div className="h-5 relative bg-white/[0.03] rounded">
-              <div className="absolute inset-y-0 left-1/2 w-px bg-white/10" />
+            <div className="h-5 relative bg-track rounded">
+              <div className="absolute inset-y-0 left-1/2 w-px bg-line" />
               <div
-                className={`absolute inset-y-0.5 rounded-sm ${r.contribution >= 0 ? 'bg-emerald-500/70' : 'bg-red-500/70'}`}
+                className={`absolute inset-y-0.5 rounded-sm ${r.contribution >= 0 ? 'bg-up' : 'bg-down'}`}
                 style={
                   r.contribution >= 0
                     ? { left: '50%', width: `${(r.contribution / maxAbs) * 48}%` }
@@ -53,17 +53,17 @@ export default function Attribution({ positions }) {
                 }
               />
             </div>
-            <span className={`text-[var(--fig-xs)] num text-right ${pctToneClass(r.contribution, 1)}`}>
+            <span className={`text-[12px] font-semibold num text-right ${TONE_TEXT[pctTone(r.contribution, 1)]}`}>
               {fmtPct(r.contribution, { decimals: 1 })} pp
             </span>
-            <span className="text-[var(--fig-xs)] num text-zinc-500 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
+            <span className="text-[12px] num text-ink-3 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
           </div>
         ))}
       </div>
       {top && (
-        <div className="mt-3 pt-3 border-t border-white/[0.06] text-[var(--fig-2xs)] text-zinc-500">
+        <p className="mt-3 pt-3 border-t border-line text-[12px] text-ink-3">
           {top.ticker} alone produced {fmtNum(top.shareOfGain, 0)}% of the total gain — concentration risk sits in one name.
-        </div>
+        </p>
       )}
     </Card>
   )

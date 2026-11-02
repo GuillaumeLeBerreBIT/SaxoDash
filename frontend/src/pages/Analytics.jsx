@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
-import { Alert, Card, CardHeader, ChartPlaceholder, MetricTile, PageHeader, StatStrip, StatRow, TabButton, TabList } from '../components/ui'
-import { Pill } from '../components/RangePills'
+import { Alert, Card, ChartPlaceholder, MetricTile, Segmented, TabButton, TabList, Tile } from '../components/ui'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
 import Projection from '../components/analytics/Projection'
@@ -12,7 +11,10 @@ import Attribution from '../components/analytics/Attribution'
 import { fmtNum, fmtPct } from '../lib/format'
 import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
-const SUBTITLE = 'Performance, risk and projection, computed from your own portfolio-value history'
+const CONTEXT = 'Daily portfolio value · computed from your own history'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const SPAN_6 = 'min-[1100px]:col-span-6'
+const SPAN_12 = 'min-[1100px]:col-span-12'
 const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'
 const TABS = [
   ['performance', 'Performance'],
@@ -28,31 +30,28 @@ function monthLabel(month) {
 
 function BenchmarkSelector({ options, value, onChange }) {
   return (
-    <div className="flex flex-wrap items-center gap-1">
-      {options.map(({ key, name }) => (
-        <Pill key={key} active={value === key} onClick={() => onChange(key)}>
-          {name}
-        </Pill>
-      ))}
-    </div>
+    <Segmented
+      label="Benchmark"
+      options={options.map(({ key, name }) => ({ value: key, label: name }))}
+      value={value}
+      onChange={onChange}
+    />
   )
 }
 
 function PerformanceTab({ data, positions }) {
-  if (!data) return <ChartPlaceholder>Loading…</ChartPlaceholder>
+  if (!data) return <Card><ChartPlaceholder>Loading…</ChartPlaceholder></Card>
 
   return (
-    <div className="space-y-4">
+    <div className={BOARD}>
       {data.benchmark.reason && (
-        <p className="text-[var(--fig-xs)] text-zinc-500">
+        <p className={`${SPAN_12} text-[12px] text-ink-3`}>
           {data.benchmark.name} columns are blank — {data.benchmark.reason}
         </p>
       )}
-      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1fr_1.25fr]">
-        <ReturnsTable periods={data.periods} benchmarkName={data.benchmark.name} />
-        <CalendarYears years={data.calendar_years} benchmarkName={data.benchmark.name} />
-      </div>
-      {positions?.length > 0 && <Attribution positions={positions} />}
+      <ReturnsTable className={SPAN_6} periods={data.periods} benchmarkName={data.benchmark.name} />
+      <CalendarYears className={SPAN_6} years={data.calendar_years} benchmarkName={data.benchmark.name} />
+      {positions?.length > 0 && <Attribution className={SPAN_12} positions={positions} />}
     </div>
   )
 }
@@ -80,17 +79,17 @@ function RiskDefinitions() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="flex items-center gap-1 text-[var(--fig-2xs)] text-zinc-500 hover:text-zinc-300"
+        className="flex items-center gap-1 min-h-11 md:min-h-0 text-[12px] font-medium text-ink-2 hover:text-ink"
       >
-        <ChevronDown size={12} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />
         {open ? 'Hide what these mean' : 'What do these mean?'}
       </button>
       {open && (
-        <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 rounded-md border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+        <dl className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 rounded-[10px] bg-tile px-3.5 py-3">
           {RISK_TERMS.map(([term, definition]) => (
-            <div key={term} className="text-[var(--fig-2xs)] leading-snug">
-              <dt className="inline font-medium text-zinc-300">{term}</dt>
-              <dd className="inline text-zinc-500"> — {definition}</dd>
+            <div key={term} className="text-[12px] leading-snug">
+              <dt className="inline font-semibold text-ink">{term}</dt>
+              <dd className="inline text-ink-2"> — {definition}</dd>
             </div>
           ))}
         </dl>
@@ -107,8 +106,8 @@ function RiskDefinitions() {
 function MetricGroup({ label, children }) {
   return (
     <div>
-      <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium mb-2">{label}</div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{children}</div>
+      <div className="text-[12px] font-medium text-ink-3 mb-2">{label}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{children}</div>
     </div>
   )
 }
@@ -128,67 +127,64 @@ function RiskTab({ data }) {
   const benchHint = (value, metric) => (bench.has_data && value == null ? needsDaysNote(benchNeedsDays[metric]) : undefined)
 
   return (
-    <div className="space-y-4">
+    <div className={BOARD}>
       {/* items-start: without it, CSS Grid stretches the shorter Drawdown
           card to match Risk & return's height (now taller with the grouped
           tiles + definitions toggle) - a card whose border wraps far past
           its own 260px chart, empty for no reason. */}
-      <div className="grid grid-cols-1 gap-4 lg:[grid-template-columns:1.15fr_1fr] items-start">
-        <Card>
-          <CardHeader title="Risk & return" subtitle={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} />
-          <RiskDefinitions />
-          <div className="mt-4 space-y-4">
-            <MetricGroup label="Return & risk">
-              <MetricTile label="Volatility (ann.)" value={pctOrDash(volatility)} hint={hintWhenNull(volatility, 'volatility')} />
-              <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} hint={hintWhenNull(sharpe, 'sharpe')} />
-              <MetricTile label="Max drawdown" value={pctOrDash(maxDrawdown)} />
-              <MetricTile label="Current drawdown" value={pctOrDash(currentDrawdown)} hint="From all-time high" />
-            </MetricGroup>
+      <Card className={SPAN_6} context={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} dot="ok" title="Risk & return">
+        <RiskDefinitions />
+        <div className="mt-4 space-y-4">
+          <MetricGroup label="Return & risk">
+            <MetricTile label="Volatility (ann.)" value={pctOrDash(volatility)} hint={hintWhenNull(volatility, 'volatility')} />
+            <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} hint={hintWhenNull(sharpe, 'sharpe')} />
+            <MetricTile label="Max drawdown" value={pctOrDash(maxDrawdown)} />
+            <MetricTile label="Current drawdown" value={pctOrDash(currentDrawdown)} hint="From all-time high" />
+          </MetricGroup>
 
-            <MetricGroup label="Consistency">
-              <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint={sortino == null ? needsDaysNote(needsDays.sortino) : "Downside-adjusted"} />
-              <MetricTile label="Positive months" value={pctOrDash(positiveMonthsPct, 0)} hint={hintWhenNull(positiveMonthsPct, 'monthly_stats')} />
-              <MetricTile
-                label="Best month"
-                value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
-                hint={bestMonth ? monthLabel(bestMonth) : needsDaysNote(needsDays.monthly_stats)}
-              />
-              <MetricTile
-                label="Worst month"
-                value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
-                hint={worstMonth ? monthLabel(worstMonth) : needsDaysNote(needsDays.monthly_stats)}
-              />
-            </MetricGroup>
+          <MetricGroup label="Consistency">
+            <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint={sortino == null ? needsDaysNote(needsDays.sortino) : "Downside-adjusted"} />
+            <MetricTile label="Positive months" value={pctOrDash(positiveMonthsPct, 0)} hint={hintWhenNull(positiveMonthsPct, 'monthly_stats')} />
+            <MetricTile
+              label="Best month"
+              value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
+              hint={bestMonth ? monthLabel(bestMonth) : needsDaysNote(needsDays.monthly_stats)}
+            />
+            <MetricTile
+              label="Worst month"
+              value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
+              hint={worstMonth ? monthLabel(worstMonth) : needsDaysNote(needsDays.monthly_stats)}
+            />
+          </MetricGroup>
 
-            <MetricGroup label={bench.has_data ? `Vs. benchmark (${bench.name})` : 'Vs. benchmark'}>
-              <MetricTile
-                label="Beta"
-                value={benchValue(bench.beta) ? fmtNum(bench.beta, 2) : '—'}
-                hint={bench.has_data ? benchHint(bench.beta, 'beta') : bench.reason}
-              />
-              <MetricTile
-                label="Tracking error"
-                value={benchValue(bench.tracking_error) ? pctOrDash(bench.tracking_error) : '—'}
-                hint={benchHint(bench.tracking_error, 'tracking_error')}
-              />
-              <MetricTile
-                label="Information ratio"
-                value={benchValue(bench.information_ratio) ? fmtNum(bench.information_ratio, 2) : '—'}
-                hint={benchHint(bench.information_ratio, 'information_ratio')}
-              />
-              <MetricTile
-                label="Jensen alpha"
-                value={benchValue(bench.jensen_alpha) ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
-                hint={bench.has_data && bench.jensen_alpha != null ? 'Risk-adjusted excess' : benchHint(bench.jensen_alpha, 'jensen_alpha')}
-              />
-            </MetricGroup>
-          </div>
-        </Card>
+          <MetricGroup label={bench.has_data ? `Vs. benchmark (${bench.name})` : 'Vs. benchmark'}>
+            <MetricTile
+              label="Beta"
+              value={benchValue(bench.beta) ? fmtNum(bench.beta, 2) : '—'}
+              hint={bench.has_data ? benchHint(bench.beta, 'beta') : bench.reason}
+            />
+            <MetricTile
+              label="Tracking error"
+              value={benchValue(bench.tracking_error) ? pctOrDash(bench.tracking_error) : '—'}
+              hint={benchHint(bench.tracking_error, 'tracking_error')}
+            />
+            <MetricTile
+              label="Information ratio"
+              value={benchValue(bench.information_ratio) ? fmtNum(bench.information_ratio, 2) : '—'}
+              hint={benchHint(bench.information_ratio, 'information_ratio')}
+            />
+            <MetricTile
+              label="Jensen alpha"
+              value={benchValue(bench.jensen_alpha) ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
+              hint={bench.has_data && bench.jensen_alpha != null ? 'Risk-adjusted excess' : benchHint(bench.jensen_alpha, 'jensen_alpha')}
+            />
+          </MetricGroup>
+        </div>
+      </Card>
 
-        <DrawdownChart series={drawdownSeries} maxDrawdown={maxDrawdown} />
-      </div>
+      <DrawdownChart className={SPAN_6} series={drawdownSeries} maxDrawdown={maxDrawdown} />
 
-      <MonthlyReturnsHeatmap monthlyReturns={monthlyReturns} />
+      <MonthlyReturnsHeatmap className={SPAN_12} monthlyReturns={monthlyReturns} />
     </div>
   )
 }
@@ -221,49 +217,53 @@ export default function Analytics() {
 
   if (isLoading || error || !data?.has_data) {
     return (
-      <div className="space-y-4">
-        <PageHeader title="Analytics" subtitle={SUBTITLE} />
-        <ChartPlaceholder tone={error ? 'red' : 'zinc'}>
-          {isLoading && 'Loading…'}
-          {!isLoading && error && 'Failed to load risk metrics'}
-          {!isLoading && !error && `Not enough history yet — risk metrics need at least two days of portfolio value (${data?.history_days ?? 0} so far).`}
-        </ChartPlaceholder>
-      </div>
+      <>
+        <h1 className="sr-only">Analytics</h1>
+        <Card context={CONTEXT} dot={error ? 'warn' : 'off'} title="Return and risk">
+          <ChartPlaceholder tone={error ? 'red' : undefined}>
+            {isLoading && 'Loading…'}
+            {!isLoading && error && 'Failed to load risk metrics'}
+            {!isLoading && !error && `Not enough history yet — risk metrics need at least two days of portfolio value (${data?.history_days ?? 0} so far).`}
+          </ChartPlaceholder>
+        </Card>
+      </>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Analytics"
-        subtitle={SUBTITLE}
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
+      <h1 className="sr-only">Analytics</h1>
+      <Card
+        context={`${CONTEXT} · vs ${data.benchmark.name}`}
+        dot={data.data_quality === 'low' || data.data_quality === 'medium' ? 'warn' : 'ok'}
+        title="Return and risk"
         right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
-      />
+      >
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+          <Tile
+            label="Avg. return (ann.)"
+            value={data.expected_return == null ? null : fmtPct(data.expected_return, { decimals: 1 })}
+            sub={
+              data.expected_return == null
+                ? needsDaysNote(data.needs_days?.expected_return) ?? AVG_RETURN_NOTE
+                : AVG_RETURN_NOTE
+            }
+          />
+          <Tile
+            label="Volatility"
+            value={data.volatility == null ? null : pctOrDash(data.volatility)}
+            sub={data.sharpe == null ? undefined : `Sharpe ${fmtNum(data.sharpe, 2)}`}
+          />
+          <Tile
+            label="Max drawdown"
+            value={data.max_drawdown == null ? null : pctOrDash(data.max_drawdown)}
+            tone={data.max_drawdown < 0 ? 'down' : undefined}
+            sub={`Current ${pctOrDash(data.current_drawdown)}`}
+          />
+        </div>
+      </Card>
 
       <DataQualityNotice dataQuality={data.data_quality} sampleSize={data.sample_size} />
-
-      <StatStrip>
-        <StatRow
-          label="Avg. return (ann.)"
-          value={fmtPct(data.expected_return, { decimals: 1 })}
-          note={
-            data.expected_return == null
-              ? needsDaysNote(data.needs_days?.expected_return) ?? AVG_RETURN_NOTE
-              : AVG_RETURN_NOTE
-          }
-        />
-        <StatRow
-          label="Volatility"
-          value={pctOrDash(data.volatility)}
-          badge={data.sharpe == null ? undefined : `Sharpe ${fmtNum(data.sharpe, 2)}`}
-          badgeTone="zinc"
-        />
-        <StatRow
-          label="Max drawdown"
-          value={pctOrDash(data.max_drawdown)}
-          note={`Current ${pctOrDash(data.current_drawdown)}`}
-        />
-      </StatStrip>
 
       <TabList label="Analytics sections">
         {TABS.map(([key, label]) => (
@@ -277,7 +277,7 @@ export default function Analytics() {
       {tab === 'risk' && <RiskTab data={data} />}
       {tab === 'projection' && (
         summary?.total_value != null ? (
-          <div className="space-y-4">
+          <div className="flex flex-col gap-[var(--sd-gap,12px)]">
             {data.inputs_reliable === false && (
               <Alert tone="info">
                 Projection inputs come from only {data.history_days} days of history, so the range
@@ -291,7 +291,9 @@ export default function Analytics() {
             />
           </div>
         ) : (
-          <ChartPlaceholder>Loading portfolio value…</ChartPlaceholder>
+          <Card>
+            <ChartPlaceholder>Loading portfolio value…</ChartPlaceholder>
+          </Card>
         )
       )}
     </div>

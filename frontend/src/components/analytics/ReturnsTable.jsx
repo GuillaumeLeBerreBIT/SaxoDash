@@ -1,54 +1,54 @@
-import { Card, CardHeader } from '../ui'
-import { fmtPct, pctTone, pctToneClass } from '../../lib/format'
+import { Card, Tag, Td, Th, Tr } from '../ui'
+import { fmtPct, pctTone } from '../../lib/format'
 import { needsDaysNote } from '../../lib/portfolioStats'
 
-const ALPHA_BADGE = {
-  positive: 'bg-emerald-500/10 text-emerald-400',
-  negative: 'bg-red-500/10 text-red-400',
-  neutral: 'bg-white/[0.05] text-zinc-500',
-}
+const TONE_TEXT = { positive: 'text-up', negative: 'text-down', neutral: 'text-ink-2' }
+const ALPHA_TAG = { positive: 'up', negative: 'down', neutral: 'neutral' }
 
-export default function ReturnsTable({ periods, benchmarkName }) {
+export default function ReturnsTable({ periods, benchmarkName, className = '' }) {
   return (
-    <Card padding={false}>
-      <div className="px-5 pt-5 pb-3">
-        <CardHeader title={`Returns vs ${benchmarkName}`} subtitle="Saxo account value change; deposits and withdrawals are not separated" />
-      </div>
-      <table className="w-full text-[var(--fig-sm)]">
-        <thead>
-          <tr className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 border-b border-white/[0.06]">
-            <th className="px-3 md:px-5 py-2 text-left font-medium">Period</th>
-            <th className="px-2 md:px-3 py-2 text-right font-medium">Portfolio</th>
-            <th className="hidden md:table-cell px-2 md:px-3 py-2 text-right font-medium">{benchmarkName}</th>
-            <th className="px-3 md:px-5 py-2 text-right font-medium">Alpha</th>
-          </tr>
-        </thead>
-        <tbody>
-          {periods.map((row) => (
-            <tr key={row.label} className="border-b border-white/[0.05] last:border-0">
-              <td className="px-3 md:px-5 py-2.5 text-zinc-300">{row.label}</td>
-              <td className={`px-2 md:px-3 py-2.5 text-right num ${row.portfolio_pct != null ? pctToneClass(row.portfolio_pct, 1) : 'text-zinc-600'}`}>
-                {fmtPct(row.portfolio_pct, { decimals: 1 })}
-                {row.portfolio_pct == null && needsDaysNote(row.needs_days) && (
-                  <div className="text-[var(--fig-2xs)] text-zinc-600">{needsDaysNote(row.needs_days)}</div>
-                )}
-              </td>
-              <td className="hidden md:table-cell px-2 md:px-3 py-2.5 text-right num text-zinc-400">{fmtPct(row.benchmark_pct, { decimals: 1 })}</td>
-              <td className="px-3 md:px-5 py-2.5 text-right num">
-                {row.alpha_pct != null ? (
-                  <span
-                    className={`px-1.5 py-0.5 rounded ${ALPHA_BADGE[pctTone(row.alpha_pct, 1)]}`}
-                  >
-                    {fmtPct(row.alpha_pct, { decimals: 1 })}
-                  </span>
-                ) : (
-                  <span className="text-zinc-600">—</span>
-                )}
-              </td>
+    <Card
+      flush
+      className={className}
+      context="Saxo account value change · deposits and withdrawals are not separated"
+      dot="ok"
+      title={`Returns vs ${benchmarkName}`}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <Th edge>Period</Th>
+              <Th align="right">Portfolio</Th>
+              <Th align="right" hideBelow="md">{benchmarkName}</Th>
+              <Th align="right" edge>Alpha</Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {periods.map((row) => (
+              <Tr key={row.label}>
+                <Td edge className="text-ink-2">{row.label}</Td>
+                <Td align="right" className={`font-semibold ${row.portfolio_pct != null ? TONE_TEXT[pctTone(row.portfolio_pct, 1)] : 'text-ink-3'}`}>
+                  {fmtPct(row.portfolio_pct, { decimals: 1 })}
+                  {row.portfolio_pct == null && needsDaysNote(row.needs_days) && (
+                    <div className="text-[12px] font-normal text-ink-3">{needsDaysNote(row.needs_days)}</div>
+                  )}
+                </Td>
+                <Td align="right" hideBelow="md" className="text-ink-2">{fmtPct(row.benchmark_pct, { decimals: 1 })}</Td>
+                <Td align="right" edge>
+                  {row.alpha_pct != null ? (
+                    <Tag tone={ALPHA_TAG[pctTone(row.alpha_pct, 1)]} className="num">
+                      {fmtPct(row.alpha_pct, { decimals: 1 })}
+                    </Tag>
+                  ) : (
+                    <span className="text-ink-3">—</span>
+                  )}
+                </Td>
+              </Tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   )
 }
