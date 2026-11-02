@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 
-import { InstrumentLogo, LetterAvatar, Td, Th, Tr } from '../ui'
+import StockLogo from '../StockLogo'
+import { Td, Th, Tr } from '../ui'
 import ChangeBadge from './ChangeBadge'
 import WeightBar from './WeightBar'
 import { EarlierCusipBadge, OptionBadge, YouBadge } from './HoldingBadges'
@@ -14,8 +15,8 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] text-[var(--fig-sm)]">
-        <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
+      <table className="w-full min-w-[720px]">
+        <thead>
           <tr>
             <Th edge>Holding</Th>
             <Th align="right">% of portfolio</Th>
@@ -37,42 +38,37 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
               >
                 <Td edge>
                   <div className="flex items-center gap-2.5">
-                    <InstrumentLogo
-                      symbol={h.ticker}
-                      size={24}
-                      className="rounded"
-                      fallback={<LetterAvatar symbol={h.ticker ?? h.issuer} size={24} />}
-                    />
+                    <StockLogo ticker={h.ticker} label={h.issuer} size={28} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         {href ? (
                           <Link
                             to={href}
                             onClick={(e) => e.stopPropagation()}
-                            className="font-mono font-semibold text-zinc-100 hover:text-blue-300"
+                            className="font-bold text-ink hover:underline"
                           >
                             {h.ticker}
                           </Link>
                         ) : (
-                          <span className="text-zinc-200">{holdingLabel(h)}</span>
+                          <span className="font-semibold text-ink">{holdingLabel(h)}</span>
                         )}
                         <OptionBadge putCall={h.put_call} />
                         <EarlierCusipBadge inherited={h.ticker_inherited} />
                       </div>
-                      {h.ticker && <div className="text-[var(--fig-xs)] text-zinc-500 truncate max-w-[260px]">{h.issuer}</div>}
+                      {h.ticker && <div className="text-[12px] text-ink-3 truncate max-w-[260px]">{h.issuer}</div>}
                     </div>
                   </div>
                 </Td>
                 <Td align="right">
                   <div className="flex items-center justify-end gap-2">
-                    <span className="num font-mono text-zinc-200">{fmtPct(h.weight, { sign: false, decimals: 1 })}</span>
+                    <span className="num text-ink">{fmtPct(h.weight, { sign: false, decimals: 1 })}</span>
                     <WeightBar weight={h.weight} max={max} className="w-16" />
                   </div>
                 </Td>
-                <Td align="right" className="num font-mono text-zinc-300">{fmtUsdCompact(h.value)}</Td>
-                <Td align="right" className="num font-mono text-zinc-400">{fmtNum(h.shares)}</Td>
+                <Td align="right" className="text-ink">{fmtUsdCompact(h.value)}</Td>
+                <Td align="right" className="text-ink-2">{fmtNum(h.shares)}</Td>
                 {showChange && <Td><ChangeBadge change={h.change} pct={h.shares_change_pct} /></Td>}
-                <Td align="right" className="num font-mono text-zinc-400">{`${h.quarters_held}q`}</Td>
+                <Td align="right" className="text-ink-2">{`${h.quarters_held}q`}</Td>
                 <Td edge><YouBadge owned={h.owned} watched={h.watched} /></Td>
               </Tr>
             )

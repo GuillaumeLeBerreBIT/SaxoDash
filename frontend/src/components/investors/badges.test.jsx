@@ -19,9 +19,11 @@ describe('ChangeBadge', () => {
     expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-ink-2')
   })
 
-  it('shows a position grown a thousand percent or more as a multiple', () => {
+  it('ChangeBadge caps absurd percentages', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={76194} />)
-    expect(screen.getByText('▲ Added 763×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Added >10×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={1000} />)
+    expect(screen.getByText('▲ Added >10×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={999.4} />)
     expect(screen.getByText('▲ Added 999%')).toBeInTheDocument()
   })

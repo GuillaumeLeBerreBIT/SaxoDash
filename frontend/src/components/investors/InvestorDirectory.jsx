@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { useInvestors } from '../../api/queries'
-import { Alert, EmptyState, Input, Select, Skeleton, TBtn } from '../ui'
+import { Alert, Card, Chip, EmptyState, Input, Segmented, Select, Skeleton } from '../ui'
 import InvestorCards from './InvestorCards'
 import InvestorTable from './InvestorTable'
 import { directoryChips, directoryInvestors } from '../../lib/investorHub'
@@ -10,7 +10,7 @@ import { INVESTOR_SORTS, looksLikeTicker } from '../../lib/investors'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
 const DEFAULTS = { chip: 'all', sort: 'value', layout: 'cards' }
-const HEADING_ID = 'investor-directory-heading'
+const LAYOUTS = [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }]
 
 function useDirectoryParams() {
   const [params, setParams] = useSearchParams()
@@ -57,35 +57,38 @@ export default function InvestorDirectory({ cards, isLoading, error }) {
   const resolving = looksLikeTicker(query) && (debounced !== query.trim() || (holds !== '' && holdersFetching))
 
   return (
-    <section ref={ref} id="directory" aria-labelledby={HEADING_ID} className="scroll-mt-4 flex flex-col gap-3">
-      <h2 id={HEADING_ID} className="text-[var(--fig-md)] font-semibold text-zinc-100">All investors</h2>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div role="group" aria-label="Show investors" className="flex items-center gap-0.5 flex-wrap">
-          {directoryChips(cards).map(([key, label]) => (
-            <TBtn key={key} active={chip === key} onClick={() => write('chip', key)}>{label}</TBtn>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Input
-            type="search"
-            aria-label="Search investors"
-            placeholder="Investor, firm or ticker"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-56"
-          />
-          <Select aria-label="Sort investors" value={sort} onChange={(e) => write('sort', e.target.value)}>
-            {INVESTOR_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-          </Select>
-          <div role="group" aria-label="Investor layout" className="flex items-center gap-0.5">
-            <TBtn active={layout === 'cards'} onClick={() => write('layout', 'cards')}>Cards</TBtn>
-            <TBtn active={layout === 'table'} onClick={() => write('layout', 'table')}>Table</TBtn>
+    <section ref={ref} id="directory" aria-label="All investors" className="scroll-mt-4">
+      <Card
+        context={`13F filers · ${cards.length} tracked`}
+        title="All investors"
+        right={<Segmented label="Investor layout" options={LAYOUTS} value={layout} onChange={(value) => write('layout', value)} />}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div role="group" aria-label="Show investors" className="flex items-center gap-1.5 flex-wrap">
+              {directoryChips(cards).map(([key, label]) => (
+                <Chip key={key} active={chip === key} onClick={() => write('chip', key)}>{label}</Chip>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Input
+                type="search"
+                aria-label="Search investors"
+                placeholder="Investor, firm or ticker"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-56"
+              />
+              <Select aria-label="Sort investors" value={sort} onChange={(e) => write('sort', e.target.value)}>
+                {INVESTOR_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </Select>
+            </div>
           </div>
+          {error
+            ? <Alert>Could not load investors. {error.message}</Alert>
+            : <Results visible={visible} layout={layout} query={query} searching={query.trim() !== ''} waiting={isLoading || (visible.length === 0 && resolving)} />}
         </div>
-      </div>
-      {error
-        ? <Alert>Could not load investors. {error.message}</Alert>
-        : <Results visible={visible} layout={layout} query={query} searching={query.trim() !== ''} waiting={isLoading || (visible.length === 0 && resolving)} />}
+      </Card>
     </section>
   )
 }

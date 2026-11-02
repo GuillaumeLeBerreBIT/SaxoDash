@@ -25,7 +25,7 @@ export function FundChange({ ticker, stock, quarter }) {
   return (
     <OwnershipLink to={researchHref(ticker, 'funds')} label={label}>
       <span>{`${up ? '▲' : '▼'}\u00a0${up ? '+' : '-'}${fmtSharesCompact(change.shares)}`}</span>
-      {showPct ? <span className="hidden min-[1600px]:inline text-[var(--fig-2xs)] text-zinc-500">{fmtPct(change.pct, { decimals: 1 })}</span> : null}
+      {showPct ? <span className="hidden min-[1600px]:inline text-[11px] text-ink-3">{fmtPct(change.pct, { decimals: 1 })}</span> : null}
     </OwnershipLink>
   )
 }

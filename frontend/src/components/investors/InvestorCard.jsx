@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { usePrefetchInvestor } from '../../api/queries'
-import { Card, InstrumentLogo, LetterAvatar } from '../ui'
+import StockLogo from '../StockLogo'
 import FollowButton from './FollowButton'
 import ImportProgress from './ImportProgress'
 import InvestorAvatar from './InvestorAvatar'
@@ -14,12 +14,7 @@ const movement = (c) => (c.new_count == null ? UNKNOWN : `${fmtCount(c.new_count
 
 function HoldingLogo({ holding }) {
   return (
-    <InstrumentLogo
-      symbol={holding.ticker}
-      size={22}
-      className="rounded-full ring-2 ring-zinc-900"
-      fallback={<LetterAvatar symbol={holding.ticker ?? holding.issuer} size={22} />}
-    />
+    <StockLogo ticker={holding.ticker} label={holding.issuer} size={22} className="ring-2 ring-tile" />
   )
 }
 
@@ -32,7 +27,7 @@ export function TopLogos({ holdings, tab }) {
           to={researchHref(h.ticker, tab)}
           aria-label={h.ticker}
           title={h.ticker}
-          className="relative z-10 rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-blue-500"
+          className="relative z-10 rounded-full transition-transform hover:z-20 hover:-translate-y-0.5 focus-visible:z-20 focus-visible:outline-2 focus-visible:outline-focus"
         >
           <HoldingLogo holding={h} />
         </Link>
@@ -44,16 +39,16 @@ export function TopLogos({ holdings, tab }) {
 }
 
 export function LatestLine({ investor }) {
-  if (!investor.latest_quarter) return <span className="text-zinc-500">No filings imported yet</span>
-  if (investor.stale) return <span className="text-amber-400">{`No 13F since ${quarterLabel(investor.latest_quarter)}`}</span>
-  return <span className="text-zinc-500">{`${quarterLabel(investor.latest_quarter)} · filed ${fmtFiledDate(investor.last_filing_at)}`}</span>
+  if (!investor.latest_quarter) return <span className="text-ink-3">No filings imported yet</span>
+  if (investor.stale) return <span className="text-warn [[data-theme=light]_&]:text-warn-text">{`No 13F since ${quarterLabel(investor.latest_quarter)}`}</span>
+  return <span className="text-ink-3">{`${quarterLabel(investor.latest_quarter)} · filed ${fmtFiledDate(investor.last_filing_at)}`}</span>
 }
 
 export default function InvestorCard({ investor, className = '' }) {
   const prefetch = usePrefetchInvestor()
   const warm = () => prefetch(investor.slug)
   return (
-    <Card interactive className={`relative h-full flex flex-col gap-2 ${className}`}>
+    <div className={`relative h-full flex flex-col gap-2 bg-tile rounded-[10px] px-3.5 py-3 hover:bg-hover transition-colors ${className}`}>
       <div data-testid="investor-card" className="contents">
         <div className="flex items-start gap-2.5">
           <InvestorAvatar name={investor.name} photo={investor.photo_url} logo={investor.logo_url} />
@@ -62,26 +57,26 @@ export default function InvestorCard({ investor, className = '' }) {
               to={`/investors/${investor.slug}`}
               onMouseEnter={warm}
               onFocus={warm}
-              className="block truncate text-[var(--fig-sm)] font-medium text-zinc-100 after:absolute after:inset-0 after:rounded-lg focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-blue-500"
+              className="block truncate text-[14px] font-bold text-ink after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-focus"
             >
               {investor.name}
             </Link>
-            {investor.firm !== investor.name ? <div className="text-[var(--fig-xs)] text-zinc-500 truncate">{investor.firm}</div> : null}
+            {investor.firm !== investor.name ? <div className="text-[12px] text-ink-3 truncate">{investor.firm}</div> : null}
           </div>
           <FollowButton investor={investor} />
         </div>
         <StyleChips styles={investor.styles} />
         <ImportProgress progress={investor.import} />
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[var(--fig-md)] num font-mono text-zinc-50">{fmtUsdCompact(investor.total_value)}</span>
-          <span className="text-[var(--fig-xs)] num font-mono text-zinc-500">{investor.positions == null ? UNKNOWN : `${fmtNum(investor.positions)} pos`}</span>
+          <span className="text-[17px] font-bold num text-ink">{fmtUsdCompact(investor.total_value)}</span>
+          <span className="text-[12px] num text-ink-3">{investor.positions == null ? UNKNOWN : `${fmtNum(investor.positions)} pos`}</span>
         </div>
-        <div className="flex items-center justify-between gap-2 text-[var(--fig-xs)]">
+        <div className="flex items-center justify-between gap-2 text-[12px]">
           <TopLogos holdings={investor.top_holdings} />
-          <span className="num font-mono text-zinc-400 text-right">{movement(investor)}</span>
+          <span className="num text-ink-2 text-right">{movement(investor)}</span>
         </div>
-        <div className="mt-auto text-[var(--fig-xs)]"><LatestLine investor={investor} /></div>
+        <div className="mt-auto text-[12px]"><LatestLine investor={investor} /></div>
       </div>
-    </Card>
+    </div>
   )
 }

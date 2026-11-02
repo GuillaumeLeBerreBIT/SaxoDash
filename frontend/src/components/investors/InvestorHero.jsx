@@ -12,7 +12,7 @@ function StopTracking({ detail }) {
   const [confirming, setConfirming] = useState(false)
   const navigate = useNavigate()
   const stop = useStopTracking()
-  if (!confirming) return <Button size="sm" onClick={() => setConfirming(true)}>Stop tracking</Button>
+  if (!confirming) return <Button size="sm" variant="ghost" onClick={() => setConfirming(true)}>Stop tracking</Button>
   return (
     <span className="flex items-center gap-2">
       <Button size="sm" variant="destructive" disabled={stop.isPending} onClick={() => stop.mutate(detail.slug, { onSuccess: () => navigate('/investors') })}>
@@ -24,35 +24,42 @@ function StopTracking({ detail }) {
   )
 }
 
-export default function InvestorHero({ detail, onQuarter }) {
+export function InvestorActions({ detail, onQuarter }) {
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-start gap-3 flex-wrap">
-        <InvestorAvatar name={detail.name} photo={detail.photo_url} logo={detail.logo_url} size={52} />
+    <div className="flex items-center gap-2 flex-wrap">
+      {detail.quarters.length > 0 ? (
+        <Select
+          aria-label="Quarter"
+          value={detail.quarter}
+          onChange={(e) => onQuarter(e.target.value === detail.quarters[0] ? null : e.target.value)}
+          className="h-8 text-[13px]"
+        >
+          {detail.quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
+        </Select>
+      ) : null}
+      <FollowButton investor={detail} labelled />
+      {detail.curated ? null : <StopTracking detail={detail} />}
+    </div>
+  )
+}
+
+export default function InvestorHero({ detail }) {
+  return (
+    <header className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-4 flex-wrap">
+        <InvestorAvatar name={detail.name} photo={detail.photo_url} logo={detail.logo_url} size={56} />
         <div className="min-w-[11rem] flex-1">
-          <h1 className="text-[var(--fig-xl)] font-semibold text-zinc-50">{detail.name}</h1>
-          {detail.firm !== detail.name ? <p className="text-[var(--fig-sm)] text-zinc-400">{detail.firm}</p> : null}
+          <h1 className="text-[22px] font-bold tracking-tight text-ink [text-wrap:balance]">{detail.name}</h1>
+          {detail.firm !== detail.name ? <p className="text-[14px] text-ink-2">{detail.firm}</p> : null}
           {detail.stale && detail.quarter ? (
-            <p className="text-[var(--fig-xs)] text-amber-400 mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
+            <p className="text-[12px] font-semibold text-warn [[data-theme=light]_&]:text-warn-text mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
           ) : null}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {detail.quarters.length > 0 ? (
-            <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
-              Quarter
-              <Select aria-label="Quarter" value={detail.quarter} onChange={(e) => onQuarter(e.target.value === detail.quarters[0] ? null : e.target.value)}>
-                {detail.quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
-              </Select>
-            </label>
-          ) : null}
-          <FollowButton investor={detail} labelled className="border border-white/10 px-2.5 h-9" />
-          {detail.curated ? null : <StopTracking detail={detail} />}
-        </div>
+        <StyleChips styles={detail.styles} />
       </div>
-      <StyleChips styles={detail.styles} />
-      {detail.blurb ? <p className="text-[var(--fig-sm)] text-zinc-400 max-w-[70ch]">{detail.blurb}</p> : null}
+      {detail.blurb ? <p className="text-[13px] text-ink-2 max-w-[70ch]">{detail.blurb}</p> : null}
       {detail.photo_credit_url ? (
-        <a href={detail.photo_credit_url} target="_blank" rel="noopener noreferrer" className="text-[var(--fig-2xs)] text-zinc-600 hover:text-zinc-400 w-fit">
+        <a href={detail.photo_credit_url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-ink-3 hover:text-ink-2 w-fit">
           Photo: Wikimedia Commons
         </a>
       ) : null}

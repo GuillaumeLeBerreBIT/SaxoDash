@@ -123,6 +123,14 @@ describe('top ten', () => {
     expect(slices[10]).toMatchObject({ name: 'Other', color: OTHER_SLICE, logo: false, weight: 20 })
   })
 
+  it('colours donut slices from the palette it is given', () => {
+    const palette = { series: ['s0', 's1', 's2', 's3', 's4', 's5', 's6', 's7'], estimate: 'other' }
+    const slices = donutSlices(detail, palette)
+    expect(slices[0].color).toBe('s0')
+    expect(slices[9].color).toBe('s1')
+    expect(slices[10].color).toBe('other')
+  })
+
   it('names a single leftover position in the singular', () => {
     const eleven = { holdings: holdings.slice(0, 11), positions: 11, total_value: 1045, top10_weight: 90 }
     expect(donutSlices(eleven)[10].note).toBe('1 smaller position')
