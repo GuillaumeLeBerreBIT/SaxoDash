@@ -225,13 +225,30 @@ describe('OverviewTab company view', () => {
 
 describe('OverviewTab on the new design', () => {
   it('lays the cards out in two columns, chart side first', () => {
-    renderOverview({ lead: <div data-testid="lead" />, allBars: risingBars(300) })
+    renderOverview({ lead: <div data-testid="lead" />, signals: <div data-testid="side-slot" />, allBars: risingBars(300) })
 
     const [left, right] = screen.getAllByTestId(/overview-col/)
     expect(left).toHaveAttribute('data-testid', 'overview-col-main')
     expect(left.firstChild).toBe(screen.getByTestId('lead'))
     expect(left).toContainElement(screen.getByRole('heading', { name: 'Performance' }))
-    expect(right).toContainElement(screen.getByRole('heading', { name: 'Your position' }))
+    expect(right).toContainElement(screen.getByTestId('side-slot'))
+  })
+
+  it('pairs the header with Your position in one row so they stand level', () => {
+    renderOverview({ header: <div data-testid="header" /> })
+
+    const row = screen.getByTestId('overview-top')
+    const [main, side] = row.children
+    expect(main).toContainElement(screen.getByTestId('header'))
+    expect(side).toContainElement(screen.getByRole('heading', { name: 'Your position' }))
+    expect(row).toHaveClass('items-stretch')
+    expect(screen.getByRole('heading', { name: 'Your position' }).closest('.sd-panel')).toHaveClass('h-full')
+  })
+
+  it('puts the watchlist first in the side column, under Your position', () => {
+    renderOverview({ rail: <div data-testid="rail" />, signals: <div data-testid="side-slot" /> })
+
+    expect(screen.getByTestId('overview-col-side').firstChild).toBe(screen.getByTestId('rail'))
   })
 
   it('says when the symbol is not in the book', () => {

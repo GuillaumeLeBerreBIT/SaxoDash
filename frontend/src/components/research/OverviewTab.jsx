@@ -17,6 +17,8 @@ import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
 const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
 const COL = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
+const TOP_ROW = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch'
+const TOP_CELL = 'flex flex-col min-w-0 [&>*]:flex-1'
 
 function Fact({ label, value }) {
   return (
@@ -74,7 +76,7 @@ function positionContext(position) {
 function PositionCard({ symbol, position }) {
   if (!position) {
     return (
-      <Card context="Not in your book" dot="off" title="Your position">
+      <Card context="Not in your book" dot="off" title="Your position" className="h-full">
         <p className="text-[13px] text-ink-2">You don’t hold {symbol}.</p>
       </Card>
     )
@@ -85,7 +87,7 @@ function PositionCard({ symbol, position }) {
     position.price_source && position.price_source !== 'live' ? priceBasis(position.price_source).note : undefined
 
   return (
-    <Card context={positionContext(position)} dot={basis ? 'warn' : 'ok'} title="Your position">
+    <Card context={positionContext(position)} dot={basis ? 'warn' : 'ok'} title="Your position" className="h-full">
       <div className="grid grid-cols-2 gap-2">
         <Tile label="Market value" value={fmtEur(position.value, { decimals: 0 })} />
         <Tile
@@ -181,6 +183,7 @@ export default function OverviewTab({
   reviewing = false,
   companyData = COMPANY_DATA.eligible,
   earnings,
+  header,
   lead,
   signals,
   rail,
@@ -191,38 +194,45 @@ export default function OverviewTab({
   const hasReturns = returns.some((row) => row.pct != null)
 
   return (
-    <div className={BOARD}>
-      <div data-testid="overview-col-main" className={`min-[1100px]:col-span-8 ${COL}`}>
-        {lead}
-        {hasReturns && (
-          <Card context="Change in price up to the latest close" dot="ok" title="Performance">
-            <div className="sm:[&>ul]:grid-cols-6">
-              <PerformanceTiles returns={returns} />
-            </div>
-          </Card>
-        )}
-        <RangeStatsCard bars={bars} range={range} />
-        <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />
-        <ThesisAndRisksCard
-          note={note?.data}
-          onSave={onSaveNote}
-          onMarkReviewed={onMarkReviewed}
-          reviewing={reviewing}
-          fundamentals={fundamentals}
-          currency={details?.currency}
-        />
+    <div className={COL}>
+      <div data-testid="overview-top" className={TOP_ROW}>
+        <div className={`min-[1100px]:col-span-8 ${TOP_CELL}`}>{header}</div>
+        <div className={`min-[1100px]:col-span-4 ${TOP_CELL}`}>
+          <PositionCard symbol={symbol} position={position} />
+        </div>
       </div>
+      <div className={BOARD}>
+        <div data-testid="overview-col-main" className={`min-[1100px]:col-span-8 ${COL}`}>
+          {lead}
+          {hasReturns && (
+            <Card context="Change in price up to the latest close" dot="ok" title="Performance">
+              <div className="sm:[&>ul]:grid-cols-6">
+                <PerformanceTiles returns={returns} />
+              </div>
+            </Card>
+          )}
+          <RangeStatsCard bars={bars} range={range} />
+          <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />
+          <ThesisAndRisksCard
+            note={note?.data}
+            onSave={onSaveNote}
+            onMarkReviewed={onMarkReviewed}
+            reviewing={reviewing}
+            fundamentals={fundamentals}
+            currency={details?.currency}
+          />
+        </div>
 
-      <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
-        <PositionCard symbol={symbol} position={position} />
-        <CompanyReads companyData={companyData} fundamentals={fundamentals} />
-        {company && <AnalystRatingCard fundamentals={company} />}
-        {signals}
-        {company && <CapitalStructureCard fundamentals={company} />}
-        {company && <OwnershipCard fundamentals={company} />}
-        <NextEarningsCard earnings={earnings} onOpenTab={onOpenTab} />
-        <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
-        {rail}
+        <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
+          {rail}
+          <CompanyReads companyData={companyData} fundamentals={fundamentals} />
+          {company && <AnalystRatingCard fundamentals={company} />}
+          {signals}
+          {company && <CapitalStructureCard fundamentals={company} />}
+          {company && <OwnershipCard fundamentals={company} />}
+          <NextEarningsCard earnings={earnings} onOpenTab={onOpenTab} />
+          <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
+        </div>
       </div>
     </div>
   )

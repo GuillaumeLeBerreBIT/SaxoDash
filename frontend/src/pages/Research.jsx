@@ -186,14 +186,10 @@ export default function Research() {
           companyData={companyData}
           earnings={earnings}
           onOpenTab={setTab}
-          lead={
-            <>
-              {header}
-              {chartPanel}
-            </>
-          }
+          header={header}
+          lead={chartPanel}
           signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} onOpenTab={setTab} />}
-          rail={<WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
+          rail={<WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
       </div>
     )
@@ -231,7 +227,7 @@ export default function Research() {
           {shown('guide') ? <GuideTab /> : null}
         </div>
         <div className="min-w-0 min-[1440px]:col-span-3">
-          <WatchlistRail symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+          <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
       </div>
     </div>
