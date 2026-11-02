@@ -1,8 +1,8 @@
 # DESIGN.md — SaxoDash
 
 The visual and interaction system for SaxoDash. It replaces the zinc/blue look of the 2026-09
-design system (`docs/design-system.md`, kept for history) with the direction agreed in the
-October 2026 redesign rounds.
+design system (that `docs/design-system.md` is in git history and now points here) with the
+direction agreed in the October 2026 redesign rounds.
 
 - **Reference prototype**: https://claude.ai/artifact/YAFabdj3qWKZbXiBfVPGZz. Every page, the
   Chart board, custom boards with edit mode, ⌘K, the theme switch and phone layouts, on real data.
@@ -268,30 +268,32 @@ Panels are `--sd-pane`, radius 12, with no border and no shadow (Porcelain adds 
 ### 5.4 Header (app frame)
 
 ```
-Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics  Money    [Search ⌘K] [€42,634.84 ▼3.06%] [€821.54] (G•)
+Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics  Money    [Search ⌘K] [€42,634.84] [€821.54] [Bell] (G•)
 ```
 
 - Tabs are 17/700 words, with 22 px between them. They scroll sideways if needed and never wrap.
 - **Pills** are 36 px tall, `--sd-pill`, radius 10, 14/700:
   - Search: Ink 3 text and a ⌘K key.
-  - Saxo account value with the day move.
+  - Saxo account value. It shows the value alone until an endpoint provides the day move;
+    the move joins then.
   - Cash across accounts.
   - Account button with its initial and a status dot: Warning when Saxo needs re-authentication,
     OK otherwise.
 - Below 1420 px the cash pill hides. Below 760 px tabs and Search hide, the page title shows,
   and the bottom bar takes over.
 - The header is sticky. Its top band is painted so nothing scrolls under the safe-area inset.
+- The filing-alerts bell sits beside the account button, not inside its menu.
 - The account button opens a menu: Saxo status (with "Reconnect"), Theme and colours, Sync
-  health, Filing alerts, Sign out. Settings lives here, not in the tabs.
+  health, Sign out. Settings lives here, not in the tabs.
 
 ### 5.5 Controls
 
 | Component | Spec |
 |---|---|
-| **Button** | 32 px tall (28 px small), radius 8, 13/600, `--sd-raised`. Primary is `--sd-accent` with On-accent text, at most one per view. Ghost has no fill. Destructive actions are ghost with Error text and confirm in place ("Click again to delete"). |
+| **Button** | 32 px tall (28 px small), radius 8, 13/600 (small 12/600), `--sd-raised`. Primary is `--sd-accent` with On-accent text, at most one per view. Ghost has no fill. Destructive actions are ghost with Error text and confirm in place ("Click again to delete"). |
 | **Segmented** | `--sd-track` track with 3 px padding, radius 9. Segments are 28 px, radius 7, 13/600 Ink 3; the active one is `--sd-selected` with Ink. Used for ranges, views, period and benchmark. |
-| **Chip** | 28 px, radius 8, `--sd-raised`, 12.5/600 Ink 2. Pressed is `--sd-accent-subtle` with Ink and a 1 px Ink 3 ring. A count sits inside in Ink 3 ("Oversold **15**"). Used for lenses, filters and symbol switchers. |
-| **Tag** | 22 px, radius 6, `--sd-pill`, 11.5/600. Variants: held, earn (E), warn, up, down, Example. |
+| **Chip** | 28 px, radius 8, `--sd-raised`, 12/600 Ink 2. Pressed is `--sd-accent-subtle` with Ink and a 1 px Ink 3 ring. A count sits inside in Ink 3 ("Oversold **15**"). Used for lenses, filters and symbol switchers. |
+| **Tag** | 22 px, radius 6, `--sd-pill`, 11/600. Variants: held, earn (E), warn, up, down, Example. |
 | **Input** | 34 px, radius 8, `--sd-track` fill, 1 px `--sd-line-input`. |
 | **Tabs (sub)** | 15/700 words, Ink 3, active Ink, no underline in Republic. Board tabs are the same type on 34 px pills, with the active one on `--sd-pill`. |
 | **Tile** | `--sd-tile`, radius 10, 12×14 padding. Label 12 Ink 3, value 20/700, sub-line 12 Ink 2. Tiles sit in an auto-fit grid of minimum 150 px. |
@@ -380,7 +382,7 @@ Overview · Portfolio · Research · **Boards** · Discover · Earnings · Inves
 | `/research` | Research | `?symbol=&tab=`, 10 tabs (§6.2) |
 | `/boards` | Boards → Chart | The Chart workspace (was `/research/chart`) |
 | `/boards/:id` | A custom board | |
-| `/discover`, `/discover/:key` | Discover, shelf | |
+| `/discover`, `/discover/:key` | Discover, shelf | Views: Cards (default) · Compact (the prototype's panels) |
 | `/earnings` | Earnings | |
 | `/investors`, `/investors/:slug`, `/investors/stocks`, `/investors/congress/:slug` | Investors | Funds / Congress switch |
 | `/analytics` | Analytics | |
@@ -410,7 +412,8 @@ Statistics). Every existing card stays, re-skinned and re-arranged as follows.
 - the tab row and the held-symbol chip switcher;
 - "Open in Chart".
 
-On the tabs other than Overview, the user's position shows inline in the header.
+On the tabs other than Overview, the user's position shows inline in the header. The price
+chart sits on Overview only; the watchlist rail sits beside every tab.
 
 **Overview** splits into two columns:
 
@@ -427,7 +430,7 @@ On the tabs other than Overview, the user's position shows inline in the header.
 
 | Tab | Content |
 |---|---|
-| Financials | Revenue and profit; the step-by-step from revenue to profit; quarterly margins; capex vs free cash flow; cash and debt; assets and liabilities; statements table |
+| Financials | Revenue and profit; the step-by-step from revenue to profit; quarterly margins; cash and debt; assets and liabilities; statements table |
 | Statistics | Ratio groups; valuation vs its own history; ratios by year (chart and table) |
 | Peers | Comparison table; quality vs valuation quadrant |
 | Earnings | Next earnings; beat record; signals; EPS vs estimate; annual EPS |
@@ -489,7 +492,8 @@ The verdict wording and thresholds stay in `lib/snapshot.js`, `lib/quadrant.js` 
   moves, and re-renders on change. `withAlpha()` stays for hex inputs. No chart file holds a
   colour literal.
 - **No palette classes.** After the migration no `zinc-*`, `emerald-*`, `red-*`, `amber-*` or
-  `blue-*` class and no hex literal may appear outside `theme.js`. A test enforces this.
+  `blue-*` class and no hex literal may appear outside `theme.js`. `src/test/noPaletteClasses.test.js`
+  enforces this.
 - **Primitives** live in `src/components/ui.jsx` and keep their names: Card is the panel, with
   `context`, `title` and `menu`.
 - **Motion**: 150 ms for hover and focus, 200 ms for page fade-in. `prefers-reduced-motion`
