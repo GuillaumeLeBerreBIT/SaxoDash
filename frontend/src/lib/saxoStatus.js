@@ -1,8 +1,8 @@
 export const SAXO_DOT_CLASS = {
-  emerald: 'bg-emerald-400',
-  amber: 'bg-amber-400',
-  red: 'bg-red-400',
-  zinc: 'bg-zinc-500',
+  emerald: 'bg-ok',
+  amber: 'bg-warn',
+  red: 'bg-error',
+  zinc: 'bg-ink-3',
 }
 
 export function deriveSaxoStatus(status) {

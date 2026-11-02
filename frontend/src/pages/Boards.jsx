@@ -141,7 +141,13 @@ export default function Boards() {
   const [boards, setBoards] = useState(loadBoards)
   const [edit, setEdit] = useState(null)
   const [saveFailed, setSaveFailed] = useState(false)
+  const [warnedOn, setWarnedOn] = useState(id)
   const nameRef = useRef(null)
+
+  if (warnedOn !== id) {
+    setWarnedOn(id)
+    setSaveFailed(false)
+  }
 
   const stored = boards.find((b) => b.id === id) ?? null
   const editing = Boolean(edit && edit.board.id === id)
@@ -198,6 +204,7 @@ export default function Boards() {
   const change = (next) => setEdit((current) => ({ ...current, board: next, focusName: false }))
 
   const cancel = () => {
+    setSaveFailed(false)
     if (edit.unsavedId) {
       setBoards(boards.filter((b) => b.id !== edit.unsavedId))
       setEdit(null)

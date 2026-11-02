@@ -68,12 +68,23 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref, stac
     setQuery('')
   }
 
+  const filter = (
+    <div className={`flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0 ${stacked ? 'self-start' : ''}`}>
+      {FILTERS.map(([value, label]) => (
+        <TBtn key={value} active={assetTypes === value} onClick={() => setAssetTypes(value)}>
+          {label}
+        </TBtn>
+      ))}
+    </div>
+  )
+
   return (
     <div
       ref={wrapperRef}
       data-testid="instrument-search"
-      className={`relative flex gap-2 ${stacked ? 'flex-col-reverse items-stretch' : 'items-center'}`}
+      className={`relative flex gap-2 ${stacked ? 'flex-col items-stretch' : 'items-center'}`}
     >
+      {stacked ? filter : null}
       <div className="relative flex-1">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none" />
         <input
@@ -85,13 +96,7 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref, stac
         />
       </div>
 
-      <div className={`flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0 ${stacked ? 'self-start' : ''}`}>
-        {FILTERS.map(([value, label]) => (
-          <TBtn key={value} active={assetTypes === value} onClick={() => setAssetTypes(value)}>
-            {label}
-          </TBtn>
-        ))}
-      </div>
+      {stacked ? null : filter}
 
       {menuRect && isError && createPortal(
         <div

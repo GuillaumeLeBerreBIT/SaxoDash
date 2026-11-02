@@ -202,7 +202,7 @@ describe('ResearchChart', () => {
   it('gives the rail search its full width by stacking the asset filter on its own row', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
-    expect(screen.getByTestId('instrument-search')).toHaveClass('flex-col-reverse')
+    expect(screen.getByTestId('instrument-search')).toHaveClass('flex-col')
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toHaveAttribute('placeholder', 'Search any stock or ETF…')
   })
 

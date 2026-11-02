@@ -1,15 +1,16 @@
 import { useRef, useState } from 'react'
 
 import { DRAG_THRESHOLD, PAD_R, PAD_T, svgY } from '../../lib/chartGeometry'
-import { LINE_STROKES, badgePrice, edgeOf, parsePriceInput, roundPrice } from '../../lib/priceLines'
+import { badgePrice, edgeOf, lineStrokes, parsePriceInput, roundPrice } from '../../lib/priceLines'
+import { useChartColors } from '../../theme/useChartColors'
 
 const TAG = { target: 'T', stop: 'S', free: '' }
 const HIT_WIDTH = 10
 
 const stop = (event) => event.stopPropagation()
 
-function Badge({ line, price, y, width, selected }) {
-  const color = LINE_STROKES[line.kind]
+function Badge({ line, price, y, width, selected, colors }) {
+  const color = lineStrokes(colors)[line.kind]
 
   return (
     <g data-testid={`price-badge-${line.id}`} pointerEvents="none">
@@ -19,15 +20,15 @@ function Badge({ line, price, y, width, selected }) {
         width={PAD_R - 4}
         height={16}
         rx={2}
-        fill={selected ? color : '#18181b'}
+        fill={selected ? color : colors.tooltip.bg}
         stroke={color}
       />
       <text
         x={width - PAD_R + 6}
         y={y + 3.5}
-        fill={selected ? '#09090b' : color}
+        fill={selected ? colors.onAccent : color}
         fontSize="10"
-        fontFamily="Geist Mono"
+        className="num"
       >
         {`${TAG[line.kind]} ${badgePrice(price)}`.trim()}
       </text>
@@ -35,8 +36,8 @@ function Badge({ line, price, y, width, selected }) {
   )
 }
 
-function EdgeMarker({ line, edge, width, chartH }) {
-  const color = LINE_STROKES[line.kind]
+function EdgeMarker({ line, edge, width, chartH, colors }) {
+  const color = lineStrokes(colors)[line.kind]
   const x = width - PAD_R + 8
   const y = edge === 'above' ? PAD_T + 6 : PAD_T + chartH - 6
   const points =
@@ -47,14 +48,14 @@ function EdgeMarker({ line, edge, width, chartH }) {
   return (
     <g data-testid={`price-edge-${line.id}`} pointerEvents="none">
       <polygon points={points} fill={color} />
-      <text x={x + 8} y={y + 3.5} fill={color} fontSize="10" fontFamily="Geist Mono">
+      <text x={x + 8} y={y + 3.5} fill={color} fontSize="10" className="num">
         {badgePrice(line.price)}
       </text>
     </g>
   )
 }
 
-function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEditLabel }) {
+function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEditLabel, colors }) {
   const [preview, setPreview] = useState(null)
   const [heldFrom, setHeldFrom] = useState(null)
   const drag = useRef(null)
@@ -64,11 +65,12 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
   }
 
   const edge = preview == null ? edgeOf(line.price, geometry) : null
-  if (edge) return <EdgeMarker line={line} edge={edge} width={width} chartH={geometry.chartH} />
+  if (edge) return <EdgeMarker line={line} edge={edge} width={width} chartH={geometry.chartH} colors={colors} />
 
   const price = preview ?? line.price
   const y = geometry.scaleY(price)
   const x2 = width - PAD_R
+  const stroke = lineStrokes(colors)[line.kind]
 
   const cancel = () => {
     drag.current = null
@@ -83,7 +85,7 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         x2={x2}
         y1={y}
         y2={y}
-        stroke={LINE_STROKES[line.kind]}
+        stroke={stroke}
         strokeWidth={selected ? 2 : 1}
         strokeDasharray={line.kind === 'free' ? undefined : '6 4'}
         pointerEvents="none"
@@ -128,9 +130,9 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
           if (line.kind === 'free') onEditLabel(line.id)
         }}
       />
-      <Badge line={line} price={price} y={y} width={width} selected={selected} />
+      <Badge line={line} price={price} y={y} width={width} selected={selected} colors={colors} />
       {line.label ? (
-        <text x={4} y={y - 6} fill={LINE_STROKES[line.kind]} fontSize="10" fontFamily="Geist Mono" pointerEvents="none">
+        <text x={4} y={y - 6} fill={stroke} fontSize="10" className="num" pointerEvents="none">
           {line.label}
         </text>
       ) : null}
@@ -139,6 +141,7 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
 }
 
 export default function PriceLines({ lines, geometry, width, selectedId, onMove, onSelect, onEditLabel }) {
+  const colors = useChartColors()
   return lines.map((line) => (
     <DraggableLine
       key={line.id}
@@ -149,6 +152,7 @@ export default function PriceLines({ lines, geometry, width, selectedId, onMove,
       onMove={onMove}
       onSelect={onSelect}
       onEditLabel={onEditLabel}
+      colors={colors}
     />
   ))
 }
@@ -178,7 +182,7 @@ export function PriceEditor({ line, y, width, onCommit, onCancel }) {
       onClick={stop}
       onDoubleClick={stop}
       onPointerDown={stop}
-      className="absolute h-5 px-1 rounded bg-zinc-900 border border-blue-500/60 text-[10px] font-mono text-zinc-100 outline-none"
+      className="absolute h-5 px-1 rounded bg-raised border border-accent/60 text-[var(--fig-2xs)] num text-ink outline-none"
       style={{ left: width - PAD_R + 2, top: y - 10, width: PAD_R - 4 }}
     />
   )

@@ -40,6 +40,19 @@ beforeEach(() => {
 })
 
 describe('Settings', () => {
+  it('says the Saxo status is unavailable when the status request fails, rather than checking forever', () => {
+    queries.useSaxoStatus.mockReturnValue({ data: undefined, isError: true })
+    renderSettings('/settings?section=connections')
+    expect(screen.getByText('Status unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('Checking the connection…')).not.toBeInTheDocument()
+  })
+
+  it('says it is checking while the Saxo status loads', () => {
+    queries.useSaxoStatus.mockReturnValue({ data: undefined, isError: false })
+    renderSettings('/settings?section=connections')
+    expect(screen.getByText('Checking the connection…')).toBeInTheDocument()
+  })
+
   it('theme cards switch the theme', async () => {
     renderSettings()
     await userEvent.click(screen.getByRole('button', { name: /Graphite Blue/ }))

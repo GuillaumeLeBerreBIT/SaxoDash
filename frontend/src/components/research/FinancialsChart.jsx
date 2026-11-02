@@ -1,20 +1,13 @@
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
-import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps, statementSeries } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { CHART_SERIES, chartRows } from '../../lib/statements'
 
-const statementColors = (c) => ({
-  revenue: c.series[0],
-  gross_profit: c.series[1],
-  operating_income: c.series[3],
-  net_income: c.series[2],
-})
-
 export default function FinancialsChart({ periods }) {
   const c = useChartColors()
-  const colors = statementColors(c)
+  const colors = statementSeries(c)
   const rows = chartRows(periods)
   if (!rows.length) return null
   const series = CHART_SERIES.filter(({ key }) => rows.some((row) => row[key] != null))

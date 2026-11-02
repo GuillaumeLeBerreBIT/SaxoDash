@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { OTHER_SLICE, colorForRank } from './charts'
+import { chartPalette, colorForRank } from './charts'
+import { DEFAULT_APPEARANCE } from './theme'
 import {
   alertHref, alertSummary, copyCaveat, copySeries, copyVerdict, donutSlices, filterHoldings, fmtFiledDate, fmtUsdCompact, latestQuarter, looksLikeTicker,
   quarterLabel, readTop10View, remainder, topTen, visibleInvestors, writeTop10View,
@@ -116,11 +117,12 @@ describe('top ten', () => {
   })
 
   it('builds donut slices with an Other slice and rank colours', () => {
-    const slices = donutSlices(detail)
+    const c = chartPalette(DEFAULT_APPEARANCE)
+    const slices = donutSlices(detail, c)
     expect(slices).toHaveLength(11)
-    expect(slices[0]).toMatchObject({ name: 'T0', note: 'Issuer 0', value: 100, color: colorForRank(0), logo: true })
+    expect(slices[0]).toMatchObject({ name: 'T0', note: 'Issuer 0', value: 100, color: colorForRank(0, c), logo: true })
     expect(slices[3]).toMatchObject({ name: 'Issuer 3', logo: false })
-    expect(slices[10]).toMatchObject({ name: 'Other', color: OTHER_SLICE, logo: false, weight: 20 })
+    expect(slices[10]).toMatchObject({ name: 'Other', color: c.estimate, logo: false, weight: 20 })
   })
 
   it('colours donut slices from the palette it is given', () => {
@@ -133,12 +135,13 @@ describe('top ten', () => {
 
   it('names a single leftover position in the singular', () => {
     const eleven = { holdings: holdings.slice(0, 11), positions: 11, total_value: 1045, top10_weight: 90 }
-    expect(donutSlices(eleven)[10].note).toBe('1 smaller position')
-    expect(donutSlices(detail)[10].note).toBe('2 smaller positions')
+    const palette = chartPalette(DEFAULT_APPEARANCE)
+    expect(donutSlices(eleven, palette)[10].note).toBe('1 smaller position')
+    expect(donutSlices(detail, palette)[10].note).toBe('2 smaller positions')
   })
 
   it('omits the Other slice at ten positions or fewer', () => {
-    expect(donutSlices({ holdings: holdings.slice(0, 4), positions: 4, total_value: 394, top10_weight: 100 })).toHaveLength(4)
+    expect(donutSlices({ holdings: holdings.slice(0, 4), positions: 4, total_value: 394, top10_weight: 100 }, chartPalette(DEFAULT_APPEARANCE))).toHaveLength(4)
   })
 })
 

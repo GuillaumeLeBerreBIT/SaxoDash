@@ -102,10 +102,8 @@ export default function Earnings() {
 
           <YourWeek events={events} nextMine={data.next_mine} onOpen={openSymbol} />
 
-          <Card context={scope === 'all' && data.stats ? marketLine(data.stats) : undefined} title="Market week" className="mb-4">
-            <div className="hidden md:block">
-              <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
-            </div>
+          <Card context={scope === 'all' && data.stats ? marketLine(data.stats) : undefined} title="Market week" className="mb-4 hidden md:block">
+            <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
           </Card>
 
           <DayList

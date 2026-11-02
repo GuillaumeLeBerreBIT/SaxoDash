@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./theme/bridge.css";
 
 @theme inline {
   --color-page: var(--sd-page);

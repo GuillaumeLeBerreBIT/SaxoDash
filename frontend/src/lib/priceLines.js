@@ -1,6 +1,4 @@
-import { CATEGORY_AXIS_TEXT, NEGATIVE, POSITIVE } from './charts'
-
-export const LINE_STROKES = { target: POSITIVE, stop: NEGATIVE, free: CATEGORY_AXIS_TEXT }
+export const lineStrokes = (c) => ({ target: c.up, stop: c.down, free: c.axisCategory })
 
 export const MIN_PRICE = 0.01
 

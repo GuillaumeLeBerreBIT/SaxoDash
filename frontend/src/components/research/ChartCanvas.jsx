@@ -2,11 +2,12 @@ import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
-import { OVERLAY_STROKES, fitChartPanes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
+import { fitChartPanes, overlayStrokes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { RVOL_WINDOW } from '../../lib/indicators'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
+import { useChartColors } from '../../theme/useChartColors'
 
 function valueAt(series, hover) {
   if (!series?.length) return null
@@ -31,31 +32,32 @@ const WIDEST_VALUES = {
 
 function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) {
   const up = bar.close >= bar.open
+  const strokes = overlayStrokes(useChartColors())
 
   return (
-    <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[var(--fig-2xs)] num font-mono flex-wrap ${className}`} {...rest}>
-      <span className="text-zinc-400">{fmtDate(bar.date)}</span>
+    <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[var(--fig-2xs)] num flex-wrap ${className}`} {...rest}>
+      <span className="text-ink-2">{fmtDate(bar.date)}</span>
       {[
         ['O', bar.open],
         ['H', bar.high],
         ['L', bar.low],
         ['C', bar.close],
       ].map(([key, value]) => (
-        <span key={key} className={key === 'C' ? 'text-zinc-500' : 'hidden md:inline text-zinc-500'}>
-          {key} <span className={up ? 'text-emerald-400' : 'text-red-400'}>{fmtNum(value, 2)}</span>
+        <span key={key} className={key === 'C' ? 'text-ink-3' : 'hidden md:inline text-ink-3'}>
+          {key} <span className={up ? 'text-up' : 'text-down'}>{fmtNum(value, 2)}</span>
         </span>
       ))}
       {change == null ? null : (
         <span className={pctToneClass(change)}>{fmtPct(change)}</span>
       )}
-      <span className="text-zinc-500">
-        Vol <span className="text-zinc-300">{fmtNum(bar.volume / 1e6, 1)}M</span>
+      <span className="text-ink-3">
+        Vol <span className="text-ink">{fmtNum(bar.volume / 1e6, 1)}M</span>
         {values.rvol == null ? null : <span> · {fmtNum(values.rvol, 1)}× {RVOL_WINDOW}d avg</span>}
       </span>
       {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
         const value = values.overlays[o.key]
         return (
-          <span key={o.key} style={{ color: OVERLAY_STROKES[o.key] }} className="text-[var(--fig-2xs)]">
+          <span key={o.key} style={{ color: strokes[o.key] }} className="text-[var(--fig-2xs)]">
             {o.label} {value == null ? '—' : fmtNum(value, 2)}
           </span>
         )

@@ -19,7 +19,7 @@ describe('VerdictBadge', () => {
     expect(screen.getByText('Read')).toHaveClass('text-up')
 
     rerender(<VerdictBadge tone="caution" text="Read" />)
-    expect(screen.getByText('Read')).toHaveClass('text-warn')
+    expect(screen.getByText('Read')).toHaveClass('text-warn-text')
 
     rerender(<VerdictBadge tone="neutral" text="Read" />)
     expect(screen.getByText('Read')).toHaveClass('text-ink-2')

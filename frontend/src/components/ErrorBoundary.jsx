@@ -14,12 +14,12 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-zinc-950 text-center">
-          <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">Something went wrong</h1>
-          <p className="text-[var(--fig-sm)] text-zinc-500">Try reloading the page.</p>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-page text-center">
+          <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-ink">Something went wrong</h1>
+          <p className="text-[var(--fig-sm)] text-ink-3">Try reloading the page.</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 rounded-md bg-blue-500 hover:bg-blue-400 transition-colors duration-200 px-4 py-2 text-[var(--fig-sm)] font-medium text-white"
+            className="mt-2 rounded-md bg-accent hover:bg-accent-hover transition-colors duration-200 px-4 py-2 text-[var(--fig-sm)] font-medium text-on-accent"
           >
             Reload
           </button>

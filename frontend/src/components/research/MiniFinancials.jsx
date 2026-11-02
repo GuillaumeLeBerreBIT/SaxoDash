@@ -1,5 +1,6 @@
-import { NEGATIVE, STATEMENT_SERIES } from '../../lib/charts'
+import { statementSeries } from '../../lib/charts'
 import { fmtStatement } from '../../lib/statements'
+import { useChartColors } from '../../theme/useChartColors'
 
 const YEARS = 5
 const MIN_YEARS = 2
@@ -14,6 +15,8 @@ function summary(year) {
 }
 
 export default function MiniFinancials({ annual }) {
+  const c = useChartColors()
+  const colors = statementSeries(c)
   const years = (annual ?? []).filter((year) => year.income?.revenue != null).slice(-YEARS)
   if (years.length < MIN_YEARS) return null
 
@@ -42,25 +45,25 @@ export default function MiniFinancials({ annual }) {
                       style={{
                         top: `${value >= 0 ? baseline - size : baseline}%`,
                         height: `${Math.max(size, 1)}%`,
-                        backgroundColor: value < 0 ? NEGATIVE : STATEMENT_SERIES[key],
+                        backgroundColor: value < 0 ? c.down : colors[key],
                       }}
                     />
                   </span>
                 )
               })}
             </div>
-            <span className="mt-1 block text-center text-[var(--fig-2xs)] text-zinc-500">
+            <span className="mt-1 block text-center text-[var(--fig-2xs)] text-ink-3">
               {String(year.fiscal_year)}
             </span>
           </li>
         ))}
       </ol>
-      <p className="mt-3 flex justify-center gap-3 text-[var(--fig-2xs)] text-zinc-400">
+      <p className="mt-3 flex justify-center gap-3 text-[var(--fig-2xs)] text-ink-2">
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATEMENT_SERIES.revenue }} /> Revenue
+          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: colors.revenue }} /> Revenue
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATEMENT_SERIES.net_income }} /> Net income
+          <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: colors.net_income }} /> Net income
         </span>
       </p>
     </div>

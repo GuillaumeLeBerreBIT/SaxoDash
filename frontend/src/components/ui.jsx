@@ -203,7 +203,7 @@ export function Select({ className = '', children, ...props }) {
 }
 
 const WARN_SURFACE = 'bg-[color-mix(in_srgb,var(--sd-warn)_14%,transparent)]'
-const WARN_TEXT = 'text-warn [[data-theme=light]_&]:text-warn-text'
+const WARN_TEXT = 'text-warn-text'
 
 const TAG_TONES = {
   neutral: 'sd-raised bg-pill text-ink-2',
@@ -616,14 +616,22 @@ function TileFrame({ label, right, children, sub, listItem = false }) {
   const List = tags.list
   const Term = tags.term
   const Detail = tags.detail
+  const title = List ? (
+    <Term className="flex items-baseline justify-between gap-2 text-[12px] text-ink-3">
+      {label}
+      {right}
+    </Term>
+  ) : (
+    <div className="flex items-baseline justify-between gap-2">
+      <Term className="text-[12px] text-ink-3">{label}</Term>
+      {right}
+    </div>
+  )
   const content = (
     <>
-      <div className="flex items-baseline justify-between gap-2">
-        <Term className="text-[12px] text-ink-3">{label}</Term>
-        {right}
-      </div>
+      {title}
       {children(Detail)}
-      {sub && <Detail className="mt-0.5 text-[12px] text-ink-2">{sub}</Detail>}
+      {sub && <Detail className="mt-0.5 text-[12px] text-ink-2 num">{sub}</Detail>}
     </>
   )
   return <Root className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">{List ? <List>{content}</List> : content}</Root>

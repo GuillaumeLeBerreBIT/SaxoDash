@@ -250,6 +250,14 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(hidden).toHaveLength(3)
   })
 
+  it('hides the whole Market week card on a phone, header included', () => {
+    stub()
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    const card = screen.getByRole('heading', { level: 2, name: 'Market week' }).closest('.sd-panel')
+    expect(card).toHaveClass('hidden', 'md:block')
+  })
+
   it('opens with the Your week band above the market grid', () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })

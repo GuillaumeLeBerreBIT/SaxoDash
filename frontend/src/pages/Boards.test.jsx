@@ -286,6 +286,29 @@ describe('Boards', () => {
     expect(screen.queryByRole('region', { name: 'News' })).not.toBeInTheDocument()
   })
 
+  it('clears the save warning when the edits are cancelled', async () => {
+    renderBoards('/boards/morning')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit board' }))
+    failStorage()
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('clears the save warning when the page moves to another board', async () => {
+    failStorage()
+    renderBoards('/boards/morning')
+    await userEvent.click(within(panel('Watchlist')).getByRole('button', { name: /^NVDA/ }))
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+
+    await userEvent.click(tabs().getByRole('link', { name: 'Semiconductors' }))
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('still follows a symbol when the browser refuses to save it', async () => {
     failStorage()
     renderBoards('/boards/morning')

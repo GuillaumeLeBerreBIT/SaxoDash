@@ -1,4 +1,5 @@
-import { AXIS_TEXT, CATEGORY_AXIS_TEXT, surpriseColor } from '../../lib/charts'
+import { surpriseColor } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
 const WIDTH = 300
 const PLOT_TOP = 10
@@ -35,6 +36,7 @@ function describeColumn(column) {
 }
 
 export default function EarningsDots({ history, next }) {
+  const c = useChartColors()
   const columns = columnsFor(history ?? [], next)
   if (!columns.length) return null
 
@@ -58,18 +60,18 @@ export default function EarningsDots({ history, next }) {
                 cy={yFor(column.estimate)}
                 r={RADIUS}
                 fill="none"
-                stroke={CATEGORY_AXIS_TEXT}
+                stroke={c.axisCategory}
                 strokeWidth="1.5"
               >
                 <title>{`${column.label} estimate ${column.estimate.toFixed(2)}`}</title>
               </circle>
             )}
             {column.actual != null && (
-              <circle data-dot="actual" cx={x} cy={yFor(column.actual)} r={RADIUS} fill={surpriseColor(column.surprise)}>
+              <circle data-dot="actual" cx={x} cy={yFor(column.actual)} r={RADIUS} fill={surpriseColor(column.surprise, c)}>
                 <title>{`${column.label} actual ${column.actual.toFixed(2)}`}</title>
               </circle>
             )}
-            <text x={x} y={LABEL_Y} textAnchor="middle" fill={AXIS_TEXT} fontSize="10">
+            <text x={x} y={LABEL_Y} textAnchor="middle" fill={c.axis} fontSize="10">
               {column.label}
             </text>
           </g>

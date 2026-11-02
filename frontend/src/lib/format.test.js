@@ -55,10 +55,10 @@ describe('pctTone', () => {
 
 describe('pctToneClass', () => {
   it('maps tones to text classes', () => {
-    expect(pctToneClass(1)).toBe('text-emerald-400')
-    expect(pctToneClass(-1)).toBe('text-red-400')
-    expect(pctToneClass(0)).toBe('text-zinc-500')
-    expect(pctToneClass(null, 2, 'text-zinc-600')).toBe('text-zinc-600')
+    expect(pctToneClass(1)).toBe('text-up')
+    expect(pctToneClass(-1)).toBe('text-down')
+    expect(pctToneClass(0)).toBe('text-ink-3')
+    expect(pctToneClass(null, 2, 'text-ink-2')).toBe('text-ink-2')
   })
 })
 

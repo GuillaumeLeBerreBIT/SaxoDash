@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Link, MemoryRouter } from 'react-router-dom'
 
+import { chartPalette } from '../../lib/charts'
+import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import HeatTile from './HeatTile'
+
+const asRendered = (colour) => {
+  const probe = document.createElement('span')
+  probe.style.background = colour
+  return probe.style.background
+}
 
 describe('HeatTile', () => {
   it('prints the ticker and the signed move at full size', () => {
@@ -14,7 +22,7 @@ describe('HeatTile', () => {
   it('shows a dash for an unknown move, never 0%', () => {
     render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
     expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe('rgb(29, 27, 25)')
+    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe(asRendered(chartPalette(DEFAULT_APPEARANCE).track))
   })
 
   it('drops the move when only the ticker fits', () => {

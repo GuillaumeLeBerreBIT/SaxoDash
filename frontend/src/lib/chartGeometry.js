@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
-import { NEGATIVE, POSITIVE } from './charts'
 import { fmtDayMonth, fmtMonthYear } from './format'
 
 /** Geometry and colours for the hand-drawn Research chart.
@@ -10,21 +9,14 @@ import { fmtDayMonth, fmtMonthYear } from './format'
  *  components and plain functions breaks React Fast Refresh.
  */
 
-// Candle/volume up-down aliased to the app's one gain/loss pair - this used
-// to be its own distinct '#26a17b'/'#e5484d', a different green/red than
-// every DayChange/badge/table cell elsewhere in the app for the identical
-// signal. lib/charts.js's policy is one green and one red, full stop.
-export const UP = POSITIVE
-export const DOWN = NEGATIVE
-
-export const OVERLAY_STROKES = {
-  ma20: '#f59e0b',
-  ma50: '#38bdf8',
-  ma200: '#94a3b8',
-  ema9: '#e879f9',
-  bb: '#a78bfa',
-  vwap: '#facc15',
-}
+export const overlayStrokes = (c) => ({
+  ma20: c.series[3],
+  ma50: c.series[0],
+  ma200: c.axisCategory,
+  ema9: c.series[4],
+  bb: c.series[6],
+  vwap: c.series[1],
+})
 
 // Right-hand gutter reserved for the price axis and the last-price tag.
 export const PAD_R = 62

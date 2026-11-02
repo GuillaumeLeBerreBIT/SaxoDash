@@ -12,11 +12,11 @@ const render = (ui) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
 const healthy = { connected: true, needs_reauth: false, usable: true, last_sync_outcome: 'ok' }
 
 const CASES = [
-  ['connected', healthy, 'Saxo connected', 'bg-emerald-400'],
-  ['a failed sync', { ...healthy, last_sync_outcome: 'failed' }, 'Saxo connected, sync failed', 'bg-amber-400'],
-  ['reconnecting', { ...healthy, usable: false }, 'Saxo reconnecting…', 'bg-amber-400'],
-  ['needs reauth', { ...healthy, needs_reauth: true, usable: false }, 'Saxo needs reconnecting', 'bg-red-400'],
-  ['not connected', { connected: false }, 'Saxo not connected', 'bg-zinc-500'],
+  ['connected', healthy, 'Saxo connected', 'bg-ok'],
+  ['a failed sync', { ...healthy, last_sync_outcome: 'failed' }, 'Saxo connected, sync failed', 'bg-warn'],
+  ['reconnecting', { ...healthy, usable: false }, 'Saxo reconnecting…', 'bg-warn'],
+  ['needs reauth', { ...healthy, needs_reauth: true, usable: false }, 'Saxo needs reconnecting', 'bg-error'],
+  ['not connected', { connected: false }, 'Saxo not connected', 'bg-ink-3'],
 ]
 
 function mockStatus(data) {

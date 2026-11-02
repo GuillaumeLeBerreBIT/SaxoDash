@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
-import { NEGATIVE, STATEMENT_SERIES } from '../../lib/charts'
+import { chartPalette, statementSeries } from '../../lib/charts'
+import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import MiniFinancials from './MiniFinancials'
+
+const palette = chartPalette(DEFAULT_APPEARANCE)
+const NEGATIVE = palette.down
+const STATEMENT_SERIES = statementSeries(palette)
 
 const year = (fiscal_year, revenue, net_income) => ({
   label: `FY ${fiscal_year}`,

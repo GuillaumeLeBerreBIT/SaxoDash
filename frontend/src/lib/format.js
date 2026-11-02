@@ -46,9 +46,9 @@ export function pctTone(value, decimals = 2) {
     return n > 0 ? 'positive' : 'negative'
 }
 
-const TONE_CLASS = { positive: 'text-emerald-400', negative: 'text-red-400' }
+const TONE_CLASS = { positive: 'text-up', negative: 'text-down' }
 
-export function pctToneClass(value, decimals = 2, neutral = 'text-zinc-500') {
+export function pctToneClass(value, decimals = 2, neutral = 'text-ink-3') {
     return TONE_CLASS[pctTone(value, decimals)] ?? neutral
 }
 

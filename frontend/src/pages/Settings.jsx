@@ -99,8 +99,9 @@ function SourceRow({ dot, name, note, action }) {
   )
 }
 
-function saxoRow(status) {
+function saxoRow(status, failed) {
   const derived = deriveSaxoStatus(status)
+  if (!derived && failed) return { dot: 'warn', name: 'Saxo', note: 'Status unavailable' }
   if (!derived) return { dot: 'off', name: 'Saxo', note: 'Checking the connection…' }
   const synced = status.last_synced_at ? `last synced ${fmtDateTime(status.last_synced_at)}` : 'never synced'
   const base = 'Positions, prices, charts and performance'
@@ -149,9 +150,9 @@ function bankRow(bank, state) {
 }
 
 function Connections() {
-  const { data: saxo } = useSaxoStatus()
+  const { data: saxo, isError: saxoFailed } = useSaxoStatus()
   const { data: banks } = useEnableBankingStatus()
-  const rows = [saxoRow(saxo), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
+  const rows = [saxoRow(saxo, saxoFailed), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Where SaxoDash gets its numbers" dot={dot} title="Connections">

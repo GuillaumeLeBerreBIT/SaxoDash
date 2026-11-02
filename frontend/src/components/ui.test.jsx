@@ -295,14 +295,27 @@ describe('Move', () => {
 describe('Tag, Tile and StatusDot', () => {
   it('Tag example', () => {
     render(<Tag tone="example">Example</Tag>)
-    expect(screen.getByText('Example')).toHaveClass('text-warn')
+    expect(screen.getByText('Example')).toHaveClass('text-warn-text')
+    expect(screen.getByText('Example').className).not.toMatch(/data-theme/)
   })
 
   it('Tile shows label, value and sub-line', () => {
     render(<Tile label="Win rate" value="62%" sub="last 12 months" />)
     expect(screen.getByText('Win rate')).toBeInTheDocument()
     expect(screen.getByText('62%')).toHaveClass('num')
-    expect(screen.getByText('last 12 months')).toBeInTheDocument()
+    expect(screen.getByText('last 12 months')).toHaveClass('num')
+  })
+
+  it('Tile as a list item keeps every child of its dl a dt or a dd', () => {
+    const { container } = render(
+      <ul>
+        <Tile listItem label="Win rate" value="62%" sub="last 12 months" right={<span>i</span>} />
+      </ul>,
+    )
+    const list = container.querySelector('dl')
+    expect([...list.children].map((child) => child.tagName)).toEqual(['DT', 'DD', 'DD'])
+    expect(list.querySelector('dt')).toHaveTextContent('Win rate')
+    expect(screen.getByText('62%').tagName).toBe('DD')
   })
 
   it('StatusDot is decorative and toned', () => {

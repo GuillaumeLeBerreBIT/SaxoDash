@@ -41,7 +41,7 @@ describe('ChangeBadge', () => {
 
   it('marks a sold-out position in amber', () => {
     render(<ChangeBadge change="sold_out" />)
-    expect(screen.getByText('Sold out')).toHaveClass('text-warn')
+    expect(screen.getByText('Sold out')).toHaveClass('text-warn-text')
   })
 
   it('says unchanged quietly and nothing for a first quarter', () => {
