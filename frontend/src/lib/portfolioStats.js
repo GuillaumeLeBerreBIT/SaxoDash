@@ -20,3 +20,11 @@ export function yearTicks(rows, maxLabels = 11) {
   const step = [2, 5, 10].find((n) => Math.ceil(years.length / n) <= maxLabels) ?? 10
   return years.filter((month) => (month / 12) % step === 0)
 }
+
+export const WEIGHT_CAP_PCT = 15
+
+export function capBreaches(positions, cap = WEIGHT_CAP_PCT) {
+  return positions
+    .filter((p) => p.weight != null && Number(p.weight) > cap)
+    .sort((a, b) => Number(b.weight) - Number(a.weight))
+}

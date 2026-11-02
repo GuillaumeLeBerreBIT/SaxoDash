@@ -1,29 +1,31 @@
 import { buildEarningsInsights } from '../../lib/earningsInsights'
-import { TONE_DOT } from '../../lib/snapshot'
-import { Card, CardHeader } from '../ui'
+import { Card, StatusDot } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 
-export default function EarningsInsights({ fundamentals }) {
+const DOT_TONE = { pos: 'ok', caution: 'warn', neutral: 'off' }
+
+export default function EarningsInsights({ fundamentals, className = '' }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
       title="What changed"
       fallback="Earnings trend data is unavailable for this symbol."
+      className={className}
     >
       {(data) => {
         const insights = buildEarningsInsights(data.quarterly_trends)
         return (
-          <Card>
-            <CardHeader title="What changed" subtitle="Quarterly trend, from Finnhub" />
+          <Card className={className} context="Quarterly trend, from Finnhub" dot="warn" title="What changed">
             {insights.length === 0 ? (
-              <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
-                Not enough quarterly history yet for trend commentary.
-              </p>
+              <p className="text-[13px] text-ink-3">Not enough quarterly history yet for trend commentary.</p>
             ) : (
-              <ul className="mt-3 space-y-2">
+              <ul>
                 {insights.map((insight) => (
-                  <li key={insight.text} className="flex items-start gap-2 text-[var(--fig-sm)] text-zinc-300">
-                    <span className={`mt-1.5 w-1.5 h-1.5 rounded-full shrink-0 ${TONE_DOT[insight.tone]}`} />
+                  <li
+                    key={insight.text}
+                    className="flex items-start gap-2.5 py-2 border-t border-line first:border-t-0 first:pt-0 text-[13.5px] text-ink"
+                  >
+                    <StatusDot tone={DOT_TONE[insight.tone] ?? 'off'} className="mt-[6px]" />
                     {insight.text}
                   </li>
                 ))}

@@ -68,12 +68,12 @@ describe('SpendingCategoryChart', () => {
 
     expect(screen.getByRole('link', { name: /Groceries/ })).toHaveAttribute(
       'href',
-      '/spending/transactions?category=GROCERIES&from=2026-09-01&to=2026-09-30',
+      '/money?section=transactions&category=GROCERIES&from=2026-09-01&to=2026-09-30',
     )
     expect(screen.getAllByRole('link')).toHaveLength(2)
     expect(screen.getByRole('link', { name: /Smaller categories/ })).toHaveAttribute(
       'href',
-      '/spending/transactions?from=2026-09-01&to=2026-09-30',
+      '/money?section=transactions&from=2026-09-01&to=2026-09-30',
     )
   })
 
@@ -93,7 +93,7 @@ describe('SpendingCategoryChart', () => {
 
     expect(screen.getByRole('link', { name: /Dining/ })).toHaveAttribute(
       'href',
-      '/spending/transactions?category=DINING&from=2026-09-01&to=2026-09-30',
+      '/money?section=transactions&category=DINING&from=2026-09-01&to=2026-09-30',
     )
     expect(screen.getAllByRole('link')).toHaveLength(2)
   })
@@ -114,7 +114,7 @@ describe('SpendingCategoryChart', () => {
 
     expect(screen.getByRole('link', { name: /Other/ })).toHaveAttribute(
       'href',
-      '/spending/transactions?category=OTHER&from=2026-09-01&to=2026-09-30',
+      '/money?section=transactions&category=OTHER&from=2026-09-01&to=2026-09-30',
     )
   })
 
@@ -135,7 +135,7 @@ describe('SpendingCategoryChart', () => {
 
     expect(screen.getByRole('link', { name: /Smaller categories/ })).toHaveAttribute(
       'href',
-      '/spending/transactions?category=DINING&from=2026-09-01&to=2026-09-30',
+      '/money?section=transactions&category=DINING&from=2026-09-01&to=2026-09-30',
     )
   })
 
@@ -156,8 +156,8 @@ describe('SpendingCategoryChart', () => {
     )
 
     const hrefs = screen.getAllByRole('link').map((link) => link.getAttribute('href'))
-    expect(hrefs).toContain('/spending/transactions?category=OTHER&from=2026-09-01&to=2026-09-30')
-    expect(hrefs).toContain('/spending/transactions?from=2026-09-01&to=2026-09-30')
+    expect(hrefs).toContain('/money?section=transactions&category=OTHER&from=2026-09-01&to=2026-09-30')
+    expect(hrefs).toContain('/money?section=transactions&from=2026-09-01&to=2026-09-30')
     expect(hrefs).toHaveLength(3)
     expect(screen.getByText('Smaller categories')).toBeInTheDocument()
   })

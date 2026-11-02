@@ -3,14 +3,15 @@ import { useParams, Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useBankAccounts, useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { Card, EmptyState, Input, PageHeader, Select, StatRow, StatStrip } from '../components/ui'
+import { Card, EmptyState, Input, QueryState, Select, Tile } from '../components/ui'
+import { BOARD, SPAN_12, TILES } from '../components/money/layout'
 import BankTransactionsTable from '../components/BankTransactionsTable'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { filterTransactions, paginate } from '../lib/accountTransactions'
 
 export default function AccountTransactions() {
   const { accountId } = useParams()
-  const { data, isLoading, error } = useBankTransactions(`?account=${accountId}`)
+  const { data, isLoading, error, refetch } = useBankTransactions(`?account=${accountId}`)
   // A drill-down page needs to confirm which account you're looking at -
   // the page previously showed no bank name, IBAN, or balance at all, so
   // clicking a tile and landing here lost that context entirely.
@@ -22,19 +23,26 @@ export default function AccountTransactions() {
   const [page, setPage] = useState(1)
 
   const backLink = (
-    <Link to="/accounts" className="inline-flex items-center gap-1 text-zinc-400 hover:text-zinc-200">
-      <ChevronLeft size={14} /> Back to Accounts
+    <Link to="/money?section=accounts" className="inline-flex items-center gap-1 min-h-11 md:min-h-0 text-ink-2 hover:text-ink">
+      <ChevronLeft size={14} aria-hidden="true" /> Back to Accounts
     </Link>
   )
 
-  if (error) return <div className="text-red-400 text-sm">Failed to load transactions</div>
-  if (isLoading || !data) return <div className="text-zinc-500 text-sm">Loading…</div>
+  if (error || isLoading || !data) {
+    return (
+      <div className={BOARD}>
+        <Card className={SPAN_12} context={backLink} dot={error ? 'warn' : 'off'} title={account?.bank ?? 'Account transactions'} titleAs="h1" />
+        <div className={`${SPAN_12} min-w-0`}>
+          <QueryState isLoading={!error} error={error} onRetry={refetch} label="transactions" />
+        </div>
+      </div>
+    )
+  }
 
   if (accounts && !account) {
     return (
-      <div className="space-y-4">
-        <PageHeader title="Account not found" subtitle={backLink} />
-        <Card>
+      <div className={BOARD}>
+        <Card className={SPAN_12} context={backLink} dot="off" title="Account not found" titleAs="h1">
           <EmptyState title="No account with this id" />
         </Card>
       </div>
@@ -61,40 +69,44 @@ export default function AccountTransactions() {
   }
 
   const hasAvailable = account && Number(account.available) !== Number(account.balance)
+  const filters = (
+    <div className="flex flex-wrap gap-2">
+      <Input
+        aria-label="Search transactions"
+        placeholder="Search transactions"
+        value={search}
+        onChange={(e) => changeSearch(e.target.value)}
+        className="w-full sm:w-64 h-11 md:h-8"
+      />
+      <Select
+        aria-label="Filter by category"
+        value={category}
+        onChange={(e) => changeCategory(e.target.value)}
+        className="h-11 md:h-8"
+      >
+        <option value="ALL">All categories</option>
+        {presentCategories.map((code) => (
+          <option key={code} value={code}>{CATEGORY_LABELS[code] ?? code}</option>
+        ))}
+      </Select>
+    </div>
+  )
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title={account?.bank ?? 'Account transactions'}
-        subtitle={backLink}
-      />
-      {account && (
-        <StatStrip>
-          <StatRow label="Balance" value={fmtEur(account.balance)} note={account.type} lead />
-          {hasAvailable && <StatRow label="Available" value={fmtEur(account.available)} />}
-          <StatRow label="IBAN" value={account.iban_masked} />
-        </StatStrip>
-      )}
-      <div className="flex flex-wrap gap-2">
-        <Input
-          aria-label="Search transactions"
-          placeholder="Search transactions"
-          value={search}
-          onChange={(e) => changeSearch(e.target.value)}
-          className="w-full sm:w-64"
-        />
-        <Select
-          aria-label="Filter by category"
-          value={category}
-          onChange={(e) => changeCategory(e.target.value)}
-        >
-          <option value="ALL">All categories</option>
-          {presentCategories.map((code) => (
-            <option key={code} value={code}>{CATEGORY_LABELS[code] ?? code}</option>
-          ))}
-        </Select>
-      </div>
+    <div className={BOARD}>
+      <Card className={SPAN_12} context={backLink} dot="ok" title={account?.bank ?? 'Account transactions'} titleAs="h1">
+        {account && (
+          <div className={TILES}>
+            <Tile label="Balance" value={fmtEur(account.balance)} sub={account.type} />
+            {hasAvailable && <Tile label="Available" value={fmtEur(account.available)} />}
+            <Tile label="IBAN" value={account.iban_masked} />
+          </div>
+        )}
+      </Card>
       <BankTransactionsTable
+        className={SPAN_12}
+        context="Bank transactions"
+        right={filters}
         paged={paged}
         hasAny={data.length > 0}
         filtering={filtering}

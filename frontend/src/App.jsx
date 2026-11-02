@@ -4,13 +4,9 @@ import RequireAuth from './components/RequireAuth'
 import Dashboard from './pages/Dashboard'
 import Portfolio from './pages/Portfolio'
 import Analytics from './pages/Analytics'
-import Transactions from './pages/Transactions'
-import Accounts from './pages/Accounts'
 import AccountTransactions from './pages/AccountTransactions'
-import Spending from './pages/Spending'
-import SpendingTransactions from './pages/SpendingTransactions'
 import Research from './pages/Research'
-import ResearchChart from './pages/ResearchChart'
+import Boards from './pages/Boards'
 import Discover from './pages/Discover'
 import DiscoverShelf from './pages/DiscoverShelf'
 import Earnings from './pages/Earnings'
@@ -20,24 +16,26 @@ import InvestorStocks from './pages/InvestorStocks'
 import CongressMember from './pages/CongressMember'
 import Login from './pages/Login'
 import NotFound from './pages/NotFound'
+import LegacyRedirect from './routes/LegacyRedirect'
+import Money from './pages/Money'
+import Settings from './pages/Settings'
+import { LEGACY_REDIRECTS } from './lib/navigation'
 
 function App() {
-
   return (
     <Routes>
       <Route path='login' element={<Login />} />
       <Route element={<RequireAuth />}>
-        <Route path='research/chart' element={<ResearchChart />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path='portfolio' element={<Portfolio />} />
           <Route path='analytics' element={<Analytics />} />
-          <Route path='transactions' element={<Transactions />} />
-          <Route path='accounts' element={<Accounts />} />
-          <Route path='accounts/:accountId' element={<AccountTransactions />} />
-          <Route path='spending' element={<Spending />} />
-          <Route path='spending/transactions' element={<SpendingTransactions />} />
+          <Route path='money' element={<Money />} />
+          <Route path='money/accounts/:accountId' element={<AccountTransactions />} />
+          <Route path='settings' element={<Settings />} />
           <Route path='research' element={<Research />} />
+          <Route path='boards' element={<Boards />} />
+          <Route path='boards/:id' element={<Boards />} />
           <Route path='discover' element={<Discover />} />
           <Route path='discover/:key' element={<DiscoverShelf />} />
           <Route path='earnings' element={<Earnings />} />
@@ -45,6 +43,9 @@ function App() {
           <Route path='investors/stocks' element={<InvestorStocks />} />
           <Route path='investors/congress/:slug' element={<CongressMember />} />
           <Route path='investors/:slug' element={<Investor />} />
+          {LEGACY_REDIRECTS.map((redirect) => (
+            <Route key={redirect.from} path={redirect.from} element={<LegacyRedirect redirect={redirect} />} />
+          ))}
         </Route>
       </Route>
       <Route path='*' element={<NotFound />} />

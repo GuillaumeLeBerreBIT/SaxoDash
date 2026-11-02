@@ -1,54 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 
-/** The dropdown menu the Research page's toolbar is built from.
- *
- *  Bespoke rather than a shared UI component because nothing else in the app
- *  had a dropdown yet; if a second page needs one, this is what gets
- *  promoted into components/ui.jsx. (TBtn already made that move.)
- */
+import { MenuContent, MenuItem, MenuLabel as OverlayMenuLabel, MenuRoot, MenuSeparator as OverlayMenuSeparator, MenuTrigger } from '../overlays'
 
 export function Menu({ label, icon: Icon, children, width = 220, align = 'left', side = 'bottom' }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-
-    const onPointerDown = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('mousedown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
   const rail = side === 'right'
-  const idle = 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
-  const openTone = 'bg-white/[0.09] text-zinc-100'
+  const idle = 'text-ink-2 hover:text-ink hover:bg-hover'
+  const openTone = 'data-[state=open]:bg-selected data-[state=open]:text-ink'
 
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        aria-haspopup="menu"
+    <MenuRoot modal={false}>
+      <MenuTrigger
         aria-label={rail ? label : undefined}
         title={rail ? label : undefined}
         className={
           rail
-            ? `w-9 h-9 rounded flex items-center justify-center transition-colors ${open ? openTone : idle}`
-            : `h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium flex items-center gap-1.5 transition-colors ${
-                open ? openTone : idle
-              }`
+            ? `w-9 h-9 rounded flex items-center justify-center transition-colors ${idle} ${openTone}`
+            : `h-7 px-2.5 rounded text-[12px] font-medium flex items-center gap-1.5 transition-colors ${idle} ${openTone}`
         }
       >
         {rail ? (
@@ -60,49 +27,48 @@ export function Menu({ label, icon: Icon, children, width = 220, align = 'left',
             <ChevronDown size={11} />
           </>
         )}
-      </button>
-
-      {open ? (
-        <div
-          role="menu"
-          style={rail ? { width, left: '100%', top: 0 } : { width, [align]: 0 }}
-          className={`absolute z-30 ${rail ? 'ml-2' : 'mt-1'} rounded-lg border border-white/10 bg-zinc-900 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.8)] p-1.5`}
-        >
-          {children}
-        </div>
-      ) : null}
-    </div>
+      </MenuTrigger>
+      <MenuContent
+        width={width}
+        side={rail ? 'right' : 'bottom'}
+        align={rail ? 'start' : align === 'right' ? 'end' : 'start'}
+        sideOffset={rail ? 8 : 4}
+      >
+        {children}
+      </MenuContent>
+    </MenuRoot>
   )
 }
 
 export function MenuRow({ checked, onClick, dot, children, right }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
-      onClick={onClick}
-      className="w-full flex items-center gap-2 px-2 h-8 rounded text-[var(--fig-xs)] text-zinc-300 hover:bg-white/[0.06] hover:text-zinc-100"
+    <MenuItem
+      onSelect={(event) => {
+        event.preventDefault()
+        onClick?.()
+      }}
+      className="w-full"
     >
       {checked !== undefined ? (
         <span
           className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 ${
-            checked ? 'bg-blue-500 border-blue-500' : 'border-zinc-600'
+            checked ? 'bg-accent border-accent' : 'border-line-input'
           }`}
         >
-          {checked ? <Check size={10} className="text-white" /> : null}
+          {checked ? <Check size={10} className="text-on-accent" /> : null}
         </span>
       ) : null}
       {dot ? <span className="w-2 h-0.5 rounded-full shrink-0" style={{ background: dot }} /> : null}
       <span className="flex-1 text-left truncate">{children}</span>
-      {right ? <span className="text-[var(--fig-2xs)] text-zinc-500">{right}</span> : null}
-    </button>
+      {right ? <span className="text-[11px] text-ink-3">{right}</span> : null}
+    </MenuItem>
   )
 }
 
 export function MenuSeparator() {
-  return <div className="h-px bg-white/[0.07] my-1" />
+  return <OverlayMenuSeparator />
 }
 
 export function MenuLabel({ children }) {
-  return <div className="px-2 pt-1 pb-1.5 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{children}</div>
+  return <OverlayMenuLabel>{children}</OverlayMenuLabel>
 }

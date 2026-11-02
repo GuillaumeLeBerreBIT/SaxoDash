@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 
 import { useSize } from '../../lib/chartGeometry'
-import { fmtNum, fmtPct, pctToneClass } from '../../lib/format'
+import { fmtNum } from '../../lib/format'
 import { moveCaption } from '../../lib/research'
 import { matchBarByDate, resolveTimeViewChange, windowToDates } from '../../lib/timeWindow'
-import { Card, InstrumentLogo } from '../ui'
+import { Card, InstrumentLogo, StatusDot } from '../ui'
 import ChartCanvas from './ChartCanvas'
-import { LineSaveAlert, PeriodChange } from './chartHeader'
+import { LineSaveAlert, MoveCaption, PeriodChange } from './chartHeader'
 import { useLinkedHover } from './LinkedHover'
 import { useChartData } from './useChartData'
 
-const HEADER_CLASS = 'flex items-center gap-2 px-2.5 h-8 border-b border-white/[0.06] min-w-0'
+const HEADER_CLASS = 'flex items-center gap-2 px-3.5 h-10 border-b border-line min-w-0'
 
 function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, showIdentity }) {
   const last = rangeBars[rangeBars.length - 1]
@@ -20,23 +20,10 @@ function PaneHeader({ symbol, quote, rangeBars, windowBars, lineSaveFailed, show
     <div className={HEADER_CLASS}>
       {showIdentity ? (
         <>
-          <InstrumentLogo
-            symbol={symbol}
-            size={14}
-            className="rounded-sm"
-            fallback={<span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />}
-          />
-          <span className="text-[var(--fig-xs)] font-medium text-zinc-100">{symbol}</span>
-          <span className="text-[var(--fig-xs)] num font-mono text-zinc-300">{price == null ? '—' : fmtNum(price, 2)}</span>
-          {change == null ? null : (
-            <span
-              className={`text-[var(--fig-2xs)] num font-mono whitespace-nowrap ${
-                pctToneClass(change)
-              }`}
-            >
-              {fmtPct(change)}{suffix ? ` ${suffix}` : ''}
-            </span>
-          )}
+          <InstrumentLogo symbol={symbol} size={20} />
+          <span className="text-[14px] font-bold text-ink">{symbol}</span>
+          <span className="text-[13px] num font-semibold text-ink">{price == null ? '—' : fmtNum(price, 2)}</span>
+          {change == null ? null : <MoveCaption change={change} suffix={suffix} className="text-[12px] font-semibold" />}
         </>
       ) : null}
       <LineSaveAlert failed={lineSaveFailed} />
@@ -52,8 +39,8 @@ const emptyPaneName = (index) => (index == null ? 'Empty pane' : `Empty pane ${i
 function EmptyPaneHeader() {
   return (
     <div className={HEADER_CLASS}>
-      <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-zinc-700" />
-      <span className="text-[var(--fig-xs)] font-medium text-zinc-400">Empty pane</span>
+      <StatusDot tone="off" />
+      <span className="text-[13px] font-medium text-ink-2">Empty pane</span>
     </div>
   )
 }
@@ -179,7 +166,7 @@ export default function ChartPane({
       style={style}
       className={`flex-col flex-1 min-h-0 min-w-0 ${className}`}
     >
-      <Card padding={false} className={`flex-1 min-h-0 flex flex-col overflow-hidden ${outlined ? 'ring-1 ring-blue-500' : ''}`}>
+      <Card padding={false} className={`flex-1 min-h-0 flex flex-col overflow-hidden ${outlined ? 'ring-1 ring-ink-3' : ''}`}>
         {slot ? (
           <FilledPane
             key={`${slot.symbol}:${slot.uic}:${slot.assetType}`}
@@ -194,7 +181,7 @@ export default function ChartPane({
         ) : (
           <>
             <EmptyPaneHeader />
-            <div className="flex-1 flex items-center justify-center text-[var(--fig-xs)] text-zinc-500">
+            <div className="flex-1 flex items-center justify-center text-[13px] text-ink-3">
               Pick a symbol from the watchlist
             </div>
           </>

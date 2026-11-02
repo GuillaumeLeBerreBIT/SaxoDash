@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { drawdownDomain, needsDaysNote, pctOrDash, yearTicks } from './portfolioStats'
+import { WEIGHT_CAP_PCT, capBreaches, drawdownDomain, needsDaysNote, pctOrDash, yearTicks } from './portfolioStats'
+
+describe('capBreaches', () => {
+  it('lists holdings strictly above the cap, heaviest first', () => {
+    const positions = [
+      { ticker: 'A', weight: '15.0' },
+      { ticker: 'B', weight: '22.4' },
+      { ticker: 'C', weight: '31.0' },
+      { ticker: 'D', weight: null },
+    ]
+    expect(WEIGHT_CAP_PCT).toBe(15)
+    expect(capBreaches(positions).map((p) => p.ticker)).toEqual(['C', 'B'])
+  })
+})
 
 describe('needsDaysNote', () => {
   it('is null when nothing is missing or unknown', () => {

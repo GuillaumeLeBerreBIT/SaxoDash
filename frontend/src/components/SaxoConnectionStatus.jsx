@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react'
-import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
+import { useConnectSaxo } from '../lib/useConnectSaxo'
 import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
 import { Link } from 'react-router-dom'
-import { Badge } from './ui'
+import { Tag } from './ui'
 
 export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
   const derived = deriveSaxoStatus(status)
-  const [error] = useState(
+  const { connect, failed } = useConnectSaxo()
+  const [redirectError] = useState(
     () => !compact && new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
 
+  const error = redirectError || failed
+
   useEffect(() => {
-    if (error) {
+    if (redirectError) {
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [error])
+  }, [redirectError])
 
   if (!derived) return null
 
@@ -37,10 +40,10 @@ export default function SaxoConnectionStatus({ compact = false }) {
   if (derived.kind === 'not_connected') {
     return (
       <div className="flex items-center gap-2">
-        {error && <Badge tone="red">Connection failed</Badge>}
+        {error && <Tag tone="down">Connection failed</Tag>}
         <button
-          onClick={connectSaxo}
-          className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
+          onClick={connect}
+          className="h-8 px-3.5 text-[13px] rounded-lg bg-accent hover:bg-accent-hover text-on-accent font-semibold transition-colors"
         >
           Connect Saxo
         </button>
@@ -50,12 +53,15 @@ export default function SaxoConnectionStatus({ compact = false }) {
 
   if (derived.kind === 'needs_reauth') {
     return (
-      <button
-        onClick={connectSaxo}
-        className="text-[var(--fig-xs)] px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium transition-colors"
-      >
-        Reconnect Saxo
-      </button>
+      <div className="flex items-center gap-2">
+        {failed && <Tag tone="down">Connection failed</Tag>}
+        <button
+          onClick={connect}
+          className="h-8 px-3.5 text-[13px] rounded-lg sd-raised bg-raised text-warn-text font-semibold transition-colors hover:bg-hover"
+        >
+          Reconnect Saxo
+        </button>
+      </div>
     )
   }
 
@@ -63,26 +69,26 @@ export default function SaxoConnectionStatus({ compact = false }) {
   // refused, so saying "connected" here would contradict the panel below.
   if (derived.kind === 'reconnecting') {
     return (
-      <Badge tone="amber">
+      <Tag tone="warn">
         <span title={status.unusable_reason ?? undefined}>Reconnecting…</span>
-      </Badge>
+      </Tag>
     )
   }
 
   return (
     <span className="flex items-center gap-2">
       {derived.kind === 'sync_degraded' && (
-        <Badge tone="amber">
+        <Tag tone="warn">
           <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
             Sync {status.last_sync_outcome}
           </span>
-        </Badge>
+        </Tag>
       )}
-      <Badge tone="emerald">
+      <Tag tone="ok">
         <span title={status.last_synced_at ? `Last synced ${fmtClock(status.last_synced_at)}` : 'Never synced'}>
           Saxo connected
         </span>
-      </Badge>
+      </Tag>
     </span>
   )
 }

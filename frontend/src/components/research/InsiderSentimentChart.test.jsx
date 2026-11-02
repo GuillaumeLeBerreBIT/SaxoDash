@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 
-import { NEGATIVE, POSITIVE } from '../../lib/charts'
+import { chartPalette } from '../../lib/charts'
+import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import InsiderSentimentChart from './InsiderSentimentChart'
 
 const sentiment = [
   { month: '2026-08', mspr: 25, change: 400 },
   { month: '2026-09', mspr: -64.04, change: -1952 },
 ]
+
+const { up: POSITIVE, down: NEGATIVE } = chartPalette(DEFAULT_APPEARANCE)
 
 const bar = (item) => item.querySelector('[data-bar]')
 

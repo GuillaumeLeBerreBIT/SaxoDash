@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { useCongressOwnershipSummary, useInvestorStocks } from '../api/queries'
-import { Alert, Button, Card, EmptyState, InstrumentLogo, LetterAvatar, PageHeader, Select, Skeleton, TBtn, Td, Th, Tr } from '../components/ui'
+import { Alert, Button, Card, EmptyState, Segmented, Select, Skeleton, Td, Th, Tr } from '../components/ui'
+import StockLogo from '../components/StockLogo'
 import CongressActivity from '../components/congress/CongressActivity'
 import InvestorAvatar from '../components/investors/InvestorAvatar'
 import LimitsNote from '../components/investors/LimitsNote'
@@ -11,17 +12,19 @@ import { PAGE_SIZE, PAGE_STEP, fmtUsdCompact, quarterLabel } from '../lib/invest
 
 const VIEW_KEYS = new Set(STOCK_VIEWS.map(([key]) => key))
 const DEFAULT_VIEW = 'bought'
+const VIEW_OPTIONS = STOCK_VIEWS.map(([value, label]) => ({ value, label }))
+const VIEW_LABELS = Object.fromEntries(STOCK_VIEWS)
 
 function Stock({ row }) {
   const label = stockLabel(row)
   return (
-    <span className="flex items-center gap-2 min-w-0">
-      <InstrumentLogo symbol={row.ticker} size={22} className="rounded" fallback={<LetterAvatar symbol={label} size={22} />} />
+    <span className="flex items-center gap-2.5 min-w-0">
+      <StockLogo ticker={row.ticker} label={label} size={28} />
       <span className="min-w-0">
         {row.ticker
-          ? <Link to={`/research?symbol=${encodeURIComponent(row.ticker)}`} className="font-mono font-semibold text-zinc-100 hover:text-blue-300">{label}</Link>
-          : <span className="text-zinc-200">{label}</span>}
-        {row.ticker ? <span className="block text-[var(--fig-2xs)] text-zinc-500 truncate">{row.issuer}</span> : null}
+          ? <Link to={`/research?symbol=${encodeURIComponent(row.ticker)}`} className="font-bold text-ink hover:underline">{label}</Link>
+          : <span className="font-semibold text-ink">{label}</span>}
+        {row.ticker ? <span className="block text-[12px] text-ink-3 truncate">{row.issuer}</span> : null}
       </span>
     </span>
   )
@@ -32,24 +35,24 @@ function Faces({ investors }) {
     <span className="flex -space-x-1.5">
       {investors.map((investor) => (
         <Link key={investor.slug} to={`/investors/${investor.slug}`} title={investor.name} aria-label={investor.name}>
-          <InvestorAvatar name={investor.name} photo={investor.photo_url} logo={investor.logo_url} size={22} className="ring-2 ring-zinc-900" />
+          <InvestorAvatar name={investor.name} photo={investor.photo_url} logo={investor.logo_url} size={22} className="ring-2 ring-pane" />
         </Link>
       ))}
     </span>
   )
 }
 
-function Rows({ rows }) {
+function Rows({ rows, title }) {
   const [shown, setShown] = useState(PAGE_SIZE)
   const visible = useMemo(() => rows.slice(0, shown), [rows, shown])
   const tickers = useMemo(() => visible.map((row) => row.ticker).filter(Boolean), [visible])
   const congress = useCongressOwnershipSummary(tickers).data
   return (
     <>
-      <Card padding={false}>
+      <Card flush context={`${rows.length} stocks · counted by fund`} title={title}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-[var(--fig-sm)]">
-            <thead className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 border-b border-white/[0.06]">
+          <table className="w-full min-w-[720px]">
+            <thead>
               <tr>
                 <Th edge>Stock</Th>
                 <Th align="right">Owners</Th>
@@ -65,11 +68,11 @@ function Rows({ rows }) {
               {visible.map((row) => (
                 <Tr key={row.cusip}>
                   <Td edge><Stock row={row} /></Td>
-                  <Td align="right" className="num font-mono text-zinc-200">{row.owners}</Td>
-                  <Td align="right" className="num font-mono text-zinc-200">{row.bought}</Td>
-                  <Td align="right" className="num font-mono text-zinc-200">{row.sold}</Td>
-                  <Td align="right" className="num font-mono text-zinc-400">{row.new}</Td>
-                  <Td align="right" className="num font-mono text-zinc-400">{fmtUsdCompact(row.value)}</Td>
+                  <Td align="right" className="text-ink">{row.owners}</Td>
+                  <Td align="right" className="text-ink">{row.bought}</Td>
+                  <Td align="right" className="text-ink">{row.sold}</Td>
+                  <Td align="right" className="text-ink-2">{row.new}</Td>
+                  <Td align="right" className="text-ink-2">{fmtUsdCompact(row.value)}</Td>
                   <Td align="right" hideBelow="md">
                     <CongressActivity ticker={row.ticker} stock={congress?.stocks?.[row.ticker]} windowDays={congress?.window_days} />
                   </Td>
@@ -81,7 +84,7 @@ function Rows({ rows }) {
         </div>
       </Card>
       {shown < rows.length ? (
-        <div className="flex items-center justify-between gap-3 text-[var(--fig-xs)] text-zinc-500">
+        <div className="flex items-center justify-between gap-3 text-[12px] text-ink-3 num">
           <span>{`Showing ${shown} of ${rows.length}`}</span>
           <Button size="sm" onClick={() => setShown(shown + PAGE_STEP)}>Show more</Button>
         </div>
@@ -104,33 +107,38 @@ export default function InvestorStocks() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link to="/investors" className="inline-block text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">← Investors</Link>
-      <PageHeader
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
+      <Card
+        context={(
+          <span className="flex items-center gap-2 min-w-0">
+            <Link to="/investors" className="text-ink-2 hover:text-ink hover:underline">← Investors</Link>
+            <span aria-hidden="true" className="text-ink-3">·</span>
+            <span className="truncate">What the tracked investors own, bought and sold, counted by fund</span>
+          </span>
+        )}
         title="Stocks"
-        subtitle="What the tracked investors own, bought and sold, counted by fund"
+        titleAs="h1"
         right={data?.quarters.length ? (
-          <label className="flex items-center gap-2 text-[var(--fig-xs)] text-zinc-500">
-            Quarter
-            <Select aria-label="Quarter" value={data.quarter ?? ''} onChange={(e) => update('quarter', e.target.value === data.signal_quarter ? null : e.target.value)}>
-              {data.quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
-            </Select>
-          </label>
+          <Select
+            aria-label="Quarter"
+            value={data.quarter ?? ''}
+            onChange={(e) => update('quarter', e.target.value === data.signal_quarter ? null : e.target.value)}
+            className="h-8 text-[13px]"
+          >
+            {data.quarters.map((q) => <option key={q} value={q}>{quarterLabel(q)}</option>)}
+          </Select>
         ) : null}
-      />
-      <div role="group" aria-label="Stock view" className="flex items-center gap-0.5 flex-wrap">
-        {STOCK_VIEWS.map(([key, label]) => (
-          <TBtn key={key} active={view === key} onClick={() => update('view', key === DEFAULT_VIEW ? null : key)}>{label}</TBtn>
-        ))}
-      </div>
+      >
+        <Segmented label="Stock view" options={VIEW_OPTIONS} value={view} onChange={(key) => update('view', key === DEFAULT_VIEW ? null : key)} />
+      </Card>
       {error ? (
         <Alert>Could not load stock activity. {error.message}</Alert>
       ) : isLoading || !data ? (
         <Skeleton className="h-64" />
       ) : data.rows.length === 0 ? (
-        <EmptyState title={`No stocks with that activity in ${quarterLabel(data.quarter)}.`} />
+        <Card><EmptyState title={`No stocks with that activity in ${quarterLabel(data.quarter)}.`} /></Card>
       ) : (
-        <Rows key={`${view}:${data.quarter}`} rows={data.rows} />
+        <Rows key={`${view}:${data.quarter}`} rows={data.rows} title={`${VIEW_LABELS[view]} · ${quarterLabel(data.quarter)}`} />
       )}
       <LimitsNote />
     </div>

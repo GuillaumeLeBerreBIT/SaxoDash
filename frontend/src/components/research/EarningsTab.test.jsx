@@ -58,7 +58,7 @@ describe('EarningsTab', () => {
     render(<EarningsTab symbol="AAPL" earnings={{ data: AVAILABLE, isLoading: false }} fundamentals={NO_FUNDAMENTALS} />)
     expect(screen.getByText('Beat record')).toBeInTheDocument()
     expect(screen.getByText('2/3')).toBeInTheDocument()
-    expect(screen.getByText('A consistent beat history.')).toBeInTheDocument()
+    expect(screen.getByText('A consistent beat history.')).toHaveClass('text-up')
   })
 
   it('falls back to the reason when earnings are unavailable', () => {

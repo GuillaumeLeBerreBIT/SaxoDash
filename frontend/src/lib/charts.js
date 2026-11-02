@@ -1,72 +1,18 @@
 import { fmtDayMonth, fmtEur } from './format'
 import { niceAxis } from './niceTicks'
-
-// This file is the ONLY source of chart color in the app - a component that
-// needs a gain/loss/warning/neutral hex for an SVG, canvas, or recharts prop
-// (none of which can take a Tailwind class) imports it from here. The 2026-09
-// UI audit found 8 components hand-copying the exact BEAT/MISS hex values
-// instead of importing them; if you're about to write '#34d399' or '#f87171'
-// anywhere, import POSITIVE/NEGATIVE instead.
-
-// One palette for beat/miss/estimate wherever earnings surprise is drawn -
-// the EPS history bars, the calendar bullet bars, the row edges and the
-// week-summary chart all read from here rather than inlining hexes.
-export const BEAT = '#34d399'
-export const MISS = '#f87171'
-export const ESTIMATE = '#52525b' // consensus / not-yet-judged
-export const REPORTED = '#3b82f6' // reported, but no surprise figure to judge it by
-export const PENDING = '#f59e0b' // report date has passed, provider hasn't posted the actual yet
-export const TARGET_TICK = '#e4e4e7' // the estimate marker on a bullet bar, once actuals are in
-export const TRACK = 'rgba(255,255,255,0.06)' // empty bar track
-
-// Generic gain/loss aliases - same two values as BEAT/MISS (this app has
-// exactly one green and one red, full stop), named for use outside an
-// earnings context (P&L lines, drawdown fills, gainers/losers bars) where
-// "BEAT"/"MISS" would read oddly. Never introduce a second red or green.
-export const POSITIVE = BEAT
-export const NEGATIVE = MISS
-
-// Muted label/axis text - the one gray used for chart ticks, legends, and
-// "neutral, not a spending category" swatches (zinc-500 equivalent).
-export const AXIS_TEXT = '#71717a'
-
-// A lighter gray than AXIS_TEXT, deliberately: a category axis (e.g. ticker
-// names on a horizontal bar chart) is the label a reader identifies each row
-// by, not incidental chrome like a numeric axis's tick marks, so it gets more
-// contrast (zinc-400 equivalent).
-export const CATEGORY_AXIS_TEXT = '#a1a1aa'
-
-// Series-identity colors for a multi-line "value over time" chart that shows
-// more than one line at once (NetWorthChart's Investments/Bank/Total) - these
-// name which line is which, not a gain/loss sign, so they're kept distinct
-// from POSITIVE/NEGATIVE even where a value happens to coincide.
-export const SERIES_INVESTMENTS = POSITIVE // reuses the gain green deliberately - investments are the growth-oriented slice
-export const SERIES_BANK = '#fbbf24' // amber-gold; a bank balance isn't a PENDING/warning signal despite the nearby hue
-export const SERIES_TOTAL = '#60a5fa' // lighter accent blue than REPORTED - reads as "the headline line" over two dashed/faded siblings
-
-export const STATEMENT_SERIES = {
-  revenue: REPORTED,
-  gross_profit: SERIES_TOTAL,
-  operating_income: SERIES_BANK,
-  net_income: POSITIVE,
-}
-
-export const HEALTH_SERIES = {
-  free_cash_flow: POSITIVE,
-  cash: SERIES_TOTAL,
-  total_debt: SERIES_BANK,
-  current_assets: SERIES_TOTAL,
-  long_term_assets: REPORTED,
-  current_liabilities: SERIES_BANK,
-  long_term_liabilities: PENDING,
-}
+import { THEMES, themeVars } from './theme'
 
 /** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
 export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
-export const surpriseColor = (value) => [MISS, ESTIMATE, BEAT][surpriseSign(value) + 1]
+export const surpriseColor = (value, c) => [c.down, c.estimate, c.up][surpriseSign(value) + 1]
 
-/** '#rrggbb' + 0..1 alpha -> 'rgba(...)', so tinted variants stay derived
- *  from BEAT/MISS instead of being hand-mixed. */
+export const statementSeries = (c) => ({
+  revenue: c.series[0],
+  gross_profit: c.series[1],
+  operating_income: c.series[3],
+  net_income: c.series[2],
+})
+
 export function withAlpha(hex, alpha) {
   const n = parseInt(hex.slice(1), 16)
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
@@ -74,59 +20,65 @@ export function withAlpha(hex, alpha) {
 
 export const PERFORMANCE_CAPS = { day: 3, sincePurchase: 30, month: 9 }
 export const FLAT_MOVE = 0.1
-export const FLAT_FILL = withAlpha(AXIS_TEXT, 0.18)
 
-export function performanceFill(pct, { cap, flat = FLAT_MOVE }) {
-  if (pct == null || Number.isNaN(Number(pct))) return null
-  const n = Number(pct)
-  if (Math.abs(n) < flat) return FLAT_FILL
-  const intensity = Math.min(1, Math.abs(n) / cap)
-  return withAlpha(n >= 0 ? POSITIVE : NEGATIVE, 0.12 + intensity * 0.65)
+export function chartPalette({ theme, moves }) {
+  const roles = themeVars(THEMES[theme] ? theme : 'republic', moves)
+  const pick = (name) => roles[`--sd-${name}`]
+  return {
+    up: pick('up'),
+    down: pick('down'),
+    flat: pick('flat'),
+    warn: pick('warn'),
+    earn: pick('earn'),
+    grid: pick('grid'),
+    ink: pick('ink'),
+    accent: pick('accent'),
+    onAccent: pick('on-accent'),
+    axis: pick('ink-3'),
+    axisCategory: pick('ink-2'),
+    crosshair: pick('crosshair'),
+    bench: pick('bench'),
+    primary: pick('primary-line'),
+    estimate: pick('ink-3'),
+    track: pick('pill'),
+    series: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => pick(`s${i}`)),
+    heat: ['heat-d3', 'heat-d2', 'heat-d1', 'heat-0', 'heat-u1', 'heat-u2', 'heat-u3'].map(pick),
+    tooltip: { bg: pick('raised'), text: pick('ink'), border: pick('line') },
+  }
 }
 
-export const chartTooltipProps = {
+export function performanceFill(pct, { cap, flat = FLAT_MOVE }, c) {
+  if (pct == null || Number.isNaN(Number(pct))) return null
+  const n = Number(pct)
+  if (Math.abs(n) < flat) return withAlpha(c.flat, 0.18)
+  const intensity = Math.min(1, Math.abs(n) / cap)
+  const base = n >= 0 ? c.up : c.down
+  return withAlpha(base, 0.12 + intensity * 0.65)
+}
+
+export const chartTooltipProps = (c) => ({
   contentStyle: {
-    background: '#18181b',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: c.tooltip.bg,
+    border: `1px solid ${c.tooltip.border}`,
     borderRadius: '8px',
-    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.5)',
+    boxShadow: '0 20px 25px -5px var(--sd-shadow), 0 8px 10px -6px var(--sd-shadow)',
     fontSize: '12px',
     padding: '8px 12px',
   },
-  labelStyle: { color: '#a1a1aa', fontSize: '11px', marginBottom: '4px' },
-  itemStyle: { color: '#fafafa', padding: '1px 0' },
-  cursor: { stroke: 'rgba(96,165,250,0.25)', fill: 'rgba(96,165,250,0.08)' },
-}
+  labelStyle: { color: c.axisCategory, fontSize: '11px', marginBottom: '4px' },
+  itemStyle: { color: c.tooltip.text, padding: '1px 0' },
+  cursor: { stroke: c.crosshair, fill: withAlpha(c.crosshair, 0.12) },
+})
 
-// Blue-family ramp for sector / category breakdowns. Lifted here so the
-// Portfolio sector bars and the Dashboard exposure donut share one.
-export const SECTOR_PALETTE = ['#3b82f6', '#60a5fa', '#93c5fd', '#1d4ed8', '#0ea5e9', '#1e40af']
-
-// The catch-all "everything else" slice in a top-N+Other donut (holdings,
-// sectors) - a real chart slice, so kept distinct from AXIS_TEXT even though
-// both are the same neutral gray family.
-export const OTHER_SLICE = '#52525b'
-
-// Multi-hue, dark-background-legible palette for per-holding identity (pie
-// slices, logo-fallback dots). Deliberately excludes green/red - those are
-// reserved for P&L sign everywhere else in the app, so reusing them here
-// would read as a gain/loss signal instead of "this is ticker X".
-export const HOLDINGS_PALETTE = [
-  '#60a5fa', '#fbbf24', '#a78bfa', '#22d3ee', '#fb923c',
-  '#f472b6', '#2dd4bf', '#818cf8', '#facc15', '#c084fc',
-]
-
-/** Deterministic color per ticker from HOLDINGS_PALETTE - same ticker always
- *  gets the same color across the app, without the backend's per-position
- *  hash-to-raw-hex color (which produces arbitrary, sometimes muddy hues). */
-export function colorForTicker(ticker) {
+export function colorForTicker(ticker, c) {
+  const palette = c.series
   let hash = 0
   for (let i = 0; i < (ticker || '').length; i++) hash = (hash * 31 + ticker.charCodeAt(i)) >>> 0
-  return HOLDINGS_PALETTE[hash % HOLDINGS_PALETTE.length]
+  return palette[hash % palette.length]
 }
 
-export function colorForRank(index) {
-  return HOLDINGS_PALETTE[index % HOLDINGS_PALETTE.length]
+export function colorForRank(index, c) {
+  return c.series[index % c.series.length]
 }
 
 // Fixed order (not hashed) so the same category always gets the same color
@@ -140,32 +92,33 @@ const CATEGORY_ORDER = [
 
 // Movement between your own accounts, not spending - a distinct neutral so
 // it never collides with a real spending category's color in a shared list.
-const NEUTRAL_CATEGORY_COLOR = AXIS_TEXT
 const NEUTRAL_CATEGORIES = ['TRANSFER', 'SAVINGS']
 
-export function colorForCategory(category) {
-  if (NEUTRAL_CATEGORIES.includes(category)) return NEUTRAL_CATEGORY_COLOR
+export function colorForCategory(category, c) {
+  const palette = c.series
+  if (NEUTRAL_CATEGORIES.includes(category)) return c.axis
   const idx = CATEGORY_ORDER.indexOf(category)
-  return idx === -1 ? NEUTRAL_CATEGORY_COLOR : HOLDINGS_PALETTE[idx % HOLDINGS_PALETTE.length]
+  if (idx === -1) return c.axis
+  return idx < palette.length ? palette[idx] : withAlpha(palette[idx % palette.length], 0.55)
 }
 
-export const gridProps = { stroke: 'rgba(255,255,255,0.06)', vertical: false }
+export const gridProps = (c) => ({ stroke: c.grid, vertical: false })
 
-export const axisProps = {
-  tick: { fill: AXIS_TEXT, fontSize: 11 },
+export const axisProps = (c) => ({
+  tick: { fill: c.axis, fontSize: 11 },
   axisLine: false,
   tickLine: false,
-}
+})
 
 export const formatAxisDate = fmtDayMonth
 
-export const dateAxisProps = { ...axisProps, dataKey: 'date', tickFormatter: formatAxisDate }
+export const dateAxisProps = (c) => ({ ...axisProps(c), dataKey: 'date', tickFormatter: formatAxisDate })
 
-export const moneyAxisProps = {
-  ...axisProps,
+export const moneyAxisProps = (c) => ({
+  ...axisProps(c),
   width: 70,
   tickFormatter: (value) => fmtEur(value, { decimals: 0 }),
-}
+})
 
 function paddedDomain([min, max]) {
   const span = max - min
@@ -187,11 +140,3 @@ export function seriesAxis(rows, keys, options = {}) {
   if (axis.ticks) return axis
   return { domain: paddedDomain([Math.min(...values), Math.max(...values)]) }
 }
-
-export const RATING_SEGMENTS = [
-  withAlpha(NEGATIVE, 0.75),
-  withAlpha(NEGATIVE, 0.35),
-  ESTIMATE,
-  withAlpha(POSITIVE, 0.4),
-  withAlpha(POSITIVE, 0.85),
-]

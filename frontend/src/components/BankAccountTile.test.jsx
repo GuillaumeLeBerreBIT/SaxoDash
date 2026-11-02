@@ -44,7 +44,7 @@ describe('BankAccountTile', () => {
         account={{ id: 42, bank: 'Argenta', type: 'Savings account', iban_masked: 'x', balance: '100.00', available: '100.00', accent: '#d97706' }}
       />,
     )
-    expect(container.querySelector('a[href="/accounts/42"]')).toBeInTheDocument()
+    expect(container.querySelector('a[href="/money/accounts/42"]')).toBeInTheDocument()
   })
 
   it('uses the flat Card language, not a skeuomorphic gradient card', () => {

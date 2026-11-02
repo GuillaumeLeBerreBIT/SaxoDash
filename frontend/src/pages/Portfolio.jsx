@@ -1,23 +1,32 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { PenLine } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 
 import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
-import { fmtEur, fmtMoney, fmtPct, pctToneClass, fmtQty } from '../lib/format'
-import { ownershipTicker, ownershipTickers } from '../lib/ownership'
-import { moveLabel, priceBasis } from '../lib/pricing'
-import { researchHref } from '../lib/research'
-import { Card, CardHeader, QueryState, EmptyState, PageHeader, Badge, DayChange, InstrumentLogo, StatStrip, StatRow, Th, SortableTh, Td, Tr } from '../components/ui'
+import { fmtEur } from '../lib/format'
+import { ownershipTickers } from '../lib/ownership'
+import { colorForTicker } from '../lib/charts'
+import { nextSort, sortRows } from '../lib/sort'
+import { useChartColors } from '../theme/useChartColors'
+import { Card, EmptyState, Move, QueryState, Segmented, Tile } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
-import PriceBasisNote from '../components/PriceBasisNote'
 import HistoryAreaChart from '../components/HistoryAreaChart'
 import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import AllocationDonut from '../components/AllocationDonut'
-import { FundChange, FundShares } from '../components/investors/FundHoldings'
-import CongressActivity from '../components/congress/CongressActivity'
-import { nextSort, sortRows } from '../lib/sort'
-import { colorForTicker, OTHER_SLICE, SECTOR_PALETTE, SERIES_INVESTMENTS } from '../lib/charts'
+import PositionsTable from '../components/portfolio/PositionsTable'
+import TransactionsView from '../components/portfolio/TransactionsView'
+import { ConcentrationPanel, CurrencyPanel, SectorsPanel } from '../components/portfolio/BalancePanels'
+
+const NO_POSITIONS = []
+const SPAN_12 = 'min-[1100px]:col-span-12'
+const SPAN_8 = 'min-[1100px]:col-span-8'
+const SPAN_4 = 'min-[1100px]:col-span-4'
+const TOP_HOLDINGS = 5
+
+const VIEWS = [
+  { value: 'positions', label: 'Positions' },
+  { value: 'transactions', label: 'Transactions' },
+]
 
 const finite = (raw) => (raw === null || raw === undefined ? null : Number(raw))
 
@@ -25,247 +34,151 @@ const HOLDING_ACCESSORS = {
   name: (p) => p.ticker,
   qty: (p) => finite(p.qty),
   value: (p) => finite(p.value),
+  pnl_pct: (p) => finite(p.pnl_pct),
   pnl: (p) => finite(p.pnl),
   weight: (p) => finite(p.weight),
 }
 
+const pnlTone = (value) => (value == null ? undefined : Number(value) >= 0 ? 'up' : 'down')
+
+function SummaryTiles({ summary, netWorth }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+      <Tile label="Total net worth" value={fmtEur(netWorth.net_worth)} sub="Portfolio + bank accounts" />
+      <Tile
+        label="Investment portfolio"
+        value={fmtEur(summary.total_value)}
+        sub={
+          summary.total_pnl_pct == null ? (
+            '—'
+          ) : (
+            <>
+              <Move value={summary.total_pnl_pct} /> since purchase
+            </>
+          )
+        }
+      />
+      <Tile
+        label="Total P&L"
+        value={summary.total_pnl == null ? null : fmtEur(summary.total_pnl, { sign: true })}
+        tone={pnlTone(summary.total_pnl)}
+        sub={`${fmtEur(summary.total_cost)} invested`}
+      />
+      <Tile
+        label="Bank balance"
+        value={fmtEur(netWorth.bank_only_total)}
+        sub={`+ ${fmtEur(netWorth.broker_cash)} cash at Saxo, included in net worth`}
+      />
+    </div>
+  )
+}
+
+function HoldingsAllocation({ positions, className }) {
+  const c = useChartColors()
+  const positionsValue = positions.reduce((sum, p) => sum + Number(p.value), 0)
+  const top = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, TOP_HOLDINGS)
+  const other = Math.max(positionsValue - top.reduce((sum, p) => sum + Number(p.value), 0), 0)
+  const items = [
+    ...top.map((p) => ({ name: p.ticker, value: Number(p.value), color: colorForTicker(p.ticker, c) })),
+    ...(other > 0 ? [{ name: 'Other', value: other, color: c.flat, logo: false }] : []),
+  ]
+  return (
+    <Card className={className} context={`Top ${TOP_HOLDINGS} by value`} dot={positionsValue > 0 ? 'ok' : 'off'} title="Holdings allocation">
+      {positionsValue > 0 ? (
+        <AllocationDonut items={items} formatValue={fmtEur} showIcons />
+      ) : (
+        <EmptyState title="No priced holdings yet" hint="Allocation needs a value per holding to chart." />
+      )}
+    </Card>
+  )
+}
+
 export default function Portfolio() {
+  const c = useChartColors()
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const netWorthQuery = useNetWorth()
-  // Computed before the loading guard below so the hook it wraps runs on
-  // every render - pricing an empty position list is a harmless no-op.
-  const quotes = usePositionQuotes(positionsQuery.data ?? [])
+  const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view = searchParams.get('view') === 'transactions' ? 'transactions' : 'positions'
+  const chooseView = (next) => setSearchParams(next === 'transactions' ? { view: next } : {})
 
   const [sort, setSort] = useState(null)
   const holdings = positionsQuery.data
-  const fundTickers = useMemo(() => ownershipTickers(holdings ?? []), [holdings])
+  const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
   const congress = useCongressOwnershipSummary(fundTickers).data
-  const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
-  const sortedHoldings = useMemo(() => sortRows(holdings ?? [], sort, HOLDING_ACCESSORS), [holdings, sort])
+  const sortedHoldings = useMemo(() => sortRows(holdings ?? NO_POSITIONS, sort, HOLDING_ACCESSORS), [holdings, sort])
   const onSort = (key) => setSort((current) => nextSort(current, key))
 
   const failed = summaryQuery.error || positionsQuery.error || netWorthQuery.error
-
-  if (failed || !summaryQuery.data || !netWorthQuery.data) {
-    const retryFailed = () =>
-      [summaryQuery, positionsQuery, netWorthQuery].filter((q) => q.error).forEach((q) => q.refetch())
-    return (
-      <div className="space-y-4">
-        <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
-        <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" />
-      </div>
-    )
-  }
+  const ready = !failed && summaryQuery.data && netWorthQuery.data
+  const retryFailed = () =>
+    [summaryQuery, positionsQuery, netWorthQuery].filter((q) => q.error).forEach((q) => q.refetch())
 
   const summary = summaryQuery.data
   const netWorth = netWorthQuery.data
-  const positions = positionsQuery.data ?? []
-
-  const positionsValue = positions.reduce((sum, p) => sum + Number(p.value), 0)
-
-  const topHoldings = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, 5)
-  const topHoldingsValue = topHoldings.reduce((sum, p) => sum + Number(p.value), 0)
-  const otherHoldingsValue = Math.max(positionsValue - topHoldingsValue, 0)
-  const allocationItems = [
-    ...topHoldings.map((p) => ({ name: p.ticker, value: Number(p.value), color: colorForTicker(p.ticker) })),
-    ...(otherHoldingsValue > 0 ? [{ name: 'Other', value: otherHoldingsValue, color: OTHER_SLICE, logo: false }] : []),
-  ]
-
-  const MAX_SECTOR_SLICES = 5
-  const sectorTotals = new Map()
-  positions.forEach((p) => {
-    sectorTotals.set(p.sector, (sectorTotals.get(p.sector) || 0) + Number(p.value))
-  })
-  const sectorEntries = Array.from(sectorTotals.entries()).sort((a, b) => b[1] - a[1])
-  const otherSectorsValue = sectorEntries.slice(MAX_SECTOR_SLICES).reduce((sum, [, value]) => sum + value, 0)
-  // Same donut+legend pattern as Holdings allocation above, same top-N+Other
-  // cap - one chart language for "share of X", not bars here and a donut
-  // there for two instances of the identical question.
-  const sectorAllocationItems = [
-    ...sectorEntries
-      .slice(0, MAX_SECTOR_SLICES)
-      .map(([name, value], i) => ({ name, value, color: SECTOR_PALETTE[i % SECTOR_PALETTE.length] })),
-    ...(otherSectorsValue > 0 ? [{ name: 'Other', value: otherSectorsValue, color: OTHER_SLICE, logo: false }] : []),
-  ]
-
-  const pnlTone = pctToneClass(summary.total_pnl_pct)
-  const dayColumnLabel = moveLabel(quotes.values()) === 'Today' ? 'Day %' : 'Latest session %'
+  const positions = holdings ?? NO_POSITIONS
 
   return (
-    <div className="space-y-4">
-      <PageHeader title="Portfolio" subtitle="Holdings and allocation" right={<SaxoConnectionStatus />} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(240px,28%)_1fr] gap-4">
-        {/* One stat surface for portfolio totals, not two - this used to be a
-            3-row strip here plus a second "Overview" card in the sidebar
-            below restating Invested cost/Total P&L/Total P&L% for the same
-            underlying figures in a different visual pattern. */}
-        <StatStrip vertical>
-          <StatRow
-            label="Total net worth"
-            value={fmtEur(netWorth.net_worth)}
-            note="Portfolio + bank accounts"
-            tone="text-blue-400"
-            lead
-          />
-          <StatRow
-            label="Investment portfolio"
-            value={fmtEur(summary.total_value)}
-            note={
-              <span className={pnlTone}>
-                {summary.total_pnl_pct == null ? '—' : `${fmtPct(summary.total_pnl_pct)} since purchase`}
-              </span>
-            }
-          />
-          <StatRow
-            label="Total P&L"
-            value={<span className={pnlTone}>{fmtEur(summary.total_pnl, { sign: true })}</span>}
-            note={`${fmtEur(summary.total_cost)} invested`}
-          />
-          <StatRow
-            label="Bank balance"
-            value={fmtEur(netWorth.bank_only_total)}
-            note={`+ ${fmtEur(netWorth.broker_cash)} cash at Saxo, included in net worth`}
-          />
-        </StatStrip>
-
-        <HistoryAreaChart
-          title="Portfolio value"
-          subtitle="Investment value over time"
-          dataKey="portfolio_value"
-          name="Portfolio"
-          color={SERIES_INVESTMENTS}
-        />
-      </div>
-
-      <InstrumentSearchBar />
-
-      <div className="grid grid-cols-1 gap-4 min-[1800px]:[grid-template-columns:66fr_34fr] min-[1800px]:grid-rows-[1fr_auto]">
-        <Card padding={false} className="flex flex-col min-h-0 min-[1800px]:col-start-1 min-[1800px]:row-start-1">
-          <div className="p-4 pb-2">
-            <CardHeader title="Holdings" subtitle="All positions" right={<PriceBasisNote positions={positions} />} />
-          </div>
-          <div className="flex-1 min-h-[160px] overflow-y-auto overflow-x-auto">
-            <table className="w-full text-[var(--fig-sm)]">
-              <thead>
-                <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-white/[0.06]">
-                  <SortableTh edge sortKey="name" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Name</SortableTh>
-                  <SortableTh align="right" hideBelow="md" sortKey="qty" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Qty</SortableTh>
-                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Avg</Th>
-                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">Price</Th>
-                  <Th align="right" hideBelow="md" className="sticky top-0 z-10 bg-zinc-900">{dayColumnLabel}</Th>
-                  <SortableTh align="right" sortKey="value" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Value</SortableTh>
-                  <SortableTh align="right" sortKey="pnl" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">P&L</SortableTh>
-                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund shares</Th>
-                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Fund change</Th>
-                  <Th align="right" hideBelow="wide" className="sticky top-0 z-10 bg-zinc-900">Congress</Th>
-                  <SortableTh edge align="right" hideBelow="md" sortKey="weight" sort={sort} onSort={onSort} className="sticky top-0 z-10 bg-zinc-900">Weight</SortableTh>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedHoldings.map((p) => (
-                  <Tr key={p.ticker}>
-                    <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
-                      <Link to={researchHref(p.ticker)} className="flex items-center gap-2.5 group min-w-0">
-                        <InstrumentLogo
-                          symbol={p.ticker}
-                          size={16}
-                          className="rounded-sm"
-                          fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorForTicker(p.ticker) }} />}
-                        />
-                        <span className="font-medium text-zinc-100 group-hover:text-blue-300">{p.ticker}</span>
-                        {p.type === 'ETF' && <Badge tone="amber">ETF</Badge>}
-                        {p.has_thesis === false && (
-                          <PenLine
-                            size={12}
-                            className="text-zinc-600 shrink-0"
-                            title="No thesis written yet — add one on the Research page"
-                          />
-                        )}
-                        <span className="text-zinc-500 truncate min-w-0 max-w-[160px]" title={p.name}>{p.name}</span>
-                        {p.price_source !== 'live' && (
-                          <span
-                            title={priceBasis(p.price_source).note}
-                            className="md:hidden shrink-0 text-[var(--fig-2xs)] text-amber-400/80"
-                          >
-                            est.
-                          </span>
-                        )}
-                      </Link>
-                    </Td>
-                    <Td align="right" hideBelow="md" className="num text-zinc-300">{fmtQty(p.qty)}</Td>
-                    <Td align="right" hideBelow="md" className="num text-zinc-400">{fmtMoney(p.avg_cost, p.currency)}</Td>
-                    <Td align="right" hideBelow="md" className="num text-zinc-200">
-                      <span
-                        title={priceBasis(p.price_source).note}
-                        className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-zinc-600'}
-                      >
-                        {fmtMoney(p.current_price, p.currency)}
-                      </span>
-                    </Td>
-                    <Td align="right" hideBelow="md"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
-                    <Td align="right" className="num text-zinc-100">{fmtEur(p.value)}</Td>
-                    <Td align="right" className={`num ${Number(p.pnl) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {fmtEur(p.pnl, { sign: true })}
-                    </Td>
-                    <Td align="right" hideBelow="wide">
-                      <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                    </Td>
-                    <Td align="right" hideBelow="wide">
-                      <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                    </Td>
-                    <Td align="right" hideBelow="wide">
-                      <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
-                    </Td>
-                    <Td edge align="right" hideBelow="md" className="num text-zinc-300">{Number(p.weight).toFixed(1)}%</Td>
-                  </Tr>
-                ))}
-                <tr className="bg-zinc-800/20">
-                  <Td edge className="!whitespace-normal md:!whitespace-nowrap font-medium text-zinc-300">
-                    Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
-                  </Td>
-                  <Td hideBelow="md" />
-                  <Td hideBelow="md" />
-                  <Td hideBelow="md" />
-                  <Td hideBelow="md" />
-                  <Td align="right" className="num text-zinc-100 font-medium">{fmtEur(summary.total_value)}</Td>
-                  <Td align="right" className={`num font-medium ${pnlTone}`}>{fmtEur(summary.total_pnl, { sign: true })}</Td>
-                  <Td hideBelow="wide" />
-                  <Td hideBelow="wide" />
-                  <Td hideBelow="wide" />
-                  <Td edge align="right" hideBelow="md" className="num text-zinc-300">100.0%</Td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+    <>
+      <h1 className="sr-only">Portfolio</h1>
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <Card
+          className={SPAN_12}
+          context={`Saxo + bank accounts${holdings ? ` · ${positions.length} position${positions.length === 1 ? '' : 's'}` : ''} · in euros`}
+          dot={failed ? 'warn' : 'ok'}
+          right={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <SaxoConnectionStatus />
+              <Segmented label="Portfolio view" options={VIEWS} value={view} onChange={chooseView} />
+            </div>
+          }
+        >
+          {ready && <SummaryTiles summary={summary} netWorth={netWorth} />}
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-[1800px]:flex min-[1800px]:flex-col min-[1800px]:col-start-2 min-[1800px]:row-start-1 min-[1800px]:row-span-2">
-          <Card>
-            <CardHeader title="Holdings allocation" subtitle="Top 5 by value" />
-            {positionsValue > 0 ? (
-              <AllocationDonut items={allocationItems} formatValue={fmtEur} showIcons />
-            ) : (
-              <EmptyState title="No priced holdings yet" hint="Allocation needs a value per holding to chart." />
-            )}
-          </Card>
+        {view === 'positions' && !ready && (
+          <div className={`${SPAN_12} min-w-0`}>
+            <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" />
+          </div>
+        )}
 
-          <Card className="flex-1 flex flex-col">
-            <CardHeader title="Sector breakdown" subtitle="By value" />
-            {positionsValue > 0 ? (
-              <AllocationDonut items={sectorAllocationItems} formatValue={fmtEur} />
-            ) : (
-              <EmptyState title="No priced holdings yet" hint="Sector weight needs a value per holding to chart." />
-            )}
-          </Card>
-        </div>
+        {view === 'transactions' && <TransactionsView />}
 
-        <div className="min-[1800px]:col-start-1 min-[1800px]:row-start-2">
-          <GainersLosersChart positions={positions} />
-        </div>
+        {view === 'positions' && ready && (
+          <>
+            <div className={`${SPAN_12} min-w-0`}>
+              <InstrumentSearchBar />
+            </div>
+            <PositionsTable
+              className={SPAN_12}
+              positions={positions}
+              sortedPositions={sortedHoldings}
+              summary={summary}
+              quotes={quotes}
+              ownership={ownership}
+              congress={congress}
+              sort={sort}
+              onSort={onSort}
+            />
+            <SectorsPanel className={SPAN_4} positions={positions} />
+            <ConcentrationPanel className={SPAN_4} positions={positions} />
+            <CurrencyPanel className={SPAN_4} positions={positions} cash={netWorth.broker_cash} />
+            <div className={`${SPAN_8} min-w-0`}>
+              <HistoryAreaChart
+                title="Portfolio value"
+                subtitle="Investment value over time"
+                dataKey="portfolio_value"
+                name="Portfolio"
+                color={c.primary}
+              />
+            </div>
+            <HoldingsAllocation className={SPAN_4} positions={positions} />
+            <GainersLosersChart className={SPAN_12} positions={positions} />
+          </>
+        )}
       </div>
-    </div>
+    </>
   )
 }

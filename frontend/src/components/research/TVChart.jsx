@@ -2,23 +2,20 @@ import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } fr
 import { ChevronsRight } from 'lucide-react'
 
 import {
-  DOWN,
   DRAG_THRESHOLD,
-  OVERLAY_STROKES,
   PAD_R,
   PAD_T,
   PAN_THRESHOLD,
-  UP,
   barsFromDrag,
   indexFromPointer,
   linePath,
+  overlayStrokes,
   priceGeometry,
   scaleFromDrag,
   shiftFromDrag,
   svgY,
   useWidth,
 } from '../../lib/chartGeometry'
-import { AXIS_TEXT, BEAT, CATEGORY_AXIS_TEXT, MISS, REPORTED, SERIES_TOTAL } from '../../lib/charts'
 import { fmtDate } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
@@ -26,6 +23,7 @@ import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
+import { useChartColors } from '../../theme/useChartColors'
 
 /** The price pane of the Research chart: candles/bars/line/area plus overlays.
  *
@@ -39,7 +37,7 @@ import { usePointerDrag } from './usePointerDrag'
  *  body's props stable enough for memo to bite.
  */
 
-function PriceAxis({ ticks, scaleY, width }) {
+function PriceAxis({ ticks, scaleY, width, colors }) {
   return ticks.map((value) => (
     <g key={value}>
       <line
@@ -47,14 +45,14 @@ function PriceAxis({ ticks, scaleY, width }) {
         x2={width - PAD_R}
         y1={scaleY(value)}
         y2={scaleY(value)}
-        stroke="rgba(255,255,255,0.05)"
+        stroke={colors.grid}
       />
       <text
         x={width - PAD_R + 8}
         y={scaleY(value) + 3.5}
-        fill={AXIS_TEXT}
+        fill={colors.axis}
         fontSize="10"
-        fontFamily="Geist Mono"
+        className="num"
       >
         {value.toFixed(value > 100 ? 0 : 2)}
       </text>
@@ -62,11 +60,11 @@ function PriceAxis({ ticks, scaleY, width }) {
   ))
 }
 
-function Candles({ data, geometry }) {
+function Candles({ data, geometry, colors }) {
   const { xAt, scaleY, candleWidth } = geometry
 
   return data.map((bar, i) => {
-    const color = bar.close >= bar.open ? UP : DOWN
+    const color = bar.close >= bar.open ? colors.up : colors.down
     const bodyTop = Math.min(scaleY(bar.open), scaleY(bar.close))
     const bodyHeight = Math.max(1, Math.abs(scaleY(bar.open) - scaleY(bar.close)))
 
@@ -92,11 +90,11 @@ function Candles({ data, geometry }) {
   })
 }
 
-function Bars({ data, geometry }) {
+function Bars({ data, geometry, colors }) {
   const { xAt, scaleY, candleWidth } = geometry
 
   return data.map((bar, i) => (
-    <g key={bar.date} stroke={bar.close >= bar.open ? UP : DOWN} strokeWidth="1.2">
+    <g key={bar.date} stroke={bar.close >= bar.open ? colors.up : colors.down} strokeWidth="1.2">
       <line x1={xAt(i)} x2={xAt(i)} y1={scaleY(bar.high)} y2={scaleY(bar.low)} />
       <line x1={xAt(i) - candleWidth / 2} x2={xAt(i)} y1={scaleY(bar.open)} y2={scaleY(bar.open)} />
       <line x1={xAt(i)} x2={xAt(i) + candleWidth / 2} y1={scaleY(bar.close)} y2={scaleY(bar.close)} />
@@ -104,9 +102,8 @@ function Bars({ data, geometry }) {
   ))
 }
 
-const MARKER_COLOR = [MISS, REPORTED, BEAT]
-
-function EarningsMarkers({ markers, geometry }) {
+function EarningsMarkers({ markers, geometry, colors }) {
+  const markerColor = [colors.down, colors.estimate, colors.up]
   const { xAt, chartH } = geometry
   const y = PAD_T + chartH - 6
   return markers.map((marker) => {
@@ -118,7 +115,7 @@ function EarningsMarkers({ markers, geometry }) {
       <polygon
         key={marker.date}
         points={`${x - 4},${y + 4} ${x + 4},${y + 4} ${x},${y - 4}`}
-        fill={MARKER_COLOR[marker.sign + 1]}
+        fill={markerColor[marker.sign + 1]}
       >
         <title>{title}</title>
       </polygon>
@@ -126,11 +123,12 @@ function EarningsMarkers({ markers, geometry }) {
   })
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, clipId }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
   const last = closes[closes.length - 1]
+  const strokes = overlayStrokes(colors)
 
   return (
     <g>
@@ -140,44 +138,41 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         </clipPath>
       </defs>
 
-      <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} />
+      <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} />
 
       <g clipPath={`url(#${clipId})`}>
-        {/* SERIES_TOTAL is named for the net-worth chart's "Total" line, but is
-            really just the app's one accent blue for "the headline line" in
-            any chart - reused here for the price line itself. */}
         {type === 'area' ? (
           <g>
             <defs>
               <linearGradient id="tvArea" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={SERIES_TOTAL} stopOpacity="0.28" />
-                <stop offset="100%" stopColor={SERIES_TOTAL} stopOpacity="0" />
+                <stop offset="0%" stopColor={colors.primary} stopOpacity="0.28" />
+                <stop offset="100%" stopColor={colors.primary} stopOpacity="0" />
               </linearGradient>
             </defs>
             <path
               d={`${pricePath} L ${xAt(data.length - 1)} ${PAD_T + chartH} L ${xAt(0)} ${PAD_T + chartH} Z`}
               fill="url(#tvArea)"
             />
-            <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" />
+            <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" />
           </g>
         ) : null}
-        {type === 'line' ? <path d={pricePath} fill="none" stroke={SERIES_TOTAL} strokeWidth="1.5" /> : null}
-        {type === 'candles' ? <Candles data={data} geometry={geometry} /> : null}
-        {type === 'bars' ? <Bars data={data} geometry={geometry} /> : null}
+        {type === 'line' ? <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" /> : null}
+        {type === 'candles' ? <Candles data={data} geometry={geometry} colors={colors} /> : null}
+        {type === 'bars' ? <Bars data={data} geometry={geometry} colors={colors} /> : null}
 
         {overlays.bb ? (
           <g>
             <path
               d={linePath(ind.bb.up, xAt, scaleY)}
               fill="none"
-              stroke={OVERLAY_STROKES.bb}
+              stroke={strokes.bb}
               strokeWidth="1"
               opacity="0.55"
             />
             <path
               d={linePath(ind.bb.mid, xAt, scaleY)}
               fill="none"
-              stroke={OVERLAY_STROKES.bb}
+              stroke={strokes.bb}
               strokeWidth="1"
               opacity="0.35"
               strokeDasharray="3 3"
@@ -185,7 +180,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
             <path
               d={linePath(ind.bb.lo, xAt, scaleY)}
               fill="none"
-              stroke={OVERLAY_STROKES.bb}
+              stroke={strokes.bb}
               strokeWidth="1"
               opacity="0.55"
             />
@@ -197,7 +192,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
               key={key}
               d={linePath(ind[key], xAt, scaleY)}
               fill="none"
-              stroke={OVERLAY_STROKES[key]}
+              stroke={strokes[key]}
               strokeWidth="1.3"
             />
           ) : null,
@@ -206,14 +201,14 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           <path
             d={linePath(ind.vwap, xAt, scaleY)}
             fill="none"
-            stroke={OVERLAY_STROKES.vwap}
+            stroke={strokes.vwap}
             strokeWidth="1.2"
             strokeDasharray="4 3"
           />
         ) : null}
 
         {earningsMarkers.length > 0 ? (
-          <EarningsMarkers markers={earningsMarkers} geometry={geometry} />
+          <EarningsMarkers markers={earningsMarkers} geometry={geometry} colors={colors} />
         ) : null}
 
         <line
@@ -221,20 +216,20 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           x2={width - PAD_R}
           y1={scaleY(last)}
           y2={scaleY(last)}
-          stroke="#3f7fd8"
+          stroke={colors.primary}
           strokeDasharray="3 3"
           opacity="0.7"
         />
       </g>
 
       <g>
-        <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={REPORTED} />
+        <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.primary} />
         <text
           x={width - PAD_R + 6}
           y={scaleY(last) + 3.5}
-          fill="#fff"
+          fill={colors.onAccent}
           fontSize="10"
-          fontFamily="Geist Mono"
+          className="num"
         >
           {last.toFixed(2)}
         </text>
@@ -243,7 +238,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
   )
 })
 
-function Crosshair({ bar, index, geometry, width, dimmed }) {
+function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
   const { xAt, scaleY, chartH } = geometry
 
   return (
@@ -253,7 +248,7 @@ function Crosshair({ bar, index, geometry, width, dimmed }) {
         x2={xAt(index)}
         y1={PAD_T}
         y2={PAD_T + chartH}
-        stroke={AXIS_TEXT}
+        stroke={colors.crosshair}
         strokeDasharray="3 3"
       />
       <line
@@ -261,16 +256,16 @@ function Crosshair({ bar, index, geometry, width, dimmed }) {
         x2={width - PAD_R}
         y1={scaleY(bar.close)}
         y2={scaleY(bar.close)}
-        stroke={AXIS_TEXT}
+        stroke={colors.crosshair}
         strokeDasharray="3 3"
       />
-      <rect x={width - PAD_R + 2} y={scaleY(bar.close) - 8} width={PAD_R - 4} height={16} rx={2} fill="#3f3f46" />
+      <rect x={width - PAD_R + 2} y={scaleY(bar.close) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.tooltip.bg} stroke={colors.tooltip.border} />
       <text
         x={width - PAD_R + 6}
         y={scaleY(bar.close) + 3.5}
-        fill="#e4e4e7"
+        fill={colors.tooltip.text}
         fontSize="10"
-        fontFamily="Geist Mono"
+        className="num"
       >
         {bar.close.toFixed(2)}
       </text>
@@ -366,6 +361,7 @@ export function TVChart({
   onPlaced,
 }) {
   const [ref, width] = useWidth()
+  const colors = useChartColors()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
   const placingLine = tool === 'hline'
   const [editingId, setEditingId] = useState(null)
@@ -540,6 +536,7 @@ export function TVChart({
           width={width}
           earningsMarkers={earningsMarkers}
           clipId={clipId}
+          colors={colors}
         />
         <ScaleHandle
           width={width}
@@ -595,13 +592,13 @@ export function TVChart({
             y1={rayStart.y}
             x2={rayPreview.x}
             y2={rayPreview.y}
-            stroke={CATEGORY_AXIS_TEXT}
+            stroke={colors.axisCategory}
             strokeDasharray="3 3"
             pointerEvents="none"
           />
         ) : null}
         {hover != null && data[hover] ? (
-          <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} dimmed={hoverDimmed} />
+          <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} dimmed={hoverDimmed} colors={colors} />
         ) : null}
       </svg>
       {editing ? (
@@ -678,7 +675,7 @@ export function TVChart({
           data-no-pan
           aria-label="Jump to latest"
           title="Jump to latest"
-          className="absolute bottom-2 flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-zinc-900/90 text-zinc-300 hover:text-white"
+          className="absolute bottom-2 flex h-6 w-6 items-center justify-center rounded border border-line bg-raised/90 text-ink-2 hover:text-ink"
           style={{ right: PAD_R + 8 }}
           onClick={(e) => {
             e.stopPropagation()
@@ -695,8 +692,8 @@ export function TVChart({
 
 export function SubPane({ title, height, children }) {
   return (
-    <div className="relative border-t border-white/[0.06]">
-      <div className="absolute z-10 px-3 pt-1.5 text-[var(--fig-2xs)] num text-zinc-500 pointer-events-none">{title}</div>
+    <div className="relative border-t border-line">
+      <div className="absolute z-10 px-3 pt-1.5 text-[var(--fig-2xs)] num text-ink-3 pointer-events-none">{title}</div>
       <div style={{ height }} className="relative">
         {children}
       </div>

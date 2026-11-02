@@ -13,6 +13,13 @@ const ev = (o = {}) => ({
 })
 
 describe('YourWeek', () => {
+  it('names each value column above the rows', () => {
+    render(<YourWeek events={[ev({ symbol: 'HLD', held: true, mine: true })]} nextMine={null} onOpen={() => {}} />)
+    for (const heading of ['Company', 'When', 'Weight', 'EPS · est', 'Move', 'Impact']) {
+      expect(screen.getByText(heading)).toBeInTheDocument()
+    }
+  })
+
   it('lists holdings before the watchlist and leaves the market out', () => {
     render(
       <YourWeek

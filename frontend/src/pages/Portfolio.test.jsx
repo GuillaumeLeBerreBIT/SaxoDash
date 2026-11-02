@@ -16,7 +16,6 @@ const msft = {
   ticker: 'MSFT',
   name: 'Microsoft Corp.',
   type: 'STOCK',
-  color: '#00a4ef',
   sector: 'Technology',
   qty: '20.0000',
   avg_cost: '494.36',
@@ -185,16 +184,16 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('2.5')).toBeInTheDocument()
   })
 
-  it('heads the day column "Day %" when every quote is live or absent', () => {
+  it('heads the day column "Today" when every quote is live or absent', () => {
     renderWithProviders(<Portfolio />)
-    expect(screen.getByRole('columnheader', { name: 'Day %' })).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Today' })).toBeInTheDocument()
   })
 
-  it('heads the day column "Latest session %" when a quote is not live', () => {
+  it('heads the day column "Latest session" when a quote is not live', () => {
     queries.usePositionQuotes.mockReturnValue(new Map([[1, { uic: 1, change_pct: -1, change_basis: 'last_close' }]]))
     renderWithProviders(<Portfolio />)
-    expect(screen.getByRole('columnheader', { name: 'Latest session %' })).toBeInTheDocument()
-    expect(screen.queryByRole('columnheader', { name: 'Day %' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Latest session' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Today' })).not.toBeInTheDocument()
   })
 
   it('titles the truncated holding name with its full text', () => {
@@ -236,7 +235,7 @@ describe('Portfolio holdings table', () => {
 
   it('charts sector breakdown as a donut, the same pattern as holdings allocation', () => {
     renderWithProviders(<Portfolio />)
-    const sectorCard = screen.getByText('Sector breakdown').closest('.flex-1.flex.flex-col')
+    const sectorCard = screen.getByRole('heading', { name: 'Sectors' }).closest('.sd-panel')
     expect(within(sectorCard).getByText('Technology')).toBeInTheDocument()
     expect(within(sectorCard).getByText('€8,773.32')).toBeInTheDocument()
     expect(within(sectorCard).getByText('100.0%')).toBeInTheDocument()
@@ -264,7 +263,7 @@ describe('Portfolio holdings table', () => {
     it('shows an empty state for sector breakdown instead of NaN% or a blank donut', () => {
       stub([unpriced])
       renderWithProviders(<Portfolio />)
-      const sectorCard = screen.getByText('Sector breakdown').closest('.flex-1.flex.flex-col')
+      const sectorCard = screen.getByRole('heading', { name: 'Sectors' }).closest('.sd-panel')
       expect(within(sectorCard).getByText('No priced holdings yet')).toBeInTheDocument()
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
     })
@@ -333,13 +332,13 @@ describe('Portfolio holdings on mobile', () => {
     stub()
   })
 
-  it('keeps name, value and P&L visible below md and hides the rest', () => {
+  it('keeps instrument, value and P/L visible below md and hides the rest', () => {
     renderWithProviders(<Portfolio />)
     const table = screen.getByRole('table')
-    for (const name of ['Name', 'Value', 'P&L']) {
+    for (const name of ['Instrument', 'Value', 'P/L']) {
       expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
     }
-    for (const name of ['Qty', 'Avg', 'Price', /^(Day|Latest session) %$/, 'Weight']) {
+    for (const name of ['Qty', 'Avg cost', 'Last', /^(Today|Latest session)$/, 'Return', 'Weight']) {
       expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
     }
     const row = within(table).getByText('MSFT').closest('tr')
@@ -384,8 +383,8 @@ describe('Portfolio sortable holdings', () => {
   const order = () =>
     within(screen.getByRole('table'))
       .getAllByRole('link')
-      .map((link) => link.textContent.slice(0, 3))
-      .filter((text) => ['AAA', 'BBB', 'CCC'].includes(text))
+      .map((link) => ['AAA', 'BBB', 'CCC'].find((ticker) => link.textContent.includes(ticker)))
+      .filter(Boolean)
   const header = (name) => within(screen.getByRole('table')).getByRole('columnheader', { name })
   const click = (name) => fireEvent.click(within(header(name)).getByRole('button'))
 
@@ -407,22 +406,22 @@ describe('Portfolio sortable holdings', () => {
 
   it('keeps a row without P&L last in both directions', () => {
     renderWithProviders(<Portfolio />)
-    click('P&L')
+    click('P/L')
     expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
-    click('P&L')
+    click('P/L')
     expect(order()).toEqual(['AAA', 'CCC', 'BBB'])
   })
 
-  it('sorts Name by the displayed ticker, not the company name', () => {
+  it('sorts Instrument by the ticker, not the company name', () => {
     stub([
       make('CCC', 'Alpha Inc', '100.00', '1.00'),
       make('AAA', 'Zeta Corp', '200.00', '2.00'),
       make('BBB', 'Mid Ltd', '300.00', '3.00'),
     ])
     renderWithProviders(<Portfolio />)
-    click('Name')
+    click('Instrument')
     expect(order()).toEqual(['AAA', 'BBB', 'CCC'])
-    click('Name')
+    click('Instrument')
     expect(order()).toEqual(['CCC', 'BBB', 'AAA'])
   })
 
@@ -446,21 +445,131 @@ describe('Portfolio sortable holdings', () => {
     renderWithProviders(<Portfolio />)
     click('Value')
     expect(header('Value')).toHaveAttribute('aria-sort', 'ascending')
-    expect(header('Name')).toHaveAttribute('aria-sort', 'none')
-    expect(header('P&L')).toHaveAttribute('aria-sort', 'none')
+    expect(header('Instrument')).toHaveAttribute('aria-sort', 'none')
+    expect(header('P/L')).toHaveAttribute('aria-sort', 'none')
     click('Value')
     expect(header('Value')).toHaveAttribute('aria-sort', 'descending')
   })
 
-  it('leaves Avg and Price unsortable', () => {
+  it('leaves Avg cost and Last unsortable', () => {
     renderWithProviders(<Portfolio />)
-    expect(within(header('Avg')).queryByRole('button')).not.toBeInTheDocument()
-    expect(within(header('Price')).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(header('Avg cost')).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(header('Last')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('keeps the sticky header classes on sortable headers', () => {
     renderWithProviders(<Portfolio />)
-    expect(header('Value')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-zinc-900')
-    expect(header('Name')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-zinc-900')
+    expect(header('Value')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-pane')
+    expect(header('Instrument')).toHaveClass('sticky', 'top-0', 'z-10', 'bg-pane')
+  })
+})
+
+describe('Portfolio redesign', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    stub()
+  })
+
+  const trade = (overrides) => ({
+    id: 1, date: '2026-09-01', type: 'BUY', instrument: 'NVIDIA', ticker: 'NVDA',
+    qty: '10.0000', price: '150.00', total: '1500.00', account: 'Saxo',
+    currency: 'USD', fx_rate: '0.86', total_eur: '1290.00', ...overrides,
+  })
+
+  it('view=transactions shows the trades grouped by day', () => {
+    queries.useTransactions.mockReturnValue({
+      data: [
+        trade({ id: 1, date: '2026-09-02', instrument: 'Bravo', total_eur: '200.00' }),
+        trade({ id: 2, date: '2026-09-02', instrument: 'Delta', type: 'SELL', total_eur: '50.00' }),
+        trade({ id: 3, date: '2026-09-01', instrument: 'Alpha', total_eur: '100.00' }),
+      ],
+      isLoading: false,
+      error: null,
+    })
+    renderWithProviders(<Portfolio />, { route: '/portfolio?view=transactions' })
+
+    expect(screen.getByRole('button', { name: 'Transactions' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('table', { name: 'Positions' })).not.toBeInTheDocument()
+    const second = screen.getByRole('rowgroup', { name: 'Trades on Wed 02 Sep 2026' })
+    expect(within(second).getByText('Bravo')).toBeInTheDocument()
+    expect(within(second).getByText('Delta')).toBeInTheDocument()
+    expect(within(second).getByText('Bought €200.00 · sold €50.00')).toBeInTheDocument()
+    const first = screen.getByRole('rowgroup', { name: 'Trades on Tue 01 Sep 2026' })
+    expect(within(first).getByText('Alpha')).toBeInTheDocument()
+    expect(within(first).queryByText('Bravo')).not.toBeInTheDocument()
+  })
+
+  it('shows the trades without the portfolio summary error in the transactions view', () => {
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, error: new Error('x'), refetch: vi.fn() })
+    queries.useTransactions.mockReturnValue({ data: [trade({ instrument: 'Alpha' })], isLoading: false, error: null })
+    renderWithProviders(<Portfolio />, { route: '/portfolio?view=transactions' })
+    expect(within(screen.getByRole('table', { name: 'Transactions' })).getByText('Alpha')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('Could not load portfolio.')).not.toBeInTheDocument()
+  })
+
+  it('switches between positions and transactions with the view control', () => {
+    queries.useTransactions.mockReturnValue({ data: [trade({})], isLoading: false, error: null })
+    renderWithProviders(<Portfolio />)
+    expect(screen.getByRole('button', { name: 'Positions' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Transactions' }))
+    expect(screen.getByRole('rowgroup', { name: 'Trades on Tue 01 Sep 2026' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Positions' }))
+    expect(screen.getByRole('table', { name: 'Positions' })).toBeInTheDocument()
+  })
+
+  it('weight above 15% renders in warning with the cap tick', () => {
+    stub([msft, { ...msft, ticker: 'AAPL', name: 'Apple Inc.', weight: '9.40' }])
+    renderWithProviders(<Portfolio />)
+    const table = screen.getByRole('table', { name: 'Positions' })
+    const heavy = within(table).getByText('27.8%')
+    expect(heavy).toHaveClass('text-warn')
+    expect(within(heavy.closest('td')).getByTitle('Your 15% cap')).toBeInTheDocument()
+    const light = within(table).getByText('9.4%')
+    expect(light).not.toHaveClass('text-warn')
+    expect(within(light.closest('td')).getByTitle('Your 15% cap')).toBeInTheDocument()
+  })
+
+  it('sorting by Return toggles direction', () => {
+    stub([
+      { ...msft, ticker: 'AAA', uic: 'AAA', pnl_pct: '5.00' },
+      { ...msft, ticker: 'BBB', uic: 'BBB', pnl_pct: '-2.00' },
+      { ...msft, ticker: 'CCC', uic: 'CCC', pnl_pct: '12.00' },
+    ])
+    renderWithProviders(<Portfolio />)
+    const table = screen.getByRole('table', { name: 'Positions' })
+    const header = within(table).getByRole('columnheader', { name: 'Return' })
+    const order = () =>
+      within(table)
+        .getAllByRole('link')
+        .map((link) => ['AAA', 'BBB', 'CCC'].find((ticker) => link.textContent.includes(ticker)))
+        .filter(Boolean)
+    fireEvent.click(within(header).getByRole('button'))
+    expect(header).toHaveAttribute('aria-sort', 'ascending')
+    expect(order()).toEqual(['BBB', 'AAA', 'CCC'])
+    fireEvent.click(within(header).getByRole('button'))
+    expect(header).toHaveAttribute('aria-sort', 'descending')
+    expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
+  })
+
+  it('Funds and Congress columns still hidden below 1440px', () => {
+    renderWithProviders(<Portfolio />)
+    const table = screen.getByRole('table', { name: 'Positions' })
+    for (const name of ['Fund shares', 'Fund change', 'Congress']) {
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'min-[1440px]:table-cell')
+    }
+  })
+
+  it('reads concentration and currency from the positions it already has', () => {
+    stub([msft, { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR', value: '1000.00', weight: '3.17' }])
+    renderWithProviders(<Portfolio />)
+    const concentration = screen.getByRole('heading', { name: 'Concentration' }).closest('.sd-panel')
+    expect(within(concentration).getByText('MSFT')).toBeInTheDocument()
+    expect(within(concentration).getByText('27.8%')).toHaveClass('text-warn')
+    expect(within(concentration).getByText(/1 holding sits above the 15% cap/)).toBeInTheDocument()
+    const currency = screen.getByRole('heading', { name: 'Currency' }).closest('.sd-panel')
+    expect(within(currency).getByText('USD')).toBeInTheDocument()
+    expect(within(currency).getByText('EUR')).toBeInTheDocument()
+    expect(within(currency).getByText('€967,000.00')).toBeInTheDocument()
   })
 })

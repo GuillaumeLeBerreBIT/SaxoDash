@@ -51,3 +51,15 @@ export function resolvePeriod(key, now = new Date()) {
   }
   throw new Error(`Unknown period key: ${key}`)
 }
+
+const PERIOD_PARAMS = { last_month: '1m', last_3_months: '3m' }
+
+export function periodKeyFromParam(param) {
+  const byShortName = Object.entries(PERIOD_PARAMS).find(([, short]) => short === param)
+  if (byShortName) return byShortName[0]
+  return Object.hasOwn(PERIOD_PARAMS, param ?? '') ? param : 'this_month'
+}
+
+export function periodParam(key) {
+  return PERIOD_PARAMS[key] ?? null
+}

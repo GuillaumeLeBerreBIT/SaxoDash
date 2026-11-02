@@ -4,7 +4,7 @@ import { ROUTES, routePath, describeLoadFailure, formatLoadFailure, formatRow, p
 describe('mobile overflow helpers', () => {
   it('lists every shell route once', () => {
     expect(new Set(ROUTES).size).toBe(ROUTES.length)
-    expect(ROUTES).toEqual(expect.arrayContaining(['/', '/portfolio', '/analytics', '/research', '/research/chart', '/discover', '/discover/momentum', '/earnings', '/investors', '/transactions', '/accounts', '/spending']))
+    expect(ROUTES).toEqual(expect.arrayContaining(['/', '/portfolio', '/analytics', '/research', '/boards', '/discover', '/discover/momentum', '/earnings', '/investors', '/transactions', '/accounts', '/spending']))
   })
   it('covers the filtered Transactions and the spending drill-down, each expected to land on its own path', () => {
     const drill = ROUTES.find((r) => r.startsWith('/spending/transactions?'))

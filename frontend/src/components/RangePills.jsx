@@ -1,28 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
+import { Segmented } from './ui'
+
 export const RANGES = ['1M', '3M', '6M', '1Y', 'ALL']
 
-export function Pill({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`whitespace-nowrap text-[var(--fig-xs)] px-2.5 py-1 rounded-md font-medium transition-colors ${
-        active ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
+const RANGE_OPTIONS = RANGES.map((range) => ({ value: range, label: range }))
 
 export function RangePills({ value, onChange }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {RANGES.map((r) => (
-        <Pill key={r} active={value === r} onClick={() => onChange(r)}>
-          {r}
-        </Pill>
-      ))}
-    </div>
-  )
+  return <Segmented label="Range" options={RANGE_OPTIONS} value={value} onChange={onChange} />
 }

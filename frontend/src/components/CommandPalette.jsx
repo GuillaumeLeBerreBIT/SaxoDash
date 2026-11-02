@@ -6,6 +6,7 @@ import { useInstrumentSearch } from '../api/queries'
 import { PAGE_COMMANDS } from '../lib/commands'
 import { rankInstrumentResults, researchHref } from '../lib/research'
 import { readRecentSymbols } from '../lib/recentSymbols'
+import { Dialog } from './overlays'
 
 const defaultHrefFor = (symbol, instrument) => researchHref(symbol, undefined, instrument)
 
@@ -62,7 +63,6 @@ function Panel({ onClose, hrefFor }) {
   }
 
   const onKeyDown = (e) => {
-    if (e.key === 'Escape') return onClose()
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setActive((i) => (items.length ? (i + 1) % items.length : 0))
@@ -76,20 +76,10 @@ function Panel({ onClose, hrefFor }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/60"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command palette"
-        className="w-[min(560px,92vw)] rounded-lg border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={onKeyDown}
-      >
-        <div className="flex items-center gap-2 px-3 h-10 border-b border-white/[0.06]">
-          <Search size={14} className="text-zinc-500" />
+    <Dialog open onOpenChange={(next) => !next && onClose()} title="Command palette" width="min(620px,92vw)" placement="top" bare>
+      <div onKeyDown={onKeyDown}>
+        <div className="flex items-center gap-2 px-3 h-11 border-b border-line">
+          <Search size={14} className="text-ink-3" />
           <input
             ref={inputRef}
             role="combobox"
@@ -102,12 +92,12 @@ function Panel({ onClose, hrefFor }) {
               setActive(0)
             }}
             placeholder="Search a symbol or a page…"
-            className="flex-1 bg-transparent text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 outline-none"
+            className="flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-3 outline-none"
           />
         </div>
-        <ul id="command-palette-list" role="listbox" className="max-h-[320px] overflow-y-auto py-1">
+        <ul id="command-palette-list" role="listbox" className="max-h-[320px] overflow-y-auto py-1.5 px-1.5">
           {items.length === 0 ? (
-            <li className="px-3 py-3 text-[var(--fig-xs)] text-zinc-500">No matches.</li>
+            <li className="px-3 py-3 text-[12px] text-ink-3">No matches.</li>
           ) : (
             items.map((item, i) => (
               <li
@@ -116,17 +106,17 @@ function Panel({ onClose, hrefFor }) {
                 aria-selected={i === activeIdx}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => go(item)}
-                className={`flex items-center justify-between gap-3 px-3 h-9 cursor-pointer text-[var(--fig-sm)] ${
-                  i === activeIdx ? 'bg-blue-500/10 text-blue-300' : 'text-zinc-200'
+                className={`flex items-center justify-between gap-3 px-3 h-9 rounded-[7px] cursor-pointer text-[13px] ${
+                  i === activeIdx ? 'bg-selected text-ink' : 'text-ink-2'
                 }`}
               >
                 <span className="truncate">{item.label}</span>
-                <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 shrink-0">{item.hint}</span>
+                <span className="text-[11px] uppercase tracking-wide text-ink-3 shrink-0">{item.hint}</span>
               </li>
             ))
           )}
         </ul>
       </div>
-    </div>
+    </Dialog>
   )
 }

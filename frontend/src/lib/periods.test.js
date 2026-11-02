@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolvePeriod } from './periods'
+import { periodKeyFromParam, periodParam, resolvePeriod } from './periods'
 
 describe('resolvePeriod', () => {
   it('resolves this_month to the 1st of the month through today', () => {
@@ -26,5 +26,27 @@ describe('resolvePeriod', () => {
     const period = resolvePeriod('last_month', new Date(2026, 0, 15))
     expect(period.date_from).toBe('2025-12-01')
     expect(period.date_to).toBe('2025-12-31')
+  })
+})
+
+describe('period in the URL', () => {
+  it('reads the short and the long names of a preset', () => {
+    expect(periodKeyFromParam('3m')).toBe('last_3_months')
+    expect(periodKeyFromParam('1m')).toBe('last_month')
+    expect(periodKeyFromParam('last_3_months')).toBe('last_3_months')
+    expect(periodKeyFromParam('last_month')).toBe('last_month')
+  })
+
+  it('falls back to this month for a missing or unknown value', () => {
+    expect(periodKeyFromParam(null)).toBe('this_month')
+    expect(periodKeyFromParam('custom')).toBe('this_month')
+    expect(periodKeyFromParam('12y')).toBe('this_month')
+  })
+
+  it('writes the short name back, and nothing for the default', () => {
+    expect(periodParam('last_3_months')).toBe('3m')
+    expect(periodParam('last_month')).toBe('1m')
+    expect(periodParam('this_month')).toBeNull()
+    expect(periodParam('custom')).toBeNull()
   })
 })

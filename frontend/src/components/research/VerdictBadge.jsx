@@ -1,13 +1,12 @@
-import { TONE_DOT } from '../../lib/snapshot'
+import { Tag } from '../ui'
 
-/** The dot-plus-text rendering for a `{tone, text}` verdict from lib/snapshot.js,
- *  shared by every tab that surfaces one instead of each defining its own copy. */
+const TAG_TONE = { pos: 'up', caution: 'warn', neutral: undefined }
+
 export default function VerdictBadge({ tone, text, className = '' }) {
   if (!text) return null
   return (
-    <span className={`flex items-center gap-1.5 text-[var(--fig-xs)] text-zinc-400 text-right ${className}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${TONE_DOT[tone]}`} />
+    <Tag tone={TAG_TONE[tone]} className={`h-auto! min-h-[22px] py-0.5 whitespace-normal! text-right ${className}`}>
       {text}
-    </span>
+    </Tag>
   )
 }

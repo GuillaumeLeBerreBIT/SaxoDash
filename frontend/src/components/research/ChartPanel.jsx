@@ -35,10 +35,10 @@ export default function ChartPanel({
 
   return (
     <Card padding={false}>
-      <div className="flex items-center gap-1 px-2.5 py-2 border-b border-white/[0.06] flex-wrap">
+      <div className="flex items-center gap-1.5 px-3.5 py-2.5 border-b border-line flex-wrap">
         <RangeButtons controls={controls} />
 
-        <span className="w-px h-5 bg-white/[0.08] mx-1.5" />
+        <span className="w-px h-5 bg-line mx-1" />
 
         <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
           <ChartTypeMenuItems controls={controls} />
@@ -57,7 +57,7 @@ export default function ChartPanel({
               to={expandHref}
               aria-label="Open advanced chart"
               title="Open advanced chart"
-              className="w-7 h-7 rounded flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05]"
+              className="w-7 h-7 rounded-[7px] flex items-center justify-center text-ink-3 hover:text-ink hover:bg-hover"
             >
               <Maximize2 size={13} />
             </Link>

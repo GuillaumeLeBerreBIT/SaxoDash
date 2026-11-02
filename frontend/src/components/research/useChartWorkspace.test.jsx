@@ -23,7 +23,7 @@ function useHarness() {
   return { workspace: useChartWorkspace({ symbol, instrument, selectSymbol }), selectSymbol, params }
 }
 
-const renderWorkspace = (route = '/research/chart?symbol=NVDA&uic=211&assetType=Stock') =>
+const renderWorkspace = (route = '/boards?symbol=NVDA&uic=211&assetType=Stock') =>
   renderHook(useHarness, {
     wrapper: ({ children }) => <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>,
   })
@@ -92,14 +92,14 @@ describe('useChartWorkspace', () => {
 
   it('restores the stored active symbol when the URL names none', () => {
     store({ layout: '2h', slots: [nvda, amd], active: 1 })
-    const { result } = renderWorkspace('/research/chart')
+    const { result } = renderWorkspace('/boards')
     expect(result.current.params.get('symbol')).toBe('AMD')
     expect(result.current.workspace.slots).toEqual([nvda, amd])
   })
 
   it('lets a deep link win over the stored active symbol', () => {
     store({ layout: '2h', slots: [nvda, amd], active: 1 })
-    const { result } = renderWorkspace('/research/chart?symbol=TSLA&uic=9&assetType=Stock')
+    const { result } = renderWorkspace('/boards?symbol=TSLA&uic=9&assetType=Stock')
     expect(result.current.workspace.slots).toEqual([nvda, tsla])
     expect(navigations).toEqual([])
   })

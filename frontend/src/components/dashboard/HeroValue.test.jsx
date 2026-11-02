@@ -18,8 +18,8 @@ describe('HeroValue', () => {
   it('shows the net worth and a green and a red delta', () => {
     render(<HeroValue {...base} />)
     expect(screen.getByText('€10,000.00')).toBeInTheDocument()
-    expect(screen.getByText(/\+0\.56%/)).toBeInTheDocument()
-    expect(screen.getByText(/-1\.30%/)).toBeInTheDocument()
+    expect(screen.getByText('▲ 0.56%')).toHaveClass('text-up')
+    expect(screen.getByText('▼ 1.30%')).toHaveClass('text-down')
   })
 
   it('renders an em dash for a null delta', () => {
@@ -45,7 +45,16 @@ describe('HeroValue', () => {
 
   it('counts Saxo cash with the Saxo side, not the bank side', () => {
     render(<HeroValue {...base} />)
-    expect(screen.getByText(/€9,000\.00 at Saxo · €1,000\.00 bank/)).toBeInTheDocument()
+    expect(screen.getByText('Positions').parentElement).toHaveTextContent('€8,000.00')
+    expect(screen.getByText('Saxo cash').parentElement).toHaveTextContent('€1,000.00')
+    expect(screen.getByText('Bank').parentElement).toHaveTextContent('€1,000.00')
+  })
+
+  it('shows the unrealised gain, and a dash when it is absent', () => {
+    const { rerender } = render(<HeroValue {...base} unrealised="6949.50" />)
+    expect(screen.getByText('Unrealised').parentElement).toHaveTextContent('+€6,949.50')
+    rerender(<HeroValue {...base} unrealised={null} />)
+    expect(screen.getByText('Unrealised').parentElement).toHaveTextContent('—')
   })
 
   it('labels the change figures as net worth', () => {

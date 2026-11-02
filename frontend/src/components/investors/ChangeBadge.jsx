@@ -1,18 +1,24 @@
-import { Badge } from '../ui'
+import { Tag } from '../ui'
 
 const MULTIPLE_FROM_PCT = 1000
+const MULTIPLE_CAP = 100
+
+function multiple(size) {
+  const times = Math.round(size / 100 + 1)
+  return times > MULTIPLE_CAP ? `>${MULTIPLE_CAP}×` : `${times}×`
+}
 
 function wholePct(pct) {
   if (pct == null) return ''
   const size = Math.abs(pct)
-  return size >= MULTIPLE_FROM_PCT ? ` ${Math.round(size / 100 + 1)}×` : ` ${Math.round(size)}%`
+  return size >= MULTIPLE_FROM_PCT ? ` ${multiple(size)}` : ` ${Math.round(size)}%`
 }
 
 export default function ChangeBadge({ change, pct }) {
-  if (change === 'new') return <Badge tone="blue">New</Badge>
-  if (change === 'sold_out') return <Badge tone="amber" className="whitespace-nowrap">Sold out</Badge>
-  if (change === 'added') return <Badge tone="zinc">{`▲\u00a0Added${wholePct(pct)}`}</Badge>
-  if (change === 'trimmed') return <Badge tone="zinc">{`▼\u00a0Trimmed${wholePct(pct)}`}</Badge>
-  if (change === 'unchanged') return <span className="text-[var(--fig-2xs)] text-zinc-500">Unchanged</span>
+  if (change === 'new') return <Tag tone="held">New</Tag>
+  if (change === 'sold_out') return <Tag tone="warn">Sold out</Tag>
+  if (change === 'added') return <Tag tone="neutral" className="num">{`▲\u00a0Added${wholePct(pct)}`}</Tag>
+  if (change === 'trimmed') return <Tag tone="neutral" className="num">{`▼\u00a0Trimmed${wholePct(pct)}`}</Tag>
+  if (change === 'unchanged') return <span className="text-[12px] text-ink-3">Unchanged</span>
   return null
 }

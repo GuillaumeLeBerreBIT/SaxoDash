@@ -1,21 +1,14 @@
-import { performanceFill } from '../../lib/charts'
-import { fmtPct } from '../../lib/format'
-
-const TINT_CAP = 40
+import { Move } from '../ui'
 
 export default function PerformanceTiles({ returns }) {
   if (!returns.some((row) => row.pct != null)) return null
 
   return (
-    <ul className="grid grid-cols-3 gap-1">
+    <ul className="grid grid-cols-3 gap-2">
       {returns.map(({ key, pct }) => (
-        <li
-          key={key}
-          className="rounded px-1 py-1.5 text-center"
-          style={{ backgroundColor: performanceFill(pct, { cap: TINT_CAP }) ?? undefined }}
-        >
-          <div className={`num font-mono text-[var(--fig-sm)] ${pct == null ? 'text-zinc-500' : 'text-zinc-100'}`}>{fmtPct(pct)}</div>
-          <div className="text-[var(--fig-2xs)] text-zinc-400">{key}</div>
+        <li key={key} className="bg-tile rounded-[10px] px-3 py-2.5 min-w-0">
+          <div className="text-[12px] text-ink-3">{key}</div>
+          <Move value={pct} className="block mt-1 text-[17px] font-bold" />
         </li>
       ))}
     </ul>

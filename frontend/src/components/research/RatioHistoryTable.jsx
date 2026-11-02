@@ -15,16 +15,16 @@ export default function RatioHistoryTable({ history, current }) {
 
   return (
     <div ref={scroller} className="overflow-x-auto">
-      <table aria-label="Ratios by fiscal year" className="w-full border-collapse text-[var(--fig-xs)]">
+      <table aria-label="Ratios by fiscal year" className="w-full border-collapse text-[13.5px]">
         <thead>
-          <tr className="text-zinc-500">
-            <th scope="col" className="sticky left-0 bg-zinc-900 text-left font-medium py-2 pr-4">Ratio</th>
+          <tr className="text-[12px] text-ink-3">
+            <th scope="col" className="sticky left-0 z-[1] bg-pane text-left font-medium h-[30px] pl-[18px] pr-4">Ratio</th>
             {points.map((point, index) => (
-              <th key={point.period} scope="col" className="text-right font-medium py-2 pl-4">
+              <th key={point.period} scope="col" className="text-right font-medium h-[30px] pl-4">
                 {labels[index]}
               </th>
             ))}
-            <th scope="col" className="text-right font-medium py-2 pl-4 text-zinc-300">Current</th>
+            <th scope="col" className="text-right font-medium h-[30px] pl-4 pr-[18px] text-ink-2">Current</th>
           </tr>
         </thead>
         <tbody>
@@ -34,22 +34,22 @@ export default function RatioHistoryTable({ history, current }) {
                 <td
                   colSpan={points.length + 2}
                   role="presentation"
-                  className="pt-3 pb-1 text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium"
+                  className="pt-3 pb-1 pl-[18px] text-[13px] font-bold text-ink"
                 >
-                  <span className="sticky left-0 inline-block">{group.label}</span>
+                  <span className="sticky left-[18px] inline-block">{group.label}</span>
                 </td>
               </tr>
               {group.ratios.map((ratio) => (
-                <tr key={ratio.key} className="border-t border-white/[0.06]">
-                  <th scope="row" className="sticky left-0 bg-zinc-900 text-left font-normal text-zinc-400 py-2 pr-4 whitespace-nowrap">
+                <tr key={ratio.key} className="border-t border-line">
+                  <th scope="row" className="sticky left-0 z-[1] bg-pane text-left font-normal text-ink-2 py-2.5 pl-[18px] pr-4 whitespace-nowrap">
                     {ratio.label}
                   </th>
                   {points.map((point) => (
-                    <td key={point.period} className="text-right num font-mono text-zinc-300 py-2 pl-4">
+                    <td key={point.period} className="text-right num text-ink-2 py-2.5 pl-4">
                       {fmtRatio(point[ratio.key], ratio.format)}
                     </td>
                   ))}
-                  <td className="text-right num font-mono text-zinc-100 py-2 pl-4">
+                  <td className="text-right num font-semibold text-ink py-2.5 pl-4 pr-[18px]">
                     {fmtRatio(ratio.current ? current?.[ratio.current] : null, ratio.format)}
                   </td>
                 </tr>

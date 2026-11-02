@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { chartTooltipProps } from '../lib/charts'
+import { useChartColors } from '../theme/useChartColors'
 import { instrumentLogoUrl } from '../lib/logos'
 import { donutOuterRadius, useWidth } from '../lib/chartGeometry'
 
@@ -18,11 +19,12 @@ const LEADER_EXT = 18 // elbow -> horizontal end where the % sits
 const LABEL_RESERVE = CHART_MARGIN + LEADER_GAP + LEADER_EXT + 26
 
 export function SliceLogo({ symbol, x, y, size }) {
+  const c = useChartColors()
   const [failedSymbol, setFailedSymbol] = useState(null)
 
   return (
     <>
-      <circle cx={x} cy={y} r={size / 2 + 2} fill="#fff" stroke="#3f3f46" strokeWidth={1} />
+      <circle cx={x} cy={y} r={size / 2 + 2} fill={c.tooltip.text} stroke={c.tooltip.border} strokeWidth={1} />
       {failedSymbol === symbol ? (
         <text
           x={x}
@@ -30,7 +32,8 @@ export function SliceLogo({ symbol, x, y, size }) {
           textAnchor="middle"
           dominantBaseline="central"
           aria-hidden="true"
-          className="text-[11px] fill-zinc-600 font-semibold"
+          className="text-[11px] font-semibold"
+          fill={c.axis}
         >
           {symbol ? symbol[0].toUpperCase() : null}
         </text>
@@ -58,7 +61,7 @@ export function SliceLogo({ symbol, x, y, size }) {
  *  itself uncluttered while still labeling every slice directly (not
  *  color-only). `payload.logo === false` (the "Other" bucket, or anything
  *  without a real ticker) skips the icon. */
-function SliceLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, percent }) {
+function SliceLabel({ c, cx, cy, midAngle, innerRadius, outerRadius, payload, percent }) {
   const ringThickness = outerRadius - innerRadius
   const iconRadius = innerRadius + ringThickness / 2
   const iconX = cx + iconRadius * Math.cos(-midAngle * RADIAN)
@@ -80,14 +83,15 @@ function SliceLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, perce
       {showLogo && (
         <SliceLogo symbol={payload.name} x={iconX} y={iconY} size={size} />
       )}
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${my}`} stroke="#52525b" fill="none" strokeWidth={1} />
-      <circle cx={ex} cy={my} r={1.5} fill="#71717a" stroke="none" />
+      <path d={`M${sx},${sy}L${mx},${my}L${ex},${my}`} stroke={c.axis} fill="none" strokeWidth={1} />
+      <circle cx={ex} cy={my} r={1.5} fill={c.axis} stroke="none" />
       <text
         x={ex + (textAnchor === 'start' ? 4 : -4)}
         y={my}
         textAnchor={textAnchor}
         dominantBaseline="central"
-        className="text-[11px] fill-zinc-400 num font-mono font-medium"
+        fill={c.axisCategory}
+        className="text-[11px] num font-medium"
       >
         {(percent * 100).toFixed(0)}%
       </text>
@@ -102,6 +106,7 @@ function SliceLabel({ cx, cy, midAngle, innerRadius, outerRadius, payload, perce
  *  accounts), and only safe to enable now that callers cap slice count
  *  (see SliceLabel) instead of plotting every row. */
 export default function AllocationDonut({ items, formatValue, showIcons = false, height = '320px', center }) {
+  const c = useChartColors()
   const [containerRef, width] = useWidth()
   const [activeIndex, setActiveIndex] = useState(null)
   const total = items.reduce((sum, d) => sum + d.value, 0)
@@ -122,26 +127,26 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
               innerRadius={innerRadius}
               outerRadius={outerRadius}
               paddingAngle={2}
-              stroke="#18181b"
+              stroke={c.tooltip.bg}
               strokeWidth={2}
               isAnimationActive={false}
               onMouseEnter={(_, index) => setActiveIndex(index)}
               onMouseLeave={() => setActiveIndex(null)}
-              label={showIcons ? SliceLabel : false}
+              label={showIcons ? (props) => <SliceLabel c={c} {...props} /> : false}
               labelLine={false}
             >
               {items.map((d, i) => (
                 <Cell key={i} fill={d.color} />
               ))}
             </Pie>
-            <Tooltip {...chartTooltipProps} formatter={(v, n) => [formatValue(v), n]} />
+            <Tooltip {...chartTooltipProps(c)} formatter={(v, n) => [formatValue(v), n]} />
           </PieChart>
         </ResponsiveContainer>
         {readout && (
           <div data-testid="donut-center" className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-[var(--fig-xs)] text-zinc-500">{readout.label}</span>
-            <span className="text-[var(--fig-lg)] num font-mono text-zinc-50">{readout.value}</span>
-            {readout.hint && <span className="text-[var(--fig-2xs)] num font-mono text-zinc-500">{readout.hint}</span>}
+            <span className="text-[12px] text-ink-3">{readout.label}</span>
+            <span className="text-[20px] font-bold num text-ink">{readout.value}</span>
+            {readout.hint && <span className="text-[11px] num text-ink-3">{readout.hint}</span>}
           </div>
         )}
       </div>
@@ -150,23 +155,23 @@ export default function AllocationDonut({ items, formatValue, showIcons = false,
           it - only the icon-less donuts (account/sector breakdowns) need
           one to name their slices at all. */}
       {showIcons ? null : (
-        <div className="grid grid-cols-1 gap-y-2 mt-3 pt-4 border-t border-zinc-800">
+        <div className="grid grid-cols-1 gap-y-2 mt-3 pt-4 border-t border-line">
           {items.map((d, i) => {
             const pct = total > 0 ? (d.value / total) * 100 : 0
-            const rowClass = 'flex items-center gap-2 text-[var(--fig-xs)]'
+            const rowClass = 'flex items-center gap-2 text-[12px]'
             const content = (
               <>
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ background: d.color }} />
-                <span className={`text-zinc-300 font-medium truncate${d.note ? ' shrink-0 max-w-[60%]' : ''}`}>{d.name}</span>
-                {d.note && <span className="text-zinc-500 truncate min-w-0">{d.note}</span>}
-                <span className="ml-auto text-zinc-500 num font-mono">{formatValue(d.value)}</span>
-                <span className="text-zinc-600 num font-mono w-12 text-right">{pct.toFixed(1)}%</span>
+                <span className={`text-ink-2 font-medium truncate${d.note ? ' shrink-0 max-w-[60%]' : ''}`}>{d.name}</span>
+                {d.note && <span className="text-ink-3 truncate min-w-0">{d.note}</span>}
+                <span className="ml-auto text-ink-3 num">{formatValue(d.value)}</span>
+                <span className="text-ink-3 num w-12 text-right">{pct.toFixed(1)}%</span>
               </>
             )
             return d.to ? (
-              <Link key={i} to={d.to} className={`${rowClass} min-h-11 md:min-h-0 rounded hover:bg-zinc-800/40 focus-visible:bg-zinc-800/40 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-600`}>
+              <Link key={i} to={d.to} className={`${rowClass} min-h-11 md:min-h-0 rounded hover:bg-hover focus-visible:bg-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus`}>
                 {content}
-                <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-zinc-600" />
+                <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-ink-3" />
               </Link>
             ) : (
               <div key={i} className={rowClass}>{content}</div>

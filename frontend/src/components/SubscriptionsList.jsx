@@ -1,39 +1,36 @@
-import { Card, CardHeader } from './ui'
+import { Button, Card } from './ui'
 import { fmtEur } from '../lib/format'
 import { monthlyTotal } from '../lib/subscriptions'
 
-export default function SubscriptionsList({ subscriptions, onDismiss }) {
-  const hasAny = (subscriptions ?? []).length > 0
+export default function SubscriptionsList({ subscriptions, onDismiss, className = '' }) {
+  const rows = subscriptions ?? []
+  const hasAny = rows.length > 0
 
   return (
-    <Card>
-      <CardHeader
-        title="Subscriptions"
-        subtitle="Detected recurring payments"
-        right={hasAny && <span className="text-zinc-100 num font-mono">≈ {fmtEur(monthlyTotal(subscriptions))} / month</span>}
-      />
-      <div className="mt-4 space-y-2">
-        {(subscriptions ?? []).length === 0 && (
-          <div className="text-zinc-500 text-[var(--fig-sm)]">No subscriptions detected yet.</div>
-        )}
-        {(subscriptions ?? []).map((sub) => (
-          <div key={sub.id} className="flex items-center justify-between py-2 border-b border-zinc-800/60 last:border-0">
-            <div>
-              <div className="text-zinc-100 text-[var(--fig-sm)] font-medium">{sub.display_name}</div>
-              <div className="text-zinc-500 text-[var(--fig-xs)]">{sub.cadence}</div>
+    <Card
+      className={className}
+      context="Detected recurring payments"
+      dot={hasAny ? 'ok' : 'off'}
+      title="Subscriptions"
+      right={hasAny && <span className="text-[13.5px] font-semibold text-ink num">≈ {fmtEur(monthlyTotal(subscriptions))} / month</span>}
+    >
+      {!hasAny && <div className="text-ink-3 text-[13.5px]">No subscriptions detected yet.</div>}
+      <ul>
+        {rows.map((sub) => (
+          <li key={sub.id} className="flex items-center justify-between gap-3 min-h-11 py-1.5 border-t border-line first:border-t-0">
+            <div className="min-w-0">
+              <div className="text-ink text-[13.5px] font-semibold truncate">{sub.display_name}</div>
+              <div className="text-ink-3 text-[12px]">{sub.cadence}</div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-zinc-100 num font-mono">{fmtEur(sub.expected_amount)}</div>
-              <button
-                onClick={() => onDismiss(sub.id)}
-                className="text-[var(--fig-xs)] text-zinc-500 hover:text-red-400"
-              >
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="text-ink text-[13.5px] font-semibold num">{fmtEur(sub.expected_amount)}</div>
+              <Button size="sm" variant="ghost" onClick={() => onDismiss(sub.id)}>
                 Dismiss
-              </button>
+              </Button>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ul>
     </Card>
   )
 }

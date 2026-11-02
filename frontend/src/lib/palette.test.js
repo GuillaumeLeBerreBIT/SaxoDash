@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { OTHER_SLICE, SECTOR_PALETTE } from './charts'
+import { chartPalette } from './charts'
+import { THEMES } from './theme'
 
 const MIN_DELTA_E = 15
 
@@ -26,9 +27,10 @@ const toLab = (hex) => {
 
 const deltaE = (a, b) => Math.hypot(...toLab(a).map((v, i) => v - toLab(b)[i]))
 
-const series = [...SECTOR_PALETTE, OTHER_SLICE]
+describe.each(Object.keys(THEMES))('the %s series palette', (theme) => {
+  const c = chartPalette({ theme, moves: 'green-red' })
+  const series = [...c.series, c.estimate]
 
-describe('SECTOR_PALETTE', () => {
   it('keeps every pair of slices at least a stated CIE76 distance apart', () => {
     const failures = []
     for (let i = 0; i < series.length; i++) {

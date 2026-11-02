@@ -75,11 +75,14 @@ describe('Investors hub', () => {
     expect(fundOptions.some((options) => options.enabled === false)).toBe(false)
   })
 
-  it('switches to the Congress directory from its tab', () => {
+  it('Funds/Congress switch keeps its tab in the URL', () => {
     hubState = { data: hub, isLoading: false, error: null }
     listState = { data: cards, isLoading: false, error: null }
     renderPage()
-    fireEvent.click(screen.getByRole('tab', { name: 'Congress' }))
+    const who = screen.getByRole('group', { name: 'Investor type' })
+    expect(within(who).getByRole('button', { name: 'Funds' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(within(who).getByRole('button', { name: 'Congress' }))
+    expect(within(who).getByRole('button', { name: 'Congress' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByTestId('where')).toHaveTextContent('/investors?tab=congress')
     expect(screen.getByText('No House trades imported yet')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Add investor' })).not.toBeInTheDocument()
@@ -89,10 +92,10 @@ describe('Investors hub', () => {
     hubState = { data: hub, isLoading: false, error: null }
     listState = { data: cards, isLoading: false, error: null }
     renderPage('/investors?quarter=2026-03-31')
-    fireEvent.click(screen.getByRole('tab', { name: 'Congress' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Congress' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/investors?quarter=2026-03-31&tab=congress')
     expect(screen.getByText(/House members’ disclosed stock trades/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Funds' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Funds' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/investors?quarter=2026-03-31')
     expect(screen.getByTestId('where')).not.toHaveTextContent('tab=')
   })

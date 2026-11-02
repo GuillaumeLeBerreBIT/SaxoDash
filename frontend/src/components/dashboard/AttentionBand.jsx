@@ -1,50 +1,49 @@
 import { Link } from 'react-router-dom'
-import { AlertTriangle, Info } from 'lucide-react'
 
 import { researchHref } from '../../lib/research'
+import { StatusDot } from '../ui'
 
 const PORTFOLIO_KINDS = new Set(['concentration', 'single_name', 'price_basis'])
 const THESIS_KINDS = new Set(['thesis_review_due', 'target_reached'])
 
-function chipClass(severity) {
-  return severity === 'warn'
-    ? 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-    : 'bg-white/[0.04] text-zinc-300 border-white/[0.08]'
+function hrefFor(item) {
+  if (item.kind === 'earnings_soon' && item.ticker) return researchHref(item.ticker, 'earnings')
+  if (THESIS_KINDS.has(item.kind) && item.ticker) return researchHref(item.ticker, 'overview')
+  if (PORTFOLIO_KINDS.has(item.kind)) return '/portfolio'
+  return null
 }
 
-function Chip({ item }) {
-  const Icon = item.severity === 'warn' ? AlertTriangle : Info
+function Row({ item }) {
+  const href = hrefFor(item)
   const body = (
-    <span
-      className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[var(--fig-xs)] ${chipClass(
-        item.severity,
-      )}`}
-    >
-      <Icon size={12} />
-      {item.text}
-    </span>
+    <>
+      <StatusDot tone={item.severity === 'warn' ? 'warn' : 'off'} />
+      <span className="min-w-0 flex-1 text-[13.5px] font-medium text-ink">{item.text}</span>
+    </>
   )
-  if (item.kind === 'earnings_soon' && item.ticker) {
-    return <Link to={researchHref(item.ticker, 'earnings')}>{body}</Link>
-  }
-  if (THESIS_KINDS.has(item.kind) && item.ticker) {
-    return <Link to={researchHref(item.ticker, 'overview')}>{body}</Link>
-  }
-  if (PORTFOLIO_KINDS.has(item.kind)) {
-    return <Link to="/portfolio">{body}</Link>
-  }
-  return body
+  const row = 'flex items-center gap-3 min-h-11 py-2'
+  return (
+    <li className="border-t border-line first:border-t-0">
+      {href ? (
+        <Link to={href} className={`${row} -mx-2 px-2 rounded-lg hover:bg-hover`}>
+          {body}
+        </Link>
+      ) : (
+        <div className={row}>{body}</div>
+      )}
+    </li>
+  )
 }
 
 export default function AttentionBand({ items }) {
   if (!items || items.length === 0) {
-    return <p className="text-[var(--fig-xs)] text-zinc-600">Nothing needs attention right now.</p>
+    return <p className="text-[13px] text-ink-3">Nothing needs attention right now.</p>
   }
   return (
-    <div className="flex flex-wrap gap-2">
+    <ul>
       {items.map((item) => (
-        <Chip key={`${item.kind}:${item.text}`} item={item} />
+        <Row key={`${item.kind}:${item.text}`} item={item} />
       ))}
-    </div>
+    </ul>
   )
 }

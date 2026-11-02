@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
-import { CATEGORY_AXIS_TEXT, NEGATIVE, POSITIVE } from './charts'
+import { chartPalette } from './charts'
 import {
-  LINE_STROKES,
   MIN_PRICE,
   badgePrice,
   chartLines,
   edgeOf,
   isTypingTarget,
   linePatch,
+  lineStrokes,
   parsePriceInput,
   roundPrice,
 } from './priceLines'
@@ -112,8 +112,9 @@ describe('linePatch', () => {
   })
 })
 
-describe('LINE_STROKES', () => {
-  it('uses the app colours for each kind of line', () => {
-    expect(LINE_STROKES).toEqual({ target: POSITIVE, stop: NEGATIVE, free: CATEGORY_AXIS_TEXT })
+describe('lineStrokes', () => {
+  it('uses the theme colours for each kind of line', () => {
+    const c = chartPalette({ theme: 'light', moves: 'green-red' })
+    expect(lineStrokes(c)).toEqual({ target: c.up, stop: c.down, free: c.axisCategory })
   })
 })

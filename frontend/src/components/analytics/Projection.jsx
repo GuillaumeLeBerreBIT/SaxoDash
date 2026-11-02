@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react'
 import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader, InfoTip, MetricTile } from '../ui'
-import { Pill } from '../RangePills'
+import { Card, InfoTip, MetricTile, Segmented } from '../ui'
 import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
 import { yearTicks } from '../../lib/portfolioStats'
-import { CATEGORY_AXIS_TEXT, chartTooltipProps, gridProps, axisProps, REPORTED, SERIES_TOTAL } from '../../lib/charts'
+import { chartTooltipProps, gridProps, axisProps } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 
 const MONTHLY_OPTIONS = [500, 1000, 1500, 2000, 2500]
 const YEAR_OPTIONS = [5, 10, 20, 30]
+const MONTHLY_SEGMENTS = MONTHLY_OPTIONS.map((m) => ({ value: m, label: `€${m}` }))
+const YEAR_SEGMENTS = YEAR_OPTIONS.map((y) => ({ value: y, label: `${y}Y` }))
 const fmtK = (v) => `€${(v / 1000).toFixed(0)}k`
 
 export default function Projection({ start, expectedReturnPct, volatilityPct }) {
+  const c = useChartColors()
   const [monthly, setMonthly] = useState(1000)
   const [years, setYears] = useState(10)
 
@@ -31,47 +34,28 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
   }))
 
   return (
-    <Card>
-      <CardHeader
-        title={
-          <span className="inline-flex items-center gap-1.5">
-            Projection
-            <InfoTip>
-              A Monte Carlo simulation runs your monthly contribution forward through 600 randomly
-              generated futures, each month's return drawn from a normal distribution centred on
-              your portfolio's own average return and volatility. The shaded band is where the
-              middle 80% of those futures land — nobody knows which one is real.
-            </InfoTip>
-          </span>
-        }
-        subtitle={`600 simulated paths · ${fmtNum(expectedReturnPct, 1)}% expected return, ${fmtNum(volatilityPct, 1)}% volatility, drawn from your own return distribution`}
-        right={
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex max-w-full flex-wrap items-center gap-0.5 p-0.5 rounded-md bg-zinc-950/60 border border-white/[0.06]">
-              {MONTHLY_OPTIONS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMonthly(m)}
-                  className={`px-2 h-6 text-[var(--fig-2xs)] font-medium rounded num ${
-                    monthly === m ? 'bg-zinc-800 text-zinc-50 ring-1 ring-white/10' : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
-                >
-                  €{m}
-                </button>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-1">
-              {YEAR_OPTIONS.map((y) => (
-                <Pill key={y} active={years === y} onClick={() => setYears(y)}>
-                  {y}Y
-                </Pill>
-              ))}
-            </div>
-          </div>
-        }
-      />
-
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+    <Card
+      context={`600 simulated paths · ${fmtNum(expectedReturnPct, 1)}% expected return, ${fmtNum(volatilityPct, 1)}% volatility, drawn from your own return distribution`}
+      dot="off"
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          Projection
+          <InfoTip>
+            A Monte Carlo simulation runs your monthly contribution forward through 600 randomly
+            generated futures, each month's return drawn from a normal distribution centred on
+            your portfolio's own average return and volatility. The shaded band is where the
+            middle 80% of those futures land — nobody knows which one is real.
+          </InfoTip>
+        </span>
+      }
+      right={
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented label="Monthly contribution" options={MONTHLY_SEGMENTS} value={monthly} onChange={setMonthly} className="max-w-full" />
+          <Segmented label="Years" options={YEAR_SEGMENTS} value={years} onChange={setYears} />
+        </div>
+      }
+    >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <MetricTile label="Invested by then" value={fmtEur(end.invested, { decimals: 0 })} hint={`€${monthly}/mo for ${years} years`} />
         <MetricTile
           label="Median outcome"
@@ -85,11 +69,11 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
       <div className="mt-4 h-[var(--chart-h-lg)]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={bands} margin={{ top: 4, right: 8, left: 4, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
-            <XAxis {...axisProps} dataKey="month" ticks={yearTicks(rows)} interval={0} tickFormatter={(m) => `${Math.round(m / 12)}y`} />
-            <YAxis {...axisProps} width={52} tickFormatter={fmtK} />
+            <CartesianGrid {...gridProps(c)} />
+            <XAxis {...axisProps(c)} dataKey="month" ticks={yearTicks(rows)} interval={0} tickFormatter={(m) => `${Math.round(m / 12)}y`} />
+            <YAxis {...axisProps(c)} width={52} tickFormatter={fmtK} />
             <Tooltip
-              {...chartTooltipProps}
+              {...chartTooltipProps(c)}
               labelFormatter={(m) => `Year ${(m / 12).toFixed(1)}`}
               formatter={(v, key, entry) => {
                 const label = { lowBand: 'P10', midBand: 'P25', hiBand: 'P75', topBand: 'P90', p50: 'Median', invested: 'Contributed' }[key]
@@ -98,18 +82,18 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
               }}
             />
             <Area dataKey="lowBand" stackId="band" stroke="none" fill="transparent" />
-            <Area dataKey="midBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.1} />
-            <Area dataKey="hiBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.22} />
-            <Area dataKey="topBand" stackId="band" stroke="none" fill={REPORTED} fillOpacity={0.1} />
-            <Line dataKey="p50" stroke={SERIES_TOTAL} strokeWidth={2} dot={false} isAnimationActive={false} />
-            <Line dataKey="invested" stroke={CATEGORY_AXIS_TEXT} strokeWidth={1.3} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
+            <Area dataKey="midBand" stackId="band" stroke="none" fill={c.primary} fillOpacity={0.1} />
+            <Area dataKey="hiBand" stackId="band" stroke="none" fill={c.primary} fillOpacity={0.22} />
+            <Area dataKey="topBand" stackId="band" stroke="none" fill={c.primary} fillOpacity={0.1} />
+            <Line dataKey="p50" stroke={c.primary} strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line dataKey="invested" stroke={c.axisCategory} strokeWidth={1.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 md:gap-y-0 text-[var(--fig-2xs)] text-zinc-500">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 shrink-0 rounded-sm bg-blue-500/25" /> P10–P90 range</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-blue-400" /> Median path</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-0.5 bg-zinc-400" /> Money contributed</span>
+      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 md:gap-y-0 text-[12px] text-ink-3">
+        <span className="flex items-center gap-1.5"><span aria-hidden="true" className="w-3 h-2 shrink-0 rounded-sm" style={{ background: c.primary, opacity: 0.3 }} /> P10–P90 range</span>
+        <span className="flex items-center gap-1.5"><span aria-hidden="true" className="w-3 h-0.5" style={{ background: c.primary }} /> Median path</span>
+        <span className="flex items-center gap-1.5"><span aria-hidden="true" className="w-3 h-0.5" style={{ background: c.axisCategory }} /> Money contributed</span>
         <span className="w-full md:ml-auto md:w-auto">Simulation, not advice. Past distribution ≠ future returns.</span>
       </div>
     </Card>

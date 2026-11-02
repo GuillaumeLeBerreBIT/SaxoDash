@@ -59,7 +59,7 @@ export default function ResizeHandle({ label, orientation, value, limits, onResi
       className={`group touch-none select-none outline-none ${vertical ? 'cursor-col-resize' : 'cursor-row-resize'} ${className}`}
     >
       <span
-        className={`block rounded-full bg-white/[0.06] transition-colors group-hover:bg-blue-500/60 group-focus-visible:bg-blue-500 ${
+        className={`block rounded-full bg-line transition-colors group-hover:bg-ink-3 group-focus-visible:bg-focus ${
           vertical ? 'mx-auto h-full w-0.5' : 'my-auto h-0.5 w-full'
         }`}
       />

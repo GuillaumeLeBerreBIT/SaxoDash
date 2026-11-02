@@ -52,14 +52,14 @@ describe('StatementTable', () => {
     renderTable()
 
     const revenue = screen.getByRole('rowheader', { name: 'Revenue' }).closest('tr')
-    expect(within(revenue).getAllByText('+25.00%')).toHaveLength(2)
+    expect(within(revenue).getAllByText('▲ 25.00%')).toHaveLength(2)
   })
 
   it('compares against a period that is not on screen', () => {
     renderTable(periods.slice(-1))
 
     const net = screen.getByRole('rowheader', { name: 'Net income' }).closest('tr')
-    expect(within(net).getByText('+100.00%')).toBeInTheDocument()
+    expect(within(net).getByText('▲ 100.00%')).toBeInTheDocument()
   })
 
   it('shows no change where there is no prior year', () => {

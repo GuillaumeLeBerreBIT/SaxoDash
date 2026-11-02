@@ -9,19 +9,25 @@ import { OptionBadge, YouBadge } from './HoldingBadges'
 describe('ChangeBadge', () => {
   it('names a new position in the accent tone', () => {
     render(<ChangeBadge change="new" />)
-    expect(screen.getByText('New')).toHaveClass('text-blue-400')
+    expect(screen.getByText('New')).toHaveClass('text-held')
   })
 
   it('describes added and trimmed with an arrow and whole percent, neutrally', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={10.4} />)
-    expect(screen.getByText('▲ Added 10%')).toHaveClass('text-zinc-300')
+    expect(screen.getByText('▲ Added 10%')).toHaveClass('text-ink-2')
     rerender(<ChangeBadge change="trimmed" pct={-4.6} />)
-    expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-zinc-300')
+    expect(screen.getByText('▼ Trimmed 5%')).toHaveClass('text-ink-2')
   })
 
-  it('shows a position grown a thousand percent or more as a multiple', () => {
+  it('ChangeBadge caps absurd percentages', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={76194} />)
-    expect(screen.getByText('▲ Added 763×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Added >100×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={1100} />)
+    expect(screen.getByText('▲ Added 12×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={1000} />)
+    expect(screen.getByText('▲ Added 11×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={9900} />)
+    expect(screen.getByText('▲ Added 100×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={999.4} />)
     expect(screen.getByText('▲ Added 999%')).toBeInTheDocument()
   })
@@ -35,7 +41,7 @@ describe('ChangeBadge', () => {
 
   it('marks a sold-out position in amber', () => {
     render(<ChangeBadge change="sold_out" />)
-    expect(screen.getByText('Sold out')).toHaveClass('text-amber-400')
+    expect(screen.getByText('Sold out')).toHaveClass('text-warn-text')
   })
 
   it('says unchanged quietly and nothing for a first quarter', () => {

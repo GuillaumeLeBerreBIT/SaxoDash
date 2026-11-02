@@ -56,13 +56,15 @@ guards this on stack restart (`migrate --check`, then `migrate`), but mid-sessio
 against an already-running server it's a manual step, easy to forget in the
 run-tests-then-move-on rhythm.
 
-**Frontend design/polish**: use the `ui-ux-pro-max`, `frontend-design`,
-and `dataviz` skills when doing visual/UX work rather than improvising —
-they already cover this project's needs. For this repo's own established
-color tokens, shared primitives, and Card philosophy, read
-`docs/design-system.md` and use the `saxodash-design-system` skill (this
-repo's own `.claude/skills/`) — it also has the screenshot-review harness
-recipe.
+**Frontend design/polish**: read `DESIGN.md` (repo root) first — themes,
+colour roles, type scale, panel anatomy and the pages are all there. Colour
+comes only from `frontend/src/lib/theme.js`: semantic utilities (`bg-pane`,
+`text-ink-3`, `text-up`, …) in markup, `useChartColors()` in charts;
+`src/test/noPaletteClasses.test.js` fails on any Tailwind palette class or
+hex literal. The `saxodash-design-system` skill (this repo's own
+`.claude/skills/`) is the compact version plus the screenshot-review
+harness recipe; `ui-ux-pro-max`, `frontend-design` and `dataviz` cover the
+rest.
 
 ## Stack
 

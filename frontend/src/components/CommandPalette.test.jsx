@@ -23,7 +23,7 @@ beforeEach(() => {
 afterEach(() => localStorage.clear())
 
 describe('CommandPalette', () => {
-  it.each([['spend', /Spending/], ['disc', /Discover/]])('offers the %s page', async (query, name) => {
+  it.each([['mon', /Money/], ['disc', /Discover/], ['sett', /Settings/]])('offers the %s page', async (query, name) => {
     renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
     await userEvent.type(screen.getByRole('combobox'), query)
     expect(screen.getByRole('option', { name })).toBeInTheDocument()
@@ -75,7 +75,7 @@ describe('CommandPalette', () => {
     renderWithProviders(<CommandPalette open onClose={onClose} hrefFor={hrefFor} />)
     await userEvent.type(screen.getByRole('combobox'), 'tsla')
     await userEvent.click(screen.getByRole('option', { name: /TSLA/ }))
-    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA&uic=9&assetType=Stock')
+    expect(navigate).toHaveBeenCalledWith('/boards?symbol=TSLA&uic=9&assetType=Stock')
     expect(onClose).toHaveBeenCalled()
   })
 

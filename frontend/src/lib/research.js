@@ -239,7 +239,7 @@ export function researchHref(symbol, tab, instrument) {
 export function chartHref(symbol, instrument) {
   const params = new URLSearchParams({ symbol })
   pinInstrument(params, instrument)
-  return `/research/chart?${params.toString()}`
+  return `/boards?${params.toString()}`
 }
 
 /** Past earnings dates mapped onto the currently-loaded bars, for the

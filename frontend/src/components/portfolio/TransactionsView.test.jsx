@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { expectValidHeadingOutline } from '../test/headingOutline'
+import { expectValidHeadingOutline } from '../../test/headingOutline'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useLocation } from 'react-router-dom'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { renderWithProviders } from '../test/renderWithProviders'
-import Transactions from './Transactions'
+import { renderWithProviders } from '../../test/renderWithProviders'
+import TransactionsView from './TransactionsView'
 
 const lag = vi.hoisted(() => ({ on: false, search: '' }))
 
@@ -22,8 +22,8 @@ vi.mock('react-router-dom', async (importOriginal) => {
   }
 })
 
-vi.mock('../api/queries')
-import * as queries from '../api/queries'
+vi.mock('../../api/queries')
+import * as queries from '../../api/queries'
 
 const row = (overrides) => ({
   id: 1, date: '2026-09-01', type: 'BUY', instrument: 'NVIDIA', ticker: 'NVDA',
@@ -35,30 +35,37 @@ function stub(rows) {
   queries.useTransactions.mockReturnValue({ data: rows, isLoading: false, error: null })
 }
 
-describe('Transactions', () => {
+describe('TransactionsView', () => {
   beforeEach(() => vi.resetAllMocks())
 
-  it('has exactly one h1 and no skipped heading level', () => {
+  const inPage = () => (
+    <>
+      <h1>Portfolio</h1>
+      <TransactionsView />
+    </>
+  )
+
+  it('sits under the page h1 without skipping a heading level', () => {
     stub([row({ id: 1, type: 'BUY' })])
-    const { container } = renderWithProviders(<Transactions />)
+    const { container } = renderWithProviders(inPage())
     expectValidHeadingOutline(container)
   })
 
-  it('keeps one h1 and no skipped level while loading', () => {
+  it('keeps the outline under the page h1 while loading', () => {
     queries.useTransactions.mockReturnValue({ data: undefined, isLoading: true, error: null })
-    const { container } = renderWithProviders(<Transactions />)
+    const { container } = renderWithProviders(inPage())
     expectValidHeadingOutline(container)
   })
 
-  it('keeps one h1 and no skipped level while in error', () => {
+  it('keeps the outline under the page h1 while in error', () => {
     queries.useTransactions.mockReturnValue({ data: undefined, isLoading: false, error: new Error('x'), refetch: vi.fn() })
-    const { container } = renderWithProviders(<Transactions />)
+    const { container } = renderWithProviders(inPage())
     expectValidHeadingOutline(container)
   })
 
   it('prices a trade in its own currency and totals it in euro with the right sign', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL', ticker: 'AMD', instrument: 'AMD' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     const buy = within(screen.getByRole('table')).getByText('NVDA').closest('tr')
     expect(within(buy).getByText('US$150.00')).toBeInTheDocument()
@@ -70,7 +77,7 @@ describe('Transactions', () => {
 
   it('shows the date as day, month and year, not ISO', () => {
     stub([row({ id: 1, date: '2026-10-04' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     const cells = within(screen.getByRole('table'))
     expect(cells.getByText('04 Oct 2026')).toBeInTheDocument()
     expect(cells.queryByText('2026-10-04')).not.toBeInTheDocument()
@@ -78,7 +85,7 @@ describe('Transactions', () => {
 
   it('marks the active type filter as pressed', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
     const sell = screen.getByRole('button', { name: 'SELL' })
@@ -90,13 +97,13 @@ describe('Transactions', () => {
 
   it('titles the truncated instrument cell with its full name and ticker', () => {
     stub([row({ instrument: 'NVIDIA Corporation', ticker: 'NVDA' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     expect(screen.getByTitle('NVIDIA Corporation (NVDA)')).toHaveClass('truncate')
   })
 
   it('carries ticker and account in the below-md subline', () => {
     stub([row({ type: 'BUY', ticker: 'NVDA', account: 'Saxo Main' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     const subline = screen.getByText(/BUY · NVDA · Saxo Main/)
     expect(subline).toHaveClass('md:hidden')
     expect(subline.closest('td')).toHaveTextContent('NVIDIA')
@@ -104,13 +111,13 @@ describe('Transactions', () => {
 
   it('skips an empty subline part without a stray separator', () => {
     stub([row({ type: 'BUY', ticker: 'NVDA', account: '' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     expect(screen.getByText('BUY · NVDA', { selector: '.md\\:hidden' })).toBeInTheDocument()
   })
 
   it('shows a dash for the total when the currency was never recorded', () => {
     stub([row({ currency: null, fx_rate: null, total_eur: null })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     const line = within(screen.getByRole('table')).getByText('NVDA').closest('tr')
     expect(within(line).getByText('150.00')).toBeInTheDocument()
@@ -119,7 +126,7 @@ describe('Transactions', () => {
 
   it('offers a chip only for the types present', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'INTEREST', ticker: '', instrument: 'Interest' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     expect(screen.getByRole('button', { name: 'BUY' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'INTEREST' })).toBeInTheDocument()
@@ -128,14 +135,14 @@ describe('Transactions', () => {
 
   it('falls back to All when the selected type vanishes from the data', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'INTEREST', ticker: '', instrument: 'Interest' })])
-    const { rerender } = renderWithProviders(<Transactions />)
+    const { rerender } = renderWithProviders(<TransactionsView />)
     fireEvent.click(screen.getByRole('button', { name: 'INTEREST' }))
 
     stub([row({ id: 1, type: 'BUY' })])
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <Transactions />
+          <TransactionsView />
         </MemoryRouter>
       </QueryClientProvider>,
     )
@@ -145,7 +152,7 @@ describe('Transactions', () => {
 
   it('names the pagination controls and marks the current page', () => {
     stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1 })))
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
@@ -157,7 +164,7 @@ describe('Transactions', () => {
 
   it('clears an unmatched search and filter from the empty state', () => {
     stub([row({ id: 1, type: 'BUY' }), row({ id: 2, type: 'SELL' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'zzz' } })
 
@@ -172,7 +179,7 @@ describe('Transactions', () => {
 
   it('lets the pager wrap and renders every page button', () => {
     stub(Array.from({ length: 250 }, (_, i) => row({ id: i + 1 })))
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     const pager = screen.getByRole('button', { name: 'Page 1' }).parentElement
     expect(pager).toHaveClass('flex-wrap')
@@ -183,7 +190,7 @@ describe('Transactions', () => {
 
   it('offers no Clear filters when nothing is filtered', () => {
     stub([])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     expect(screen.getByText('No transactions match your filters.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
@@ -194,7 +201,7 @@ describe('Transactions', () => {
       row({ id: 100 + i, type: 'INTEREST', ticker: '', instrument: 'Interest' }))
     const buys = Array.from({ length: 12 }, (_, i) => row({ id: i + 1, type: 'BUY' }))
     stub([...buys, ...interest])
-    const { rerender } = renderWithProviders(<Transactions />)
+    const { rerender } = renderWithProviders(<TransactionsView />)
     fireEvent.click(screen.getByRole('button', { name: 'INTEREST' }))
     fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
 
@@ -202,7 +209,7 @@ describe('Transactions', () => {
     rerender(
       <QueryClientProvider client={new QueryClient()}>
         <MemoryRouter>
-          <Transactions />
+          <TransactionsView />
         </MemoryRouter>
       </QueryClientProvider>,
     )
@@ -216,7 +223,11 @@ describe('Transactions sorting', () => {
   beforeEach(() => vi.resetAllMocks())
 
   const bodyTickers = () =>
-    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate').textContent)
+    within(screen.getByRole('table'))
+      .getAllByRole('row')
+      .map((r) => r.querySelector('td:nth-child(3) .truncate'))
+      .filter(Boolean)
+      .map((cell) => cell.textContent)
   const header = (name) => screen.getByRole('columnheader', { name })
   const sortBy = (name) => fireEvent.click(within(header(name)).getByRole('button'))
 
@@ -228,7 +239,7 @@ describe('Transactions sorting', () => {
 
   it('keeps API order with no sort and marks sortable headers aria-sort none', () => {
     stub(sample())
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     expect(bodyTickers()).toEqual(['Bravo', 'Alpha', 'Charlie'])
     expect(header(/^Date/)).toHaveAttribute('aria-sort', 'none')
     expect(screen.getByRole('columnheader', { name: 'Type' })).not.toHaveAttribute('aria-sort')
@@ -236,7 +247,7 @@ describe('Transactions sorting', () => {
 
   it('sorts Date ascending, descending, then back to API order', () => {
     stub(sample())
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     sortBy(/^Date/)
     expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
     expect(header(/^Date/)).toHaveAttribute('aria-sort', 'ascending')
@@ -250,7 +261,7 @@ describe('Transactions sorting', () => {
 
   it('sorts Instrument by its text', () => {
     stub(sample())
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     sortBy(/^Instrument/)
     expect(bodyTickers()).toEqual(['Alpha', 'Bravo', 'Charlie'])
     sortBy(/^Instrument/)
@@ -259,7 +270,7 @@ describe('Transactions sorting', () => {
 
   it('sorts Total numerically on the euro figure with a missing total last both ways', () => {
     stub(sample())
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     sortBy(/^Total/)
     expect(bodyTickers()).toEqual(['Charlie', 'Bravo', 'Alpha'])
     sortBy(/^Total/)
@@ -272,7 +283,7 @@ describe('Transactions sorting', () => {
       row({ id: 2, type: 'BUY', instrument: 'Bought', total_eur: '500.00' }),
       row({ id: 3, type: 'DIVIDEND', instrument: 'Paid', total_eur: '50.00' }),
     ])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     sortBy(/^Total/)
     expect(bodyTickers()).toEqual(['Bought', 'Paid', 'Sold'])
     sortBy(/^Total/)
@@ -281,7 +292,7 @@ describe('Transactions sorting', () => {
 
   it('returns to page 1 when the sort changes', () => {
     stub(Array.from({ length: 12 }, (_, i) => row({ id: i + 1, instrument: `Name ${i}` })))
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
     sortBy(/^Instrument/)
     expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
@@ -299,7 +310,7 @@ describe('Transactions sorting', () => {
       return 'blob:x'
     })
     URL.revokeObjectURL = vi.fn()
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     sortBy(/^Instrument/)
     fireEvent.click(screen.getByRole('button', { name: /Export CSV/ }))
     const text = await new Promise((resolve) => {
@@ -317,7 +328,7 @@ describe('Transactions on mobile', () => {
 
   it('keeps date, instrument and total visible below md and hides the rest', () => {
     stub([row({ id: 1, type: 'BUY' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     const table = screen.getByRole('table')
     for (const name of ['Date', 'Instrument', 'Total']) {
       expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
@@ -332,7 +343,7 @@ describe('Transactions on mobile', () => {
   })
   it('wraps the toolbar and its type chips and gives the search the full row on mobile', () => {
     stub([row({ id: 1, type: 'BUY' })])
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
 
     const chips = screen.getByRole('button', { name: 'BUY' }).parentElement
     expect(chips).toHaveClass('flex-wrap')
@@ -343,8 +354,8 @@ describe('Transactions on mobile', () => {
   it('keeps the heading and offers Retry when transactions fail', () => {
     const refetch = vi.fn()
     queries.useTransactions.mockReturnValue({ data: undefined, isLoading: false, error: new Error('x'), refetch })
-    renderWithProviders(<Transactions />)
-    expect(screen.getByRole('heading', { level: 1, name: 'Transactions' })).toBeInTheDocument()
+    renderWithProviders(<TransactionsView />)
+    expect(screen.getByRole('heading', { level: 2, name: 'Transactions' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(refetch).toHaveBeenCalled()
@@ -352,7 +363,7 @@ describe('Transactions on mobile', () => {
 
   it('shows a skeleton card, not bare Loading text, while loading', () => {
     queries.useTransactions.mockReturnValue({ data: undefined, isLoading: true, error: null })
-    renderWithProviders(<Transactions />)
+    renderWithProviders(<TransactionsView />)
     expect(screen.getByRole('status', { name: 'Loading transactions' })).toBeInTheDocument()
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
   })
@@ -362,13 +373,16 @@ describe('Transactions filters', () => {
   beforeEach(() => vi.resetAllMocks())
 
   const names = () =>
-    within(screen.getByRole('table')).getAllByRole('row').slice(1).map((r) => r.querySelector('td:nth-child(3) .truncate')?.textContent)
+    within(screen.getByRole('table'))
+      .getAllByRole('row')
+      .map((r) => r.querySelector('td:nth-child(3) .truncate')?.textContent)
+      .filter((name) => name !== undefined)
 
   function Where() {
     const location = useLocation()
     return <output data-testid="where">{location.search}</output>
   }
-  const renderAt = (route) => renderWithProviders(<><Transactions /><Where /></>, { route })
+  const renderAt = (route) => renderWithProviders(<><TransactionsView /><Where /></>, { route })
   const where = () => screen.getByTestId('where').textContent
 
   const sample = () => [
@@ -410,6 +424,14 @@ describe('Transactions filters', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: 'bra' } })
     const params = new URLSearchParams(where())
     expect(Object.fromEntries(params)).toEqual({ type: 'SELL', account: 'Bank', from: '2026-01-01', q: 'bra' })
+  })
+
+  it('keeps the Portfolio view it is shown in when a filter changes', () => {
+    stub(sample())
+    renderAt('/portfolio?view=transactions')
+    fireEvent.click(screen.getByRole('button', { name: 'SELL' }))
+    fireEvent.change(screen.getByRole('textbox', { name: /search/i }), { target: { value: 'bra' } })
+    expect(Object.fromEntries(new URLSearchParams(where()))).toEqual({ view: 'transactions', type: 'SELL', q: 'bra' })
   })
 
   it('pre-applies filters from the URL', () => {
@@ -502,7 +524,7 @@ describe('Transactions filters', () => {
       const view = render(
         <QueryClientProvider client={client}>
           <MemoryRouter initialEntries={['/']}>
-            <Transactions />
+            <TransactionsView />
             <Where />
           </MemoryRouter>
         </QueryClientProvider>,
@@ -513,7 +535,7 @@ describe('Transactions filters', () => {
       view.rerender(
         <QueryClientProvider client={client}>
           <MemoryRouter initialEntries={['/']}>
-            <Transactions />
+            <TransactionsView />
             <Where />
           </MemoryRouter>
         </QueryClientProvider>,
@@ -523,7 +545,7 @@ describe('Transactions filters', () => {
       view.rerender(
         <QueryClientProvider client={client}>
           <MemoryRouter initialEntries={['/']}>
-            <Transactions />
+            <TransactionsView />
             <Where />
           </MemoryRouter>
         </QueryClientProvider>,
@@ -540,7 +562,7 @@ describe('Transactions filters', () => {
       const view = render(
         <QueryClientProvider client={client}>
           <MemoryRouter initialEntries={['/']}>
-            <Transactions />
+            <TransactionsView />
             <Where />
           </MemoryRouter>
         </QueryClientProvider>,
@@ -550,7 +572,7 @@ describe('Transactions filters', () => {
       view.rerender(
         <QueryClientProvider client={client}>
           <MemoryRouter initialEntries={['/']}>
-            <Transactions />
+            <TransactionsView />
             <Where />
           </MemoryRouter>
         </QueryClientProvider>,
@@ -622,5 +644,31 @@ describe('Transactions filters', () => {
       reader.readAsText(blob)
     })
     expect(text.trim().split('\n').slice(1).map((l) => l.split(',')[2])).toEqual(['Alpha', 'Charlie'])
+  })
+})
+
+describe('Transactions grouped by day', () => {
+  beforeEach(() => vi.resetAllMocks())
+
+  it('shows the whole day total on every page the day spans', () => {
+    stub(Array.from({ length: 11 }, (_, i) => row({ id: i + 1, date: '2026-09-02', total_eur: '100.00' })))
+    renderWithProviders(<TransactionsView />)
+    const day = () => screen.getByRole('rowgroup', { name: 'Trades on Wed 02 Sep 2026' })
+    expect(within(day()).getByText('Bought €1,100.00')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    expect(within(day()).getByText('Bought €1,100.00')).toBeInTheDocument()
+  })
+
+  it.each([/^Instrument/, /^Total/])('renders a flat list without day headers when sorted by %s', (name) => {
+    stub([
+      row({ id: 1, date: '2026-09-02', instrument: 'Bravo' }),
+      row({ id: 2, date: '2026-09-01', instrument: 'Alpha' }),
+    ])
+    renderWithProviders(<TransactionsView />)
+    expect(screen.getAllByRole('rowgroup', { name: /^Trades on/ })).toHaveLength(2)
+    fireEvent.click(within(screen.getByRole('columnheader', { name })).getByRole('button'))
+    expect(screen.queryAllByRole('rowgroup', { name: /^Trades on/ })).toHaveLength(0)
+    expect(within(screen.getByRole('table')).getByText('Alpha')).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByText('Bravo')).toBeInTheDocument()
   })
 })

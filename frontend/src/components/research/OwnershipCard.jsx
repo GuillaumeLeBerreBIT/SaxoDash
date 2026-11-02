@@ -1,10 +1,11 @@
-import { SERIES_TOTAL, TRACK } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
-import { Card, CardHeader } from '../ui'
+import { useChartColors } from '../../theme/useChartColors'
+import { Card } from '../ui'
 
 const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
 
-export default function OwnershipCard({ fundamentals }) {
+export default function OwnershipCard({ fundamentals, className = '' }) {
+  const c = useChartColors()
   const { shares_outstanding: shares, free_float: float } = fundamentals
   if (!shares || float == null) return null
 
@@ -12,24 +13,23 @@ export default function OwnershipCard({ fundamentals }) {
   const held = 100 - free
 
   return (
-    <Card>
-      <CardHeader title="Ownership" subtitle="Shares free to trade against shares closely held" />
+    <Card className={className} context="Shares free to trade against shares closely held" dot="ok" title="Ownership">
       <div
         role="img"
         aria-label={`Free float ${share(free)}, closely held ${share(held)}`}
-        className="mt-4 h-2.5 rounded-full overflow-hidden"
-        style={{ backgroundColor: TRACK }}
+        className="h-1.5 rounded-full overflow-hidden"
+        style={{ backgroundColor: c.track }}
       >
-        <div className="h-full" style={{ width: `${free}%`, backgroundColor: SERIES_TOTAL }} />
+        <div className="h-full" style={{ width: `${free}%`, backgroundColor: c.primary }} />
       </div>
-      <dl className="mt-3 grid grid-cols-2 gap-4 text-[var(--fig-xs)]">
-        <div>
-          <dt className="text-zinc-500">Free float</dt>
-          <dd className="num font-mono text-[var(--fig-md)] text-zinc-100">{share(free)}</dd>
+      <dl className="mt-3 grid grid-cols-2 gap-2">
+        <div className="bg-tile rounded-[10px] px-3.5 py-3">
+          <dt className="text-[12px] text-ink-3">Free float</dt>
+          <dd className="mt-1 text-[20px] font-bold num text-ink">{share(free)}</dd>
         </div>
-        <div>
-          <dt className="text-zinc-500">Closely held</dt>
-          <dd className="num font-mono text-[var(--fig-md)] text-zinc-100">{share(held)}</dd>
+        <div className="bg-tile rounded-[10px] px-3.5 py-3">
+          <dt className="text-[12px] text-ink-3">Closely held</dt>
+          <dd className="mt-1 text-[20px] font-bold num text-ink">{share(held)}</dd>
         </div>
       </dl>
     </Card>

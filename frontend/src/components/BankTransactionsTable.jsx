@@ -1,5 +1,5 @@
 import { fmtDate, fmtEur } from '../lib/format'
-import { Button, Card, Th, Td } from './ui'
+import { Button, Card, Th, Td, Tr } from './ui'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { PAGE_SIZE } from '../lib/accountTransactions'
 
@@ -9,10 +9,10 @@ function CategoryCell({ tx, onChange }) {
       aria-label={`Category for ${tx.counterparty_name}`}
       value={tx.effective_category}
       onChange={(e) => onChange({ id: tx.id, category: e.target.value })}
-      className="bg-transparent text-zinc-400 hover:text-zinc-200 text-[var(--fig-sm)] outline-none cursor-pointer"
+      className="bg-transparent text-ink-2 hover:text-ink text-[13px] cursor-pointer rounded-[7px]"
     >
       {Object.entries(CATEGORY_LABELS).map(([code, label]) => (
-        <option key={code} value={code} className="bg-zinc-900">{label}</option>
+        <option key={code} value={code} className="bg-raised text-ink">{label}</option>
       ))}
     </select>
   )
@@ -26,16 +26,21 @@ export default function BankTransactionsTable({
   onPage,
   onCategoryChange,
   emptyText = 'No transactions yet.',
+  className = '',
+  context,
+  title,
+  titleAs,
+  right,
 }) {
   const first = (paged.page - 1) * PAGE_SIZE + 1
   const last = first + paged.rows.length - 1
 
   return (
-    <Card padding={false}>
+    <Card flush className={className} context={context} title={title} titleAs={titleAs} right={right}>
       <div className="overflow-x-auto">
-        <table className="w-full text-[var(--fig-sm)]">
+        <table className="w-full">
           <thead>
-            <tr className="text-left text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide border-b border-zinc-800">
+            <tr>
               <Th edge>Date</Th>
               <Th>Description</Th>
               <Th hideBelow="md">Category</Th>
@@ -44,12 +49,12 @@ export default function BankTransactionsTable({
           </thead>
           <tbody>
             {paged.rows.map((tx) => (
-              <tr key={tx.id} className="border-b border-zinc-800/60 last:border-0 hover:bg-zinc-800/30">
-                <Td edge className="num text-zinc-300">{fmtDate(tx.booking_date)}</Td>
-                <Td className="w-full max-w-0 text-zinc-100">
+              <Tr key={tx.id}>
+                <Td edge className="num text-ink-2">{fmtDate(tx.booking_date)}</Td>
+                <Td className="w-full max-w-0 text-ink">
                   <div className="truncate">{tx.counterparty_name}</div>
                   {tx.description && tx.description !== tx.counterparty_name && (
-                    <div title={tx.description} className="truncate text-[var(--fig-2xs)] text-zinc-500">{tx.description}</div>
+                    <div title={tx.description} className="truncate text-[12px] text-ink-3">{tx.description}</div>
                   )}
                   <div className="md:hidden">
                     <CategoryCell tx={tx} onChange={onCategoryChange} />
@@ -59,20 +64,20 @@ export default function BankTransactionsTable({
                 <Td
                   align="right"
                   edge
-                  className={`num font-medium ${Number(tx.amount) > 0 ? 'text-emerald-400' : 'text-zinc-100'}`}
+                  className={`font-semibold ${Number(tx.amount) > 0 ? 'text-up' : 'text-ink'}`}
                 >
                   {fmtEur(tx.amount, { sign: true })}
                 </Td>
-              </tr>
+              </Tr>
             ))}
             {!hasAny && (
-              <tr>
-                <td colSpan={4} className="text-center text-zinc-500 py-8">{emptyText}</td>
+              <tr className="border-t border-line">
+                <td colSpan={4} className="text-center text-[13.5px] text-ink-3 py-8">{emptyText}</td>
               </tr>
             )}
             {hasAny && paged.total === 0 && (
-              <tr>
-                <td colSpan={4} className="text-center text-zinc-500 py-8">
+              <tr className="border-t border-line">
+                <td colSpan={4} className="text-center text-[13.5px] text-ink-3 py-8">
                   No transactions match your filters.
                   {filtering && (
                     <div className="mt-2">
@@ -86,7 +91,7 @@ export default function BankTransactionsTable({
         </table>
       </div>
       {paged.pageCount > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-zinc-800 text-[var(--fig-sm)] text-zinc-400">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-[18px] pt-3 border-t border-line text-[13px] text-ink-2 num">
           <span>Showing {first}–{last} of {paged.total}</span>
           <div className="flex gap-2">
             <Button size="sm" className="h-11 md:h-8" aria-label="Previous page" disabled={paged.page <= 1} onClick={() => onPage(paged.page - 1)}>

@@ -1,8 +1,69 @@
-import { useId, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Info, X } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Info, MoreHorizontal } from 'lucide-react'
 
 import { instrumentLogoUrl } from '../lib/logos'
-import { fmtPct, pctToneClass } from '../lib/format'
+import { Dialog, Menu, Tooltip } from './overlays'
+
+const STATUS_DOT_TONES = {
+  ok: 'bg-ok',
+  warn: 'bg-warn',
+  error: 'bg-error',
+  earn: 'bg-earn',
+  off: 'bg-ink-3',
+}
+
+export function StatusDot({ tone = 'ok', className = '' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block w-[7px] h-[7px] rounded-full shrink-0 ${STATUS_DOT_TONES[tone] || STATUS_DOT_TONES.ok} ${className}`}
+    />
+  )
+}
+
+const PANEL_MENU_BUTTON =
+  'w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink'
+
+function PanelMenu({ label, items }) {
+  const button = (
+    <button type="button" aria-label={label} className={PANEL_MENU_BUTTON}>
+      <MoreHorizontal size={16} aria-hidden="true" />
+    </button>
+  )
+  return Array.isArray(items) ? <Menu trigger={button} items={items} /> : button
+}
+
+function PanelHead({ context, dot, title, right, menu, as: Heading = 'h2', className = '' }) {
+  const menuLabel = `${title || context || 'Panel'} options`
+  return (
+    <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-x-2.5 gap-y-2 ${className}`}>
+      <div className="min-w-0">
+        {context && (
+          <div className="flex items-center gap-2 min-w-0 text-[13px] font-medium text-ink">
+            {dot && <StatusDot tone={dot} />}
+            <span className="min-w-0 truncate">{context}</span>
+          </div>
+        )}
+        {title && (
+          <Heading className={`text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance] ${context ? 'mt-1.5' : ''}`}>
+            {title}
+          </Heading>
+        )}
+      </div>
+      {(right || menu) && (
+        <div className="flex items-center gap-1.5 min-w-0 max-w-full">
+          {right}
+          {menu && <PanelMenu label={menuLabel} items={menu} />}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function panelPadding(padding, flush) {
+  if (!padding) return ''
+  return flush ? 'pt-[14px] pb-[18px]' : 'pt-[14px] px-[18px] pb-[18px]'
+}
 
 /** The one container primitive for a bounded, self-contained unit of page
  *  content - reach for it when grouping information that's meaningfully
@@ -11,14 +72,52 @@ import { fmtPct, pctToneClass } from '../lib/format'
  *  table/chart/StatStrip already on the same page shows the same
  *  information in another form (the 2026-09 audit's most common finding
  *  was a Card that turned out to duplicate one already on the page). */
-export function Card({ children, className = '', padding = true, interactive = false, onClick }) {
+export function Card({
+  children,
+  className = '',
+  padding = true,
+  interactive = false,
+  onClick,
+  context,
+  dot,
+  title,
+  right,
+  menu,
+  flush = false,
+  titleAs = 'h2',
+}) {
+  const hasHead = Boolean(context || title || right || menu)
+  const activate = onClick
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onKeyDown: (event) => {
+          if (event.target !== event.currentTarget) return
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          onClick(event)
+        },
+      }
+    : {}
   return (
     <div
       onClick={onClick}
-      className={`bg-gradient-to-b from-zinc-900 to-zinc-900/70 border border-white/[0.06] border-t-white/[0.09] rounded-lg shadow-sm shadow-black/40 ${
-        interactive ? 'hover:border-white/[0.12] cursor-pointer transition-colors duration-200' : ''
-      } ${padding ? 'p-4 2xl:p-5' : ''} ${className}`}
+      {...activate}
+      className={`sd-panel bg-pane rounded-xl min-w-0 ${
+        interactive ? 'hover:bg-hover cursor-pointer transition-colors duration-200' : ''
+      } ${panelPadding(padding, flush)} ${className}`}
     >
+      {hasHead && (
+        <PanelHead
+          context={context}
+          dot={dot}
+          title={title}
+          right={right}
+          menu={menu}
+          as={titleAs}
+          className={`mb-3.5 ${flush ? 'px-[18px]' : ''}`}
+        />
+      )}
       {children}
     </div>
   )
@@ -28,46 +127,39 @@ export function Card({ children, className = '', padding = true, interactive = f
  *  CardHeader is that page's first section level for screen-reader
  *  navigation, not a third-level heading with nothing at h2 in between. Pass
  *  `as="h3"` only for a heading genuinely nested under another CardHeader. */
-export function CardHeader({ title, subtitle, right, className = '', as: Heading = 'h2' }) {
-  return (
-    <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-3 2xl:gap-4 ${className}`}>
-      <div className="min-w-0">
-        <Heading className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</Heading>
-        {subtitle && <p className="text-[var(--fig-xs)] text-zinc-500 mt-0.5 2xl:mt-1">{subtitle}</p>}
-      </div>
-      {right && <div className="flex min-w-0 max-w-full">{right}</div>}
-    </div>
-  )
+export function CardHeader({ title, subtitle, right, className = '', as = 'h2' }) {
+  return <PanelHead context={subtitle} title={title} right={right} as={as} className={className} />
 }
 
 export function PageHeader({ title, subtitle, right }) {
   return (
     <div className="flex flex-wrap md:flex-nowrap items-end justify-between gap-x-4 gap-y-3 md:gap-x-0 md:gap-y-0 mb-5 2xl:mb-6">
       <div className="min-w-0">
-        <h1 className="text-[var(--fig-lg)] font-medium tracking-tight text-zinc-50">{title}</h1>
-        {subtitle && <p className="text-[var(--fig-sm)] text-zinc-500 mt-1 2xl:mt-1.5">{subtitle}</p>}
+        <h1 className="text-[22px] font-bold tracking-tight text-ink [text-wrap:balance]">{title}</h1>
+        {subtitle && <p className="text-[14px] text-ink-2 mt-1 2xl:mt-1.5">{subtitle}</p>}
       </div>
       {right && <div className="flex min-w-0 max-w-full">{right}</div>}
     </div>
   )
 }
 
-// The audit found 5+ ad hoc "primary button" treatments (bg-blue-600,
-// bg-blue-500, bg-zinc-800, a bordered outline, plus a permanently-disabled
+// The audit found 5+ ad hoc "primary button" treatments (two different blue
+// fills, a dark grey fill, a bordered outline, plus a permanently-disabled
 // one) and 3 different input heights with no shared source. Button/Input/
 // Select below are that shared source - every action button, text field, and
 // simple picker in the app should render through one of these three rather
 // than inventing new bg-*/border-*/h-* combinations.
 const buttonVariants = {
-  primary: 'bg-blue-500 text-white hover:bg-blue-400',
-  secondary: 'border border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-600',
-  ghost: 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]',
-  destructive: 'bg-red-500/90 text-white hover:bg-red-500',
+  primary: 'bg-accent text-on-accent hover:bg-accent-hover',
+  secondary: 'sd-raised bg-raised text-ink hover:bg-hover',
+  ghost: 'bg-transparent text-ink-2 hover:text-ink hover:bg-hover',
+  danger: 'bg-transparent text-error hover:bg-down-subtle',
+  destructive: 'bg-transparent text-error hover:bg-down-subtle',
 }
 
 const buttonSizes = {
-  sm: 'h-8 px-2.5 text-[var(--fig-xs)] gap-1.5',
-  md: 'h-9 px-3.5 text-[var(--fig-sm)] gap-2',
+  sm: 'h-7 px-2.5 text-[12px] gap-1.5',
+  md: 'h-8 px-3.5 text-[13px] gap-1.5',
 }
 
 /** `variant`: primary (the one main action per view), secondary (everything
@@ -79,7 +171,7 @@ export function Button({ variant = 'secondary', size = 'md', type = 'button', cl
   return (
     <button
       type={type}
-      className={`inline-flex items-center justify-center rounded-md font-medium disabled:opacity-40 disabled:pointer-events-none ${
+      className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg font-semibold disabled:opacity-40 disabled:pointer-events-none ${
         buttonVariants[variant] || buttonVariants.secondary
       } ${buttonSizes[size] || buttonSizes.md} ${className}`}
       {...props}
@@ -89,15 +181,12 @@ export function Button({ variant = 'secondary', size = 'md', type = 'button', cl
   )
 }
 
+const FIELD = 'h-[34px] px-3 bg-track border border-line-input rounded-lg text-[14px] text-ink outline-none'
+
 /** The one text-input treatment (lifted from Transactions' existing search
  *  field, the most-used instance of this pattern already in the app). */
 export function Input({ className = '', ...props }) {
-  return (
-    <input
-      className={`h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 placeholder-zinc-600 focus:border-zinc-600 outline-none ${className}`}
-      {...props}
-    />
-  )
+  return <input className={`${FIELD} placeholder:text-ink-3 ${className}`} {...props} />
 }
 
 /** A native &lt;select&gt;, styled to match Input. Native selects already carry
@@ -107,29 +196,45 @@ export function Input({ className = '', ...props }) {
  *  rows, or an inline search). */
 export function Select({ className = '', children, ...props }) {
   return (
-    <select
-      className={`h-9 px-3 bg-zinc-950 border border-zinc-800 rounded-md text-[var(--fig-sm)] text-zinc-100 focus:border-zinc-600 outline-none ${className}`}
-      {...props}
-    >
+    <select className={`${FIELD} ${className}`} {...props}>
       {children}
     </select>
   )
 }
 
-const statTones = {
-  blue: 'bg-blue-500/10 text-blue-400 border border-blue-500/15',
-  emerald: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15',
-  red: 'bg-red-500/10 text-red-400 border border-red-500/15',
-  zinc: 'bg-zinc-800/80 text-zinc-300 border border-zinc-700/70',
+const WARN_SURFACE = 'bg-[color-mix(in_srgb,var(--sd-warn)_14%,transparent)]'
+const WARN_TEXT = 'text-warn-text'
+
+const TAG_TONES = {
+  neutral: 'sd-raised bg-pill text-ink-2',
+  held: 'bg-accent-subtle text-held',
+  earn: 'bg-earn-subtle text-earn',
+  warn: `${WARN_SURFACE} ${WARN_TEXT}`,
+  example: `${WARN_SURFACE} ${WARN_TEXT}`,
+  ok: 'bg-[color-mix(in_srgb,var(--sd-ok)_14%,transparent)] text-ok',
+  up: 'bg-up-subtle text-up',
+  down: 'bg-down-subtle text-down',
 }
 
-const badgeTones = {
-  blue: 'bg-blue-500/10 text-blue-400 border-blue-500/15',
-  zinc: 'bg-zinc-800/80 text-zinc-300 border-zinc-700/70',
-  amber: 'bg-amber-500/10 text-amber-400 border-amber-500/15',
-  red: 'bg-red-500/10 text-red-400 border-red-500/15',
-  teal: 'bg-teal-500/10 text-teal-400 border-teal-500/15',
-  emerald: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/15',
+export function Tag({ tone, children, className = '' }) {
+  return (
+    <span
+      className={`inline-flex items-center h-[22px] px-2 rounded-md text-[11px] font-semibold whitespace-nowrap ${
+        TAG_TONES[tone] || TAG_TONES.neutral
+      } ${className}`}
+    >
+      {children}
+    </span>
+  )
+}
+
+const LEGACY_TONE_TO_TAG = {
+  blue: 'held',
+  zinc: 'neutral',
+  amber: 'warn',
+  red: 'down',
+  teal: 'earn',
+  emerald: 'up',
 }
 
 /** Fills a chart's space with a message instead of rendering an empty plot.
@@ -140,8 +245,8 @@ const badgeTones = {
 export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
   return (
     <div
-      className={`flex items-center justify-center text-center px-6 text-[var(--fig-xs)] ${
-        tone === 'red' ? 'text-red-400' : 'text-zinc-500'
+      className={`flex items-center justify-center text-center px-6 text-[12px] ${
+        tone === 'red' ? 'text-error' : 'text-ink-3'
       }`}
       style={{ height }}
     >
@@ -151,18 +256,19 @@ export function ChartPlaceholder({ height = 260, tone = 'zinc', children }) {
 }
 
 const alertTones = {
-  error: 'bg-red-500/10 border-red-500/20 text-red-300',
-  warning: 'bg-amber-500/10 border-amber-500/20 text-amber-300',
-  info: 'bg-blue-500/10 border-blue-500/20 text-blue-300',
+  error: { surface: 'bg-down-subtle', dot: 'error' },
+  warning: { surface: WARN_SURFACE, dot: 'warn' },
+  info: { surface: 'bg-accent-subtle', dot: 'off' },
 }
 
-/** A page/section-level status banner - replaces the ad hoc
- *  `&lt;div className="text-red-400 text-sm"&gt;Failed to load...&lt;/div&gt;`
- *  every page's error branch currently hand-rolls independently. */
+/** A page/section-level status banner - replaces the ad hoc failed-to-load
+ *  line every page's error branch currently hand-rolls independently. */
 export function Alert({ tone = 'error', children, className = '' }) {
+  const { surface, dot } = alertTones[tone] || alertTones.error
   return (
-    <div className={`rounded-md border px-3.5 py-3 text-[var(--fig-sm)] ${alertTones[tone] || alertTones.error} ${className}`}>
-      {children}
+    <div className={`flex items-start gap-2.5 rounded-[10px] px-3.5 py-3 text-[13px] text-ink ${surface} ${className}`}>
+      <StatusDot tone={dot} className="mt-[5px]" />
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   )
 }
@@ -173,8 +279,8 @@ export function Alert({ tone = 'error', children, className = '' }) {
 export function EmptyState({ title, hint, className = '' }) {
   return (
     <div className={`text-center py-8 px-4 ${className}`}>
-      <div className="text-[var(--fig-sm)] text-zinc-400">{title}</div>
-      {hint && <div className="mt-1 text-[var(--fig-xs)] text-zinc-600">{hint}</div>}
+      <div className="text-[14px] text-ink-2">{title}</div>
+      {hint && <div className="mt-1 text-[12px] text-ink-3">{hint}</div>}
     </div>
   )
 }
@@ -185,29 +291,9 @@ export function EmptyState({ title, hint, className = '' }) {
  *  surface (a form, a confirmation) rather than inline on the page. */
 export function Modal({ title, children, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.key === 'Escape' && onClose()}
-        className="w-[min(420px,92vw)] rounded-lg border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50"
-      >
-        <div className="flex items-center justify-between px-4 h-11 border-b border-white/[0.06]">
-          <span className="text-[var(--fig-sm)] font-medium text-zinc-100">{title}</span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="w-6 h-6 rounded text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60 flex items-center justify-center"
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()} title={title}>
+      {children}
+    </Dialog>
   )
 }
 
@@ -219,63 +305,25 @@ export function Modal({ title, children, onClose }) {
  */
 export function InfoTip({ children, label }) {
   const [open, setOpen] = useState(false)
-  // Opens upward by default (the common case: a trigger below the fold with
-  // room above it) but flips below when there genuinely isn't room - a long
-  // explanation on a trigger near the top of a card otherwise renders with
-  // its opening lines pushed off the top of the viewport, unreadable. 160px
-  // is a rough "a few lines of tooltip" budget, not an exact measurement of
-  // this tip's actual height (which varies per caller and isn't known until
-  // it renders) - good enough to catch the real failure case.
-  const [openBelow, setOpenBelow] = useState(false)
-  const triggerRef = useRef(null)
-  const id = useId()
-
-  const show = () => {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    setOpenBelow(rect ? rect.top < 160 : false)
-    setOpen(true)
-  }
-  const hide = () => setOpen(false)
-
   return (
-    <span className="relative inline-flex">
+    <Tooltip content={children} open={open} onOpenChange={setOpen}>
       <button
-        ref={triggerRef}
         type="button"
         aria-label={label}
-        aria-describedby={id}
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        className="text-zinc-500 hover:text-zinc-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-full"
+        onClick={() => setOpen(true)}
+        className="text-ink-3 hover:text-ink rounded-full"
       >
         <Info size={13} />
       </button>
-      {open && (
-        <span
-          id={id}
-          role="tooltip"
-          className={`absolute z-20 left-1/2 -translate-x-1/2 w-64 rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-[var(--fig-2xs)] leading-snug text-zinc-300 shadow-lg shadow-black/40 ${
-            openBelow ? 'top-full mt-2' : 'bottom-full mb-2'
-          }`}
-        >
-          {children}
-        </span>
-      )}
-    </span>
+    </Tooltip>
   )
 }
 
 export function Badge({ tone = 'zinc', children, className = '' }) {
   return (
-    <span
-      className={`inline-flex items-center text-[var(--fig-2xs)] font-medium tracking-wide uppercase px-1.5 py-0.5 rounded border ${
-        badgeTones[tone] || badgeTones.zinc
-      } ${className}`}
-    >
+    <Tag tone={LEGACY_TONE_TO_TAG[tone] || 'neutral'} className={className}>
       {children}
-    </span>
+    </Tag>
   )
 }
 
@@ -288,7 +336,7 @@ export function Badge({ tone = 'zinc', children, className = '' }) {
  *  is already how the app uses the two, just not written down until now. */
 export function TabList({ children, label, className = '' }) {
   return (
-    <div role="tablist" aria-label={label} className={`flex items-center gap-1 border-b border-white/[0.06] ${className}`}>
+    <div role="tablist" aria-label={label} className={`flex items-center gap-1 border-b border-line ${className}`}>
       {children}
     </div>
   )
@@ -323,8 +371,8 @@ export function TabButton({ active, onClick, children, id, controls, className =
       tabIndex={active ? 0 : -1}
       onClick={onClick}
       onKeyDown={onKeyDown}
-      className={`h-11 md:h-9 px-3.5 text-[var(--fig-sm)] font-medium border-b-2 -mb-px transition-colors ${
-        active ? 'text-zinc-100 border-blue-500' : 'text-zinc-500 border-transparent hover:text-zinc-300'
+      className={`h-11 md:h-9 px-3 text-[15px] font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ${
+        active ? 'sd-tab text-ink border-accent' : 'text-ink-3 border-transparent hover:text-ink-2'
       } ${className}`}
     >
       {children}
@@ -338,7 +386,7 @@ export function TabButton({ active, onClick, children, id, controls, className =
 export function StatStrip({ children, className = '', vertical = false }) {
   return (
     <div
-      className={`flex flex-col h-full rounded-lg border border-white/[0.06] bg-gradient-to-b from-zinc-900 to-zinc-900/70 divide-y divide-white/[0.06] ${
+      className={`sd-panel flex flex-col h-full rounded-xl bg-pane divide-y divide-line ${
         vertical ? '' : 'sm:flex-row sm:divide-y-0 sm:divide-x'
       } ${className}`}
     >
@@ -347,33 +395,40 @@ export function StatStrip({ children, className = '', vertical = false }) {
   )
 }
 
-/** `tone` (a text-color class, e.g. `text-blue-400`) tints the label to mark
+const statTones = {
+  blue: 'bg-accent-subtle text-held',
+  emerald: 'bg-up-subtle text-up',
+  red: 'bg-down-subtle text-down',
+  zinc: 'bg-pill text-ink-2',
+}
+
+/** `tone` (a text-color class, e.g. `text-held`) tints the label to mark
  *  this row as the strip's standout figure among siblings. `lead` steps the
  *  value up to the old single-stat card's size - for a strip's one figure
  *  that deserves top billing regardless of whether it needs a tint. */
 export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, lead = false }) {
   return (
-    <div className="flex-1 p-3.5 2xl:p-4">
-      <div className={`text-[var(--fig-2xs)] font-medium uppercase tracking-wider ${tone || 'text-zinc-500'}`}>{label}</div>
+    <div className="flex-1 px-3.5 py-3 2xl:px-[18px] 2xl:py-3.5">
+      <div className={`text-[12px] font-medium ${tone || 'text-ink-3'}`}>{label}</div>
       <div
-        className={`mt-1.5 2xl:mt-2 font-semibold text-zinc-50 tracking-tight num font-mono whitespace-nowrap ${
-          lead ? 'text-[clamp(20px,1.9vw,28px)]' : 'text-[clamp(18px,1.7vw,24px)]'
+        className={`mt-1 font-bold text-ink tracking-[-0.01em] num whitespace-nowrap ${
+          lead ? 'text-[26px]' : 'text-[20px]'
         }`}
       >
         {value}
       </div>
       {(badge || note) && (
-        <div className="mt-2 2xl:mt-2.5 flex items-center gap-2 flex-wrap">
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
           {badge && (
             <span
-              className={`inline-flex items-center whitespace-nowrap text-[var(--fig-xs)] px-2 py-0.5 rounded-md font-medium num font-mono ${
+              className={`inline-flex items-center h-[22px] px-2 rounded-md whitespace-nowrap text-[11px] font-semibold num ${
                 statTones[badgeTone] || statTones.zinc
               }`}
             >
               {badge}
             </span>
           )}
-          {note && <span className="text-[var(--fig-xs)] text-zinc-500">{note}</span>}
+          {note && <span className="text-[12px] text-ink-3">{note}</span>}
         </div>
       )}
     </div>
@@ -381,12 +436,12 @@ export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, l
 }
 
 export function Skeleton({ className = '', ...props }) {
-  return <div className={`animate-pulse bg-white/[0.05] rounded ${className}`} {...props} />
+  return <div className={`animate-pulse bg-tile rounded ${className}`} {...props} />
 }
 
 const LETTER_AVATAR_TEXT = [
-  [28, 'text-[var(--fig-2xs)]'],
-  [Infinity, 'text-[var(--fig-xs)]'],
+  [28, 'text-[11px]'],
+  [Infinity, 'text-[12px]'],
 ]
 
 export function LetterAvatar({ symbol, size, chars = 1, className = 'rounded' }) {
@@ -395,7 +450,7 @@ export function LetterAvatar({ symbol, size, chars = 1, className = 'rounded' })
     <span
       aria-hidden="true"
       style={{ width: size, height: size }}
-      className={`shrink-0 bg-zinc-800 flex items-center justify-center ${textSize} font-semibold text-zinc-400 ${className}`}
+      className={`shrink-0 bg-pill flex items-center justify-center ${textSize} font-bold text-ink ${className}`}
     >
       {symbol ? symbol.slice(0, chars).toUpperCase() : null}
     </span>
@@ -406,7 +461,7 @@ export function LetterAvatar({ symbol, size, chars = 1, className = 'rounded' })
  *  `fallback` instead when there's no symbol or the image fails to load.
  *  SymbolBar's letter avatar and Portfolio's holdings-table color dot both
  *  use this rather than each tracking their own load failure. */
-export function InstrumentLogo({ symbol, size, className = '', fallback }) {
+export function InstrumentLogo({ symbol, size = 28, className = '', fallback }) {
   // Tracks which symbol failed, not just whether one did - Research's
   // SymbolBar keeps one InstrumentLogo instance across symbol changes, so a
   // plain boolean would keep hiding the logo for every symbol after the
@@ -414,7 +469,11 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
   const [failedSymbol, setFailedSymbol] = useState(null)
   const src = symbol !== failedSymbol ? instrumentLogoUrl(symbol) : null
 
-  if (!src) return fallback
+  if (!src) {
+    return fallback === undefined
+      ? <LetterAvatar symbol={symbol} size={size} chars={2} className="rounded-full" />
+      : fallback
+  }
 
   return (
     <img
@@ -424,9 +483,26 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
       loading="lazy"
       decoding="async"
       onError={() => setFailedSymbol(symbol)}
-      style={{ width: size, height: size }}
-      className={`object-contain bg-white shrink-0 ${className}`}
+      style={{ width: size, height: size, borderRadius: '50%', padding: size >= 24 ? 3 : 1 }}
+      className={`object-contain bg-white ring-1 ring-line shrink-0 ${className}`}
     />
+  )
+}
+
+export function Move({ value, digits = 2, className = '' }) {
+  if (value == null || Number.isNaN(Number(value))) {
+    return <span className={`num whitespace-nowrap text-ink-3 ${className}`}>—</span>
+  }
+  const n = Number(value)
+  const magnitude = Math.abs(n).toFixed(digits)
+  if (Number(magnitude) === 0) {
+    return <span className={`num whitespace-nowrap text-flat ${className}`}>{magnitude}%</span>
+  }
+  const up = n > 0
+  return (
+    <span className={`num whitespace-nowrap ${up ? 'text-up' : 'text-down'} ${className}`}>
+      {up ? '▲' : '▼'} {magnitude}%
+    </span>
   )
 }
 
@@ -435,8 +511,7 @@ export function InstrumentLogo({ symbol, size, className = '', fallback }) {
  *  next to a ticker, TradingView-style. `null` (no live quote) reads as a
  *  dash rather than a false flat 0%. */
 export function DayChange({ value, className = '' }) {
-  const tone = value == null ? 'text-zinc-600' : pctToneClass(value)
-  return <span className={`num font-mono ${tone} ${className}`}>{fmtPct(value)}</span>
+  return <Move value={value} className={className} />
 }
 
 /** A single button in a segmented toggle - Research's chart-range picker
@@ -448,12 +523,24 @@ export function TBtn({ active, onClick, children, title }) {
       title={title}
       onClick={onClick}
       aria-pressed={active}
-      className={`relative h-7 px-2.5 rounded text-[var(--fig-xs)] font-medium transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-[max(100%,2.75rem)] after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] md:after:hidden ${
-        active ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+      className={`relative h-7 px-3 rounded-[7px] text-[13px] font-semibold whitespace-nowrap transition-colors after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-[max(100%,2.75rem)] after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] md:after:hidden ${
+        active ? 'bg-selected text-ink' : 'text-ink-3 hover:text-ink'
       }`}
     >
       {children}
     </button>
+  )
+}
+
+export function Segmented({ options, value, onChange, label, className = '' }) {
+  return (
+    <div role="group" aria-label={label} className={`inline-flex flex-wrap gap-0.5 p-[3px] rounded-[9px] bg-track ${className}`}>
+      {options.map((option) => (
+        <TBtn key={option.value} active={option.value === value} onClick={() => onChange(option.value)}>
+          {option.label}
+        </TBtn>
+      ))}
+    </div>
   )
 }
 
@@ -463,10 +550,10 @@ export function Chip({ active, onClick, children, className = '' }) {
       type="button"
       onClick={onClick}
       aria-pressed={!!active}
-      className={`inline-flex items-center h-11 md:h-8 px-3 rounded-full border text-[var(--fig-xs)] font-medium transition-colors ${
+      className={`inline-flex items-center gap-1.5 h-11 md:h-7 px-[11px] rounded-lg text-[12px] font-semibold whitespace-nowrap transition-colors ${
         active
-          ? 'bg-white/[0.09] border-white/[0.16] text-zinc-100'
-          : 'border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]'
+          ? 'bg-accent-subtle text-ink shadow-[inset_0_0_0_1px_var(--sd-ink-3)]'
+          : 'sd-raised bg-raised text-ink-2 hover:text-ink'
       } ${className}`}
     >
       {children}
@@ -501,35 +588,80 @@ export function QueryState({ isLoading, error, onRetry, label, children }) {
 
 /** A labelled figure with an optional sub-hint. Shared by OverviewTab,
  *  EarningsTab and SnapshotSection so they render metrics identically. */
-export function Metric({ label, value, tone = 'text-zinc-100', hint }) {
+export function Metric({ label, value, tone = 'text-ink', hint }) {
   return (
     <div>
-      <div className="text-[var(--fig-2xs)] text-zinc-500 uppercase tracking-wide font-medium">{label}</div>
-      <div className={`text-[var(--fig-md)] num font-mono mt-1 2xl:mt-1.5 ${tone}`}>{value}</div>
-      {hint ? <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5 num font-mono">{hint}</div> : null}
+      <div className="text-[12px] text-ink-3 font-medium">{label}</div>
+      <div className={`text-[17px] font-semibold num mt-1 ${tone}`}>{value}</div>
+      {hint ? <div className="text-[12px] text-ink-3 mt-0.5 num">{hint}</div> : null}
     </div>
+  )
+}
+
+const TILE_TONES = {
+  up: 'text-up',
+  down: 'text-down',
+  warn: 'text-warn',
+  earn: 'text-earn',
+  flat: 'text-flat',
+}
+
+const TILE_TAGS = {
+  block: { root: 'div', list: null, term: 'span', detail: 'div' },
+  listItem: { root: 'li', list: 'dl', term: 'dt', detail: 'dd' },
+}
+
+function TileFrame({ label, right, children, sub, listItem = false }) {
+  const tags = listItem ? TILE_TAGS.listItem : TILE_TAGS.block
+  const Root = tags.root
+  const List = tags.list
+  const Term = tags.term
+  const Detail = tags.detail
+  const title = List ? (
+    <Term className="flex items-baseline justify-between gap-2 text-[12px] text-ink-3">
+      {label}
+      {right}
+    </Term>
+  ) : (
+    <div className="flex items-baseline justify-between gap-2">
+      <Term className="text-[12px] text-ink-3">{label}</Term>
+      {right}
+    </div>
+  )
+  const content = (
+    <>
+      {title}
+      {children(Detail)}
+      {sub && <Detail className="mt-0.5 text-[12px] text-ink-2 num">{sub}</Detail>}
+    </>
+  )
+  return <Root className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">{List ? <List>{content}</List> : content}</Root>
+}
+
+const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
+
+export function Tile({ label, value, sub, tone, right, listItem = false }) {
+  const absent = value == null
+  return (
+    <TileFrame label={label} right={right} sub={sub} listItem={listItem}>
+      {(Detail) => (
+        <Detail className={`${TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
+      )}
+    </TileFrame>
   )
 }
 
 /** Metric's bordered sibling, for a figure that needs visual separation from
  *  its neighbors - a grid of risk stats, a week's summary tiles. The audit
- *  found this exact box (bg-white/[0.02] border border-white/[0.06]) already
- *  independently reimplemented as Analytics' MetricTile, Earnings'
- *  SummaryTile, and Research's Ratio; this is that box, promoted once. Reach
- *  for bare `Metric` instead when the tile doesn't need its own boundary
- *  (e.g. already inside a Card with siblings). */
-export function MetricTile({ label, value, hint, tone = 'text-zinc-50', right }) {
+ *  found this exact box already independently reimplemented as Analytics'
+ *  MetricTile, Earnings' SummaryTile, and Research's Ratio; this is that box,
+ *  promoted once. Reach for bare `Metric` instead when the tile doesn't need
+ *  its own boundary (e.g. already inside a Card with siblings). */
+export function MetricTile({ label, value, hint, tone = 'text-ink', right }) {
   return (
-    <div className="bg-white/[0.02] border border-white/[0.06] rounded-md p-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[var(--fig-2xs)] text-zinc-500 font-medium uppercase tracking-wider">{label}</span>
-        {right}
-      </div>
-      {value != null && (
-        <div className={`mt-1.5 text-[var(--fig-lg)] font-semibold num font-mono tracking-tight ${tone}`}>{value}</div>
-      )}
-      {hint && <div className="mt-1 text-[var(--fig-2xs)] text-zinc-500">{hint}</div>}
-    </div>
+    <TileFrame label={label} right={right} sub={hint}>
+      {(Detail) => value != null && <Detail className={`${TILE_VALUE} ${tone}`}>{value}</Detail>}
+    </TileFrame>
   )
 }
 
@@ -544,7 +676,7 @@ export function Th({ children, align = 'left', edge = false, hideBelow, classNam
   return (
     <th
       aria-sort={ariaSort}
-      className={`font-medium ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-1.5 2xl:py-2 ${
+      className={`h-[30px] text-[12px] font-medium text-ink-3 whitespace-nowrap ${edge ? 'px-[18px]' : 'px-2.5'} ${
         align === 'right' ? 'text-right' : 'text-left'
       } ${hideClass} ${className}`}
     >
@@ -563,12 +695,12 @@ export function SortableTh({ children, sortKey, sort, onSort, align = 'left', ed
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`inline-flex h-11 min-w-11 items-center gap-1 font-medium hover:text-zinc-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 md:h-auto md:min-w-0 ${
-          align === 'right' ? 'flex-row-reverse' : ''
-        }`}
+        className={`inline-flex h-11 min-w-11 items-center gap-1 font-medium hover:text-ink md:h-auto md:min-w-0 ${
+          active ? 'text-ink' : ''
+        } ${align === 'right' ? 'flex-row-reverse' : ''}`}
       >
         {children}
-        <Glyph size={12} aria-hidden="true" className={active ? 'text-zinc-200' : 'opacity-50'} />
+        <Glyph size={12} aria-hidden="true" className={active ? 'text-ink' : 'opacity-50'} />
       </button>
     </Th>
   )
@@ -584,8 +716,8 @@ export function Td({ children, align = 'left', edge = false, hideBelow, classNam
   const hideClass = HIDE_BELOW[hideBelow] ?? ''
   return (
     <td
-      className={`whitespace-nowrap ${edge ? 'px-4 2xl:px-5' : 'px-2 2xl:px-3'} py-2 2xl:py-2.5 ${
-        align === 'right' ? 'text-right' : 'text-left'
+      className={`whitespace-nowrap h-[var(--sd-row-h)] text-[13.5px] ${edge ? 'px-[18px]' : 'px-2.5'} py-1.5 ${
+        align === 'right' ? 'text-right num' : 'text-left'
       } ${hideClass} ${className}`}
     >
       {children}
@@ -594,15 +726,14 @@ export function Td({ children, align = 'left', edge = false, hideBelow, classNam
 }
 
 /** A table body row with the app's shared border/hover/selected treatment -
- *  use instead of hand-copying `border-b border-white/[0.06] hover:bg-...`
- *  per table (the audit found both an older opaque `border-zinc-800` and a
- *  newer `border-white/[0.06]` convention coexisting; this is the newer one,
+ *  use instead of hand-copying a border and hover fill per table (the audit
+ *  found two divider conventions coexisting; this is the newer one,
  *  standardized). */
 export function Tr({ children, selected = false, className = '', ...props }) {
   return (
     <tr
-      className={`border-b border-white/[0.06] last:border-0 ${
-        selected ? 'bg-blue-500/[0.06]' : 'hover:bg-white/[0.03]'
+      className={`border-t border-line ${
+        selected ? 'bg-selected' : 'hover:bg-hover'
       } ${className}`}
       {...props}
     >

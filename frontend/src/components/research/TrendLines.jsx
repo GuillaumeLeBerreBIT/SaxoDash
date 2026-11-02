@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 
 import { indexFromPointer, svgY } from '../../lib/chartGeometry'
-import { CATEGORY_AXIS_TEXT } from '../../lib/charts'
 import { roundPrice } from '../../lib/priceLines'
+import { useChartColors } from '../../theme/useChartColors'
 
 const HIT_WIDTH = 10
 const HANDLE_RADIUS = 4
@@ -11,6 +11,7 @@ const HANDLE_HIT_RADIUS = 10
 const stop = (event) => event.stopPropagation()
 
 function Handle({ line, endpoint, x, y, geometry, data, onMove }) {
+  const c = useChartColors()
   const [preview, setPreview] = useState(null)
   const drag = useRef(null)
   const point = preview ?? { x, y }
@@ -22,7 +23,7 @@ function Handle({ line, endpoint, x, y, geometry, data, onMove }) {
 
   return (
     <g>
-      <circle cx={point.x} cy={point.y} r={HANDLE_RADIUS} fill={CATEGORY_AXIS_TEXT} pointerEvents="none" />
+      <circle cx={point.x} cy={point.y} r={HANDLE_RADIUS} fill={c.axisCategory} pointerEvents="none" />
       <circle
         data-testid={`trend-line-handle-${line.id}-${endpoint}`}
         cx={point.x}
@@ -59,6 +60,7 @@ function Handle({ line, endpoint, x, y, geometry, data, onMove }) {
 }
 
 function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
+  const c = useChartColors()
   const x1 = geometry.xAt(line.x1)
   const y1 = geometry.scaleY(line.y1)
   const x2 = geometry.xAt(line.x2)
@@ -71,7 +73,7 @@ function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
         x2={x2.toFixed(2)}
         y1={y1.toFixed(2)}
         y2={y2.toFixed(2)}
-        stroke={CATEGORY_AXIS_TEXT}
+        stroke={c.axisCategory}
         strokeWidth={selected ? 2 : 1}
         pointerEvents="none"
       />
@@ -98,9 +100,8 @@ function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
           data-testid={`trend-line-label-${line.id}`}
           x={x1 + 4}
           y={y1 - 6}
-          fill={CATEGORY_AXIS_TEXT}
+          fill={c.axisCategory}
           fontSize="10"
-          fontFamily="Geist Mono"
           pointerEvents="none"
         >
           {line.label}
@@ -161,7 +162,7 @@ export function LabelEditor({ value, x, y, ariaLabel, onCommit, onCancel }) {
       onClick={stop}
       onDoubleClick={stop}
       onPointerDown={stop}
-      className="absolute h-6 px-1.5 rounded bg-zinc-900 border border-blue-500/60 text-[10px] font-mono text-zinc-100 outline-none"
+      className="absolute h-6 px-1.5 rounded bg-raised border border-accent/60 text-[var(--fig-2xs)] text-ink outline-none"
       style={{ left: x, top: y - 12, width: 140 }}
     />
   )

@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { useCompanyNews } from '../../api/queries'
 import { fmtDayMonth } from '../../lib/format'
-import { Card, CardHeader, Skeleton } from '../ui'
+import { Button, Card, Skeleton } from '../ui'
 
 const NEWS_PAGE = 10
 
@@ -23,15 +23,14 @@ function groupByDay(items) {
   return groups
 }
 
-export default function NewsTab({ symbol }) {
+export default function NewsTab({ symbol, context, className = '' }) {
   const [shown, setShown] = useState(NEWS_PAGE)
   const { data, isLoading } = useCompanyNews(symbol)
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader title="News" subtitle="From Finnhub" />
-        <div className="mt-4 space-y-2">
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
+        <div className="space-y-2">
           <Skeleton className="h-4 w-3/4" />
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -42,9 +41,8 @@ export default function NewsTab({ symbol }) {
 
   if (!data?.available) {
     return (
-      <Card>
-        <CardHeader title="News" subtitle="From Finnhub" />
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
+        <p className="text-[13px] text-ink-3">
           {data?.reason || `News is unavailable for ${symbol}.`}
         </p>
       </Card>
@@ -53,55 +51,45 @@ export default function NewsTab({ symbol }) {
 
   if (data.items.length === 0) {
     return (
-      <Card>
-        <CardHeader title="News" subtitle="From Finnhub" />
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">No recent news for {symbol}.</p>
+      <Card className={className} context={context ?? 'From Finnhub'} dot="off" title="News">
+        <p className="text-[13px] text-ink-3">No recent news for {symbol}.</p>
       </Card>
     )
   }
 
   return (
-    <Card padding={false}>
-      <div className="px-4 py-3 border-b border-white/[0.06]">
-        <CardHeader title="News" subtitle="Company headlines, last 14 days · Finnhub" />
-      </div>
-      <div className="divide-y divide-white/[0.04]">
-        {groupByDay(data.items.slice(0, shown)).map((group) => (
-          <div key={group.key} className="px-4 py-2.5">
-            <div className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600 mb-1.5">{group.label}</div>
-            <ul className="space-y-2">
-              {group.items.map((item) => (
-                <li key={item.id ?? item.url}>
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--fig-sm)] text-zinc-100 hover:text-blue-300"
-                  >
-                    {item.headline}
-                  </a>
-                  <div className="text-[var(--fig-2xs)] text-zinc-500 mt-0.5">
-                    <span className="num font-mono">{timeLabel(item.datetime)}</span>
-                    {' · '}
-                    {item.source}
-                    {item.summary ? <span className="line-clamp-1"> — {item.summary}</span> : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+    <Card className={className} context={context ?? 'Finnhub company news · last 14 days, newest first'} dot="ok" title="News">
+      {groupByDay(data.items.slice(0, shown)).map((group) => (
+        <section key={group.key} className="pt-3 first:pt-0">
+          <h3 className="text-[12px] font-medium text-ink-3 num">{group.label}</h3>
+          <ul>
+            {group.items.map((item) => (
+              <li key={item.id ?? item.url} className="py-2.5 border-t border-line first:border-t-0">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[14px] font-semibold text-ink hover:underline [text-wrap:pretty]"
+                >
+                  {item.headline}
+                </a>
+                {item.summary ? (
+                  <p className="mt-0.5 max-w-[80ch] text-[13px] text-ink-2 line-clamp-2">{item.summary}</p>
+                ) : null}
+                <div className="mt-0.5 text-[12px] text-ink-3">
+                  <span className="num">{timeLabel(item.datetime)}</span>
+                  {' · '}
+                  {item.source}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
       {data.items.length > shown ? (
-        <div className="px-4 py-2.5 border-t border-white/[0.04]">
-          <button
-            type="button"
-            onClick={() => setShown((n) => n + NEWS_PAGE)}
-            className="text-[var(--fig-xs)] text-blue-400 hover:text-blue-300"
-          >
-            Show more ({data.items.length - shown})
-          </button>
-        </div>
+        <Button size="sm" className="mt-3" onClick={() => setShown((n) => n + NEWS_PAGE)}>
+          Show more ({data.items.length - shown})
+        </Button>
       ) : null}
     </Card>
   )

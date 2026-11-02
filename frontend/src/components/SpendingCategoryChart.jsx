@@ -1,23 +1,25 @@
 import { fmtEur } from '../lib/format'
 import { colorForCategory } from '../lib/charts'
-import { Card, CardHeader } from './ui'
+import { Card } from './ui'
+import { useChartColors } from '../theme/useChartColors'
 import { chartPlaceholderFor } from '../lib/chartState'
 import { foldSmallSlices, spendingTransactionsPath } from '../lib/spending'
 import { CATEGORY_LABELS } from '../lib/categories'
 import AllocationDonut from './AllocationDonut'
 
-export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, period, onRetry }) {
+export default function SpendingCategoryChart({ categories, isLoading, error, periodLabel, period, onRetry, className = '' }) {
+  const c = useChartColors()
   const folded = foldSmallSlices(
     (categories ?? [])
-      .map((c) => ({
-        name: CATEGORY_LABELS[c.category] ?? c.category,
-        category: c.category,
-        value: Number(c.amount),
-        color: colorForCategory(c.category),
-        to: period ? spendingTransactionsPath(c.category, period) : undefined,
+      .map((row) => ({
+        name: CATEGORY_LABELS[row.category] ?? row.category,
+        category: row.category,
+        value: Number(row.amount),
+        color: colorForCategory(row.category, c),
+        to: period ? spendingTransactionsPath(row.category, period) : undefined,
       }))
       .sort((a, b) => b.value - a.value),
-    { otherName: 'Smaller categories' },
+    { otherName: 'Smaller categories', otherColor: c.flat },
   )
   const items = period
     ? folded.map((item) =>
@@ -30,9 +32,8 @@ export default function SpendingCategoryChart({ categories, isLoading, error, pe
   const placeholder = chartPlaceholderFor({ isLoading, error, data: items, minPoints: 1, height: 260, onRetry })
 
   return (
-    <Card>
-      <CardHeader title="Spending by category" subtitle={periodLabel} />
-      <div className="mt-2">
+    <Card className={className} context={periodLabel} dot={error ? 'warn' : items.length ? 'ok' : 'off'} title="Spending by category">
+      <div>
         {placeholder ?? <AllocationDonut items={items} formatValue={fmtEur} height="280px" />}
       </div>
     </Card>

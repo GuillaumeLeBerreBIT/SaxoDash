@@ -5,6 +5,8 @@
 // An absent figure is not zero: "€0.00" is a claim, a dash is not.
 export const UNKNOWN = '—'
 
+export const REPORTING_CURRENCY = 'EUR'
+
 export function fmtMoney(value, currency = 'EUR', { sign = false, decimals = 2 } = {}) {
     if (value == null || Number.isNaN(Number(value))) return UNKNOWN
     const n = Number(value)
@@ -46,9 +48,9 @@ export function pctTone(value, decimals = 2) {
     return n > 0 ? 'positive' : 'negative'
 }
 
-const TONE_CLASS = { positive: 'text-emerald-400', negative: 'text-red-400' }
+const TONE_CLASS = { positive: 'text-up', negative: 'text-down' }
 
-export function pctToneClass(value, decimals = 2, neutral = 'text-zinc-500') {
+export function pctToneClass(value, decimals = 2, neutral = 'text-ink-3') {
     return TONE_CLASS[pctTone(value, decimals)] ?? neutral
 }
 

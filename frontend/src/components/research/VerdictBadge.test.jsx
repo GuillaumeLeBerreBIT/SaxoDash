@@ -13,4 +13,15 @@ describe('VerdictBadge', () => {
     const { container } = render(<VerdictBadge tone="pos" text={undefined} />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('maps each verdict tone onto a tag tone', () => {
+    const { rerender } = render(<VerdictBadge tone="pos" text="Read" />)
+    expect(screen.getByText('Read')).toHaveClass('text-up')
+
+    rerender(<VerdictBadge tone="caution" text="Read" />)
+    expect(screen.getByText('Read')).toHaveClass('text-warn-text')
+
+    rerender(<VerdictBadge tone="neutral" text="Read" />)
+    expect(screen.getByText('Read')).toHaveClass('text-ink-2')
+  })
 })

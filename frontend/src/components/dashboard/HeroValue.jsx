@@ -1,5 +1,5 @@
-import { fmtEur, fmtPct } from '../../lib/format'
-import { Card } from '../ui'
+import { fmtEur } from '../../lib/format'
+import { Move } from '../ui'
 
 const PERIODS = [
   ['day', 'Day'],
@@ -8,66 +8,68 @@ const PERIODS = [
   ['ytd', 'YTD'],
 ]
 
-function DeltaPill({ label, delta }) {
+function Figure({ label, children }) {
+  return (
+    <div className="flex flex-col min-w-0">
+      <span className="text-[12px] text-ink-3">{label}</span>
+      <span className="text-[13.5px] font-semibold num whitespace-nowrap">{children}</span>
+    </div>
+  )
+}
+
+function Delta({ label, delta }) {
   const known = delta && delta.pct != null
-  const up = known && Number(delta.pct) >= 0
   return (
-    <div className="flex flex-col">
-      <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{label}</span>
-      <span
-        className={`text-[var(--fig-sm)] num font-mono ${
-          !known ? 'text-zinc-500' : up ? 'text-emerald-400' : 'text-red-400'
-        }`}
-      >
-        {!known ? '—' : fmtPct(delta.pct, { decimals: 2 })}
-      </span>
+    <Figure label={label}>
+      <Move value={known ? delta.pct : null} />
       {known && (
-        <span className="text-[var(--fig-2xs)] num font-mono text-zinc-600">
-          {fmtEur(delta.abs, { sign: true, decimals: 0 })}
-        </span>
+        <span className="block text-[12px] font-medium text-ink-3">{fmtEur(delta.abs, { sign: true, decimals: 0 })}</span>
       )}
-    </div>
+    </Figure>
   )
 }
 
-/** A flat figure alongside the DeltaPill grid - "spent this month" isn't a
- *  gain/loss delta to compare against a prior period the way the others are,
- *  so it gets a plain value rather than a colored up/down pill. Folded in
- *  here instead of a standalone "This month's spending" Card - a single
- *  number with a label doesn't need its own bordered box, and the fuller
- *  breakdown already lives on the Spending page. */
-function FlatStat({ label, value }) {
-  return (
-    <div className="flex flex-col">
-      <span className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-600">{label}</span>
-      <span className="text-[var(--fig-sm)] num font-mono text-zinc-300">{value}</span>
-    </div>
-  )
+function unrealisedTone(value) {
+  if (value == null) return 'text-ink-3'
+  const n = Number(value)
+  if (n > 0) return 'text-up'
+  if (n < 0) return 'text-down'
+  return 'text-ink'
 }
 
-export default function HeroValue({ value, change, spendingThisMonth }) {
-  const atSaxo = Number(value.portfolio) + Number(value.broker_cash)
+export default function HeroValue({ value, change, spendingThisMonth, unrealised }) {
   return (
-    <Card className="h-full flex flex-col">
-      <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth</div>
-      <div className="mt-1 text-[clamp(22px,2.4vw,30px)] font-semibold tracking-tight num font-mono text-zinc-50">
-        {fmtEur(value.net_worth)}
-      </div>
-      <div className="mt-1 text-[var(--fig-xs)] text-zinc-500 num font-mono">
-        {fmtEur(atSaxo)} at Saxo · {fmtEur(value.bank_only)} bank
-      </div>
-      <div className="mt-4 pt-4 border-t border-white/[0.06]">
-        <div className="text-[var(--fig-2xs)] uppercase tracking-wider text-zinc-500 font-medium">Net worth change</div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {PERIODS.map(([key, label]) => (
-            <DeltaPill key={key} label={label} delta={change?.[key]} />
-          ))}
-          {spendingThisMonth != null && <FlatStat label="Spent MTD" value={fmtEur(spendingThisMonth)} />}
+    <div>
+      <div className="flex flex-wrap items-end gap-x-[26px] gap-y-3">
+        <div className="text-[34px] font-bold tracking-[-0.02em] leading-none num text-ink">{fmtEur(value.net_worth)}</div>
+        <div className="flex flex-wrap gap-x-[22px] gap-y-2">
+          <Figure label="Positions">
+            <span className="text-ink">{fmtEur(value.portfolio)}</span>
+          </Figure>
+          <Figure label="Saxo cash">
+            <span className="text-ink">{fmtEur(value.broker_cash)}</span>
+          </Figure>
+          <Figure label="Bank">
+            <span className="text-ink">{fmtEur(value.bank_only)}</span>
+          </Figure>
+          <Figure label="Unrealised">
+            <span className={unrealisedTone(unrealised)}>{fmtEur(unrealised, { sign: true })}</span>
+          </Figure>
         </div>
       </div>
-      <p className="mt-auto pt-3 text-[var(--fig-2xs)] text-zinc-600">
-        Change is end-of-day, from the daily net-worth snapshot.
-      </p>
-    </Card>
+      <div className="mt-4 pt-3 border-t border-line">
+        <div className="text-[12px] font-medium text-ink-3">Net worth change</div>
+        <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-3">
+          {PERIODS.map(([key, label]) => (
+            <Delta key={key} label={label} delta={change?.[key]} />
+          ))}
+          {spendingThisMonth != null && (
+            <Figure label="Spent MTD">
+              <span className="text-ink">{fmtEur(spendingThisMonth)}</span>
+            </Figure>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

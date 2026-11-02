@@ -1,4 +1,4 @@
-import { OTHER_SLICE, colorForRank } from './charts'
+import { colorForRank } from './charts'
 import { UNKNOWN, fmtDate, fmtPct } from './format'
 
 const VIEW_KEY = 'saxodash:investors-top10-view'
@@ -133,18 +133,18 @@ export function remainder(detail) {
   }
 }
 
-export function donutSlices(detail) {
+export function donutSlices(detail, c) {
   const slices = topTen(detail.holdings).map((h, i) => ({
     name: holdingLabel(h),
     note: h.ticker ? h.issuer : null,
     value: h.value,
     weight: h.weight,
-    color: colorForRank(i),
+    color: colorForRank(i, c),
     logo: Boolean(h.ticker),
   }))
   const rest = remainder(detail)
   return rest
-    ? [...slices, { name: 'Other', note: `${rest.count} smaller ${positionWord(rest.count)}`, value: rest.value, weight: rest.weight, color: OTHER_SLICE, logo: false }]
+    ? [...slices, { name: 'Other', note: `${rest.count} smaller ${positionWord(rest.count)}`, value: rest.value, weight: rest.weight, color: c.estimate, logo: false }]
     : slices
 }
 

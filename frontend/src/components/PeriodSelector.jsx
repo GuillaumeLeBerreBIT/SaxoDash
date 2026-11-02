@@ -42,7 +42,7 @@ export default function PeriodSelector({ value, onChange }) {
             }}
             className="h-8"
           />
-          <span className="text-zinc-600 text-[var(--fig-xs)]">to</span>
+          <span className="text-ink-3 text-[12px]">to</span>
           <Input
             type="date"
             aria-label="To date"

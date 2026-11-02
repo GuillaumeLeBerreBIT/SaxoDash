@@ -1,5 +1,5 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
-import { Card } from '../ui'
+import { Card, Skeleton } from '../ui'
 
 function websiteLink(website) {
   try {
@@ -11,9 +11,10 @@ function websiteLink(website) {
   }
 }
 
-export default function KeyFactsStrip({ fundamentals }) {
+function companyFacts(fundamentals) {
+  if (!fundamentals) return []
   const site = websiteLink(fundamentals.website)
-  const facts = [
+  return [
     ['Market cap', fundamentals.market_cap == null ? null : fmtCompact(fundamentals.market_cap)],
     ['P/E', fundamentals.pe_ratio == null ? null : fmtNum(fundamentals.pe_ratio, 2)],
     ['EPS (TTM)', fundamentals.eps_ttm == null ? null : fmtNum(fundamentals.eps_ttm, 2)],
@@ -24,24 +25,48 @@ export default function KeyFactsStrip({ fundamentals }) {
     [
       'Website',
       site ? (
-        <a href={site.href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+        <a href={site.href} target="_blank" rel="noopener noreferrer" className="text-ink hover:underline">
           {site.host}
         </a>
       ) : null,
     ],
-  ].filter(([, value]) => value != null)
-  if (!facts.length) return null
+  ]
+}
+
+function referenceFacts(details) {
+  if (!details) return []
+  return [
+    ['Exchange', details.exchange_name || details.exchange],
+    ['Currency', details.currency],
+    ['ISIN', details.isin],
+    ['Uic', details.uic],
+    ['Lot size', details.lot_size],
+    ['Asset type', details.asset_type],
+  ]
+}
+
+export default function KeyFactsStrip({ fundamentals, details, detailsLoading = false, className = '' }) {
+  const facts = [...companyFacts(fundamentals), ...referenceFacts(details)].filter(
+    ([, value]) => value != null && value !== '',
+  )
+  if (!facts.length && !detailsLoading) return null
 
   return (
-    <Card>
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3">
+    <Card
+      className={className}
+      context={fundamentals ? 'Finnhub profile · Saxo reference data' : 'Saxo reference data'}
+      dot="off"
+      title="Company facts"
+    >
+      <dl>
         {facts.map(([label, value]) => (
-          <div key={label} className="min-w-0">
-            <dt className="text-[var(--fig-2xs)] uppercase tracking-wide text-zinc-500 font-medium">{label}</dt>
-            <dd className="mt-1 text-[var(--fig-sm)] num font-mono text-zinc-100 truncate">{value}</dd>
+          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line first:border-t-0">
+            <dt className="text-[13px] text-ink-2 shrink-0">{label}</dt>
+            <dd className="text-[13.5px] font-semibold num text-ink truncate text-right">{value}</dd>
           </div>
         ))}
       </dl>
+      {detailsLoading && <Skeleton className="mt-2 h-4 w-2/3" />}
     </Card>
   )
 }

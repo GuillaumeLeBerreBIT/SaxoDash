@@ -38,17 +38,17 @@ function NextEarnings({ day, session }) {
   return (
     <>
       <span className="block whitespace-nowrap">{day}</span>
-      {session && <span className="block whitespace-nowrap text-[var(--fig-2xs)] text-zinc-500">{session}</span>}
+      {session && <span className="block whitespace-nowrap text-[12px] font-normal text-ink-3">{session}</span>}
     </>
   )
 }
 
 function Section({ title, note, children }) {
   return (
-    <section className="border-t border-white/[0.06] pt-3 mt-3 first:border-t-0 first:pt-0 first:mt-0">
+    <section className="border-t border-line pt-3.5 mt-3.5 first:border-t-0 first:pt-0 first:mt-0">
       <div className="flex items-baseline justify-between gap-2 mb-2">
-        <h2 className="text-[var(--fig-sm)] font-medium text-zinc-200">{title}</h2>
-        {note && <span className="text-[var(--fig-2xs)] text-zinc-500">{note}</span>}
+        <h2 className="text-[15px] font-bold text-ink [text-wrap:balance]">{title}</h2>
+        {note && <span className="text-[12px] text-ink-3">{note}</span>}
       </div>
       {children}
     </section>
@@ -66,7 +66,7 @@ function IndicatorDisclosure({ votes }) {
         aria-expanded={open}
         aria-controls={tableId}
         onClick={() => setOpen((value) => !value)}
-        className="mx-auto block text-[var(--fig-2xs)] text-zinc-400 hover:text-zinc-200 transition-colors"
+        className="mx-auto block min-h-7 px-2 rounded-lg text-[12px] font-semibold text-ink-2 hover:text-ink hover:bg-hover transition-colors"
       >
         {open ? 'Hide indicators' : `Show indicators (${votes.length})`}
       </button>
@@ -113,13 +113,13 @@ export default function SymbolPanel({ symbol, companyData, bars, earnings, href,
 
   return (
     <Card>
-      <Section title={symbol} note={<Link to={href} className="hover:text-zinc-300">Open in Research →</Link>}>
+      <Section title={symbol} note={<Link to={href} className="font-semibold text-ink-2 hover:text-ink">Open in Research →</Link>}>
         {stats.length > 0 && (
-          <dl className="text-[var(--fig-xs)]">
+          <dl className="text-[13px]">
             {stats.map(([key, label, value]) => (
               <div key={key} className="flex justify-between gap-3 py-1">
-                <dt className="whitespace-nowrap text-zinc-400">{label}</dt>
-                <dd data-stat={key} className="num font-mono text-zinc-100 text-right">
+                <dt className="whitespace-nowrap text-ink-2">{label}</dt>
+                <dd data-stat={key} className="num font-semibold text-ink text-right">
                   {typeof value === 'object' ? <NextEarnings {...value} /> : value}
                 </dd>
               </div>
@@ -143,7 +143,7 @@ export default function SymbolPanel({ symbol, companyData, bars, earnings, href,
       {hasFinancials && (
         <Section
           title="Financials"
-          note={financialsHref ? <Link to={financialsHref} className="hover:text-zinc-300">More financials →</Link> : null}
+          note={financialsHref ? <Link to={financialsHref} className="font-semibold text-ink-2 hover:text-ink">More financials →</Link> : null}
         >
           <MiniFinancials annual={annual} />
         </Section>
@@ -155,7 +155,7 @@ export default function SymbolPanel({ symbol, companyData, bars, earnings, href,
         <Section title="Analyst rating">
           <RatingGauge title="Analyst rating" fraction={analyst.fraction} label={analyst.label} />
           <AnalystCounts rows={analyst.counts.map((row) => [row.label, row.count])} />
-          <p className="mt-1 text-center text-[var(--fig-2xs)] text-zinc-500">
+          <p className="mt-1 text-center text-[12px] text-ink-3">
             {analyst.period ? `${analyst.total} analysts · as of ${fmtMonthYear(analyst.period)}` : `${analyst.total} analysts`}
           </p>
         </Section>

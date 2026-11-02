@@ -33,10 +33,10 @@ describe('RatingGauge', () => {
     const sell = render(<RatingGauge title="t" fraction={0.3} label="Sell" />)
     const hold = render(<RatingGauge title="t" fraction={0.4} label="Hold" />)
 
-    expect(buy.getByText('Buy')).toHaveClass('text-emerald-400')
-    expect(sell.getByText('Sell')).toHaveClass('text-red-400')
-    expect(hold.getByText('Hold')).not.toHaveClass('text-emerald-400')
-    expect(hold.getByText('Hold')).not.toHaveClass('text-red-400')
+    expect(buy.getByText('Buy')).toHaveClass('text-up')
+    expect(sell.getByText('Sell')).toHaveClass('text-down')
+    expect(hold.getByText('Hold')).not.toHaveClass('text-up')
+    expect(hold.getByText('Hold')).not.toHaveClass('text-down')
   })
 
   it('draws five segments', () => {

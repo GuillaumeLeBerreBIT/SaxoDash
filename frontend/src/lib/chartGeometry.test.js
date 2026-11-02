@@ -6,6 +6,7 @@ import {
   MIN_PRICE_HEIGHT,
   SPLIT_MIN_PRICE_HEIGHT,
   fitChartPanes,
+  overlayStrokes,
   MIN_Y_SCALE,
   PAD_R,
   barCountFromDrag,
@@ -22,6 +23,8 @@ import {
   scaleFromDrag,
   svgY,
 } from './chartGeometry'
+import { chartPalette } from './charts'
+import { THEMES } from './theme'
 
 const bars = [
   { high: 110, low: 90 },
@@ -342,5 +345,15 @@ describe('time-axis zoom', () => {
     expect(barCountFromDrag(100, 150)).toBeCloseTo(100 / Math.E)
     expect(barCountFromDrag(100, -150)).toBeCloseTo(100 * Math.E)
     expect(barCountFromDrag(100, 0)).toBe(100)
+  })
+})
+
+describe('overlayStrokes', () => {
+  it.each(Object.keys(THEMES))('gives every overlay its own colour from the %s palette', (theme) => {
+    const c = chartPalette({ theme, moves: 'green-red' })
+    const strokes = Object.values(overlayStrokes(c))
+    expect(strokes).toHaveLength(6)
+    expect(new Set(strokes).size).toBe(6)
+    strokes.forEach((stroke) => expect([...c.series, c.axisCategory]).toContain(stroke))
   })
 })

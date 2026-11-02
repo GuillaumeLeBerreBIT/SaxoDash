@@ -5,10 +5,10 @@ import { Menu, MenuRow } from './menu'
 import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
 import { CHART_LAYOUTS, gridStyle, paneStyle } from '../../lib/chartLayouts'
 
-const RAIL_BUTTON = 'w-9 h-9 rounded flex items-center justify-center transition-colors'
+const RAIL_BUTTON = 'w-9 h-9 rounded-lg flex items-center justify-center transition-colors'
 
 function RailDivider({ className = '' }) {
-  return <span role="separator" aria-orientation="horizontal" className={`w-6 h-px bg-white/[0.08] my-1 ${className}`} />
+  return <span role="separator" className={`w-px h-6 mx-1 lg:w-6 lg:h-px lg:mx-0 lg:my-1 bg-line ${className}`} />
 }
 
 function RailButton({ label, icon: Icon, pressed, disabled = false, onClick }) {
@@ -21,7 +21,7 @@ function RailButton({ label, icon: Icon, pressed, disabled = false, onClick }) {
       disabled={disabled}
       onClick={onClick}
       className={`${RAIL_BUTTON} disabled:opacity-35 disabled:pointer-events-none ${
-        pressed ? 'bg-white/[0.09] text-zinc-100' : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]'
+        pressed ? 'bg-selected text-ink' : 'text-ink-3 hover:text-ink hover:bg-hover'
       }`}
     >
       <Icon size={16} />
@@ -33,11 +33,11 @@ function LayoutIcon({ preset }) {
   return (
     <span
       aria-hidden="true"
-      className="w-5 h-3.5 inline-grid align-middle mr-1.5 gap-px p-px rounded-sm border border-zinc-500 shrink-0"
+      className="w-5 h-3.5 inline-grid align-middle mr-1.5 gap-px p-px rounded-sm border border-ink-3 shrink-0"
       style={gridStyle(preset)}
     >
       {Array.from({ length: preset.panes }, (_, index) => (
-        <span key={index} className="bg-zinc-600 rounded-[1px]" style={paneStyle(preset, index)} />
+        <span key={index} className="bg-ink-3 rounded-[1px]" style={paneStyle(preset, index)} />
       ))}
     </span>
   )
@@ -56,7 +56,7 @@ export default function ChartToolRail({
   onLinkedChange,
 }) {
   return (
-    <nav aria-label="Chart tools" className="flex flex-col items-center gap-1 py-2 border-r border-white/[0.06]">
+    <nav aria-label="Chart tools" className="sd-panel bg-pane rounded-xl flex flex-row flex-wrap lg:flex-col items-center gap-1 px-1.5 py-1.5 lg:px-0 lg:py-2">
       <RailButton label="Crosshair" icon={Crosshair} pressed={tool === 'crosshair'} onClick={() => onToolChange('crosshair')} />
       <RailButton
         label="Horizontal line"
@@ -94,7 +94,7 @@ export default function ChartToolRail({
             <MenuRow
               key={preset.id}
               onClick={() => onLayoutChange(preset.id)}
-              right={preset.id === layout ? <Check size={12} className="text-blue-400" /> : null}
+              right={preset.id === layout ? <Check size={12} className="text-ink" /> : null}
             >
               <LayoutIcon preset={preset} />
               {preset.label}
@@ -114,13 +114,13 @@ export default function ChartToolRail({
         onClick={() => controls.setYScale(1)}
       />
 
-      <RailDivider className="mt-auto" />
+      <RailDivider className="ml-auto lg:ml-0 lg:mt-auto" />
 
       <Link
         to={backHref}
         aria-label="Back to Research"
         title="Back to Research"
-        className={`${RAIL_BUTTON} text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06]`}
+        className={`${RAIL_BUTTON} text-ink-3 hover:text-ink hover:bg-hover`}
       >
         <Minimize2 size={16} />
       </Link>

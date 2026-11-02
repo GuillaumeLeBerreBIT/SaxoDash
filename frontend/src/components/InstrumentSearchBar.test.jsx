@@ -31,6 +31,21 @@ describe('InstrumentSearchBar', () => {
     expect(screen.getByRole('button', { name: 'ETFs' })).toBeInTheDocument()
   })
 
+  it('stacked, keeps the filter above the input in reading and tab order alike', () => {
+    renderWithProviders(<InstrumentSearchBar stacked />)
+    const input = screen.getByRole('textbox', { name: /search instruments/i })
+    const filter = screen.getByRole('button', { name: 'All' })
+    expect(filter.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByTestId('instrument-search').className).not.toMatch(/reverse/)
+  })
+
+  it('inline, keeps the input before the filter', () => {
+    renderWithProviders(<InstrumentSearchBar />)
+    const input = screen.getByRole('textbox', { name: /search instruments/i })
+    const filter = screen.getByRole('button', { name: 'All' })
+    expect(input.compareDocumentPosition(filter) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('lists ranked results once the query is long enough', async () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [tsla], isError: false })
     renderWithProviders(<InstrumentSearchBar />)
@@ -116,9 +131,9 @@ describe('InstrumentSearchBar', () => {
 
   it('navigates wherever hrefFor points when the caller supplies it', async () => {
     queries.useInstrumentSearch.mockReturnValue({ data: [tsla], isError: false })
-    renderWithProviders(<InstrumentSearchBar hrefFor={(r) => `/research/chart?symbol=${r.symbol}`} />)
+    renderWithProviders(<InstrumentSearchBar hrefFor={(r) => `/boards?symbol=${r.symbol}`} />)
     await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), 'tsla')
     await userEvent.click(screen.getByText('Tesla Inc'))
-    expect(navigate).toHaveBeenCalledWith('/research/chart?symbol=TSLA')
+    expect(navigate).toHaveBeenCalledWith('/boards?symbol=TSLA')
   })
 })

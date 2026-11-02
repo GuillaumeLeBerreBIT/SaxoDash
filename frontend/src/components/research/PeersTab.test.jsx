@@ -101,6 +101,21 @@ describe('PeersTab', () => {
     expect(within(verdictRow).getByText(/fairly priced vs. growth/)).toBeInTheDocument() // MSFT: peg 1.8
   })
 
+  it('quadrant leaves out a peer that cannot be scored', () => {
+    stub({
+      peersData: { available: true, symbols: ['MSFT', 'ORCL'] },
+      peerResults: [
+        { data: PEER, isLoading: false },
+        { data: { available: true, pe_ratio: 18 }, isLoading: false },
+      ],
+    })
+    render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
+
+    expect(screen.getByRole('heading', { name: 'Quality vs. valuation' })).toBeInTheDocument()
+    expect(screen.getByText('A company missing either score is left off, never guessed. ORCL could not be scored.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'How to read it' })).toBeInTheDocument()
+  })
+
   it('falls back to the fundamentals gate when the current symbol has no data', () => {
     stub()
     render(<PeersTab symbol="AAPL" fundamentals={{ data: { available: false, reason: 'nope' }, isLoading: false }} />)

@@ -12,74 +12,73 @@ import {
   YAxis,
 } from 'recharts'
 
-import { axisProps, BEAT, chartTooltipProps, ESTIMATE, gridProps, MISS, REPORTED, surpriseColor, TRACK } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps, surpriseSign } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
-import { Card, CardHeader } from '../ui'
+import { Card } from '../ui'
 
-const barColor = (surprise) => (surprise == null ? REPORTED : surpriseColor(surprise))
 const surpriseTag = (v) => (v == null ? '' : fmtPct(v, { decimals: 1 }))
 
-/** Actual vs. estimate EPS over recent quarters. The estimate is the grey
- *  reference bar; the actual is coloured by whether it beat consensus and
- *  labelled with the surprise %. `data`: `[{ period, actual, estimate,
- *  surprise }]`; `format` renders the Y axis and tooltip values. */
-export default function EpsBarChart({ title, subtitle, data, format }) {
+function barColor(surprise, c) {
+  if (surprise == null) return c.primary
+  return [c.down, c.estimate, c.up][surpriseSign(surprise) + 1]
+}
+
+function Swatch({ color, children }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: color }} />
+      {children}
+    </span>
+  )
+}
+
+export default function EpsBarChart({ title, subtitle, data, format, control, className = '' }) {
+  const c = useChartColors()
   if (!data?.length) return null
 
   const forward = data.filter((row) => row.forward)
   const hasEstimates = data.some((row) => row.estimate != null)
 
   return (
-    <Card>
-      <CardHeader
-        title={title}
-        subtitle={subtitle}
-        right={
-          <div className="flex items-center gap-3 text-[var(--fig-2xs)] text-zinc-500">
-            {hasEstimates && (
-              <>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: ESTIMATE }} /> Estimate</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: BEAT }} /> Beat</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ background: MISS }} /> Miss</span>
-              </>
-            )}
-          </div>
-        }
-      />
-      <div className="mt-4 h-[var(--chart-h-md)]">
+    <Card className={className} context={subtitle} dot="earn" title={title} right={control}>
+      <div className="h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps} />
+            <CartesianGrid {...gridProps(c)} />
             {forward.length > 0 && (
-              <ReferenceArea x1={forward[0].period} x2={forward.at(-1).period} fill={TRACK} strokeOpacity={0} />
+              <ReferenceArea x1={forward[0].period} x2={forward.at(-1).period} fill={c.track} fillOpacity={0.5} strokeOpacity={0} />
             )}
-            <XAxis {...axisProps} dataKey="period" />
-            <YAxis {...axisProps} width={52} tickFormatter={format} />
-            <ReferenceLine y={0} stroke="rgba(255,255,255,0.18)" />
-            <Tooltip
-              {...chartTooltipProps}
-              cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-              formatter={(value, name) => [format(value), name]}
-            />
+            <XAxis {...axisProps(c)} dataKey="period" />
+            <YAxis {...axisProps(c)} width={52} tickFormatter={format} />
+            <ReferenceLine y={0} stroke={c.axis} />
+            <Tooltip {...chartTooltipProps(c)} formatter={(value, name) => [format(value), name]} />
             {hasEstimates && (
-              <Bar dataKey="estimate" name="Estimate" fill={ESTIMATE} radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
+              <Bar dataKey="estimate" name="Estimate" fill={c.estimate} radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false} />
             )}
             <Bar dataKey="actual" name="Actual" radius={[3, 3, 0, 0]} barSize={18} isAnimationActive={false}>
               <LabelList
                 dataKey="surprise"
                 position="top"
                 formatter={surpriseTag}
-                style={{ fontSize: 10, fill: '#a1a1aa' }}
+                style={{ fontSize: 11, fill: c.axisCategory }}
               />
               {data.map((row) => (
-                <Cell key={row.period} fill={barColor(row.surprise)} />
+                <Cell key={row.period} fill={barColor(row.surprise, c)} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
+      {hasEstimates && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-2">
+          <Swatch color={c.estimate}>Estimate</Swatch>
+          <Swatch color={c.up}>Beat</Swatch>
+          <Swatch color={c.down}>Miss</Swatch>
+        </div>
+      )}
       {forward.length > 0 && (
-        <p className="mt-2 text-[var(--fig-2xs)] text-zinc-500">
+        <p className="mt-2 text-[12px] text-ink-3">
           {forward.length} upcoming {forward.length === 1 ? 'quarter' : 'quarters'}, estimate only.
         </p>
       )}

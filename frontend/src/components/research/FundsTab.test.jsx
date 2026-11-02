@@ -51,9 +51,24 @@ describe('FundsTab', () => {
     expect(screen.getByText('1,200,300')).toBeInTheDocument()
     expect(screen.getByText('▲ +301,100')).toBeInTheDocument()
     expect(screen.getByText('+33.5%')).toBeInTheDocument()
-    expect(screen.getByText('1 new · 1 added · 0 trimmed · 1 sold out')).toBeInTheDocument()
     expect(screen.getByText(/As of Q2 2026 quarter end, filed up to 45 days later/)).toBeInTheDocument()
     expect(screen.getByText(/8 of 88 funds have not filed it yet/)).toBeInTheDocument()
+  })
+
+  it('Funds tab summary shows owners, net share change and new/added/trimmed/sold out', () => {
+    show()
+
+    const summary = screen.getByRole('list', { name: 'Tracked funds in NBIS, Q2 2026' })
+    const tile = (label) => within(summary).getByText(label, { selector: 'dt' }).closest('li')
+    expect(tile('Owners')).toHaveTextContent('2 of 88')
+    expect(tile('Net change')).toHaveTextContent('▲ +301,100')
+    expect(tile('Net change')).toHaveTextContent('+33.5%')
+    expect(tile('Shares held')).toHaveTextContent('1,200,300')
+    expect(tile('New')).toHaveTextContent('1')
+    expect(tile('Added')).toHaveTextContent('1')
+    expect(tile('Trimmed')).toHaveTextContent('0')
+    expect(tile('Sold out')).toHaveTextContent('1')
+    expect(within(tile('Net change')).getByText('▲ +301,100')).toHaveClass('text-up')
   })
 
   it('shows a dash for the net change when nothing moved', () => {

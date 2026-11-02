@@ -1,15 +1,14 @@
-import { Card, CardHeader, Skeleton } from '../ui'
+import { Card, Skeleton } from '../ui'
 
 // Shared loading/unavailable/available branching for a `useFundamentals`
 // result, used by both OverviewTab's fundamentals card and ValuationTab.
-export default function FundamentalsGate({ fundamentals, title, subtitle = 'From Finnhub', fallback, children }) {
+export default function FundamentalsGate({ fundamentals, title, subtitle = 'From Finnhub', fallback, className = '', children }) {
   const { data, isLoading } = fundamentals
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader title={title} subtitle={subtitle} />
-        <div className="mt-4 space-y-2">
+      <Card className={className} context={subtitle} dot="off" title={title}>
+        <div className="space-y-2">
           <Skeleton className="h-4 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
         </div>
@@ -19,9 +18,8 @@ export default function FundamentalsGate({ fundamentals, title, subtitle = 'From
 
   if (!data?.available) {
     return (
-      <Card>
-        <CardHeader title={title} subtitle={subtitle} />
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">{data?.reason || fallback}</p>
+      <Card className={className} context={subtitle} dot="off" title={title}>
+        <p className="text-[13px] text-ink-3">{data?.reason || fallback}</p>
       </Card>
     )
   }

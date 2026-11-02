@@ -13,8 +13,8 @@ export default function ShelfHeader({ shelf, shown }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h3 id={`shelf-${shelf.key}`} className="scroll-mt-4 text-[var(--fig-md)] font-semibold text-zinc-100">{shelf.title}</h3>
-        <p className="text-[var(--fig-xs)] text-zinc-500">
+        <h3 id={`shelf-${shelf.key}`} className="scroll-mt-4 text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance]">{shelf.title}</h3>
+        <p className="mt-0.5 text-[12px] text-ink-3">
           <span className="num whitespace-nowrap">{stockCount(shelf.total)}</span>
           <span aria-hidden="true" className="whitespace-nowrap">{' · '}</span>
           {head ? `${head} ` : null}
@@ -27,8 +27,11 @@ export default function ShelfHeader({ shelf, shown }) {
         </p>
       </div>
       {shelf.total > 0 ? (
-        <Link to={`/discover/${shelf.key}`} className="shrink-0 whitespace-nowrap text-[var(--fig-xs)] text-blue-400 hover:text-blue-300">
-          See all <span className="num">{shelf.total}</span>
+        <Link
+          to={`/discover/${shelf.key}`}
+          className="shrink-0 whitespace-nowrap rounded text-[13px] font-semibold text-accent hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+        >
+          See all <span className="num">{shelf.total}</span> <span aria-hidden="true">→</span>
         </Link>
       ) : null}
     </div>

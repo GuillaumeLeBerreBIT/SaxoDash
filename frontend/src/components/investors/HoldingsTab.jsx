@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { Button, EmptyState, Input, TBtn } from '../ui'
+import { Button, Chip, EmptyState, Input } from '../ui'
 import HoldingsTable from './HoldingsTable'
 import { COMPARING_FILTERS, HOLDING_FILTERS, PAGE_SIZE, PAGE_STEP, filterHoldings } from '../../lib/investors'
 
@@ -20,9 +20,9 @@ export default function HoldingsTab({ detail }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div role="group" aria-label="Filter holdings" className="flex items-center gap-0.5 flex-wrap">
+        <div role="group" aria-label="Filter holdings" className="flex items-center gap-1.5 flex-wrap">
           {filters.map(([key, label]) => (
-            <TBtn key={key} active={filter === key} onClick={() => choose(key)}>{label}</TBtn>
+            <Chip key={key} active={filter === key} onClick={() => choose(key)}>{label}</Chip>
           ))}
         </div>
         <Input
@@ -40,7 +40,7 @@ export default function HoldingsTab({ detail }) {
         <HoldingsTable holdings={shown} showChange={detail.previous_quarter != null} maxWeight={detail.holdings[0]?.weight} />
       )}
       {matching.length > 0 && (
-        <div className="flex items-center justify-between gap-3 text-[var(--fig-xs)] text-zinc-500">
+        <div className="flex items-center justify-between gap-3 text-[12px] text-ink-3 num">
           <span>{`Showing ${shown.length} of ${matching.length}`}</span>
           {next > 0 && <Button size="sm" onClick={() => setCount(count + PAGE_STEP)}>{`Show ${next} more`}</Button>}
         </div>

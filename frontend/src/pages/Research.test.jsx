@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { expectValidHeadingOutline } from '../test/headingOutline'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Outlet, Route, Routes } from 'react-router-dom'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import { fmtDate } from '../lib/format'
@@ -65,6 +66,8 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
     removeItem: { mutate: vi.fn() },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
+  queries.useOwnership.mockReturnValue({ ...idle, data: { quarter: null, filed: 0, tracked: 0, stock: null, funds: [] } })
+  queries.useCongressOwnership.mockReturnValue({ ...idle, data: { window_days: 365, stock: null, members: [] } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
@@ -559,7 +562,7 @@ describe('Research', () => {
 
     expect(screen.getByRole('link', { name: 'Open advanced chart' })).toHaveAttribute(
       'href',
-      '/research/chart?symbol=NVDA&uic=211&assetType=Stock',
+      '/boards?symbol=NVDA&uic=211&assetType=Stock',
     )
   })
 })
@@ -606,10 +609,149 @@ describe('Research panning', () => {
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-controls', panel.id)
   })
 
-  it('stacks the watchlist rail under the chart until xl', () => {
-    const { container } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+  it.each(['', '&tab=financials', '&tab=news'])('keeps the watchlist rail on every tab (%s)', (tab) => {
+    renderWithProviders(<Research />, { route: `/research?symbol=NVDA${tab}` })
 
-    const grid = container.querySelector('[class*="xl:grid-cols-"]')
-    expect(grid).toHaveClass('grid-cols-1')
+    expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
+  })
+
+  it('puts the tab body and the rail side by side from 1440px on the other tabs', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
+
+    expect(screen.getByRole('tabpanel')).toHaveClass('min-[1440px]:col-span-9')
+  })
+})
+
+const company = {
+  available: true,
+  industry: 'Semiconductors',
+  market_cap: 4_200_000,
+  enterprise_value: 4_150_000,
+  shares_outstanding: 24_000,
+  free_float: 23_000,
+  recommendation: { strong_buy: 20, buy: 30, hold: 5, sell: 1, strong_sell: 0, period: '2026-10-01' },
+  recommendation_history: [],
+}
+
+describe('Research header and Overview on the new design', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+  })
+
+  it('all ten tabs render for an eligible US stock', () => {
+    queries.useFundamentals.mockReturnValue({ ...idle, data: company })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
+    expect(tabs).toHaveLength(10)
+    expect(screen.getByRole('heading', { level: 1, name: 'NVIDIA Corporation' })).toBeInTheDocument()
+    expect(screen.getByText('NVDA · Semiconductors · 4.20T market cap')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
+      'href',
+      '/boards?symbol=NVDA&uic=211&assetType=Stock',
+    )
+  })
+
+  it('offers the held symbols as chips and opens the palette for any other instrument', async () => {
+    const openPalette = vi.fn()
+    renderWithProviders(
+      <Routes>
+        <Route element={<Outlet context={{ openPalette }} />}>
+          <Route path="/research" element={<Research />} />
+        </Route>
+      </Routes>,
+      { route: '/research?symbol=AAPL' },
+    )
+
+    expect(screen.getByRole('button', { name: 'NVDA' })).toHaveAttribute('aria-pressed', 'false')
+    await userEvent.click(screen.getByRole('button', { name: /Any instrument/ }))
+    expect(openPalette).toHaveBeenCalledTimes(1)
+  })
+
+  it('?tab=valuation opens Statistics', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=valuation' })
+
+    expect(screen.getByRole('tab', { name: 'Statistics' })).toHaveAttribute('aria-selected', 'true')
+    const inline = screen.getByTestId('header-position')
+    expect(inline).toHaveTextContent('Your value')
+    expect(inline).toHaveTextContent('€13,131')
+    expect(inline).toHaveTextContent('▲ 112.35%')
+  })
+
+  it('keeps the position out of the header on the Overview, where it has its own panel', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.queryByTestId('header-position')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your position' })).toBeInTheDocument()
+  })
+
+  it('a foreign listing still shows the company-data note and hides company tabs', () => {
+    queries.useInstrumentDetails.mockReturnValue({
+      ...idle,
+      data: { symbol: 'NVDA', description: 'NVIDIA on Xetra', exchange: 'XETR', currency: 'EUR', uic: 211 },
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
+    expect(screen.getByRole('heading', { name: 'Listed outside the US' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Investment snapshot' })).not.toBeInTheDocument()
+  })
+
+  it('Overview keeps Thesis and risks, Range statistics, Capital structure, Ownership, Analysts', () => {
+    queries.useFundamentals.mockReturnValue({ ...idle, data: company })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    for (const name of ['Thesis and risks', 'Range statistics', 'Capital structure', 'Ownership', 'Analysts']) {
+      expect(screen.getAllByRole('heading', { name })).toHaveLength(1)
+    }
+  })
+
+  it('summarises funds and Congress on the Overview and opens their tabs', async () => {
+    queries.useOwnership.mockReturnValue({
+      ...idle,
+      data: { quarter: '2026-06-30', tracked: 88, filed: 80, stock: { owners: 40, new: 4, added: 11, trimmed: 22, sold_out: 2 }, funds: [] },
+    })
+    queries.useCongressOwnership.mockReturnValue({
+      ...idle,
+      data: { window_days: 365, stock: { buyers: 3, sellers: 1, holders: 5 }, members: [] },
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByRole('heading', { name: 'Funds and Congress' })).toBeInTheDocument()
+    expect(screen.getByText('40 of 88 tracked funds hold it')).toBeInTheDocument()
+    expect(screen.getByText('3 bought · 1 sold · 5 holding')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Funds tab' }))
+    expect(screen.getByRole('tab', { name: 'Funds' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('asks nobody about fund or Congress ownership while the instrument is pending', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [], isResolving: true })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT' })
+
+    expect(queries.useOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useCongressOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(screen.getByRole('heading', { name: 'Funds and Congress' })).toBeInTheDocument()
+  })
+
+  it('asks nobody about ownership for a listing Saxo could not confirm', () => {
+    stubQueries({ positions: [] })
+    queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined, error: new Error('saxo down') })
+    renderWithProviders(<Research />, { route: '/research?symbol=WHAT&uic=9&assetType=Stock' })
+
+    expect(queries.useOwnership).not.toHaveBeenCalledWith('WHAT')
+    expect(queries.useCongressOwnership).not.toHaveBeenCalledWith('WHAT')
+  })
+
+  it('shows a dash rather than a made-up volume when the bar has none', () => {
+    stubQueries({ chart: { data: bars.map((bar) => ({ ...bar, volume: undefined })), isLoading: false, error: null } })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const line = screen.getByText(/Vol —/)
+    expect(line).not.toHaveTextContent(/NaN|0\.0M/)
   })
 })

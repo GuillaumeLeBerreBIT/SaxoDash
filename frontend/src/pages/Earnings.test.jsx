@@ -250,6 +250,14 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(hidden).toHaveLength(3)
   })
 
+  it('hides the whole Market week card on a phone, header included', () => {
+    stub()
+    renderWithProviders(<Earnings />, { route: '/earnings' })
+
+    const card = screen.getByRole('heading', { level: 2, name: 'Market week' }).closest('.sd-panel')
+    expect(card).toHaveClass('hidden', 'md:block')
+  })
+
   it('opens with the Your week band above the market grid', () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
@@ -305,4 +313,18 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.getByText('THUCO')).toBeInTheDocument()
     expect(screen.queryByText('MONCO')).not.toBeInTheDocument()
   })
+})
+
+it('a picked cell lists that day and session', async () => {
+  stub({
+    events: [
+      ev({ symbol: 'MORN', session: 'bmo' }),
+      ev({ symbol: 'EVEN', session: 'amc' }),
+    ],
+  })
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+
+  await userEvent.click(screen.getByRole('button', { name: 'Show Mon after close' }))
+
+  expect(screen.getByRole('heading', { name: 'Monday, after close' })).toBeInTheDocument()
 })

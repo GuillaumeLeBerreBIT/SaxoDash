@@ -55,7 +55,7 @@ describe('Login', () => {
     const user = screen.getByText('Username', { selector: 'label' })
     const pass = screen.getByText('Password', { selector: 'label' })
     expect(user.className).toBe(pass.className)
-    expect(pass).toHaveClass('text-zinc-400')
+    expect(pass).toHaveClass('text-ink-2')
   })
 
   it('links the inputs to the error only while it is shown', async () => {

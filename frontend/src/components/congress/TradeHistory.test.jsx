@@ -26,7 +26,7 @@ describe('TradeHistory', () => {
     renderWithProviders(<TradeHistory trades={[trade({ asset: 'Vidant bonds', ticker: null, priceable: false })]} />)
     const cell = screen.getByText('Vidant bonds').closest('td')
     expect(cell.querySelector('img')).toBeNull()
-    expect(within(cell).getByText('V')).toBeInTheDocument()
+    expect(within(cell).getByText('VI')).toBeInTheDocument()
   })
 
   it('keeps a long unpriceable asset name to one truncated line with the full name on hover', () => {

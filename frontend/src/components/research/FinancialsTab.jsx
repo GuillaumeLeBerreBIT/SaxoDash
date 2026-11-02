@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { useStatements } from '../../api/queries'
 import { STATEMENTS, latestPeriods, rowsWithData, statementByKey, waterfallSteps } from '../../lib/statements'
-import { Card, CardHeader, Skeleton, TBtn } from '../ui'
+import { Button, Card, Segmented, Skeleton } from '../ui'
 import AssetsLiabilitiesChart from './AssetsLiabilitiesChart'
 import CashAndDebtChart from './CashAndDebtChart'
 import FinancialsChart from './FinancialsChart'
@@ -12,44 +12,71 @@ import StatementTable from './StatementTable'
 
 const VISIBLE = { annual: 6, quarterly: 8 }
 const FREQUENCIES = [
-  ['annual', 'Annual'],
-  ['quarterly', 'Quarterly'],
+  { value: 'annual', label: 'Annual' },
+  { value: 'quarterly', label: 'Quarterly' },
 ]
+const STATEMENT_OPTIONS = STATEMENTS.map(({ key, label }) => ({ value: key, label }))
+const SOURCE = 'SEC filings via Finnhub'
 
-function Statements({ symbol, statements }) {
+const HALVES =
+  'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start min-[1100px]:[&>*]:col-span-6 min-[1100px]:[&>:last-child:nth-child(odd)]:col-span-12'
+
+function Halves({ children }) {
+  return <div className={HALVES}>{children}</div>
+}
+
+function Notice({ children, action }) {
+  return (
+    <Card context={SOURCE} dot="off" title="Financials">
+      {children}
+      {action}
+    </Card>
+  )
+}
+
+function Statements({ symbol, statements, margins }) {
   const [frequency, setFrequency] = useState('annual')
   const [statementKey, setStatementKey] = useState('income')
 
   if (statements.isLoading) {
     return (
-      <Card>
-        <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />
-        <Skeleton className="mt-4 h-40 w-full" data-testid="financials-loading" />
-      </Card>
+      <Halves>
+        <Notice>
+          <Skeleton className="h-40 w-full" data-testid="financials-loading" />
+        </Notice>
+        {margins}
+      </Halves>
     )
   }
 
   if (statements.error && !statements.data) {
     return (
-      <Card>
-        <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">Statements could not be loaded.</p>
-        <div className="mt-3">
-          <TBtn onClick={() => statements.refetch()}>Try again</TBtn>
-        </div>
-      </Card>
+      <Halves>
+        <Notice
+          action={
+            <div className="mt-3">
+              <Button size="sm" onClick={() => statements.refetch()}>
+                Try again
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-[13px] text-ink-3">Statements could not be loaded.</p>
+        </Notice>
+        {margins}
+      </Halves>
     )
   }
 
   const data = statements.data
   if (!data?.available || data.annual.length === 0) {
     return (
-      <Card>
-        <CardHeader title="Financials" subtitle="From SEC filings, via Finnhub" />
-        <p className="mt-3 text-[var(--fig-xs)] text-zinc-500">
-          {data?.reason || `Statements are unavailable for ${symbol}.`}
-        </p>
-      </Card>
+      <Halves>
+        <Notice>
+          <p className="text-[13px] text-ink-3">{data?.reason || `Statements are unavailable for ${symbol}.`}</p>
+        </Notice>
+        {margins}
+      </Halves>
     )
   }
 
@@ -59,67 +86,53 @@ function Statements({ symbol, statements }) {
   const periods = latestPeriods(allPeriods, VISIBLE[active])
   const statement = statementByKey(statementKey)
   const latest = periods.at(-1)
+  const hasRows = rowsWithData(statement, periods).length > 0
 
   return (
     <>
-      <Card>
-        <CardHeader
+      <Halves>
+        <Card
+          context={`${active === 'annual' ? 'Annual' : 'Quarterly'} · ${SOURCE}`}
+          dot="ok"
           title="Revenue and profit"
-          subtitle="From SEC filings, via Finnhub"
           right={
             hasQuarters ? (
-              <div className="flex items-center gap-0.5">
-                {FREQUENCIES.map(([key, label]) => (
-                  <TBtn key={key} active={active === key} onClick={() => setFrequency(key)}>
-                    {label}
-                  </TBtn>
-                ))}
-              </div>
+              <Segmented label="Period" options={FREQUENCIES} value={active} onChange={setFrequency} />
             ) : null
           }
-        />
-        {data.partial && (
-          <p className="mt-2 text-[var(--fig-xs)] text-zinc-500">
-            Quarterly figures could not be loaded; showing annual reports only.
-          </p>
-        )}
-        <div className="mt-4">
-          <FinancialsChart periods={periods} />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex flex-wrap items-center gap-0.5">
-          {STATEMENTS.map(({ key, label }) => (
-            <TBtn key={key} active={statement.key === key} onClick={() => setStatementKey(key)}>
-              {label}
-            </TBtn>
-          ))}
-        </div>
-        <div className="mt-3">
-          {rowsWithData(statement, periods).length > 0 ? (
-            <StatementTable statement={statement} periods={periods} allPeriods={allPeriods} />
-          ) : (
-            <p className="text-[var(--fig-xs)] text-zinc-500">
-              No {statement.label.toLowerCase()} figures for these periods.
-            </p>
+        >
+          {data.partial && (
+            <p className="mb-3 text-[12px] text-ink-3">Quarterly figures could not be loaded; showing annual reports only.</p>
           )}
-        </div>
-      </Card>
+          <FinancialsChart periods={periods} />
+        </Card>
 
-      {waterfallSteps(latest).length > 0 && (
-        <section>
-          <Card>
-            <CardHeader title="From revenue to profit" subtitle={latest.label} />
-            <div className="mt-4">
+        {waterfallSteps(latest).length > 0 && (
+          <section>
+            <Card context={latest.label} dot="ok" title="From revenue to profit">
               <ProfitWaterfall period={latest} />
-            </div>
-          </Card>
-        </section>
-      )}
+            </Card>
+          </section>
+        )}
 
-      <CashAndDebtChart annual={data.annual} />
-      <AssetsLiabilitiesChart annual={data.annual} />
+        {margins}
+        <CashAndDebtChart annual={data.annual} />
+        <AssetsLiabilitiesChart annual={data.annual} />
+      </Halves>
+
+      <Card
+        flush
+        context={`${active === 'annual' ? 'Fiscal years' : 'Quarters'} · ${SOURCE}`}
+        dot="ok"
+        title="Statements"
+        right={<Segmented label="Statement" options={STATEMENT_OPTIONS} value={statement.key} onChange={setStatementKey} />}
+      >
+        {hasRows ? (
+          <StatementTable statement={statement} periods={periods} allPeriods={allPeriods} />
+        ) : (
+          <p className="px-[18px] text-[13px] text-ink-3">No {statement.label.toLowerCase()} figures for these periods.</p>
+        )}
+      </Card>
     </>
   )
 }
@@ -129,9 +142,13 @@ export default function FinancialsTab({ symbol, fundamentals }) {
   const company = fundamentals.data?.available ? fundamentals.data : null
 
   return (
-    <div className="space-y-4">
-      <Statements key={symbol} symbol={symbol} statements={statements} />
-      <QuarterlyTrendsChart trends={company?.quarterly_trends} />
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
+      <Statements
+        key={symbol}
+        symbol={symbol}
+        statements={statements}
+        margins={<QuarterlyTrendsChart trends={company?.quarterly_trends} />}
+      />
     </div>
   )
 }

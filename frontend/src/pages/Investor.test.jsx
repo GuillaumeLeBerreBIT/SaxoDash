@@ -101,24 +101,61 @@ describe('Investor profile', () => {
     expect(follow).toHaveBeenCalledWith({ slug: 'pershing-square', followed: true })
   })
 
-  it('summarises the portfolio in four tiles', () => {
+  it('investor profile tiles show value, positions, top 5/10, new/exited, shared with you', () => {
+    const small = { ...detail.holdings[0], cusip: 'A', ticker: 'AAPL', issuer: 'APPLE', weight: 4, owned: true }
+    const large = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, holdings: [...detail.holdings, small, large] }, isLoading: false, error: null }
     renderPage()
     const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
-    expect(within(tiles).getByText('$14.2B')).toBeInTheDocument()
-    expect(within(tiles).getByText('11')).toBeInTheDocument()
-    expect(within(tiles).getByText('78.4%')).toBeInTheDocument()
-    expect(within(tiles).getByText('14 Aug 2026')).toBeInTheDocument()
+    const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
+    expect(tile('Reported value')).toHaveTextContent('$14.2B')
+    expect(tile('Reported value')).toHaveTextContent('as of Q2 2026 end')
+    expect(tile('Positions')).toHaveTextContent('11')
+    expect(tile('Top 5 / top 10')).toHaveTextContent('78.4% / 98.0%')
+    expect(tile('This quarter')).toHaveTextContent('+1 / −1')
+    expect(tile('This quarter')).toHaveTextContent('new / exited · turnover 6%')
+    expect(tile('You hold today')).toHaveTextContent('2 stocks')
+    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest book')
+    expect(screen.getByText('13F for Q2 2026 · filed 14 Aug 2026')).toBeInTheDocument()
+  })
+
+  it('names the one stock you hold today', () => {
+    const shared = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, holdings: [...detail.holdings, shared] }, isLoading: false, error: null }
+    renderPage()
+    const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
+    const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
+    expect(tile('You hold today')).toHaveTextContent('GOOGL')
+    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest book')
+  })
+
+  it('leaves out what you hold today when a past quarter is shown', () => {
+    const shared = { ...detail.holdings[0], cusip: 'G', ticker: 'GOOGL', issuer: 'ALPHABET', weight: 15, owned: true }
+    state = { data: { ...detail, quarter: '2026-03-31', holdings: [shared] }, isLoading: false, error: null }
+    renderPage('/investors/pershing-square?quarter=2026-03-31')
+    const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
+    expect(within(tiles).queryByText('You hold today')).not.toBeInTheDocument()
+  })
+
+  it('says when you hold none of them and when a quarter has nothing to compare', () => {
+    state = { data: { ...detail, previous_quarter: null, new_count: null, exited_count: null, turnover: null }, isLoading: false, error: null }
+    renderPage()
+    const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
+    const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
+    expect(tile('You hold today')).toHaveTextContent('None in your portfolio')
+    expect(tile('This quarter')).toHaveTextContent('—')
+    expect(tile('This quarter')).toHaveTextContent('first stored quarter')
   })
 
   it('links each move to the stock\'s Research page', () => {
     renderPage()
-    const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })
+    const moves = screen.getByRole('region', { name: 'What changed' })
     expect(within(moves).getByRole('link', { name: 'AMZN' })).toHaveAttribute('href', '/research?symbol=AMZN')
   })
 
   it('tells the quarter as moves in plain words, in story order', () => {
     renderPage()
-    const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })
+    const moves = screen.getByRole('region', { name: 'What changed' })
     expect(within(moves).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       'AMZNOpened a 9.0% position',
       'GOOGLAdded 32% more shares · now 15.0%',
@@ -129,20 +166,20 @@ describe('Investor profile', () => {
 
   it('colours the move groups like the change badges, never green or red', () => {
     renderPage()
-    const moves = screen.getByRole('region', { name: 'Latest moves · Q2 2026' })
+    const moves = screen.getByRole('region', { name: 'What changed' })
     const tone = (title) => within(moves).getByRole('heading', { level: 3, name: title }).className
-    expect(tone('New')).toContain('text-blue-400')
-    expect(tone('Sold out')).toContain('text-amber-400')
-    expect(tone('Added')).toContain('text-zinc-300')
-    expect(tone('Trimmed')).toContain('text-zinc-300')
-    for (const title of ['New', 'Added', 'Trimmed', 'Sold out']) expect(tone(title)).not.toMatch(/emerald|red-|rose/)
+    expect(tone('New')).toContain('text-held')
+    expect(tone('Sold out')).toContain('text-warn')
+    expect(tone('Added')).toContain('text-ink-2')
+    expect(tone('Trimmed')).toContain('text-ink-2')
+    for (const title of ['New', 'Added', 'Trimmed', 'Sold out']) expect(tone(title)).not.toMatch(/text-up|text-down/)
   })
 
   it('shows eight moves and reveals the rest on request', () => {
     const many = Array.from({ length: 11 }, (_, i) => move('new', `T${i}`))
     state = { data: { ...detail, moves: many }, isLoading: false, error: null }
     renderPage()
-    const moves = screen.getByRole('region', { name: /Latest moves/ })
+    const moves = screen.getByRole('region', { name: 'What changed' })
     expect(within(moves).getAllByRole('listitem')).toHaveLength(8)
     fireEvent.click(within(moves).getByRole('button', { name: 'Show all 11' }))
     expect(within(moves).getAllByRole('listitem')).toHaveLength(11)

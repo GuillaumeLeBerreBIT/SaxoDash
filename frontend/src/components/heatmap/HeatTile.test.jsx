@@ -14,7 +14,20 @@ describe('HeatTile', () => {
   it('shows a dash for an unknown move, never 0%', () => {
     render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
     expect(screen.getByText('—')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'KO' }).style.background).toBe('rgba(255, 255, 255, 0.06)')
+  })
+
+  it('gives a tile with no move the tile surface and a line ring, so it shows on a white pane', () => {
+    render(<HeatTile ticker="KO" pct={null} fill={null} aria-label="KO" />)
+    const tile = screen.getByRole('button', { name: 'KO' })
+    expect(tile).toHaveClass('bg-tile', 'ring-1', 'ring-inset', 'ring-line')
+    expect(tile.style.background).toBe('')
+  })
+
+  it('keeps a coloured tile on its own fill, without the neutral surface', () => {
+    render(<HeatTile ticker="NVDA" pct={1.2} fill="rgb(1, 2, 3)" aria-label="NVDA" />)
+    const tile = screen.getByRole('button', { name: 'NVDA' })
+    expect(tile.style.background).toBe('rgb(1, 2, 3)')
+    expect(tile).not.toHaveClass('bg-tile')
   })
 
   it('drops the move when only the ticker fits', () => {

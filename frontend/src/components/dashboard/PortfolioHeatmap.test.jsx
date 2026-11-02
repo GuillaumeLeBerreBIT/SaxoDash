@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { LAST_SESSION_NOTE } from '../../lib/pricing'
-import { PERFORMANCE_CAPS, performanceFill } from '../../lib/charts'
+import { PERFORMANCE_CAPS, chartPalette, performanceFill } from '../../lib/charts'
+import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import PortfolioHeatmap from './PortfolioHeatmap'
 
 const positions = [
@@ -69,8 +70,8 @@ describe('PortfolioHeatmap', () => {
     renderWithProviders(<PortfolioHeatmap positions={flat} quotes={flatQuotes} />)
     const summary = screen.getByText(/biggest driver/).closest('p')
     const figure = summary.querySelector('span')
-    expect(figure).toHaveClass('text-zinc-300')
-    expect(figure).not.toHaveClass('text-emerald-400')
+    expect(figure).toHaveClass('text-ink-2')
+    expect(figure).not.toHaveClass('text-up')
   })
 
   it('switches to the return since purchase', async () => {
@@ -137,7 +138,7 @@ describe('PortfolioHeatmap since-purchase legend', () => {
     expect(screen.getByText(`−${cap}%`)).toBeInTheDocument()
     expect(screen.getByText(`+${cap}%`)).toBeInTheDocument()
     returns.forEach((pct, index) => {
-      expect(tile(`T${index + 1}`)).toHaveStyle({ background: performanceFill(pct, { cap }) })
+      expect(tile(`T${index + 1}`)).toHaveStyle({ background: performanceFill(pct, { cap }, chartPalette(DEFAULT_APPEARANCE)) })
     })
   })
 

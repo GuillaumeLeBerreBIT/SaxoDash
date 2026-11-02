@@ -7,12 +7,12 @@ import { looksLikeTicker } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
 import StockLogo from '../StockLogo'
-import { Card, CardHeader, EmptyState, Input, QueryState, Select, Skeleton, TBtn } from '../ui'
+import { Card, Chip, EmptyState, Input, QueryState, Segmented, Select, Skeleton } from '../ui'
 import CongressCards from './CongressCards'
 import CongressTable from './CongressTable'
 
 const DEFAULTS = { filter: 'all', order: 'edge', layout: 'cards' }
-const HEADING_ID = 'congress-directory-heading'
+const LAYOUTS = [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }]
 
 function useDirectoryParams() {
   const [params, setParams] = useSearchParams()
@@ -29,15 +29,18 @@ function useDirectoryParams() {
 function MostBought({ items, windowDays }) {
   if (items.length === 0) return null
   return (
-    <Card>
-      <CardHeader title={`Most bought by Congress, last ${windowDays} days`} subtitle="Distinct members with a purchase or call in reports filed in the window" />
-      <ul className="mt-3 flex flex-wrap gap-2">
+    <Card
+      dot="ok"
+      context="Distinct members with a purchase or call in reports filed in the window"
+      title={`Most bought by Congress, last ${windowDays} days`}
+    >
+      <ul className="flex flex-wrap gap-2">
         {items.map((item) => (
           <li key={item.ticker}>
-            <Link to={researchHref(item.ticker, 'congress')} className="inline-flex items-center gap-2 rounded-md border border-white/[0.06] px-2.5 py-1.5 hover:border-blue-400/40">
-              <StockLogo ticker={item.ticker} size={18} />
-              <span className="font-mono text-zinc-100">{item.ticker}</span>
-              <span className="num text-[var(--fig-xs)] text-zinc-400">{`${item.buyers} ↑ / ${item.sellers} ↓`}</span>
+            <Link to={researchHref(item.ticker, 'congress')} className="inline-flex items-center gap-2 rounded-[10px] bg-tile px-2.5 py-1.5 hover:bg-hover transition-colors">
+              <StockLogo ticker={item.ticker} size={20} />
+              <span className="font-bold text-ink">{item.ticker}</span>
+              <span className="num text-[12px] text-ink-2">{`${item.buyers} ↑ / ${item.sellers} ↓`}</span>
             </Link>
           </li>
         ))}
@@ -88,42 +91,45 @@ export default function CongressDirectory() {
     return <EmptyState title="No House trades imported yet" hint="They load daily from the House Clerk; run backfill_house once to import history." />
   }
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       <MostBought items={mostBought} windowDays={windowDays} />
-      <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
-        <h2 id={HEADING_ID} className="text-[var(--fig-md)] font-semibold text-zinc-100">All members</h2>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div role="group" aria-label="Show members" className="flex items-center gap-0.5 flex-wrap">
-            {CONGRESS_CHIPS.map(([key, label]) => (
-              <TBtn key={key} active={filter === key} onClick={() => write('filter', key)}>{label}</TBtn>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Input
-              type="search"
-              aria-label="Search members"
-              placeholder="Name, state or ticker"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-56"
-            />
-            <Select aria-label="Sort members" value={order} onChange={(e) => write('order', e.target.value)}>
-              {CONGRESS_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-            </Select>
-            <div role="group" aria-label="Member layout" className="flex items-center gap-0.5">
-              <TBtn active={layout === 'cards'} onClick={() => write('layout', 'cards')}>Cards</TBtn>
-              <TBtn active={layout === 'table'} onClick={() => write('layout', 'table')}>Table</TBtn>
+      <section aria-label="All members">
+        <Card
+          context={`House members · ${members.length} with disclosed trades`}
+          title="All members"
+          right={<Segmented label="Member layout" options={LAYOUTS} value={layout} onChange={(value) => write('layout', value)} />}
+        >
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div role="group" aria-label="Show members" className="flex items-center gap-1.5 flex-wrap">
+                {CONGRESS_CHIPS.map(([key, label]) => (
+                  <Chip key={key} active={filter === key} onClick={() => write('filter', key)}>{label}</Chip>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Input
+                  type="search"
+                  aria-label="Search members"
+                  placeholder="Name, state or ticker"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-56"
+                />
+                <Select aria-label="Sort members" value={order} onChange={(e) => write('order', e.target.value)}>
+                  {CONGRESS_SORTS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                </Select>
+              </div>
             </div>
+            <Results
+              visible={visible}
+              layout={layout}
+              order={order}
+              onSort={(key) => write('order', key)}
+              query={search}
+              waiting={visible.length === 0 && resolving}
+            />
           </div>
-        </div>
-        <Results
-          visible={visible}
-          layout={layout}
-          order={order}
-          onSort={(key) => write('order', key)}
-          query={search}
-          waiting={visible.length === 0 && resolving}
-        />
+        </Card>
       </section>
     </div>
   )

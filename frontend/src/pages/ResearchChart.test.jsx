@@ -77,7 +77,7 @@ function stubQueries() {
 
 const nvdaSlot = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
 const tslaSlot = { symbol: 'TSLA', uic: 9, assetType: 'Stock' }
-const renderPage = () => renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+const renderPage = () => renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 const plot = () => screen.getByTestId('price-scale').closest('svg').parentElement
 const backLink = () => screen.getByRole('link', { name: 'Back to Research' })
 const panes = () => screen.getAllByRole('region', { name: /(chart|^Empty pane( \d)?)$/ })
@@ -97,14 +97,14 @@ describe('ResearchChart', () => {
   it('gives the sidebar and the watchlist their stored sizes', () => {
     localStorage.setItem('saxodash:chart-rail-width', '420')
     localStorage.setItem('saxodash:chart-watchlist-height', '500')
-    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(container.firstChild.style.getPropertyValue('--rail-width')).toBe('420px')
     expect(screen.getByTestId('chart-watchlist')).toHaveStyle({ height: '500px' })
   })
 
   it('resizes the sidebar from its handle and remembers the width', () => {
-    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     fireEvent.keyDown(screen.getByRole('separator', { name: 'Sidebar width' }), { key: 'ArrowLeft' })
 
@@ -113,7 +113,7 @@ describe('ResearchChart', () => {
   })
 
   it('resizes the watchlist from its handle and remembers the height', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     fireEvent.keyDown(screen.getByRole('separator', { name: 'Watchlist height' }), { key: 'ArrowDown' })
 
@@ -122,7 +122,7 @@ describe('ResearchChart', () => {
   })
 
   it('shows the symbol panel under the watchlist', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByRole('heading', { name: 'Technicals' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /open in research/i })).toHaveAttribute(
@@ -145,7 +145,7 @@ describe('ResearchChart', () => {
         score: null,
       },
     })
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByRole('heading', { name: 'Analyst rating' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Earnings' })).toBeInTheDocument()
@@ -162,14 +162,14 @@ describe('ResearchChart', () => {
         ],
       },
     })
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByRole('link', { name: /more financials/i }).getAttribute('href')).toContain('tab=financials')
     expect(queries.useStatements).not.toHaveBeenCalled()
   })
 
   it('keeps the heading outline valid with the panel mounted', () => {
-    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     expectValidHeadingOutline(container)
   })
 
@@ -179,19 +179,19 @@ describe('ResearchChart', () => {
     queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
     queries.useChart.mockReturnValue({ data: [], isLoading: false, error: null })
 
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=ZZZZ' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=ZZZZ' })
 
     expect(queries.useFundamentals).not.toHaveBeenCalledWith('ZZZZ')
     expect(screen.queryByRole('link', { name: /open in research/i })).not.toBeInTheDocument()
   })
 
   it('has exactly one h1 and no skipped heading level', () => {
-    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     expectValidHeadingOutline(container)
   })
 
   it('lays out the tool rail, the chart, instrument search and the watchlist', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByRole('navigation', { name: 'Chart tools' })).toBeInTheDocument()
     expect(screen.getByTestId('price-scale')).toBeInTheDocument()
@@ -199,8 +199,15 @@ describe('ResearchChart', () => {
     expect(screen.getByText('Tech')).toBeInTheDocument()
   })
 
+  it('gives the rail search its full width by stacking the asset filter on its own row', () => {
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
+
+    expect(screen.getByTestId('instrument-search')).toHaveClass('flex-col')
+    expect(screen.getByRole('textbox', { name: /search instruments/i })).toHaveAttribute('placeholder', 'Search any stock or ETF…')
+  })
+
   it('fetches the same widest-range chart as Research, so the two views share a cache entry', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(queries.useChart).toHaveBeenLastCalledWith(
       expect.objectContaining({ uic: 211, assetType: 'Stock', count: WIDEST_RANGE_COUNT, horizon: 1440 }),
@@ -208,25 +215,25 @@ describe('ResearchChart', () => {
   })
 
   it('loads company fundamentals for the symbol only through the panel', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(queries.useFundamentals).toHaveBeenCalledWith('NVDA')
   })
 
   it('falls back to the first held position when no symbol is given', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart' })
+    renderWithProviders(<ResearchChart />, { route: '/boards' })
 
     expect(backLink()).toHaveAttribute('href', '/research?symbol=NVDA&uic=211&assetType=Stock')
   })
 
   it('hides the day range in the compact symbol bar', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.queryByText('Day range')).not.toBeInTheDocument()
   })
 
   it('switches symbol within the chart view from a watchlist row', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: /^TSLA/ }))
 
@@ -234,7 +241,7 @@ describe('ResearchChart', () => {
   })
 
   it('keeps a search pick in the chart view', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), 'tsla')
     await userEvent.click(screen.getByText('Tesla Inc'))
@@ -248,13 +255,13 @@ describe('ResearchChart', () => {
     queries.useInstrumentDetails.mockReturnValue({ ...idle, data: undefined })
     queries.useChart.mockReturnValue({ data: [], isLoading: false, error: null })
 
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=ZZZZ' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=ZZZZ' })
 
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toBeDisabled()
   })
 
   it('places one line with the armed line tool, then returns to the crosshair', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
     fireEvent.mouseDown(plot(), { detail: 1 })
@@ -265,7 +272,7 @@ describe('ResearchChart', () => {
   })
 
   it('disarms the line tool on Escape without leaving the page', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'true')
@@ -277,7 +284,7 @@ describe('ResearchChart', () => {
   })
 
   it('does not disarm the line tool when Escape is pressed while typing', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
     await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), '{Escape}')
@@ -286,7 +293,7 @@ describe('ResearchChart', () => {
   })
 
   it('disarms the line tool when the symbol changes', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
     await userEvent.click(screen.getByRole('button', { name: /^TSLA/ }))
@@ -295,23 +302,23 @@ describe('ResearchChart', () => {
   })
 
   it('remembers a lower pane turned on here after the page is left and reopened', async () => {
-    const first = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const first = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     await userEvent.click(screen.getByRole('button', { name: 'Indicators' }))
     await userEvent.click(screen.getByRole('menuitem', { name: /RSI/ }))
     first.unmount()
 
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByText(/^RSI 14/)).toBeInTheDocument()
   })
 
   it('starts as one chart', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     expect(panes()).toHaveLength(1)
   })
 
   it('does not repeat the symbol bar inside the single pane header', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     const pane = screen.getByRole('region', { name: 'NVDA chart' })
     expect(within(pane).queryByText('NVDA')).not.toBeInTheDocument()
     expect(within(pane).queryByText('875.40')).not.toBeInTheDocument()
@@ -319,7 +326,7 @@ describe('ResearchChart', () => {
 
   it('shows the symbol bar identity in each pane once split', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await pickLayout(user, 'Side by side')
 
@@ -330,7 +337,7 @@ describe('ResearchChart', () => {
 
   it('splits into four panes with the first new one active and empty', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await pickLayout(user, 'Grid of four')
 
@@ -344,7 +351,7 @@ describe('ResearchChart', () => {
 
   it('loads a watchlist pick into the active pane and keeps the other', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await pickLayout(user, 'Side by side')
     await user.click(screen.getByRole('button', { name: /^TSLA/ }))
@@ -355,7 +362,7 @@ describe('ResearchChart', () => {
 
   it('disables the line tool while the active pane is empty', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await pickLayout(user, 'Stacked')
 
@@ -374,17 +381,17 @@ describe('ResearchChart', () => {
         active: 0,
       }),
     )
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     expect(screen.getAllByRole('region', { name: 'NVDA chart' })).toHaveLength(2)
   })
 
   it('remembers the layout across visits', async () => {
     const user = userEvent.setup()
-    const first = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    const first = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     await pickLayout(user, 'Stacked')
     first.unmount()
 
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     expect(panes()).toHaveLength(2)
   })
 
@@ -421,7 +428,7 @@ describe('ResearchChart panning', () => {
   })
 
   it('keeps the header on the latest close while the chart is panned back', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     await userEvent.click(screen.getByRole('button', { name: '1W' }))
 
     fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
@@ -434,7 +441,7 @@ describe('ResearchChart panning', () => {
   })
 
   it('returns a panned pane to the latest bar when the current range is re-picked', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     await userEvent.click(screen.getByRole('button', { name: '1W' }))
 
     fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
@@ -457,7 +464,7 @@ describe('ResearchChart time-axis zoom', () => {
   })
 
   it('leaves every range unselected while zoomed, and a range pick restores it', async () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
     const axis = screen.getByTestId('time-axis')
 
     fireEvent.pointerDown(axis, { clientX: 300, clientY: 5, pointerId: 1 })
@@ -474,19 +481,20 @@ describe('ResearchChart time-axis zoom', () => {
   })
 
   it('lets the range buttons and the connection status wrap instead of clipping', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(screen.getByRole('button', { name: '1W' }).parentElement.parentElement).toHaveClass('flex-wrap')
   })
 
-  it('fills the dynamic viewport so the phone toolbar does not clip it', () => {
-    const { container } = renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
-    expect(container.firstChild).toHaveClass('h-dvh')
+  it('fills the dynamic viewport under the app header so the phone toolbar does not clip it', () => {
+    const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
+    expect(container.firstChild.className).toMatch(/h-\[calc\(100dvh-/)
+    expect(container.firstChild).not.toHaveClass('h-dvh')
     expect(container.firstChild).not.toHaveClass('h-screen')
   })
 
   it('has a way back to Research on every viewport', () => {
-    renderWithProviders(<ResearchChart />, { route: '/research/chart?symbol=NVDA' })
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(backLink()).toBeVisible()
   })

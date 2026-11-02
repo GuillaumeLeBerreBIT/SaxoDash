@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
@@ -50,14 +50,27 @@ describe('FilingsTab', () => {
     renderWithProviders(<FilingsTab symbol="NVDA" />)
 
     const sentence = screen.getByText('Insiders sold 1.20M shares net over 3 sales and 0 buys')
-    expect(sentence).toHaveClass('text-red-400')
+    expect(sentence).toHaveClass('text-down')
     expect(screen.getByText('01 Oct 2025 to 12 Sep 2026')).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Insider sentiment by month' })).toBeInTheDocument()
   })
 
+  it('insider totals count open-market trades only', () => {
+    renderWithProviders(<FilingsTab symbol="NVDA" />)
+
+    const totals = screen.getByRole('list', { name: 'Open-market insider totals' })
+    const tile = (label) => within(totals).getByText(label, { selector: 'dt' }).closest('li')
+    expect(tile('Buys')).toHaveTextContent('0')
+    expect(tile('Sales')).toHaveTextContent('3')
+    expect(tile('Shares sold')).toHaveTextContent('1.20M')
+    expect(
+      screen.getByText('Counts open-market trades only (codes P and S), so awards, gifts and option exercises never read as buying or selling.'),
+    ).toBeInTheDocument()
+  })
+
   it.each([
-    [{ shares_bought: 5000, shares_sold: 0, buys: 2, sells: 0 }, 'text-emerald-400'],
-    [{ shares_bought: 100, shares_sold: 100, buys: 1, sells: 1 }, 'text-zinc-400'],
+    [{ shares_bought: 5000, shares_sold: 0, buys: 2, sells: 0 }, 'text-up'],
+    [{ shares_bought: 100, shares_sold: 100, buys: 1, sells: 1 }, 'text-ink-2'],
   ])('colours the sentence by tone %#', (summary, className) => {
     queries.useInsiders.mockReturnValue(ok({ ...insidersData, summary: { ...insidersData.summary, ...summary } }))
     renderWithProviders(<FilingsTab symbol="NVDA" />)

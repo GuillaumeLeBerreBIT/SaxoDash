@@ -2,9 +2,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
-import { DOWN, UP, priceGeometry } from '../../lib/chartGeometry'
+import { overlayStrokes, priceGeometry } from '../../lib/chartGeometry'
+import { chartPalette } from '../../lib/charts'
+import { DEFAULT_APPEARANCE } from '../../lib/theme'
 import { roundPrice } from '../../lib/priceLines'
 import { SubPane, TVChart } from './TVChart'
+
+const c = chartPalette(DEFAULT_APPEARANCE)
+const { up: UP, down: DOWN } = c
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
   date: `2026-08-${String(i + 1).padStart(2, '0')}`,
@@ -49,17 +54,17 @@ describe('TVChart', () => {
 
   it('draws a moving average only when its overlay is on', () => {
     const off = renderChart()
-    expect(off.container.querySelector('path[stroke="#f59e0b"]')).toBeNull()
+    expect(off.container.querySelector(`path[stroke="${overlayStrokes(c).ma20}"]`)).toBeNull()
 
     const on = renderChart({ overlays: { ...overlays, ma20: true } })
-    expect(on.container.querySelector('path[stroke="#f59e0b"]')).not.toBeNull()
+    expect(on.container.querySelector(`path[stroke="${overlayStrokes(c).ma20}"]`)).not.toBeNull()
   })
 
   it('shows the crosshair only while a bar is hovered', () => {
     const idle = renderChart()
     const hovered = renderChart({ hover: 10 })
 
-    const dashed = (c) => c.querySelectorAll('line[stroke="#71717a"]').length
+    const dashed = (node) => node.querySelectorAll(`line[stroke="${c.crosshair}"]`).length
     expect(dashed(idle.container)).toBe(0)
     expect(dashed(hovered.container)).toBe(2)
   })
@@ -77,19 +82,19 @@ describe('earnings markers', () => {
     const { container } = renderChart({
       earningsMarkers: [{ index: 10, date: bars[10].date, sign: 1, actual: 1.1, estimate: 1.0 }],
     })
-    expect(container.querySelector('polygon[fill="#34d399"]')).not.toBeNull()
+    expect(container.querySelector(`polygon[fill="${c.up}"]`)).not.toBeNull()
   })
 
   it('draws a miss marker in the miss colour', () => {
     const { container } = renderChart({
       earningsMarkers: [{ index: 10, date: bars[10].date, sign: -1, actual: 0.9, estimate: 1.0 }],
     })
-    expect(container.querySelector('polygon[fill="#f87171"]')).not.toBeNull()
+    expect(container.querySelector(`polygon[fill="${c.down}"]`)).not.toBeNull()
   })
 
   it('renders none when no markers are given', () => {
     const { container } = renderChart()
-    expect(container.querySelector('polygon[fill="#34d399"], polygon[fill="#f87171"], polygon[fill="#3b82f6"]')).toBeNull()
+    expect(container.querySelector(`polygon[fill="${c.up}"], polygon[fill="${c.down}"], polygon[fill="${c.estimate}"]`)).toBeNull()
   })
 })
 
@@ -1043,7 +1048,7 @@ describe('text annotations', () => {
 
     fireEvent.click(getByTestId('text-annotation-hit-1'))
 
-    expect(getByTestId('text-annotation-1').querySelector('text')).toHaveAttribute('fill', '#e4e4e7')
+    expect(getByTestId('text-annotation-1').querySelector('text')).toHaveAttribute('fill', c.ink)
   })
 
   it('moves the annotation on drag', () => {
