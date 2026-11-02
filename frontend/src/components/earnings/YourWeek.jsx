@@ -1,6 +1,6 @@
-import { Card } from '../ui'
-import { eventKey, rankEvents, sessionWords, yourWeekTally } from '../../lib/earnings'
-import { fmtDayMonth, fmtEur, fmtPct, pctToneClass } from '../../lib/format'
+import { Card, Tag } from '../ui'
+import { eventKey, rankEvents, sessionWords, signTone, yourWeekTally } from '../../lib/earnings'
+import { fmtDayMonth, fmtEur, fmtPct } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell } from './EarningsCells'
 
 const ROW_GRID =
@@ -14,7 +14,7 @@ function headline({ count, reported, beat }) {
 
 function QuietWeek({ nextMine }) {
   return (
-    <p className="px-3.5 py-3 text-[var(--fig-sm)] text-zinc-500">
+    <p className="px-[18px] py-3 text-[13.5px] text-ink-2">
       None of yours report this week.
       {nextMine && ` Next: ${nextMine.symbol}, ${weekday(nextMine.date)} ${fmtDayMonth(nextMine.date)}`}
     </p>
@@ -26,18 +26,18 @@ function YourRow({ event, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen(event.symbol)}
-      className={`w-full grid items-center ${ROW_GRID} gap-2.5 h-12 px-3.5 text-left hover:bg-white/[0.045] transition-colors`}
+      className={`w-full grid items-center ${ROW_GRID} gap-2.5 h-12 px-[18px] text-left hover:bg-hover transition-colors`}
     >
       <span className="flex items-center gap-2 min-w-0">
         <CompanyCell event={event} />
-        <span className={`hidden md:inline text-[var(--fig-2xs)] ${event.held ? 'text-blue-500' : 'text-zinc-600'}`}>
+        <Tag tone={event.held ? 'held' : 'neutral'} className="hidden md:inline-flex">
           {event.held ? 'Held' : 'Watching'}
-        </span>
+        </Tag>
       </span>
-      <span className="hidden md:block text-[var(--fig-2xs)] text-zinc-400">
+      <span className="hidden md:block text-[12px] text-ink-2">
         {weekday(event.date)} · {sessionWords(event.session)}
       </span>
-      <span className="hidden md:block text-right text-[var(--fig-2xs)] num font-mono text-zinc-400">
+      <span className="hidden md:block text-right text-[12px] num text-ink-2">
         {event.weight_pct == null ? '' : fmtPct(event.weight_pct, { sign: false, decimals: 1 })}
       </span>
       <span className="text-right">
@@ -46,7 +46,7 @@ function YourRow({ event, onOpen }) {
       <span className="text-right">
         <MoveCell event={event} />
       </span>
-      <span className={`hidden md:block text-right text-[var(--fig-2xs)] num font-mono ${pctToneClass(event.pnl_impact, 2)}`}>
+      <span className={`hidden md:block text-right text-[12px] num ${signTone(event.pnl_impact)}`}>
         {event.pnl_impact == null ? '' : fmtEur(event.pnl_impact, { sign: true })}
       </span>
     </button>
@@ -57,11 +57,14 @@ export default function YourWeek({ events, nextMine, onOpen }) {
   const mine = rankEvents(events.filter((event) => event.mine))
   const tally = yourWeekTally(events)
   return (
-    <Card padding={false} className="mb-4">
-      <div className="flex items-baseline justify-between gap-3 px-3.5 py-3 border-b border-white/[0.06]">
-        <h2 className="text-[var(--fig-sm)] font-semibold text-zinc-100 whitespace-nowrap">Your week</h2>
-        {mine.length > 0 && <span className="text-[var(--fig-2xs)] text-zinc-500">{headline(tally)}</span>}
-      </div>
+    <Card
+      flush
+      dot="earn"
+      context="Your holdings and watchlist"
+      title="Your week"
+      right={mine.length > 0 && <span className="text-[12px] text-ink-3">{headline(tally)}</span>}
+      className="mb-4"
+    >
       {mine.length === 0 ? (
         <QuietWeek nextMine={nextMine} />
       ) : (

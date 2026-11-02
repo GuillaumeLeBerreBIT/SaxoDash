@@ -2,37 +2,49 @@ import { memo, useEffect, useMemo, useRef } from 'react'
 import { ChevronRight } from 'lucide-react'
 
 import { Card, InfoTip } from '../ui'
-import { REPORTED, withAlpha } from '../../lib/charts'
-import { WEEKDAYS, eventKey, gridSessionKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
+import { withAlpha } from '../../lib/charts'
+import { useChartColors } from '../../theme/useChartColors'
+import { GRID_SESSIONS, eventKey, gridSessionKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
 import { fmtCompact } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 
 const ROW_GRID =
   'grid-cols-[minmax(0,1fr)_112px_64px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_76px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
-const weekdayLabel = (key) => (WEEKDAYS.find(([k]) => k === key) || ['', key])[1]
+const WEEKDAY_NAME = {
+  mon: 'Monday',
+  tue: 'Tuesday',
+  wed: 'Wednesday',
+  thu: 'Thursday',
+  fri: 'Friday',
+  sat: 'Saturday',
+  sun: 'Sunday',
+}
+const weekdayLabel = (key) => WEEKDAY_NAME[key] || key
+const gridSessionLabel = (key) => (GRID_SESSIONS.find(([k]) => k === key) || ['', key])[1].toLowerCase()
 
-function edge(event) {
-  const color = outcomeColor(event)
+function edge(event, colors) {
+  const color = outcomeColor(event, colors)
   return color ? `inset 3px 0 0 ${withAlpha(color, 0.45)}` : 'none'
 }
 
 const DayRow = memo(function DayRow({ event, onOpen }) {
+  const colors = useChartColors()
   return (
     <button
       type="button"
       onClick={() => onOpen(event.symbol)}
-      className={`w-full grid items-center ${ROW_GRID} gap-2.5 h-12 pl-3 pr-3.5 text-left hover:bg-white/[0.045] transition-colors`}
+      className={`w-full grid items-center ${ROW_GRID} gap-2.5 h-12 pl-3 pr-[18px] text-left hover:bg-hover transition-colors`}
       style={{
-        borderLeft: `2px solid ${event.held ? REPORTED : event.watched ? withAlpha(REPORTED, 0.4) : 'transparent'}`,
-        boxShadow: edge(event),
+        borderLeft: `2px solid ${event.held ? colors.primary : event.watched ? withAlpha(colors.primary, 0.4) : 'transparent'}`,
+        boxShadow: edge(event, colors),
       }}
     >
       <CompanyCell event={event} />
-      <span className={`${PHONE_HIDDEN} text-right text-[var(--fig-2xs)] num font-mono text-zinc-500`}>
+      <span className={`${PHONE_HIDDEN} text-right text-[12px] num text-ink-2`}>
         {event.market_cap == null ? '—' : fmtCompact(event.market_cap)}
       </span>
-      <span className={`${PHONE_HIDDEN} pl-3 text-[var(--fig-2xs)] num font-mono text-zinc-600 whitespace-nowrap`}>
+      <span className={`${PHONE_HIDDEN} pl-3 text-[12px] num text-ink-3 whitespace-nowrap`}>
         {event.quarter ? `Q${event.quarter} ${event.year ?? ''}`.trim() : ''}
       </span>
       <span className="text-right">
@@ -44,7 +56,7 @@ const DayRow = memo(function DayRow({ event, onOpen }) {
       <span className="text-right">
         <MoveCell event={event} />
       </span>
-      <span className="text-zinc-600 flex">
+      <span className="text-ink-3 flex">
         <ChevronRight size={14} />
       </span>
     </button>
@@ -54,7 +66,7 @@ const DayRow = memo(function DayRow({ event, onOpen }) {
 function ColumnHeader() {
   return (
     <div
-      className={`grid items-center ${ROW_GRID} gap-2.5 pl-3 pr-3.5 py-1.5 border-b border-white/[0.06] text-[var(--fig-2xs)] uppercase tracking-[0.08em] text-zinc-600 whitespace-nowrap`}
+      className={`grid items-center ${ROW_GRID} gap-2.5 pl-3 pr-[18px] h-[30px] border-t border-line text-[12px] font-medium text-ink-3 whitespace-nowrap`}
       style={{ borderLeft: '2px solid transparent' }}
     >
       <span>Company</span>
@@ -80,26 +92,27 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusSession, day])
 
+  const title = focusSession ? `${weekdayLabel(day)}, ${gridSessionLabel(focusSession)}` : weekdayLabel(day)
   return (
-    <Card padding={false}>
-      <div className="flex items-center justify-between px-3.5 py-3 border-b border-white/[0.06]">
-        <h2 className="flex items-center gap-1.5 text-[var(--fig-sm)] font-semibold text-zinc-100">
-          {weekdayLabel(day)}
-          <span className="text-zinc-600 font-normal"> · {events.length} reporting</span>
-          <InfoTip>
-            One row per company, your names first, then by market cap. A coloured left edge means it has
-            reported: green beat consensus, red missed, blue in line; amber means the date has passed but no
-            figure is posted yet. Move is the share price change across the report: 1d for a known session,
-            2d when the time was not set.
-          </InfoTip>
-        </h2>
-      </div>
+    <Card
+      flush
+      context={`${events.length} reporting`}
+      title={title}
+      right={
+        <InfoTip>
+          One row per company, your names first, then by market cap. A coloured left edge means it has
+          reported: the up colour beat consensus, the down colour missed, the flat colour in line; the warning
+          colour means the date has passed but no figure is posted yet. Move is the share price change across
+          the report: 1d for a known session, 2d when the time was not set.
+        </InfoTip>
+      }
+    >
       {events.length === 0 ? (
-        <p className="px-4 py-9 text-center text-[var(--fig-sm)] text-zinc-500">
+        <p className="px-[18px] py-9 text-center text-[13.5px] text-ink-2">
           {scope === 'mine' ? (
             <>
               Nothing on your lists reports this day.{' '}
-              <button type="button" className="text-blue-400" onClick={onViewAll}>
+              <button type="button" className="font-semibold text-ink underline underline-offset-2" onClick={onViewAll}>
                 View all →
               </button>
             </>
@@ -112,7 +125,7 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
           <ColumnHeader />
           {sections.map(({ key, label, rows }, i) => (
             <div key={key} role="group" aria-label={label} ref={(el) => (refs.current[key] = el)}>
-              <div className={`px-3.5 pt-2.5 pb-1 text-[var(--fig-2xs)] uppercase tracking-[0.09em] text-zinc-600 ${i ? 'border-t border-white/[0.04]' : ''}`}>
+              <div className={`px-[18px] pt-2.5 pb-1 text-[12px] font-semibold text-ink-2 ${i ? 'border-t border-line' : ''}`}>
                 {label}
               </div>
               {rows.map((event) => (

@@ -306,3 +306,17 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.queryByText('MONCO')).not.toBeInTheDocument()
   })
 })
+
+it('a picked cell lists that day and session', async () => {
+  stub({
+    events: [
+      ev({ symbol: 'MORN', session: 'bmo' }),
+      ev({ symbol: 'EVEN', session: 'amc' }),
+    ],
+  })
+  renderWithProviders(<Earnings />, { route: '/earnings' })
+
+  await userEvent.click(screen.getByRole('button', { name: 'Show Mon after close' }))
+
+  expect(screen.getByRole('heading', { name: 'Monday, after close' })).toBeInTheDocument()
+})

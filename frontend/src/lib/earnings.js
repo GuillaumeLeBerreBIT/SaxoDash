@@ -1,4 +1,4 @@
-import { BEAT, MISS, PENDING, REPORTED, surpriseSign } from './charts'
+import { surpriseSign } from './charts'
 import { fmtCompact, fmtDate, fmtPct } from './format'
 
 export const WEEKDAYS = [
@@ -181,7 +181,7 @@ export function yourWeekTally(events) {
 }
 
 const REPORTED_OUTCOMES = ['missed', 'in line', 'beat']
-const OUTCOME_COLOR = { missed: MISS, 'in line': REPORTED, reported: REPORTED, beat: BEAT, pending: PENDING }
+const OUTCOME_ROLE = { missed: 'down', 'in line': 'flat', reported: 'primary', beat: 'up', pending: 'warn' }
 
 export function outcome(event) {
   const status = reportStatus(event)
@@ -191,6 +191,12 @@ export function outcome(event) {
   return null
 }
 
-export function outcomeColor(event) {
-  return OUTCOME_COLOR[outcome(event)] ?? null
+export function outcomeColor(event, palette) {
+  const role = OUTCOME_ROLE[outcome(event)]
+  return role ? palette[role] : null
+}
+
+export function signTone(value) {
+  if (value == null || value === 0) return 'text-ink-3'
+  return value > 0 ? 'text-up' : 'text-down'
 }

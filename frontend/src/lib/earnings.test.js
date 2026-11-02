@@ -20,7 +20,6 @@ import {
   WEEKDAYS,
   yourWeekTally,
 } from './earnings'
-import { BEAT, MISS, PENDING, REPORTED } from './charts'
 
 describe('outcome', () => {
   it('names a result in words', () => {
@@ -34,25 +33,26 @@ describe('outcome', () => {
 })
 
 describe('outcomeColor', () => {
+  const c = { up: '#0a0', down: '#a00', flat: '#888', warn: '#fa0', primary: '#00f' }
   const past = '2000-01-03'
   const future = '2999-01-03'
 
   it('colours a reported result by its surprise', () => {
-    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 4 })).toBe(BEAT)
-    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: -4 })).toBe(MISS)
-    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 0 })).toBe(REPORTED)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 4 }, c)).toBe(c.up)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: -4 }, c)).toBe(c.down)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: 0 }, c)).toBe(c.flat)
   })
 
   it('colours a report with no estimate as reported, not in line', () => {
-    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: null })).toBe(REPORTED)
+    expect(outcomeColor({ date: past, eps_actual: 1, eps_surprise_pct: null }, c)).toBe(c.primary)
   })
 
   it('marks a passed date with no figure as pending', () => {
-    expect(outcomeColor({ date: past, eps_actual: null })).toBe(PENDING)
+    expect(outcomeColor({ date: past, eps_actual: null }, c)).toBe(c.warn)
   })
 
   it('has no colour for an upcoming report', () => {
-    expect(outcomeColor({ date: future, eps_actual: null })).toBeNull()
+    expect(outcomeColor({ date: future, eps_actual: null }, c)).toBeNull()
   })
 })
 

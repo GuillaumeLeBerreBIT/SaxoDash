@@ -76,4 +76,16 @@ describe('WeekGrid', () => {
     renderGrid([ev('WIN', { date: '2000-01-03', eps_actual: 2, eps_surprise_pct: 5 })])
     expect(screen.getByRole('button', { name: 'Open WIN, beat' })).toBeInTheDocument()
   })
+
+  it('your cell in the week grid is marked in the earnings colour with words', () => {
+    renderGrid([ev('VST', { name: 'Vistra', mine: true, held: true }), ev('OTH')])
+    const words = screen.getByText('Vistra, yours')
+    expect(words).toHaveClass('text-earn')
+    expect(screen.getByLabelText(/^Mon before open: 2 reporting/)).toHaveClass('bg-earn-subtle')
+  })
+
+  it('counts several of yours in a cell instead of naming one', () => {
+    renderGrid([ev('AAA', { mine: true }), ev('BBB', { mine: true })])
+    expect(screen.getByText('2 yours')).toHaveClass('text-earn')
+  })
 })

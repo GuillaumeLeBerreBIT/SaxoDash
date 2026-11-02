@@ -3,18 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { useEarningsCalendar } from '../api/queries'
-import { Pill } from '../components/RangePills'
 import DayList from '../components/earnings/DayList'
 import DayStrip from '../components/earnings/DayStrip'
 import WeekGrid from '../components/earnings/WeekGrid'
 import YourWeek from '../components/earnings/YourWeek'
-import { Card, PageHeader } from '../components/ui'
+import { Alert, Card, Segmented } from '../components/ui'
 import { buildWeekGrid, currentWeekLabel, groupByWeekday, weekLabel, weekdayKey } from '../lib/earnings'
 
 const MIN_WEEK = -8
 const MAX_WEEK = 12
 const NAV_BUTTON =
-  'w-11 h-11 md:w-6 md:h-6 rounded border border-white/[0.08] bg-[#0e0e11] text-zinc-400 hover:text-zinc-100 disabled:opacity-40 flex items-center justify-center'
+  'sd-raised w-11 h-11 md:w-7 md:h-7 rounded-[7px] bg-raised text-ink-2 hover:text-ink disabled:opacity-40 flex items-center justify-center'
+const SCOPES = [
+  { value: 'all', label: 'All' },
+  { value: 'mine', label: 'Mine' },
+]
 
 function marketLine({ total, reported, beat }) {
   const base = `${total} reporting`
@@ -59,49 +62,37 @@ export default function Earnings() {
 
   return (
     <div>
-      <PageHeader
-        title="Earnings"
-        subtitle="Your names first, then the US market week"
-        right={
-          <div className="flex items-center gap-1 bg-[#0e0e11] border border-white/[0.07] rounded-lg p-0.5">
-            <Pill active={scope === 'all'} onClick={() => setScope('all')}>All</Pill>
-            <Pill active={scope === 'mine'} onClick={() => setScope('mine')}>Mine</Pill>
-          </div>
-        }
-      />
+      <h1 className="sr-only">Earnings</h1>
 
-      <div className="flex flex-wrap items-center gap-2.5 mb-3">
-        <button type="button" onClick={() => shiftWeek(-1)} disabled={week <= MIN_WEEK} aria-label="Previous week" className={NAV_BUTTON}>
-          <ChevronLeft size={13} />
-        </button>
-        <span className="text-[var(--fig-sm)] num font-mono font-semibold text-zinc-200 md:min-w-[200px]">
-          {weekLabel(data?.window)}
-        </span>
-        <button type="button" onClick={() => shiftWeek(1)} disabled={week >= MAX_WEEK} aria-label="Next week" className={NAV_BUTTON}>
-          <ChevronRight size={13} />
-        </button>
-        {week !== 0 && (
-          <button
-            type="button"
-            onClick={resetWeek}
-            className="h-11 md:h-6 px-2 rounded border border-white/[0.08] bg-[#0e0e11] text-[var(--fig-xs)] text-zinc-400 hover:text-zinc-100"
-          >
-            {currentWeekLabel()}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => shiftWeek(-1)} disabled={week <= MIN_WEEK} aria-label="Previous week" className={NAV_BUTTON}>
+            <ChevronLeft size={14} />
           </button>
-        )}
+          <span className="text-[13.5px] num font-semibold text-ink md:min-w-[200px] text-center">{weekLabel(data?.window)}</span>
+          <button type="button" onClick={() => shiftWeek(1)} disabled={week >= MAX_WEEK} aria-label="Next week" className={NAV_BUTTON}>
+            <ChevronRight size={14} />
+          </button>
+          {week !== 0 && (
+            <button
+              type="button"
+              onClick={resetWeek}
+              className="sd-raised h-11 md:h-6 px-2.5 rounded-[7px] bg-raised text-[12px] font-semibold text-ink-2 hover:text-ink"
+            >
+              {currentWeekLabel()}
+            </button>
+          )}
+        </div>
+        <Segmented label="Universe" options={SCOPES} value={scope} onChange={setScope} />
       </div>
 
       {isLoading && (
         <Card>
-          <p className="text-[var(--fig-xs)] text-zinc-500">Loading…</p>
+          <p className="text-[12px] text-ink-3">Loading…</p>
         </Card>
       )}
 
-      {!isLoading && failed && (
-        <Card>
-          <p className="text-[var(--fig-sm)] text-red-400">Couldn’t load the earnings calendar.</p>
-        </Card>
-      )}
+      {!isLoading && failed && <Alert>Couldn’t load the earnings calendar.</Alert>}
 
       {!isLoading && !failed && data && (
         <>
@@ -111,11 +102,11 @@ export default function Earnings() {
 
           <YourWeek events={events} nextMine={data.next_mine} onOpen={openSymbol} />
 
-          {scope === 'all' && data.stats && <p className="mb-2 text-[var(--fig-2xs)] text-zinc-500">{marketLine(data.stats)}</p>}
-
-          <div className="hidden md:block">
-            <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
-          </div>
+          <Card context={scope === 'all' && data.stats ? marketLine(data.stats) : undefined} title="Market week" className="mb-4">
+            <div className="hidden md:block">
+              <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
+            </div>
+          </Card>
 
           <DayList
             day={day}
