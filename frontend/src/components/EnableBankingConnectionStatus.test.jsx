@@ -1,10 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
+import { useLocation } from 'react-router-dom'
 import { renderWithProviders } from '../test/renderWithProviders'
 import EnableBankingConnectionStatus from './EnableBankingConnectionStatus'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
+
+function Where() {
+  const { pathname, search } = useLocation()
+  return <output data-testid="where">{pathname + search}</output>
+}
 
 describe('EnableBankingConnectionStatus', () => {
   beforeEach(() => {
@@ -51,22 +57,27 @@ describe('EnableBankingConnectionStatus', () => {
   })
 
   it('shows a failure badge for the bank named in a ?enablebanking=error redirect', () => {
-    window.history.replaceState({}, '', '/accounts?enablebanking=error&bank=kbc')
     queries.useEnableBankingStatus.mockReturnValue({
       data: { kbc: { connected: false }, argenta: { connected: false } },
     })
-    renderWithProviders(<EnableBankingConnectionStatus />)
+    renderWithProviders(<EnableBankingConnectionStatus />, { route: '/money?section=accounts&enablebanking=error&bank=kbc' })
     expect(screen.getByText('KBC connection failed')).toBeInTheDocument()
     expect(screen.queryByText('Argenta connection failed')).not.toBeInTheDocument()
   })
 
-  it('clears the error params from the URL after reading them', () => {
-    window.history.replaceState({}, '', '/accounts?enablebanking=error&bank=kbc')
+  it('clears only the error params from the URL, keeping the Money section', () => {
     queries.useEnableBankingStatus.mockReturnValue({
       data: { kbc: { connected: false }, argenta: { connected: false } },
     })
-    renderWithProviders(<EnableBankingConnectionStatus />)
-    expect(window.location.search).toBe('')
+    renderWithProviders(
+      <>
+        <EnableBankingConnectionStatus />
+        <Where />
+      </>,
+      { route: '/money?section=accounts&enablebanking=error&bank=kbc' },
+    )
+    expect(screen.getByText('KBC connection failed')).toBeInTheDocument()
+    expect(screen.getByTestId('where')).toHaveTextContent(/^\/money\?section=accounts$/)
   })
 
   it('shows a single sync-failed badge when a bank is connected but its last sync failed', () => {

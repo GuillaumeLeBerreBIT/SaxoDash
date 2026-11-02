@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useSpendingSummary } from '../../api/queries'
 import { fmtEur, fmtNum } from '../../lib/format'
 import { topCategory } from '../../lib/spending'
@@ -51,7 +51,14 @@ export default function SpendingSection() {
           className={SPAN_12}
           context={`Categorised bank transactions · ${period.label}`}
           dot={error ? 'warn' : summary ? 'ok' : 'off'}
-          right={<PeriodSelector value={period} onChange={choosePeriod} />}
+          right={
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <Link to="/money?section=budgets" className="text-[13px] font-semibold text-ink-2 hover:text-ink whitespace-nowrap">
+                Budgets →
+              </Link>
+              <PeriodSelector value={period} onChange={choosePeriod} />
+            </div>
+          }
         >
           <div className={TILES}>
             <Tile

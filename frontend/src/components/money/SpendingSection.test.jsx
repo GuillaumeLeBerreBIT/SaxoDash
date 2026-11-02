@@ -158,4 +158,10 @@ describe('SpendingSection', () => {
       screen.getByRole('tooltip'),
     ).toHaveTextContent('Money moved between your own accounts. It is left out of the totals above.')
   })
+
+  it('links to the budgets section', () => {
+    mockDefaults()
+    renderWithProviders(<SpendingSection />, { route: '/money?section=spending&period=3m' })
+    expect(screen.getByRole('link', { name: 'Budgets →' })).toHaveAttribute('href', '/money?section=budgets')
+  })
 })

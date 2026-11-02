@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { connectEnableBanking } from '../api/client'
 import { useEnableBankingStatus } from '../api/queries'
 import { bankSyncBadge } from '../lib/bankSync'
@@ -49,16 +50,22 @@ function OneBank({ bank, state, failed }) {
 
 export default function EnableBankingConnectionStatus() {
   const { data: status } = useEnableBankingStatus()
-  const [failedBank] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    return params.get('enablebanking') === 'error' ? params.get('bank') : null
-  })
+  const [params, setParams] = useSearchParams()
+  const [failedBank] = useState(() => (params.get('enablebanking') === 'error' ? params.get('bank') : null))
+  const hasErrorParams = params.has('enablebanking') || params.has('bank')
 
   useEffect(() => {
-    if (failedBank) {
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-  }, [failedBank])
+    if (!hasErrorParams) return
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current)
+        next.delete('enablebanking')
+        next.delete('bank')
+        return next
+      },
+      { replace: true },
+    )
+  }, [hasErrorParams, setParams])
 
   if (!status) return null
 
