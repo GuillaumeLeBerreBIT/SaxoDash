@@ -9,9 +9,9 @@ export default function ScanProgress({ progress, now }) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex flex-wrap justify-between gap-x-3 text-[var(--fig-xs)] text-zinc-400 num">
+      <div className="num flex flex-wrap justify-between gap-x-3 text-[12px] text-ink-2">
         <span>{label}</span>
-        {eta ? <span className="text-zinc-500">{eta}</span> : null}
+        {eta ? <span className="text-ink-3">{eta}</span> : null}
       </div>
       <div
         role="progressbar"
@@ -19,11 +19,11 @@ export default function ScanProgress({ progress, now }) {
         aria-valuemin={known ? 0 : undefined}
         aria-valuemax={known ? progress.total : undefined}
         aria-valuenow={known ? progress.done : undefined}
-        className="h-1 w-full overflow-hidden rounded-full bg-zinc-800"
+        className="h-1 w-full overflow-hidden rounded-full bg-track"
       >
         <div
           data-testid="scan-progress-fill"
-          className={`h-full rounded-full bg-blue-500 transition-[width] duration-500 ${known ? '' : 'animate-pulse'}`}
+          className={`h-full rounded-full bg-accent transition-[width] duration-500 ${known ? '' : 'animate-pulse'}`}
           style={{ width }}
         />
       </div>

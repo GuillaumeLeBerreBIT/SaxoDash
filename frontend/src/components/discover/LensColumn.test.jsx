@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 import LensColumn from './LensColumn'
@@ -59,5 +59,18 @@ describe('LensColumn', () => {
   it('keeps the jump target id of the lens', () => {
     renderColumn(shelf(1, 1))
     expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
+  })
+
+  it('falls back to round initials when a logo cannot load', () => {
+    const { container } = renderColumn(shelf(1, 1))
+    fireEvent.error(container.querySelector('img'))
+    expect(container.querySelector('li .rounded-full.bg-pill')).not.toBeNull()
+  })
+
+  it('points See all at the shelf page with an arrow', () => {
+    renderColumn(shelf(12, 12))
+    const link = screen.getByRole('link', { name: 'See all 12' })
+    expect(link).toHaveAttribute('href', '/discover/overbought')
+    expect(link).toHaveTextContent('See all 12 →')
   })
 })

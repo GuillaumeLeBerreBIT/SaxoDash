@@ -50,10 +50,10 @@ describe('DiscoverCard', () => {
     expect(reasons.className).not.toMatch(/text-blue/)
   })
 
-  it('falls back to the ticker initial when the logo cannot load', () => {
+  it('falls back to round initials when the logo cannot load', () => {
     const { container } = renderCard()
     fireEvent.error(container.querySelector('img'))
-    expect(screen.getByText('A')).toBeInTheDocument()
+    expect(screen.getByText('AA')).toHaveClass('rounded-full')
   })
 
   it('names the period its sparkline covers', () => {

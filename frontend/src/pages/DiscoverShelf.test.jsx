@@ -22,7 +22,8 @@ const shelf = {
   }],
 }
 
-vi.mock('../api/queries', () => ({ useDiscoverShelf: () => ({ data: shelf, isLoading: false, error: null }) }))
+let served = shelf
+vi.mock('../api/queries', () => ({ useDiscoverShelf: () => ({ data: served, isLoading: false, error: null }) }))
 const toggleList = vi.fn()
 vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [{ id: 1, name: 'Ideas', items: [] }], toggleList }),
@@ -97,5 +98,33 @@ describe('DiscoverShelf', () => {
     await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Ideas/ }))
     expect(toggleList).toHaveBeenCalledWith({ id: 1, name: 'Ideas', items: [] })
     expect(screen.queryByText('Research page')).not.toBeInTheDocument()
+  })
+
+  it('shelf sector chips filter rows', async () => {
+    const stock = (ticker, sector) => ({ ...shelf.items[0], ticker, name: ticker, uic: ticker.charCodeAt(0), sector })
+    served = { ...shelf, total: 3, items: [stock('FICO', 'Technology'), stock('MSFT', 'Technology'), stock('JPM', 'Financials')] }
+    try {
+      renderPage()
+      expect(screen.getByRole('button', { name: 'All sectors 3' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('button', { name: 'Technology 2' })).toBeInTheDocument()
+      await userEvent.click(screen.getByRole('button', { name: 'Financials 1' }))
+      expect(screen.getByRole('button', { name: 'Financials 1' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByRole('link', { name: /^JPM/ })).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: /^FICO/ })).toBeNull()
+      await userEvent.click(screen.getByRole('button', { name: 'All sectors 3' }))
+      expect(screen.getByRole('link', { name: /^FICO/ })).toBeInTheDocument()
+    } finally {
+      served = shelf
+    }
+  })
+
+  it('offers no sector chips when no stock names a sector', () => {
+    renderPage()
+    expect(screen.queryByRole('button', { name: /All sectors/ })).toBeNull()
+  })
+
+  it('titles the page with the shelf name as the one h1', () => {
+    renderPage()
+    expect(screen.getByRole('heading', { level: 1, name: shelf.title })).toBeInTheDocument()
   })
 })

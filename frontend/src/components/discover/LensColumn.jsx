@@ -2,17 +2,18 @@ import { Link } from 'react-router-dom'
 
 import { COMPACT_ROWS, leadReason, reasonParts } from '../../lib/discover'
 import { researchHref } from '../../lib/research'
-import { Card, DayChange, EmptyState, InstrumentLogo, LetterAvatar } from '../ui'
+import { Card, DayChange, EmptyState, InstrumentLogo, Tag } from '../ui'
 import ShelfHeader from './ShelfHeader'
+import Sparkline from './Sparkline'
 
 function LeadReason({ reason }) {
   if (!reason) return null
   const { label, value } = reasonParts(reason)
   return (
-    <span className="ml-auto flex min-w-0 items-baseline justify-end gap-1 text-[var(--fig-xs)]">
-      <span title={label} className="min-w-0 truncate text-zinc-500">{label}</span>{' '}
-      <span className="num shrink-0 whitespace-nowrap font-mono text-zinc-200">{value}</span>
-    </span>
+    <Tag tone="neutral" className="ml-auto min-w-0 shrink-0 gap-1">
+      <span title={label} className="min-w-0 truncate">{label}</span>{' '}
+      <span className="num whitespace-nowrap">{value}</span>
+    </Tag>
   )
 }
 
@@ -26,14 +27,17 @@ export default function LensColumn({ shelf }) {
       ) : (
         <ul aria-label={`${shelf.title} stocks`}>
           {rows.map((item) => (
-            <li key={`${item.uic}:${item.asset_type}`} className="border-t border-white/[0.04] first:border-t-0">
+            <li key={`${item.uic}:${item.asset_type}`} className="border-t border-line first:border-t-0">
               <Link
                 to={researchHref(item.ticker, 'overview', { uic: item.uic, assetType: item.asset_type })}
-                className="flex min-w-0 items-center gap-2 py-2 rounded hover:bg-white/[0.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+                className="flex min-w-0 items-center gap-2 py-2 rounded hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
               >
-                <InstrumentLogo symbol={item.ticker} size={16} className="rounded" fallback={<LetterAvatar symbol={item.ticker} size={16} />} />
-                <span className="w-14 shrink-0 text-[var(--fig-sm)] font-semibold text-zinc-100">{item.ticker}</span>
-                <DayChange value={item.change_1d} className="shrink-0 text-[var(--fig-xs)]" />
+                <InstrumentLogo symbol={item.ticker} size={20} />
+                <span className="w-14 shrink-0 text-[13.5px] font-semibold text-ink">{item.ticker}</span>
+                <span className="hidden w-16 shrink-0 sm:block">
+                  <Sparkline values={item.sparkline} height={20} />
+                </span>
+                <DayChange value={item.change_1d} className="shrink-0 text-[12px]" />
                 <LeadReason reason={leadReason(item, shelf.sort)} />
               </Link>
             </li>

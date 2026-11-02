@@ -217,4 +217,26 @@ describe('Discover page', () => {
     renderPage()
     expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
   })
+
+  it('puts the scan status, the stale reason and Refresh in the lens panel', () => {
+    useDiscover.mockReturnValue({ data: {
+      as_of: '2026-10-20T12:00:00Z',
+      health: { state: 'stale', last_ok_at: '2026-10-20T12:00:00Z', issue: 'Saxo needs re-authentication', progress: null },
+      groups, shelves: [shelf('overbought', 'Overbought', 7, [card])],
+    } })
+    renderPage()
+    const panel = screen.getByRole('region', { name: 'Lenses' })
+    expect(within(panel).getByRole('status')).toHaveTextContent('No fresh scan since 20 Oct. Last attempt: Saxo needs re-authentication')
+    expect(within(panel).getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
+    expect(within(panel).getByRole('navigation', { name: 'Lenses' })).toBeInTheDocument()
+  })
+
+  it('lists five rows per shelf panel in compact view with See all N', () => {
+    localStorage.setItem('saxodash:discover-view', 'compact')
+    const items = Array.from({ length: 8 }, (_, i) => ({ ...card, ticker: `S${i}`, uic: i + 10 }))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 8, items)] } })
+    renderPage()
+    expect(within(screen.getByRole('list', { name: 'Overbought stocks' })).getAllByRole('listitem')).toHaveLength(5)
+    expect(screen.getByRole('link', { name: 'See all 8' })).toHaveTextContent('See all 8 →')
+  })
 })
