@@ -7,6 +7,7 @@
 
 import { moveLabel } from './pricing'
 import { surpriseSign } from './charts'
+import { earningsMove } from './reaction'
 
 /** A range and how many bars it spans, in one place.
  *
@@ -245,15 +246,16 @@ export function chartHref(symbol, instrument) {
 /** Past earnings dates mapped onto the currently-loaded bars, for the
  *  price-chart markers. A history date absent from `bars` (a provider date
  *  landing on a non-trading day) is skipped, not fuzzy-matched. */
-export function earningsMarkersForBars(bars = [], history = [], { upcoming = [], futureDates = [] } = {}) {
+export function earningsMarkersForBars(bars = [], history = [], { upcoming = [], futureDates = [], closes = bars } = {}) {
   const indexByDate = new Map(bars.map((b, i) => [b.date, i]))
   const markers = []
   for (const e of history) {
-    const index = indexByDate.get(e.date)
+    const index = e.reported_on ? indexByDate.get(e.reported_on) : null
     if (index == null) continue
     markers.push({
-      index, date: e.date, sign: surpriseSign(e.eps_surprise_pct),
+      index, date: e.reported_on, session: e.session, sign: surpriseSign(e.eps_surprise_pct),
       actual: e.eps_actual, estimate: e.eps_estimate, surprise: e.eps_surprise_pct,
+      move: earningsMove(e.reported_on, e.session, closes),
     })
   }
   futureDates.forEach((date, i) => indexByDate.set(date, bars.length + i))

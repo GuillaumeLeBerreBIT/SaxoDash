@@ -82,7 +82,10 @@ const badge = (container, words) =>
     node.getAttribute('aria-label').includes(words),
   )
 
-const beat = { index: 10, date: bars[10].date, sign: 1, actual: 1.1, estimate: 1.0, surprise: 10 }
+const beat = {
+  index: 10, date: bars[10].date, session: 'amc', sign: 1, actual: 1.1, estimate: 1.0, surprise: 10,
+  move: { pct: 6.4, basis: '1d' },
+}
 const miss = { index: 20, date: bars[20].date, sign: -1, actual: 0.9, estimate: 1.0, surprise: -10 }
 const next = { index: 35, date: '2026-09-04', upcoming: true, estimate: 1.23, session: 'amc' }
 
@@ -132,6 +135,8 @@ describe('earnings badges', () => {
     expect(card.textContent).toContain('beat')
     expect(card.textContent).toContain('1.10')
     expect(card.textContent).toContain('▲ +10.0%')
+    expect(card.textContent).toContain('After close')
+    expect(card.textContent).toContain('Move, next session▲ +6.4%')
 
     fireEvent.mouseLeave(badge(container, 'beat'))
     expect(screen.queryByTestId('earnings-card')).toBeNull()
@@ -144,6 +149,24 @@ describe('earnings badges', () => {
     const card = screen.getByTestId('earnings-card')
     expect(card.textContent).toContain('After close')
     expect(card.textContent).toContain('1.23')
+  })
+})
+
+describe('earnings card', () => {
+  it('shows a dash for a move the bars cannot measure yet', () => {
+    const { container } = renderChart({ earningsMarkers: [{ ...miss, session: 'bmo', move: null }] })
+
+    fireEvent.mouseEnter(badge(container, 'missed'))
+    expect(screen.getByTestId('earnings-card').textContent).toContain('Move, on the day—')
+  })
+
+  it('names a move with no known session as spanning two sessions', () => {
+    const { container } = renderChart({
+      earningsMarkers: [{ ...miss, session: null, move: { pct: -3.2, basis: '2d' } }],
+    })
+
+    fireEvent.mouseEnter(badge(container, 'missed'))
+    expect(screen.getByTestId('earnings-card').textContent).toContain('Move, 2 sessions▼ -3.2%')
   })
 })
 

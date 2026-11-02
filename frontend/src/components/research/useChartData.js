@@ -80,9 +80,13 @@ export function useChartData({
   const earningsMarkers = useMemo(
     () => {
       const known = earnings.data?.available ? earnings.data : null
-      return earningsMarkersForBars(bars, known?.history ?? [], { upcoming: known?.upcoming ?? [], futureDates })
+      return earningsMarkersForBars(bars, known?.history ?? [], {
+        upcoming: known?.upcoming ?? [],
+        futureDates,
+        closes: allBars,
+      })
     },
-    [bars, earnings.data, futureDates],
+    [bars, allBars, earnings.data, futureDates],
   )
   const liveQuotes = useQuotes(uic ? [uic] : [], assetType)
 

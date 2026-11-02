@@ -1,0 +1,76 @@
+{
+ "closes": [
+  {
+   "date": "2026-10-15",
+   "close": 100.0
+  },
+  {
+   "date": "2026-10-16",
+   "close": 110.0
+  },
+  {
+   "date": "2026-10-19",
+   "close": 99.0
+  },
+  {
+   "date": "2026-10-20",
+   "close": 121.0
+  }
+ ],
+ "cases": [
+  {
+   "date": "2026-10-16",
+   "session": "bmo",
+   "pct": 10.0,
+   "basis": "1d"
+  },
+  {
+   "date": "2026-10-16",
+   "session": "dmh",
+   "pct": 10.0,
+   "basis": "1d"
+  },
+  {
+   "date": "2026-10-19",
+   "session": "amc",
+   "pct": 22.22,
+   "basis": "1d"
+  },
+  {
+   "date": "2026-10-16",
+   "session": "amc",
+   "pct": -10.0,
+   "basis": "1d"
+  },
+  {
+   "date": "2026-10-16",
+   "session": null,
+   "pct": -1.0,
+   "basis": "2d"
+  },
+  {
+   "date": "2026-10-17",
+   "session": "amc",
+   "pct": null,
+   "basis": null
+  },
+  {
+   "date": "2026-10-20",
+   "session": "amc",
+   "pct": null,
+   "basis": null
+  },
+  {
+   "date": "2026-10-17",
+   "session": "bmo",
+   "pct": null,
+   "basis": null
+  },
+  {
+   "date": "2026-10-15",
+   "session": "bmo",
+   "pct": null,
+   "basis": null
+  }
+ ]
+}

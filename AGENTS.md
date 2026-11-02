@@ -354,8 +354,22 @@ linked pane follows the margin too. Earnings reports are "E" badges in a 24px la
 the candles (only when there is one to show), with a faint guide line up through the
 price: green beat, red missed, grey in line, and the next report dashed in the earnings
 colour inside the margin. Never arrows, which read as trade signals. Hovering or
-focusing a badge shows EPS, estimate and surprise; no price reaction, because
-`research/reaction.py` is the only definition of a move and the chart does not ask it.
+focusing a badge shows the session, EPS, estimate, surprise and the price move.
+
+**A badge sits on the day the company reported, which Finnhub does not know.** Finnhub's
+`/stock/earnings` `period` is the calendar quarter end, not the report day, and for an
+off-calendar fiscal year (NVDA) the quarter it names ended weeks earlier; its calendar
+endpoint keeps only about a month of history. `research/report_dates.py` reads the
+company's own EDGAR submissions instead: an 8-K carrying Item 2.02 (results of
+operations) is a release, its acceptance time in New York gives the session, and each
+10-Q/10-K `reportDate` is a real fiscal quarter end. A quarter takes the first release
+after its fiscal end (or, before its 10-Q is filed, the first after the previous
+quarter's release), within 100 days. `symbol_earnings` adds `reported_on` and `session`
+to each history row; when EDGAR is unreachable the rows are undated and the answer is
+cached for ten minutes. A quarter without a report day gets no badge rather than one on
+the wrong candle, so a foreign filer (6-Ks carry no item numbers; NBIS) shows none. The
+move is `lib/reaction.js::earningsMove` over every fetched bar, the twin of
+`research/reaction.py`, pinned to it by the shared `lib/fixtures/reaction-parity.json`.
 
 **The active chart pane is the URL.** `/research/chart` shows up to four panes
 (`lib/chartLayouts.js`), saved per browser under `saxodash:chart-workspace`. The

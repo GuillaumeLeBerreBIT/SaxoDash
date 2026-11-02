@@ -8,7 +8,7 @@ held/watched tagging and the rest of the per-request enrichment live in
 import logging
 from datetime import date, timedelta
 
-from . import calendar_enrichment, finnhub
+from . import calendar_enrichment, finnhub, report_dates
 from .provider_cache import cached
 from .providers import ProviderUnavailable
 
@@ -21,7 +21,8 @@ UPCOMING_AHEAD = timedelta(days=300)
 # an entry an old build wrote (a shape mismatch here was a 500, not just
 # staleness). Old entries expire on their own TTL.
 CACHE_V = 'v4'
-SYMBOL_CACHE_V = 'v6'
+SYMBOL_CACHE_V = 'v7'
+UNDATED_TTL = 600
 
 # The week-nav arrows page one calendar week at a time; clamp how far.
 MIN_WEEK, MAX_WEEK = -8, 12
@@ -250,11 +251,18 @@ def symbol_earnings(symbol):
     def produce():
         history = _eps_history(symbol)
         upcoming = _upcoming(symbol, today)
+        ttl = finnhub.EARNINGS_TTL
+        try:
+            reports = report_dates.company_reports(symbol)
+        except report_dates.SecUnavailable as exc:
+            logger.warning('Report dates for %s unavailable: %s', symbol, exc)
+            reports, ttl = report_dates.NO_REPORTS, UNDATED_TTL
+        report_dates.attach(history, reports)
         return {
             'history': history,
             'next': upcoming[0] if upcoming else None,
             'upcoming': upcoming,
             'score': _score(history),
-        }
+        }, ttl
 
-    return {'available': True, **cached(key, lambda: (produce(), finnhub.EARNINGS_TTL))}
+    return {'available': True, **cached(key, produce)}
