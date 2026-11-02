@@ -1,6 +1,12 @@
+import json
+from pathlib import Path
+
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from . import reaction
+
+FIXTURE = Path(settings.BASE_DIR).parent / 'frontend' / 'src' / 'lib' / 'fixtures' / 'reaction-parity.json'
 
 CLOSES = [
     {'date': '2026-10-15', 'close': 100.0},
@@ -45,3 +51,14 @@ class MoveTest(SimpleTestCase):
     def test_bmo_today_uses_the_forming_bar(self):
         closes = [{'date': '2026-10-19', 'close': 100.0}, {'date': '2026-10-20', 'close': 103.0}]
         self.assertEqual(reaction.move('2026-10-20', 'bmo', closes), (3.0, '1d'))
+
+
+class ParityTest(SimpleTestCase):
+    def test_matches_the_chart_badges_shared_fixture(self):
+        fixture = json.loads(FIXTURE.read_text())
+        for case in fixture['cases']:
+            with self.subTest(date=case['date'], session=case['session']):
+                self.assertEqual(
+                    reaction.move(case['date'], case['session'], fixture['closes']),
+                    (case['pct'], case['basis']),
+                )

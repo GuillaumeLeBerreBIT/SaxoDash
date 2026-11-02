@@ -195,10 +195,15 @@ function CardRow({ label, children, className = 'text-ink' }) {
   )
 }
 
-function surpriseText(surprise) {
-  if (surprise == null) return fmtPct(null)
-  const arrow = surprise > 0 ? '▲' : surprise < 0 ? '▼' : ''
-  return `${arrow} ${fmtPct(surprise, { decimals: 1 })}`.trim()
+function signedPct(value) {
+  if (value == null) return fmtPct(null)
+  const arrow = value > 0 ? '▲' : value < 0 ? '▼' : ''
+  return `${arrow} ${fmtPct(value, { decimals: 1 })}`.trim()
+}
+
+function moveLabel(marker) {
+  if (marker.move?.basis === '2d') return 'Move, 2 sessions'
+  return marker.session === 'amc' ? 'Move, next session' : 'Move, on the day'
 }
 
 export function EarningsCard({ marker, x, bottom, width }) {
@@ -224,10 +229,14 @@ export function EarningsCard({ marker, x, bottom, width }) {
           <p className={`font-semibold text-[12px] ${tone}`}>
             Earnings · {fmtDate(marker.date)} · {OUTCOME_WORDS[marker.sign + 1]}
           </p>
+          <CardRow label="Session">{sessionWords(marker.session)}</CardRow>
           <CardRow label="EPS actual">{fmtNum(marker.actual, 2)}</CardRow>
           <CardRow label="EPS estimate">{fmtNum(marker.estimate, 2)}</CardRow>
           <CardRow label="Surprise" className={pctToneClass(marker.surprise, 1, 'text-ink')}>
-            {surpriseText(marker.surprise)}
+            {signedPct(marker.surprise)}
+          </CardRow>
+          <CardRow label={moveLabel(marker)} className={pctToneClass(marker.move?.pct, 1, 'text-ink')}>
+            {signedPct(marker.move?.pct)}
           </CardRow>
         </>
       )}

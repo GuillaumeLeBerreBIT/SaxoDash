@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 
 from portfolio.models import Position
 
-from . import earnings, finnhub
+from . import earnings, finnhub, report_dates
 from .models import ScreenerRow, Watchlist, WatchlistItem
 from .providers import ProviderUnavailable
 
@@ -255,6 +255,33 @@ class SymbolEarningsTest(TestCase):
         self.assertEqual(result['score']['beats'], 1)
         self.assertEqual(result['score']['streak'], 1)  # latest quarter beat
 
+    @patch('research.earnings.report_dates.company_reports')
+    @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_each_quarter_carries_the_day_and_session_it_was_reported(self, mock_hist, mock_cal, mock_releases):
+        mock_hist.return_value = [{'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7}]
+        mock_releases.return_value = {
+            'releases': [{'date': date(2026, 7, 22), 'session': 'amc'}],
+            'fiscal_ends': [date(2026, 6, 30)],
+        }
+
+        row = earnings.symbol_earnings('AAPL')['history'][0]
+
+        self.assertEqual((row['date'], row['reported_on'], row['session']), ('2026-06-30', '2026-07-22', 'amc'))
+
+    @patch('research.earnings.report_dates.company_reports')
+    @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
+    @patch('research.earnings.finnhub.get_earnings_history')
+    def test_without_the_sec_the_quarters_are_undated_and_cached_briefly(self, mock_hist, mock_cal, mock_releases):
+        mock_hist.return_value = [{'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7}]
+        mock_releases.side_effect = report_dates.SecUnavailable('down')
+
+        with patch('research.provider_cache.cache', wraps=cache) as spy:
+            row = earnings.symbol_earnings('AAPL')['history'][0]
+
+        self.assertIsNone(row['reported_on'])
+        self.assertEqual(spy.set.call_args.args[2], earnings.UNDATED_TTL)
+
     @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
     @patch('research.earnings.finnhub.get_earnings_history', return_value=[])
     def test_next_is_none_when_nothing_is_scheduled(self, mock_hist, mock_cal):
@@ -287,7 +314,7 @@ class SymbolEarningsCacheKeyTest(TestCase):
         cache.clear()
 
     def test_the_symbol_key_carries_its_own_version_independent_of_the_week_calendar(self):
-        self.assertEqual(earnings.SYMBOL_CACHE_V, 'v6')
+        self.assertEqual(earnings.SYMBOL_CACHE_V, 'v7')
         self.assertNotEqual(earnings.CACHE_V, earnings.SYMBOL_CACHE_V)
         with patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []}):
             with patch('research.earnings.finnhub.get_earnings_history', return_value=[]):

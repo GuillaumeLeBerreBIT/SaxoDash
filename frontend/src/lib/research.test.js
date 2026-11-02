@@ -328,16 +328,36 @@ describe('earningsMarkersForBars', () => {
     { date: '2026-08-01', close: 10 }, { date: '2026-08-02', close: 11 }, { date: '2026-08-03', close: 12 },
   ]
 
-  it('maps a history row onto its matching bar index and beat/miss sign', () => {
+  it('places a quarter on the day it was reported, with its outcome and price move', () => {
     const markers = earningsMarkersForBars(testBars, [
-      { date: '2026-08-02', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
+      {
+        date: '2026-06-30', reported_on: '2026-08-02', session: 'bmo',
+        eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10,
+      },
     ])
-    expect(markers).toEqual([{ index: 1, date: '2026-08-02', sign: 1, actual: 1.1, estimate: 1.0, surprise: 10 }])
+    expect(markers).toEqual([{
+      index: 1, date: '2026-08-02', session: 'bmo', sign: 1, actual: 1.1, estimate: 1.0, surprise: 10,
+      move: { pct: 10, basis: '1d' },
+    }])
   })
 
-  it('skips a history date absent from the bars', () => {
+  it('measures the move over every fetched bar, not only the visible ones', () => {
+    const [marker] = earningsMarkersForBars(testBars.slice(0, 2), [
+      { date: '2026-06-30', reported_on: '2026-08-02', session: 'amc', eps_surprise_pct: 1 },
+    ], { closes: testBars })
+    expect(marker.move).toEqual({ pct: 9.09, basis: '1d' })
+  })
+
+  it('leaves out a quarter whose report day is unknown', () => {
     const markers = earningsMarkersForBars(testBars, [
-      { date: '2026-09-01', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
+      { date: '2026-08-02', reported_on: null, eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
+    ])
+    expect(markers).toEqual([])
+  })
+
+  it('skips a report day absent from the bars', () => {
+    const markers = earningsMarkersForBars(testBars, [
+      { date: '2026-06-30', reported_on: '2026-09-01', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
     ])
     expect(markers).toEqual([])
   })
