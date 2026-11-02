@@ -236,4 +236,37 @@ describe('WatchlistRail', () => {
     render({ gridView: true })
     expect(screen.getByText(/by move/)).toBeInTheDocument()
   })
+
+  it('offers no collapse control unless asked to', () => {
+    render()
+    expect(screen.queryByRole('button', { name: /watchlist/i })).not.toBeInTheDocument()
+  })
+
+  it('folds the list away and back from the chevron', async () => {
+    const user = userEvent.setup()
+    render({ collapsible: true })
+
+    const toggle = screen.getByRole('button', { name: 'Collapse watchlist' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(toggle)
+    const expand = screen.getByRole('button', { name: 'Expand watchlist' })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    expect(document.getElementById(expand.getAttribute('aria-controls'))).toHaveAttribute('inert')
+
+    await user.click(expand)
+    expect(screen.getByRole('button', { name: 'Collapse watchlist' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('remembers that the list was folded away', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render({ collapsible: true })
+
+    await user.click(screen.getByRole('button', { name: 'Collapse watchlist' }))
+    expect(localStorage.getItem('saxodash:watchlist-collapsed')).toBe('true')
+
+    unmount()
+    render({ collapsible: true })
+    expect(screen.getByRole('button', { name: 'Expand watchlist' })).toBeInTheDocument()
+  })
 })
