@@ -137,12 +137,12 @@ describe('ChartPane', () => {
 
   it('reports the dates it is showing', () => {
     renderPane()
-    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-01', to: '2026-08-30' })
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-01', to: '2026-08-30', pad: 10 })
   })
 
   it('shows the followed window and reports it', () => {
     renderPane({ view: { ...view, followDates: { from: '2026-08-05', to: '2026-08-14' } } })
-    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-05', to: '2026-08-14' })
+    expect(view.reportWindow).toHaveBeenLastCalledWith({ from: '2026-08-05', to: '2026-08-14', pad: 0 })
     expect(view.commitTimeView).not.toHaveBeenCalled()
   })
 

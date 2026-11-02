@@ -332,7 +332,7 @@ describe('earningsMarkersForBars', () => {
     const markers = earningsMarkersForBars(testBars, [
       { date: '2026-08-02', eps_actual: 1.1, eps_estimate: 1.0, eps_surprise_pct: 10 },
     ])
-    expect(markers).toEqual([{ index: 1, date: '2026-08-02', sign: 1, actual: 1.1, estimate: 1.0 }])
+    expect(markers).toEqual([{ index: 1, date: '2026-08-02', sign: 1, actual: 1.1, estimate: 1.0, surprise: 10 }])
   })
 
   it('skips a history date absent from the bars', () => {
@@ -344,6 +344,34 @@ describe('earningsMarkersForBars', () => {
 
   it('is empty with no history', () => {
     expect(earningsMarkersForBars(testBars, [])).toEqual([])
+  })
+
+  it('places an upcoming report on its future slot after the last bar', () => {
+    const markers = earningsMarkersForBars(testBars, [], {
+      upcoming: [{ date: '2026-08-05', eps_estimate: 1.2, session: 'amc' }],
+      futureDates: ['2026-08-04', '2026-08-05'],
+    })
+    expect(markers).toEqual([
+      { index: 4, date: '2026-08-05', upcoming: true, estimate: 1.2, session: 'amc' },
+    ])
+  })
+
+  it('places an upcoming report due today on today\'s bar', () => {
+    const markers = earningsMarkersForBars(testBars, [], {
+      upcoming: [{ date: '2026-08-03', eps_estimate: null, session: null }],
+      futureDates: ['2026-08-04'],
+    })
+    expect(markers).toEqual([
+      { index: 2, date: '2026-08-03', upcoming: true, estimate: null, session: null },
+    ])
+  })
+
+  it('leaves out an upcoming report beyond the visible slots', () => {
+    const markers = earningsMarkersForBars(testBars, [], {
+      upcoming: [{ date: '2026-09-30', eps_estimate: 1.2, session: 'bmo' }],
+      futureDates: ['2026-08-04'],
+    })
+    expect(markers).toEqual([])
   })
 })
 

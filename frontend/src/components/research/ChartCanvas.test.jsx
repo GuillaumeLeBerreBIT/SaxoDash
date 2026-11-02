@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { ApiError } from '../../api/client'
 import { fmtDate } from '../../lib/format'
 import { computeIndicators } from '../../lib/indicators'
-import { LATEST_TIME_VIEW, resolveTimeWindow } from '../../lib/timeWindow'
+import { LATEST_TIME_VIEW, resolveTimeWindow, rightMargin, slotsForBars } from '../../lib/timeWindow'
 import ChartCanvas from './ChartCanvas'
 
 const bars = Array.from({ length: 30 }, (_, i) => ({
@@ -111,22 +111,22 @@ describe('ChartCanvas panning and zoom', () => {
     expect(next()).toEqual({ offset: 0, barCount: Math.round(30 / Math.E) })
   })
 
-  it('shows more bars when the time axis is dragged left, never more than were fetched', () => {
+  it('shows more bars when the time axis is dragged left, never more than were fetched plus the margin', () => {
     const { next } = setup()
 
     drag(timeAxis(), -600)
 
-    expect(next()).toEqual({ offset: 0, barCount: 40 })
+    expect(next()).toEqual({ offset: 0, barCount: slotsForBars(40) })
   })
 
   it('keeps a panned view inside the history when zooming out', () => {
-    const view = { offset: 10, barCount: 30 }
+    const view = { offset: 16, barCount: 30 }
     const { next } = setup({ view })
 
     drag(timeAxis(), -30)
 
     const count = Math.round(30 * Math.exp(0.2))
-    expect(next(view)).toEqual({ offset: 40 - count, barCount: count })
+    expect(next(view)).toEqual({ offset: 40 + rightMargin(count) - count, barCount: count })
   })
 
   it('pans from where the window really is, even if the stored offset ran past the history', () => {
@@ -135,7 +135,7 @@ describe('ChartCanvas panning and zoom', () => {
 
     drag(plot(), -3 * ((760 - 62) / 30))
 
-    expect(next(view).offset).toBe(7)
+    expect(next(view).offset).toBe(40 + rightMargin(30) - 30 - 3)
   })
 
   it('returns to the range and the latest bars on a double-click of the time axis', () => {

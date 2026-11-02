@@ -14,6 +14,8 @@ function valueAt(series, hover) {
   return series[hover ?? series.length - 1]
 }
 
+const NO_DATES = []
+
 const WIDEST_BAR = { date: '0000-00-00', open: 99999.99, high: 99999.99, low: 99999.99, close: 99999.99, volume: 99999.9e6 }
 const WIDEST_VALUE = 99999.99
 const WIDEST_CHANGE = -999.99
@@ -78,6 +80,7 @@ export default function ChartCanvas({
   error,
   unresolved,
   earningsMarkers = [],
+  futureDates = NO_DATES,
   lines,
   onMoveLine,
   onCreateLine,
@@ -114,6 +117,7 @@ export default function ChartCanvas({
       }
     : undefined
   const bar = bars[hover ?? bars.length - 1]
+  const slots = bars.length + futureDates.length
   const [legendRef, legendSize] = useSize()
 
   const layout = { total: fitHeight, legendHeight: legendSize.height, panes, paneHeights }
@@ -168,6 +172,7 @@ export default function ChartCanvas({
             hoverDimmed={hoverDimmed}
             height={resolvedPriceHeight}
             earningsMarkers={earningsMarkers}
+            slots={slots}
             yScale={yScale}
             onYScaleChange={setYScale}
             onPriceScaleReset={resetPriceScale}
@@ -195,20 +200,20 @@ export default function ChartCanvas({
           />
           {shownPanes.volume ? (
             <SubPane title="Volume" height={paneHeights.volume}>
-              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
+              <VolumePane data={bars} rvol={ind.rvol} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} slots={slots} />
             </SubPane>
           ) : null}
           {shownPanes.rsi ? (
             <SubPane title={`RSI 14 ${fmtNum(valueAt(ind.rsi, hover) ?? 0, 1)}`} height={paneHeights.rsi}>
-              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
+              <RsiPane values={ind.rsi} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} slots={slots} />
             </SubPane>
           ) : null}
           {shownPanes.macd ? (
             <SubPane title="MACD 12 26 9" height={paneHeights.macd}>
-              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} />
+              <MacdPane macd={ind.macd} hover={hover} setHover={setHover} hoverDimmed={hoverDimmed} slots={slots} />
             </SubPane>
           ) : null}
-          <TimeAxis data={bars} onBarCountChange={zoomTime} onReset={resetTime} />
+          <TimeAxis data={bars} futureDates={futureDates} onBarCountChange={zoomTime} onReset={resetTime} />
         </div>
       )}
     </>

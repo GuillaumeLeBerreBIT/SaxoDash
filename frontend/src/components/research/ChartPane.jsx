@@ -56,6 +56,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
     timeWindow,
     timeView,
     earningsMarkers,
+    futureDates,
     priceLines,
     trendLines,
     trendLineActions,
@@ -117,6 +118,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           error={chart.error}
           unresolved={!instrument && !chart.isLoading}
           earningsMarkers={earningsMarkers}
+          futureDates={futureDates}
           lines={priceLines.lines}
           onMoveLine={priceLines.move}
           onCreateLine={priceLines.create}

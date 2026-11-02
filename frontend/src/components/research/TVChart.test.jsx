@@ -77,24 +77,83 @@ describe('TVChart', () => {
   })
 })
 
-describe('earnings markers', () => {
-  it('draws a beat marker in the beat colour', () => {
-    const { container } = renderChart({
-      earningsMarkers: [{ index: 10, date: bars[10].date, sign: 1, actual: 1.1, estimate: 1.0 }],
-    })
-    expect(container.querySelector(`polygon[fill="${c.up}"]`)).not.toBeNull()
+const badge = (container, words) =>
+  [...container.querySelectorAll('[data-testid="earnings-badge"]')].find((node) =>
+    node.getAttribute('aria-label').includes(words),
+  )
+
+const beat = { index: 10, date: bars[10].date, sign: 1, actual: 1.1, estimate: 1.0, surprise: 10 }
+const miss = { index: 20, date: bars[20].date, sign: -1, actual: 0.9, estimate: 1.0, surprise: -10 }
+const next = { index: 35, date: '2026-09-04', upcoming: true, estimate: 1.23, session: 'amc' }
+
+describe('earnings badges', () => {
+  it('labels a past report with an E in its outcome colour', () => {
+    const { container } = renderChart({ earningsMarkers: [beat, miss] })
+
+    const beatBadge = badge(container, 'beat')
+    expect(beatBadge.getAttribute('aria-label')).toMatch(/^Earnings .*EPS 1\.10 vs est 1\.00/)
+    expect(beatBadge.querySelector('text').textContent).toBe('E')
+    expect(beatBadge.querySelector('rect').getAttribute('stroke')).toBe(c.up)
+    expect(badge(container, 'missed').querySelector('rect').getAttribute('stroke')).toBe(c.down)
   })
 
-  it('draws a miss marker in the miss colour', () => {
-    const { container } = renderChart({
-      earningsMarkers: [{ index: 10, date: bars[10].date, sign: -1, actual: 0.9, estimate: 1.0 }],
-    })
-    expect(container.querySelector(`polygon[fill="${c.down}"]`)).not.toBeNull()
+  it('draws the next report dashed in the earnings colour', () => {
+    const { container } = renderChart({ slots: 40, earningsMarkers: [next] })
+
+    const nextBadge = badge(container, 'Next earnings')
+    expect(nextBadge.getAttribute('aria-label')).toMatch(/After close · est EPS 1\.23$/)
+    expect(nextBadge.querySelector('rect').getAttribute('stroke')).toBe(c.earn)
+    expect(nextBadge.querySelector('rect').getAttribute('stroke-dasharray')).not.toBeNull()
   })
 
-  it('renders none when no markers are given', () => {
+  it('puts the badges in a lane under the candles, with a guide line up through them', () => {
+    const { container } = renderChart({ earningsMarkers: [beat] })
+    const geometry = priceGeometry({ data: bars, ind: null, width: 760, height: 360, lane: 24 })
+    const floor = 10 + geometry.chartH
+
+    const rect = badge(container, 'beat').querySelector('rect')
+    expect(Number(rect.getAttribute('y'))).toBeGreaterThanOrEqual(floor)
+    const guide = container.querySelector('[data-testid="earnings-guide"]')
+    expect(Number(guide.getAttribute('y2'))).toBe(floor)
+  })
+
+  it('keeps the full price height when there is nothing to badge', () => {
     const { container } = renderChart()
-    expect(container.querySelector(`polygon[fill="${c.up}"], polygon[fill="${c.down}"], polygon[fill="${c.estimate}"]`)).toBeNull()
+
+    expect(container.querySelector('[data-testid="earnings-lane"]')).toBeNull()
+    expect(container.querySelector('[data-testid="earnings-badge"]')).toBeNull()
+  })
+
+  it('shows the report details while a badge is hovered', () => {
+    const { container } = renderChart({ earningsMarkers: [beat] })
+
+    fireEvent.mouseEnter(badge(container, 'beat'))
+    const card = screen.getByTestId('earnings-card')
+    expect(card.textContent).toContain('beat')
+    expect(card.textContent).toContain('1.10')
+    expect(card.textContent).toContain('▲ +10.0%')
+
+    fireEvent.mouseLeave(badge(container, 'beat'))
+    expect(screen.queryByTestId('earnings-card')).toBeNull()
+  })
+
+  it('shows the session and estimate for the next report on keyboard focus', () => {
+    const { container } = renderChart({ slots: 40, earningsMarkers: [next] })
+
+    fireEvent.focus(badge(container, 'Next earnings'))
+    const card = screen.getByTestId('earnings-card')
+    expect(card.textContent).toContain('After close')
+    expect(card.textContent).toContain('1.23')
+  })
+})
+
+describe('right margin', () => {
+  it('leaves the reserved future slots empty after the last candle', () => {
+    const { container } = renderChart({ slots: 40 })
+    const bodies = [...container.querySelectorAll(`rect[fill="${UP}"], rect[fill="${DOWN}"]`)]
+    const lastRight = Math.max(...bodies.map((r) => Number(r.getAttribute('x')) + Number(r.getAttribute('width'))))
+    const geometry = priceGeometry({ data: bars, ind: null, width: 760, height: 360, slots: 40 })
+    expect(lastRight).toBeLessThan(geometry.chartW * (31 / 40))
   })
 })
 

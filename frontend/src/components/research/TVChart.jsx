@@ -16,7 +16,8 @@ import {
   svgY,
   useWidth,
 } from '../../lib/chartGeometry'
-import { fmtDate } from '../../lib/format'
+import { daysUntil, sessionWords } from '../../lib/earnings'
+import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
@@ -102,28 +103,139 @@ function Bars({ data, geometry, colors }) {
   ))
 }
 
-function EarningsMarkers({ markers, geometry, colors }) {
-  const markerColor = [colors.down, colors.estimate, colors.up]
-  const { xAt, chartH } = geometry
-  const y = PAD_T + chartH - 6
+export const EARNINGS_LANE = 24
+const BADGE_SIZE = 15
+const OUTCOME_WORDS = ['missed', 'in line', 'beat']
+
+function badgeColor(marker, colors) {
+  if (marker.upcoming) return colors.earn
+  return [colors.down, colors.flat, colors.up][marker.sign + 1]
+}
+
+function earningsLabel(marker) {
+  if (marker.upcoming) {
+    const estimate = marker.estimate == null ? '' : ` · est EPS ${fmtNum(marker.estimate, 2)}`
+    return `Next earnings ${fmtDate(marker.date)} · ${sessionWords(marker.session)}${estimate}`
+  }
+  const figures = marker.actual == null ? '' : ` · EPS ${fmtNum(marker.actual, 2)} vs est ${fmtNum(marker.estimate, 2)}`
+  return `Earnings ${fmtDate(marker.date)} · ${OUTCOME_WORDS[marker.sign + 1]}${figures}`
+}
+
+function EarningsGuides({ markers, geometry, colors }) {
+  const floor = PAD_T + geometry.chartH
   return markers.map((marker) => {
-    const x = xAt(marker.index)
-    const title = marker.actual != null
-      ? `${fmtDate(marker.date)}: ${marker.actual} vs est ${marker.estimate}`
-      : fmtDate(marker.date)
+    const x = geometry.xAt(marker.index)
     return (
-      <polygon
-        key={marker.date}
-        points={`${x - 4},${y + 4} ${x + 4},${y + 4} ${x},${y - 4}`}
-        fill={markerColor[marker.sign + 1]}
-      >
-        <title>{title}</title>
-      </polygon>
+      <line
+        key={`${marker.upcoming ? 'next' : 'past'}-${marker.date}`}
+        data-testid="earnings-guide"
+        x1={x}
+        x2={x}
+        y1={PAD_T}
+        y2={floor}
+        stroke={badgeColor(marker, colors)}
+        strokeDasharray={marker.upcoming ? '2 3' : '2 4'}
+        opacity={marker.upcoming ? 0.6 : 0.5}
+        pointerEvents="none"
+      />
     )
   })
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, clipId, colors }) {
+function EarningsLane({ markers, geometry, colors, onInspect }) {
+  const floor = PAD_T + geometry.chartH
+  const top = floor + (EARNINGS_LANE - BADGE_SIZE) / 2
+  return (
+    <g data-no-pan data-testid="earnings-lane">
+      <line x1={0} x2={geometry.chartW} y1={floor} y2={floor} stroke={colors.grid} />
+      {markers.map((marker) => {
+        const x = geometry.xAt(marker.index)
+        const color = badgeColor(marker, colors)
+        const show = () => onInspect(marker)
+        const hide = () => onInspect(null)
+        return (
+          <g
+            key={`${marker.upcoming ? 'next' : 'past'}-${marker.date}`}
+            data-testid="earnings-badge"
+            role="img"
+            tabIndex={0}
+            aria-label={earningsLabel(marker)}
+            className="cursor-default outline-none"
+            onMouseEnter={show}
+            onMouseLeave={hide}
+            onFocus={show}
+            onBlur={hide}
+          >
+            <rect
+              x={x - BADGE_SIZE / 2}
+              y={top}
+              width={BADGE_SIZE}
+              height={BADGE_SIZE}
+              rx={3.5}
+              fill={marker.upcoming ? colors.earnSubtle : colors.pane}
+              stroke={color}
+              strokeDasharray={marker.upcoming ? '2 2' : undefined}
+            />
+            <text x={x} y={top + BADGE_SIZE / 2 + 3.5} fill={color} fontSize="10" fontWeight="700" textAnchor="middle">
+              E
+            </text>
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
+function CardRow({ label, children, className = 'text-ink' }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <span className="text-ink-3">{label}</span>
+      <span className={`num ${className}`}>{children}</span>
+    </div>
+  )
+}
+
+function surpriseText(surprise) {
+  if (surprise == null) return fmtPct(null)
+  const arrow = surprise > 0 ? '▲' : surprise < 0 ? '▼' : ''
+  return `${arrow} ${fmtPct(surprise, { decimals: 1 })}`.trim()
+}
+
+export function EarningsCard({ marker, x, bottom, width }) {
+  const cardWidth = 228
+  const left = Math.max(8, Math.min(width - PAD_R - cardWidth, x - cardWidth / 2))
+  const tone = marker.upcoming ? 'text-earn' : ['text-down', 'text-ink-2', 'text-up'][marker.sign + 1]
+  return (
+    <div
+      data-testid="earnings-card"
+      role="tooltip"
+      className="absolute z-20 pointer-events-none rounded-lg border border-line bg-raised px-3 py-2 text-[11.5px] leading-5 shadow-lg"
+      style={{ left, bottom, width: cardWidth }}
+    >
+      {marker.upcoming ? (
+        <>
+          <p className={`font-semibold text-[12px] ${tone}`}>Next earnings · {fmtDate(marker.date)}</p>
+          <CardRow label="Session">{sessionWords(marker.session)}</CardRow>
+          <CardRow label="EPS estimate">{fmtNum(marker.estimate, 2)}</CardRow>
+          <CardRow label="When">{daysUntil(marker.date)}</CardRow>
+        </>
+      ) : (
+        <>
+          <p className={`font-semibold text-[12px] ${tone}`}>
+            Earnings · {fmtDate(marker.date)} · {OUTCOME_WORDS[marker.sign + 1]}
+          </p>
+          <CardRow label="EPS actual">{fmtNum(marker.actual, 2)}</CardRow>
+          <CardRow label="EPS estimate">{fmtNum(marker.estimate, 2)}</CardRow>
+          <CardRow label="Surprise" className={pctToneClass(marker.surprise, 1, 'text-ink')}>
+            {surpriseText(marker.surprise)}
+          </CardRow>
+        </>
+      )}
+    </div>
+  )
+}
+
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -208,7 +320,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         ) : null}
 
         {earningsMarkers.length > 0 ? (
-          <EarningsMarkers markers={earningsMarkers} geometry={geometry} colors={colors} />
+          <EarningsGuides markers={earningsMarkers} geometry={geometry} colors={colors} />
         ) : null}
 
         <line
@@ -221,6 +333,10 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           opacity="0.7"
         />
       </g>
+
+      {earningsMarkers.length > 0 ? (
+        <EarningsLane markers={earningsMarkers} geometry={geometry} colors={colors} onInspect={onInspectEarnings} />
+      ) : null}
 
       <g>
         <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.primary} />
@@ -335,6 +451,7 @@ export function TVChart({
   hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
+  slots,
   yScale = 1,
   onYScaleChange,
   onPriceScaleReset,
@@ -382,6 +499,8 @@ export function TVChart({
     setTextTool(tool)
     setTextDraftPoint(null)
   }
+  const [inspected, setInspected] = useState(null)
+  const lane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
   const [rayStart, setRayStart] = useState(null)
   const [rayPreview, setRayPreview] = useState(null)
   const [rayTool, setRayTool] = useState(tool)
@@ -392,8 +511,8 @@ export function TVChart({
   }
 
   const geometry = useMemo(
-    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift }),
-    [data, ind, width, height, overlays.bb, yScale, yShift],
+    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift, slots, lane }),
+    [data, ind, width, height, overlays.bb, yScale, yShift, slots, lane],
   )
 
   const canPan = Boolean(onTimeOffsetChange || onYShiftChange)
@@ -535,6 +654,7 @@ export function TVChart({
           geometry={geometry}
           width={width}
           earningsMarkers={earningsMarkers}
+          onInspectEarnings={setInspected}
           clipId={clipId}
           colors={colors}
         />
@@ -601,6 +721,14 @@ export function TVChart({
           <Crosshair bar={data[hover]} index={hover} geometry={geometry} width={width} dimmed={hoverDimmed} colors={colors} />
         ) : null}
       </svg>
+      {inspected && earningsMarkers.includes(inspected) ? (
+        <EarningsCard
+          marker={inspected}
+          x={geometry.xAt(inspected.index)}
+          bottom={height - PAD_T - geometry.chartH + 4}
+          width={width}
+        />
+      ) : null}
       {editing ? (
         <PriceEditor
           key={editing.id}

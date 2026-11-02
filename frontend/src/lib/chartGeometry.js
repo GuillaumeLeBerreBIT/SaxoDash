@@ -146,10 +146,10 @@ export function fitChartPanes({ total, legendHeight, panes, paneHeights }) {
  *  Computed once per dataset and handed to both the chart body and the
  *  crosshair, so hovering does not recompute the scale for every frame.
  */
-export function priceGeometry({ data, ind, width, height, withBands, yScale = 1, yShift = 0 }) {
-  const chartH = height - PAD_T - PAD_B
+export function priceGeometry({ data, ind, width, height, withBands, yScale = 1, yShift = 0, slots = data.length, lane = 0 }) {
+  const chartH = height - PAD_T - PAD_B - lane
   const chartW = Math.max(80, width - PAD_R)
-  const slot = chartW / Math.max(1, data.length)
+  const slot = chartW / Math.max(1, slots, data.length)
 
   let max = -Infinity
   let min = Infinity
@@ -194,9 +194,9 @@ export function priceGeometry({ data, ind, width, height, withBands, yScale = 1,
  *  All four panes must put bar i at the same x as the price chart does, or the
  *  crosshair lies; deriving that from one place is what guarantees it.
  */
-export function paneGeometry(width, length) {
+export function paneGeometry(width, length, slots = length) {
   const chartW = Math.max(80, width - PAD_R)
-  const slot = chartW / Math.max(1, length)
+  const slot = chartW / Math.max(1, slots, length)
 
   return {
     chartW,

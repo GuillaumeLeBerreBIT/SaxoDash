@@ -11,7 +11,7 @@ import { COMPANY_DATA, companyDataStatus, listingCurrency } from '../../lib/comp
 import { computeIndicatorsForWindow } from '../../lib/indicators'
 import { recordLook } from '../../lib/lastLook'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars } from '../../lib/research'
-import { LATEST_TIME_VIEW, resolveTimeWindow, timeViewForDates } from '../../lib/timeWindow'
+import { LATEST_TIME_VIEW, futureSessionDates, resolveTimeWindow, timeViewForDates } from '../../lib/timeWindow'
 import { resolveTextAnnotations } from '../../lib/textAnnotations'
 import { resolveTrendLines } from '../../lib/trendLines'
 import { useChartLines } from './useChartLines'
@@ -47,8 +47,10 @@ export function useChartData({
     () => resolveTimeWindow(effectiveTimeView, { total: allBars.length, range }),
     [effectiveTimeView, allBars.length, range],
   )
-  const { start, end } = timeWindow
+  const { start, end, pad } = timeWindow
   const bars = useMemo(() => allBars.slice(start, end), [allBars, start, end])
+  const lastDate = bars[bars.length - 1]?.date
+  const futureDates = useMemo(() => futureSessionDates(lastDate, pad), [lastDate, pad])
   const rangeBars = useMemo(() => barsForRange(allBars, range), [allBars, range])
   // Indicators run on everything fetched and are sliced to match, so MA-50 has
   // a value on a one-month view instead of being null for want of history.
@@ -76,8 +78,11 @@ export function useChartData({
     [savedTextAnnotations.items, allBars, start, bars.length],
   )
   const earningsMarkers = useMemo(
-    () => earningsMarkersForBars(bars, earnings.data?.available ? earnings.data.history : []),
-    [bars, earnings.data],
+    () => {
+      const known = earnings.data?.available ? earnings.data : null
+      return earningsMarkersForBars(bars, known?.history ?? [], { upcoming: known?.upcoming ?? [], futureDates })
+    },
+    [bars, earnings.data, futureDates],
   )
   const liveQuotes = useQuotes(uic ? [uic] : [], assetType)
 
@@ -92,6 +97,7 @@ export function useChartData({
     rangeBars,
     ind,
     timeWindow,
+    futureDates,
     timeView: effectiveTimeView,
     earnings,
     companyData,

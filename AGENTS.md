@@ -346,6 +346,16 @@ and dragging the candles pans. Dragging the date strip sets the time view's
 `barCount`, which overrides the range's count (5 to all fetched, right edge
 anchored), and no range button is highlighted while it is set. A range pick, a
 symbol switch or a double-click on the strip returns to `LATEST_TIME_VIEW`.
+The window is measured in slots, not bars: the latest view keeps `rightMargin(slots)`
+empty weekday slots after the last bar (about 15 calendar days, at most a quarter of
+the width), so the offset counts back from the margin's edge and panning fills the
+margin with real bars at a constant slot width. `windowToDates` carries that `pad`, so a
+linked pane follows the margin too. Earnings reports are "E" badges in a 24px lane under
+the candles (only when there is one to show), with a faint guide line up through the
+price: green beat, red missed, grey in line, and the next report dashed in the earnings
+colour inside the margin. Never arrows, which read as trade signals. Hovering or
+focusing a badge shows EPS, estimate and surprise; no price reaction, because
+`research/reaction.py` is the only definition of a move and the chart does not ask it.
 
 **The active chart pane is the URL.** `/research/chart` shows up to four panes
 (`lib/chartLayouts.js`), saved per browser under `saxodash:chart-workspace`. The
