@@ -21,6 +21,23 @@ function QuietWeek({ nextMine }) {
   )
 }
 
+const HEADER_CELL = 'hidden md:block'
+
+function ColumnHeader() {
+  return (
+    <div
+      className={`grid items-center ${ROW_GRID} gap-2.5 px-[18px] h-[30px] border-t border-line text-[12px] font-medium text-ink-3 whitespace-nowrap`}
+    >
+      <span>Company</span>
+      <span className={HEADER_CELL}>When</span>
+      <span className={`${HEADER_CELL} text-right`}>Weight</span>
+      <span className="text-right">EPS · est</span>
+      <span className="text-right">Move</span>
+      <span className={`${HEADER_CELL} text-right`}>Impact</span>
+    </div>
+  )
+}
+
 function YourRow({ event, onOpen }) {
   return (
     <button
@@ -68,7 +85,12 @@ export default function YourWeek({ events, nextMine, onOpen }) {
       {mine.length === 0 ? (
         <QuietWeek nextMine={nextMine} />
       ) : (
-        mine.map((event) => <YourRow key={eventKey(event)} event={event} onOpen={onOpen} />)
+        <>
+          <ColumnHeader />
+          {mine.map((event) => (
+            <YourRow key={eventKey(event)} event={event} onOpen={onOpen} />
+          ))}
+        </>
       )}
     </Card>
   )

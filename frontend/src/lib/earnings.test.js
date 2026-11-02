@@ -87,7 +87,7 @@ describe('groupByWeekday', () => {
   })
 
   it('WEEKDAYS lists Monday first', () => {
-    expect(WEEKDAYS[0]).toEqual(['mon', 'Mon'])
+    expect(WEEKDAYS[0]).toEqual(['mon', 'Mon', 'Monday'])
   })
 })
 

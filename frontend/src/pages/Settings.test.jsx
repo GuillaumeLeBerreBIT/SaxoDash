@@ -90,6 +90,29 @@ describe('Settings', () => {
     expect(connectSaxo).toHaveBeenCalledTimes(1)
   })
 
+  it('sync health says the status is unavailable when both status requests fail', () => {
+    queries.useSaxoStatus.mockReturnValue({ data: undefined, isError: true })
+    queries.useEnableBankingStatus.mockReturnValue({ data: undefined, isError: true })
+    renderSettings('/settings?section=sync')
+    expect(screen.getAllByText('Status unavailable')).toHaveLength(2)
+    expect(screen.queryByText(/Nothing is connected/)).not.toBeInTheDocument()
+  })
+
+  it('sync health keeps the empty message when nothing is connected and the requests succeeded', () => {
+    queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+    queries.useEnableBankingStatus.mockReturnValue({ data: {} })
+    renderSettings('/settings?section=sync')
+    expect(screen.getByText(/Nothing is connected/)).toBeInTheDocument()
+  })
+
+  it('connections report Connection failed when starting the Saxo connection throws', async () => {
+    queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
+    connectSaxo.mockRejectedValueOnce(new Error('boom'))
+    renderSettings('/settings?section=connections')
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }))
+    expect(await screen.findByText('Connection failed')).toBeInTheDocument()
+  })
+
   it('clicking a section updates the view', async () => {
     renderSettings()
     await userEvent.click(screen.getByRole('button', { name: 'Sync health' }))

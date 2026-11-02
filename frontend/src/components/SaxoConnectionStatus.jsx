@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { connectSaxo } from '../api/client'
 import { useSaxoStatus } from '../api/queries'
 import { fmtClock } from '../lib/pricing'
+import { useConnectSaxo } from '../lib/useConnectSaxo'
 import { SAXO_DOT_CLASS, deriveSaxoStatus } from '../lib/saxoStatus'
 import { Link } from 'react-router-dom'
 import { Tag } from './ui'
@@ -9,15 +9,18 @@ import { Tag } from './ui'
 export default function SaxoConnectionStatus({ compact = false }) {
   const { data: status } = useSaxoStatus()
   const derived = deriveSaxoStatus(status)
-  const [error] = useState(
+  const { connect, failed } = useConnectSaxo()
+  const [redirectError] = useState(
     () => !compact && new URLSearchParams(window.location.search).get('saxo') === 'error'
   )
 
+  const error = redirectError || failed
+
   useEffect(() => {
-    if (error) {
+    if (redirectError) {
       window.history.replaceState({}, '', window.location.pathname)
     }
-  }, [error])
+  }, [redirectError])
 
   if (!derived) return null
 
@@ -39,7 +42,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
       <div className="flex items-center gap-2">
         {error && <Tag tone="down">Connection failed</Tag>}
         <button
-          onClick={connectSaxo}
+          onClick={connect}
           className="h-8 px-3.5 text-[13px] rounded-lg bg-accent hover:bg-accent-hover text-on-accent font-semibold transition-colors"
         >
           Connect Saxo
@@ -50,12 +53,15 @@ export default function SaxoConnectionStatus({ compact = false }) {
 
   if (derived.kind === 'needs_reauth') {
     return (
-      <button
-        onClick={connectSaxo}
-        className="h-8 px-3.5 text-[13px] rounded-lg sd-raised bg-raised text-error font-semibold transition-colors hover:bg-hover"
-      >
-        Reconnect Saxo
-      </button>
+      <div className="flex items-center gap-2">
+        {failed && <Tag tone="down">Connection failed</Tag>}
+        <button
+          onClick={connect}
+          className="h-8 px-3.5 text-[13px] rounded-lg sd-raised bg-raised text-warn-text font-semibold transition-colors hover:bg-hover"
+        >
+          Reconnect Saxo
+        </button>
+      </div>
     )
   }
 
@@ -78,7 +84,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
           </span>
         </Tag>
       )}
-      <Tag tone="up">
+      <Tag tone="ok">
         <span title={status.last_synced_at ? `Last synced ${fmtClock(status.last_synced_at)}` : 'Never synced'}>
           Saxo connected
         </span>

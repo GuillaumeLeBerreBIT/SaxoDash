@@ -61,7 +61,7 @@ export const chartTooltipProps = (c) => ({
     background: c.tooltip.bg,
     border: `1px solid ${c.tooltip.border}`,
     borderRadius: '8px',
-    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.5)',
+    boxShadow: '0 20px 25px -5px var(--sd-shadow), 0 8px 10px -6px var(--sd-shadow)',
     fontSize: '12px',
     padding: '8px 12px',
   },

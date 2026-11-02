@@ -346,9 +346,9 @@ Follow the dataviz rules: one y-axis, thin marks, a recessive grid, and a hover 
 
 Overlays are built on **Radix primitives**: Dialog, DropdownMenu, Popover and Tooltip.
 
-- **Menu**: `--sd-raised`, radius 10, 6 px padding, and a large soft shadow (Porcelain uses its
-  1 px ring instead). Items are 13.5 px with a selected fill on hover.
-- **⌘K palette**: a dialog 620 px wide at 12vh from the top, over a 55% black scrim.
+- **Menu**: `--sd-raised`, radius 10, 6 px padding, and a large soft shadow in the
+  `--sd-shadow` role (lighter in Porcelain, which also adds its 1 px ring). Items are 13.5 px with a selected fill on hover.
+- **⌘K palette**: a dialog 620 px wide at 12vh from the top, over the `--sd-scrim` role (a 55% black wash; Porcelain tints it).
   - It searches instruments, pages, actions, Discover lenses and investors.
   - ↑↓ to move, ↵ to open, esc to close. It also opens with ⌘K, Ctrl+K and `/`.
 - **Toast**: bottom centre, `--sd-raised`, 13/600, 2.2 s. The words match the control
@@ -491,9 +491,11 @@ The verdict wording and thresholds stay in `lib/snapshot.js`, `lib/quadrant.js` 
 - **Charts** read `useChartColors()`, which returns resolved hex values for the active theme and
   moves, and re-renders on change. `withAlpha()` stays for hex inputs. No chart file holds a
   colour literal.
-- **No palette classes.** After the migration no `zinc-*`, `emerald-*`, `red-*`, `amber-*` or
-  `blue-*` class and no hex literal may appear outside `theme.js`. `src/test/noPaletteClasses.test.js`
-  enforces this.
+- **No palette classes.** After the migration no Tailwind colour-family class (`slate` through `rose`,
+  with any colour prefix), no `bg-white`/`bg-black`/`text-white`/`text-black`, and no hex or `rgb()`
+  literal may appear outside `theme.js`. `src/test/noPaletteClasses.test.js` enforces this, with a
+  named allow-list: the white logo discs (`InstrumentLogo`, `InvestorAvatar`) and `withAlpha`'s
+  `rgba()` composition in `lib/charts.js`. Shadows and scrims are theme roles (`shadow`, `scrim`).
 - **Primitives** live in `src/components/ui.jsx` and keep their names: Card is the panel, with
   `context`, `title` and `menu`.
 - **Motion**: 150 ms for hover and focus, 200 ms for page fade-in. `prefers-reduced-motion`

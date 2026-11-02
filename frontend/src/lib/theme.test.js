@@ -87,3 +87,16 @@ describe('readAppearance', () => {
     })
   })
 })
+
+describe('overlay roles', () => {
+  it('gives every theme a shadow and a scrim, written as CSS variables', () => {
+    for (const name of Object.keys(THEMES)) {
+      expect(THEMES[name].shadow).toMatch(/^#[0-9A-F]{8}$/)
+      expect(THEMES[name].scrim).toMatch(/^#[0-9A-F]{8}$/)
+    }
+    const vars = themeVars('light')
+    expect(vars['--sd-shadow']).toBe(THEMES.light.shadow)
+    expect(vars['--sd-scrim']).toBe(THEMES.light.scrim)
+    expect(THEMES.light.shadow).not.toBe(THEMES.republic.shadow)
+  })
+})

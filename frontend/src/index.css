@@ -32,6 +32,7 @@
   --color-line: var(--sd-line);
   --color-line-input: var(--sd-line-input);
   --color-focus: var(--sd-focus);
+  --color-scrim: var(--sd-scrim);
 }
 
 @theme {
@@ -68,7 +69,7 @@
 
 @layer components {
   .sd-overlay {
-    box-shadow: 0 16px 40px -12px rgb(0 0 0 / 0.8);
+    box-shadow: 0 16px 40px -12px var(--sd-shadow);
   }
   [data-theme="light"] .sd-panel,
   [data-theme="light"] .sd-raised {

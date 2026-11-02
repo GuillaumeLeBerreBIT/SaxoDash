@@ -1,10 +1,11 @@
 import { useSearchParams } from 'react-router-dom'
-import { connectEnableBanking, connectSaxo } from '../api/client'
+import { connectEnableBanking } from '../api/client'
 import { useEnableBankingStatus, useSaxoStatus } from '../api/queries'
 import { Button, Card, PageHeader, Segmented, StatusDot } from '../components/ui'
 import { fmtDateTime } from '../lib/format'
 import { bankSyncBadge } from '../lib/bankSync'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
+import { useConnectSaxo } from '../lib/useConnectSaxo'
 import { THEMES } from '../lib/theme'
 import { useAppearance } from '../theme/ThemeProvider'
 
@@ -99,21 +100,21 @@ function SourceRow({ dot, name, note, action }) {
   )
 }
 
-function saxoRow(status, failed) {
+function saxoRow(status, failed, connect, connectFailed) {
   const derived = deriveSaxoStatus(status)
   if (!derived && failed) return { dot: 'warn', name: 'Saxo', note: 'Status unavailable' }
   if (!derived) return { dot: 'off', name: 'Saxo', note: 'Checking the connection…' }
   const synced = status.last_synced_at ? `last synced ${fmtDateTime(status.last_synced_at)}` : 'never synced'
   const base = 'Positions, prices, charts and performance'
   if (derived.kind === 'not_connected') {
-    return { dot: 'off', name: 'Saxo not connected', note: base, action: <Button variant="primary" size="sm" onClick={connectSaxo}>Connect</Button> }
+    return { dot: 'off', name: 'Saxo not connected', note: connectFailed ? 'Connection failed' : base, action: <Button variant="primary" size="sm" onClick={connect}>Connect</Button> }
   }
   if (derived.kind === 'needs_reauth') {
     return {
       dot: 'warn',
       name: 'Saxo needs re-authentication',
-      note: `${base}. The session lapsed; ${synced}.`,
-      action: <Button variant="primary" size="sm" onClick={connectSaxo}>Reconnect</Button>,
+      note: connectFailed ? 'Connection failed' : `${base}. The session lapsed; ${synced}.`,
+      action: <Button variant="primary" size="sm" onClick={connect}>Reconnect</Button>,
     }
   }
   if (derived.kind === 'reconnecting') {
@@ -152,7 +153,8 @@ function bankRow(bank, state) {
 function Connections() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
   const { data: banks } = useEnableBankingStatus()
-  const rows = [saxoRow(saxo, saxoFailed), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
+  const { connect, failed: connectFailed } = useConnectSaxo()
+  const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Where SaxoDash gets its numbers" dot={dot} title="Connections">
@@ -171,10 +173,14 @@ function Connections() {
   )
 }
 
-function syncRows(saxo, banks) {
+function syncRows(saxo, banks, failed) {
   const rows = []
-  const groups = [['Saxo', saxo], ...Object.entries(banks ?? {}).map(([bank, state]) => [BANK_LABELS[bank] ?? bank, state])]
+  const groups = [['Saxo', saxo], ['Banks', undefined], ...Object.entries(banks ?? {}).map(([bank, state]) => [BANK_LABELS[bank] ?? bank, state])]
   for (const [source, state] of groups) {
+    if (failed[source]) {
+      rows.push({ key: `${source}:unavailable`, dot: 'warn', name: source, note: 'Status unavailable' })
+      continue
+    }
     if (!state?.connected) continue
     const lastGood = state.last_synced_at ? fmtDateTime(state.last_synced_at) : 'never'
     const failing = state.failing_syncs ?? []
@@ -196,9 +202,9 @@ function syncRows(saxo, banks) {
 }
 
 function SyncHealth() {
-  const { data: saxo } = useSaxoStatus()
-  const { data: banks } = useEnableBankingStatus()
-  const rows = syncRows(saxo, banks)
+  const { data: saxo, isError: saxoFailed } = useSaxoStatus()
+  const { data: banks, isError: banksFailed } = useEnableBankingStatus()
+  const rows = syncRows(saxo, banks, { Saxo: saxoFailed, Banks: banksFailed })
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Latest run of each task" dot={dot} title="Sync health">

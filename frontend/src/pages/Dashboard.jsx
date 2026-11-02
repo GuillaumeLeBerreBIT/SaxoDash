@@ -49,7 +49,7 @@ function RecentTransactions({ rows, className }) {
       dot={rows.length ? 'ok' : 'off'}
       title="Recent transactions"
       right={
-        <Link to="/transactions" className="text-[13px] font-semibold text-ink-2 hover:text-ink whitespace-nowrap">
+        <Link to="/portfolio?view=transactions" className="text-[13px] font-semibold text-ink-2 hover:text-ink whitespace-nowrap">
           View all →
         </Link>
       }

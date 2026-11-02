@@ -211,6 +211,7 @@ const TAG_TONES = {
   earn: 'bg-earn-subtle text-earn',
   warn: `${WARN_SURFACE} ${WARN_TEXT}`,
   example: `${WARN_SURFACE} ${WARN_TEXT}`,
+  ok: 'bg-[color-mix(in_srgb,var(--sd-ok)_14%,transparent)] text-ok',
   up: 'bg-up-subtle text-up',
   down: 'bg-down-subtle text-down',
 }

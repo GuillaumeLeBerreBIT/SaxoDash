@@ -4,23 +4,13 @@ import { ChevronRight } from 'lucide-react'
 import { Card, InfoTip } from '../ui'
 import { withAlpha } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
-import { GRID_SESSIONS, eventKey, gridSessionKey, outcomeColor, rankEvents, splitBySession } from '../../lib/earnings'
+import { GRID_SESSIONS, eventKey, gridSessionKey, outcomeColor, rankEvents, splitBySession, weekdayName } from '../../lib/earnings'
 import { fmtCompact } from '../../lib/format'
 import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 
 const ROW_GRID =
   'grid-cols-[minmax(0,1fr)_112px_64px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_76px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
-const WEEKDAY_NAME = {
-  mon: 'Monday',
-  tue: 'Tuesday',
-  wed: 'Wednesday',
-  thu: 'Thursday',
-  fri: 'Friday',
-  sat: 'Saturday',
-  sun: 'Sunday',
-}
-const weekdayLabel = (key) => WEEKDAY_NAME[key] || key
 const gridSessionLabel = (key) => (GRID_SESSIONS.find(([k]) => k === key) || ['', key])[1].toLowerCase()
 
 function edge(event, colors) {
@@ -92,7 +82,7 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusSession, day])
 
-  const title = focusSession ? `${weekdayLabel(day)}, ${gridSessionLabel(focusSession)}` : weekdayLabel(day)
+  const title = focusSession ? `${weekdayName(day)}, ${gridSessionLabel(focusSession)}` : weekdayName(day)
   return (
     <Card
       flush

@@ -101,7 +101,7 @@ export default function MobileNav({ onOpenPalette }) {
 
       {open && (
         <>
-          <div data-testid="more-backdrop" onClick={() => setOpen(false)} className="fixed inset-0 z-50 bg-black/55" />
+          <div data-testid="more-backdrop" onClick={() => setOpen(false)} className="fixed inset-0 z-50 bg-scrim" />
           <div
             role="dialog"
             aria-modal="true"

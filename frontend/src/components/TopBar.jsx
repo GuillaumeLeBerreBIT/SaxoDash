@@ -1,12 +1,13 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import { connectSaxo, getUsername, logout } from '../api/client'
+import { getUsername, logout } from '../api/client'
 import { useNetWorth, usePortfolioSummary, useSaxoStatus } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { NAV_ITEMS, pageTitle } from '../lib/navigation'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
 import { MenuContent, MenuItem, MenuLabel, MenuRoot, MenuSeparator, MenuTrigger } from './overlays'
-import { StatusDot } from './ui'
+import { useConnectSaxo } from '../lib/useConnectSaxo'
+import { StatusDot, Tag } from './ui'
 import FilingAlerts from './investors/FilingAlerts'
 
 const PILL = 'items-center gap-2 h-9 px-3.5 rounded-[10px] bg-pill text-[14px] whitespace-nowrap'
@@ -59,6 +60,7 @@ function AccountMenu() {
   const saxo = deriveSaxoStatus(status)
   const username = getUsername() || 'Account'
   const action = saxo && SAXO_ACTION[saxo.kind]
+  const { connect, failed } = useConnectSaxo()
 
   const signOut = async () => {
     await logout()
@@ -85,10 +87,20 @@ function AccountMenu() {
       <MenuContent align="end" width={300}>
         <MenuLabel>{username}</MenuLabel>
         {saxo && (
-          <MenuItem onSelect={action ? connectSaxo : () => navigate('/settings?section=connections')}>
+          <MenuItem
+            onSelect={
+              action
+                ? (event) => {
+                    event.preventDefault()
+                    connect()
+                  }
+                : () => navigate('/settings?section=connections')
+            }
+          >
             <StatusDot tone={STATUS_TONE[saxo.kind]} />
             <span className="min-w-0 flex-1 truncate">{saxo.sentence}</span>
-            {action && <span className="text-ink font-semibold">{action}</span>}
+            {failed && <Tag tone="down">Connection failed</Tag>}
+            {action && !failed && <span className="text-ink font-semibold">{action}</span>}
           </MenuItem>
         )}
         <MenuItem onSelect={() => navigate('/settings')}>Theme and colours</MenuItem>
@@ -118,6 +130,14 @@ export default function TopBar({ onOpenPalette }) {
       <p className="min-[760px]:hidden min-w-0 flex-1 truncate text-[20px] font-bold text-ink">{pageTitle(pathname)}</p>
       <Tabs />
       <div className="ml-auto flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          aria-label="Search"
+          onClick={onOpenPalette}
+          className={`${PILL} inline-flex w-9 px-0 justify-center min-[760px]:hidden text-ink-2`}
+        >
+          <Search size={16} aria-hidden="true" />
+        </button>
         <button
           type="button"
           onClick={onOpenPalette}

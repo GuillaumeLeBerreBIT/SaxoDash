@@ -1,7 +1,6 @@
 export const SAXO_DOT_CLASS = {
   emerald: 'bg-ok',
   amber: 'bg-warn',
-  red: 'bg-error',
   zinc: 'bg-ink-3',
 }
 
@@ -11,7 +10,7 @@ export function deriveSaxoStatus(status) {
     return { kind: 'not_connected', tone: 'zinc', sentence: 'Saxo not connected' }
   }
   if (status.needs_reauth) {
-    return { kind: 'needs_reauth', tone: 'red', sentence: 'Saxo needs reconnecting' }
+    return { kind: 'needs_reauth', tone: 'amber', sentence: 'Saxo needs re-authentication' }
   }
   if (!status.usable) {
     return { kind: 'reconnecting', tone: 'amber', sentence: 'Saxo reconnecting…' }

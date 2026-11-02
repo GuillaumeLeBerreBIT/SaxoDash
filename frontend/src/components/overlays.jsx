@@ -14,7 +14,7 @@ export function Dialog({ open, onOpenChange, title, children, width = 'min(420px
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/55" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-scrim" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           style={{ width }}

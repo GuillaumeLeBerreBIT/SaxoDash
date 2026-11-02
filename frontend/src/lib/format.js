@@ -5,6 +5,8 @@
 // An absent figure is not zero: "€0.00" is a claim, a dash is not.
 export const UNKNOWN = '—'
 
+export const REPORTING_CURRENCY = 'EUR'
+
 export function fmtMoney(value, currency = 'EUR', { sign = false, decimals = 2 } = {}) {
     if (value == null || Number.isNaN(Number(value))) return UNKNOWN
     const n = Number(value)

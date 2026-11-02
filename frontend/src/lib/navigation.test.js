@@ -36,10 +36,13 @@ describe('mobile navigation split', () => {
 })
 
 describe('palette pages', () => {
-  it('offers every tab plus Settings, in the same order', () => {
+  it('offers every tab plus Settings, in the same order, then the deep links', () => {
     expect(PAGE_COMMANDS).toEqual([
       ...NAV_ITEMS.map(({ to, label }) => ({ to, label })),
       { to: '/settings', label: 'Settings' },
+      { to: '/portfolio?view=transactions', label: 'Transactions' },
+      { to: '/money?section=accounts', label: 'Accounts' },
+      { to: '/money?section=spending', label: 'Spending' },
     ])
   })
 })

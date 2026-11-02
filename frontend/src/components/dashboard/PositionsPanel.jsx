@@ -87,7 +87,7 @@ export default function PositionsPanel({ summary, positions, quotes, className =
         <Tile
           label="Top holding"
           value={topHolding?.ticker ?? '—'}
-          sub={topHolding ? `${Number(topHolding.weight).toFixed(1)}% of portfolio` : undefined}
+          sub={topHolding ? (topHolding.weight == null ? '—' : `${Number(topHolding.weight).toFixed(1)}% of portfolio`) : undefined}
         />
         <Tile label="Holdings" value={fmtNum(positions.length)} sub="Across all accounts" />
       </div>

@@ -1,12 +1,11 @@
 import { colorForRank } from '../../lib/charts'
-import { fmtEur } from '../../lib/format'
+import { REPORTING_CURRENCY, fmtEur } from '../../lib/format'
 import { capBreaches, WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { useChartColors } from '../../theme/useChartColors'
 import AllocationDonut from '../AllocationDonut'
 import { Card, EmptyState, Tile } from '../ui'
 
 const MAX_SECTOR_SLICES = 5
-const REPORTING_CURRENCY = 'EUR'
 
 const valueOf = (p) => Number(p.value) || 0
 const weightText = (weight) => `${Number(weight).toFixed(1)}%`
@@ -79,22 +78,22 @@ function currencyExposure(positions) {
   const totals = new Map()
   positions.forEach((p) => {
     const code = p.currency || 'Unknown'
-    const entry = totals.get(code) || { currency: code, value: 0, count: 0 }
-    entry.value += valueOf(p)
+    const entry = totals.get(code) || { currency: code, value: null, count: 0 }
+    if (p.value != null) entry.value = (entry.value ?? 0) + Number(p.value)
     entry.count += 1
     totals.set(code, entry)
   })
-  return Array.from(totals.values()).sort((a, b) => b.value - a.value)
+  return Array.from(totals.values()).sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))
 }
 
 export function CurrencyPanel({ positions, cash, className = '' }) {
   const c = useChartColors()
   const rows = currencyExposure(positions)
   const cashValue = cash == null ? null : Number(cash)
-  const total = rows.reduce((sum, r) => sum + r.value, 0) + (cashValue > 0 ? cashValue : 0)
-  const foreign = rows.filter((r) => r.currency !== REPORTING_CURRENCY).reduce((sum, r) => sum + r.value, 0)
+  const total = rows.reduce((sum, r) => sum + (r.value ?? 0), 0) + (cashValue > 0 ? cashValue : 0)
+  const foreign = rows.filter((r) => r.currency !== REPORTING_CURRENCY).reduce((sum, r) => sum + (r.value ?? 0), 0)
   const segments = [
-    ...rows.map((r, i) => ({ key: r.currency, value: r.value, color: colorForRank(i, c) })),
+    ...rows.map((r, i) => ({ key: r.currency, value: r.value ?? 0, color: colorForRank(i, c) })),
     ...(cashValue > 0 ? [{ key: 'cash', value: cashValue, color: c.flat }] : []),
   ]
   return (
@@ -114,7 +113,7 @@ export function CurrencyPanel({ positions, cash, className = '' }) {
             <span className="flex-1 min-w-0 truncate text-ink-3">
               {r.count} {plural(r.count, 'position', 'positions')}
             </span>
-            <span className="num text-ink-2">{fmtEur(r.value)}</span>
+            <span className="num text-ink-2">{r.value == null ? '—' : fmtEur(r.value)}</span>
           </li>
         ))}
         {cashValue != null && (

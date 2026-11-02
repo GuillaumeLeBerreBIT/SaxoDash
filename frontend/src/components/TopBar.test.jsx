@@ -69,7 +69,16 @@ describe('TopBar', () => {
   it('opens the palette from the Search pill', async () => {
     const onOpenPalette = vi.fn()
     renderBar({ onOpenPalette })
-    await userEvent.click(screen.getByRole('button', { name: /Search/ }))
+    await userEvent.click(screen.getByRole('button', { name: /⌘K/ }))
+    expect(onOpenPalette).toHaveBeenCalledTimes(1)
+  })
+
+  it('puts a Search button in the phone header that opens the palette', async () => {
+    const onOpenPalette = vi.fn()
+    renderBar({ onOpenPalette })
+    const phone = screen.getByRole('button', { name: 'Search' })
+    expect(phone).toHaveClass('min-[760px]:hidden')
+    await userEvent.click(phone)
     expect(onOpenPalette).toHaveBeenCalledTimes(1)
   })
 
@@ -113,9 +122,18 @@ describe('account menu', () => {
     queries.useSaxoStatus.mockReturnValue({ data: { connected: true, needs_reauth: true } })
     renderBar()
     const menu = await openAccountMenu()
-    expect(within(menu).getByText('Saxo needs reconnecting')).toBeInTheDocument()
+    expect(within(menu).getByText('Saxo needs re-authentication')).toBeInTheDocument()
     await userEvent.click(within(menu).getByRole('menuitem', { name: /Reconnect/ }))
     expect(connectSaxo).toHaveBeenCalledTimes(1)
+  })
+
+  it('says so, and keeps the menu open, when starting the connection fails', async () => {
+    queries.useSaxoStatus.mockReturnValue({ data: { connected: true, needs_reauth: true } })
+    connectSaxo.mockRejectedValueOnce(new Error('boom'))
+    renderBar()
+    const menu = await openAccountMenu()
+    await userEvent.click(within(menu).getByRole('menuitem', { name: /Reconnect/ }))
+    expect(await screen.findByText('Connection failed')).toBeInTheDocument()
   })
 
   it('offers no reconnect while Saxo is healthy', async () => {

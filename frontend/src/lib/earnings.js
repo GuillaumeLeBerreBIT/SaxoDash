@@ -2,14 +2,16 @@ import { surpriseSign } from './charts'
 import { fmtCompact, fmtDate, fmtPct } from './format'
 
 export const WEEKDAYS = [
-  ['mon', 'Mon'],
-  ['tue', 'Tue'],
-  ['wed', 'Wed'],
-  ['thu', 'Thu'],
-  ['fri', 'Fri'],
-  ['sat', 'Sat'],
-  ['sun', 'Sun'],
+  ['mon', 'Mon', 'Monday'],
+  ['tue', 'Tue', 'Tuesday'],
+  ['wed', 'Wed', 'Wednesday'],
+  ['thu', 'Thu', 'Thursday'],
+  ['fri', 'Fri', 'Friday'],
+  ['sat', 'Sat', 'Saturday'],
+  ['sun', 'Sun', 'Sunday'],
 ]
+
+export const weekdayName = (key) => WEEKDAYS.find(([k]) => k === key)?.[2] ?? key
 
 const KEY_BY_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
