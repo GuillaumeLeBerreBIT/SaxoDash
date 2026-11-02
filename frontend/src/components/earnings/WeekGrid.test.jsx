@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -21,6 +21,15 @@ const renderGrid = (events, props = {}) =>
   )
 
 describe('WeekGrid', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-26T09:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows at most six logos and a +N more for the rest', () => {
     renderGrid(Array.from({ length: 9 }, (_, i) => ev(`S${i}`)))
     expect(CELL_LIMIT).toBe(6)
