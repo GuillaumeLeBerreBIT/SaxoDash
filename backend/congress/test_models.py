@@ -27,6 +27,16 @@ class ModelsTest(TestCase):
         self.assertFalse(trade.priceable)
         self.assertIsNone(trade.amount_high)
 
+    def test_an_asset_name_has_no_length_limit(self):
+        report = Report.objects.create(doc_id='20030868', member=self.member, year=2025, filed_on=date(2025, 1, 17))
+        asset = 'Comment text the parser kept with the name. ' * 20 + 'Alaska Air Group, Inc. Common Stock (ALK)'
+
+        Trade.objects.create(
+            report=report, asset=asset, kind=Trade.SALE, traded_on=date(2025, 1, 14), amount_low=1001,
+        )
+
+        self.assertEqual(Trade.objects.get().asset, asset)
+
     def test_one_holding_per_member_and_ticker(self):
         Holding.objects.create(member=self.member, ticker='NVDA', value=10.0, weight_pct=100.0)
         with self.assertRaises(IntegrityError):
