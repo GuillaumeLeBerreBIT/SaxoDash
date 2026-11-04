@@ -111,6 +111,8 @@ jobs:
         run: |
           docker run --rm saxodash-backend:ci pg_dump --version | grep -q ' 17\.'
           docker run --rm saxodash-backend:ci test -f staticfiles/admin/css/base.css
+      - name: The backend image can load Celery's Redis transport
+        run: docker run --rm saxodash-backend:ci python -c "import kombu.transport.redis"
       - name: The frontend image's Caddyfile is valid
         run: docker run --rm saxodash-proxy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: The stack definition resolves
