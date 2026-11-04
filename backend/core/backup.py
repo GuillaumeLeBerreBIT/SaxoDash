@@ -1,73 +1,86 @@
-"""Local SQLite backups.
-
-Uses sqlite3's own online backup API (Connection.backup), not a raw file
-copy - a file copy taken while WAL-mode Django is mid-write can capture a
-torn, unreadable snapshot; the backup API is SQLite's own answer to backing
-up a live database safely, copying page-by-page under a lock it manages
-itself.
-
-The Fernet key that encrypts SaxoCredential/EnableBankingCredential tokens
-(SAXO_TOKEN_ENCRYPTION_KEY) lives in backend/.env, not the database, and is
-deliberately NOT backed up here - copying .env would also copy every other
-secret in it (SAXO_SECRET, FINNHUB_API_KEY, ENABLE_BANKING_PRIVATE_KEY).
-Losing that key only forces reconnecting Saxo/Enable Banking - low stakes -
-so keep .env's own values written down durably yourself (a password
-manager); restoring a database backup without it is still fully usable,
-just re-authenticate the two integrations afterwards.
-
-Restoring: stop the app and any Celery worker/beat process, then
-    cp backend/backups/db-<timestamp>.sqlite3 backend/db.sqlite3
-and restart. There is no in-app restore command deliberately - this is a
-rare, high-stakes action better done as a conscious, explicit file copy.
-"""
 import logging
-import sqlite3
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
 from django.conf import settings
+from django.db import connections
 
 logger = logging.getLogger(__name__)
 
+STAMP_FORMAT = '%Y%m%d-%H%M%S-%f'
+DUMP_GLOB = 'db-*.dump'
+
+
+class BackupFailed(Exception):
+    pass
+
+
+def _now():
+    return datetime.now(timezone.utc)
+
+
+def _pg_env():
+    db = connections['default'].settings_dict
+    env = dict(os.environ)
+    env.update({
+        'PGDATABASE': db['NAME'],
+        'PGUSER': db['USER'],
+        'PGPASSWORD': db['PASSWORD'],
+        'PGHOST': db['HOST'],
+        'PGPORT': str(db['PORT']),
+    })
+    return env
+
 
 def backup_database():
-    """Writes a new timestamped backup and prunes old ones. Returns the
-    Path of the backup just written."""
     backup_dir = Path(settings.DB_BACKUP_DIR)
     backup_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = backup_dir / f'db-{_now().strftime(STAMP_FORMAT)}.dump'
+    partial_path = dest_path.with_name(dest_path.name + '.partial')
 
-    # Microsecond resolution: a scheduled once-daily backup never collides,
-    # but tests calling this back-to-back would otherwise land on the same
-    # second and silently overwrite each other.
-    stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')
-    dest_path = backup_dir / f'db-{stamp}.sqlite3'
-
-    source_path = Path(settings.DATABASES['default']['NAME'])
-    if not source_path.exists():
-        raise FileNotFoundError(f'No database to back up at {source_path}')
-
-    partial_path = dest_path.with_suffix('.partial')
-    source = sqlite3.connect(str(source_path))
-    dest = sqlite3.connect(str(partial_path))
     try:
-        source.backup(dest)
+        subprocess.run(
+            ['pg_dump', '--format=custom', '--no-owner', f'--file={partial_path}'],
+            env=_pg_env(), check=True, capture_output=True,
+        )
+    except FileNotFoundError as exc:
+        partial_path.unlink(missing_ok=True)
+        raise BackupFailed('pg_dump is not installed on this machine') from exc
+    except subprocess.CalledProcessError as exc:
+        partial_path.unlink(missing_ok=True)
+        detail = (exc.stderr or b'').decode(errors='replace').strip()
+        raise BackupFailed(f'pg_dump failed: {detail}') from exc
     except BaseException:
-        dest.close()
         partial_path.unlink(missing_ok=True)
         raise
-    finally:
-        dest.close()
-        source.close()
     partial_path.replace(dest_path)
 
     logger.info('Database backed up to %s', dest_path)
-    _prune(backup_dir)
+    _prune(backup_dir, keep=dest_path)
     return dest_path
 
 
-def _prune(backup_dir):
-    retain = max(settings.DB_BACKUP_RETAIN, 1)  # never prune to zero
-    backups = sorted(backup_dir.glob('db-*.sqlite3'))
-    for stale in (backups[:-retain] if len(backups) > retain else []):
-        stale.unlink()
-        logger.info('Pruned old backup %s', stale)
+def _day(path):
+    return path.name[3:11]
+
+
+def _month(path):
+    return path.name[3:9]
+
+
+def _prune(backup_dir, keep):
+    backups = sorted(backup_dir.glob(DUMP_GLOB))
+    recent_days = sorted({_day(p) for p in backups}, reverse=True)[:max(settings.DB_BACKUP_RETAIN, 0)]
+    recent_months = sorted({_month(p) for p in backups}, reverse=True)[:max(settings.DB_BACKUP_MONTHLY, 0)]
+    first_of_month = {}
+    for path in backups:
+        first_of_month.setdefault(_month(path), path)
+    retained = {keep}
+    retained.update(p for p in backups if _day(p) in recent_days)
+    retained.update(first_of_month[m] for m in recent_months)
+    for stale in backups:
+        if stale not in retained:
+            stale.unlink()
+            logger.info('Pruned old backup %s', stale)

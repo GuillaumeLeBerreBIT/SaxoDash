@@ -21,18 +21,19 @@ kept out of scope.
 
 ## Running the stack
 
-`scripts/dev.sh` starts redis, the celery worker, celery beat, Django and
-Vite in one terminal, prefixed and colour-coded per service, each gated on a
-readiness probe so "stack up" means it. Ctrl-C (or SIGHUP) stops everything
-it started; an already-running redis is reused and left alone.
+`scripts/dev.sh` starts Postgres (Docker), redis, the celery worker, celery
+beat, Django and Vite in one terminal, prefixed and colour-coded per service,
+each gated on a readiness probe so "stack up" means it. Ctrl-C (or SIGHUP)
+stops everything it started; an already-running Postgres or redis is reused
+and left alone.
 
 Services are declared in one table near the top of the script — adding a
 sixth is one `service` line, and `--no-<name>` works for it automatically.
-Flags: `--no-redis|worker|beat|web|ui` (`--no-frontend` aliases `--no-ui`)
+Flags: `--no-ngrok|postgres|redis|worker|beat|web|ui` (`--no-frontend` aliases `--no-ui`)
 and `--reclaim`, which clears leftovers from a killed run instead of dying
 on a held port. Ports come from `backend/.env` so they can't drift from the
 backend's own config; override per-run with `WEB_PORT` / `UI_PORT` /
-`REDIS_PORT`. Per-service logs land in `.dev/logs/` (gitignored).
+`REDIS_PORT`, and the database with `DATABASE_URL`. Per-service logs land in `.dev/logs/` (gitignored).
 
 Full reference — flags, troubleshooting, adding a service:
 `docs/running-the-stack.md`.
@@ -50,7 +51,7 @@ and a few components — so add/adjust specs alongside frontend changes.
 **A new migration isn't done until `manage.py migrate` has run against the
 dev database, not just the test suite.** `manage.py test` builds its own
 fresh, fully-migrated database every run, so it stays green even when the
-persistent `db.sqlite3` the live dev server reads is missing the column —
+persistent dev Postgres the live dev server reads is missing the column —
 which then 500s on every request touching that model. `scripts/dev.sh`
 guards this on stack restart (`migrate --check`, then `migrate`), but mid-session
 against an already-running server it's a manual step, easy to forget in the
@@ -68,7 +69,8 @@ rest.
 
 ## Stack
 
-- Backend: Django + DRF, SQLite (dev), JWT auth (SimpleJWT), single user.
+- Backend: Django + DRF, Postgres 17 (dev, CI and production alike), JWT auth
+  (SimpleJWT), single user.
 - Frontend: Vite + React 19 (JavaScript, not TS), React Router, Recharts,
   Lucide icons, Tailwind. Components are the mockup's own bespoke
   primitives ported as-is — no MUI. `shadcn/ui` may be introduced in a
@@ -237,14 +239,18 @@ ask (see "One module decides who gets US company data" below). Market
 context (Buffett indicator, macro series) is still deferred: it needs an
 unrelated data source (FRED) and was deliberately kept out of this pass.
 
-**SQLite runs in WAL with `transaction_mode=IMMEDIATE`** (`DATABASES` `OPTIONS`,
-20s `timeout`). The default rollback-journal + DEFERRED combo made concurrent
-Celery sync tasks hit `SQLITE_BUSY` on a mid-transaction lock upgrade — which
-SQLite refuses to retry (deadlock avoidance), so the busy timeout never
-applied and the write failed in under a second. `BEGIN IMMEDIATE` takes the
-write lock up front, so a second writer queues on the timeout instead; WAL is
-the orthogonal half (readers stop blocking the writer). The dev worker also
-runs `--concurrency=2` to keep write pressure low.
+**One database everywhere: Postgres 17, configured by `DATABASE_URL`.** The Mac
+(`scripts/dev.sh`, Docker), CI and the homelab all run it, so nothing SQLite would let
+through (unenforced `CharField` lengths, case-insensitive `LIKE`, unordered ties) can
+reach production unseen. `core/database_url.py` parses the URL and refuses any other
+scheme: a SQLite fallback would rot unnoticed the first time code used something only
+Postgres has. Postgres takes row locks, so concurrent Celery tasks no longer need the
+WAL / `BEGIN IMMEDIATE` workaround SQLite did. Connections are kept 60 s with a health
+check before reuse. Backups are `pg_dump --format=custom` (`core/backup.py`), written to
+a `.partial` name and renamed on success, keeping every dump from the newest
+`DB_BACKUP_RETAIN` days plus the first of each of the newest `DB_BACKUP_MONTHLY`
+months. Production and the plan to get there:
+`docs/superpowers/specs/2026-11-02-cicd-homelab-design.md`.
 
 **The Saxo/Finnhub proxy endpoints are rate-limited per scope**, not only by
 cache TTL — `research.search` 20/min, `research.market` 60/min,

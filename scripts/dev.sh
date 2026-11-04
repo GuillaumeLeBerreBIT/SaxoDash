@@ -15,7 +15,7 @@ REDIS_DIR="$ROOT/.dev/redis"
 ENV_FILE="$BACKEND/.env"
 
 C_RESET=$'\033[0m'; C_DIM=$'\033[2m'; C_RED=$'\033[31m'; C_AMBER=$'\033[33m'
-C_REDIS=$'\033[35m'; C_WORKER=$'\033[33m'; C_BEAT=$'\033[36m'
+C_PG=$'\033[94m'; C_REDIS=$'\033[35m'; C_WORKER=$'\033[33m'; C_BEAT=$'\033[36m'
 C_WEB=$'\033[32m'; C_UI=$'\033[34m'; C_NGROK=$'\033[95m'
 
 note() { printf '%s>>%s %s\n' "$C_DIM" "$C_RESET" "$1"; }
@@ -58,6 +58,12 @@ url_host() {
 WEB_PORT="${WEB_PORT:-$(url_port "$(env_get SAXO_REDIRECT_URI)" 8000)}"
 UI_PORT="${UI_PORT:-$(url_port "$(env_get FRONTEND_URL)" 5173)}"
 REDIS_PORT="${REDIS_PORT:-$(url_port "$(env_get CELERY_BROKER_URL)" 6379)}"
+DATABASE_URL="${DATABASE_URL:-$(env_get DATABASE_URL)}"
+DATABASE_URL="${DATABASE_URL:-postgres://saxodash:saxodash@localhost:5432/saxodash}"
+PG_PORT="$(url_port "$DATABASE_URL" 5432)"
+PG_IMAGE="postgres:17"
+PG_CONTAINER="saxodash-dev-postgres"
+PG_VOLUME="saxodash-dev-pg"
 
 # Enable Banking's redirect must be HTTPS even in local dev (it rejects plain
 # http:// outright), so that's the one service here that needs a real public
@@ -68,22 +74,30 @@ NGROK_DOMAIN="${NGROK_DOMAIN:-$(url_host "$(env_get ENABLE_BANKING_REDIRECT_URI)
 usage() {
   cat <<EOF
 Start the whole SaxoDash dev stack in one terminal:
-  ngrok -> redis -> celery worker -> celery beat -> django -> vite
+  ngrok -> postgres -> redis -> celery worker -> celery beat -> django -> vite
 
-Ctrl-C stops everything this script started. Redis and ngrok are left alone
-if either was already running (e.g. redis under \`brew services\`, or ngrok
+Ctrl-C stops everything this script started. Postgres, redis and ngrok are
+left alone if already running (e.g. redis under \`brew services\`, or ngrok
 started by hand in another terminal).
 
 Usage: scripts/dev.sh [--no-<service>]... [--reclaim]
 
-  --no-<service>  skip one service: $(printf '%s ' ngrok redis worker beat web ui)
+  --no-<service>  skip one service: $(printf '%s ' ngrok postgres redis worker beat web ui)
                   (--no-frontend is accepted as an alias for --no-ui)
   --reclaim       stop leftover processes from a previous run without asking
 
 Ports are read from backend/.env (SAXO_REDIRECT_URI, FRONTEND_URL,
 CELERY_BROKER_URL) so they cannot drift from the backend's own config.
-Override per-run with WEB_PORT / UI_PORT / REDIS_PORT.
-  web=$WEB_PORT  ui=$UI_PORT  redis=$REDIS_PORT
+Override per-run with WEB_PORT / UI_PORT / REDIS_PORT, and the database
+with DATABASE_URL.
+  web=$WEB_PORT  ui=$UI_PORT  redis=$REDIS_PORT  postgres=$PG_PORT
+
+Postgres runs in Docker ($PG_IMAGE, container $PG_CONTAINER) with its
+data in the named volume $PG_VOLUME, so it survives restarts. Its user,
+password and database come from DATABASE_URL (backend/.env), default
+postgres://saxodash:saxodash@localhost:5432/saxodash. Requires Docker
+Desktop running. Use --no-postgres to point DATABASE_URL at a Postgres you
+run yourself.
 
 ngrok tunnels to the web port using the domain in ENABLE_BANKING_REDIRECT_URI
 (backend/.env) — needed only for the Enable Banking connect flow, which
@@ -122,11 +136,22 @@ log_has() { grep -q "$2" "$LOG_DIR/$1.log" 2>/dev/null; }
 # reports a public_url only once the tunnel is really live.
 ngrok_ready() { curl -fsS 'http://127.0.0.1:4040/api/tunnels' 2>/dev/null | grep -q '"public_url"'; }
 
+db_part() {
+  "$VENV/bin/python" -c 'import sys, urllib.parse as u; p = u.urlsplit(sys.argv[1]); print(u.unquote({"user": p.username or "", "password": p.password or "", "name": p.path.lstrip("/")}[sys.argv[2]]))' "$DATABASE_URL" "$1"
+}
+
+pg_ready() {
+  "$VENV/bin/python" -c 'import sys, psycopg; psycopg.connect(sys.argv[1], connect_timeout=2).close()' "$DATABASE_URL"
+}
+
 # adopt=yes: a tunnel started by hand in another terminal (e.g. the
 # ngrok-banking alias) is reused rather than fought over - only one agent can
 # hold a given authtoken/domain at a time anyway.
 service ngrok  "$C_NGROK"  "$ROOT"      4040          yes ngrok_ready \
   'ngrok http --url=https://$NGROK_DOMAIN $WEB_PORT --log=stdout'
+
+service postgres "$C_PG"  "$ROOT"      "$PG_PORT"    yes pg_ready \
+  'docker run --rm --name $PG_CONTAINER -p $PG_PORT:5432 -e POSTGRES_USER="$(db_part user)" -e POSTGRES_PASSWORD="$(db_part password)" -e POSTGRES_DB="$(db_part name)" -v $PG_VOLUME:/var/lib/postgresql/data $PG_IMAGE'
 
 service redis  "$C_REDIS"  "$REDIS_DIR" "$REDIS_PORT" yes 'redis-cli -p $REDIS_PORT ping' \
   'redis-server --dir "$REDIS_DIR" --save "" --appendonly no --port $REDIS_PORT'
@@ -189,6 +214,15 @@ fi
 preflight_service() {
   case "$1" in
     redis) command -v redis-server >/dev/null || die "redis-server not found — brew install redis" ;;
+    postgres)
+      pg_ready && return 0
+      command -v docker >/dev/null || die "docker not found — install Docker Desktop (brew install --cask docker)"
+      docker info >/dev/null 2>&1 || die "Docker is not running — start Docker Desktop and try again"
+      if ! docker image inspect "$PG_IMAGE" >/dev/null 2>&1; then
+        note "pulling $PG_IMAGE (first run only)"
+        docker pull "$PG_IMAGE" >/dev/null || die "could not pull $PG_IMAGE"
+      fi
+      ;;
     ui)    [ -d "$FRONTEND/node_modules" ] || die "frontend/node_modules is missing — run 'npm install' in frontend/" ;;
     ngrok)
       command -v ngrok >/dev/null || die "ngrok not found — brew install ngrok"
@@ -336,15 +370,27 @@ run_service() {
 # `migrate --check` exits 1 for unapplied migrations *and* for a broken
 # settings/env, so the exit code alone can't name the cause — keep its output
 # and surface it if the follow-up migrate also fails.
-if check_out=$("$VENV/bin/python" "$BACKEND/manage.py" migrate --check 2>&1); then
-  :
-else
+MIGRATED=0
+ensure_migrated() {
+  [ "$MIGRATED" = 1 ] && return 0
+  MIGRATED=1
+  local check_out
+  if check_out=$("$VENV/bin/python" "$BACKEND/manage.py" migrate --check 2>&1); then
+    return 0
+  fi
   note "migrate --check failed — attempting to apply migrations"
   if ! (cd "$BACKEND" && "$VENV/bin/python" manage.py migrate); then
     die "migrate failed. 'migrate --check' had reported:
 $check_out"
   fi
-fi
+}
+
+ready_tries() {
+  case "$1" in
+    postgres) printf 240 ;;
+    *) printf 60 ;;
+  esac
+}
 
 # --- start -------------------------------------------------------------------
 
@@ -354,6 +400,8 @@ for i in "${!SVC_NAME[@]}"; do
 
   probe="${SVC_PROBE[$i]}"
   [ "$probe" = "-" ] && probe="port_busy ${SVC_PORT[$i]}"
+
+  case "$name" in worker|beat|web) ensure_migrated ;; esac
 
   if [ "${SVC_ADOPT[$i]}" = yes ] && eval "$probe" >/dev/null 2>&1; then
     note "$name already running — reusing it"
@@ -370,7 +418,7 @@ for i in "${!SVC_NAME[@]}"; do
   run_service "$name" "${SVC_COLOR[$i]}" "${SVC_DIR[$i]}" "${SVC_CMD[$i]}"
 
   # "stack up" should be a true statement, so gate on readiness before moving on.
-  wait_for 60 0.25 eval "$probe" \
+  wait_for "$(ready_tries "$name")" 0.25 eval "$probe" \
     || die "$name did not become ready — see $LOG_DIR/$name.log"
 done
 

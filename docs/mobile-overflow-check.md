@@ -16,15 +16,19 @@ Never point it at the real database. Run a throwaway stack on spare ports
 against copies, from the worktree:
 
 ```bash
-cp ../SaxoDash/backend/db.sqlite3 backend/db.sqlite3
+docker exec saxodash-dev-postgres createdb -U saxodash -T saxodash saxodash_check
 cp ../SaxoDash/backend/.env backend/.env
 cd backend && CORS_ALLOWED_ORIGINS=http://localhost:5273 \
+  DATABASE_URL=postgres://saxodash:saxodash@localhost:5432/saxodash_check \
   .venv/bin/python manage.py runserver 8100 --noreload
 cd frontend && VITE_API_BASE_URL=http://localhost:8100 \
   npx vite --port 5273 --strictPort
 ```
 The backend and frontend commands each block, so run them in separate terminals.
-Both copies are gitignored; delete them afterwards.
+The database copy needs the main stack's Django and Celery stopped while it is made
+(Postgres copies a database only while nobody is connected to it). Afterwards, delete
+both copies: `docker exec saxodash-dev-postgres dropdb -U saxodash saxodash_check` and
+`rm backend/.env`.
 
 The app has two users, so a bare `get()` fails. Mint tokens for `demo`, using
 the shell snippet from the `saxodash-design-system` skill with the lookup

@@ -1,7 +1,7 @@
 # Running the Dev Stack
 
-Reference for `scripts/dev.sh`, which starts redis, the celery worker, celery
-beat, Django and Vite in one terminal and stops them all together.
+Reference for `scripts/dev.sh`, which starts Postgres, redis, the celery worker,
+celery beat, Django and Vite in one terminal and stops them all together.
 
 This is a living reference, not a dated note — it is expected to change
 whenever the script does.
@@ -18,12 +18,13 @@ Works from any directory; the script resolves its own paths. **Ctrl-C stops
 everything it started.**
 
 ```
+>> starting postgres (port 5432)
 >> starting redis (port 6379)
 >> starting worker
 >> starting beat
 >> starting web (port 8000)
 >> starting ui (port 5173)
->> stack up (redis worker beat web ui) — Ctrl-C to stop everything
+>> stack up (postgres redis worker beat web ui) — Ctrl-C to stop everything
 [worker] celery@MacBook-Pro.local ready.
 [ui]     ➜  Local:   http://localhost:5173/
 ```
@@ -56,13 +57,13 @@ guarantee cleanup. Saved keystrokes are a side effect, not the point.
 | `./scripts/dev.sh --reclaim` | A previous run was killed and still holds a port |
 | `./scripts/dev.sh --help` | Full usage, plus the ports it resolved from `.env` |
 
-`--no-<service>` accepts any of `redis worker beat web ui`, and they combine.
+`--no-<service>` accepts any of `ngrok postgres redis worker beat web ui`, and they combine.
 A name that isn't a service is rejected with the valid list rather than
 silently skipping nothing:
 
 ```
 $ ./scripts/dev.sh --no-uii
-error: unknown service 'uii' — known services: redis worker beat web ui
+error: unknown service 'uii' — known services: ngrok postgres redis worker beat web ui
 ```
 
 `--no-frontend` is kept as an alias for `--no-ui`.
@@ -78,6 +79,7 @@ error: unknown service 'uii' — known services: redis worker beat web ui
 | `SAXO_REDIRECT_URI` | Django's port | 8000 |
 | `FRONTEND_URL` | Vite's port | 5173 |
 | `CELERY_BROKER_URL` | redis's port | 6379 |
+| `DATABASE_URL` | Postgres's port, user, password and database | `postgres://saxodash:saxodash@localhost:5432/saxodash` |
 
 The fallbacks match `settings.py`'s own defaults, so an absent key behaves
 exactly like the backend expects. Change `FRONTEND_URL` and the script follows
@@ -89,6 +91,32 @@ Override for a single run with environment variables:
 UI_PORT=5200 ./scripts/dev.sh
 WEB_PORT=8080 UI_PORT=5200 ./scripts/dev.sh
 ```
+
+### Postgres
+
+The dev database is Postgres 17 in Docker, the same major version as production and CI,
+so a query that works on the Mac works on the server. It needs **Docker Desktop running**;
+the first run pulls the image.
+
+| | |
+| --- | --- |
+| Container | `saxodash-dev-postgres`, started by the script and removed again on Ctrl-C |
+| Data | Docker volume `saxodash-dev-pg`, which survives every restart |
+| Credentials | Taken from `DATABASE_URL`, so the container and Django can't disagree |
+| Already running? | If something already answers on `DATABASE_URL` (a Postgres from Homebrew, or a container left by a killed run), it is reused and left alone |
+
+Useful by hand:
+
+```bash
+docker exec -it saxodash-dev-postgres psql -U saxodash saxodash
+docker volume rm saxodash-dev-pg
+```
+
+The first opens a SQL prompt. The second **deletes the dev database**: the next start
+creates an empty one and migrates it. Only run it with the stack stopped.
+
+Running your own Postgres instead: point `DATABASE_URL` at it and start with
+`--no-postgres`. The Mac's old `backend/db.sqlite3` is no longer read by anything.
 
 ### The CORS warning
 
@@ -137,7 +165,7 @@ error: worker did not become ready — see .dev/logs/worker.log
 ```
 
 Per-service logs live in `.dev/logs/` (gitignored, truncated each run):
-`redis.log`, `worker.log`, `beat.log`, `web.log`, `ui.log`, plus
+`postgres.log`, `redis.log`, `worker.log`, `beat.log`, `web.log`, `ui.log`, plus
 `shutdown.log` for the noisy job-control messages during teardown.
 
 ### Preflight failures
@@ -149,6 +177,8 @@ These stop the run before anything starts:
 | `no virtualenv at .../backend/.venv` | Create it, `pip install -r backend/requirements.txt` |
 | `backend/.env is missing` | `cp backend/.env.example backend/.env` and fill it in |
 | `redis-server not found` | `brew install redis` |
+| `docker not found` | Install Docker Desktop: `brew install --cask docker` |
+| `Docker is not running` | Start Docker Desktop and wait for it to say it is running |
 | `frontend/node_modules is missing` | `npm install` in `frontend/` |
 
 Unapplied migrations are applied automatically. If `migrate` itself fails, the
@@ -181,7 +211,7 @@ service flower  "$C_FLOWER" "$BACKEND"  5555  no     -                          
 | Field | Meaning |
 | --- | --- |
 | `port` | Checked before start, and used as the default readiness probe. `-` for services that bind nothing |
-| `adopt` | `yes` = if the probe already passes, reuse what's running and leave it alone on exit. Only redis uses this |
+| `adopt` | `yes` = if the probe already passes, reuse what's running and leave it alone on exit. Postgres, redis and ngrok use this |
 | `probe` | Readiness test, eval'd. `-` means "derive from `port`" |
 | command | Single-quoted — expanded at spawn time, not at table-definition time |
 
@@ -202,7 +232,9 @@ log for a startup marker:
 
 **Readiness gating.** Every service has a probe, and the script waits for it
 before starting the next one. This is what makes the ordering safe: celery
-cannot start before redis answers `PONG`.
+cannot start before redis answers `PONG`, and nothing Django-based starts
+before Postgres accepts a connection. Migrations are checked (and applied)
+right before the first Django service, once the database is up.
 
 **Process groups.** Each service runs as a brace group, so `$!` *is* its
 process-group leader and one `kill -TERM -- -$pid` reaches the whole child
@@ -221,8 +253,8 @@ closes, i.e. when the service exits. A proxy, and a deliberate one: a service
 that closed stdout but kept running would be missed, and none of these five
 do that.
 
-**Adopted redis.** If redis is already up (say under `brew services`), the
-script reuses it and says so on exit:
+**Adopted services.** If Postgres or redis is already up (say under `brew services`),
+the script reuses it and says so on exit:
 
 ```
 >> redis already running — reusing it
