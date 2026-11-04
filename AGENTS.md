@@ -249,7 +249,12 @@ WAL / `BEGIN IMMEDIATE` workaround SQLite did. Connections are kept 60 s with a 
 check before reuse. Backups are `pg_dump --format=custom` (`core/backup.py`), written to
 a `.partial` name and renamed on success, keeping every dump from the newest
 `DB_BACKUP_RETAIN` days plus the first of each of the newest `DB_BACKUP_MONTHLY`
-months. `manage.py import_sqlite` copies an old `db.sqlite3` in once (only ever reading
+months. Production is `deploy/compose.yaml` (gunicorn, Celery, Postgres, Redis and a Caddy
+`proxy` serving the built app on the homelab's `edge` network as `saxodash`); `deploy/README.md`
+explains it. Behind that proxy Django trusts `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`,
+safe only because nothing else reaches gunicorn), WhiteNoise serves static files, and
+`/healthz` (database + cache, no login, exempt from the HTTPS redirect) is what the deploy
+probes. `manage.py import_sqlite` copies an old `db.sqlite3` in once (only ever reading
 it, from a migrated temporary copy, verified by row counts). Production and the plan to
 get there:
 `docs/superpowers/specs/2026-11-02-cicd-homelab-design.md`.

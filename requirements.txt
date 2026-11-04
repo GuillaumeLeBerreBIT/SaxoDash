@@ -8,9 +8,11 @@ django-cors-headers==4.9.0
 django-filter==26.1
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
+gunicorn==26.2.0
 psycopg[binary]==3.3.8
 pypdf==6.20.1
 python-dotenv==1.2.2
 redis==8.1.0
 requests==2.34.2
 sqlparse==0.5.5
+whitenoise==6.12.0

@@ -80,43 +80,49 @@ the stack up on Postgres from a clean machine, and the Mac's real data is still 
 
 ## Phase 2 — Production images and stack (PR 2)
 
-- [ ] `backend/Dockerfile`: `python:3.13-slim`, non-root user, `requirements.txt`, the app,
+- [x] `backend/Dockerfile`: `python:3.13-slim`, non-root user, `requirements.txt`, the app,
       `postgresql-client-17` (for `pg_dump`/`pg_restore`), `collectstatic`, default command
       gunicorn on `0.0.0.0:8000`. The same image runs `web`, `worker`, `beat` and one-off
       `migrate` with a different command.
-- [ ] `gunicorn` added to requirements.
-- [ ] `frontend/Dockerfile` (multi-stage): `node:22` builds with `VITE_API_BASE_URL=""`
+- [x] `gunicorn` added to requirements.
+- [x] `frontend/Dockerfile` (multi-stage): `node:22` builds with `VITE_API_BASE_URL=""`
       (same origin; `http.js` uses `??`, so the empty string is kept), then
       `caddy:2.10.2` serves `dist/` with SPA fallback and proxies `/api/`, `/admin/` and
       `/static/` to `web:8000`. Its Caddyfile sets `trusted_proxies static private_ranges`
       so the edge's `X-Forwarded-Proto` survives. This image is the `proxy` service.
-- [ ] Production settings, each test-first:
-  - [ ] `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` when `DEBUG` is
+- [x] Production settings, each test-first:
+  - [x] `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` when `DEBUG` is
         off. Test: a request with the header over plain HTTP is not redirected; one
         without it is.
-  - [ ] `SECURE_SSL_REDIRECT` exempts `/healthz` so the deploy can probe `web` directly.
-  - [ ] `STATIC_ROOT` for `collectstatic` (admin and DRF assets).
-  - [ ] `DEBUG=False` refuses to start without `ALLOWED_HOSTS` and a real
+  - [x] `SECURE_SSL_REDIRECT` exempts `/healthz` so the deploy can probe `web` directly.
+  - [x] WhiteNoise serves Django's own static files (admin, DRF) from `STATIC_ROOT`, so
+        `proxy` forwards `/static/` to `web` instead of sharing a volume.
+  - [x] `STATIC_ROOT` for `collectstatic` (admin and DRF assets).
+  - [x] `DEBUG=False` refuses to start without `ALLOWED_HOSTS` and a real
         `SAXO_TOKEN_ENCRYPTION_KEY`.
-- [ ] `GET /healthz`: 200 when a `SELECT 1` and a cache round-trip succeed, 503 otherwise,
+- [x] `GET /healthz`: 200 when a `SELECT 1` and a cache round-trip succeed, 503 otherwise,
       `AllowAny`, no data in the body. Tests for both.
-- [ ] `deploy/compose.yaml` (project `saxodash`): `postgres` (bind `/srv/saxodash/postgres`,
+- [x] `deploy/compose.yaml` (project `saxodash`): `postgres` (bind `/srv/saxodash/postgres`,
       healthcheck), `redis` (named volume), `web`, `worker` (`--concurrency=2`), `beat`,
       `proxy` (no `ports:`; networks `default` + external `edge` with alias `saxodash`).
       `env_file: /srv/saxodash/.env` for the app services; images tagged `${SAXODASH_TAG}`.
-- [ ] `deploy/.env.example`: every production variable with its production value or a
+- [x] `deploy/.env.example`: every production variable with its production value or a
       blank for a secret (`DEBUG=False`, `ALLOWED_HOSTS=saxodash.uniroo.dev`,
       `CSRF_TRUSTED_ORIGINS`/`FRONTEND_URL=https://saxodash.uniroo.dev`,
       `SAXO_ENVIRONMENT=live`, `SAXO_REDIRECT_URI=https://saxodash.uniroo.dev/api/saxo/callback/`,
       `DATABASE_URL`, `CACHE_URL`, `CELERY_BROKER_URL`, `DB_BACKUP_DIR=/backups`, …).
-- [ ] Backups in the stack: the image carries `postgresql-client-17` (Phase 1 already
+- [x] Backups in the stack: the image carries `postgresql-client-17` (Phase 1 already
       rewrote `core/backup.py` for `pg_dump`). `/srv/saxodash/backups` is mounted at
       `/backups` in `web` and `worker`, and `manage.py backup_database` is what the deploy
       calls.
-- [ ] `deploy/restore.sh <file>`: refuses without an explicit file, stops `web`/`worker`/`beat`,
+- [x] `deploy/restore.sh <file>`: refuses without an explicit file, stops `web`/`worker`/`beat`,
       `pg_restore --clean --if-exists` into the running `postgres`, starts them again.
-- [ ] Local check: `docker compose -f deploy/compose.yaml` with a scratch `.env` and a
-      scratch `/srv` path builds and serves the app at `http://localhost` through `proxy`.
+- [x] Local check, without a Docker daemon in the build environment. `docker compose config`
+      validates and resolves the stack. The frontend built with an empty `VITE_API_BASE_URL`
+      calls `/api/...` with no `localhost:8000` left. gunicorn with `DEBUG=False`: `/healthz`
+      200 over HTTP; proxied HTTPS passes; plain HTTP is redirected; HSTS is set; static
+      files are served; a wrong host gets 400. `restore.sh`'s `pg_restore` flags restore a
+      populated database. **The images themselves are first built by CI (Phase 3).**
 
 **Done when:** the stack starts from the images alone, `/healthz` is 200, login works,
 the SPA loads with no request to `localhost:8000`, and a backup restores into a scratch

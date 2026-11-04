@@ -1,0 +1,78 @@
+name: saxodash
+
+x-app: &app
+  image: saxodash-backend:${SAXODASH_TAG:-local}
+  restart: unless-stopped
+  env_file: /srv/saxodash/.env
+  environment:
+    DATABASE_URL: postgres://saxodash:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in /srv/saxodash/.env}@postgres:5432/saxodash
+    CACHE_URL: redis://redis:6379/1
+    CELERY_BROKER_URL: redis://redis:6379/0
+    DB_BACKUP_DIR: /backups
+  volumes:
+    - /srv/saxodash/backups:/backups
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saxodash
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in /srv/saxodash/.env}
+      POSTGRES_DB: saxodash
+    volumes:
+      - /srv/saxodash/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saxodash -d saxodash"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+
+  web:
+    <<: *app
+    build: ../backend
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8000/healthz', headers={'Host': os.environ['ALLOWED_HOSTS'].split(',')[0]}), timeout=5)"
+      interval: 10s
+      timeout: 10s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    <<: *app
+    command: ["celery", "-A", "backend", "worker", "-l", "info", "--concurrency=2"]
+
+  beat:
+    <<: *app
+    command: ["celery", "-A", "backend", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+
+  proxy:
+    image: saxodash-proxy:${SAXODASH_TAG:-local}
+    build: ../frontend
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      default:
+      edge:
+        aliases:
+          - saxodash
+
+networks:
+  edge:
+    external: true
