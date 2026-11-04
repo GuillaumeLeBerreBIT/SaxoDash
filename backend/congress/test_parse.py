@@ -271,3 +271,74 @@ class OlderGeneratorDeletionsTest(SimpleTestCase):
     def test_an_older_report_of_only_deletions_reads_as_deletions(self):
         parsed = read_report((TESTDATA / '20019618.pdf').read_bytes())
         self.assertEqual((len(parsed.rows), parsed.unparsed_rows, parsed.deleted_rows), (0, 0, 6))
+
+
+class NoteSentenceEndingAtALineBreakTest(SimpleTestCase):
+    def test_the_rest_of_a_comment_stays_out_of_the_next_asset(self):
+        rows = (
+            'SP Alaska Air Group, Inc. Common Stock (ALK) [ST] S 01/10/2025 01/10/2025 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'C       : This stock was part of the Inherited Beneficiary IRA.\n'
+            'There will be no capital gains on this sale.\n'
+            'SP Delta Air Lines, Inc. (DAL) [ST] S 01/10/2025 01/10/2025 $1,001 - $15,000\n'
+            'F      S     : New\n'
+        )
+        parsed = parse_report(inline(rows))
+        self.assertEqual([row.asset for row in parsed.rows], [
+            'Alaska Air Group, Inc. Common Stock (ALK)', 'Delta Air Lines, Inc. (DAL)',
+        ])
+        self.assertEqual(parsed.unparsed_rows, 0)
+
+    def test_a_self_owned_row_after_a_multi_sentence_note_keeps_its_bare_name(self):
+        rows = (
+            'SP Apple Inc. (AAPL) [ST] S 06/15/2020 06/15/2020 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'D          : The account passed to my spouse upon her mother\'s\n'
+            'death. After completion of probate, the estate\'s financial advisors liquidated the assets in June 2020.\n'
+            'This filing is made to provide full transparency into that sale.\n'
+            'blackRock, Inc. (BLK) [ST] S 06/15/2020 06/15/2020 $1,001 - $15,000\n'
+            'F      S     : New\n'
+        )
+        parsed = parse_report(inline(rows))
+        self.assertEqual([(row.owner, row.asset) for row in parsed.rows], [
+            ('SP', 'Apple Inc. (AAPL)'), ('self', 'blackRock, Inc. (BLK)'),
+        ])
+
+    def test_a_self_owned_name_wrapped_before_its_type_after_a_full_stop_is_still_a_row(self):
+        rows = (
+            OPTION_ROW.replace('market\n', 'market.\n')
+            + 'Alphabet Inc. - Class A Common\nStock (GOOGL) [ST]\nP 01/15/2025 01/15/2025 $1,001 - $15,000\nF      S     : New\n'
+        )
+        parsed = parse_report(inline(rows))
+        self.assertEqual(parsed.rows[1].asset, 'Alphabet Inc. - Class A Common Stock (GOOGL)')
+
+
+class LabelAfterWrappedTextTest(SimpleTestCase):
+    def test_a_label_preceded_by_the_previous_notes_tail_is_still_a_label(self):
+        rows = (
+            'SP Alaska Air Group, Inc. Common Stock (ALK) [ST] S 01/10/2025 01/10/2025 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'D          : Sold from the Inherited IRA.\n'
+            'Beneficiary C       : This stock was part of the Inherited Beneficiary IRA. There will be\n'
+            'no capital gains on this sale.\n'
+            'SP American Airlines Group Inc. (AAL) [ST] S 01/10/2025 01/10/2025 $1,001 - $15,000\n'
+            'F      S     : New\n'
+        )
+        parsed = parse_report(inline(rows))
+        self.assertEqual([(row.owner, row.asset) for row in parsed.rows], [
+            ('SP', 'Alaska Air Group, Inc. Common Stock (ALK)'), ('SP', 'American Airlines Group Inc. (AAL)'),
+        ])
+
+
+class RowsRunTogetherOnOneLineTest(SimpleTestCase):
+    def test_a_deleted_row_and_its_subholding_note_do_not_reach_the_next_row(self):
+        rows = (
+            '2000084609 General Electric Company (GE) [ST] S 09/16/2019 09/20/2019 $1,001 - $15,000 '
+            'F      S     : Deleted S          O : National Securities- Advisor Discretion Account '
+            '2000084449 General Motors Company (GM) [ST] S 09/16/2019 09/20/2019 $1,001 - $15,000\n'
+            'F      S     : New\n'
+            'S          O : National Securities- Advisor Discretion Account\n'
+        )
+        parsed = parse_report(inline(rows))
+        self.assertEqual([row.asset for row in parsed.rows], ['General Motors Company (GM)'])
+        self.assertEqual((parsed.deleted_rows, parsed.unparsed_rows), (1, 0))

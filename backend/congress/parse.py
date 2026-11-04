@@ -23,6 +23,9 @@ _CORE = re.compile(
     r'(?P<amount>(?:Spouse/DC )?Over(?: \$[\d,]+)?|\$[\d,]+\s*-\s*(?:\$[\d,]+)?|\$[\d,]+\.\d{2})'
 )
 _OWNER = re.compile(r'^(SP|JT|DC)\s+')
+_ROW_ID = re.compile(r'^\d{10}\s+')
+_EMBEDDED_START = re.compile(r'(?<=\S\S)\s+(?=[A-Z]\s{2,}(?:[A-Z]\s+)?:|\d{10}\s)')
+_PROSE_WORD = re.compile(r"(?:^|\s)[a-z][a-z'’]{2,}\b")
 _TYPE = re.compile(r'\s*\[([A-Z]{2})\]')
 _TICKER = re.compile(r'\(([A-Z][A-Z0-9.]{0,9})\)\s*\[')
 _MISCASED_CODE = re.compile(r'\([A-Za-z][A-Za-z0-9.]{0,9}\)|\[[A-Za-z]{2}\]')
@@ -86,12 +89,20 @@ def _body(text):
     return _COLUMN_HEADER.sub('', _PAGE_BREAK.sub('', body + '\n'))
 
 
-def _is_continuation(line, following):
-    if _OWNER.match(line) or _TYPE.search(line) or _CORE.search(line):
+def _starts_a_row(line):
+    return bool(_OWNER.match(line) or _ROW_ID.match(line) or _TYPE.search(line) or _CORE.search(line))
+
+
+def _reads_as_prose(line):
+    return len(_PROSE_WORD.findall(line)) >= 2
+
+
+def _is_continuation(line, following, after_full_stop):
+    if _starts_a_row(line):
         return False
     rest = []
     closed = False
-    for later in following:
+    for later, _ in following:
         if _STATUS.match(later):
             closed = True
             break
@@ -99,25 +110,40 @@ def _is_continuation(line, following):
     if not closed:
         return True
     flat = ' '.join(rest)
-    return bool(_TYPE.search(flat) and _CORE.search(flat))
+    markers = [match.start() for match in (_TYPE.search(flat), _CORE.search(flat)) if match]
+    if len(markers) < 2 or not flat[:min(markers)].strip():
+        return False
+    return not after_full_stop or _reads_as_prose(line)
+
+
+def _pieces(body):
+    for line in body.splitlines():
+        parts = _EMBEDDED_START.split(line)
+        lead_is_tail = len(parts) > 1 and not _STATUS.match(parts[1]) and not _ROW_ID.match(parts[1])
+        yield parts[0], lead_is_tail
+        for part in parts[1:]:
+            yield part, False
 
 
 def _records(body):
-    records, current, continuing = [], [], False
-    lines = body.splitlines()
-    for index, line in enumerate(lines):
+    records, current, continuing, after_full_stop = [], [], False, False
+    pieces = list(_pieces(body))
+    for index, (line, is_tail) in enumerate(pieces):
         status = _STATUS.match(line)
         if status:
             records.append({'lines': current, 'status': status.group(1), 'notes': []})
-            current, continuing = [], False
+            current, continuing, after_full_stop = [], False, False
             continue
         if records and not current:
             label = _LABEL.match(line)
-            if label or (continuing and _is_continuation(line, lines[index + 1:])):
+            if is_tail and not label and not _starts_a_row(line):
+                records[-1]['notes'].append(line)
+                continue
+            if label or (continuing and _is_continuation(line, pieces[index + 1:], after_full_stop)):
                 note = label.group('text') if label else line
                 records[-1]['notes'].append(note)
-                is_description = (label and label.group('key') in _WRAPPING_LABELS) or (not label and continuing)
-                continuing = bool(is_description) and not note.rstrip().endswith('.')
+                continuing = bool((label and label.group('key') in _WRAPPING_LABELS) or (not label and continuing))
+                after_full_stop = note.rstrip().endswith('.')
                 continue
         if line.strip():
             current.append(line)
@@ -142,6 +168,7 @@ def _trade(record):
         amount = f'{amount} {closing.group(0)}'
         tail = (tail[:closing.start()] + tail[closing.end():]).strip()
     low, high = parse_range(amount)
+    head = _ROW_ID.sub('', head)
     owner_match = _OWNER.match(head)
     owner = owner_match.group(1) if owner_match else 'self'
     head = head[owner_match.end():] if owner_match else head
