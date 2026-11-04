@@ -1,6 +1,6 @@
 # CI/CD and homelab production — design
 
-Date: 2026-11-02. Status: approved in conversation, not yet planned. Amended 2026-11-04:
+Date: 2026-11-02. Status: approved, ready to plan. Amended 2026-11-04:
 HTTPS and hostnames now come from the shared edge Caddy on `uniroo.dev`, which lives in
 the private `GuillaumeLeBerreBIT/homelab` repo (`docs/edge-design.md` there), instead of
 `tailscale serve`.
@@ -220,7 +220,8 @@ Exact Python/Node versions (match the current lockfiles), Caddy vs nginx for the
 `dumpdata` vs `pgloader`, health endpoint shape, how the guard job reads the PR head, and the
 order of tasks — provided the Postgres switch lands and is green in CI before anything deploys.
 
-## Open
+## Readiness
 
-- The user wants to check one more thing about production readiness ("a real MVP") before this
-  is planned; its outcome may add to this design.
+Settled 2026-11-04: the app is MVP-ready as it stands, its purpose being to view the real
+investment portfolio. Feature work continues afterwards through the branch flow above, and
+daily use on the server is what feeds it.
