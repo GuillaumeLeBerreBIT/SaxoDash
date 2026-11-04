@@ -5,7 +5,8 @@ from pathlib import Path
 
 from django.apps import apps
 from django.core.management import call_command
-from django.db import DEFAULT_DB_ALIAS, connections
+from django.db import DEFAULT_DB_ALIAS, connections, models
+from django.db.models.functions import Length
 
 from core.scheduling import sync_periodic_tasks
 
@@ -60,6 +61,25 @@ def _first_table_with_rows(alias):
     return None
 
 
+def _oversized_values():
+    found = []
+    for model in copied_models():
+        for field in model._meta.concrete_fields:
+            if not isinstance(field, models.CharField) or not field.max_length:
+                continue
+            rows = (
+                model._base_manager.using(SOURCE_ALIAS)
+                .annotate(_length=Length(field.attname))
+                .filter(_length__gt=field.max_length)
+                .values_list('pk', '_length')
+            )
+            found.extend(
+                f'{model._meta.label_lower} {field.name} pk={pk}: {length} > {field.max_length}'
+                for pk, length in rows
+            )
+    return found
+
+
 def _snapshot(source, destination):
     reader = sqlite3.connect(f'{source.resolve().as_uri()}?mode=ro', uri=True)
     writer = sqlite3.connect(str(destination))
@@ -98,6 +118,12 @@ def import_sqlite(source, flush=False):
         _snapshot(source, working)
         with source_database(working):
             call_command('migrate', database=SOURCE_ALIAS, verbosity=0, interactive=False)
+            oversized = _oversized_values()
+            if oversized:
+                raise ImportRefused(
+                    'These values are longer than their column allows, which SQLite never '
+                    'enforced and Postgres does. Nothing was copied:\n  ' + '\n  '.join(oversized)
+                )
             call_command(
                 'dumpdata',
                 database=SOURCE_ALIAS,

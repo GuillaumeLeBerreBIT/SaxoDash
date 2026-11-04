@@ -106,6 +106,24 @@ class ImportSqliteTest(TransactionTestCase):
 
         self.assertEqual(list(User.objects.values_list('username', flat=True)), ['guillaume'])
 
+    def test_lists_every_value_too_long_for_its_postgres_column_before_copying(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'oversized.sqlite3'
+            with source_database(source):
+                call_command('migrate', database=SOURCE_ALIAS, verbosity=0, interactive=False)
+                User.objects.db_manager(SOURCE_ALIAS).create_user('long', first_name='x' * 151)
+                User.objects.db_manager(SOURCE_ALIAS).create_user('longer', last_name='y' * 200)
+
+            with self.assertRaises(ImportRefused) as refused:
+                import_sqlite(source)
+
+        message = str(refused.exception)
+        self.assertIn('auth.user first_name', message)
+        self.assertIn('151 > 150', message)
+        self.assertIn('auth.user last_name', message)
+        self.assertIn('200 > 150', message)
+        self.assertFalse(User.objects.exists())
+
     def test_refuses_a_missing_file(self):
         with self.assertRaisesMessage(ImportRefused, 'no SQLite database'):
             import_sqlite(Path(self._tmp.name) / 'missing.sqlite3')
