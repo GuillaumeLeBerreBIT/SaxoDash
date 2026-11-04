@@ -17,10 +17,12 @@ write_stubs() {
 #!/usr/bin/env bash
 args="$*"
 printf 'TAG=%s %s\n' "${SAXODASH_TAG:-}" "$args" >> "$STUB_LOG"
+[[ "$args" == compose* ]] && printf '%s\n' "$PWD" >> "$STUB_DIR/compose_cwd"
 if [ -n "${STUB_FAIL:-}" ] && [[ "$args" == *"$STUB_FAIL"* ]]; then exit 1; fi
 case "$args" in
   *" up -d --remove-orphans"*) printf '%s\n' "${SAXODASH_TAG:-}" > "$STUB_DIR/running" ;;
   *" ps -q web"*) echo web-1 ;;
+  *" ps --status running --services"*) echo postgres ;;
   inspect*)
     running="$(cat "$STUB_DIR/running" 2>/dev/null || true)"
     if [ -n "${STUB_UNHEALTHY_TAG:-}" ] && [ "$running" = "$STUB_UNHEALTHY_TAG" ]; then echo unhealthy; else echo healthy; fi
@@ -204,6 +206,22 @@ rollback_pins_and_deploys_an_earlier_release() {
   assert_eq "$(state pinned)" "" "pinned after release"
 }
 
+restore_runs_compose_from_the_checkout_wherever_it_is_started() {
+  running_as "$A"
+  mkdir -p "$T/elsewhere"
+  printf 'PGDMP' > "$T/elsewhere/backup.dump"
+  (cd "$T/elsewhere" && "$APP/deploy/restore.sh" backup.dump --yes) || fail "restore exited non-zero"
+  assert_log_has "exec -T postgres pg_restore"
+  assert_eq "$(sort -u "$STUB_DIR/compose_cwd")" "$APP" "compose working directory"
+}
+
+polls_from_any_directory() {
+  running_as "$A"
+  mkdir -p "$T/elsewhere"
+  (cd "$T/elsewhere" && "$APP/deploy/poll.sh") || fail "poll exited non-zero"
+  assert_eq "$(sort -u "$STUB_DIR/compose_cwd")" "$APP" "compose working directory"
+}
+
 rollback_refuses_a_commit_never_deployed() {
   running_as "$A"
   "$APP/deploy/rollback.sh" "${B:0:8}" && fail "rollback should have refused"
@@ -226,7 +244,9 @@ for name in \
   a_first_deploy_backs_up_with_its_own_image \
   a_pinned_release_is_not_replaced \
   rollback_pins_and_deploys_an_earlier_release \
-  rollback_refuses_a_commit_never_deployed
+  rollback_refuses_a_commit_never_deployed \
+  restore_runs_compose_from_the_checkout_wherever_it_is_started \
+  polls_from_any_directory
 do
   run_case "$name"
 done

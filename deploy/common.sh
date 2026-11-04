@@ -10,7 +10,7 @@ KEEP_RELEASES=5
 log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 die() { log "error: $*" >&2; exit 1; }
 
-compose() { docker compose --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.yaml" "$@"; }
+compose() { (cd "$REPO_DIR" && docker compose --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.yaml" "$@"); }
 
 state_get() { cat "$STATE_DIR/$1" 2>/dev/null || true; }
 state_set() { printf '%s\n' "$2" > "$STATE_DIR/$1.tmp" && mv "$STATE_DIR/$1.tmp" "$STATE_DIR/$1"; }
