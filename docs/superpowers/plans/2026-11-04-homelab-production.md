@@ -130,19 +130,27 @@ database.
 
 ## Phase 3 — CI and branch model (PR 3)
 
-- [ ] `.github/workflows/ci.yml` on `pull_request` and `push` to `main`/`develop`:
+- [x] `.github/workflows/ci.yml` on `pull_request` and `push` to `main`/`develop`:
   - `backend`: Python 3.13, `postgres:17` and `redis:7` services, `pip install`,
     `manage.py test`, `manage.py makemigrations --check`.
   - `frontend`: Node 22, `npm ci`, `npx vitest run`, `npx eslint .`, `npm run build`.
   - `images`: `docker build` both Dockerfiles, no push.
   - `source-branch`: on PRs into `main` only, fails unless `github.head_ref == 'develop'`.
   - `permissions: contents: read`; actions pinned by major version.
-- [ ] Create `develop` from `main`.
+- [x] Create `develop` from `main`.
 - [ ] Rulesets on `main` and `develop` (user, in GitHub settings; exact clicks in the PR):
-      require a PR, require the four checks, require up to date, block force-push and
-      deletion, no required approvals. Settings → Actions: require approval for all
+      require a PR, require the four checks, block force-push and deletion, no required
+      approvals. "Require up to date" stays **off**: every develop → main merge commit would
+      otherwise leave develop permanently behind, and updating it would mean a push the
+      ruleset forbids. Steps in `docs/branching.md`. Settings → Actions: require approval for all
       outside collaborators.
-- [ ] AGENTS.md: the branch flow (feature → `develop` → `main`) and that `main` deploys.
+- [x] AGENTS.md: the branch flow (feature → `develop` → `main`) and that `main` deploys.
+
+- [x] Running the suite with no `backend/.env` (CI's conditions) found
+      `EnableBankingAPIErrorClassificationTest` signing with the developer's real Enable
+      Banking key; it now uses the throwaway test key like its neighbours. WhiteNoise is
+      added only when `DEBUG` is off, so tests no longer warn about a missing
+      `staticfiles/`.
 
 **Done when:** a PR into `develop` shows the four checks green, and a PR into `main` from
 any branch but `develop` is red.

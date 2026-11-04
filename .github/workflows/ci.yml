@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: saxodash
+          POSTGRES_DB: saxodash
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U saxodash"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgres://saxodash@localhost:5432/saxodash
+      CACHE_URL: redis://localhost:6379/1
+      CELERY_BROKER_URL: redis://localhost:6379/0
+      ENABLE_BANKING_APPLICATION_ID: ci-placeholder
+      ENABLE_BANKING_PRIVATE_KEY: ci-placeholder
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Generate a throwaway token encryption key
+        run: echo "SAXO_TOKEN_ENCRYPTION_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> "$GITHUB_ENV"
+      - name: No missing migrations
+        run: python manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: python manage.py test --noinput --parallel 4
+
+  frontend:
+    name: Frontend tests, lint and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npx eslint .
+      - name: Tests
+        run: npx vitest run
+      - name: Production build
+        env:
+          VITE_API_BASE_URL: ''
+          VITE_ENABLE_BANKING_CONNECT_BASE_URL: ''
+        run: |
+          npm run build
+          if grep -q 'localhost:8000' dist/assets/*.js; then
+            echo "::error::the production build still points at localhost:8000"
+            exit 1
+          fi
+
+  images:
+    name: Production images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the backend image
+        run: docker build --tag saxodash-backend:ci backend
+      - name: Build the frontend image
+        run: docker build --tag saxodash-proxy:ci frontend
+      - name: The backend image carries pg_dump 17 and its static files
+        run: |
+          docker run --rm saxodash-backend:ci pg_dump --version | grep -q ' 17\.'
+          docker run --rm saxodash-backend:ci test -f staticfiles/admin/css/base.css
+      - name: The backend image can load Celery's Redis transport
+        run: docker run --rm saxodash-backend:ci python -c "import kombu.transport.redis"
+      - name: The frontend image's Caddyfile is valid
+        run: docker run --rm saxodash-proxy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: The stack definition resolves
+        working-directory: deploy
+        run: |
+          sudo mkdir -p /srv/saxodash
+          sed -e "s/^SECRET_KEY=\$/SECRET_KEY=$(openssl rand -hex 32)/" \
+              -e "s/^POSTGRES_PASSWORD=\$/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" \
+              .env.example | sudo tee /srv/saxodash/.env > /dev/null
+          docker compose --env-file /srv/saxodash/.env config --quiet
+
+  source-branch:
+    name: Only develop merges into main
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check the pull request's source
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$BASE_REF" != main ]; then
+            echo "Pull request into $BASE_REF: any branch may open it."
+            exit 0
+          fi
+          if [ "$HEAD_REF" = develop ] && [ "$HEAD_REPO" = "$REPO" ]; then
+            echo "develop -> main: allowed."
+            exit 0
+          fi
+          echo "::error::Only this repository's develop branch may be merged into main (this PR comes from $HEAD_REPO:$HEAD_REF). Open it against develop instead."
+          exit 1

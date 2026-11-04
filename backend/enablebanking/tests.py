@@ -208,6 +208,10 @@ class EnableBankingClientTest(TestCase):
             client.get_balances('sess-1', 'acc-1')
 
 
+@override_settings(
+    ENABLE_BANKING_APPLICATION_ID='11111111-1111-1111-1111-111111111111',
+    ENABLE_BANKING_PRIVATE_KEY=TEST_PRIVATE_KEY_PEM,
+)
 class EnableBankingAPIErrorClassificationTest(TestCase):
     """Only network failures, timeouts, 429, and 5xx should be retried by
     Celery - a 4xx means the request itself is wrong (or the session needs

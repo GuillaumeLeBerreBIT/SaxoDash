@@ -40,6 +40,12 @@ Full reference — flags, troubleshooting, adding a service:
 
 ## Working agreement (read this before writing any code)
 
+**Branches: feature → `develop` → `main`.** Branch from `develop` and open pull requests
+into `develop`; only `develop` merges into `main`, and a push to `main` deploys to the
+homelab. CI (`.github/workflows/ci.yml`) must be green on both. `docs/branching.md` has the
+flow, the checks and the GitHub ruleset. GitHub proposes `main` as a PR's base by default,
+so set `develop` explicitly.
+
 **Direct implementation, backend and frontend.** Coach mode is retired — write
 the models/serializers/views/tests and the React components directly, test-first.
 Keep changes scoped to what was asked and explain what changed in the chat / PR.
