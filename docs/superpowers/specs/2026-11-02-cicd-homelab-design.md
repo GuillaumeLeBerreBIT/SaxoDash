@@ -82,7 +82,7 @@ installed through CasaOS. Domain `uniroo.dev`, registered and DNS-hosted at Clou
 9. Failures are reported by email.
 10. Existing SQLite data is carried over into Postgres once (stated as an assumption; user did not
     object).
-11. SaxoDash is served as `saxo.uniroo.dev` through one shared edge Caddy (2026-11-04).
+11. SaxoDash is served as `saxodash.uniroo.dev` through one shared edge Caddy (2026-11-04).
 
 ## The design
 
@@ -150,9 +150,9 @@ proxying `/api/` to `web`).
   loss is harmless). Secrets: `/srv/saxodash/.env`, mode 600, root-owned, read by compose.
 - The compose file and deploy scripts live in the repo under `deploy/`; no script ever uses
   `down -v`.
-- `DEBUG=False`, `ALLOWED_HOSTS=saxo.uniroo.dev`,
-  `CSRF_TRUSTED_ORIGINS`/`FRONTEND_URL=https://saxo.uniroo.dev`, `SAXO_ENVIRONMENT=live`,
-  `SAXO_REDIRECT_URI=https://saxo.uniroo.dev/api/saxo/callback/`.
+- `DEBUG=False`, `ALLOWED_HOSTS=saxodash.uniroo.dev`,
+  `CSRF_TRUSTED_ORIGINS`/`FRONTEND_URL=https://saxodash.uniroo.dev`, `SAXO_ENVIRONMENT=live`,
+  `SAXO_REDIRECT_URI=https://saxodash.uniroo.dev/api/saxo/callback/`.
 
 ### Postgres migration of the app
 
@@ -200,7 +200,7 @@ proxying `/api/` to `web`).
 - Install Tailscale on the server.
 - Cloudflare: the `*.uniroo.dev` DNS-only record and the scoped API token; fill
   `/srv/edge/.env`; move CasaOS off port 80 (`deploy/edge/README.md`).
-- Add `https://saxo.uniroo.dev/api/saxo/callback/` to the Saxo LIVE app in the Saxo developer
+- Add `https://saxodash.uniroo.dev/api/saxo/callback/` to the Saxo LIVE app in the Saxo developer
   portal, and the matching URL to the Enable Banking application whitelist.
 - Register the self-hosted runner (token from the repo settings) — a guided script can do the rest.
 - Fill `/srv/saxodash/.env` with the secrets.

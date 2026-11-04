@@ -42,7 +42,7 @@ reachable only over Tailscale.
 
 | Hostname | Upstream |
 |---|---|
-| `saxo.uniroo.dev` | `saxodash:80`, an alias on the shared `edge` Docker network |
+| `saxodash.uniroo.dev` | `saxodash:80`, an alias on the shared `edge` Docker network |
 | `music.uniroo.dev` | Navidrome via `host.docker.internal:<port>` (CasaOS-managed, publishes a host port) |
 | `casa.uniroo.dev` | CasaOS dashboard via `host.docker.internal:8080` |
 | anything else | `abort`: connection closed, no default site |
@@ -65,9 +65,9 @@ forwards `/api/` to gunicorn. What changes:
   redirects every request to HTTPS forever. The production-settings work adds
   `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` under `not DEBUG`.
   This is safe only because gunicorn is unreachable except through the proxies.
-- Server env: `ALLOWED_HOSTS=saxo.uniroo.dev`,
-  `CSRF_TRUSTED_ORIGINS=https://saxo.uniroo.dev`, `FRONTEND_URL=https://saxo.uniroo.dev`,
-  `SAXO_REDIRECT_URI=https://saxo.uniroo.dev/api/saxo/callback/`, and the frontend built
+- Server env: `ALLOWED_HOSTS=saxodash.uniroo.dev`,
+  `CSRF_TRUSTED_ORIGINS=https://saxodash.uniroo.dev`, `FRONTEND_URL=https://saxodash.uniroo.dev`,
+  `SAXO_REDIRECT_URI=https://saxodash.uniroo.dev/api/saxo/callback/`, and the frontend built
   same-origin, so `VITE_API_BASE_URL` is empty-relative and CORS is not needed.
 - The Saxo OAuth callback is a browser redirect, not a call from Saxo's servers. A
   tailnet-only address therefore works, provided the browser doing the login is on
@@ -109,5 +109,5 @@ Step-by-step commands: `deploy/edge/README.md`.
 - `docker compose logs caddy` reports the `*.uniroo.dev` certificate obtained.
 - On a tailnet device: `https://music.uniroo.dev` loads with a valid certificate.
 - Off the tailnet: no hostname answers.
-- After the SaxoDash stack is up: `https://saxo.uniroo.dev` logs in, `/admin/` login
+- After the SaxoDash stack is up: `https://saxodash.uniroo.dev` logs in, `/admin/` login
   works (CSRF over the proxy), and no request loops on a 301 (proxy SSL header).

@@ -10,8 +10,8 @@
 
 	encode zstd gzip
 
-	@saxo host saxo.uniroo.dev
-	handle @saxo {
+	@saxodash host saxodash.uniroo.dev
+	handle @saxodash {
 		reverse_proxy saxodash:80
 	}
 

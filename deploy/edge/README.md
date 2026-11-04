@@ -6,13 +6,21 @@ subdomain; no app publishes a port of its own. Design:
 
 | Address | Upstream |
 |---|---|
-| `saxo.uniroo.dev` | `saxodash:80` on the `edge` network (SaxoDash's own proxy) |
+| `saxodash.uniroo.dev` | `saxodash:80` on the `edge` network (SaxoDash's own proxy) |
 | `music.uniroo.dev` | Navidrome on the host, port `NAVIDROME_PORT` (default 4533) |
 | `casa.uniroo.dev` | CasaOS dashboard on the host, port `CASAOS_PORT` (default 8080) |
 | anything else | connection closed |
 
 ## One-time setup on the server
 
+0. **Get the files**: the repo is public, so clone over HTTPS, with no SSH key or token:
+   ```sh
+   sudo apt install -y git
+   sudo git clone https://github.com/GuillaumeLeBerreBIT/SaxoDash.git /opt/homelab
+   ```
+   This clone is for the edge proxy only and is updated by hand (`git pull`). Never point
+   the edge at the deploy runner's checkout: the runner rewrites it on every deploy.
+   `docker compose version` must answer; if not, `sudo apt install docker-compose-plugin`.
 1. **Tailscale**: `curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up`,
    then note `tailscale ip -4` (a `100.x.y.z` address).
 2. **Cloudflare DNS**: one `A` record, name `*`, value the `100.x.y.z` address,
@@ -34,14 +42,14 @@ subdomain; no app publishes a port of its own. Design:
    Set `NAVIDROME_PORT` to the host port CasaOS gave Navidrome
    (`docker ps | grep -i navidrome`).
 6. **Shared network**, once: `docker network create edge`.
-7. **Start**: `cd deploy/edge && docker compose up -d --build`.
+7. **Start**: `cd /opt/homelab/deploy/edge && sudo docker compose up -d --build`.
 
 ## Checking it
 
 - `docker compose logs -f caddy` should show `certificate obtained successfully`
   for `*.uniroo.dev` within a minute.
 - From a device on the tailnet: `https://music.uniroo.dev` opens Navidrome with a
-  valid certificate. `saxo.uniroo.dev` answers 502 until the SaxoDash stack is up.
+  valid certificate. `saxodash.uniroo.dev` answers 502 until the SaxoDash stack is up.
 - From a device **off** the tailnet, nothing answers. That is the point.
 
 ## Adding an app
