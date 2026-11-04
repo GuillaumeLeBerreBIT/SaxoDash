@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${SAXODASH_ENV_FILE:-/srv/saxodash/.env}"
-TAG_FILE="$DEPLOY_DIR/../.deployed"
 APP_SERVICES=(proxy web worker beat)
-
-die() { printf 'error: %s\n' "$1" >&2; exit 1; }
 
 usage() {
   cat <<USAGE
@@ -36,16 +32,16 @@ done
 [ -n "$dump" ] || { usage >&2; exit 2; }
 [ -f "$dump" ] || die "no such file: $dump"
 case "$dump" in *.dump) ;; *) die "expected a .dump file written by the backup task, got: $dump" ;; esac
-[ -r "$ENV_FILE" ] || die "cannot read $ENV_FILE (run with sudo)"
+[ -r "$ENV_FILE" ] || die "cannot read $ENV_FILE (run it as the deploy user: sudo -u saxodash-deploy $0 ...)"
 
-tag="${SAXODASH_TAG:-}"
-if [ -z "$tag" ] && [ -f "$TAG_FILE" ]; then tag="$(cat "$TAG_FILE")"; fi
-export SAXODASH_TAG="${tag:-local}"
+deployed="$(state_get deployed)"
+export SAXODASH_TAG="${SAXODASH_TAG:-${deployed:0:12}}"
+SAXODASH_TAG="${SAXODASH_TAG:-local}"
 
-compose() { docker compose --env-file "$ENV_FILE" -f "$DEPLOY_DIR/compose.yaml" "$@"; }
+take_lock
 
 compose ps --status running --services | grep -qx postgres \
-  || die "postgres is not running; start it with: docker compose --env-file $ENV_FILE -f $DEPLOY_DIR/compose.yaml up -d postgres"
+  || die "postgres is not running; start it with: docker compose --env-file $ENV_FILE -f $REPO_DIR/deploy/compose.yaml up -d postgres"
 
 if [ "$assume_yes" != 1 ]; then
   printf 'This replaces the entire SaxoDash database with %s.\nType "restore" to continue: ' "$dump"

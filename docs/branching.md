@@ -1,7 +1,7 @@
 # Branches, checks and how a change reaches production
 
 ```
-feature branch ──PR──► develop ──PR──► main ──push──► deploy to the homelab (Phase 4)
+feature branch ──PR──► develop ──PR──► main ──CI green──► the homelab deploys it
                  CI               CI
 ```
 
@@ -9,7 +9,8 @@ feature branch ──PR──► develop ──PR──► main ──push──
 - **Open the pull request into `develop`.** CI runs; merge once it is green.
 - **When `develop` holds something worth shipping**, open a pull request from `develop` into
   `main`. CI runs again, including a check that refuses any other source branch. Merging it
-  is the release: a push to `main` deploys (once Phase 4 is in).
+  is the release: once CI passes on `main`, the server picks it up within two minutes and
+  deploys it (`docs/deploying.md`).
 - `develop` is never deployed anywhere. It is the checkpoint where changes wait together.
 - `main` stays the repository's default branch, so a clone or the README shows what runs in
   production. Pull requests therefore have to be pointed at `develop` by hand: GitHub
@@ -24,7 +25,7 @@ machines, never on the homelab.
 |---|---|
 | **Backend tests** | Postgres 17 and Redis as services, `makemigrations --check`, the full suite in parallel |
 | **Frontend tests, lint and build** | `npm ci`, eslint, vitest, the production build, and a failure if it still points at `localhost:8000` |
-| **Production images** | Builds both Dockerfiles; checks the backend image has `pg_dump` 17 and its static files; validates the proxy's Caddyfile and `deploy/compose.yaml` |
+| **Production images** | Builds both Dockerfiles; checks the backend image has `pg_dump` 17 and its static files; validates the proxy's Caddyfile and `deploy/compose.yaml`; shellcheck and the deploy scripts' tests (`deploy/tests/run.sh`) |
 | **Only develop merges into main** | On a PR into `main`, fails unless it comes from this repository's `develop`; passes on any PR into `develop` |
 
 No secret is used. Enable Banking's two settings are placeholders, and the Saxo token
@@ -58,7 +59,7 @@ request already tests the result of merging it, so the check adds little here.
 workflows from outside collaborators** → **Require approval for all external contributors**.
 The repository is public, and this stops a stranger's PR from running any workflow
 unattended. The CI workflow runs on GitHub's machines with a read-only token either way,
-and the deploy (Phase 4) never runs for a pull request.
+and the deploy is pulled by the server, so no workflow can reach it at all.
 
 ## A change that skips develop
 

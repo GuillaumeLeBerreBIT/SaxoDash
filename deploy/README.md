@@ -21,7 +21,11 @@ edge Caddy (homelab repo) ──network "edge", alias "saxodash"──► proxy 
 |---|---|
 | `compose.yaml` | The stack. Project name `saxodash`; images are tagged `${SAXODASH_TAG:-local}` |
 | `.env.example` | Every production setting. Filled in, it lives at `/srv/saxodash/.env`, never in git |
+| `deploy.sh`, `poll.sh` | One release, and the timer's check for a new one (`docs/deploying.md`) |
+| `rollback.sh`, `status.sh` | Go back to an earlier release; show what runs and the last outcome |
+| `install.sh`, `systemd/` | One-time server setup: the deploy user, the clone, `/srv/saxodash`, the timer |
 | `restore.sh` | Replace the database with a backup |
+| `tests/run.sh` | The deploy scripts against a fake `docker` and GitHub (run in CI) |
 | `../backend/Dockerfile` | Python 3.13 + `pg_dump` 17; collects static files at build time |
 | `../frontend/Dockerfile` | Builds the app with `VITE_API_BASE_URL=""` (same origin), then serves it with Caddy |
 | `../frontend/Caddyfile` | The `proxy` container's routes and caching rules |
@@ -36,52 +40,35 @@ safe for Django to trust the `X-Forwarded-Proto` header the edge sets.
 /srv/saxodash/.env        secrets and settings        root:root, mode 600
 /srv/saxodash/postgres/   the database                owned by the postgres container
 /srv/saxodash/backups/    pg_dump files, nightly      owned by uid 1000 (the app user in the image)
-/opt/saxodash/            this repo                   put there by the deploy runner (Phase 4)
+/opt/saxodash/            this repo                   owned by saxodash-deploy, checked out at the running commit
+/var/lib/saxodash-deploy/ deploy state               what runs, history, last outcome (docs/deploying.md)
 ```
 
 `compose.yaml` takes `DATABASE_URL`, `CACHE_URL`, `CELERY_BROKER_URL` and `DB_BACKUP_DIR`
 from the stack itself. Only `POSTGRES_PASSWORD` connects the database and the app, and it
 is set once, in `.env`.
 
-## Starting it by hand
+## Setting it up
 
-Automatic deploys come in Phase 4. Until then, this is how to bring the stack up yourself,
-for example to see `https://saxodash.uniroo.dev` answer. **Leave the `SAXO_*` keys empty
-for a trial like this**: the Mac is still connected to Saxo LIVE, and the two must never
-both sync it.
-
-```sh
-sudo mkdir -p /srv/saxodash/postgres /srv/saxodash/backups
-sudo chown 1000:1000 /srv/saxodash/backups
-sudo cp deploy/.env.example /srv/saxodash/.env
-sudo nano /srv/saxodash/.env
-sudo chmod 600 /srv/saxodash/.env
-
-cd deploy
-C="sudo docker compose --env-file /srv/saxodash/.env"
-$C build
-$C up -d postgres redis
-$C run --rm web python manage.py migrate
-$C up -d
-$C ps
-```
-
-When filling in `.env`, set `SECRET_KEY` and `POSTGRES_PASSWORD` to two different values
-from `openssl rand -hex 32`.
-
-`--env-file` is needed on every command: compose reads `POSTGRES_PASSWORD` from it to build
-the database URL. `sudo` is needed because the file is root-only.
+`deploy/install.sh` does the whole server side once, and from then on every commit that
+reaches `main` with green CI deploys itself. See `docs/deploying.md`, which also covers
+rollbacks, failed deploys and the deploy state.
 
 ## Day to day
 
-| Want to … | Command (in `deploy/`) |
+Run these as the deploy user, which can read `.env` and drive Docker:
+`C="sudo -u saxodash-deploy docker compose --env-file /srv/saxodash/.env -f /opt/saxodash/deploy/compose.yaml"`.
+Don't use `up` by hand: it needs the running release's tag, and the deploy scripts handle that.
+`stop` and `start` reuse the containers that are already there.
+
+| Want to … | Command |
 |---|---|
 | See what runs | `$C ps` |
 | Follow the logs | `$C logs -f web worker beat` |
 | Open a Django shell | `$C exec web python manage.py shell` |
 | Back up now | `$C exec web python manage.py backup_database` |
-| Restore a backup | `sudo ./restore.sh /srv/saxodash/backups/db-<stamp>.dump` |
-| Stop / start | `$C stop` / `$C up -d` |
+| Restore a backup | `sudo -u saxodash-deploy /opt/saxodash/deploy/restore.sh /srv/saxodash/backups/db-<stamp>.dump` |
+| Stop / start the existing containers | `$C stop` / `$C start` |
 
 Never `down -v`: `-v` deletes volumes. The database is a host folder rather than a volume,
 so it would survive, but no command in this project ever uses `-v` either way.
