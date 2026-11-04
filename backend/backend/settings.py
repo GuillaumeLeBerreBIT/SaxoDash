@@ -17,6 +17,8 @@ from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
+from core.database_url import database_from_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -164,29 +166,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        # WAL + IMMEDIATE so concurrent Celery sync tasks queue on the busy
-        # timeout instead of failing instantly on a mid-transaction lock
-        # upgrade (which skips SQLite's busy handler).
-        'OPTIONS': {
-            'timeout': 20,
-            'transaction_mode': 'IMMEDIATE',
-            'init_command': (
-                'PRAGMA journal_mode=WAL;'
-                'PRAGMA synchronous=NORMAL;'
-                'PRAGMA foreign_keys=ON;'
-            ),
-        },
-    }
+    'default': database_from_url(
+        os.environ.get('DATABASE_URL', 'postgres://saxodash:saxodash@localhost:5432/saxodash')
+    ),
 }
 
-# Local SQLite backups (core.backup) - a plain file copy via SQLite's own
-# online backup API (safe under WAL with concurrent writers), not a
-# database-agnostic abstraction, since this app only ever runs on SQLite.
 DB_BACKUP_DIR = Path(os.environ.get('DB_BACKUP_DIR') or (BASE_DIR / 'backups'))
 DB_BACKUP_RETAIN = int(os.environ.get('DB_BACKUP_RETAIN', '14'))
+DB_BACKUP_MONTHLY = int(os.environ.get('DB_BACKUP_MONTHLY', '6'))
 
 
 # Password validation

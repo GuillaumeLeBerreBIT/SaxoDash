@@ -4,7 +4,7 @@ from core.backup import backup_database
 
 
 class Command(BaseCommand):
-    help = 'Write a timestamped SQLite backup and prune old ones. See core.backup for restore instructions.'
+    help = 'Write a timestamped pg_dump of the database into DB_BACKUP_DIR and prune old ones.'
 
     def handle(self, *args, **options):
         try:

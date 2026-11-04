@@ -44,29 +44,35 @@ edge Caddy (homelab repo) ──edge network, alias "saxodash"──► proxy (C
 Riskiest change, landed alone, so a test failing on Postgres is fixed before anything
 else depends on it.
 
-- [ ] Add `psycopg[binary]` to `backend/requirements.txt` (and the root copy, which the
+- [x] Add `psycopg[binary]` to `backend/requirements.txt` (and the root copy, which the
       last sync kept identical).
-- [ ] `DATABASES` from `DATABASE_URL` (parsed with `urllib.parse`; no new dependency),
+- [x] `DATABASES` from `DATABASE_URL` (parsed with `urllib.parse`; no new dependency),
       default `postgres://saxodash:saxodash@localhost:5432/saxodash`, with
       `CONN_MAX_AGE=60` and `CONN_HEALTH_CHECKS=True`. Remove the SQLite block and its
       WAL / `transaction_mode` options. Test: settings parse a URL with user, password,
       host, port and name, and reject a non-postgres scheme.
-- [ ] `scripts/dev.sh`: a `postgres` service (Docker `postgres:17`, port from
+- [x] `scripts/dev.sh`: a `postgres` service (Docker `postgres:17`, port from
       `backend/.env` `POSTGRES_PORT`, data in a named volume `saxodash-dev-pg`), gated on
       `pg_isready`, started before `web`/`worker`/`beat`, reused when already running like
       redis is. `--no-postgres` falls out of the service table. Update
       `docs/running-the-stack.md` and `backend/.env.example`.
-- [ ] Run the full suite on Postgres; fix what SQLite let through. Expected kinds:
+- [x] Run the full suite on Postgres; fix what SQLite let through. Expected kinds:
       case-sensitive `LIKE`/`contains`, `CharField` max length now enforced, unordered
       querysets whose order tests relied on, `saxo/test_models.py`'s raw cursor,
       `IntegrityError` inside a test without `atomic()`, sequences after explicit-pk
       inserts. Each fix is the code's fault or the test's, decided case by case, never
       `skip`.
-- [ ] `makemigrations --check` clean on Postgres.
-- [ ] AGENTS.md: replace "SQLite runs in WAL with `transaction_mode=IMMEDIATE`" with what
+- [x] `makemigrations --check` clean on Postgres.
+- [x] Backups for Postgres, moved here from Phase 2: the SQLite backup could no longer
+      work, and its tests only passed because they faked an SQLite database.
+      `core/backup.py` runs `pg_dump --format=custom` into `DB_BACKUP_DIR` as
+      `db-<stamp>.dump.partial`, renamed on success. It keeps every dump from the newest
+      `DB_BACKUP_RETAIN` (14) days plus the first of each of the newest
+      `DB_BACKUP_MONTHLY` (6) months, and never touches the old `db-*.sqlite3` files.
+- [x] AGENTS.md: replace "SQLite runs in WAL with `transaction_mode=IMMEDIATE`" with what
       replaced it (Postgres, row-level locking, why the WAL/IMMEDIATE workaround is gone) and
       update the Stack line.
-- [ ] Learning record for whatever Postgres caught that SQLite hid.
+- [x] Learning record for whatever Postgres caught that SQLite hid.
 
 **Done when:** `manage.py test` is green against Postgres locally, `scripts/dev.sh` brings
 the stack up on Postgres from a clean machine, and the Mac's real data is still in
@@ -103,12 +109,10 @@ the stack up on Postgres from a clean machine, and the Mac's real data is still 
       `CSRF_TRUSTED_ORIGINS`/`FRONTEND_URL=https://saxodash.uniroo.dev`,
       `SAXO_ENVIRONMENT=live`, `SAXO_REDIRECT_URI=https://saxodash.uniroo.dev/api/saxo/callback/`,
       `DATABASE_URL`, `CACHE_URL`, `CELERY_BROKER_URL`, `DB_BACKUP_DIR=/backups`, …).
-- [ ] Backups for Postgres. `core/backup.py` runs
-      `pg_dump --format=custom` into `DB_BACKUP_DIR` as `db-<stamp>.dump.partial`, renamed
-      on success. Retention is 14 daily plus 6 monthly (the first dump of each month is
-      kept). It stays the nightly Celery task, and `manage.py backup_database` exists for
-      the deploy. Tests: a failed dump leaves no `.dump` file; retention keeps the right
-      set. `/srv/saxodash/backups` is mounted at `/backups` in `web` and `worker`.
+- [ ] Backups in the stack: the image carries `postgresql-client-17` (Phase 1 already
+      rewrote `core/backup.py` for `pg_dump`). `/srv/saxodash/backups` is mounted at
+      `/backups` in `web` and `worker`, and `manage.py backup_database` is what the deploy
+      calls.
 - [ ] `deploy/restore.sh <file>`: refuses without an explicit file, stops `web`/`worker`/`beat`,
       `pg_restore --clean --if-exists` into the running `postgres`, starts them again.
 - [ ] Local check: `docker compose -f deploy/compose.yaml` with a scratch `.env` and a
