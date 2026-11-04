@@ -59,7 +59,7 @@ class Trade(models.Model):
 
     report = models.ForeignKey(Report, related_name='trades', on_delete=models.CASCADE)
     owner = models.CharField(max_length=4, default='self')
-    asset = models.CharField(max_length=300)
+    asset = models.TextField()
     asset_type = models.CharField(max_length=4, blank=True, default='')
     ticker = models.CharField(max_length=16, null=True, blank=True)
     kind = models.CharField(max_length=12, choices=KIND_CHOICES)
