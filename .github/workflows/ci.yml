@@ -23,8 +23,8 @@ jobs:
         image: postgres:17
         env:
           POSTGRES_USER: saxodash
-          POSTGRES_PASSWORD: saxodash
           POSTGRES_DB: saxodash
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -42,7 +42,7 @@ jobs:
           --health-timeout 5s
           --health-retries 12
     env:
-      DATABASE_URL: postgres://saxodash:saxodash@localhost:5432/saxodash
+      DATABASE_URL: postgres://saxodash@localhost:5432/saxodash
       CACHE_URL: redis://localhost:6379/1
       CELERY_BROKER_URL: redis://localhost:6379/0
       ENABLE_BANKING_APPLICATION_ID: ci-placeholder
@@ -117,7 +117,9 @@ jobs:
         working-directory: deploy
         run: |
           sudo mkdir -p /srv/saxodash
-          sed 's/^SECRET_KEY=$/SECRET_KEY=ci/; s/^POSTGRES_PASSWORD=$/POSTGRES_PASSWORD=ci/' .env.example | sudo tee /srv/saxodash/.env > /dev/null
+          sed -e "s/^SECRET_KEY=\$/SECRET_KEY=$(openssl rand -hex 32)/" \
+              -e "s/^POSTGRES_PASSWORD=\$/POSTGRES_PASSWORD=$(openssl rand -hex 32)/" \
+              .env.example | sudo tee /srv/saxodash/.env > /dev/null
           docker compose --env-file /srv/saxodash/.env config --quiet
 
   source-branch:
