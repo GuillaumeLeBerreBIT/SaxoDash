@@ -179,11 +179,10 @@ rolls back to the previous tag, and a PR from a fork never reaches the runner.
       installed (user runs `install-runner.sh`).
 - [ ] First deploy from `main` brings up an empty stack; `/healthz` 200 through
       `https://saxodash.uniroo.dev`.
-- [ ] Data copy, scripted and re-runnable into an empty database: `dumpdata` on the Mac
-      with `--natural-foreign --natural-primary`, excluding `contenttypes`,
-      `auth.permission`, `admin.logentry`, `sessions` and `django_celery_beat` (the
-      schedule comes from `sync_periodic_tasks`). Then `loaddata` on the server and reset
-      sequences. Verified by row counts per model on both sides, plus a click-through of
+- [ ] Data copy with `manage.py import_sqlite` (built early, 2026-11-04, so the Mac's
+      Postgres could carry the real history; see `docs/running-the-stack.md`). Copy the
+      Mac's `db.sqlite3` to the server, run it once in a one-off `web` container with the
+      file mounted, `--flush`. It verifies row counts per model itself; then click through
       Portfolio, Analytics, Investors and Congress.
 - [ ] `restore.sh` tried once against a scratch database on the server.
 - [ ] Saxo: add `https://saxodash.uniroo.dev/api/saxo/callback/` to the LIVE app (user),

@@ -116,7 +116,34 @@ The first opens a SQL prompt. The second **deletes the dev database**: the next 
 creates an empty one and migrates it. Only run it with the stack stopped.
 
 Running your own Postgres instead: point `DATABASE_URL` at it and start with
-`--no-postgres`. The Mac's old `backend/db.sqlite3` is no longer read by anything.
+`--no-postgres`.
+
+### Bringing over the old SQLite data
+
+`backend/db.sqlite3` is no longer read by the app, but its rows can be copied into
+Postgres once:
+
+```bash
+./scripts/dev.sh --no-worker --no-beat --no-web --no-ui --no-ngrok
+cd backend && .venv/bin/python manage.py import_sqlite --flush
+```
+
+Run the first line in one terminal; it keeps only Postgres and redis up, so no sync task
+writes while the copy runs. Run the second in another terminal.
+
+- The SQLite file is **only read**. The command works on a temporary copy, brings that
+  up to the current migrations, and copies every row with its original id.
+- `--flush` empties Postgres first, including any user made with `createsuperuser`;
+  you then log in with your old account. Without it, a database that already holds
+  data is refused.
+- It prints source and target row counts per table and fails if any differ.
+- Skipped on purpose: sessions, JWT blacklist entries, admin history, content types and
+  permissions (Postgres has its own, matched by name), and the Celery schedule
+  (rewritten from `core/scheduling.py`).
+- Stored Saxo and Enable Banking tokens come along, readable as long as
+  `SAXO_TOKEN_ENCRYPTION_KEY` in `backend/.env` is the one they were saved with.
+
+A different file: `manage.py import_sqlite path/to/other.sqlite3 --flush`.
 
 ### The CORS warning
 
