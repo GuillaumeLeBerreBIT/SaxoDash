@@ -78,8 +78,10 @@ installed through CasaOS. Domain `uniroo.dev`, registered and DNS-hosted at Clou
 5. Mac goes back to Saxo **SIM**; the server alone holds the **LIVE** connection.
 6. No backups needed for the Mac's development database.
 7. Secrets live only on the server, never in GitHub (proposed by Claude, accepted).
-8. Deploy is executed from the server side by a self-hosted runner that only handles pushes to
-   `main` (proposed by Claude, accepted).
+8. Deploy is executed from the server side. Amended 2026-11-04: **the server pulls** (a systemd
+   timer polls `main` and GitHub's public API for CI's result) instead of a self-hosted runner.
+   The repository is public, and a runner is reachable by any fork pull request a maintainer
+   approves; polling leaves GitHub no way to start anything on the server.
 9. Failures are reported by email.
 10. Existing SQLite data is carried over into Postgres once (stated as an assumption; user did not
     object).
@@ -109,30 +111,15 @@ One workflow, triggered on `pull_request` to `main`/`develop` and `push` to them
 
 These run on GitHub's machines, never on the homelab, so a stranger's PR runs nowhere near it.
 
-### Deploy (self-hosted runner on the homelab)
+### Deploy (the server pulls)
 
-- A GitHub Actions self-hosted runner installed on the server under its own unprivileged user in the
-  `docker` group, with a label such as `homelab`.
-- A separate deploy workflow triggered **only** by `push` to `main` (never `pull_request`), with
-  `runs-on: [self-hosted, homelab]`, and gated on the CI workflow having passed for that commit.
-  Use a GitHub **environment** named `production` restricted to the `main` branch so no other ref
-  can target the runner's jobs.
-- Repository setting: "require approval for all outside collaborators" on fork PR workflows, as a
-  second fence.
-- The deploy touches the `saxodash` compose project only, never `edge`.
-- Deploy steps, in order:
-  1. Check out the pushed commit into the deploy directory.
-  2. Build the images locally on the server, tagged with the commit SHA (no registry; nothing is
-     published, which suits a public repo).
-  3. Take a pre-deploy database backup. Abort if it fails.
-  4. Run `migrate` in a one-off container from the new image. Abort if it fails (old stack still
-     running, untouched).
-  5. `docker compose up -d` with the new tag.
-  6. Health check the web container (an HTTP endpoint that touches the DB). If it fails, re-up the
-     previous SHA's images and fail the job.
-  7. Keep the last few SHA tags for rollback; prune older images.
-- Rollback by hand: `deploy/rollback.sh <sha>` re-ups an older tag (schema permitting; restoring the
-  pre-deploy backup is the escape hatch when a migration must be undone).
+Superseded 2026-11-04 (decision 8): a systemd timer on the server (`saxodash-deploy.timer`,
+every 2 minutes, user `saxodash-deploy`) runs `deploy/poll.sh`. It fetches `main`, asks
+GitHub's public API whether the `CI` workflow's push run on that exact commit succeeded, and
+then runs `deploy/deploy.sh <sha>`: build, back up with the running image, migrate, start,
+health check through the proxy, and roll back to the previous release on failure. A failed or
+refused commit is not retried; `rollback.sh` pins an earlier release. No token, runner or
+inbound connection exists. Full description: `docs/deploying.md`.
 
 ### Production stack (docker compose on the server)
 

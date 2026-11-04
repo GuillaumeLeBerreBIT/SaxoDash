@@ -115,6 +115,10 @@ jobs:
         run: docker run --rm saxodash-backend:ci python -c "import kombu.transport.redis"
       - name: The frontend image's Caddyfile is valid
         run: docker run --rm saxodash-proxy:ci caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: The deploy scripts pass shellcheck
+        run: shellcheck -x -S warning deploy/*.sh deploy/tests/run.sh
+      - name: The deploy scripts behave (fake docker and GitHub)
+        run: deploy/tests/run.sh
       - name: The stack definition resolves
         working-directory: deploy
         run: |

@@ -34,8 +34,8 @@ edge Caddy (homelab repo) ──edge network, alias "saxodash"──► proxy (C
   confirms the server's data is right (Phase 5).
 - **Versions:** Python 3.13, Node 22, Postgres 17, Redis 7, Caddy 2.10.2, each pinned in
   images and CI.
-- **The deploy runs only on push to `main`** on the self-hosted runner. Nothing triggered by
-  `pull_request` ever runs on the homelab.
+- **Only a commit on `main` that passed CI is deployed**, and the server pulls it. Nothing on
+  GitHub, pull requests included, can start anything on the homelab.
 
 ---
 
@@ -157,40 +157,44 @@ any branch but `develop` is red.
 
 ## Phase 4 — Deploy (PR 4, into `develop`, then `main`)
 
-- [ ] `.github/workflows/deploy.yml`: `on: workflow_run` of CI, `branches: [main]`,
-      `types: [completed]`, running only when `conclusion == 'success'` and the event was
-      `push`. `runs-on: [self-hosted, homelab]`, `environment: production`,
-      `concurrency: deploy` (no overlap). It checks out
-      `github.event.workflow_run.head_sha` and runs `deploy/deploy.sh <sha>`.
-- [ ] `deploy/deploy.sh <sha>`, with `set -euo pipefail`. Each step aborts on failure, and
-      the running stack stays as it was:
-  1. Sync the checked-out tree to `/opt/saxodash`.
-  2. Build both images tagged `<sha>`.
-  3. Backup: `docker compose run --rm web manage.py backup_database` with the
-     **current** image.
-  4. Migrate: `docker compose run --rm web manage.py migrate` with the **new** image, then
-     `sync_periodic_tasks`.
-  5. `SAXODASH_TAG=<sha> docker compose up -d`.
-  6. Poll `web`'s `/healthz` for 60 s. On failure, re-up the previous tag (from
-     `/opt/saxodash/.deployed`) and exit non-zero.
-  7. Write `<sha>` to `.deployed`, keep the last 5 tags, prune older images.
-- [ ] `deploy/rollback.sh <sha>`: re-up an earlier tag, warning that it does not undo
-      migrations (`restore.sh` with the pre-deploy dump does).
-- [ ] `deploy/install-runner.sh`: creates user `saxodash-deploy` (in group `docker`, owner
-      of `/opt/saxodash`), downloads the pinned GitHub runner, registers it with the
-      token the user pastes, label `homelab`, installs it as a systemd service. Run once
-      with `sudo`.
-- [ ] GitHub environment `production`, restricted to `main` (user, in settings).
-- [ ] `docs/deploying.md`: the whole path from merge to live, how to read a failed deploy,
-      rollback, restore, where logs are.
+The design's self-hosted runner was replaced before building (user decision, 2026-11-04): the
+repository is public, and a runner is reachable by any approved fork pull request. **The
+server pulls.**
+
+- [x] `deploy/poll.sh`, run every 2 minutes by `deploy/systemd/saxodash-deploy.{service,timer}`
+      as `saxodash-deploy`: fetch `main`. If it differs from the deployed commit and is not
+      refused or pinned, read the `CI` workflow's push run for that SHA from GitHub's public
+      API. Success means deploy; pending or unreachable means try again; any other result
+      refuses the commit once.
+- [x] `deploy/deploy.sh <sha>` (one `flock`, so nothing overlaps):
+  1. Check out the commit and re-run from it.
+  2. Start `postgres`/`redis`, then build both images tagged `<sha12>`.
+  3. Back up with the **running** image. Stop on failure; the old release is untouched.
+  4. Migrate and `sync_periodic_tasks` with the **new** image. Stop on failure; still untouched.
+  5. `up -d`, then the health check: `web` healthy and `/healthz` through `proxy`.
+  6. On failure, re-up the previous release's images and refuse the commit.
+  7. Record `deployed` and `history`, and keep images for the last 5 releases.
+- [x] `deploy/rollback.sh <sha>` pins an earlier deployed release and deploys it; `--release`
+      unpins; `--list` shows the history. `deploy/status.sh` shows the state.
+- [x] `deploy/install.sh` (run once with sudo):
+  - creates the `saxodash-deploy` user, in `docker`;
+  - clones over HTTPS into `/opt/saxodash` (public, no key);
+  - creates `/srv/saxodash/{postgres,backups}`;
+  - writes `.env` with a random `SECRET_KEY` / `POSTGRES_PASSWORD` (`root:saxodash-deploy` 640);
+  - installs the units, and enables the timer only once nothing required is blank.
+- [x] `restore.sh` shares the lock and reads the running tag from the deploy state.
+- [x] `deploy/tests/run.sh`: 14 cases against fake `docker`/`curl` in a throwaway git repo,
+      run in CI with shellcheck.
+- [x] `docs/deploying.md`: the path from merge to live, failures, rollback, restore.
 
 **Done when:** a merge into `main` deploys by itself, a deliberately broken health check
-rolls back to the previous tag, and a PR from a fork never reaches the runner.
+rolls back to the previous release, and nothing on GitHub can start a process on the server.
+The first two are proven against fakes in CI. On the real server they are proven at the first
+deploy (Phase 5).
 
 ## Phase 5 — Go live (together, no PR)
 
-- [ ] Server: `/srv/saxodash/{postgres,backups}`, `/srv/saxodash/.env` filled (user), runner
-      installed (user runs `install-runner.sh`).
+- [ ] Server: `sudo bash deploy/install.sh` (user), then `/srv/saxodash/.env` filled (user).
 - [ ] First deploy from `main` brings up an empty stack; `/healthz` 200 through
       `https://saxodash.uniroo.dev`.
 - [ ] Data copy with `manage.py import_sqlite` (built early, 2026-11-04, so the Mac's
@@ -209,7 +213,7 @@ rolls back to the previous tag, and a PR from a fork never reaches the runner.
 |---|---|
 | Phase 1 | Docker Desktop on the Mac (for the dev Postgres) |
 | Phase 3 | Rulesets on `main` / `develop`, outside-collaborator approval setting |
-| Phase 4 | Create the `production` environment; paste a runner token into `install-runner.sh` |
+| Phase 4 | Run `deploy/install.sh` once on the server and fill in `/srv/saxodash/.env` |
 | Phase 5 | Fill `/srv/saxodash/.env`; Saxo LIVE callback URL; confirm the copied data |
 
 ## Open, decided when reached
