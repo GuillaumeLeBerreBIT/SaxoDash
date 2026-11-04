@@ -1,8 +1,9 @@
 # CI/CD and homelab production — design
 
 Date: 2026-11-02. Status: approved in conversation, not yet planned. Amended 2026-11-04:
-HTTPS and hostnames now come from the shared edge proxy on `uniroo.dev`
-(`2026-11-04-homelab-edge-proxy-design.md`) instead of `tailscale serve`.
+HTTPS and hostnames now come from the shared edge Caddy on `uniroo.dev`, which lives in
+the private `GuillaumeLeBerreBIT/homelab` repo (`docs/edge-design.md` there), instead of
+`tailscale serve`.
 
 ## Intent
 
@@ -31,7 +32,7 @@ Congress imports) is safe across restarts, updates and bad migrations.
 
 - A staging environment or a second server stack.
 - Any port open to the internet. The domain `uniroo.dev` names private, tailnet-only
-  addresses (see the edge proxy design); it does not make anything public.
+  addresses (see the homelab repo's edge design); it does not make anything public.
 - Banking aggregation work, Navidrome setup, or CasaOS management of SaxoDash.
 - Monitoring dashboards beyond email alerts (user will research server tooling separately).
 
@@ -141,11 +142,18 @@ proxying `/api/` to `web`).
 
 - Same origin for frontend and API, so CORS is not needed in production; `VITE_API_BASE_URL` is
   built empty-relative.
-- HTTPS comes from the shared edge Caddy (`deploy/edge/`, own compose project). `proxy`
-  publishes **no host port**; it joins the external `edge` network with alias `saxodash`.
-  Every other service stays on the stack's private network. The inner proxy passes
-  `X-Forwarded-Proto` through, and settings add `SECURE_PROXY_SSL_HEADER` (details in the
-  edge design).
+- HTTPS comes from the shared edge Caddy (`homelab` repo, own compose project `edge`).
+  `proxy` publishes **no host port**; it joins the external `edge` network with alias
+  `saxodash`. Every other service stays on the stack's private network.
+- TLS ends at the edge, so two things must hold or every page redirects to itself forever.
+  The inner proxy passes the edge's `X-Forwarded-Proto: https` through: an inner Caddy
+  overwrites it unless `servers { trusted_proxies static private_ranges }` is set; nginx
+  must forward `$http_x_forwarded_proto`, not `$scheme`. And settings add
+  `SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')` under `not DEBUG`,
+  since today they set `SECURE_SSL_REDIRECT` without it. Trusting the header is safe only
+  because gunicorn is unreachable except through the proxies.
+- The Saxo OAuth callback is a browser redirect, not a call from Saxo's servers, so a
+  tailnet-only address works as long as the browser doing the login is on the tailnet.
 - Postgres data: bind mount `/srv/saxodash/postgres`. Redis: a volume (cache and broker only,
   loss is harmless). Secrets: `/srv/saxodash/.env`, mode 600, root-owned, read by compose.
 - The compose file and deploy scripts live in the repo under `deploy/`; no script ever uses
@@ -199,7 +207,7 @@ proxying `/api/` to `web`).
 
 - Install Tailscale on the server.
 - Cloudflare: the `*.uniroo.dev` DNS-only record and the scoped API token; fill
-  `/srv/edge/.env`; move CasaOS off port 80 (`deploy/edge/README.md`).
+  `/srv/edge/.env`; move CasaOS off port 80 (`edge/README.md` in the `homelab` repo).
 - Add `https://saxodash.uniroo.dev/api/saxo/callback/` to the Saxo LIVE app in the Saxo developer
   portal, and the matching URL to the Enable Banking application whitelist.
 - Register the self-hosted runner (token from the repo settings) — a guided script can do the rest.
