@@ -1,0 +1,10 @@
+[Unit]
+Description=Check every two minutes whether SaxoDash has a release to deploy
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=2min
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

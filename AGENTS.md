@@ -41,8 +41,9 @@ Full reference — flags, troubleshooting, adding a service:
 ## Working agreement (read this before writing any code)
 
 **Branches: feature → `develop` → `main`.** Branch from `develop` and open pull requests
-into `develop`; only `develop` merges into `main`, and a push to `main` deploys to the
-homelab. CI (`.github/workflows/ci.yml`) must be green on both. `docs/branching.md` has the
+into `develop`; only `develop` merges into `main`, and a commit on `main` that passed CI
+deploys itself to the homelab: the server pulls (`deploy/poll.sh` on a timer), so no GitHub
+workflow ever runs there (`docs/deploying.md`). CI (`.github/workflows/ci.yml`) must be green on both. `docs/branching.md` has the
 flow, the checks and the GitHub ruleset. GitHub proposes `main` as a PR's base by default,
 so set `develop` explicitly.
 
