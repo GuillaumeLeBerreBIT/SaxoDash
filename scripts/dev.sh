@@ -215,7 +215,7 @@ preflight_service() {
   case "$1" in
     redis) command -v redis-server >/dev/null || die "redis-server not found — brew install redis" ;;
     postgres)
-      pg_ready && return 0
+      pg_ready >/dev/null 2>&1 && return 0
       command -v docker >/dev/null || die "docker not found — install Docker Desktop (brew install --cask docker)"
       docker info >/dev/null 2>&1 || die "Docker is not running — start Docker Desktop and try again"
       if ! docker image inspect "$PG_IMAGE" >/dev/null 2>&1; then
