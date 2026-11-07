@@ -120,6 +120,31 @@ DEFAULT_FROM_EMAIL=<the sending Gmail address>
 A failed send is logged by `users.reset` and the request still answers the same way, so the
 page never reveals whether an address has an account.
 
+## Going public
+
+Signup is open, so these are settings and checks to do before sharing the address. The
+email variables are in "Password reset email (Gmail)" above.
+
+1. **`NUM_PROXIES`.** Throttles key on the visitor's address, read from `X-Forwarded-For`
+   only as far as `NUM_PROXIES` says: 0 ignores the header, N trusts the last N hops.
+   `deploy/compose.yaml` sets it to `1` for every app container (the Caddy `proxy` is the
+   one hop in front of gunicorn). It lives there rather than in `/srv/saxodash/.env`
+   because it describes the shape of the stack, not a per-deploy secret; change it there
+   if a hop is ever added.
+2. **Verify it on the server.** Request `/api/auth/me/` through the public address with a
+   forged `X-Forwarded-For: 1.2.3.4`, then confirm the throttle's cache key (or a
+   temporary log line, removed afterwards) shows your real address: neither `1.2.3.4` nor
+   the proxy's. If it shows the proxy's, `NUM_PROXIES` is too low; if `1.2.3.4`, too high.
+3. **Email.** Set the six `EMAIL_*` / `DEFAULT_FROM_EMAIL` lines and send yourself a
+   password reset.
+4. **`ADMIN_ENABLED`.** The Django admin is routed only when `ADMIN_ENABLED=True`, which
+   defaults to the value of `DEBUG`, so production has no `/admin/`. Leave it unset.
+5. **`SAXODASH_OWNER` on the first migrate.** The migration that introduces accounts makes
+   the only existing user the owner. With more than one user it stops and asks for
+   `SAXODASH_OWNER=<username>` in `/srv/saxodash/.env`; the owner can be left set.
+6. **Rehearse the migration** on a restored copy of the newest backup (`deploy/restore.sh`
+   into a throwaway database): row counts unchanged, every row's `user` the owner.
+
 ## Day to day
 
 Run the deploy scripts as `saxodash-deploy`, so the files they write stay readable by the timer:

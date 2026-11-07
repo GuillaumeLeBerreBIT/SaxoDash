@@ -77,7 +77,7 @@ rest.
 ## Stack
 
 - Backend: Django + DRF, Postgres 17 (dev, CI and production alike), JWT auth
-  (SimpleJWT), single user.
+  (SimpleJWT), many users with one owner.
 - Frontend: Vite + React 19 (JavaScript, not TS), React Router, Recharts,
   Lucide icons, Tailwind. Components are the mockup's own bespoke
   primitives ported as-is — no MUI. `shadcn/ui` may be introduced in a
@@ -623,3 +623,28 @@ key per instrument), `portfolio/tax_year.py::report` runs the tax year, `advisor
 the whole journal, entry price included (it reads the Saxo chart itself, so no caller can
 supply one). No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
 "The MCP server".
+
+**Accounts are open, and one of them is the owner.** Login takes an email or a username
+(10/min per IP and login); signup is 5/hour per IP, has a `website` honeypot and no email
+verification; password reset is 5/hour and its confirm step 20/hour, the link lasts an hour
+and works once. The reset mail is queued with Celery on commit, so a known and an unknown
+address answer alike. On the first migrate the only existing user becomes the owner; with
+several, `SAXODASH_OWNER=<username>` must name one or migrate stops. Banking belongs to the
+owner alone. The owner's Saxo credential runs the shared jobs (the Discover scan, the
+copy-performance price feed, congress prices) and only the owner may start a scan.
+`NUM_PROXIES` (default 0, `X-Forwarded-For` ignored) must equal the proxy hops in front of
+gunicorn, 1 behind Caddy; `docs/deploying.md` "Going public" has the checklist. The admin
+site is routed only when `ADMIN_ENABLED`, which defaults to `DEBUG`.
+
+**Every person's row carries `user`, and the test enforces it.** Views scope by
+`request.user`; background tasks write to `credential.user`, and `@synced(credential=...)`
+takes `'each'` (once per connected user), `'owner'` or `None`. `users/test_isolation.py`
+fails when a model pointing at the user is missing from `COVERED`, and when any endpoint
+returns another user's rows, so a new per-person model is not finished until it is listed
+and covered there.
+
+**Finnhub keeps a reserve for the owner.** `FINNHUB_OWNER_RESERVE` (default 20) is held
+back from the per-minute budget: a signed-in non-owner request may use
+`FINNHUB_CALLS_PER_MINUTE - FINNHUB_OWNER_RESERVE`, so strangers cannot starve the owner's
+pages. The acting user comes from `users.acting.current_user()`; MCP calls act as
+`MCP_USER`.
