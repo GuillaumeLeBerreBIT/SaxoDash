@@ -1,3 +1,5 @@
+import logging
+
 from celery import shared_task
 
 from django.contrib.auth import get_user_model
@@ -9,6 +11,8 @@ from saxo.tasks import synced
 from . import scan, scan_progress
 from .models import Watchlist
 from .watchlists import OPEN_POSITIONS_WATCHLIST, sync_open_positions_watchlist
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -25,8 +29,15 @@ def sync_watchlists():
     user_ids = set(Position.objects.values_list('user_id', flat=True)) | set(
         Watchlist.objects.filter(name=OPEN_POSITIONS_WATCHLIST).values_list('user_id', flat=True)
     )
+    errors = []
     for user in get_user_model().objects.filter(pk__in=user_ids).order_by('pk'):
-        sync_open_positions_watchlist(user, Position.objects.filter(user=user).exclude(uic__isnull=True))
+        try:
+            sync_open_positions_watchlist(user, Position.objects.filter(user=user).exclude(uic__isnull=True))
+        except Exception as exc:
+            logger.exception('Could not reconcile the open-positions watchlist for %s', user)
+            errors.append(exc)
+    if errors:
+        raise errors[0]
 
 
 ALREADY_RUNNING = 'A scan was already running.'

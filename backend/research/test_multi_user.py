@@ -138,6 +138,26 @@ class SyncWatchlistsPerUserTest(TestCase):
         self.assertEqual({i.symbol for i in alices.items.all()}, {'NVDA'})
         self.assertEqual({i.symbol for i in bobs.items.all()}, {'AAPL', 'MSFT'})
 
+    def test_one_users_failure_does_not_stop_the_next_user(self):
+        alice = make_user('alice', owner=True)
+        bob = make_user('bob')
+        hold(alice, 'NVDA', 211)
+        hold(bob, 'AAPL', 5)
+        real = tasks.sync_open_positions_watchlist
+
+        def fail_for_alice(user, positions):
+            if user.pk == alice.pk:
+                raise RuntimeError('alice broke')
+            return real(user, positions)
+
+        with patch('research.tasks.sync_open_positions_watchlist', side_effect=fail_for_alice):
+            with self.assertRaisesMessage(RuntimeError, 'alice broke'):
+                with self.assertLogs('research.tasks', level='ERROR'):
+                    tasks.sync_watchlists()
+
+        bobs = Watchlist.objects.get(user=bob, name='Open positions')
+        self.assertEqual({i.symbol for i in bobs.items.all()}, {'AAPL'})
+
     def test_a_user_with_no_positions_left_is_emptied(self):
         alice = make_user('alice', owner=True)
         position = hold(alice, 'NVDA', 211)
