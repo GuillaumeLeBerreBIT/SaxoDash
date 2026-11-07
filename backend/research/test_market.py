@@ -125,6 +125,7 @@ class MarketDataViewTest(APITestCase):
 
     def _connect_saxo(self):
         return SaxoCredential.objects.create(
+            user=self.user,
             access_token='access',
             refresh_token='refresh',
             expires_at=timezone.now() + timedelta(minutes=20),
@@ -184,6 +185,7 @@ class MarketDataViewTest(APITestCase):
         # rendered "Saxo is not connected", for the 15 minutes between token
         # expiry and the reauth grace running out.
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='access',
             refresh_token='refresh',
             expires_at=timezone.now() - timedelta(minutes=1),

@@ -32,7 +32,7 @@ BENCHMARKS = {
 }
 
 
-def eur_closes(benchmark_key):
+def eur_closes(benchmark_key, *, user):
     """Daily closes for one benchmark, converted to EUR - (date, float) pairs.
 
     Raises BenchmarkUnavailable for every reason the series can't be built.
@@ -40,8 +40,8 @@ def eur_closes(benchmark_key):
     info = BENCHMARKS[benchmark_key]
     needs_fx = info['currency'] != 'EUR'
     try:
-        candles = market.chart(info['uic'], info['asset_type'], 1440, CHART_COUNT)
-        fx_candles = market.chart(EURUSD_UIC, 'FxSpot', 1440, CHART_COUNT) if needs_fx else []
+        candles = market.chart(info['uic'], info['asset_type'], 1440, CHART_COUNT, user=user)
+        fx_candles = market.chart(EURUSD_UIC, 'FxSpot', 1440, CHART_COUNT, user=user) if needs_fx else []
     except ProviderError as exc:
         raise BenchmarkUnavailable(str(exc)) from exc
 

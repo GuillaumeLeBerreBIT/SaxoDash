@@ -6,13 +6,18 @@ from django.utils import timezone
 from investors.models import PriceHistory
 from research.models import ScreenerRow
 from saxo.models import SyncRun
+from users.testing import make_user
 
 from .tools.system import get_data_health
 
 
 class DataHealthTest(TestCase):
+    def setUp(self):
+        self.user = make_user('advisor')
+
     def test_reports_connection_and_each_task(self):
-        SyncRun.objects.create(task='sync_positions', outcome='ok')
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok')
+        SyncRun.objects.create(user=make_user('someone-else'), task='sync_closed_positions', outcome='failed')
         out = get_data_health()
         data = out['data']
         self.assertEqual(
@@ -23,6 +28,7 @@ class DataHealthTest(TestCase):
         self.assertFalse(data['saxo_usable'])
         self.assertEqual(data['unusable_reason'], 'Saxo is not connected.')
         self.assertEqual(data['tasks']['sync_positions']['outcome'], 'ok')
+        self.assertNotIn('sync_closed_positions', data['tasks'])
         self.assertIsNotNone(data['tasks']['sync_positions']['finished_at'])
         self.assertIsNone(data['discover_scanned_at'])
         self.assertIsNone(data['prices_refreshed_at'])

@@ -114,7 +114,8 @@ class ToolSchemaTest(SimpleTestCase):
 
         with patch('mcp_server.tools.compare._compare_one', side_effect=entry), \
                 patch('mcp_server.tools.compare.look_up', side_effect=Listing.unresolved), \
-                patch('mcp_server.tools.saxo_warnings', return_value=[]):
+                patch('mcp_server.tools.saxo_warnings', return_value=[]), \
+                patch('mcp_server.tools.app_user'):
             call('compare_companies', {'symbols': ['AMD', 'MU']})
         self.assertEqual(called, ['AMD', 'MU'])
 

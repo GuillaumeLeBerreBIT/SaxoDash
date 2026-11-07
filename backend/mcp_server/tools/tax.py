@@ -10,6 +10,7 @@ from research.providers import ProviderError
 from .. import throttled
 from ..bounds import Euros
 from ..envelope import Reply, Unavailable
+from ..views import app_user
 from . import tool
 
 
@@ -37,7 +38,7 @@ def get_tax_year(year: Annotated[int, Field(ge=0)] = 0, carry_over_eur: Euros = 
         raise Unavailable(str(refused)) from refused
     if year > date.today().year:
         raise Unavailable(f'The {year} tax year has not started yet.')
-    rows, reason = closed_positions.for_year(year)
+    rows, reason = closed_positions.for_year(year, user=app_user())
     result = tax_year.report(year, carry_over_eur, closed_rows=rows, closed_reason=reason, close_on=_basis_close)
     warnings = result.pop('warnings')
     return Reply({'year': year, **result}, warnings)

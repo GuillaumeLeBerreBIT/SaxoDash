@@ -36,8 +36,13 @@ def fields(**over):
     return base
 
 
+USER = SimpleNamespace(pk=1)
+
+
 def charts(bars=CANDLES, error=None):
-    def chart(*args):
+    def chart(*args, user):
+        if user is not USER:
+            raise AssertionError('charted for the wrong user')
         if error is not None:
             raise error
         return bars
@@ -48,7 +53,7 @@ def charts(bars=CANDLES, error=None):
 def logged(instrument=INSTRUMENT, saxo=None, **over):
     values = fields(**over)
     values.pop('ticker')
-    return journal.log(listing=instrument, saxo=saxo or charts(), **values)
+    return journal.log(listing=instrument, user=USER, saxo=saxo or charts(), **values)
 
 
 class LogTests(TestCase):

@@ -41,18 +41,18 @@ def _scorable(listing):
 NO_CLOSES = 'the chart has no closes.'
 
 
-def _entry_price(listing, saxo):
-    bars, reason = daily.available(listing, saxo)
+def _entry_price(listing, saxo, user):
+    bars, reason = daily.available(listing, saxo, user=user)
     price = daily.latest_close(bars or [])
     if price is None:
         raise Refused(f'No entry price, so nothing was logged: {reason or NO_CLOSES}')
     return price
 
 
-def log(*, listing, saxo=market, **fields):
+def log(*, listing, user, saxo=market, **fields):
     values = _validated(fields)
     _scorable(listing)
-    price = _entry_price(listing, saxo)
+    price = _entry_price(listing, saxo, user)
     return Recommendation.objects.create(
         ticker=listing.symbol,
         uic=listing.uic,

@@ -148,7 +148,7 @@ def _week_stats(events):
     }
 
 
-def window_earnings(scope='all', week_offset=0, today=None, moves=True):
+def window_earnings(scope='all', week_offset=0, today=None, moves=True, *, user):
     """One week of the whole US-market calendar, tagged with the user's
     holdings/watchlists. `scope='mine'` keeps only tagged rows.
 
@@ -168,7 +168,7 @@ def window_earnings(scope='all', week_offset=0, today=None, moves=True):
         logger.warning('market earnings calendar unavailable for week of %s: %s', start, exc)
         return {'events': [], 'window': window, 'ok': False}
 
-    tagged = calendar_enrichment.merge_share_classes(calendar_enrichment.enrich(events, today, moves=moves))
+    tagged = calendar_enrichment.merge_share_classes(calendar_enrichment.enrich(events, today, moves=moves, user=user))
 
     if scope == 'mine':
         events = [event for event in tagged if event['mine']]

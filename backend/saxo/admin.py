@@ -5,9 +5,9 @@ from .models import SaxoCredential, SyncRun
 
 @admin.register(SaxoCredential)
 class SaxoCredentialAdmin(admin.ModelAdmin):
-    list_display = ('environment', 'needs_reauth', 'expires_at')
+    list_display = ('user', 'environment', 'needs_reauth', 'expires_at')
     list_filter = ('environment', 'needs_reauth')
-    readonly_fields = ('expires_at',)
+    readonly_fields = ('user', 'expires_at')
 
     # access_token/refresh_token are EncryptedTextFields, so putting them on the
     # form would decrypt live Saxo bearer tokens into an HTML page and undo the
@@ -24,9 +24,9 @@ class SaxoCredentialAdmin(admin.ModelAdmin):
 
 @admin.register(SyncRun)
 class SyncRunAdmin(admin.ModelAdmin):
-    list_display = ('ran_at', 'task', 'outcome', 'rows', 'detail')
+    list_display = ('ran_at', 'task', 'user', 'outcome', 'rows', 'detail')
     list_filter = ('task', 'outcome')
-    readonly_fields = ('task', 'outcome', 'detail', 'rows', 'ran_at')
+    readonly_fields = ('user', 'task', 'outcome', 'detail', 'rows', 'ran_at')
 
     def has_add_permission(self, request):
         return False

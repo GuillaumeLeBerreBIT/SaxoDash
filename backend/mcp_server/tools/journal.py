@@ -6,6 +6,7 @@ from ..bounds import RowId, at_most
 from ..envelope import Reply, Unavailable
 from ..shaping import capped
 from ..throttled import look_up
+from ..views import app_user
 from . import tool
 
 MAX_LISTED = 500
@@ -74,6 +75,7 @@ def log_recommendation(
         journal.log,
         listing=look_up(ticker),
         saxo=throttled.PAGES,
+        user=app_user(),
         action=action,
         thesis=thesis,
         bear_case=bear_case,

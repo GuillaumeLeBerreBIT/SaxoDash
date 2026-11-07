@@ -61,7 +61,7 @@ class Providers:
         self.asked = []
 
         def recorded(name, produce):
-            def call(*args):
+            def call(*args, **kwargs):
                 self.asked.append((name, args))
                 return produce(*args)
 

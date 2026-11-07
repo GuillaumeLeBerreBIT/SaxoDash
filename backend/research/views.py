@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from saxo import client
 from saxo.credentials import connection_state
+from users.owner import owner
 
 from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
@@ -103,7 +104,7 @@ class ChartView(APIView):
         asset_type = _asset_type(request.query_params)
         count = _int_param(request.query_params, 'count', client.CHART_MAX_COUNT)
 
-        return provider_response(lambda: market.chart(uic, asset_type, horizon, count))
+        return provider_response(lambda: market.chart(uic, asset_type, horizon, count, user=request.user))
 
 
 class InstrumentSearchView(APIView):
@@ -115,14 +116,14 @@ class InstrumentSearchView(APIView):
             return Response([])
 
         asset_types = request.query_params.get('asset_types', 'Stock,Etf')
-        return provider_response(lambda: market.search(keywords, asset_types))
+        return provider_response(lambda: market.search(keywords, asset_types, user=request.user))
 
 
 class InstrumentDetailsView(APIView):
     throttle_scope = 'research.market'
 
     def get(self, request, uic, asset_type):
-        return provider_response(lambda: market.details(int(uic), asset_type))
+        return provider_response(lambda: market.details(int(uic), asset_type, user=request.user))
 
 
 class QuotesView(APIView):
@@ -139,7 +140,7 @@ class QuotesView(APIView):
             return Response([])
 
         asset_type = _asset_type(request.query_params)
-        return provider_response(lambda: market.quotes(uics, asset_type))
+        return provider_response(lambda: market.quotes(uics, asset_type, user=request.user))
 
 
 class FundamentalsView(APIView):
@@ -197,7 +198,7 @@ class EarningsCalendarView(APIView):
         except (TypeError, ValueError):
             raise ValidationError({'week': 'Must be an integer.'})
         week = max(earnings.MIN_WEEK, min(earnings.MAX_WEEK, week))
-        return Response(earnings.window_earnings(scope, week))
+        return Response(earnings.window_earnings(scope, week, user=request.user))
 
 
 class SymbolEarningsView(APIView):
@@ -302,7 +303,7 @@ class DiscoverView(APIView):
 
 class StartDiscoverScanView(APIView):
     def post(self, request):
-        saxo = connection_state()
+        saxo = connection_state(owner())
         if not saxo.usable:
             return Response({'detail': saxo.reason}, status=status.HTTP_409_CONFLICT)
         if not scan_progress.claim():

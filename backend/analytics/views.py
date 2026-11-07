@@ -31,7 +31,7 @@ def _portfolio_dated_values():
 class RiskMetricsView(APIView):
     def get(self, request):
         return Response(report.risk_report(
-            _portfolio_dated_values(), request.query_params.get('benchmark', ''),
+            _portfolio_dated_values(), request.query_params.get('benchmark', ''), user=request.user,
         ))
 
 
@@ -44,5 +44,5 @@ class PerformanceView(APIView):
 
     def get(self, request):
         return Response(report.performance_report(
-            _portfolio_dated_values(), request.query_params.get('benchmark', ''),
+            _portfolio_dated_values(), request.query_params.get('benchmark', ''), user=request.user,
         ))

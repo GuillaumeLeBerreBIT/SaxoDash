@@ -1,7 +1,7 @@
 import math
 import statistics
 from datetime import date, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -20,6 +20,7 @@ from . import benchmarks, history, metrics, report, views
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 TRADING_DAYS = 252
+USER = sentinel.user
 
 
 class DailyReturnsTest(TestCase):
@@ -567,32 +568,32 @@ class BenchmarkEurClosesTest(TestCase):
             {'date': '2026-01-01', 'close': 50.0},
             {'date': '2026-01-02', 'close': 51.0},
         ]
-        closes = benchmarks.eur_closes('world')
+        closes = benchmarks.eur_closes('world', user=USER)
         self.assertEqual(closes, [(date(2026, 1, 1), 50.0), (date(2026, 1, 2), 51.0)])
-        mock_chart.assert_called_once_with(50629, 'Etf', 1440, benchmarks.CHART_COUNT)
+        mock_chart.assert_called_once_with(50629, 'Etf', 1440, benchmarks.CHART_COUNT, user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_usd_benchmark_is_converted_using_that_days_eurusd_rate(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 1.1}, {'date': '2026-01-02', 'close': 1.2}]
             return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
         mock_chart.side_effect = side_effect
 
-        closes = dict(benchmarks.eur_closes('sp500'))
+        closes = dict(benchmarks.eur_closes('sp500', user=USER))
 
         self.assertAlmostEqual(closes[date(2026, 1, 1)], 100.0)  # 110 USD / 1.1
         self.assertAlmostEqual(closes[date(2026, 1, 2)], 100.0)  # 120 USD / 1.2
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_date_missing_from_the_fx_series_is_skipped(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 1.1}]
             return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
         mock_chart.side_effect = side_effect
 
-        closes = benchmarks.eur_closes('sp500')
+        closes = benchmarks.eur_closes('sp500', user=USER)
 
         self.assertEqual(len(closes), 1)
 
@@ -600,17 +601,17 @@ class BenchmarkEurClosesTest(TestCase):
     def test_a_provider_failure_becomes_benchmark_unavailable(self, mock_chart):
         mock_chart.side_effect = ProviderNotConnected('Saxo is not connected.')
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('world')
+            benchmarks.eur_closes('world', user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_an_empty_chart_becomes_benchmark_unavailable(self, mock_chart):
         mock_chart.return_value = []
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('world')
+            benchmarks.eur_closes('world', user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_zero_fx_rate_is_skipped_not_divided_by(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 0.0}]  # bad rate
             return [{'date': '2026-01-01', 'close': 110.0}]
@@ -618,7 +619,7 @@ class BenchmarkEurClosesTest(TestCase):
 
         # No ZeroDivisionError; the one bad day drops out, leaving nothing.
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('sp500')
+            benchmarks.eur_closes('sp500', user=USER)
 
 
 @override_settings(CACHES=LOCMEM)
@@ -781,7 +782,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.data['benchmark']['key'], 'world')
-        mock_eur_closes.assert_called_once_with('world')
+        mock_eur_closes.assert_called_once_with('world', user=self.user)
 
     @patch('analytics.benchmarks.eur_closes')
     def test_accepts_a_benchmark_query_param(self, mock_eur_closes):
@@ -791,7 +792,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/?benchmark=sp500')
         self.assertEqual(response.data['benchmark']['key'], 'sp500')
-        mock_eur_closes.assert_called_once_with('sp500')
+        mock_eur_closes.assert_called_once_with('sp500', user=self.user)
 
     @patch('analytics.benchmarks.eur_closes')
     def test_an_unknown_benchmark_falls_back_to_world(self, mock_eur_closes):
@@ -825,7 +826,7 @@ class RiskMetricsViewTest(APITestCase):
         # the whole risk page instead of just dropping the benchmark.
         self._seed_snapshots()
 
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': f'2026-01-0{d}', 'close': 0.0} for d in range(1, 6)]
             return [{'date': f'2026-01-0{d}', 'close': 100.0 + d} for d in range(1, 6)]
@@ -845,14 +846,14 @@ class RiskReportTest(TestCase):
     @patch('analytics.report.benchmarks.eur_closes')
     def test_an_unavailable_benchmark_is_a_reason_not_an_exception(self, mock_eur_closes):
         mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('not connected')
-        out = report.risk_report(self._dv(), 'sp500')
+        out = report.risk_report(self._dv(), 'sp500', user=USER)
         self.assertTrue(out['has_data'])
         self.assertEqual(out['benchmark']['reason'], 'not connected')
         self.assertIsNone(out['benchmark']['beta'])
 
     @patch('analytics.report.benchmarks.eur_closes')
     def test_no_portfolio_history_does_not_fetch_a_benchmark(self, mock_eur_closes):
-        out = report.risk_report([], 'world')
+        out = report.risk_report([], 'world', user=USER)
         self.assertFalse(out['has_data'])
         self.assertIsNone(out['benchmark']['reason'])
         mock_eur_closes.assert_not_called()
@@ -861,7 +862,7 @@ class RiskReportTest(TestCase):
     def test_the_benchmark_block_carries_history_and_needs(self, mock_eur_closes):
         mock_eur_closes.return_value = benchmark_series(400)
 
-        out = report.risk_report(synthetic_series(8), 'world')
+        out = report.risk_report(synthetic_series(8), 'world', user=USER)
 
         self.assertEqual(out['history_days'], 8)
         self.assertEqual(out['benchmark']['history_days'], 8)
@@ -880,7 +881,7 @@ class PerformanceReportTest(TestCase):
     @patch('analytics.report.benchmarks.eur_closes')
     def test_benchmark_is_best_effort(self, mock_eur_closes):
         mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('x')
-        out = report.performance_report(self._dv(), 'world')
+        out = report.performance_report(self._dv(), 'world', user=USER)
         self.assertIn('periods', out)
         self.assertEqual(out['benchmark']['key'], 'world')
         one_month = next(r for r in out['periods'] if r['label'] == '1 month')

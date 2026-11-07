@@ -25,9 +25,9 @@ def sync_watchlists():
 ALREADY_RUNNING = 'A scan was already running.'
 
 
-@synced(reports_health=False, task=scan.SCAN_TASK)
+@synced(reports_health=False, task=scan.SCAN_TASK, credential='owner')
 def _scan_with_credential(credential):
-    return scan.scan_universe()
+    return scan.scan_universe(user=credential.user)
 
 
 @shared_task

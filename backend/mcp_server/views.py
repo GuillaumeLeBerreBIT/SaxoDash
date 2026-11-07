@@ -36,9 +36,9 @@ def _host():
     return next((host for host in named if host), FALLBACK_HOST)
 
 
-def call_view(view_class, *, kwargs=None, query=None):
+def call_view(view_class, *, kwargs=None, query=None, user=None):
     request = APIRequestFactory().get('/', query or {}, HTTP_HOST=_host())
-    force_authenticate(request, user=app_user())
+    force_authenticate(request, user=user or app_user())
     response = view_class.as_view()(request, **(kwargs or {}))
     return ViewResult(response.status_code, response.data)
 

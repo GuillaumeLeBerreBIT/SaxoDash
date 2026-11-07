@@ -465,7 +465,7 @@ class UpcomingEarningsTest(TestCase):
     @patch('research.earnings.window_earnings', return_value={'events': []})
     def test_the_dashboard_asks_for_no_moves(self, mock_window):
         insights._window_earnings(0)
-        mock_window.assert_called_once_with('mine', 0, moves=False)
+        mock_window.assert_called_once_with('mine', 0, moves=False, user=None)
 
     @patch('portfolio.insights._window_earnings', side_effect=RuntimeError('feed down'))
     def test_a_feed_failure_yields_none(self, _mock):
