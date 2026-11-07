@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Signup from './Signup'
 import { ApiError, signup } from '../api/client'
 
@@ -10,15 +11,19 @@ vi.mock('../api/client', async (importOriginal) => ({
   signup: vi.fn(),
 }))
 
+let queryClient
+
 function renderSignup() {
   return render(
-    <MemoryRouter initialEntries={['/signup']}>
-      <Routes>
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/" element={<p>home</p>} />
-        <Route path="/login" element={<p>login page</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/signup']}>
+        <Routes>
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/" element={<p>home</p>} />
+          <Route path="/login" element={<p>login page</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -31,6 +36,7 @@ async function fillAndSubmit() {
 
 beforeEach(() => {
   signup.mockReset()
+  queryClient = new QueryClient()
 })
 
 describe('Signup', () => {
@@ -47,6 +53,16 @@ describe('Signup', () => {
     expect(trap).toHaveAttribute('tabindex', '-1')
     expect(trap).toHaveAttribute('autocomplete', 'off')
     expect(trap.closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('leaves no cached user from a previous session', async () => {
+    queryClient.setQueryData(['me'], { username: 'previous', is_owner: true })
+    signup.mockResolvedValue({})
+    renderSignup()
+    await fillAndSubmit()
+
+    expect(await screen.findByText('home')).toBeInTheDocument()
+    expect(queryClient.getQueryData(['me'])).toBeUndefined()
   })
 
   it('submits the four fields and goes home', async () => {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
+import { useStartSession } from '../api/queries'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
 import { TOO_MANY_ATTEMPTS, isThrottled } from '../lib/authErrors'
 
@@ -9,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const navigate = useNavigate()
+  const startSession = useStartSession()
   const location = useLocation()
 
   async function handleSubmit(e) {
@@ -16,6 +18,7 @@ export default function Login() {
     setError(null)
     try {
       await login(username, password)
+      startSession()
       navigate(location.state?.from?.pathname ?? '/')
     } catch (failure) {
       setError(isThrottled(failure) ? TOO_MANY_ATTEMPTS : 'Invalid username or password')

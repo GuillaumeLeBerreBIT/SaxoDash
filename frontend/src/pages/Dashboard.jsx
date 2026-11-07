@@ -10,6 +10,7 @@ import {
   usePositions,
   useSpendingSummary,
   useTransactions,
+  useMe,
 } from '../api/queries'
 import { fmtDate, fmtEur, fmtQty } from '../lib/format'
 import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
@@ -101,8 +102,10 @@ export default function Dashboard() {
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const recentTxQuery = useTransactions('?page_size=5')
-  const spendingQuery = useSpendingSummary(`?date_from=${currentMonthStart()}`)
-  const budgetProgressQuery = useBudgetProgress()
+  const { data: me } = useMe()
+  const banking = { enabled: me?.is_owner === true }
+  const spendingQuery = useSpendingSummary(`?date_from=${currentMonthStart()}`, banking)
+  const budgetProgressQuery = useBudgetProgress(banking)
   const performanceQuery = usePerformance('sp500')
   const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
   const holdings = positionsQuery.data

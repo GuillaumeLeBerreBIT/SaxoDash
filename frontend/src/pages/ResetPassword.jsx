@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmPasswordReset } from '../api/client'
+import { useStartSession } from '../api/queries'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
 import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } from '../lib/authErrors'
 
@@ -16,6 +17,7 @@ export default function ResetPassword() {
   const [linkInvalid, setLinkInvalid] = useState(!uid || !token)
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  const startSession = useStartSession()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -24,6 +26,7 @@ export default function ResetPassword() {
     setBusy(true)
     try {
       await confirmPasswordReset({ uid, token, newPassword })
+      startSession()
       navigate('/')
     } catch (failure) {
       const fields = fieldErrors(failure)

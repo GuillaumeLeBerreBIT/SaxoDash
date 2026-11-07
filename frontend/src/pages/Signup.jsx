@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../api/client'
+import { useStartSession } from '../api/queries'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
 import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } from '../lib/authErrors'
 
@@ -18,6 +19,7 @@ export default function Signup() {
   const [notice, setNotice] = useState(null)
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  const startSession = useStartSession()
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -26,6 +28,7 @@ export default function Signup() {
     setBusy(true)
     try {
       await signup({ email, username, password, website })
+      startSession()
       navigate('/')
     } catch (failure) {
       if (isThrottled(failure)) {

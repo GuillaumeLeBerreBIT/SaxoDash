@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Login from './Login'
 import { ApiError, login } from '../api/client'
 
@@ -10,19 +11,47 @@ vi.mock('../api/client', async (importOriginal) => ({
   login: vi.fn(),
 }))
 
+let queryClient
+
 function renderLogin() {
   return render(
-    <MemoryRouter>
-      <Login />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <Login />
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
 beforeEach(() => {
   login.mockReset()
+  queryClient = new QueryClient()
 })
 
 describe('Login', () => {
+  it('leaves no cached user from a previous session', async () => {
+    queryClient.setQueryData(['me'], { username: 'previous', is_owner: true })
+    login.mockResolvedValue()
+    renderLogin()
+    await userEvent.type(screen.getByLabelText('Email or username'), 'b')
+    await userEvent.type(screen.getByLabelText('Password'), 'pw')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await waitFor(() => expect(queryClient.getQueryData(['me'])).toBeUndefined())
+  })
+
+  it('keeps the previous cache when the login fails', async () => {
+    queryClient.setQueryData(['me'], { username: 'previous', is_owner: true })
+    login.mockRejectedValue(new Error('nope'))
+    renderLogin()
+    await userEvent.type(screen.getByLabelText('Email or username'), 'b')
+    await userEvent.type(screen.getByLabelText('Password'), 'pw')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await screen.findByRole('alert')
+    expect(queryClient.getQueryData(['me'])).toEqual({ username: 'previous', is_owner: true })
+  })
+
   it('labels both fields', () => {
     renderLogin()
 

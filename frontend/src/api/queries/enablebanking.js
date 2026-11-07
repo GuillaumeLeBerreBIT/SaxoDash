@@ -52,10 +52,11 @@ export function useBankTransactions(query = '') {
   })
 }
 
-export function useSpendingSummary(query = '') {
+export function useSpendingSummary(query = '', { enabled = true } = {}) {
   return useQuery({
     queryKey: enableBankingKeys.spendingSummary(query),
     queryFn: () => getSpendingSummary(query),
+    enabled,
   })
 }
 
@@ -158,8 +159,8 @@ export function useBudgets() {
   return useQuery({ queryKey: enableBankingKeys.budgets, queryFn: getBudgets })
 }
 
-export function useBudgetProgress() {
-  return useQuery({ queryKey: enableBankingKeys.budgetProgress, queryFn: getBudgetProgress })
+export function useBudgetProgress({ enabled = true } = {}) {
+  return useQuery({ queryKey: enableBankingKeys.budgetProgress, queryFn: getBudgetProgress, enabled })
 }
 
 export function useSetBudget() {

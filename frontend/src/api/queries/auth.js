@@ -17,6 +17,11 @@ export function useUpdateMe() {
   })
 }
 
+export function useStartSession() {
+  const queryClient = useQueryClient()
+  return () => queryClient.clear()
+}
+
 export function useChangePassword() {
   return useMutation({ mutationFn: (passwords) => changePassword(passwords) })
 }

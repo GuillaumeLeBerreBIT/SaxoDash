@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ResetPassword from './ResetPassword'
 import { ApiError, confirmPasswordReset } from '../api/client'
 
@@ -10,14 +11,18 @@ vi.mock('../api/client', async (importOriginal) => ({
   confirmPasswordReset: vi.fn(),
 }))
 
+let queryClient
+
 function renderReset(url = '/reset-password?uid=u1&token=t1') {
   return render(
-    <MemoryRouter initialEntries={[url]}>
-      <Routes>
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/" element={<p>home</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/" element={<p>home</p>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -28,9 +33,20 @@ async function submit() {
 
 beforeEach(() => {
   confirmPasswordReset.mockReset()
+  queryClient = new QueryClient()
 })
 
 describe('ResetPassword', () => {
+  it('leaves no cached user from a previous session', async () => {
+    queryClient.setQueryData(['me'], { username: 'previous', is_owner: true })
+    confirmPasswordReset.mockResolvedValue({})
+    renderReset()
+    await submit()
+
+    expect(await screen.findByText('home')).toBeInTheDocument()
+    expect(queryClient.getQueryData(['me'])).toBeUndefined()
+  })
+
   it('submits the link parameters with the new password and goes home', async () => {
     confirmPasswordReset.mockResolvedValue({})
     renderReset()
