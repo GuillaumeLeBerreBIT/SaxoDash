@@ -83,7 +83,16 @@ class SignupTests(AccountTestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+        self.assertNotIn('website', response.data)
         self.assertFalse(User.objects.filter(username='alice').exists())
+
+    def test_signup_refuses_username_with_a_space(self):
+        response = self.client.post(
+            '/api/auth/signup/', signup_payload(username='al ice'), format='json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.data)
 
     def test_signup_throttled(self):
         for i in range(5):
@@ -166,6 +175,11 @@ class LoginTests(AccountTestCase):
             self.assertEqual(response.status_code, 401)
             self.assertEqual(response.data['detail'], NO_MATCH)
 
+    def test_login_with_a_json_list_body_is_not_a_server_error(self):
+        response = self.client.post('/api/token/', ['a', 'b'], format='json')
+
+        self.assertIn(response.status_code, (400, 401))
+
     def test_login_throttle_is_per_ip_and_login(self):
         def attempt(login, ip):
             return self.client.post(
@@ -198,6 +212,15 @@ class MeTests(AccountTestCase):
         self.assertEqual(changed.data['username'], 'alicia')
         user.refresh_from_db()
         self.assertEqual(user.username, 'alicia')
+
+    def test_change_username_with_a_space_is_refused(self):
+        user = make_user('alice')
+        self.bearer(user)
+
+        response = self.client.patch('/api/auth/me/', {'username': 'al ice'}, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('username', response.data)
 
     def test_change_username_to_taken_is_refused(self):
         make_user('bob')

@@ -7,6 +7,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from users.owner import is_owner
 
 User = get_user_model()
+USERNAME_FIELD = User._meta.get_field('username')
 
 GENERIC_REFUSAL = 'We could not create that account. Check the details and try again.'
 
@@ -40,14 +41,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 class SignupSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    username = serializers.CharField(max_length=150)
+    username = serializers.CharField(
+        max_length=USERNAME_FIELD.max_length, validators=USERNAME_FIELD.validators
+    )
     password = serializers.CharField(write_only=True, trim_whitespace=False)
     website = serializers.CharField(required=False, allow_blank=True, write_only=True)
-
-    def validate_website(self, value):
-        if value:
-            raise serializers.ValidationError(GENERIC_REFUSAL)
-        return value
 
     def validate_email(self, value):
         value = value.strip().lower()
@@ -64,6 +62,8 @@ class SignupSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        if attrs.get('website'):
+            raise serializers.ValidationError(GENERIC_REFUSAL)
         candidate = User(username=attrs['username'], email=attrs['email'])
         try:
             validate_password(attrs['password'], candidate)
@@ -80,7 +80,11 @@ class SignupSerializer(serializers.Serializer):
 
 
 class AccountChangeSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150, required=False)
+    username = serializers.CharField(
+        max_length=USERNAME_FIELD.max_length,
+        validators=USERNAME_FIELD.validators,
+        required=False,
+    )
     email = serializers.EmailField(required=False)
     current_password = serializers.CharField(
         required=False, write_only=True, trim_whitespace=False

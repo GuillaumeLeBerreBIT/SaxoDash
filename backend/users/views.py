@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -48,10 +49,12 @@ class PasswordView(APIView):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = request.user
-        user.set_password(serializer.validated_data['new_password'])
-        user.save(update_fields=['password'])
-        tokens.blacklist_all(user)
-        return Response(tokens.issue(user))
+        with transaction.atomic():
+            user.set_password(serializer.validated_data['new_password'])
+            user.save(update_fields=['password'])
+            tokens.blacklist_all(user)
+            issued = tokens.issue(user)
+        return Response(issued)
 
 
 class SignOutEverywhereView(APIView):
