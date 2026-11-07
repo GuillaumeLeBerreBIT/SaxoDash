@@ -15,6 +15,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
+from users.testing import make_user
 
 from .models import EnableBankingCredential, BankSyncRun
 from . import checks as eb_checks
@@ -292,6 +293,35 @@ BALANCES = {'balances': [{'balance_amount': {'currency': 'EUR', 'amount': '100.0
 
 
 class SyncEnableBankingBalancesTaskTest(TestCase):
+    def setUp(self):
+        self.owner = make_user('owner', owner=True)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_accounts_belong_to_the_owner(self, mock_get_balances):
+        mock_get_balances.return_value = BALANCES
+        make_user('someone-else')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        self.assertEqual(BankAccount.objects.get(external_id='enablebanking:kbc:acc-1').user, self.owner)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_without_an_owner_nothing_is_written(self, mock_get_balances):
+        self.owner.profile.is_owner = False
+        self.owner.profile.save()
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        mock_get_balances.assert_not_called()
+        self.assertFalse(BankAccount.objects.exists())
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').detail, tasks.NO_OWNER)
+
     def test_skips_a_bank_with_no_credential(self):
         tasks.sync_enablebanking_balances()
         run = BankSyncRun.objects.get(bank='kbc')

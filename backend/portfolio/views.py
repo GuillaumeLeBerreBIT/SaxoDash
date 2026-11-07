@@ -17,12 +17,12 @@ class PositionListView(ListAPIView):
     def list(self, request, *args, **kwargs):
         from research.thesis import tickers_with_thesis  # avoid a portfolio<->research import cycle
 
-        positions = list(Position.objects.all())
+        positions = list(Position.objects.filter(user=request.user))
         serializer = self.get_serializer(
             positions,
             many=True,
             context={
-                'total_value': get_positions_value().amount,
+                'total_value': get_positions_value(request.user).amount,
                 'tickers_with_thesis': tickers_with_thesis([p.ticker for p in positions]),
                 'request': request,
             },
@@ -38,9 +38,9 @@ class PortfolioSummaryView(APIView):
     """
 
     def get(self, request):
-        positions = list(Position.objects.all())
+        positions = list(Position.objects.filter(user=request.user))
 
-        total_value = get_portfolio_value().rounded().amount
+        total_value = get_portfolio_value(request.user).rounded().amount
         total_cost = sum((p.cost for p in positions), Decimal('0'))
 
         # The balance sync and the position sync are independent tasks, so the
@@ -67,4 +67,4 @@ class PortfolioSummaryView(APIView):
 
 class PortfolioInsightsView(APIView):
     def get(self, request):
-        return Response(insights.build_insights())
+        return Response(insights.build_insights(request.user))

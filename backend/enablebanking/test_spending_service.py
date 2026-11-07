@@ -8,11 +8,13 @@ from accounts.models import BankAccount
 
 from .models import BankTransaction
 from .services import spending_summary, spending_trend
+from users.testing import the_owner
 
 
 class SpendingSummaryTest(TestCase):
     def setUp(self):
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -214,6 +216,7 @@ class SpendingSummaryTest(TestCase):
 class SpendingTrendTest(TestCase):
     def setUp(self):
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

@@ -11,6 +11,8 @@ from portfolio.views import PortfolioSummaryView
 from transactions.models import Transaction
 from transactions.views import TransactionListView
 
+from users.testing import the_owner, make_user
+
 from .views import ViewResult, app_user, call_view, problem
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -22,16 +24,17 @@ class CallViewTest(APITestCase):
         cache.clear()
 
     def test_dispatches_as_the_app_user(self):
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
         result = call_view(PortfolioSummaryView)
         self.assertEqual(result.status, 200)
         self.assertIn('total_value', result.data)
 
     @override_settings(ALLOWED_HOSTS=['saxodash.local', 'localhost'])
     def test_paginated_view_links_on_an_allowed_host(self):
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
         for i in range(2):
             Transaction.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
                 qty=Decimal('1'), price=Decimal('1'), saxo_trade_id=f't{i}',
             )
@@ -41,9 +44,10 @@ class CallViewTest(APITestCase):
 
     @override_settings(ALLOWED_HOSTS=['*'])
     def test_wildcard_hosts_fall_back_to_localhost(self):
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
         for i in range(2):
             Transaction.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
                 qty=Decimal('1'), price=Decimal('1'), saxo_trade_id=f't{i}',
             )
@@ -60,10 +64,15 @@ class CallViewTest(APITestCase):
         with override_settings(MCP_USER='second'):
             self.assertEqual(app_user(), second)
 
-    def test_app_user_defaults_to_lowest_id(self):
-        first = get_user_model().objects.create_user('first', password='p')
-        get_user_model().objects.create_user('second', password='p')
-        self.assertEqual(app_user(), first)
+    def test_app_user_defaults_to_the_owner(self):
+        get_user_model().objects.create_user('first', password='p')
+        owner = make_user('second', owner=True)
+        self.assertEqual(app_user(), owner)
+
+    def test_app_user_without_an_owner_is_improperly_configured(self):
+        get_user_model().objects.create_user('first', password='p')
+        with self.assertRaises(ImproperlyConfigured):
+            app_user()
 
     def test_throttled_view_is_a_warning(self):
         self.assertEqual(problem(ViewResult(429, {})), 'Busy — try again in a minute.')

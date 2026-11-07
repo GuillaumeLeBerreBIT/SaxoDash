@@ -10,6 +10,7 @@ from research.models import Watchlist, WatchlistItem
 
 from .factories import make_investor, store_quarter
 from .models import Security
+from users.testing import the_owner
 
 Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
@@ -84,6 +85,7 @@ class InvestorDetailApiTest(APITestCase):
 
     def test_flags_what_you_own_and_watch(self):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#000000',
         )

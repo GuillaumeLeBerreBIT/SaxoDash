@@ -1,10 +1,10 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import TextAnnotation
+from users.testing import the_owner
 
 LIST_URL = '/api/research/text-annotations/211/Stock/'
 
@@ -15,7 +15,7 @@ def detail_url(pk):
 
 class TextAnnotationAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

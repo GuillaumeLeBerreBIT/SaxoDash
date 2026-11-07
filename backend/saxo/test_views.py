@@ -1,11 +1,10 @@
 from datetime import timedelta
 from unittest.mock import patch
-from django.contrib.auth.models import User
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
-from users.testing import make_user
+from users.testing import the_owner, make_user
 
 from .models import SaxoCredential, SyncRun
 from . import client
@@ -13,7 +12,7 @@ from . import client
 
 class SaxoConnectViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         self.token = str(RefreshToken.for_user(self.user).access_token)
 
     def _ticket(self):

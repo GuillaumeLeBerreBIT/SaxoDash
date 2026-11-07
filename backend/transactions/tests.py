@@ -5,11 +5,12 @@ from transactions.models import Transaction
 from decimal import Decimal
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.test import APITestCase
-from django.contrib.auth.models import User
 from django.db.utils import IntegrityError
+from users.testing import the_owner
 class TransactioModelTest(TestCase):
     def test_create_transaction(self):
         tx = Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 4, 22), type='BUY', instrument='NVIDIA Corporation',
             ticker='NVDA', qty=Decimal('5'), price=Decimal('870.20'), account='Saxo',
         )
@@ -19,10 +20,12 @@ class TransactioModelTest(TestCase):
 
     def test_default_ordering_is_newest_first(self):
         older = Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 3, 1), type='BUY', instrument='A', ticker='A',
             qty=Decimal('1'), price=Decimal('1'), account='Saxo',
         )
         newer = Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 4, 1), type='BUY', instrument='B', ticker='B',
             qty=Decimal('1'), price=Decimal('1'), account='Saxo',
         )
@@ -30,15 +33,17 @@ class TransactioModelTest(TestCase):
         
 class TransactionAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         refresh = RefreshToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 10), type='BUY', instrument='NVIDIA', ticker='NVDA',
             qty=Decimal('5'), price=Decimal('100.00'), account='Saxo',
         )
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 3, 5), type='DIVIDEND', instrument='NVIDIA', ticker='NVDA',
             qty=Decimal('1'), price=Decimal('12.50'), account='Saxo',
         )
@@ -73,10 +78,12 @@ class TransactionAPITest(APITestCase):
 class TransactionSaxoTradeIdTest(TestCase):
     def test_multiple_transactions_without_saxo_trade_id_are_allowed(self):
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), type='DEPOSIT', instrument='Cash Deposit',
             ticker='-', qty=Decimal('1'), price=Decimal('100.00'), account='Saxo',
         )
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 2), type='DEPOSIT', instrument='Cash Deposit',
             ticker='-', qty=Decimal('1'), price=Decimal('200.00'), account='Saxo',
         )
@@ -84,12 +91,14 @@ class TransactionSaxoTradeIdTest(TestCase):
 
     def test_saxo_trade_id_is_unique_when_set(self):
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), type='SELL', instrument='NVIDIA', ticker='NVDA',
             qty=Decimal('5'), price=Decimal('850.00'), account='Saxo',
             saxo_trade_id='abc123',
         )
         with self.assertRaises(IntegrityError):
             Transaction.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 2), type='SELL', instrument='NVIDIA', ticker='NVDA',
                 qty=Decimal('5'), price=Decimal('860.00'), account='Saxo',
                 saxo_trade_id='abc123',
@@ -97,12 +106,13 @@ class TransactionSaxoTradeIdTest(TestCase):
 
 class TransactionCurrencyAPITest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='alex', password='pw')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def row(self, **extra):
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 8, 26), type='BUY', instrument='NVIDIA', ticker='NVDA',
             qty=Decimal('5'), price=Decimal('100.00'), account='Saxo', **extra,
         )

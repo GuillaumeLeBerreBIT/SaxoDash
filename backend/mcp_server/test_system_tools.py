@@ -13,7 +13,7 @@ from .tools.system import get_data_health
 
 class DataHealthTest(TestCase):
     def setUp(self):
-        self.user = make_user('advisor')
+        self.user = make_user('advisor', owner=True)
 
     def test_reports_connection_and_each_task(self):
         SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok')

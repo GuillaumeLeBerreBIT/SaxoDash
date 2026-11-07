@@ -172,9 +172,9 @@ def summary(realised_rows, unrealised_rows, carry_over_eur):
     return result
 
 
-def _lots():
+def _lots(user):
     lots = {}
-    for row in Transaction.objects.filter(type='BUY').values('ticker', 'date', 'qty', 'price'):
+    for row in Transaction.objects.filter(user=user, type='BUY').values('ticker', 'date', 'qty', 'price'):
         lots.setdefault(row['ticker'], []).append((row['date'], row['qty'], row['price']))
     return lots
 
@@ -196,7 +196,7 @@ def ensure_tax_year(year):
         raise NotATaxYear(NOT_A_TAX_YEAR)
 
 
-def report(year, carry_over_eur, *, closed_rows, close_on, closed_reason=None):
+def report(year, carry_over_eur, *, user, closed_rows, close_on, closed_reason=None):
     ensure_tax_year(year)
     close_on = _memoised(close_on)
     warnings = []
@@ -207,7 +207,7 @@ def report(year, carry_over_eur, *, closed_rows, close_on, closed_reason=None):
         realised_rows, reason = realised(closed_rows, year, close_on)
         if reason:
             warnings.append(reason)
-    unrealised_rows = unrealised(list(Position.objects.all()), close_on, _lots(), warnings)
+    unrealised_rows = unrealised(list(Position.objects.filter(user=user)), close_on, _lots(user), warnings)
     warnings.extend([COVERAGE_NOTE, FX_NOTE, ADVISER_NOTE])
     return {
         'realised': realised_rows,

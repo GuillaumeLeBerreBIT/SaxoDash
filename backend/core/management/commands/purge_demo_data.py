@@ -5,6 +5,7 @@ from accounts.models import BankAccount
 from core.models import NetWorthSnapshot
 from portfolio.models import Position
 from transactions.models import Transaction
+from users.commands import add_user_argument, chosen_user
 
 SAXO_BANK = 'Saxo'
 
@@ -16,6 +17,7 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        add_user_argument(parser)
         parser.add_argument(
             '--dry-run', action='store_true',
             help='Report what would be deleted without deleting it.',
@@ -27,16 +29,19 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        user = chosen_user(options['user'])
+        transactions = Transaction.objects.filter(user=user)
+        accounts = BankAccount.objects.filter(user=user)
         # Demo transactions are the ones no Saxo sync ever claimed. Real rows
         # carry the PositionId that makes their upsert idempotent.
-        demo_transactions = Transaction.objects.filter(saxo_trade_id=None)
-        demo_accounts = BankAccount.objects.exclude(bank=SAXO_BANK)
+        demo_transactions = transactions.filter(saxo_trade_id=None)
+        demo_accounts = accounts.exclude(bank=SAXO_BANK)
 
         # Every existing snapshot is discarded, not just the 364 synthetic
         # ones: bank_total on the recent "real" snapshots still included the
         # invented BNP/KBC/ING balances, so they are wrong the moment those
         # accounts go away. ensure_todays_snapshot rebuilds from clean data.
-        snapshots = NetWorthSnapshot.objects.all()
+        snapshots = NetWorthSnapshot.objects.filter(user=user)
 
         counts = {
             'transactions': demo_transactions.count(),
@@ -48,9 +53,9 @@ class Command(BaseCommand):
             self.stdout.write(f'  {count:>5} {label}')
 
         kept = (
-            f'Keeping {Transaction.objects.exclude(saxo_trade_id=None).count()} Saxo '
-            f'transactions, {BankAccount.objects.filter(bank=SAXO_BANK).count()} Saxo '
-            f'account, {Position.objects.count()} positions.'
+            f'Keeping {transactions.exclude(saxo_trade_id=None).count()} Saxo '
+            f'transactions, {accounts.filter(bank=SAXO_BANK).count()} Saxo '
+            f'account, {Position.objects.filter(user=user).count()} positions.'
         )
 
         if not options['yes'] or options['dry_run']:

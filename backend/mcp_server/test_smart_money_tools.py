@@ -2,13 +2,14 @@ import json
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from investors.models import FilingAlert, Investor
 from research.listings import Listing
+
+from users.testing import the_owner
 
 from .views import ViewResult
 from .tools.smart_money import (
@@ -29,7 +30,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 class SmartMoneyToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
         self.investor = Investor.objects.create(cik=1, name='Fund One', slug='fund-one', followed=True)
 
     def test_alerts_are_not_marked_read(self):

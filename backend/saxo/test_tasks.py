@@ -11,6 +11,7 @@ from .models import SaxoCredential, SyncRun
 from . import client, mapping, tasks
 from .tasks import SyncReport, synced
 from .testing import saxo_credential
+from users.testing import the_owner
 
 SAMPLE_POSITION = {
     'PositionId': '5027270864',
@@ -75,6 +76,7 @@ UNENTITLED_POSITION = {
 class RefreshSaxoTokenTaskTest(TestCase):
     def test_does_nothing_when_token_not_near_expiry(self):
         saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -88,6 +90,7 @@ class RefreshSaxoTokenTaskTest(TestCase):
             'access_token': 'new-a', 'refresh_token': 'new-b', 'expires_in': 1200,
         }
         cred = saxo_credential(
+            user=the_owner(),
             access_token='old-a', refresh_token='old-b',
             expires_at=timezone.now() + timedelta(minutes=2),
         )
@@ -100,6 +103,7 @@ class RefreshSaxoTokenTaskTest(TestCase):
     def test_marks_needs_reauth_on_failure(self, mock_refresh):
         mock_refresh.side_effect = client.SaxoAuthError('expired')
         cred = saxo_credential(
+            user=the_owner(),
             access_token='old-a', refresh_token='old-b',
             expires_at=timezone.now() + timedelta(minutes=2),
         )
@@ -112,6 +116,7 @@ class RefreshSaxoTokenTaskTest(TestCase):
 class SyncPositionsTaskTest(TestCase):
     def setUp(self):
         self.cred = saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -148,6 +153,7 @@ class SyncPositionsTaskTest(TestCase):
     @patch('saxo.tasks.client.get_positions')
     def test_removes_positions_no_longer_present(self, mock_get_positions):
         Position.objects.create(
+            user=the_owner(),
             ticker='OLD', name='Old Corp', qty=1, avg_cost=Decimal('1'),
             current_price=Decimal('1'), sector='Uncategorized', type='STOCK', color='#000000',
         )
@@ -168,6 +174,7 @@ class SyncPositionsTaskTest(TestCase):
         # exclude(ticker__in=[]) matches every row, so an unguarded prune here
         # deletes the whole book on a payload we simply failed to read.
         Position.objects.create(
+            user=the_owner(),
             ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
             current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
             color='#000000',
@@ -183,6 +190,7 @@ class SyncPositionsTaskTest(TestCase):
     def test_an_empty_saxo_response_still_prunes(self, mock_get_positions):
         # Holding nothing is a real answer, and differs from failing to read.
         Position.objects.create(
+            user=the_owner(),
             ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
             current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
             color='#000000',
@@ -242,6 +250,7 @@ class SyncPositionsTaskTest(TestCase):
 class SyncClosedPositionsTaskTest(TestCase):
     def setUp(self):
         self.cred = saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -299,6 +308,7 @@ class ExpiredCredentialGuardTest(TestCase):
 
     def setUp(self):
         self.cred = saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() - timedelta(minutes=1),
         )
@@ -340,6 +350,7 @@ class ExpiredCredentialGuardTest(TestCase):
 class SyncAccountBalanceTaskTest(TestCase):
     def setUp(self):
         self.cred = saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -347,6 +358,7 @@ class SyncAccountBalanceTaskTest(TestCase):
     @patch('saxo.tasks.client.get_account_balance')
     def test_updates_the_synced_account_in_place(self, mock_get_balance):
         BankAccount.objects.create(
+            user=the_owner(),
             bank='Saxo', type='Cash', iban_masked='-',
             balance=Decimal('850.00'), available=Decimal('850.00'),
             external_id=mapping.SAXO_CASH_ACCOUNT_ID,
@@ -407,11 +419,13 @@ class SyncAccountBalanceTaskTest(TestCase):
     def test_second_account_at_the_same_bank_does_not_break_the_sync(self, mock_get_balance):
         # update_or_create(bank='Saxo') raised MultipleObjectsReturned here.
         BankAccount.objects.create(
+            user=the_owner(),
             bank='Saxo', type='Cash', iban_masked='-',
             balance=Decimal('850.00'), available=Decimal('850.00'),
             external_id=mapping.SAXO_CASH_ACCOUNT_ID,
         )
         BankAccount.objects.create(
+            user=the_owner(),
             bank='Saxo', type='Savings', iban_masked='-',
             balance=Decimal('25.00'), available=Decimal('25.00'),
         )
@@ -480,6 +494,7 @@ class SyncRunTest(TestCase):
     @patch('saxo.tasks.client.get_positions')
     def test_an_expired_token_is_recorded_with_its_reason(self, mock_get_positions):
         saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() - timedelta(minutes=1),
         )
@@ -492,6 +507,7 @@ class SyncRunTest(TestCase):
     @patch('saxo.tasks.client.get_positions')
     def test_a_failing_sync_is_recorded_and_still_raises(self, mock_get_positions):
         saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -506,6 +522,7 @@ class SyncRunTest(TestCase):
 class SyncedHealthDeclarationTest(TestCase):
     def test_synced_without_health_accepts_an_undeclared_task_and_records_runs(self):
         saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -527,6 +544,7 @@ class SyncedHealthDeclarationTest(TestCase):
 class TransactionCurrencySyncTest(TestCase):
     def setUp(self):
         self.cred = saxo_credential(
+            user=the_owner(),
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )

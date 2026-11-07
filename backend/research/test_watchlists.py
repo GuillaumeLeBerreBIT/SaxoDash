@@ -1,5 +1,4 @@
 from decimal import Decimal
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.utils import IntegrityError
 from django.test import TestCase, override_settings
@@ -10,6 +9,7 @@ from portfolio.models import Position
 
 from . import tasks
 from .models import Watchlist, WatchlistItem
+from users.testing import the_owner
 
 
 class WatchlistModelTest(TestCase):
@@ -61,6 +61,7 @@ class SyncWatchlistsTaskTest(TestCase):
 
     def _position(self, ticker, uic):
         return Position.objects.create(
+            user=the_owner(),
             ticker=ticker, name=ticker, qty=1, avg_cost=Decimal('1'),
             current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
             color='#000000', uic=uic,
@@ -112,7 +113,7 @@ class SyncWatchlistsTaskTest(TestCase):
 
 class WatchlistAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

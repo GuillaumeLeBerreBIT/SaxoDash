@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
@@ -12,6 +11,7 @@ from research.models import ScreenerRow
 
 from .views import ViewResult
 from .tools.market import EARNINGS_UNAVAILABLE, get_discover_shelves, get_earnings_calendar, screen_universe
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -20,7 +20,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 class ScreenUniverseTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def row(self, ticker, **fields):
         fields.setdefault('technicals_at', timezone.now())
@@ -96,7 +96,7 @@ class ScreenUniverseTest(APITestCase):
 class ShelvesAndCalendarTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_shelves_overview_lists_every_shelf(self):
         result = get_discover_shelves()

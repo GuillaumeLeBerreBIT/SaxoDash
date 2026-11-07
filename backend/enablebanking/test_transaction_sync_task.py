@@ -9,6 +9,7 @@ from accounts.models import BankAccount
 from . import client
 from .models import BankSyncRun, BankTransaction, EnableBankingCredential
 from .tasks import sync_enablebanking_transactions
+from users.testing import the_owner
 
 LINKED_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE00'}, 'product': 'Current account'}
 
@@ -28,6 +29,7 @@ RAW_PENDING = {**RAW_TX, 'entry_reference': 'e-2', 'status': 'PDNG'}
 class SyncEnablebankingTransactionsTaskTest(TestCase):
     def setUp(self):
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -106,6 +108,7 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
         self.credential.linked_accounts = [LINKED_ACCOUNT, {**LINKED_ACCOUNT, 'uid': 'acc-2'}]
         self.credential.save()
         BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Savings', iban_masked='BE12 •••• •••• 0002',
             balance=0, available=0, external_id='enablebanking:kbc:acc-2',
         )
@@ -145,6 +148,7 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
         catches the bug where per-account mark_transfers calls could never
         see the other bank's leg in the same batch."""
         argenta_account = BankAccount.objects.create(
+            user=the_owner(),
             bank='Argenta', type='Current account', iban_masked='BE12 •••• •••• 0002',
             balance=100, available=100, external_id='enablebanking:argenta:acc-2',
         )

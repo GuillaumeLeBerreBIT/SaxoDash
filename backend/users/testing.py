@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 
 from users.models import Profile
+from users.owner import owner
 
 
 def make_user(username='u', *, email=None, password='pw-Strong-123', owner=False):
@@ -12,3 +13,7 @@ def make_user(username='u', *, email=None, password='pw-Strong-123', owner=False
         profile.is_owner = True
         profile.save(update_fields=['is_owner'])
     return user
+
+
+def the_owner():
+    return owner() or make_user('owner', owner=True)

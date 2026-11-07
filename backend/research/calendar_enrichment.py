@@ -16,9 +16,9 @@ DAILY_HORIZON = 1440
 MINE_CHART_BARS = 60
 
 
-def _portfolio_total():
+def _portfolio_total(user):
     try:
-        total = get_portfolio_value()
+        total = get_portfolio_value(user)
     except CurrencyMismatch:
         logger.warning('portfolio total unavailable for earnings weights', exc_info=True)
         return None
@@ -84,7 +84,7 @@ def enrich(events, today, moves=True, *, user):
     positions = {position.ticker.upper(): position for position in Position.objects.all() if position.ticker}
     watch_items = _watch_items()
     instruments = _instruments(positions, watch_items)
-    total = _portfolio_total() if symbols & positions.keys() else None
+    total = _portfolio_total(user) if symbols & positions.keys() else None
     bars_by_symbol = {}
     today_iso = today.isoformat()
 

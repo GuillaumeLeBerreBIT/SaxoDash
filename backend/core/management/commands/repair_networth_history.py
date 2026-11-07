@@ -15,15 +15,16 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from portfolio.models import Position
+from users.commands import add_user_argument, chosen_user
 
 from ...models import NetWorthSnapshot
 
 CENTS = Decimal('0.01')
 
 
-def _default_rate():
+def _default_rate(user):
     """The rate the positions themselves carry, when they agree on one."""
-    rates = set(Position.objects.values_list('fx_rate', flat=True).distinct())
+    rates = set(Position.objects.filter(user=user).values_list('fx_rate', flat=True).distinct())
     return rates.pop() if len(rates) == 1 else None
 
 
@@ -31,6 +32,7 @@ class Command(BaseCommand):
     help = 'Restate or delete net worth snapshots recorded in the wrong currency.'
 
     def add_arguments(self, parser):
+        add_user_argument(parser)
         parser.add_argument('--since', help='First date to repair (YYYY-MM-DD).')
         parser.add_argument('--until', help='Last date to repair (YYYY-MM-DD).')
         parser.add_argument('--rate', help='Instrument-to-reporting currency rate.')
@@ -50,7 +52,8 @@ class Command(BaseCommand):
                 'that it ran, so an unbounded or repeated run corrupts good data.'
             )
 
-        snapshots = NetWorthSnapshot.objects.filter(date__lt=timezone.localdate())
+        user = chosen_user(options['user'])
+        snapshots = NetWorthSnapshot.objects.filter(user=user, date__lt=timezone.localdate())
         if options['since']:
             snapshots = snapshots.filter(date__gte=options['since'])
         if options['until']:
@@ -64,7 +67,7 @@ class Command(BaseCommand):
         if options['delete']:
             return self._delete(snapshots, options['apply'])
 
-        rate = Decimal(options['rate']) if options['rate'] else _default_rate()
+        rate = Decimal(options['rate']) if options['rate'] else _default_rate(user)
         if rate is None:
             raise CommandError(
                 'No --rate given and the positions do not agree on one. Pass '

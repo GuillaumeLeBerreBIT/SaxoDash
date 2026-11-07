@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from portfolio.models import Position
 
 from . import finnhub
+from users.testing import the_owner
 
 TEST_KEY = Fernet.generate_key().decode()
 
@@ -50,7 +51,7 @@ RAW_NEWS_ROW = {
 class FundamentalsViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -139,7 +140,7 @@ class FundamentalsViewTest(APITestCase):
 class StatementsViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -188,7 +189,7 @@ class StatementsViewTest(APITestCase):
 class FilingsViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -226,7 +227,7 @@ class FilingsViewTest(APITestCase):
 class InsidersViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -267,7 +268,7 @@ class InsidersViewTest(APITestCase):
 class PeersViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -314,7 +315,7 @@ class CompanyNewsViewTest(APITestCase):
 
     def setUp(self):
         cache.clear()
-        user = User.objects.create_user(username='alex', password='pw')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -371,7 +372,7 @@ class CompanyNewsViewTest(APITestCase):
 class ThrottleTest(APITestCase):
     def setUp(self):
         cache.clear()
-        user = User.objects.create_user(username='alex', password='pw')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -440,6 +441,7 @@ class EarningsCalendarViewTest(APITestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_returns_the_week_with_tagged_rows(self, mock_cal):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )

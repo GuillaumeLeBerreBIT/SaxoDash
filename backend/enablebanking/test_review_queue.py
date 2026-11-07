@@ -11,6 +11,7 @@ from accounts.models import BankAccount
 
 from . import views
 from .models import BankTransaction
+from users.testing import the_owner
 
 
 def _auth_client(test_case):
@@ -23,6 +24,7 @@ class ReviewQueueTestCase(APITestCase):
     def setUp(self):
         _auth_client(self)
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

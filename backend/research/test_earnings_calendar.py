@@ -9,6 +9,7 @@ from portfolio.models import Position
 from . import earnings, finnhub, report_dates
 from .models import ScreenerRow, Watchlist, WatchlistItem
 from .providers import ProviderUnavailable
+from users.testing import the_owner
 
 # Redis is the real cache; these tests must not need it running, and must not
 # leak entries into a developer's running instance.
@@ -85,6 +86,7 @@ class WindowEarningsTest(TestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_rows_are_tagged_held_and_watched(self, mock_cal):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )
@@ -104,6 +106,7 @@ class WindowEarningsTest(TestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_mine_scope_keeps_only_tagged_rows(self, mock_cal):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )
@@ -117,6 +120,7 @@ class WindowEarningsTest(TestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_all_scope_drops_rows_with_no_consensus_estimate_unless_held(self, mock_cal):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )

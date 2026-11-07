@@ -9,14 +9,14 @@ from transactions.views import TransactionListView
 from ..bounds import at_most
 from ..envelope import Reply
 from ..shaping import capped, numbers, without
-from ..views import fetch, fetch_optional
+from ..views import app_user, fetch, fetch_optional
 from . import tool
 
 TRANSACTION_FETCH_SIZE = 1000
 
 
-def _cash_eur():
-    valuation = PortfolioValuation.objects.order_by('-as_of').first()
+def _cash_eur(user):
+    valuation = PortfolioValuation.objects.filter(user=user).order_by('-as_of').first()
     if valuation is None or valuation.currency != settings.REPORTING_CURRENCY:
         return None
     return valuation.cash_balance
@@ -51,6 +51,7 @@ def _position(row):
     saxo=True,
 )
 def get_portfolio():
+    user = app_user()
     warnings = []
     summary = fetch_optional(PortfolioSummaryView, warnings) or {}
     listed = fetch_optional(PositionListView, warnings)
@@ -65,9 +66,9 @@ def get_portfolio():
         'total_cost_eur': summary.get('total_cost'),
         'total_pnl_eur': summary.get('total_pnl'),
         'total_pnl_pct': summary.get('total_pnl_pct'),
-        'cash_eur': _cash_eur(),
+        'cash_eur': _cash_eur(user),
         'positions': rows,
-        'insights': without(build_position_insights()),
+        'insights': without(build_position_insights(user)),
     }
     return Reply(data, warnings)
 

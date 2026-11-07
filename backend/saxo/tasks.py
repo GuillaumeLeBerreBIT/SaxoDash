@@ -28,8 +28,9 @@ class SyncReport(NamedTuple):
     detail: str = ''
 
 
-def _upsert_transaction(fields):
+def _upsert_transaction(user, fields):
     transaction_row, created = Transaction.objects.update_or_create(
+        user=user,
         saxo_trade_id=fields['saxo_trade_id'],
         defaults={key: value for key, value in fields.items() if key != 'fx_rate'},
         create_defaults=fields,
@@ -218,7 +219,7 @@ def sync_positions(credential):
         for fields in mapping.merge_lots(_mapped_rows(saxo_positions, mapping.to_position_fields)):
             synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
             Position.objects.update_or_create(
-                ticker=fields['ticker'], defaults=synced, create_defaults=fields
+                user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
             )
             seen_tickers.append(fields['ticker'])
 
@@ -231,10 +232,10 @@ def sync_positions(credential):
                 f'mapped; refusing to prune the portfolio to empty.'
             )
 
-        Position.objects.exclude(ticker__in=seen_tickers).delete()
+        Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
 
         for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
-            _upsert_transaction(fields)
+            _upsert_transaction(credential.user, fields)
 
     return len(seen_tickers)
 
@@ -249,7 +250,7 @@ def sync_closed_positions(credential):
     rows = 0
     with transaction.atomic():
         for fields in _mapped_rows(saxo_closed_positions, mapping.to_closed_transaction_fields):
-            _upsert_transaction(fields)
+            _upsert_transaction(credential.user, fields)
             rows += 1
 
     return rows
@@ -263,12 +264,13 @@ def sync_account_balance(credential):
 
     with transaction.atomic():
         BankAccount.objects.update_or_create(
+            user=credential.user,
             external_id=mapping.SAXO_CASH_ACCOUNT_ID,
             defaults=mapping.to_account_fields(saxo_balance=saxo_balance),
         )
         if valuation:
             PortfolioValuation.objects.update_or_create(
-                source=SAXO_SOURCE, defaults=valuation
+                user=credential.user, source=SAXO_SOURCE, defaults=valuation
             )
 
     if not valuation:

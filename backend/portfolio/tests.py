@@ -17,18 +17,19 @@ from portfolio.services import (
     get_positions_value,
     get_saxo_account_value,
 )
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+from users.testing import the_owner
 
 
 def _snap(d, portfolio, bank=Decimal('1000.00')):
-    # net_worth mirrors what ensure_todays_snapshot() itself computes:
+    # net_worth mirrors what ensure_todays_snapshot(the_owner()) itself computes:
     # portfolio_value + bank_total. Trade-neutral in practice because Saxo's
     # cash is mirrored into a BankAccount row (part of bank_total) atomically
     # alongside PortfolioValuation - a sale that drops portfolio_value raises
     # that mirror by the same amount, in the same sync.
     return NetWorthSnapshot.objects.create(
+        user=the_owner(),
         date=d, portfolio_value=Decimal(portfolio),
         bank_total=bank, net_worth=Decimal(portfolio) + bank,
     )
@@ -37,6 +38,7 @@ def _snap(d, portfolio, bank=Decimal('1000.00')):
 def _pos(ticker, qty, avg, price, sector='Technology', currency='USD', color='#111111',
          price_source='live'):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=f'{ticker} Inc', qty=Decimal(qty), avg_cost=Decimal(avg),
         current_price=Decimal(price), sector=sector, type='STOCK', color=color,
         currency=currency, price_source=price_source,
@@ -47,6 +49,7 @@ def _pos(ticker, qty, avg, price, sector='Technology', currency='USD', color='#1
 class PositionModelTest(TestCase):
     def test_create_position(self):
         position = Position.objects.create(
+            user=the_owner(),
             ticker='NVDA', name='NVIDIA Corporation', qty=15,
             avg_cost=Decimal('412.30'), current_price=Decimal('875.40'),
             sector='Technology', type='STOCK', color='#76b900', 
@@ -58,22 +61,24 @@ class PositionModelTest(TestCase):
 class PositionSerializerTest(TestCase):
     def setUp(self):
         self.p1 = Position.objects.create(
+            user=the_owner(),
             ticker='NVDA', name='NVIDIA', qty=10,
             avg_cost=Decimal('100.00'), current_price=Decimal('150.00'),
             sector='Technology', type='STOCK', color='#76b900',
         )
         self.p2 = Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=10,
             avg_cost=Decimal('100.00'), current_price=Decimal('50.00'),
             sector='Technology', type='STOCK', color='#a3a3a3',
         )
 
     def test_total_value(self):
-        total = get_positions_value().amount
+        total = get_positions_value(the_owner()).amount
         self.assertEqual(total, Decimal('2000.00'))  # 1500 + 500
 
     def test_computed_fields(self):
-        total = get_positions_value().amount
+        total = get_positions_value(the_owner()).amount
         data = PositionSerializer(self.p1, context={'total_value': total}).data
         self.assertEqual(data['value'], Decimal('1500.00'))
         self.assertEqual(data['cost'], Decimal('1000.00'))
@@ -97,10 +102,11 @@ class PositionSerializerTest(TestCase):
 
 class PortfolioAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         refresh = RefreshToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
         Position.objects.create(
+            user=the_owner(),
             ticker='NVDA', name='NVIDIA', qty=10,
             avg_cost=Decimal('100.00'), current_price=Decimal('150.00'),
             sector='Technology', type='STOCK', color='#76b900',
@@ -135,7 +141,7 @@ class PortfolioValuationTrustTest(TestCase):
     """The broker's figure is preferred, but only while it is evidence."""
 
     def _valuation(self, **overrides):
-        return PortfolioValuation.objects.create(**{
+        return PortfolioValuation.objects.create(user=the_owner(), **{
             'source': SAXO_SOURCE,
             'currency': 'EUR',
             'cash_balance': Decimal('1000.00'),
@@ -146,6 +152,7 @@ class PortfolioValuationTrustTest(TestCase):
 
     def _position(self):
         return Position.objects.create(
+            user=the_owner(),
             ticker='MSFT', name='Microsoft', qty=Decimal('10'),
             avg_cost=Decimal('100.00'), current_price=Decimal('110.00'),
             sector='Technology', type='STOCK', color='#00a4ef',
@@ -156,14 +163,14 @@ class PortfolioValuationTrustTest(TestCase):
         self._valuation()
         self._position()
 
-        self.assertEqual(get_portfolio_value().amount, Decimal('31567.81'))
+        self.assertEqual(get_portfolio_value(the_owner()).amount, Decimal('31567.81'))
 
     def test_falls_back_to_our_own_marks_for_a_foreign_currency_account(self):
         # The valuation carries no fx_rate; the positions do.
         self._valuation(currency='USD')
         self._position()
 
-        value = get_portfolio_value()
+        value = get_portfolio_value(the_owner())
         self.assertEqual(value.currency, settings.REPORTING_CURRENCY)
         self.assertEqual(value.amount, Decimal('1100.00'))
 
@@ -174,7 +181,7 @@ class PortfolioValuationTrustTest(TestCase):
         )
         self._position()
 
-        self.assertEqual(get_portfolio_value().amount, Decimal('1100.00'))
+        self.assertEqual(get_portfolio_value(the_owner()).amount, Decimal('1100.00'))
 
 
 class SaxoAccountValueTest(TestCase):
@@ -183,7 +190,7 @@ class SaxoAccountValueTest(TestCase):
     docs/superpowers/plans/2026-09-2x-return-methodology.md)."""
 
     def _valuation(self, **overrides):
-        return PortfolioValuation.objects.create(**{
+        return PortfolioValuation.objects.create(user=the_owner(), **{
             'source': SAXO_SOURCE,
             'currency': 'EUR',
             'cash_balance': Decimal('1000.00'),
@@ -194,12 +201,12 @@ class SaxoAccountValueTest(TestCase):
 
     def test_returns_the_brokers_total_value_when_usable(self):
         self._valuation()
-        value = get_saxo_account_value()
+        value = get_saxo_account_value(the_owner())
         self.assertEqual(value.amount, Decimal('32567.81'))
         self.assertEqual(value.currency, 'EUR')
 
     def test_returns_none_when_there_is_no_valuation_yet(self):
-        self.assertIsNone(get_saxo_account_value())
+        self.assertIsNone(get_saxo_account_value(the_owner()))
 
     def test_returns_none_for_a_stale_valuation_rather_than_reconstructing_one(self):
         # Deliberately does not fall back to positions+cash from independent
@@ -211,7 +218,7 @@ class SaxoAccountValueTest(TestCase):
         PortfolioValuation.objects.filter(pk=valuation.pk).update(
             as_of=timezone.now() - VALUATION_MAX_AGE - timedelta(hours=1)
         )
-        self.assertIsNone(get_saxo_account_value())
+        self.assertIsNone(get_saxo_account_value(the_owner()))
 
     def test_returns_none_for_a_valuation_in_a_foreign_currency(self):
         # total_value has no fx_rate to convert with (unlike positions,
@@ -219,7 +226,7 @@ class SaxoAccountValueTest(TestCase):
         # foreign-currency fallback, but there is no positions-only fallback
         # here to fall back to.
         self._valuation(currency='USD')
-        self.assertIsNone(get_saxo_account_value())
+        self.assertIsNone(get_saxo_account_value(the_owner()))
 
 
 class InsightsHelpersTest(TestCase):
@@ -355,7 +362,7 @@ class BackfillSectorsTest(TestCase):
     def test_backfills_every_uncategorized_position(self, mock_industry):
         mock_industry.side_effect = lambda ticker: {'AAPL': 'Technology', 'GOOGL': 'Media'}[ticker]
 
-        updated = sectors.backfill_sectors()
+        updated = sectors.backfill_sectors(Position.objects.all())
 
         self.assertEqual(updated, 2)
         self.aapl.refresh_from_db()
@@ -368,7 +375,7 @@ class BackfillSectorsTest(TestCase):
         msft = _pos('MSFT', '1', '1', '1', sector='Technology')
         mock_industry.return_value = 'Media'
 
-        sectors.backfill_sectors()
+        sectors.backfill_sectors(Position.objects.all())
 
         called_tickers = {call.args[0] for call in mock_industry.call_args_list}
         self.assertNotIn('MSFT', called_tickers)
@@ -380,7 +387,7 @@ class BackfillSectorsTest(TestCase):
         from research.finnhub import FinnhubNoData
         mock_industry.side_effect = FinnhubNoData('AAPL')
 
-        updated = sectors.backfill_sectors()
+        updated = sectors.backfill_sectors(Position.objects.all())
 
         self.assertEqual(updated, 0)
         self.aapl.refresh_from_db()
@@ -394,7 +401,7 @@ class BackfillSectorsTest(TestCase):
             if ticker == 'AAPL' else 'Media'
         )
 
-        updated = sectors.backfill_sectors()
+        updated = sectors.backfill_sectors(Position.objects.all())
 
         self.assertEqual(updated, 1)
         self.googl.refresh_from_db()
@@ -420,7 +427,7 @@ class BackfillPositionSectorsTaskTest(TestCase):
     def test_delegates_to_backfill_sectors(self, mock_backfill):
         from portfolio import tasks
         self.assertEqual(tasks.backfill_position_sectors(), 2)
-        mock_backfill.assert_called_once_with()
+        self.assertEqual(list(mock_backfill.call_args.args[0]), [])
 
 
 class UpcomingEarningsTest(TestCase):
@@ -444,7 +451,7 @@ class UpcomingEarningsTest(TestCase):
                  'eps_estimate': 3.2, 'eps_actual': None, 'held': True},   # past horizon
             ]),
         ]
-        rows = insights._upcoming_earnings({'MSFT', 'AAPL', 'TSLA'}, today)
+        rows = insights._upcoming_earnings({'MSFT', 'AAPL', 'TSLA'}, today, the_owner())
         self.assertEqual([r['ticker'] for r in rows], ['MSFT'])
         self.assertEqual(rows[0]['days_until'], 3)
 
@@ -459,17 +466,18 @@ class UpcomingEarningsTest(TestCase):
             {**base, 'symbol': 'GOOGL', 'held': True},
         ])
         mock_win.side_effect = [self._win(merged), self._win([])]
-        rows = insights._upcoming_earnings({'GOOGL'}, date(2026, 9, 10))
+        rows = insights._upcoming_earnings({'GOOGL'}, date(2026, 9, 10), the_owner())
         self.assertEqual([r['ticker'] for r in rows], ['GOOGL'])
 
     @patch('research.earnings.window_earnings', return_value={'events': []})
     def test_the_dashboard_asks_for_no_moves(self, mock_window):
-        insights._window_earnings(0)
-        mock_window.assert_called_once_with('mine', 0, moves=False, user=None)
+        user = the_owner()
+        insights._window_earnings(0, user)
+        mock_window.assert_called_once_with('mine', 0, moves=False, user=user)
 
     @patch('portfolio.insights._window_earnings', side_effect=RuntimeError('feed down'))
     def test_a_feed_failure_yields_none(self, _mock):
-        self.assertIsNone(insights._upcoming_earnings({'MSFT'}, date(2026, 9, 10)))
+        self.assertIsNone(insights._upcoming_earnings({'MSFT'}, date(2026, 9, 10), the_owner()))
 
 
 class InsightsAttentionTest(TestCase):
@@ -613,7 +621,7 @@ class ThesisAttentionTest(TestCase):
         _pos('AAPL', '1', '100', '200')
         SymbolNote.objects.create(symbol='AAPL', bull_case='x')
 
-        kinds = [i['kind'] for i in insights.build_insights()['attention']]
+        kinds = [i['kind'] for i in insights.build_insights(the_owner())['attention']]
 
         self.assertIn('thesis_review_due', kinds)
 
@@ -621,7 +629,7 @@ class ThesisAttentionTest(TestCase):
 class BuildInsightsTest(TestCase):
     @patch('portfolio.insights._upcoming_earnings', return_value=None)
     def test_empty_portfolio_and_no_snapshots_is_well_formed(self, _mock):
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
         self.assertIsNone(payload['as_of'])
         self.assertFalse(payload['stale'])
         self.assertEqual(payload['spark'], [])
@@ -635,7 +643,7 @@ class BuildInsightsTest(TestCase):
         _pos('NVDA', '10', '100', '600')
         _snap(date(2026, 9, 8), '5000')  # bank defaults to 1000: total 6000
         _snap(date(2026, 9, 9), '5500')  # total 6500
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
         self.assertEqual(payload['as_of'], '2026-09-09')
         # The series is net_worth (portfolio_value + bank_total):
         # (1000+5500 - (1000+5000)) / (1000+5000) = 500/6000 = 8.33%.
@@ -647,12 +655,13 @@ class BuildInsightsTest(TestCase):
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_mostly_idle_saxo_cash_surfaces_as_an_attention_item(self, _mock):
         PortfolioValuation.objects.create(
+            user=the_owner(),
             source=SAXO_SOURCE, currency='EUR',
             cash_balance=Decimal('97000.00'),
             positions_value=Decimal('3000.00'),
             total_value=Decimal('100000.00'),
         )
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
         idle = next(i for i in payload['attention'] if i['kind'] == 'idle_cash')
         self.assertIn('97%', idle['text'])
 
@@ -665,20 +674,22 @@ class BuildInsightsTest(TestCase):
         # the positions-only figure.
         _snap(date(2026, 9, 15), '32535', bank=Decimal('1000.00'))
         _snap(date(2026, 9, 16), '30145', bank=Decimal('3390.00'))  # the rebalance day
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
         self.assertGreater(payload['change']['day']['pct'], -1.0)
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_value_splits_saxo_cash_from_external_banks(self, _mock):
         BankAccount.objects.create(
+            user=the_owner(),
             bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('900.00'), available=Decimal('900.00'),
         )
         BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Checking', iban_masked='BE68 1234',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
-        value = insights.build_insights()['value']
+        value = insights.build_insights(the_owner())['value']
         self.assertEqual(Decimal(value['broker_cash']), Decimal('900.00'))
         self.assertEqual(Decimal(value['bank_only']), Decimal('2500.00'))
 
@@ -689,8 +700,8 @@ class PositionInsightsTest(TestCase):
         _pos('NVDA', '10', '100', '600')
         _pos('MSFT', '1', '100', '90', price_source='derived')
         _snap(date(2026, 9, 1), '5000')
-        dashboard = insights.build_insights()
-        advisor = insights.build_position_insights()
+        dashboard = insights.build_insights(the_owner())
+        advisor = insights.build_position_insights(the_owner())
         for key in ('concentration', 'sector_exposure', 'currency_exposure', 'movers', 'contributors', 'upcoming_earnings'):
             self.assertEqual(advisor[key], dashboard[key], key)
         history_kinds = {'stale_value', 'no_history'}
@@ -716,11 +727,12 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
         _snap(today, '1500', bank=Decimal('2500.00'))
         _pos('NVDA', '10', '100', '200')
         BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Checking', iban_masked='-',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
 
         self.assertEqual(payload['value']['net_worth'], Decimal('4500.00'))
         self.assertEqual(payload['change']['day']['abs'], Decimal('1000.00'))
@@ -733,19 +745,20 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
         # falls back to a fresh live computation instead of a stale last row.
         _pos('NVDA', '10', '100', '150')  # value = 1500.00
         BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Checking', iban_masked='-',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
         yesterday = date.today() - timedelta(days=1)
         _snap(yesterday, '900', bank=Decimal('900.00'))  # a stale prior-day row
 
-        payload = insights.build_insights()
+        payload = insights.build_insights(the_owner())
         self.assertEqual(payload['value']['net_worth'], Decimal('4000.00'))  # 1500 + 2500, live
 
 
 class PortfolioInsightsViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='alex', password='pw')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

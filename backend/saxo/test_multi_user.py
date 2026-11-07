@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
@@ -8,6 +9,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from portfolio.models import Position
 from users.testing import make_user
 
 from . import client, tasks
@@ -158,6 +160,26 @@ class PerUserSyncTest(TestCase):
 
         self.assertEqual(SyncRun.objects.get(task='sync_positions', user=self.alice).outcome, 'failed')
         self.assertEqual(SyncRun.objects.get(task='sync_positions', user=self.bob).outcome, 'ok')
+
+    def test_a_failing_user_has_its_partial_writes_rolled_back(self):
+        connect(self.alice, 'alice-token')
+        connect(self.bob, 'bob-token')
+
+        @tasks.synced(reports_health=False, task='write_then_fail')
+        def write_then_fail(credential):
+            Position.objects.create(
+                user=credential.user, ticker='NVDA', name='NVIDIA', qty=Decimal('1'),
+                avg_cost=Decimal('1'), current_price=Decimal('1'), sector='Technology',
+                type='STOCK', color='#111111',
+            )
+            if credential.user == self.alice:
+                raise RuntimeError('after the write')
+            return 1
+
+        with self.assertRaises(RuntimeError):
+            write_then_fail()
+
+        self.assertEqual(list(Position.objects.values_list('user', flat=True)), [self.bob.pk])
 
     def test_refresh_token_refreshes_each_credential(self):
         soon = timezone.now() + timedelta(minutes=2)

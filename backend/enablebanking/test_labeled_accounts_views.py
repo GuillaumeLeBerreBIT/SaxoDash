@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import BankAccount
 
 from .models import BankTransaction, ManualIbanLabel
+from users.testing import the_owner
 
 
 def _auth_client(test_case, username):
@@ -19,6 +20,7 @@ class LabeledAccountListCreateViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u1')
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -92,6 +94,7 @@ class LabeledAccountDetailViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u1')
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -122,6 +125,7 @@ class LabeledAccountCandidatesViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u1')
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

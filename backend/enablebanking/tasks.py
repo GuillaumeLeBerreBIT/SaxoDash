@@ -4,14 +4,20 @@ from datetime import date
 from celery import shared_task
 
 from accounts.models import BankAccount
+from users.owner import owner
 
 from . import categorization, client, credentials, mapping, subscriptions, transfers
 from .models import BankSyncRun, BankTransaction
 
 logger = logging.getLogger(__name__)
 
+NO_OWNER = 'No user is the owner of this instance.'
 
-def _sync_one_bank(bank):
+
+def _sync_one_bank(bank, account_owner):
+    if account_owner is None:
+        return ('skipped', NO_OWNER, 0), None
+
     state = credentials.connection_state(bank)
 
     if not state.connected:
@@ -39,7 +45,7 @@ def _sync_one_bank(bank):
 
         fields = mapping.to_account_fields(bank, account, balance_response)
         BankAccount.objects.update_or_create(
-            external_id=f'enablebanking:{bank}:{account["uid"]}', defaults=fields,
+            user=account_owner, external_id=mapping.account_external_id(bank, account['uid']), defaults=fields,
         )
         rows += 1
 
@@ -73,8 +79,9 @@ def _retry_on(outages):
 def sync_enablebanking_balances():
     total = 0
     outages = []
+    account_owner = owner()
     for bank in credentials.BANKS:
-        (outcome, detail, rows), outage = _sync_one_bank(bank)
+        (outcome, detail, rows), outage = _sync_one_bank(bank, account_owner)
         BankSyncRun.objects.create(bank=bank, outcome=outcome, detail=(detail or '')[:200], rows=rows)
         outages.append(outage)
         total += rows
@@ -82,7 +89,7 @@ def sync_enablebanking_balances():
     return total
 
 
-def _fetch_transactions_for_account(bank, credential, account):
+def _fetch_transactions_for_account(bank, credential, account, account_owner):
     """Fetches and maps new transactions for one linked account into unsaved
     BankTransaction instances - categorized, but not yet transfer-checked or
     persisted. Kept separate from persistence so the caller can combine every
@@ -91,7 +98,7 @@ def _fetch_transactions_for_account(bank, credential, account):
     could never see each other in the same batch (see transfers.py)."""
     account_uid = account['uid']
     bank_account = BankAccount.objects.filter(
-        external_id=f'enablebanking:{bank}:{account_uid}'
+        user=account_owner, external_id=mapping.account_external_id(bank, account_uid)
     ).first()
     if bank_account is None:
         return []
@@ -139,6 +146,7 @@ def sync_enablebanking_transactions():
     all_new = []
     outages = []
     run_info = []  # (bank, outcome, detail, rows), recorded after persisting
+    account_owner = owner()
 
     for bank in credentials.BANKS:
         state = credentials.connection_state(bank)
@@ -152,7 +160,7 @@ def sync_enablebanking_transactions():
         succeeded = 0
         for account in state.credential.linked_accounts:
             try:
-                bank_batch += _fetch_transactions_for_account(bank, state.credential, account)
+                bank_batch += _fetch_transactions_for_account(bank, state.credential, account, account_owner)
             except client.EnableBankingAPIError as exc:
                 logger.warning('Skipping %s account %s transactions: %s', bank, account['uid'], exc)
                 errors.append(exc)

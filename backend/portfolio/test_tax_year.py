@@ -6,6 +6,7 @@ from django.test import SimpleTestCase, TestCase
 from portfolio import tax_year
 from portfolio.models import Position
 from transactions.models import Transaction
+from users.testing import the_owner
 
 
 def position(ticker='AAA', qty=10, avg_cost=90, current_price=120, fx_rate='0.9'):
@@ -234,6 +235,7 @@ class SummaryTests(SimpleTestCase):
 
 def make_position(ticker='AAA', uic=1):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=ticker, qty=Decimal('10'), avg_cost=Decimal('90'),
         current_price=Decimal('120'), sector='Tech', type='STOCK', color='#000000',
         uic=uic, asset_type='Stock', currency='USD', fx_rate=Decimal('0.9'),
@@ -241,7 +243,7 @@ def make_position(ticker='AAA', uic=1):
 
 
 def bought(ticker, day, qty, price, trade):
-    Transaction.objects.create(date=day, type='BUY', instrument=ticker, ticker=ticker, qty=qty, price=price, saxo_trade_id=trade)
+    Transaction.objects.create(user=the_owner(), date=day, type='BUY', instrument=ticker, ticker=ticker, qty=qty, price=price, saxo_trade_id=trade)
 
 
 class ReportTests(TestCase):
@@ -258,13 +260,13 @@ class ReportTests(TestCase):
 
     def test_a_year_before_2026_is_refused(self):
         with self.assertRaises(tax_year.NotATaxYear) as refused:
-            tax_year.report(2025, 0, closed_rows=[], close_on=self.lookup({}))
+            tax_year.report(2025, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({}))
         self.assertEqual(str(refused.exception), 'Belgian capital-gains tax starts in 2026; there is no tax year before it.')
 
     def test_positions_and_lots_are_read_and_closes_keyed_by_instrument(self):
         make_position(uic=1)
         bought('AAA', date(2025, 5, 1), 10, 90, 'a')
-        result = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({(1, 'Stock'): 100.0}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({(1, 'Stock'): 100.0}))
         self.assertEqual(result['unrealised'][0]['unrealised_eur'], Decimal('180.00'))
         self.assertEqual(self.asked, [(1, 'Stock')])
 
@@ -272,45 +274,45 @@ class ReportTests(TestCase):
         make_position(uic=7)
         bought('AAA', date(2025, 5, 1), 10, 90, 'a')
         rows = [closed('AAA', '2026-03-04', 5.0, opened_on='2025-05-01', TotalBookedOnClosingLegAccountCurrency=50.0)]
-        tax_year.report(2026, 0, closed_rows=rows, close_on=self.lookup({(7, 'Stock'): 9.0}))
+        tax_year.report(2026, 0, user=the_owner(), closed_rows=rows, close_on=self.lookup({(7, 'Stock'): 9.0}))
         self.assertEqual(self.asked, [(7, 'Stock')])
 
     def test_a_position_bought_in_2026_needs_no_close(self):
         make_position()
         bought('AAA', date(2026, 2, 1), 10, 90, 'a')
-        result = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({}))
         self.assertEqual(result['unrealised'][0]['basis_source'], 'avg_cost')
         self.assertEqual(self.asked, [])
 
     def test_no_recorded_purchase_is_unknown_and_named(self):
         make_position()
-        result = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({}))
         self.assertIsNone(result['unrealised'][0]['unrealised_eur'])
         self.assertIn('AAA: no recorded purchase, so its opening date (before or after 2026) is unknown.', result['warnings'])
 
     def test_a_missing_close_is_named(self):
         make_position()
         bought('AAA', date(2025, 5, 1), 10, 90, 'a')
-        result = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({}))
         self.assertIn('AAA: no 31 December 2025 close (no close on or before 31 December 2025).', result['warnings'])
 
     def test_unsplittable_lots_are_named(self):
         make_position()
         bought('AAA', date(2025, 5, 1), 6, 80, 'a')
         bought('AAA', date(2026, 2, 1), 6, 110, 'b')
-        result = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({(1, 'Stock'): 100.0}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({(1, 'Stock'): 100.0}))
         self.assertTrue(any('AAA' in w and 'both sides' in w for w in result['warnings']))
 
     def test_unreachable_realised_keeps_unrealised_and_the_reason(self):
         make_position()
         bought('AAA', date(2026, 2, 1), 10, 90, 'a')
-        result = tax_year.report(2026, 0, closed_rows=None, closed_reason='Saxo is not connected.', close_on=self.lookup({}))
+        result = tax_year.report(2026, 0, user=the_owner(), closed_rows=None, closed_reason='Saxo is not connected.', close_on=self.lookup({}))
         self.assertIsNone(result['realised'])
         self.assertIsNone(result['summary']['estimated_tax_eur'])
         self.assertEqual(len(result['unrealised']), 1)
         self.assertIn('Saxo is not connected.', result['warnings'])
 
     def test_standing_notes_are_always_there(self):
-        warnings = tax_year.report(2026, 0, closed_rows=[], close_on=self.lookup({}))['warnings']
+        warnings = tax_year.report(2026, 0, user=the_owner(), closed_rows=[], close_on=self.lookup({}))['warnings']
         for note in (tax_year.COVERAGE_NOTE, tax_year.FX_NOTE, tax_year.ADVISER_NOTE):
             self.assertIn(note, warnings)

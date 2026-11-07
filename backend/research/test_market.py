@@ -2,7 +2,6 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
-from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -13,6 +12,7 @@ from saxo import client
 from saxo.models import SaxoCredential
 
 from . import market
+from users.testing import the_owner
 
 TEST_KEY = Fernet.generate_key().decode()
 
@@ -119,7 +119,7 @@ class ShapingTest(TestCase):
 class MarketDataViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

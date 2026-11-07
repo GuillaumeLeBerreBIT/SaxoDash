@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import BankAccount
 
 from .models import BankTransaction, Budget, Subscription
+from users.testing import the_owner
 
 
 def _auth_client(test_case, username):
@@ -21,6 +22,7 @@ class BankTransactionListViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u1')
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -63,6 +65,7 @@ class BankTransactionCategoryViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u2')
         account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -103,6 +106,7 @@ class SpendingSummaryViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u3')
         account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -177,6 +181,7 @@ class SpendingTrendViewTest(APITestCase):
     def setUp(self):
         _auth_client(self, 'u5')
         account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
@@ -275,6 +280,7 @@ class BudgetProgressViewTest(APITestCase):
 
     def test_returns_progress_rows(self):
         account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

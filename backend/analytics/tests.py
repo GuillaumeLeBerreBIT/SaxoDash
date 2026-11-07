@@ -3,7 +3,6 @@ import statistics
 from datetime import date, timedelta
 from unittest.mock import patch, sentinel
 
-from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,6 +11,7 @@ from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
 
 from . import benchmarks, history, metrics, report, views
+from users.testing import the_owner
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -625,13 +625,14 @@ class BenchmarkEurClosesTest(TestCase):
 @override_settings(CACHES=LOCMEM)
 class PerformanceViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def _seed_snapshots(self, n=35):
         for day in range(1, n + 1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 1) + timedelta(days=day - 1),
                 portfolio_value=100 + day, saxo_account_value=100 + day,
                 bank_total=0, net_worth=100 + day,
@@ -670,6 +671,7 @@ class PerformanceViewTest(APITestCase):
     def test_a_week_of_history_reports_what_is_missing_instead_of_zeros(self):
         for offset in range(5):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 5) + timedelta(days=offset),
                 portfolio_value=100, saxo_account_value=100 + offset,
                 bank_total=0, net_worth=100,
@@ -687,7 +689,7 @@ class PerformanceViewTest(APITestCase):
 @override_settings(RISK_FREE_RATE_ANNUAL=0.02, CACHES=LOCMEM)
 class RiskMetricsViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -698,6 +700,7 @@ class RiskMetricsViewTest(APITestCase):
 
     def test_reports_no_data_below_two_snapshots(self):
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100,
         )
         response = self.client.get('/api/analytics/risk/')
@@ -707,6 +710,7 @@ class RiskMetricsViewTest(APITestCase):
     def test_computes_risk_from_portfolio_value_history(self):
         for day, value in enumerate([100, 102, 101, 105, 103], start=5):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=value,
                 saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
@@ -733,6 +737,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         for day, (portfolio_value, saxo_value) in enumerate(rows, start=1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=portfolio_value,
                 saxo_account_value=saxo_value, bank_total=0, net_worth=portfolio_value,
             )
@@ -748,10 +753,12 @@ class RiskMetricsViewTest(APITestCase):
         # usable (see portfolio.services.get_saxo_account_value) - those
         # days must be excluded, not treated as a zero/blank data point.
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), portfolio_value=100,
             saxo_account_value=None, bank_total=0, net_worth=100,
         )
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 2), portfolio_value=105,
             saxo_account_value=None, bank_total=0, net_worth=105,
         )
@@ -762,6 +769,7 @@ class RiskMetricsViewTest(APITestCase):
     def _seed_snapshots(self):
         for day, value in enumerate([100, 102, 101, 105, 103], start=1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=value,
                 saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
@@ -814,7 +822,7 @@ class RiskMetricsViewTest(APITestCase):
 
     @patch('analytics.benchmarks.eur_closes')
     def test_benchmark_is_not_fetched_without_enough_portfolio_history(self, mock_eur_closes):
-        NetWorthSnapshot.objects.create(date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100)
+        NetWorthSnapshot.objects.create(user=the_owner(), date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100)
         response = self.client.get('/api/analytics/risk/')
         self.assertFalse(response.data['has_data'])
         self.assertFalse(response.data['benchmark']['has_data'])
@@ -893,11 +901,12 @@ class PortfolioDatedValuesTest(TestCase):
         friday = date(2026, 9, 18)
         for offset, value in enumerate([100, 100, 100, 104]):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=friday + timedelta(days=offset),
                 portfolio_value=value, bank_total=0, net_worth=value, saxo_account_value=value,
             )
 
-        dates = [d for d, _ in views._portfolio_dated_values()]
+        dates = [d for d, _ in views._portfolio_dated_values(the_owner())]
 
         self.assertEqual(dates, [date(2026, 9, 18), date(2026, 9, 21)])
 

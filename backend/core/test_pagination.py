@@ -2,22 +2,22 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.pagination import StandardPagination
 from transactions.models import Transaction
+from users.testing import the_owner
 
 
 class PageSizeQueryParamTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='alex', password='pw')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
         Transaction.objects.bulk_create([
             Transaction(
-                date=date(2026, 1, 1), type='BUY', instrument=f'Inst {n}',
+                user=user, date=date(2026, 1, 1), type='BUY', instrument=f'Inst {n}',
                 ticker=f'T{n}', qty=Decimal('1'), price=Decimal('1.00'),
                 account='Saxo',
             )

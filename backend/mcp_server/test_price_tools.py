@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -10,6 +9,7 @@ from research.providers import ProviderNotConnected
 from research.technicals import sma
 
 from .tools.research import get_price_history, get_quotes, search_instruments
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -37,7 +37,7 @@ def instrument(symbol, uic, currency='USD', asset_type='Stock'):
 class PriceToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_search_instruments_lists_matches(self):
         with patch('research.market.search', return_value=[instrument('NVDA', 5)]):

@@ -10,6 +10,7 @@ from portfolio.models import Position
 from . import calendar_enrichment
 from .models import ScreenerRow, Watchlist, WatchlistItem
 from .providers import ProviderNotConnected
+from users.testing import the_owner
 
 USER = sentinel.user
 TODAY = date(2026, 10, 21)
@@ -46,6 +47,7 @@ class EnrichTest(TestCase):
 
     def hold(self, ticker, value, uic=None):
         return Position.objects.create(
+            user=the_owner(),
             ticker=ticker, name=ticker, qty=1, avg_cost=1, current_price=value,
             sector='Tech', type='STOCK', color='#fff', uic=uic, asset_type='Stock' if uic else None,
         )
@@ -233,6 +235,7 @@ class MergeShareClassesTest(TestCase):
 class NextMineTest(TestCase):
     def hold(self, ticker):
         Position.objects.create(
+            user=the_owner(),
             ticker=ticker, name=ticker, qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )

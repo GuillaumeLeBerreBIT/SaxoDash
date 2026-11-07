@@ -20,6 +20,10 @@ def _amount_for_type(balances, wanted):
     )
 
 
+def account_external_id(bank, account_uid):
+    return f'enablebanking:{bank}:{account_uid}'
+
+
 def to_account_fields(bank, account, balance_response):
     """Map one Enable Banking account + its balances to a BankAccount row.
 

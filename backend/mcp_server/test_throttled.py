@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -12,6 +11,7 @@ from research.views import ChartView, InstrumentSearchView
 from . import throttled
 from .tools.research import QUOTE_LIMIT, get_quotes
 from .views import ViewResult
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 LISTING = Listing(ticker='NVDA', symbol='NVDA', name='N', uic=4, asset_type='Stock', currency='USD', exchange=None)
@@ -21,7 +21,7 @@ LISTING = Listing(ticker='NVDA', symbol='NVDA', name='N', uic=4, asset_type='Sto
 class ThrottledTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_lookups_go_through_the_page_search_view(self):
         with patch('mcp_server.throttled.call_view', return_value=ViewResult(429, {})) as view:

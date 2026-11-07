@@ -9,6 +9,7 @@ from portfolio.models import Position
 from . import company_data
 from .listings import Listing, bare, look_up
 from .providers import ProviderError
+from users.testing import the_owner
 
 USER = sentinel.user
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -23,6 +24,7 @@ def row(currency='USD', exchange='xnas', uic=1, symbol='NVDA'):
 
 def hold(ticker='GOOGL', uic=7, currency='USD', asset_type='Stock'):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=f'{ticker} Inc', qty=Decimal('1'), avg_cost=Decimal('1'),
         current_price=Decimal('1'), sector='T', type='STOCK', color='#000',
         uic=uic, asset_type=asset_type, currency=currency,
