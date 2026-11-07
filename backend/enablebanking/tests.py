@@ -10,7 +10,7 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from decimal import Decimal
 
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
@@ -516,6 +516,31 @@ class EnableBankingConnectViewTest(APITestCase):
         self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
 
         self.assertIsNone(mock_build_url.call_args.kwargs.get('iban'))
+
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_another_browser_holding_the_ticket_is_refused(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        stranger = APIClient()
+        stranger.cookies['enablebanking_connect'] = 'someone-elses-nonce'
+
+        self.assertEqual(stranger.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}').status_code, 403)
+        self.assertEqual(APIClient().get(f'/api/enablebanking/connect/kbc/?ticket={ticket}').status_code, 403)
+        mock_build_url.assert_not_called()
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_a_ticket_works_once(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        nonce = self.client.cookies['enablebanking_connect'].value
+        first = self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+        self.client.cookies['enablebanking_connect'] = nonce
+
+        second = self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 403)
 
 
 class EnableBankingCallbackViewTest(APITestCase):

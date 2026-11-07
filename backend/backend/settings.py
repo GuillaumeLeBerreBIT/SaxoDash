@@ -150,6 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
     if o.strip()
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 # Django admin uses session+CSRF auth (the API itself is JWT, which doesn't
 # need this) - without an origin here, admin login from a real domain fails

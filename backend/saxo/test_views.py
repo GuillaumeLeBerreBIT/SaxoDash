@@ -2,7 +2,7 @@ from datetime import timedelta
 from unittest.mock import patch
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 from users.testing import the_owner, make_user
 
@@ -45,14 +45,59 @@ class SaxoConnectViewTest(APITestCase):
         # The ticket rides in the URL; don't leak it to Saxo via Referer.
         self.assertEqual(response['Referrer-Policy'], 'no-referrer')
 
-    def test_a_ticket_is_replayable_within_its_short_window(self):
-        # Documented, bounded: a replayed ticket can only *start* a flow the user
-        # must still complete at Saxo, and the callback is guarded by `state`.
+    def test_minting_sets_an_http_only_cookie_scoped_to_saxo(self):
+        self._ticket()
+        cookie = self.client.cookies['saxo_connect']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'Lax')
+        self.assertEqual(cookie['path'], '/api/saxo/')
+        self.assertTrue(cookie['secure'])
+
+    def test_the_dev_frontend_may_store_the_cookie_across_origins(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+
+        response = self.client.post(
+            '/api/saxo/connect-ticket/', HTTP_ORIGIN='http://localhost:5173'
+        )
+
+        self.assertEqual(response['Access-Control-Allow-Credentials'], 'true')
+
+    def test_another_browser_holding_the_ticket_is_refused(self):
         ticket = self._ticket()
+        stranger = APIClient()
+
+        response = stranger.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn('saxo_oauth_state', stranger.session)
+
+    def test_a_browser_with_a_different_cookie_is_refused(self):
+        ticket = self._ticket()
+        stranger = APIClient()
+        stranger.cookies['saxo_connect'] = 'someone-elses-nonce'
+
+        response = stranger.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_a_refused_browser_does_not_burn_the_ticket(self):
+        ticket = self._ticket()
+        APIClient().get(f'/api/saxo/connect/?ticket={ticket}')
+
+        response = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_a_ticket_works_once(self):
+        ticket = self._ticket()
+        nonce = self.client.cookies['saxo_connect'].value
         first = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+        self.client.cookies['saxo_connect'] = nonce
+
         second = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+
         self.assertEqual(first.status_code, 302)
-        self.assertEqual(second.status_code, 302)
+        self.assertEqual(second.status_code, 403)
 
 
 class SaxoCallbackViewTest(APITestCase):

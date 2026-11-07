@@ -5,7 +5,6 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.cache import cache
-from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
@@ -14,6 +13,7 @@ from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpda
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
+from core.connect_ticket import ConnectTicket
 from users.permissions import IsOwner
 
 from . import client, credentials, tasks
@@ -37,7 +37,7 @@ def _back_to_frontend(outcome, bank=None):
 # Same reasoning as saxo.views: the connect redirect is a full-page
 # navigation, so a signed ticket stands in for the JWT header an
 # authenticated fetch would normally carry.
-_connect_ticket_signer = TimestampSigner(salt='enablebanking-connect')
+connect_ticket = ConnectTicket('enablebanking')
 CONNECT_TICKET_MAX_AGE = 120
 
 
@@ -53,7 +53,7 @@ class EnableBankingConnectTicketView(APIView):
     permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request):
-        return Response({'ticket': _connect_ticket_signer.sign(str(request.user.pk))})
+        return connect_ticket.issue(request.user, CONNECT_TICKET_MAX_AGE)
 
 
 class EnableBankingConnectView(APIView):
@@ -63,11 +63,7 @@ class EnableBankingConnectView(APIView):
         if bank not in credentials.BANKS:
             raise Http404(f'Unknown bank: {bank}')
 
-        try:
-            _connect_ticket_signer.unsign(
-                request.query_params.get('ticket', ''), max_age=CONNECT_TICKET_MAX_AGE
-            )
-        except (BadSignature, SignatureExpired):
+        if connect_ticket.redeem(request, CONNECT_TICKET_MAX_AGE) is None:
             return HttpResponseForbidden('A fresh connect ticket is required.')
 
         state = f'{secrets.token_urlsafe(24)}:{bank}'
@@ -78,7 +74,7 @@ class EnableBankingConnectView(APIView):
             client.build_authorize_url(bank, state, settings.ENABLE_BANKING_REDIRECT_URI, iban=iban)
         )
         response['Referrer-Policy'] = 'no-referrer'
-        return response
+        return connect_ticket.forget(response)
 
 
 class EnableBankingCallbackView(APIView):

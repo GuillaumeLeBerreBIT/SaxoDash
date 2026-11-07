@@ -4,13 +4,14 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.db import transaction
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 from django.utils import timezone
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
+
+from core.connect_ticket import ConnectTicket
 
 from . import client, credentials
 from .models import SaxoCredential
@@ -25,7 +26,7 @@ def _back_to_frontend(outcome):
 # The connect redirect is a full-page navigation, so it cannot carry the JWT
 # header. This signed, short-lived ticket - minted by an authenticated request -
 # stands in for it, so an anonymous caller cannot start the OAuth flow.
-_connect_ticket_signer = TimestampSigner(salt='saxo-connect')
+connect_ticket = ConnectTicket('saxo')
 CONNECT_TICKET_MAX_AGE = 120
 
 
@@ -33,18 +34,15 @@ class SaxoConnectTicketView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        return Response({'ticket': _connect_ticket_signer.sign(str(request.user.pk))})
+        return connect_ticket.issue(request.user, CONNECT_TICKET_MAX_AGE)
 
 
 class SaxoConnectView(APIView):
     permission_classes = [AllowAny]  # the ticket is the credential
 
     def get(self, request):
-        try:
-            user_pk = _connect_ticket_signer.unsign(
-                request.query_params.get('ticket', ''), max_age=CONNECT_TICKET_MAX_AGE
-            )
-        except (BadSignature, SignatureExpired):
+        user_pk = connect_ticket.redeem(request, CONNECT_TICKET_MAX_AGE)
+        if user_pk is None:
             return HttpResponseForbidden('A fresh connect ticket is required.')
 
         state = secrets.token_urlsafe(24)
@@ -54,7 +52,7 @@ class SaxoConnectView(APIView):
         response = redirect(client.build_authorize_url(state))
         # Keep the signed ticket in the URL out of the Referer sent to Saxo.
         response['Referrer-Policy'] = 'no-referrer'
-        return response
+        return connect_ticket.forget(response)
 
 
 def _connecting_user(user_pk):

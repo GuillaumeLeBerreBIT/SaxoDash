@@ -276,7 +276,15 @@ bypass the cache, and one fundamentals miss is four Finnhub calls against a
 was `AllowAny`; it now requires a 120s `TimestampSigner` ticket minted by the
 authenticated `POST /api/saxo/connect-ticket/` (the redirect is a full-page
 navigation and can't carry the JWT). The callback stays `AllowAny`, still
-guarded by the session `state` nonce.
+guarded by the session `state` nonce. The ticket is bound to the browser that minted it
+and works once (`core/connect_ticket.py`, shared with Enable Banking): minting also sets an
+HttpOnly `saxo_connect` cookie holding a nonce that is signed into the ticket, connect
+refuses a ticket whose nonce the cookie does not match, and a redeemed nonce is remembered
+in the cache for the ticket's lifetime. Without that, a stranger could mint a ticket for
+their own account, send the link, and receive the victim's Saxo tokens. The frontend mints
+with `credentials: 'include'` (`CORS_ALLOW_CREDENTIALS`), so the Vite dev origin can store
+the cookie too. A dev Enable Banking connect through an ngrok tunnel cannot see a cookie
+set on localhost, so it is refused there.
 
 **One seam maps a provider call to HTTP.** `research/providers.py` defines
 `ProviderError` (→502, logged), `ProviderNotConnected` (→409) and

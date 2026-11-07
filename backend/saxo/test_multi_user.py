@@ -15,7 +15,6 @@ from users.testing import make_user
 
 from . import client, tasks
 from .models import SaxoCredential, SyncRun
-from .views import _connect_ticket_signer
 
 TEST_KEY = Fernet.generate_key().decode()
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -60,7 +59,9 @@ class CallbackTest(APITestCase):
         self.bob = make_user('bob')
 
     def _connect_as(self, user, token):
-        ticket = _connect_ticket_signer.sign(str(user.pk))
+        self.client.credentials(HTTP_AUTHORIZATION=bearer(user))
+        ticket = self.client.post('/api/saxo/connect-ticket/').data['ticket']
+        self.client.credentials()
         with patch('saxo.views.client.build_authorize_url', return_value='https://saxo.example/authorize'):
             self.client.get(f'/api/saxo/connect/?ticket={ticket}')
         state = self.client.session['saxo_oauth_state']

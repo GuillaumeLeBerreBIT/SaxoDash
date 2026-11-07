@@ -411,6 +411,7 @@ describe('connectSaxo', () => {
     const [url, options] = window.fetch.mock.calls[0]
     expect(url).toContain('/api/saxo/connect-ticket/')
     expect(options.method).toBe('POST')
+    expect(options.credentials).toBe('include')
     expect(window.location.href).toContain('/api/saxo/connect/?ticket=signed-xyz')
   })
 })
@@ -427,6 +428,7 @@ describe('connectEnableBanking', () => {
     const [url, options] = window.fetch.mock.calls[0]
     expect(url).toContain('/api/enablebanking/connect-ticket/')
     expect(options.method).toBe('POST')
+    expect(options.credentials).toBe('include')
     expect(window.location.href).toContain('/api/enablebanking/connect/kbc/?ticket=signed-xyz')
   })
 })
