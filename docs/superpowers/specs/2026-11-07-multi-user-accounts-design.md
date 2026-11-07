@@ -42,8 +42,13 @@ person would see, and overwrite, the first person's money.
   bug this whole project exists to prevent.
 - A stranger's activity draining the shared Finnhub key or Saxo app limits enough to break the
   owner's own use.
-- The password-reset or signup endpoints telling an anonymous caller whether an email or
-  username is registered.
+- The password-reset endpoint, or login's response time, telling an anonymous caller whether
+  an email or username is registered.
+- **Amended (accepted):** signup does name a taken email ("That email is already registered.")
+  or username ("That username is taken."). Hiding it is impossible without email
+  verification, which this spec rules out: a signup that succeeds silently for a taken email
+  either creates a second account or tells the caller nothing useful. Signup is throttled to
+  5 an hour per IP, which bounds how fast anyone can test addresses through it.
 - A migration that leaves the production database's existing rows without an owner, or
   attaches them to the wrong user.
 
