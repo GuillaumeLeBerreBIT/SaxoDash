@@ -126,15 +126,43 @@ Signup is open, so these are settings and checks to do before sharing the addres
 email variables are in "Password reset email (Gmail)" above.
 
 1. **`NUM_PROXIES`.** Throttles key on the visitor's address, read from `X-Forwarded-For`
-   only as far as `NUM_PROXIES` says: 0 ignores the header, N trusts the last N hops.
-   `deploy/compose.yaml` sets it to `1` for every app container (the Caddy `proxy` is the
-   one hop in front of gunicorn). It lives there rather than in `/srv/saxodash/.env`
-   because it describes the shape of the stack, not a per-deploy secret; change it there
-   if a hop is ever added.
-2. **Verify it on the server.** Request `/api/auth/me/` through the public address with a
-   forged `X-Forwarded-For: 1.2.3.4`, then confirm the throttle's cache key (or a
-   temporary log line, removed afterwards) shows your real address: neither `1.2.3.4` nor
-   the proxy's. If it shows the proxy's, `NUM_PROXIES` is too low; if `1.2.3.4`, too high.
+   only as far as `NUM_PROXIES` says: 0 ignores the header, N takes the Nth address from the
+   right. `deploy/compose.yaml` sets it to `2` for every app container, because two proxies
+   append to the header before gunicorn sees it: the homelab's edge Caddy adds the visitor,
+   and the compose `proxy` Caddy (`frontend/Caddyfile` trusts private ranges, so it keeps the
+   edge's header and appends the edge's address) adds the edge. Gunicorn receives
+   `<anything the client sent>, <visitor>, <edge>`, and the second from the right is the
+   visitor. It lives in the compose file rather than in `/srv/saxodash/.env` because it
+   describes the shape of the stack, not a per-deploy secret; change it there if a hop is
+   added or removed. `2` is the expected value, not a measured one: the check in step 2
+   decides the final value.
+2. **Verify it on the server.** Send a throttled request through the public address with a
+   forged header, then read which address the throttle counted. From any machine outside
+   the homelab:
+
+   ```sh
+   curl -s https://saxodash.uniroo.dev/api/auth/password-reset/ \
+     -H 'Content-Type: application/json' -H 'X-Forwarded-For: 1.2.3.4' \
+     -d '{"email": "nobody@example.com"}'
+   curl -s https://api.ipify.org; echo
+   ```
+
+   The second command prints your public address. Then, on the server:
+
+   ```sh
+   cd /opt/saxodash && docker compose --env-file /srv/saxodash/.env -f deploy/compose.yaml \
+     exec redis redis-cli -n 1 --scan --pattern '*throttle_password_reset_*'
+   ```
+
+   Each key ends in the address the throttle used (`:1:throttle_password_reset_<address>`):
+   - your public address: `NUM_PROXIES` is right;
+   - a `172.x` / `10.x` / `192.168.x` address: too low, every visitor shares the proxy's
+     bucket (signup and reset limited for the whole site, the owner lockable by strangers);
+   - `1.2.3.4`: too high, anyone can pick their own bucket by forging the header.
+
+   Change the value in `deploy/compose.yaml`, redeploy and repeat until the key shows your
+   address. Clear the probe's bucket afterwards with
+   `… exec redis redis-cli -n 1 del ':1:throttle_password_reset_<address>'`.
 3. **Email.** Set the six `EMAIL_*` / `DEFAULT_FROM_EMAIL` lines and send yourself a
    password reset.
 4. **`ADMIN_ENABLED`.** The Django admin is routed only when `ADMIN_ENABLED=True`, which

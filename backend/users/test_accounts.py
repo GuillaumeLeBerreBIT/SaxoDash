@@ -1,3 +1,7 @@
+import re
+from pathlib import Path
+
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
@@ -141,6 +145,47 @@ class SignupTests(AccountTestCase):
             ]
 
         self.assertEqual(set(statuses), {201})
+
+
+COMPOSE_FILE = Path(settings.BASE_DIR).parent / 'deploy' / 'compose.yaml'
+EDGE_CADDY = '172.18.0.2'
+COMPOSE_CADDY = '172.18.0.3'
+
+
+def deployed_num_proxies():
+    return int(re.search(r'NUM_PROXIES:\s*"(\d+)"', COMPOSE_FILE.read_text()).group(1))
+
+
+class DeployedProxyChainTests(AccountTestCase):
+    def reset_through_both_caddies(self, forged, visitor):
+        return self.client.post(
+            '/api/auth/password-reset/',
+            {'email': 'nobody@example.com'},
+            format='json',
+            REMOTE_ADDR=COMPOSE_CADDY,
+            HTTP_X_FORWARDED_FOR=f'{forged}, {visitor}, {EDGE_CADDY}',
+        ).status_code
+
+    def deployed_settings(self):
+        return override_settings(
+            REST_FRAMEWORK={**api_settings.user_settings, 'NUM_PROXIES': deployed_num_proxies()}
+        )
+
+    def test_each_visitor_gets_their_own_bucket(self):
+        with self.deployed_settings():
+            statuses = [
+                self.reset_through_both_caddies('1.2.3.4', f'203.0.113.{i}') for i in range(6)
+            ]
+
+        self.assertEqual(set(statuses), {200})
+
+    def test_a_forged_forwarded_for_does_not_escape_the_bucket(self):
+        with self.deployed_settings():
+            statuses = [
+                self.reset_through_both_caddies(f'1.2.3.{i}', '203.0.113.7') for i in range(6)
+            ]
+
+        self.assertEqual(statuses[-1], 429)
 
 
 class LoginTests(AccountTestCase):

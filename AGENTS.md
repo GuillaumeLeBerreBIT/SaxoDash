@@ -632,8 +632,9 @@ address answer alike. On the first migrate the only existing user becomes the ow
 several, `SAXODASH_OWNER=<username>` must name one or migrate stops. Banking belongs to the
 owner alone. The owner's Saxo credential runs the shared jobs (the Discover scan, the
 copy-performance price feed, congress prices) and only the owner may start a scan.
-`NUM_PROXIES` (default 0, `X-Forwarded-For` ignored) must equal the proxy hops in front of
-gunicorn, 1 behind Caddy; `docs/deploying.md` "Going public" has the checklist. The admin
+`NUM_PROXIES` (default 0, `X-Forwarded-For` ignored) must equal the proxies that append to it before
+gunicorn: 2 in `deploy/compose.yaml` (edge Caddy, then the compose `proxy` Caddy), the expected
+value until the on-server check in `docs/deploying.md` "Going public" decides it. The admin
 site is routed only when `ADMIN_ENABLED`, which defaults to `DEBUG`.
 
 **Every person's row carries `user`, and the test enforces it.** Views scope by
