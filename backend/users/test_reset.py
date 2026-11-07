@@ -8,6 +8,7 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from users import reset, tasks
 from users.test_accounts import AccountTestCase
 from users.testing import make_user
 
@@ -26,10 +27,22 @@ def reset_credentials(user):
 
 
 class ResetRequestTests(AccountTestCase):
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.object(
+            tasks.send_password_reset, 'delay', side_effect=tasks.send_password_reset
+        )
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def post_request(self, email):
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(REQUEST_URL, {'email': email}, format='json')
+
     def test_reset_known_email_sends_one_mail(self):
         user = make_user('alice', email='alice@example.com')
 
-        response = self.client.post(REQUEST_URL, {'email': 'alice@example.com'}, format='json')
+        response = self.post_request('alice@example.com')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'detail': ANSWER})
@@ -42,16 +55,16 @@ class ResetRequestTests(AccountTestCase):
     def test_reset_matches_email_case_insensitively(self):
         make_user('alice', email='alice@example.com')
 
-        self.client.post(REQUEST_URL, {'email': 'Alice@Example.COM'}, format='json')
+        self.post_request('Alice@Example.COM')
 
         self.assertEqual(len(mail.outbox), 1)
 
     def test_reset_unknown_email_same_answer_no_mail(self):
         make_user('alice', email='alice@example.com')
-        known = self.client.post(REQUEST_URL, {'email': 'alice@example.com'}, format='json')
+        known = self.post_request('alice@example.com')
         mail.outbox.clear()
 
-        unknown = self.client.post(REQUEST_URL, {'email': 'nobody@example.com'}, format='json')
+        unknown = self.post_request('nobody@example.com')
 
         self.assertEqual(unknown.status_code, known.status_code)
         self.assertEqual(unknown.data, known.data)
@@ -66,7 +79,9 @@ class ResetRequestTests(AccountTestCase):
         passwordless.save(update_fields=['password'])
 
         for email in ('gone@example.com', 'sso@example.com'):
-            self.client.post(REQUEST_URL, {'email': email}, format='json')
+            response = self.post_request(email)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'detail': ANSWER})
 
         self.assertEqual(mail.outbox, [])
 
@@ -74,6 +89,7 @@ class ResetRequestTests(AccountTestCase):
         for body in ({}, {'email': ''}, {'email': ['a@example.com']}):
             response = self.client.post(REQUEST_URL, body, format='json')
             self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, {'detail': ANSWER})
         self.assertEqual(mail.outbox, [])
 
     def test_reset_smtp_failure_still_200(self):
@@ -81,16 +97,52 @@ class ResetRequestTests(AccountTestCase):
 
         with mock.patch('users.reset.send_mail', side_effect=SMTPException('down')):
             with self.assertLogs('users.reset', 'ERROR'):
-                response = self.client.post(
-                    REQUEST_URL, {'email': 'alice@example.com'}, format='json'
-                )
+                response = self.post_request('alice@example.com')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, {'detail': ANSWER})
 
+    def test_request_view_queues_the_mail_and_never_sends_inline(self):
+        user = make_user('alice', email='alice@example.com')
+
+        with mock.patch.object(tasks.send_password_reset, 'delay') as delay:
+            response = self.post_request('alice@example.com')
+
+        self.assertEqual(response.status_code, 200)
+        delay.assert_called_once_with(user.pk)
+        self.assertEqual(mail.outbox, [])
+
+    def test_broker_failure_still_200_and_logged(self):
+        make_user('alice', email='alice@example.com')
+
+        with mock.patch.object(
+            tasks.send_password_reset, 'delay', side_effect=ConnectionError('broker down')
+        ):
+            with self.assertLogs('users.reset', 'ERROR'):
+                response = self.post_request('alice@example.com')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, {'detail': ANSWER})
+
+    def test_task_for_a_vanished_user_sends_nothing(self):
+        tasks.send_password_reset(999999)
+
+        self.assertEqual(mail.outbox, [])
+
+    def test_mail_states_the_configured_lifetime(self):
+        user = make_user('alice')
+
+        with override_settings(PASSWORD_RESET_TIMEOUT=1800):
+            reset.send_reset_link(user)
+        with override_settings(PASSWORD_RESET_TIMEOUT=7200):
+            reset.send_reset_link(user)
+
+        self.assertIn('30 minutes', mail.outbox[0].body)
+        self.assertIn('2 hours', mail.outbox[1].body)
+
     def test_reset_throttled(self):
         for _ in range(5):
-            ok = self.client.post(REQUEST_URL, {'email': 'x@example.com'}, format='json')
+            ok = self.post_request('x@example.com')
             self.assertEqual(ok.status_code, 200)
 
         sixth = self.client.post(REQUEST_URL, {'email': 'x@example.com'}, format='json')
@@ -99,6 +151,17 @@ class ResetRequestTests(AccountTestCase):
 
 
 class ResetConfirmTests(AccountTestCase):
+    def test_confirm_calls_do_not_use_up_the_request_budget(self):
+        user = make_user('alice')
+        for _ in range(6):
+            self.client.post(CONFIRM_URL, {'uid': 'zz', 'token': 'x', 'new_password': 'p'}, format='json')
+
+        with mock.patch.object(tasks.send_password_reset, 'delay'):
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.client.post(REQUEST_URL, {'email': user.email}, format='json')
+
+        self.assertEqual(response.status_code, 200)
+
     def confirm(self, user, **overrides):
         payload = {**reset_credentials(user), 'new_password': NEW_PASSWORD, **overrides}
         return self.client.post(CONFIRM_URL, payload, format='json')

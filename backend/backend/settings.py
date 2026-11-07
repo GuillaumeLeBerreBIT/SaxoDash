@@ -124,6 +124,7 @@ REST_FRAMEWORK = {
         'login': '10/min',
         'signup': '5/hour',
         'password_reset': '5/hour',
+        'password_reset_confirm': '20/hour',
     },
     'NUM_PROXIES': int(os.environ.get('NUM_PROXIES') or 0),
 }

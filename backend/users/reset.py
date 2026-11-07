@@ -17,10 +17,19 @@ def reset_link(user):
     return f'{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}'
 
 
+def lifetime_words():
+    seconds = settings.PASSWORD_RESET_TIMEOUT
+    if seconds % 3600 == 0:
+        hours = seconds // 3600
+        return f'{hours} hour' + ('' if hours == 1 else 's')
+    minutes = max(seconds // 60, 1)
+    return f'{minutes} minute' + ('' if minutes == 1 else 's')
+
+
 def send_reset_link(user):
     body = (
         'Someone asked to reset the password for your SaxoDash account.\n\n'
-        f'Choose a new password here (the link works once, for one hour):\n{reset_link(user)}\n\n'
+        f'Choose a new password here (the link works once, for {lifetime_words()}):\n{reset_link(user)}\n\n'
         'If this was not you, ignore this email; your password stays as it is.\n'
     )
     try:

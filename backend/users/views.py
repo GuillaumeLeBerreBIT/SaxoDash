@@ -1,3 +1,6 @@
+import logging
+from functools import partial
+
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -13,10 +16,19 @@ from users.serializers import (
     SignupSerializer,
     UserSerializer,
 )
+from users.tasks import send_password_reset
 
 
+logger = logging.getLogger('users.reset')
 RESET_REQUESTED = 'If an account exists for that address, a link is on its way.'
 RESET_INVALID = 'This reset link is invalid or has expired.'
+
+
+def queue_reset_mail(user_id):
+    try:
+        send_password_reset.delay(user_id)
+    except Exception:
+        logger.exception('Password reset email for user %s could not be queued', user_id)
 
 
 class SignupView(APIView):
@@ -55,12 +67,9 @@ class PasswordView(APIView):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = request.user
-        with transaction.atomic():
-            user.set_password(serializer.validated_data['new_password'])
-            user.save(update_fields=['password'])
-            tokens.blacklist_all(user)
-            issued = tokens.issue(user)
-        return Response(issued)
+        return Response(
+            tokens.set_password_and_reissue(user, serializer.validated_data['new_password'])
+        )
 
 
 class SignOutEverywhereView(APIView):
@@ -77,14 +86,14 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         data = request.data if isinstance(request.data, dict) else {}
         for user in reset.users_for_email(data.get('email')):
-            reset.send_reset_link(user)
+            transaction.on_commit(partial(queue_reset_mail, user.pk))
         return Response({'detail': RESET_REQUESTED})
 
 
 class PasswordResetConfirmView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
-    throttle_scope = 'password_reset'
+    throttle_scope = 'password_reset_confirm'
 
     def post(self, request):
         data = request.data if isinstance(request.data, dict) else {}
@@ -100,9 +109,4 @@ class PasswordResetConfirmView(APIView):
             validate_password(new_password, user)
         except ValidationError as error:
             return Response({'new_password': error.messages}, status=status.HTTP_400_BAD_REQUEST)
-        with transaction.atomic():
-            user.set_password(new_password)
-            user.save(update_fields=['password'])
-            tokens.blacklist_all(user)
-            issued = tokens.issue(user)
-        return Response(issued)
+        return Response(tokens.set_password_and_reissue(user, new_password))
