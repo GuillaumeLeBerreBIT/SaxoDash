@@ -10,6 +10,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from portfolio.models import Position
+from transactions.models import Transaction
 from users.testing import make_user
 
 from . import client, tasks
@@ -160,6 +161,22 @@ class PerUserSyncTest(TestCase):
 
         self.assertEqual(SyncRun.objects.get(task='sync_positions', user=self.alice).outcome, 'failed')
         self.assertEqual(SyncRun.objects.get(task='sync_positions', user=self.bob).outcome, 'ok')
+
+    def test_a_sync_prunes_and_records_only_for_the_credential_user(self):
+        Position.objects.create(
+            user=self.alice, ticker='AAPL', name='Apple', qty=Decimal('2'), avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Technology', type='STOCK', color='#111111',
+        )
+        connect(self.bob, 'bob-token')
+
+        with patch('saxo.tasks.client.get_positions', return_value=[SAMPLE_POSITION]):
+            tasks.sync_positions()
+
+        self.assertTrue(Position.objects.filter(user=self.alice, ticker='AAPL').exists())
+        self.assertFalse(Position.objects.filter(user=self.alice, ticker='NVDA').exists())
+        self.assertTrue(Position.objects.filter(user=self.bob, ticker='NVDA').exists())
+        self.assertTrue(Transaction.objects.exists())
+        self.assertEqual(set(Transaction.objects.values_list('user', flat=True)), {self.bob.pk})
 
     def test_a_failing_user_has_its_partial_writes_rolled_back(self):
         connect(self.alice, 'alice-token')

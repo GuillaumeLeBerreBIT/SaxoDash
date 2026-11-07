@@ -151,6 +151,15 @@ class SnapshotPerUserTest(TestCase):
         self.assertEqual(rows[self.alice.pk].net_worth, Decimal('1000.00'))
         self.assertEqual(rows[self.bob.pk].net_worth, Decimal('250.00'))
 
+    def test_an_inactive_user_gets_no_snapshot(self):
+        hold(self.carol, qty='1', price='100')
+        self.carol.is_active = False
+        self.carol.save(update_fields=['is_active'])
+
+        snapshot_net_worth()
+
+        self.assertFalse(NetWorthSnapshot.objects.filter(user=self.carol).exists())
+
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY, CACHES=LOCMEM)
 class SaxoSyncPerUserTest(TestCase):

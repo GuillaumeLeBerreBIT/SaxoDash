@@ -149,6 +149,10 @@ def sync_enablebanking_transactions():
     account_owner = owner()
 
     for bank in credentials.BANKS:
+        if account_owner is None:
+            run_info.append((bank, 'skipped', NO_OWNER, 0))
+            continue
+
         state = credentials.connection_state(bank)
 
         if not state.usable:

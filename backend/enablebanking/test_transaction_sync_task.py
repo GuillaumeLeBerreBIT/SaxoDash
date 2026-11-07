@@ -8,7 +8,7 @@ from accounts.models import BankAccount
 
 from . import client
 from .models import BankSyncRun, BankTransaction, EnableBankingCredential
-from .tasks import sync_enablebanking_transactions
+from .tasks import NO_OWNER, sync_enablebanking_transactions
 from users.testing import the_owner
 
 LINKED_ACCOUNT = {'uid': 'acc-1', 'account_id': {'iban': 'BE00'}, 'product': 'Current account'}
@@ -37,6 +37,18 @@ class SyncEnablebankingTransactionsTaskTest(TestCase):
             bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
             linked_accounts=[LINKED_ACCOUNT],
         )
+
+    @patch('enablebanking.tasks.client.iter_transactions')
+    def test_without_an_owner_every_bank_is_skipped(self, mock_iter):
+        owner = the_owner()
+        owner.profile.is_owner = False
+        owner.profile.save()
+
+        sync_enablebanking_transactions()
+
+        mock_iter.assert_not_called()
+        run = BankSyncRun.objects.get(bank='kbc', kind='transactions')
+        self.assertEqual((run.outcome, run.detail, run.rows), ('skipped', NO_OWNER, 0))
 
     def test_skips_a_bank_with_no_credential(self):
         EnableBankingCredential.objects.filter(bank='kbc').delete()

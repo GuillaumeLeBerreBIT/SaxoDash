@@ -74,4 +74,4 @@ def ensure_todays_snapshot(user):
 
 def users_with_holdings():
     holders = Q(pk__in=Position.objects.values('user')) | Q(pk__in=BankAccount.objects.values('user'))
-    return get_user_model().objects.filter(holders).order_by('pk')
+    return get_user_model().objects.filter(holders, is_active=True).order_by('pk')
