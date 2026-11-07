@@ -122,8 +122,15 @@ REST_FRAMEWORK = {
         # The one plausible brute-force target - everything else sits behind
         # JWTAuthentication already.
         'login': '10/min',
+        'signup': '5/hour',
     },
+    'NUM_PROXIES': int(os.environ.get('NUM_PROXIES') or 0),
 }
+
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailOrUsernameBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
