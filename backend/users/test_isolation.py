@@ -8,6 +8,7 @@ import requests
 from django.apps import apps
 from django.conf import settings
 from django.core.cache import cache
+from django.test import override_settings
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.utils import timezone
 from rest_framework.test import APITestCase
@@ -120,6 +121,7 @@ class CoverageTests(APITestCase):
         self.assertEqual(project_models_pointing_at_users(), COVERED)
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'users-isolation'}})
 class IsolationSweepTests(APITestCase):
     def setUp(self):
         cache.clear()

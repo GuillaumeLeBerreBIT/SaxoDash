@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from django.core.cache import cache
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
@@ -478,7 +479,11 @@ class EnableBankingConnectTicketViewTest(APITestCase):
         self.assertIn('ticket', response.data)
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'enablebanking-connect'}})
 class EnableBankingConnectViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+
     def _ticket(self):
         user = the_owner()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')

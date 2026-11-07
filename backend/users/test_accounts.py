@@ -29,6 +29,7 @@ def signup_payload(**overrides):
     return {**GOOD, **overrides}
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'users-accounts'}})
 class AccountTestCase(APITestCase):
     def setUp(self):
         cache.clear()

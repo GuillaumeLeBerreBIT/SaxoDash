@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest.mock import patch
+from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient, APITestCase
@@ -10,8 +11,10 @@ from .models import SaxoCredential, SyncRun
 from . import client
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'saxo-connect'}})
 class SaxoConnectViewTest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.user = the_owner()
         self.token = str(RefreshToken.for_user(self.user).access_token)
 
