@@ -1,16 +1,22 @@
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users import tokens
+from users import reset, tokens
 from users.serializers import (
     AccountChangeSerializer,
     PasswordChangeSerializer,
     SignupSerializer,
     UserSerializer,
 )
+
+
+RESET_REQUESTED = 'If an account exists for that address, a link is on its way.'
+RESET_INVALID = 'This reset link is invalid or has expired.'
 
 
 class SignupView(APIView):
@@ -61,3 +67,42 @@ class SignOutEverywhereView(APIView):
     def post(self, request):
         tokens.blacklist_all(request.user)
         return Response(status=status.HTTP_205_RESET_CONTENT)
+
+
+class PasswordResetRequestView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        data = request.data if isinstance(request.data, dict) else {}
+        for user in reset.users_for_email(data.get('email')):
+            reset.send_reset_link(user)
+        return Response({'detail': RESET_REQUESTED})
+
+
+class PasswordResetConfirmView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    throttle_scope = 'password_reset'
+
+    def post(self, request):
+        data = request.data if isinstance(request.data, dict) else {}
+        user = reset.user_for_link(data.get('uid'), data.get('token'))
+        if user is None:
+            return Response({'detail': RESET_INVALID}, status=status.HTTP_400_BAD_REQUEST)
+        new_password = data.get('new_password')
+        if not isinstance(new_password, str):
+            return Response(
+                {'new_password': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            validate_password(new_password, user)
+        except ValidationError as error:
+            return Response({'new_password': error.messages}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            user.set_password(new_password)
+            user.save(update_fields=['password'])
+            tokens.blacklist_all(user)
+            issued = tokens.issue(user)
+        return Response(issued)

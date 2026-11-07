@@ -98,6 +98,28 @@ journalctl -u saxodash-deploy -f
 The first check deploys the current `main`. Re-running the install script is safe; it never
 overwrites an existing `.env`.
 
+## Password reset email (Gmail)
+
+Password reset sends a link by email. Without `EMAIL_HOST` the message is printed to the
+server log instead, which is what development uses.
+
+1. On the Google account that will send the mail, turn on 2-Step Verification.
+2. Create an app password (Google Account, Security, App passwords) and copy the 16
+   characters.
+3. Add these to `/srv/saxodash/.env`, then redeploy:
+
+```sh
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=true
+EMAIL_HOST_USER=<the sending Gmail address>
+EMAIL_HOST_PASSWORD=<the app password>
+DEFAULT_FROM_EMAIL=<the sending Gmail address>
+```
+
+A failed send is logged by `users.reset` and the request still answers the same way, so the
+page never reveals whether an address has an account.
+
 ## Day to day
 
 Run the deploy scripts as `saxodash-deploy`, so the files they write stay readable by the timer:

@@ -123,6 +123,7 @@ REST_FRAMEWORK = {
         # JWTAuthentication already.
         'login': '10/min',
         'signup': '5/hour',
+        'password_reset': '5/hour',
     },
     'NUM_PROXIES': int(os.environ.get('NUM_PROXIES') or 0),
 }
@@ -158,6 +159,19 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_BACKEND = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if EMAIL_HOST
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT') or 587)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'saxodash@localhost'
+PASSWORD_RESET_TIMEOUT = 3600
 
 ROOT_URLCONF = 'backend.urls'
 
