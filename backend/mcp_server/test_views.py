@@ -2,7 +2,9 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.core.cache import cache
 from django.test import override_settings
+from rest_framework.response import Response
 from rest_framework.test import APITestCase
+from rest_framework.views import APIView
 
 from datetime import date
 from decimal import Decimal
@@ -11,6 +13,7 @@ from portfolio.views import PortfolioSummaryView
 from transactions.models import Transaction
 from transactions.views import TransactionListView
 
+from users.acting import current_user
 from users.testing import the_owner, make_user
 
 from .views import ViewResult, app_user, call_view, problem
@@ -28,6 +31,19 @@ class CallViewTest(APITestCase):
         result = call_view(PortfolioSummaryView)
         self.assertEqual(result.status, 200)
         self.assertIn('total_value', result.data)
+
+    def test_the_view_sees_the_dispatched_user_as_the_acting_user_and_it_is_released(self):
+        seen = []
+        owner = the_owner()
+
+        class Probe(APIView):
+            def get(self, request):
+                seen.append(current_user())
+                return Response({})
+
+        call_view(Probe)
+        self.assertEqual(seen, [owner])
+        self.assertIsNone(current_user())
 
     @override_settings(ALLOWED_HOSTS=['saxodash.local', 'localhost'])
     def test_paginated_view_links_on_an_allowed_host(self):

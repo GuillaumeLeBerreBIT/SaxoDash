@@ -10,12 +10,11 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from decimal import Decimal
 
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
-from users.testing import make_user
+from users.testing import make_user, the_owner
 
 from .models import EnableBankingCredential, BankSyncRun
 from . import checks as eb_checks
@@ -464,7 +463,7 @@ class SyncEnableBankingBalancesTaskTest(TestCase):
 
 class EnableBankingConnectTicketViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='u', password='p')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -481,7 +480,7 @@ class EnableBankingConnectTicketViewTest(APITestCase):
 
 class EnableBankingConnectViewTest(APITestCase):
     def _ticket(self):
-        user = User.objects.create_user(username='u2', password='p')
+        user = the_owner()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
         return self.client.post('/api/enablebanking/connect-ticket/').data['ticket']
 
@@ -559,7 +558,7 @@ class EnableBankingCallbackViewTest(APITestCase):
 
 class EnableBankingStatusViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='u3', password='p')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

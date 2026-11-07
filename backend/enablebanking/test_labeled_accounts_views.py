@@ -1,6 +1,5 @@
 from datetime import date
 
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -11,7 +10,7 @@ from users.testing import the_owner
 
 
 def _auth_client(test_case, username):
-    user = User.objects.create_user(username=username, password='p')
+    user = the_owner()
     token = RefreshToken.for_user(user).access_token
     test_case.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

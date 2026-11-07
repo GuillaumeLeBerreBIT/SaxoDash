@@ -91,6 +91,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.acting.ActingUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -100,7 +101,7 @@ if not DEBUG:
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        'users.authentication.JWTAuthentication'
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -294,6 +295,9 @@ FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY', '')
 FINNHUB_CALLS_PER_MINUTE = max(1, int(os.environ.get('FINNHUB_CALLS_PER_MINUTE') or 58))
 FINNHUB_BACKGROUND_RESERVE = min(
     FINNHUB_CALLS_PER_MINUTE - 1, max(0, int(os.environ.get('FINNHUB_BACKGROUND_RESERVE') or 15))
+)
+FINNHUB_OWNER_RESERVE = min(
+    FINNHUB_CALLS_PER_MINUTE - 1, max(0, int(os.environ.get('FINNHUB_OWNER_RESERVE') or 20))
 )
 SEC_USER_AGENT = os.environ.get('SEC_USER_AGENT', '')
 OPENFIGI_API_KEY = os.environ.get('OPENFIGI_API_KEY', '')

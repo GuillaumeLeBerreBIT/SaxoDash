@@ -1,7 +1,6 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -15,7 +14,7 @@ from users.testing import the_owner
 
 
 def _auth_client(test_case):
-    user = User.objects.create_user(username='u1', password='p')
+    user = the_owner()
     token = RefreshToken.for_user(user).access_token
     test_case.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

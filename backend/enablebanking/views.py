@@ -14,6 +14,8 @@ from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpda
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
 
+from users.permissions import IsOwner
+
 from . import client, credentials, tasks
 from .filters import BankTransactionFilter
 from .models import CATEGORY_CHOICES, BUDGETABLE_CATEGORIES, BankTransaction, Budget, EnableBankingCredential, ManualIbanLabel, Subscription
@@ -48,7 +50,7 @@ def _fallback_valid_until():
 
 
 class EnableBankingConnectTicketView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request):
         return Response({'ticket': _connect_ticket_signer.sign(str(request.user.pk))})
@@ -112,6 +114,7 @@ class EnableBankingCallbackView(APIView):
 
 
 class EnableBankingStatusView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         result = {}
@@ -136,6 +139,7 @@ class EnableBankingStatusView(APIView):
 
 
 class BankTransactionListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = BankTransaction.objects.select_related('bank_account').all()
     serializer_class = BankTransactionSerializer
     filterset_class = BankTransactionFilter
@@ -144,6 +148,7 @@ class BankTransactionListView(ListAPIView):
 
 
 class BankTransactionCategoryView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def patch(self, request, pk):
         tx = get_object_or_404(BankTransaction, pk=pk)
@@ -185,6 +190,7 @@ SYNC_COOLDOWN_SECONDS = 300
 
 
 class SyncNowView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request):
         if not cache.add(SYNC_COOLDOWN_KEY, True, SYNC_COOLDOWN_SECONDS):
@@ -200,6 +206,7 @@ class SyncNowView(APIView):
 
 
 class SpendingSummaryView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(spending_summary(
@@ -209,6 +216,7 @@ class SpendingSummaryView(APIView):
 
 
 class SpendingTrendView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         months = min(max(int(request.query_params.get('months', 6)), 1), 120)
@@ -216,6 +224,7 @@ class SpendingTrendView(APIView):
 
 
 class SubscriptionListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     serializer_class = SubscriptionSerializer
     pagination_class = None
 
@@ -227,6 +236,7 @@ class SubscriptionListView(ListAPIView):
 
 
 class SubscriptionDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def patch(self, request, pk):
         sub = get_object_or_404(Subscription, pk=pk)
@@ -237,6 +247,7 @@ class SubscriptionDetailView(APIView):
 
 
 class BudgetListView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(BudgetSerializer(Budget.objects.all().order_by('category'), many=True).data)
@@ -260,12 +271,14 @@ class BudgetListView(APIView):
 
 
 class BudgetProgressView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(budget_progress())
 
 
 class LabeledAccountListCreateView(ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = ManualIbanLabel.objects.all().order_by('label')
     serializer_class = ManualIbanLabelSerializer
     pagination_class = None
@@ -277,6 +290,7 @@ class LabeledAccountListCreateView(ListCreateAPIView):
 
 
 class LabeledAccountDetailView(RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = ManualIbanLabel.objects.all()
     serializer_class = ManualIbanLabelSerializer
 
@@ -285,6 +299,7 @@ class LabeledAccountDetailView(RetrieveUpdateDestroyAPIView):
 
 
 class LabeledAccountCandidatesView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     """Recurring counterparties still in OTHER/REFUND_CREDIT - a shortlist
     the user can label from, rather than hunting through raw transactions
     for an IBAN themselves."""

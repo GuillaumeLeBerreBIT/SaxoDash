@@ -7,6 +7,7 @@ from django.core.exceptions import ImproperlyConfigured
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from research.daily import NOT_CONNECTED
+from users.acting import acting_as
 from users.owner import owner
 
 from .envelope import Unavailable
@@ -39,8 +40,10 @@ def _host():
 
 def call_view(view_class, *, kwargs=None, query=None, user=None):
     request = APIRequestFactory().get('/', query or {}, HTTP_HOST=_host())
-    force_authenticate(request, user=user or app_user())
-    response = view_class.as_view()(request, **(kwargs or {}))
+    acting = user or app_user()
+    force_authenticate(request, user=acting)
+    with acting_as(acting):
+        response = view_class.as_view()(request, **(kwargs or {}))
     return ViewResult(response.status_code, response.data)
 
 
