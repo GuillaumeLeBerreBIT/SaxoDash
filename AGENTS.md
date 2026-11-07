@@ -633,7 +633,8 @@ supply one). No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
 "The MCP server".
 
 **Accounts are open, and one of them is the owner.** Login takes an email or a username
-(10/min per IP and login); signup is 5/hour per IP, has a `website` honeypot and no email
+(10/min per IP and login, 30/min per IP) and hashes once whether or not the login exists, so
+its timing does not reveal an account; signup is 5/hour per IP, has a `website` honeypot and no email
 verification; password reset is 5/hour and its confirm step 20/hour, the link lasts an hour
 and works once. The reset mail is queued with Celery on commit, so a known and an unknown
 address answer alike. On the first migrate the only existing user becomes the owner; with

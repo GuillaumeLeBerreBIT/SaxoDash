@@ -7,12 +7,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.serializers import LoginSerializer
-from users.throttling import LoginThrottle
+from users.throttling import LoginIPThrottle, LoginThrottle
 
 
 class ThrottledTokenObtainPairView(TokenObtainPairView):
     serializer_class = LoginSerializer
-    throttle_classes = [LoginThrottle]
+    throttle_classes = [LoginIPThrottle, LoginThrottle]
 
 
 class TokenLogoutView(APIView):

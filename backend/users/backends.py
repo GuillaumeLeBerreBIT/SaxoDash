@@ -8,9 +8,11 @@ class EmailOrUsernameBackend(ModelBackend):
         if not username or password is None:
             return None
         login = username.strip()
-        users = get_user_model().objects.filter(
-            Q(username__iexact=login) | Q(email__iexact=login)
-        )
+        User = get_user_model()
+        users = list(User.objects.filter(Q(username__iexact=login) | Q(email__iexact=login)))
+        if not users:
+            User().set_password(password)
+            return None
         for user in users:
             if user.check_password(password) and self.user_can_authenticate(user):
                 return user

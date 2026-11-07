@@ -2,7 +2,10 @@ import re
 from pathlib import Path
 
 from django.conf import settings
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import get_hasher
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.settings import api_settings
@@ -239,6 +242,45 @@ class LoginTests(AccountTestCase):
         self.assertEqual(attempt('a', '10.0.0.1'), 429)
         self.assertEqual(attempt('b', '10.0.0.1'), 401)
         self.assertEqual(attempt('a', '10.0.0.2'), 401)
+
+    @override_settings(PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
+    def test_one_ip_trying_many_logins_is_throttled(self):
+        def attempt(i):
+            return self.client.post(
+                '/api/token/',
+                {'username': f'guess{i}@example.com', 'password': 'bad'},
+                format='json',
+                REMOTE_ADDR='10.0.0.9',
+            ).status_code
+
+        first = [attempt(i) for i in range(30)]
+
+        self.assertEqual(set(first), {401})
+        self.assertEqual(attempt(30), 429)
+        self.assertEqual(
+            self.client.post(
+                '/api/token/',
+                {'username': 'guess0@example.com', 'password': 'bad'},
+                format='json',
+                REMOTE_ADDR='10.0.0.10',
+            ).status_code,
+            401,
+        )
+
+    def hashes_spent_logging_in_as(self, login):
+        hasher = type(get_hasher('default'))
+        with patch.object(hasher, 'encode', autospec=True, side_effect=hasher.encode) as encode:
+            response = self.client.post(
+                '/api/token/', {'username': login, 'password': 'wrong-Pass-1'}, format='json'
+            )
+        self.assertEqual(response.status_code, 401)
+        return encode.call_count
+
+    def test_an_unknown_login_costs_as_many_hashes_as_a_wrong_password(self):
+        make_user('alice', email='alice@example.com')
+
+        self.assertEqual(self.hashes_spent_logging_in_as('nobody@example.com'), 1)
+        self.assertEqual(self.hashes_spent_logging_in_as('alice'), 1)
 
 
 class MeTests(AccountTestCase):

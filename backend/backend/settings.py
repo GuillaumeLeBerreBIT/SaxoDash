@@ -124,6 +124,7 @@ REST_FRAMEWORK = {
         # The one plausible brute-force target - everything else sits behind
         # JWTAuthentication already.
         'login': '10/min',
+        'login_ip': '30/min',
         'signup': '5/hour',
         'password_reset': '5/hour',
         'password_reset_confirm': '20/hour',
@@ -133,7 +134,6 @@ REST_FRAMEWORK = {
 
 AUTHENTICATION_BACKENDS = [
     'users.backends.EmailOrUsernameBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 SIMPLE_JWT = {
