@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'congress',
     'advisor',
     'mcp_server',
+    'users',
 ]
 
 MIDDLEWARE = [
