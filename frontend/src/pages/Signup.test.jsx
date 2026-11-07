@@ -78,6 +78,28 @@ describe('Signup', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Sign-ups are closed.')
   })
 
+  it('shows a general notice for errors on no visible field', async () => {
+    signup.mockRejectedValue(new ApiError(400, null, { website: ['Invalid.'] }))
+    renderSignup()
+    await fillAndSubmit()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not create the account. Try again.')
+  })
+
+  it('shows a string detail as the notice', async () => {
+    signup.mockRejectedValue(new ApiError(400, 'Sign-ups are paused.', { detail: 'Sign-ups are paused.' }))
+    renderSignup()
+    await fillAndSubmit()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign-ups are paused.')
+  })
+
+  it('offers a retry when the server fails', async () => {
+    signup.mockRejectedValue(new ApiError(500, null, null))
+    renderSignup()
+    await fillAndSubmit()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Try again.')
+    expect(screen.getByLabelText('Email')).toHaveValue('a@b.com')
+  })
+
   it('stays calm when throttled', async () => {
     signup.mockRejectedValue(new ApiError(429, null, null))
     renderSignup()

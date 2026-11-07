@@ -66,6 +66,23 @@ describe('ResetPassword', () => {
     expect(screen.queryByRole('link', { name: 'Request a new link' })).not.toBeInTheDocument()
   })
 
+  it('keeps the form and password when the server fails', async () => {
+    confirmPasswordReset.mockRejectedValue(new ApiError(500, null, null))
+    renderReset()
+    await submit()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Try again.')
+    expect(screen.getByLabelText('New password')).toHaveValue('S3cure-passw0rd')
+    expect(screen.queryByRole('link', { name: 'Request a new link' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the form and password when the network is down', async () => {
+    confirmPasswordReset.mockRejectedValue(new TypeError('Failed to fetch'))
+    renderReset()
+    await submit()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Try again.')
+    expect(screen.getByLabelText('New password')).toHaveValue('S3cure-passw0rd')
+  })
+
   it('treats a link without parameters as invalid', () => {
     renderReset('/reset-password')
     expect(screen.getByText('This reset link is invalid or has expired.')).toBeInTheDocument()

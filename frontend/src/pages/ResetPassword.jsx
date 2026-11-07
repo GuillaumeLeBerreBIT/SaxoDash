@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmPasswordReset } from '../api/client'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
-import { TOO_MANY_ATTEMPTS, fieldErrors, isThrottled } from '../lib/authErrors'
+import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } from '../lib/authErrors'
 
 const INVALID_LINK = 'This reset link is invalid or has expired.'
 
@@ -29,7 +29,8 @@ export default function ResetPassword() {
       const fields = fieldErrors(failure)
       if (isThrottled(failure)) setNotice(TOO_MANY_ATTEMPTS)
       else if (fields.new_password) setFieldError(fields.new_password)
-      else setLinkInvalid(true)
+      else if (isRefusal(failure) && failure.detail) setLinkInvalid(true)
+      else setNotice(RETRYABLE)
     } finally {
       setBusy(false)
     }

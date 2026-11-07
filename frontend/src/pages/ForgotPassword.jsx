@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../api/client'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
-import { TOO_MANY_ATTEMPTS, isThrottled } from '../lib/authErrors'
+import { RETRYABLE, TOO_MANY_ATTEMPTS, isRefusal, isThrottled } from '../lib/authErrors'
 
 const FALLBACK_SENTENCE = 'If an account exists for that address, a link is on its way.'
 
@@ -21,7 +21,8 @@ export default function ForgotPassword() {
       setSentence(body?.detail ?? FALLBACK_SENTENCE)
     } catch (failure) {
       if (isThrottled(failure)) setError(TOO_MANY_ATTEMPTS)
-      else setSentence(FALLBACK_SENTENCE)
+      else if (isRefusal(failure)) setSentence(failure.detail ?? FALLBACK_SENTENCE)
+      else setError(RETRYABLE)
     } finally {
       setBusy(false)
     }
@@ -29,9 +30,8 @@ export default function ForgotPassword() {
 
   return (
     <AuthShell title="Reset your password" onSubmit={handleSubmit}>
-      {sentence ? (
-        <p role="status" className="text-[var(--fig-sm)] text-ink-2">{sentence}</p>
-      ) : (
+      <p role="status" className="text-[var(--fig-sm)] text-ink-2 empty:hidden">{sentence}</p>
+      {!sentence && (
         <>
           <AuthField
             label="Email"

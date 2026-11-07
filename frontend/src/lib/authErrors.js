@@ -1,6 +1,8 @@
-import { TOO_MANY_REQUESTS_STATUS } from '../api/client'
+import { ApiError, TOO_MANY_REQUESTS_STATUS } from '../api/client'
 
 export const TOO_MANY_ATTEMPTS = 'Too many attempts, try again later.'
+
+export const RETRYABLE = 'Something went wrong. Try again.'
 
 export const isThrottled = (error) => error?.status === TOO_MANY_REQUESTS_STATUS
 
@@ -13,3 +15,5 @@ export function fieldErrors(error) {
       .map(([field, messages]) => [field, messages.join(' ')]),
   )
 }
+
+export const isRefusal = (error) => error instanceof ApiError && error.status === 400

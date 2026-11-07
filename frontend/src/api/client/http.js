@@ -55,13 +55,13 @@ export function isAuthenticated() {
   return Boolean(getTokens().access);
 }
 
+export const TOO_MANY_REQUESTS_STATUS = 429
+
 /** Carries the HTTP status so callers can tell failures apart.
  *
  *  The Research endpoints answer 409 when the app itself is not connected to
  *  Saxo, which is a prompt to reconnect rather than an error to report.
  */
-export const TOO_MANY_REQUESTS_STATUS = 429
-
 export class ApiError extends Error {
   constructor(status, detail, body = null) {
     super(detail || `Request failed: ${status}`)

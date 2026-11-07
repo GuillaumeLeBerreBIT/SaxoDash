@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signup } from '../api/client'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
-import { TOO_MANY_ATTEMPTS, fieldErrors, isThrottled } from '../lib/authErrors'
+import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } from '../lib/authErrors'
 
 const EMAIL_HINT = "We only use this to send you a password reset link. A typo means you can't reset it."
+
+const SIGNUP_FIELDS = ['email', 'username', 'password']
+const UNPLACED = 'Could not create the account. Try again.'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
@@ -27,13 +30,15 @@ export default function Signup() {
     } catch (failure) {
       if (isThrottled(failure)) {
         setNotice(TOO_MANY_ATTEMPTS)
-      } else {
+      } else if (isRefusal(failure)) {
         const fields = fieldErrors(failure)
         setErrors(fields)
-        const general = fields.non_field_errors ?? fields.detail
-        if (general || Object.keys(fields).length === 0) {
-          setNotice(general ?? 'Could not create the account. Try again.')
-        }
+        const unplaced = Object.keys(fields).some((key) => !SIGNUP_FIELDS.includes(key))
+        const general = fields.non_field_errors ?? failure.detail
+        if (general) setNotice(general)
+        else if (unplaced || Object.keys(fields).length === 0) setNotice(UNPLACED)
+      } else {
+        setNotice(RETRYABLE)
       }
     } finally {
       setBusy(false)
