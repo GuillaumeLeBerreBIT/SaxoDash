@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -8,6 +9,7 @@ class Recommendation(models.Model):
     DECISIONS = [(d, d) for d in ('pending', 'accepted', 'declined')]
     CLOSE_REASONS = [(r, r) for r in ('sold', 'invalidated', 'superseded')]
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
     ticker = models.CharField(max_length=16)
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)

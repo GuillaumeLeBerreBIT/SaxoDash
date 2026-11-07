@@ -73,9 +73,9 @@ def log_recommendation(
 ):
     rec = _refusing(
         journal.log,
+        app_user(),
         listing=look_up(ticker),
         saxo=throttled.PAGES,
-        user=app_user(),
         action=action,
         thesis=thesis,
         bear_case=bear_case,
@@ -96,17 +96,17 @@ def log_recommendation(
 
 @tool('Advisor: record whether a logged recommendation was accepted or declined.', sources=['journal'])
 def set_decision(id: RowId, decision: str):
-    return _row(_refusing(journal.decide, id, decision))
+    return _row(_refusing(journal.decide, app_user(), id, decision))
 
 
 @tool('Advisor: close a logged recommendation as sold, invalidated or superseded.', sources=['journal'])
 def close_recommendation(id: RowId, reason: str):
-    return _row(_refusing(journal.close, id, reason))
+    return _row(_refusing(journal.close, app_user(), id, reason))
 
 
 @tool('Advisor: logged recommendations, newest first, with 3/6/12-month scores against the S&P 500; status is open, closed or all.', sources=['journal', 'price history'])
 def list_recommendations(status: str = 'open', limit: at_most(MAX_LISTED) = 50):
-    result = _refusing(journal.review, status)
+    result = _refusing(journal.review, app_user(), status)
     items = [{**_row(rec), 'score': score} for rec, score in result['recommendations']]
     warnings = [f'No {BENCHMARK_TICKER} price history yet, so recommendations are not scored.'] if result['benchmark_missing'] else []
     return Reply({**capped(items, limit), 'summary': result['summary']}, warnings)

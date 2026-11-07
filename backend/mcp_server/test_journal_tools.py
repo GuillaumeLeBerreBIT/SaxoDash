@@ -10,7 +10,7 @@ from investors.models import PriceHistory
 from research.listings import Listing
 
 from .tools import journal as tools
-from users.testing import the_owner
+from users.testing import make_user, the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -104,6 +104,23 @@ class JournalToolTests(APITestCase):
         row_id = log()['data']['id']
         tools.close_recommendation(row_id, 'sold')
         self.assertEqual(tools.set_decision(row_id, 'accepted')['data']['decision'], 'accepted')
+
+
+@override_settings(CACHES=LOCMEM)
+class JournalMcpUserTests(APITestCase):
+    def test_mcp_records_for_mcp_user(self):
+        owner = the_owner()
+        bob = make_user('bob')
+
+        with override_settings(MCP_USER='bob'):
+            row_id = log()['data']['id']
+            listed = tools.list_recommendations('all')['data']['items']
+
+        self.assertEqual(Recommendation.objects.get(pk=row_id).user, bob)
+        self.assertEqual([item['id'] for item in listed], [row_id])
+        self.assertEqual(tools.list_recommendations('all')['data']['items'], [])
+        self.assertEqual(tools.set_decision(row_id, 'accepted')['warnings'], [f'No recommendation {row_id}.'])
+        self.assertEqual(Recommendation.objects.filter(user=owner).count(), 0)
 
 
 @override_settings(CACHES=LOCMEM)
