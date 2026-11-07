@@ -416,7 +416,7 @@ so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
 quarter). OpenFIGI tickers are normalised `/` to `.`. An identifier
 starting with a letter is a CINS (a foreign-domiciled issuer listed in the US: Chubb, Aon,
 Medtronic) and is asked for as `ID_CINS`; `ID_CUSIP` answers "no identifier found" for those. `sync_investors` is
-`@synced(reports_health=False, needs_credential=False)`, so it never touches the
+`@synced(reports_health=False, credential=None)`, so it never touches the
 header's Saxo health badge and runs without a Saxo credential.
 
 **Investors pages read only `/api/investors/…`.** `/investors` (hub), `/investors/stocks`
@@ -617,7 +617,7 @@ move so far until the session closes, while universe names show `—` until the 
 **The advisor reads the app through `mcp_server`, which runs the pages' own views.**
 `manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; a page-backed tool
 dispatches the matching DRF view in-process (`mcp_server/views.py::fetch`, authenticated as
-the single user), so the assistant and the page cannot disagree about a number, and the
+the user named by `MCP_USER`, else the owner), so the assistant and the page cannot disagree about a number, and the
 pages' throttles and the Finnhub budget still apply: even the domain modules' own Saxo
 calls (symbol lookup, daily closes) reach Saxo through the pages' views, passed in as a port
 (`mcp_server/throttled.py::PAGES`), and `get_quotes` takes at most 20 symbols. It never
