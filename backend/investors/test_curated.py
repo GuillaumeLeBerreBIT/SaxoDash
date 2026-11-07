@@ -98,12 +98,12 @@ class LoadCuratedTest(TestCase):
     def test_reloading_updates_styles_without_touching_history(self):
         load_curated()
         berkshire = Investor.objects.get(cik=1067983)
-        Investor.objects.filter(pk=berkshire.pk).update(styles=[], followed=True)
+        Investor.objects.filter(pk=berkshire.pk).update(styles=[])
 
         self.assertEqual(load_curated(), {'created': 0, 'updated': 1})
 
         berkshire.refresh_from_db()
-        self.assertEqual((berkshire.styles, berkshire.followed), (['Value', 'Concentrated'], True))
+        self.assertEqual(berkshire.styles, ['Value', 'Concentrated'])
 
     def test_a_photo_is_read_from_its_column_and_left_blank_when_absent(self):
         load_curated()

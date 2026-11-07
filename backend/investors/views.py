@@ -1,11 +1,11 @@
 from datetime import date
 
 from django.shortcuts import get_object_or_404
-from rest_framework.exceptions import APIException, NotFound, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import alerts, copying, edgar, ownership, signals, summaries, tracking
+from . import alerts, copying, edgar, follows, ownership, signals, summaries, tracking
 from .models import Investor
 
 MIN_QUERY = 3
@@ -34,14 +34,14 @@ class InvestorListView(APIView):
         holds = request.query_params.get('holds', '').strip()
         if holds:
             investors = investors.filter(pk__in=summaries.holder_ids(holds))
-        return Response(summaries.cards(investors, date.today()))
+        return Response(summaries.cards(investors, date.today(), request.user))
 
     def post(self, request):
         cik = request.data.get('cik')
         if isinstance(cik, bool) or not isinstance(cik, int) or cik <= 0:
             raise Refused('Send the filer\'s CIK as a positive integer.')
         try:
-            investor = tracking.add(cik)
+            investor = tracking.add(cik, request.user)
         except tracking.AlreadyTracked as exc:
             raise Conflict(f'{exc.investor.name} is already tracked.')
         except tracking.NotA13FFiler as exc:
@@ -50,7 +50,7 @@ class InvestorListView(APIView):
             raise BadGateway(EDGAR_DOWN)
         except tracking.ImportNotQueued:
             raise ServiceUnavailable('Could not start the import. Is the worker running?')
-        return Response(summaries.card(investor, date.today()), status=201)
+        return Response(summaries.card(investor, date.today(), request.user), status=201)
 
 
 def _quarter_param(request):
@@ -67,9 +67,11 @@ class InvestorDetailView(APIView):
     def delete(self, request, slug):
         investor = get_object_or_404(Investor, slug=slug)
         try:
-            tracking.stop(investor)
+            tracking.stop(investor, request.user)
         except tracking.CuratedInvestor:
             raise Conflict('Curated investors cannot be removed; unfollow instead.')
+        except tracking.NotYours:
+            raise PermissionDenied('Only the person who added this investor, while nobody else follows it, can remove it.')
         return Response(status=204)
 
     def get(self, request, slug):
@@ -84,9 +86,8 @@ class InvestorDetailView(APIView):
         followed = request.data.get('followed')
         if not isinstance(followed, bool):
             raise ValidationError({'followed': 'Send true or false.'})
-        Investor.objects.filter(pk=investor.pk).update(followed=followed)
-        investor.followed = followed
-        return Response(summaries.card(investor, date.today()))
+        follows.set_followed(request.user, investor, followed)
+        return Response(summaries.card(investor, date.today(), request.user))
 
 
 class InvestorChangesView(APIView):
@@ -105,18 +106,18 @@ class InvestorCopyView(APIView):
 
 class InvestorHubView(APIView):
     def get(self, request):
-        return Response(signals.hub(date.today()))
+        return Response(signals.hub(date.today(), request.user))
 
 
 class InvestorAlertsView(APIView):
     def get(self, request):
-        return Response(alerts.payload())
+        return Response(alerts.payload(request.user))
 
 
 class InvestorAlertsReadView(APIView):
     def post(self, request):
-        alerts.mark_read()
-        return Response(alerts.payload())
+        alerts.mark_read(request.user)
+        return Response(alerts.payload(request.user))
 
 
 class InvestorStocksView(APIView):
@@ -139,7 +140,7 @@ class OwnershipSummaryView(APIView):
 
 class OwnershipDetailView(APIView):
     def get(self, request, ticker):
-        return Response(ownership.detail(ticker.upper()))
+        return Response(ownership.detail(ticker.upper(), request.user))
 
 
 class InvestorSearchView(APIView):

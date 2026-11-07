@@ -12,12 +12,14 @@ from rest_framework.generics import (
     RetrieveUpdateAPIView,
     RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from saxo import client
 from saxo.credentials import connection_state
 from users.owner import owner
+from users.permissions import IsOwner
 
 from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
@@ -324,6 +326,8 @@ class DiscoverView(APIView):
 
 
 class StartDiscoverScanView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
+
     def post(self, request):
         saxo = connection_state(owner())
         if not saxo.usable:

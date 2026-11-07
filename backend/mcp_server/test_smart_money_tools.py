@@ -6,7 +6,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
-from investors.models import FilingAlert, Investor
+from investors.models import FilingAlert, FilingAlertRead, Investor, InvestorFollow
 from research.listings import Listing
 
 from users.testing import the_owner
@@ -30,14 +30,14 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 class SmartMoneyToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
-        the_owner()
-        self.investor = Investor.objects.create(cik=1, name='Fund One', slug='fund-one', followed=True)
+        self.investor = Investor.objects.create(cik=1, name='Fund One', slug='fund-one')
+        InvestorFollow.objects.create(user=the_owner(), investor=self.investor)
 
     def test_alerts_are_not_marked_read(self):
         FilingAlert.objects.create(investor=self.investor, quarter_end=date(2026, 6, 30), filed_on=date(2026, 8, 14))
         result = get_filing_alerts()
         self.assertEqual(result['data']['unread'], 1)
-        self.assertEqual(FilingAlert.objects.filter(read_at__isnull=True).count(), 1)
+        self.assertFalse(FilingAlertRead.objects.exists())
 
     def test_foreign_listing_ownership_is_refused(self):
         eur = Listing(ticker='ASML', symbol='ASML', name='ASML', uic=1, asset_type='Stock', currency='EUR', exchange='X')

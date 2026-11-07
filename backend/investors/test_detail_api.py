@@ -8,7 +8,7 @@ from portfolio.models import Position
 from research.models import Watchlist, WatchlistItem
 
 from .factories import make_investor, store_quarter
-from .models import Security
+from .models import InvestorFollow, Security
 from users.testing import the_owner
 
 Q1 = date(2026, 3, 31)
@@ -175,8 +175,7 @@ class InvestorDetailApiTest(APITestCase):
         response = self.client.patch(self.url(), {'followed': True}, format='json')
 
         self.assertEqual((response.status_code, response.data['followed'], response.data['slug']), (200, True, 'berkshire-hathaway'))
-        self.investor.refresh_from_db()
-        self.assertTrue(self.investor.followed)
+        self.assertEqual(InvestorFollow.objects.filter(investor=self.investor).count(), 1)
 
     def test_following_needs_a_boolean(self):
         self.assertEqual(self.client.patch(self.url(), {'followed': 'yes'}, format='json').status_code, 400)

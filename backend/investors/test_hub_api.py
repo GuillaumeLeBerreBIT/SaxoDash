@@ -12,8 +12,9 @@ Q2 = date(2026, 6, 30)
 
 class HubApiTest(APITestCase):
     def setUp(self):
-        self.client.force_authenticate(User.objects.create_user('me', password='x'))
-        investor = make_investor(followed=True, last_filing_at=date(2026, 8, 14))
+        me = User.objects.create_user('me', password='x')
+        self.client.force_authenticate(me)
+        investor = make_investor(followed_by=[me], last_filing_at=date(2026, 8, 14))
         store_quarter(investor, Q1, [('037833100', 'APPLE INC', 10, 600)])
         store_quarter(investor, Q2, [('037833100', 'APPLE INC', 10, 600), ('67066G104', 'NVIDIA CORP', 1, 400)])
 

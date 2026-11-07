@@ -56,9 +56,9 @@ class InvestorModelTest(TestCase):
 
 
 class InvestorHubFieldsTest(TestCase):
-    def test_a_new_investor_has_no_styles_and_is_not_followed(self):
+    def test_a_new_investor_has_no_styles(self):
         investor = make_investor()
-        self.assertEqual((investor.styles, investor.followed), ([], False))
+        self.assertEqual(investor.styles, [])
 
     def test_the_style_vocabulary_is_fixed(self):
         self.assertEqual(

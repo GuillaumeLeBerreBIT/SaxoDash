@@ -28,12 +28,13 @@ def held(security, shares, value, put_call=''):
 
 class OwnershipApiTest(APITestCase):
     def setUp(self):
-        self.client.force_authenticate(User.objects.create_user('me', password='x'))
+        me = User.objects.create_user('me', password='x')
+        self.client.force_authenticate(me)
         for (cusip, _), ticker in (
             (APPLE, 'AAPL'), (NVIDIA, 'NVDA'), (MICROSOFT, 'MSFT'), (ALPHABET_OLD, 'GOOGL'), (ALPHABET, 'GOOGL'),
         ):
             Security.objects.create(cusip=cusip, ticker=ticker)
-        self.berkshire = make_investor(followed=True)
+        self.berkshire = make_investor(followed_by=[me])
         self.pershing = make_investor(
             name='Bill Ackman', firm='Pershing Square', cik=1336528, slug='pershing-square',
         )

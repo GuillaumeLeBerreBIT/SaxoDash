@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -18,7 +19,9 @@ class Investor(models.Model):
     last_filing_at = models.DateField(null=True, blank=True)
     quarters_expected = models.PositiveSmallIntegerField(null=True, blank=True)
     styles = models.JSONField(default=list, blank=True)
-    followed = models.BooleanField(default=False)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
     successor_cik = models.PositiveIntegerField(null=True, blank=True)
     successor_from = models.DateField(null=True, blank=True)
 
@@ -137,7 +140,6 @@ class FilingAlert(models.Model):
     quarter_end = models.DateField()
     filed_on = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
-    read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [
@@ -146,6 +148,27 @@ class FilingAlert(models.Model):
 
     def __str__(self):
         return f'{self.investor.slug} {self.quarter_end}'
+
+
+class InvestorFollow(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    investor = models.ForeignKey(Investor, related_name='follows', on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'investor'], name='follow_user_investor_uniq'),
+        ]
+
+
+class FilingAlertRead(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    alert = models.ForeignKey(FilingAlert, related_name='reads', on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'alert'], name='alertread_user_alert_uniq'),
+        ]
 
 
 class PriceHistory(models.Model):
