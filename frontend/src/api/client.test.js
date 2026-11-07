@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   login,
+  signup,
+  requestPasswordReset,
+  confirmPasswordReset,
+  ApiError,
   logout,
   isAuthenticated,
   getUsername,
@@ -36,6 +40,54 @@ function jsonResponse(body, ok = true, status = ok ? 200 : 400) {
 beforeEach(() => {
   localStorage.clear()
   vi.restoreAllMocks()
+})
+
+describe('account creation and password reset', () => {
+  it('signup posts the honeypot and stores the session', async () => {
+    window.fetch = vi.fn().mockResolvedValue(
+      jsonResponse({ access: 'a', refresh: 'r', user: { username: 'alice' } }, true, 201),
+    )
+
+    await signup({ email: 'a@b.com', username: 'alice', password: 'pw', website: '' })
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/signup\/$/)
+    expect(JSON.parse(init.body)).toEqual({ email: 'a@b.com', username: 'alice', password: 'pw', website: '' })
+    expect(localStorage.getItem('access')).toBe('a')
+    expect(getUsername()).toBe('alice')
+  })
+
+  it('signup carries the field errors and stores nothing', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ email: ['Taken.'] }, false, 400))
+
+    const failure = await signup({ email: 'a', username: 'b', password: 'c', website: '' }).catch((e) => e)
+
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.body).toEqual({ email: ['Taken.'] })
+    expect(localStorage.getItem('access')).toBeNull()
+  })
+
+  it('login reports a throttle as a 429', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse(null, false, 429))
+
+    await expect(login('a', 'b')).rejects.toMatchObject({ status: 429 })
+  })
+
+  it('requestPasswordReset posts the email', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ detail: 'sent' }))
+
+    expect(await requestPasswordReset('a@b.com')).toEqual({ detail: 'sent' })
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ email: 'a@b.com' })
+  })
+
+  it('confirmPasswordReset maps newPassword and stores the session', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ access: 'a2', refresh: 'r2' }))
+
+    await confirmPasswordReset({ uid: 'u', token: 't', newPassword: 'pw' })
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ uid: 'u', token: 't', new_password: 'pw' })
+    expect(localStorage.getItem('refresh')).toBe('r2')
+  })
 })
 
 describe('login', () => {

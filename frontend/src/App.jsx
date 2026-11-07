@@ -15,6 +15,9 @@ import Investor from './pages/Investor'
 import InvestorStocks from './pages/InvestorStocks'
 import CongressMember from './pages/CongressMember'
 import Login from './pages/Login'
+import Signup from './pages/Signup'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import NotFound from './pages/NotFound'
 import LegacyRedirect from './routes/LegacyRedirect'
 import Money from './pages/Money'
@@ -25,6 +28,9 @@ function App() {
   return (
     <Routes>
       <Route path='login' element={<Login />} />
+      <Route path='signup' element={<Signup />} />
+      <Route path='forgot-password' element={<ForgotPassword />} />
+      <Route path='reset-password' element={<ResetPassword />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />

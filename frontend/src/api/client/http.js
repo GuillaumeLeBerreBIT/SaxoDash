@@ -12,7 +12,7 @@ const getTokens = () => ({
   refresh: localStorage.getItem("refresh"),
 });
 
-const setTokens = ({ access, refresh }) => {
+export const setTokens = ({ access, refresh }) => {
   if (access) localStorage.setItem("access", access);
   if (refresh) localStorage.setItem("refresh", refresh);
 };
@@ -29,6 +29,7 @@ export async function login(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
+  if (res.status === TOO_MANY_REQUESTS_STATUS) throw new ApiError(res.status);
   if (!res.ok) throw new Error("Invalid credentials");
   setTokens(await res.json());
   localStorage.setItem("username", username);
@@ -64,12 +65,15 @@ export function isAuthenticated() {
  *  The Research endpoints answer 409 when the app itself is not connected to
  *  Saxo, which is a prompt to reconnect rather than an error to report.
  */
+export const TOO_MANY_REQUESTS_STATUS = 429
+
 export class ApiError extends Error {
-  constructor(status, detail) {
+  constructor(status, detail, body = null) {
     super(detail || `Request failed: ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail ?? null
+    this.body = body
   }
 }
 
