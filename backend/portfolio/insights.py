@@ -171,12 +171,12 @@ def _upcoming_earnings(held_upper, today, user):
     return rows
 
 
-def _thesis_attention(positions, today):
+def _thesis_attention(positions, today, user):
     from research.thesis import notes_with_thesis
 
     by_ticker = {p.ticker: p for p in positions}
     items = []
-    for note in notes_with_thesis(list(by_ticker)):
+    for note in notes_with_thesis(list(by_ticker), user=user):
         position = by_ticker[note.symbol]
         if note.reviewed_at is None:
             items.append({'kind': 'thesis_review_due', 'severity': 'info', 'ticker': note.symbol,
@@ -333,7 +333,7 @@ def build_insights(user):
         **sections,
         'attention': (
             _attention(positions, pairs, today, sections['concentration'], sections['upcoming_earnings'], _idle_cash_pct(user))
-            + _thesis_attention(positions, today)
+            + _thesis_attention(positions, today, user)
         ),
     }
 
@@ -348,6 +348,6 @@ def build_position_insights(user):
         'attention': (
             _concentration_attention(sections['concentration'])
             + _holding_attention(positions, sections['upcoming_earnings'], _idle_cash_pct(user))
-            + _thesis_attention(positions, today)
+            + _thesis_attention(positions, today, user)
         ),
     }

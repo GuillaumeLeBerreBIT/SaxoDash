@@ -441,7 +441,7 @@ class EarningsCalendarViewTest(APITestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_returns_the_week_with_tagged_rows(self, mock_cal):
         Position.objects.create(
-            user=the_owner(),
+            user=self.user,
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )

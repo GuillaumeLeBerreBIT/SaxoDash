@@ -87,11 +87,11 @@ class SymbolNoteAPITest(APITestCase):
         self.assertIsNotNone(response.data['reviewed_at'])
 
     def test_marking_reviewed_does_not_touch_the_thesis(self):
-        SymbolNote.objects.create(symbol='AAPL', bull_case='Services growth.')
+        SymbolNote.objects.create(user=self.user, symbol='AAPL', bull_case='Services growth.')
 
         self.client.post('/api/research/notes/AAPL/review/')
 
-        self.assertEqual(SymbolNote.objects.get(symbol='AAPL').bull_case, 'Services growth.')
+        self.assertEqual(SymbolNote.objects.get(user=self.user, symbol='AAPL').bull_case, 'Services growth.')
 
     def test_marking_reviewed_requires_authentication(self):
         self.client.credentials()

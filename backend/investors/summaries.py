@@ -79,9 +79,12 @@ def _header(investor, today):
     }
 
 
-def _yours():
-    owned = {ticker.upper() for ticker in Position.objects.values_list('ticker', flat=True)}
-    watched = {symbol.upper() for symbol in WatchlistItem.objects.values_list('symbol', flat=True)}
+def _yours(user):
+    owned = {ticker.upper() for ticker in Position.objects.filter(user=user).values_list('ticker', flat=True)}
+    watched = {
+        symbol.upper()
+        for symbol in WatchlistItem.objects.filter(watchlist__user=user).values_list('symbol', flat=True)
+    }
     return owned, watched
 
 
@@ -232,7 +235,7 @@ def story_moves(investor, quarter_end):
     ]
 
 
-def detail(investor, quarter_end, today):
+def detail(investor, quarter_end, today, *, user):
     ends = quarters.quarter_ends(investor)
     base = {
         **_header(investor, today),
@@ -258,7 +261,7 @@ def detail(investor, quarter_end, today):
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
     tickers = quarters.tickers_held(investor)
     held = quarters.quarters_held(quarters.held_keys_by_quarter(investor, tickers), quarter_end)
-    owned, watched = _yours()
+    owned, watched = _yours(user)
     inherited = inherited_cusips(row['cusip'] for row in rows)
 
     holdings = []

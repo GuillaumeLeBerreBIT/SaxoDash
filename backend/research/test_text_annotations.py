@@ -20,7 +20,7 @@ class TextAnnotationAPITest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def annotation(self, uic=211, asset_type='Stock', bar_date='2026-08-01', price='100.00', text='Earnings gap'):
-        return TextAnnotation.objects.create(uic=uic, asset_type=asset_type, bar_date=bar_date, price=Decimal(price), text=text)
+        return TextAnnotation.objects.create(user=the_owner(), uic=uic, asset_type=asset_type, bar_date=bar_date, price=Decimal(price), text=text)
 
     def test_requires_authentication(self):
         self.client.credentials()

@@ -56,8 +56,8 @@ class Listing:
         return fields
 
 
-def _held(ticker):
-    position = Position.objects.filter(ticker__iexact=ticker, uic__isnull=False).order_by('id').first()
+def _held(ticker, user):
+    position = Position.objects.filter(user=user, ticker__iexact=ticker, uic__isnull=False).order_by('id').first()
     if position is None or not position.asset_type:
         return None
     return Listing(
@@ -101,7 +101,7 @@ def _searched(ticker, saxo, user):
 
 def look_up(symbol, saxo=market, *, user):
     ticker = bare(symbol)
-    held = _held(ticker)
+    held = _held(ticker, user)
     if held is not None:
         return held
     key = f'{CACHE_PREFIX}{ticker}'

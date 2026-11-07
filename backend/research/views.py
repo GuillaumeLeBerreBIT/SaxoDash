@@ -39,14 +39,21 @@ ALLOWED_HORIZONS = {1440, 10080, 43200}
 
 
 class WatchlistListCreateView(ListCreateAPIView):
-    queryset = Watchlist.objects.prefetch_related('items')
     serializer_class = WatchlistSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        return Watchlist.objects.filter(user=self.request.user).prefetch_related('items')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class WatchlistDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Watchlist.objects.prefetch_related('items')
     serializer_class = WatchlistSerializer
+
+    def get_queryset(self):
+        return Watchlist.objects.filter(user=self.request.user).prefetch_related('items')
 
 
 class WatchlistItemCreateView(CreateAPIView):
@@ -55,14 +62,17 @@ class WatchlistItemCreateView(CreateAPIView):
     def get_serializer_context(self):
         return {
             **super().get_serializer_context(),
-            'watchlist': get_object_or_404(Watchlist, pk=self.kwargs['pk']),
+            'watchlist': get_object_or_404(Watchlist, pk=self.kwargs['pk'], user=self.request.user),
         }
 
 
 class WatchlistItemDeleteView(DestroyAPIView):
     def get_object(self):
         return get_object_or_404(
-            WatchlistItem, pk=self.kwargs['item_pk'], watchlist_id=self.kwargs['pk']
+            WatchlistItem,
+            pk=self.kwargs['item_pk'],
+            watchlist_id=self.kwargs['pk'],
+            watchlist__user=self.request.user,
         )
 
 
@@ -227,14 +237,14 @@ class SymbolNoteView(RetrieveUpdateAPIView):
 
     def get_object(self):
         symbol = _symbol(self.kwargs['symbol'])
-        note, _ = SymbolNote.objects.get_or_create(symbol=symbol)
+        note, _ = SymbolNote.objects.get_or_create(user=self.request.user, symbol=symbol)
         return note
 
 
 class SymbolNoteReviewView(APIView):
 
     def post(self, request, symbol):
-        note, _ = SymbolNote.objects.get_or_create(symbol=_symbol(symbol))
+        note, _ = SymbolNote.objects.get_or_create(user=request.user, symbol=_symbol(symbol))
         note.reviewed_at = timezone.now()
         note.save(update_fields=['reviewed_at'])
         return Response(SymbolNoteSerializer(note).data)
@@ -245,16 +255,20 @@ class PriceLineListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return PriceLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return PriceLine.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class PriceLineDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = PriceLineSerializer
-    queryset = PriceLine.objects.all()
+
+    def get_queryset(self):
+        return PriceLine.objects.filter(user=self.request.user)
 
 
 class TrendLineListCreateView(ListCreateAPIView):
@@ -262,16 +276,20 @@ class TrendLineListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return TrendLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return TrendLine.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class TrendLineDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = TrendLineSerializer
-    queryset = TrendLine.objects.all()
+
+    def get_queryset(self):
+        return TrendLine.objects.filter(user=self.request.user)
 
 
 class TextAnnotationListCreateView(ListCreateAPIView):
@@ -279,16 +297,20 @@ class TextAnnotationListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return TextAnnotation.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return TextAnnotation.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = TextAnnotationSerializer
-    queryset = TextAnnotation.objects.all()
+
+    def get_queryset(self):
+        return TextAnnotation.objects.filter(user=self.request.user)
 
 
 class DiscoverView(APIView):

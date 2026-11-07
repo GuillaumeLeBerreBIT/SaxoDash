@@ -35,9 +35,9 @@ def _instruments(positions, watch_items):
     return found
 
 
-def _watch_items():
+def _watch_items(user):
     found = {}
-    for item in WatchlistItem.objects.order_by('pk'):
+    for item in WatchlistItem.objects.filter(watchlist__user=user).order_by('pk'):
         found.setdefault(item.symbol.upper(), item)
     return found
 
@@ -81,8 +81,8 @@ def _holding(position, total):
 def enrich(events, today, moves=True, *, user):
     symbols = {(event['symbol'] or '').upper() for event in events}
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
-    positions = {position.ticker.upper(): position for position in Position.objects.all() if position.ticker}
-    watch_items = _watch_items()
+    positions = {position.ticker.upper(): position for position in Position.objects.filter(user=user) if position.ticker}
+    watch_items = _watch_items(user)
     instruments = _instruments(positions, watch_items)
     total = _portfolio_total(user) if symbols & positions.keys() else None
     bars_by_symbol = {}
@@ -151,8 +151,8 @@ def merge_share_classes(events):
     return sorted(merged + singles, key=lambda e: (e['date'], e['symbol'] or ''))
 
 
-def next_mine(after):
-    held = [ticker.upper() for ticker in Position.objects.values_list('ticker', flat=True) if ticker]
+def next_mine(after, *, user):
+    held = [ticker.upper() for ticker in Position.objects.filter(user=user).values_list('ticker', flat=True) if ticker]
     row = (
         ScreenerRow.objects.filter(ticker__in=held, next_earnings_date__gt=after)
         .order_by('next_earnings_date', 'ticker')

@@ -135,15 +135,15 @@ class CompanyToolsTest(APITestCase):
         self.assertIn('busy', result['warnings'])
 
     def test_notes_include_target_and_stop(self):
-        SymbolNote.objects.create(symbol='NVDA', bull_case='AI', target_price=Decimal('200'), stop_price=Decimal('90'))
+        SymbolNote.objects.create(user=the_owner(), symbol='NVDA', bull_case='AI', target_price=Decimal('200'), stop_price=Decimal('90'))
         result = get_my_notes('nvda')
         self.assertEqual(result['data']['bull_case'], 'AI')
         self.assertEqual(result['data']['target_price'], 200.0)
         self.assertEqual(result['data']['stop_price'], 90.0)
 
     def test_notes_carry_the_instrument_price_lines(self):
-        PriceLine.objects.create(uic=1, asset_type='Stock', price=Decimal('150'), label='breakout')
-        PriceLine.objects.create(uic=2, asset_type='Stock', price=Decimal('9'), label='other')
+        PriceLine.objects.create(user=the_owner(), uic=1, asset_type='Stock', price=Decimal('150'), label='breakout')
+        PriceLine.objects.create(user=the_owner(), uic=2, asset_type='Stock', price=Decimal('9'), label='other')
         with patch('mcp_server.tools.research.look_up', return_value=instrument()):
             result = get_my_notes('NVDA')
         self.assertEqual([(line['price'], line['label']) for line in result['data']['price_lines']], [(150.0, 'breakout')])
@@ -169,7 +169,7 @@ class CompanyToolsTest(APITestCase):
             self.assertEqual(result['warnings'], [company_data.refusal('foreign')])
 
     def test_watchlists_keep_identity_only(self):
-        watchlist = Watchlist.objects.create(name='Core')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Core')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=1, asset_type='Stock', description='NVIDIA')
         result = get_watchlists()
         [row] = result['data']['watchlists']

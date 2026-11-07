@@ -13,7 +13,6 @@ from users.testing import the_owner
 
 # Redis is the real cache; these tests must not need it running, and must not
 # leak entries into a developer's running instance.
-USER = None
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 
@@ -41,7 +40,7 @@ class WindowEarningsTest(TestCase):
         mock_cal.return_value = {'earningsCalendar': []}
         for weekend_day in (date(2026, 10, 17), date(2026, 10, 18)):
             with self.subTest(weekend_day=weekend_day):
-                result = earnings.window_earnings('all', 0, today=weekend_day, user=USER)
+                result = earnings.window_earnings('all', 0, today=weekend_day, user=the_owner())
                 self.assertEqual(result['window']['from'], '2026-10-19')
                 self.assertEqual(result['window']['to'], '2026-10-25')
 
@@ -50,13 +49,13 @@ class WindowEarningsTest(TestCase):
         mock_cal.return_value = {'earningsCalendar': []}
         for weekday in (date(2026, 10, 12), date(2026, 10, 16)):
             with self.subTest(weekday=weekday):
-                result = earnings.window_earnings('all', 0, today=weekday, user=USER)
+                result = earnings.window_earnings('all', 0, today=weekday, user=the_owner())
                 self.assertEqual(result['window']['from'], '2026-10-12')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_the_previous_week_on_a_weekend_is_the_one_that_just_ended(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': []}
-        result = earnings.window_earnings('all', -1, today=date(2026, 10, 18), user=USER)
+        result = earnings.window_earnings('all', -1, today=date(2026, 10, 18), user=the_owner())
         self.assertEqual(result['window']['from'], '2026-10-12')
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
@@ -64,7 +63,7 @@ class WindowEarningsTest(TestCase):
         mon = self._monday()
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon.isoformat())]}
 
-        result = earnings.window_earnings('all', 0, user=USER)
+        result = earnings.window_earnings('all', 0, user=the_owner())
 
         self.assertEqual(mock_cal.call_count, 1)
         (symbol, date_from, date_to), _ = mock_cal.call_args
@@ -79,7 +78,7 @@ class WindowEarningsTest(TestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_week_offset_shifts_the_window_by_seven_days(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': []}
-        earnings.window_earnings('all', 2, user=USER)
+        earnings.window_earnings('all', 2, user=the_owner())
         (_, date_from, _), _ = mock_cal.call_args
         self.assertEqual(date_from, self._monday(2).isoformat())
 
@@ -90,14 +89,14 @@ class WindowEarningsTest(TestCase):
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )
-        wl = Watchlist.objects.create(name='Tech')
+        wl = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=wl, symbol='MSFT', uic=2)
         mon = self._monday().isoformat()
         mock_cal.return_value = {'earningsCalendar': [
             self._row('AAPL', mon), self._row('MSFT', mon), self._row('TSLA', mon),
         ]}
 
-        by_symbol = {e['symbol']: e for e in earnings.window_earnings('all', 0, user=USER)['events']}
+        by_symbol = {e['symbol']: e for e in earnings.window_earnings('all', 0, user=the_owner())['events']}
 
         self.assertEqual((by_symbol['AAPL']['held'], by_symbol['AAPL']['watched'], by_symbol['AAPL']['mine']), (True, False, True))
         self.assertEqual((by_symbol['MSFT']['held'], by_symbol['MSFT']['watched'], by_symbol['MSFT']['mine']), (False, True, True))
@@ -113,7 +112,7 @@ class WindowEarningsTest(TestCase):
         mon = self._monday().isoformat()
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon), self._row('TSLA', mon)]}
 
-        result = earnings.window_earnings('mine', 0, user=USER)
+        result = earnings.window_earnings('mine', 0, user=the_owner())
 
         self.assertEqual([e['symbol'] for e in result['events']], ['AAPL'])
 
@@ -131,7 +130,7 @@ class WindowEarningsTest(TestCase):
             {**self._row('AAPL', mon), 'epsEstimate': None},
         ]}
 
-        symbols = [e['symbol'] for e in earnings.window_earnings('all', 0, user=USER)['events']]
+        symbols = [e['symbol'] for e in earnings.window_earnings('all', 0, user=the_owner())['events']]
 
         self.assertIn('COVR', symbols)
         self.assertIn('AAPL', symbols)  # no estimate, but held
@@ -141,8 +140,8 @@ class WindowEarningsTest(TestCase):
     def test_the_week_is_fetched_once_then_served_from_cache(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', self._monday().isoformat())]}
 
-        earnings.window_earnings('all', 0, user=USER)
-        earnings.window_earnings('mine', 0, user=USER)
+        earnings.window_earnings('all', 0, user=the_owner())
+        earnings.window_earnings('mine', 0, user=the_owner())
 
         self.assertEqual(mock_cal.call_count, 1)
 
@@ -155,7 +154,7 @@ class WindowEarningsTest(TestCase):
             self._row('SOON', mon),                   # not reported
         ]}
 
-        stats = earnings.window_earnings('all', 0, user=USER)['stats']
+        stats = earnings.window_earnings('all', 0, user=the_owner())['stats']
 
         self.assertEqual((stats['total'], stats['reported']), (3, 2))
         self.assertEqual((stats['beat'], stats['missed']), (1, 1))
@@ -164,7 +163,7 @@ class WindowEarningsTest(TestCase):
     def test_events_carry_the_enrichment_fields(self, mock_cal):
         ScreenerRow.objects.create(ticker='AAPL', name='Apple Inc', indexes='SP500', market_cap=3.5e6)
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', self._monday().isoformat())]}
-        (only,) = earnings.window_earnings('all', 0, user=USER)['events']
+        (only,) = earnings.window_earnings('all', 0, user=the_owner())['events']
         self.assertEqual((only['name'], only['market_cap'], only['also']), ('Apple Inc', 3.5e6, []))
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
@@ -173,27 +172,27 @@ class WindowEarningsTest(TestCase):
         ScreenerRow.objects.create(ticker='GOOG', name='Alphabet Inc', indexes='NDX', market_cap=2.0e6)
         mon = self._monday().isoformat()
         mock_cal.return_value = {'earningsCalendar': [self._row('GOOGL', mon), self._row('GOOG', mon)]}
-        result = earnings.window_earnings('all', 0, user=USER)
+        result = earnings.window_earnings('all', 0, user=the_owner())
         self.assertEqual([e['symbol'] for e in result['events']], ['GOOGL'])
         self.assertEqual(result['stats']['total'], 1)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_stats_drop_the_tile_only_fields(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': []}
-        stats = earnings.window_earnings('all', 0, user=USER)['stats']
+        stats = earnings.window_earnings('all', 0, user=the_owner())['stats']
         self.assertEqual(set(stats), {'total', 'reported', 'beat', 'missed', 'inline', 'mine'})
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_response_names_the_next_holding_report(self, mock_cal):
         mock_cal.return_value = {'earningsCalendar': []}
-        self.assertIn('next_mine', earnings.window_earnings('all', 0, user=USER))
+        self.assertIn('next_mine', earnings.window_earnings('all', 0, user=the_owner()))
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
     def test_dateless_rows_are_dropped(self, mock_cal):
         mon = self._monday().isoformat()
         mock_cal.return_value = {'earningsCalendar': [self._row('AAPL', mon), self._row('AAPL', None)]}
 
-        result = earnings.window_earnings('all', 0, user=USER)
+        result = earnings.window_earnings('all', 0, user=the_owner())
 
         self.assertEqual([e['date'] for e in result['events']], [mon])
 
@@ -201,7 +200,7 @@ class WindowEarningsTest(TestCase):
     def test_a_provider_failure_degrades_to_ok_false_and_no_events(self, mock_cal):
         mock_cal.side_effect = finnhub.FinnhubAPIError('/calendar/earnings failed: 500')
 
-        result = earnings.window_earnings('all', 0, user=USER)
+        result = earnings.window_earnings('all', 0, user=the_owner())
 
         self.assertFalse(result['ok'])
         self.assertEqual(result['events'], [])
@@ -210,9 +209,9 @@ class WindowEarningsTest(TestCase):
     @patch('research.earnings.finnhub.get_earnings_calendar', return_value={'earningsCalendar': []})
     def test_the_current_week_caches_briefly_and_settled_weeks_do_not(self, _mock_cal):
         with patch('research.provider_cache.cache', wraps=cache) as spy:
-            earnings.window_earnings('all', 0, user=USER)
+            earnings.window_earnings('all', 0, user=the_owner())
             self.assertEqual(spy.set.call_args.args[2], earnings.CURRENT_WEEK_TTL)
-            earnings.window_earnings('all', 3, user=USER)
+            earnings.window_earnings('all', 3, user=the_owner())
             self.assertEqual(spy.set.call_args.args[2], finnhub.EARNINGS_CAL_TTL)
 
     @patch('research.earnings.finnhub.get_earnings_calendar')
@@ -223,7 +222,7 @@ class WindowEarningsTest(TestCase):
             self._row('AAPL', mon, actual=1.2),
         ]}
 
-        result = earnings.window_earnings('all', 0, user=USER)
+        result = earnings.window_earnings('all', 0, user=the_owner())
 
         self.assertEqual(len(result['events']), 1)
         self.assertEqual(result['events'][0]['eps_actual'], 1.2)

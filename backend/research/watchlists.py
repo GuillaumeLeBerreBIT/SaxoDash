@@ -3,13 +3,13 @@ from .models import Watchlist, WatchlistItem
 OPEN_POSITIONS_WATCHLIST = 'Open positions'
 
 
-def sync_open_positions_watchlist(positions):
+def sync_open_positions_watchlist(user, positions):
     """Mirror currently-open, uic-identified positions into a default watchlist.
 
     Not protected against deletion - the next sync just recreates it, which is
     simpler than special-casing one row in Watchlist.
     """
-    watchlist, _ = Watchlist.objects.get_or_create(name=OPEN_POSITIONS_WATCHLIST)
+    watchlist, _ = Watchlist.objects.get_or_create(user=user, name=OPEN_POSITIONS_WATCHLIST)
 
     seen_uics = []
     for position in positions:

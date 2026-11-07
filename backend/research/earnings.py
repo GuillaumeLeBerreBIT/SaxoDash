@@ -182,7 +182,7 @@ def window_earnings(scope='all', week_offset=0, today=None, moves=True, *, user)
         'events': events,
         'window': window,
         'stats': _week_stats(events),
-        'next_mine': calendar_enrichment.next_mine(end),
+        'next_mine': calendar_enrichment.next_mine(end, user=user),
         'ok': True,
     }
 

@@ -23,7 +23,7 @@ class PositionListView(ListAPIView):
             many=True,
             context={
                 'total_value': get_positions_value(request.user).amount,
-                'tickers_with_thesis': tickers_with_thesis([p.ticker for p in positions]),
+                'tickers_with_thesis': tickers_with_thesis([p.ticker for p in positions], user=request.user),
                 'request': request,
             },
         )

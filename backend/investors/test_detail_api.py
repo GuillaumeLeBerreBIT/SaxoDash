@@ -1,7 +1,6 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -18,7 +17,7 @@ Q2 = date(2026, 6, 30)
 
 class InvestorDetailApiTest(APITestCase):
     def setUp(self):
-        self.client.force_authenticate(User.objects.create_user('me', password='x'))
+        self.client.force_authenticate(the_owner())
         self.investor = make_investor(last_filing_at=date(2026, 8, 14))
         store_quarter(self.investor, Q1, [
             ('037833100', 'APPLE INC', 100, 600), ('02005N100', 'ALLY FINL INC', 5, 400),
@@ -89,7 +88,7 @@ class InvestorDetailApiTest(APITestCase):
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#000000',
         )
-        WatchlistItem.objects.create(watchlist=Watchlist.objects.create(name='Tech'), symbol='nvda', uic=1)
+        WatchlistItem.objects.create(watchlist=Watchlist.objects.create(user=the_owner(), name='Tech'), symbol='nvda', uic=1)
 
         rows = self.holdings()
 

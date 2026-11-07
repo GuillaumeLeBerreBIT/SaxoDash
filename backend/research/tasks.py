@@ -1,11 +1,14 @@
 from celery import shared_task
 
+from django.contrib.auth import get_user_model
+
 from portfolio.models import Position
 from saxo.models import SyncRun
 from saxo.tasks import synced
 
 from . import scan, scan_progress
-from .watchlists import sync_open_positions_watchlist
+from .models import Watchlist
+from .watchlists import OPEN_POSITIONS_WATCHLIST, sync_open_positions_watchlist
 
 
 @shared_task
@@ -19,7 +22,11 @@ def sync_watchlists():
     transaction used to guarantee they moved together. Needs its own
     periodic-task registration in admin, same as sync_account_balance did.
     """
-    sync_open_positions_watchlist(Position.objects.exclude(uic__isnull=True))
+    user_ids = set(Position.objects.values_list('user_id', flat=True)) | set(
+        Watchlist.objects.filter(name=OPEN_POSITIONS_WATCHLIST).values_list('user_id', flat=True)
+    )
+    for user in get_user_model().objects.filter(pk__in=user_ids).order_by('pk'):
+        sync_open_positions_watchlist(user, Position.objects.filter(user=user).exclude(uic__isnull=True))
 
 
 ALREADY_RUNNING = 'A scan was already running.'

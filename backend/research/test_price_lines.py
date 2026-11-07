@@ -20,7 +20,7 @@ class PriceLineAPITest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def line(self, uic=211, asset_type='Stock', price='100.00'):
-        return PriceLine.objects.create(uic=uic, asset_type=asset_type, price=Decimal(price))
+        return PriceLine.objects.create(user=the_owner(), uic=uic, asset_type=asset_type, price=Decimal(price))
 
     def test_requires_authentication(self):
         self.client.credentials()
@@ -123,7 +123,7 @@ class PriceLineAPITest(APITestCase):
         self.assertEqual(response.status_code, 201)
 
     def test_accepts_a_compound_saxo_asset_type(self):
-        PriceLine.objects.create(uic=211, asset_type='CfdOnStock', price=Decimal('10.00'))
+        PriceLine.objects.create(user=the_owner(), uic=211, asset_type='CfdOnStock', price=Decimal('10.00'))
 
         response = self.client.get('/api/research/price-lines/211/CfdOnStock/')
 
