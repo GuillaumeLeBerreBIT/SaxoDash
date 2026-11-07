@@ -4,22 +4,23 @@ from django.db import migrations, models
 
 
 def give_rows_to_owner(apps, schema_editor):
+    alias = schema_editor.connection.alias
     SaxoCredential = apps.get_model('saxo', 'SaxoCredential')
     SyncRun = apps.get_model('saxo', 'SyncRun')
     Profile = apps.get_model('users', 'Profile')
-    if not SaxoCredential.objects.exists() and not SyncRun.objects.exists():
+    if not SaxoCredential.objects.using(alias).exists() and not SyncRun.objects.using(alias).exists():
         return
-    owner = Profile.objects.filter(is_owner=True).first()
+    owner = Profile.objects.using(alias).filter(is_owner=True).first()
     if owner is None:
         raise RuntimeError(
             'Saxo credentials or sync runs exist but no user is the owner. '
             'Run the users migrations with SAXODASH_OWNER=<username> first.'
         )
-    newest = SaxoCredential.objects.order_by('-pk').first()
+    newest = SaxoCredential.objects.using(alias).order_by('-pk').first()
     if newest is not None:
-        SaxoCredential.objects.exclude(pk=newest.pk).delete()
-    SaxoCredential.objects.update(user_id=owner.user_id)
-    SyncRun.objects.update(user_id=owner.user_id)
+        SaxoCredential.objects.using(alias).exclude(pk=newest.pk).delete()
+    SaxoCredential.objects.using(alias).update(user_id=owner.user_id)
+    SyncRun.objects.using(alias).update(user_id=owner.user_id)
 
 
 class Migration(migrations.Migration):

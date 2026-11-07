@@ -17,18 +17,19 @@ OLD_INDEXES = {
 
 
 def give_rows_to_owner(apps, schema_editor):
+    alias = schema_editor.connection.alias
     owned = [apps.get_model('research', name) for name in OWNED_MODELS]
     Profile = apps.get_model('users', 'Profile')
-    if not any(model.objects.exists() for model in owned):
+    if not any(model.objects.using(alias).exists() for model in owned):
         return
-    owner = Profile.objects.filter(is_owner=True).first()
+    owner = Profile.objects.using(alias).filter(is_owner=True).first()
     if owner is None:
         raise RuntimeError(
             'Watchlists, notes or chart lines exist but no user is the owner. '
             'Run the users migrations with SAXODASH_OWNER=<username> first.'
         )
     for model in owned:
-        model.objects.update(user_id=owner.user_id)
+        model.objects.using(alias).update(user_id=owner.user_id)
 
 
 def user_field(null):

@@ -5,10 +5,11 @@ from django.db import migrations
 
 
 def pick_owner(apps, schema_editor):
+    alias = schema_editor.connection.alias
     app_label, model_name = settings.AUTH_USER_MODEL.split('.')
     User = apps.get_model(app_label, model_name)
     Profile = apps.get_model('users', 'Profile')
-    users = list(User.objects.order_by('pk'))
+    users = list(User.objects.using(alias).order_by('pk'))
     if not users:
         return
     if len(users) == 1:
@@ -27,7 +28,7 @@ def pick_owner(apps, schema_editor):
     chosen.is_superuser = True
     chosen.save(update_fields=['is_superuser'])
     for user in users:
-        Profile.objects.update_or_create(
+        Profile.objects.using(alias).update_or_create(
             user=user, defaults={'is_owner': user.pk == chosen.pk}
         )
 

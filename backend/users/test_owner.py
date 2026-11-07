@@ -1,11 +1,12 @@
 import importlib
 import os
+from types import SimpleNamespace
 from unittest import mock
 
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, connection, transaction
 from django.test import TestCase
 
 from users.models import Profile
@@ -46,7 +47,7 @@ class PickOwnerTests(TestCase):
     def test_pick_owner_single_user(self):
         user = get_user_model().objects.create_user('solo', password='pw-Strong-123')
         Profile.objects.all().delete()
-        pick_owner(apps, None)
+        pick_owner(apps, SimpleNamespace(connection=connection))
         user.refresh_from_db()
         self.assertTrue(Profile.objects.get(user=user).is_owner)
         self.assertTrue(user.is_superuser)
@@ -57,7 +58,7 @@ class PickOwnerTests(TestCase):
         users.create_user('b', password='pw-Strong-123')
         Profile.objects.all().delete()
         with mock.patch.dict(os.environ, {'SAXODASH_OWNER': 'b'}):
-            pick_owner(apps, None)
+            pick_owner(apps, SimpleNamespace(connection=connection))
         self.assertEqual(owner().username, 'b')
         self.assertEqual(Profile.objects.count(), 2)
         self.assertFalse(Profile.objects.get(user__username='a').is_owner)
@@ -71,8 +72,8 @@ class PickOwnerTests(TestCase):
         with mock.patch.dict(os.environ, clear=False):
             os.environ.pop('SAXODASH_OWNER', None)
             with self.assertRaisesRegex(RuntimeError, 'SAXODASH_OWNER'):
-                pick_owner(apps, None)
+                pick_owner(apps, SimpleNamespace(connection=connection))
 
     def test_pick_owner_without_users(self):
-        pick_owner(apps, None)
+        pick_owner(apps, SimpleNamespace(connection=connection))
         self.assertEqual(Profile.objects.count(), 0)

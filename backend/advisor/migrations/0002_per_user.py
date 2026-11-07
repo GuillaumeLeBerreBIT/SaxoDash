@@ -4,17 +4,18 @@ from django.db import migrations, models
 
 
 def give_rows_to_owner(apps, schema_editor):
+    alias = schema_editor.connection.alias
     Recommendation = apps.get_model('advisor', 'Recommendation')
     Profile = apps.get_model('users', 'Profile')
-    if not Recommendation.objects.exists():
+    if not Recommendation.objects.using(alias).exists():
         return
-    owner = Profile.objects.filter(is_owner=True).first()
+    owner = Profile.objects.using(alias).filter(is_owner=True).first()
     if owner is None:
         raise RuntimeError(
             'Recommendations exist but no user is the owner. '
             'Run the users migrations with SAXODASH_OWNER=<username> first.'
         )
-    Recommendation.objects.update(user_id=owner.user_id)
+    Recommendation.objects.using(alias).update(user_id=owner.user_id)
 
 
 def user_field(null):
