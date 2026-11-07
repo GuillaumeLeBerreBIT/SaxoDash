@@ -29,6 +29,7 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ADMIN_ENABLED = os.environ.get('ADMIN_ENABLED', str(DEBUG)) == 'True'
 
 DEV_SECRET_KEY = 'django-insecure-=#^80zr^o-1c684pjmbgjwum*87vc(=^%hk7)q5cc9h-*=*-30'
 SECRET_KEY = os.environ.get('SECRET_KEY', DEV_SECRET_KEY)
