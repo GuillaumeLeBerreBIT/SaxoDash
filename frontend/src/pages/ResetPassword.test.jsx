@@ -28,6 +28,7 @@ function renderReset(url = '/reset-password?uid=u1&token=t1') {
 
 async function submit() {
   await userEvent.type(screen.getByLabelText('New password'), 'S3cure-passw0rd')
+  await userEvent.type(screen.getByLabelText('Confirm password'), 'S3cure-passw0rd')
   await userEvent.click(screen.getByRole('button', { name: 'Set new password' }))
 }
 
@@ -57,6 +58,20 @@ describe('ResetPassword', () => {
       newPassword: 'S3cure-passw0rd',
     })
     expect(await screen.findByText('home')).toBeInTheDocument()
+  })
+
+  it('refuses mismatched passwords without a request and clears the message on edit', async () => {
+    renderReset()
+    await userEvent.type(screen.getByLabelText('New password'), 'S3cure-passw0rd')
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'other')
+    await userEvent.click(screen.getByRole('button', { name: 'Set new password' }))
+    const message = await screen.findByText("Passwords don't match.")
+    const confirm = screen.getByLabelText('Confirm password')
+    expect(confirm).toHaveAttribute('aria-invalid', 'true')
+    expect(confirm.getAttribute('aria-describedby')).toBe(message.id)
+    expect(confirmPasswordReset).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByLabelText('New password'), 'x')
+    expect(screen.queryByText("Passwords don't match.")).not.toBeInTheDocument()
   })
 
   it('says the link is invalid and offers a new one', async () => {

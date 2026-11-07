@@ -27,6 +27,8 @@ function Field({ label, error, hint, ...inputProps }) {
   )
 }
 
+const MISMATCH = "Passwords don't match."
+
 function Outcome({ failure, success }) {
   if (failure) return <Alert tone="warning"><span role="alert">{failure}</span></Alert>
   if (success) return <Alert tone="info"><span role="status">{success}</span></Alert>
@@ -93,17 +95,25 @@ function ProfileForm({ me }) {
 function PasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [mismatch, setMismatch] = useState(null)
   const change = useChangePassword()
   const fields = change.error ? fieldErrors(change.error) : {}
 
   const submit = (event) => {
     event.preventDefault()
+    if (newPassword !== confirmation) {
+      setMismatch(MISMATCH)
+      return
+    }
+    setMismatch(null)
     change.mutate(
       { currentPassword, newPassword },
       {
         onSuccess: () => {
           setCurrentPassword('')
           setNewPassword('')
+          setConfirmation('')
         },
       },
     )
@@ -112,7 +122,8 @@ function PasswordForm() {
   return (
     <form onSubmit={submit} className="flex flex-col gap-3.5">
       <Field label="Current password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" error={fields.current_password} required />
-      <Field label="New password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" error={fields.new_password} required />
+      <Field label="New password" type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); setMismatch(null) }} autoComplete="new-password" error={fields.new_password} required />
+      <Field label="Confirm new password" type="password" value={confirmation} onChange={(e) => { setConfirmation(e.target.value); setMismatch(null) }} autoComplete="new-password" error={mismatch} required />
       <Outcome
         failure={change.error ? generalMessage(change.error, fields) : null}
         success={change.isSuccess ? 'Password changed. Your other sessions were signed out; this one stays signed in.' : null}

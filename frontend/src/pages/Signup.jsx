@@ -8,12 +8,14 @@ import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } fro
 const EMAIL_HINT = "We only use this to send you a password reset link. A typo means you can't reset it."
 
 const SIGNUP_FIELDS = ['email', 'username', 'password']
+const MISMATCH = "Passwords don't match."
 const UNPLACED = 'Could not create the account. Try again.'
 
 export default function Signup() {
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
   const [website, setWebsite] = useState('')
   const [errors, setErrors] = useState({})
   const [notice, setNotice] = useState(null)
@@ -21,10 +23,18 @@ export default function Signup() {
   const navigate = useNavigate()
   const startSession = useStartSession()
 
+  function clearMismatch() {
+    setErrors((current) => (current.confirmation ? { ...current, confirmation: undefined } : current))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
-    setErrors({})
     setNotice(null)
+    if (password !== confirmation) {
+      setErrors({ confirmation: MISMATCH })
+      return
+    }
+    setErrors({})
     setBusy(true)
     try {
       await signup({ email, username, password, website })
@@ -72,9 +82,24 @@ export default function Signup() {
         label="Password"
         type="password"
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
+        onChange={(e) => {
+          setPassword(e.target.value)
+          clearMismatch()
+        }}
         autoComplete="new-password"
         error={errors.password}
+        required
+      />
+      <AuthField
+        label="Confirm password"
+        type="password"
+        value={confirmation}
+        onChange={(e) => {
+          setConfirmation(e.target.value)
+          clearMismatch()
+        }}
+        autoComplete="new-password"
+        error={errors.confirmation}
         required
       />
       <div aria-hidden="true" className="absolute left-[-9999px] h-0 w-0 overflow-hidden">

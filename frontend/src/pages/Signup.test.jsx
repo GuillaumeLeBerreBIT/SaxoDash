@@ -31,6 +31,7 @@ async function fillAndSubmit() {
   await userEvent.type(screen.getByLabelText('Email'), 'a@b.com')
   await userEvent.type(screen.getByLabelText('Username'), 'alice')
   await userEvent.type(screen.getByLabelText('Password'), 'S3cure-passw0rd')
+  await userEvent.type(screen.getByLabelText('Confirm password'), 'S3cure-passw0rd')
   await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
 }
 
@@ -76,6 +77,34 @@ describe('Signup', () => {
       website: '',
     })
     expect(await screen.findByText('home')).toBeInTheDocument()
+  })
+
+  it('refuses mismatched passwords without a request and clears the message on edit', async () => {
+    renderSignup()
+    await userEvent.type(screen.getByLabelText('Email'), 'a@b.com')
+    await userEvent.type(screen.getByLabelText('Username'), 'alice')
+    await userEvent.type(screen.getByLabelText('Password'), 'S3cure-passw0rd')
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'S3cure-passw0rt')
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
+    const message = await screen.findByText("Passwords don't match.")
+    const confirm = screen.getByLabelText('Confirm password')
+    expect(confirm).toHaveAttribute('aria-invalid', 'true')
+    expect(confirm.getAttribute('aria-describedby')).toBe(message.id)
+    expect(signup).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByLabelText('Password'), 'x')
+    expect(screen.queryByText("Passwords don't match.")).not.toBeInTheDocument()
+  })
+
+  it('clears the mismatch message when the confirmation is edited', async () => {
+    renderSignup()
+    await userEvent.type(screen.getByLabelText('Email'), 'a@b.com')
+    await userEvent.type(screen.getByLabelText('Username'), 'alice')
+    await userEvent.type(screen.getByLabelText('Password'), 'abc')
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'abd')
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }))
+    expect(await screen.findByText("Passwords don't match.")).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'x')
+    expect(screen.queryByText("Passwords don't match.")).not.toBeInTheDocument()
   })
 
   it('shows server field errors beside the field', async () => {

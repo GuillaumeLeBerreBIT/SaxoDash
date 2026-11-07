@@ -94,6 +94,7 @@ describe('AccountSettings', () => {
     await screen.findByLabelText('Username')
     await userEvent.type(screen.getByLabelText('Current password'), 'old-password')
     await userEvent.type(screen.getByLabelText('New password'), 'a-better-password')
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'a-better-password')
     await userEvent.click(screen.getByRole('button', { name: 'Change password' }))
 
     expect(await screen.findByText(/Password changed/)).toBeInTheDocument()
@@ -103,12 +104,29 @@ describe('AccountSettings', () => {
     expect(screen.getByLabelText('New password')).toHaveValue('')
   })
 
+  it('refuses mismatched new passwords without a request and clears the message on edit', async () => {
+    renderAccount()
+    await screen.findByLabelText('Username')
+    await userEvent.type(screen.getByLabelText('Current password'), 'old-password')
+    await userEvent.type(screen.getByLabelText('New password'), 'a-better-password')
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'a-better-passwore')
+    await userEvent.click(screen.getByRole('button', { name: 'Change password' }))
+    const message = await screen.findByText("Passwords don't match.")
+    const confirm = screen.getByLabelText('Confirm new password')
+    expect(confirm).toHaveAttribute('aria-invalid', 'true')
+    expect(confirm.getAttribute('aria-describedby')).toBe(message.id)
+    expect(client.changePassword).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByLabelText('New password'), 'x')
+    expect(screen.queryByText("Passwords don't match.")).not.toBeInTheDocument()
+  })
+
   it('shows password field errors', async () => {
     client.changePassword.mockRejectedValue(new ApiError(400, null, { new_password: ['Too short.'] }))
     renderAccount()
     await screen.findByLabelText('Username')
     await userEvent.type(screen.getByLabelText('Current password'), 'old')
     await userEvent.type(screen.getByLabelText('New password'), 'x')
+    await userEvent.type(screen.getByLabelText('Confirm new password'), 'x')
     await userEvent.click(screen.getByRole('button', { name: 'Change password' }))
 
     expect(await screen.findByText('Too short.')).toBeInTheDocument()

@@ -5,6 +5,7 @@ import { useStartSession } from '../api/queries'
 import { AuthError, AuthField, AuthShell, AuthSubmit, authLinkClass } from '../components/auth/AuthShell'
 import { RETRYABLE, TOO_MANY_ATTEMPTS, fieldErrors, isRefusal, isThrottled } from '../lib/authErrors'
 
+const MISMATCH = "Passwords don't match."
 const INVALID_LINK = 'This reset link is invalid or has expired.'
 
 export default function ResetPassword() {
@@ -12,6 +13,8 @@ export default function ResetPassword() {
   const uid = params.get('uid')
   const token = params.get('token')
   const [newPassword, setNewPassword] = useState('')
+  const [confirmation, setConfirmation] = useState('')
+  const [mismatch, setMismatch] = useState(null)
   const [fieldError, setFieldError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [linkInvalid, setLinkInvalid] = useState(!uid || !token)
@@ -23,6 +26,11 @@ export default function ResetPassword() {
     e.preventDefault()
     setFieldError(null)
     setNotice(null)
+    if (newPassword !== confirmation) {
+      setMismatch(MISMATCH)
+      return
+    }
+    setMismatch(null)
     setBusy(true)
     try {
       await confirmPasswordReset({ uid, token, newPassword })
@@ -54,9 +62,24 @@ export default function ResetPassword() {
             label="New password"
             type="password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={(e) => {
+              setNewPassword(e.target.value)
+              setMismatch(null)
+            }}
             autoComplete="new-password"
             error={fieldError}
+            required
+          />
+          <AuthField
+            label="Confirm password"
+            type="password"
+            value={confirmation}
+            onChange={(e) => {
+              setConfirmation(e.target.value)
+              setMismatch(null)
+            }}
+            autoComplete="new-password"
+            error={mismatch}
             required
           />
           {notice && <AuthError>{notice}</AuthError>}
