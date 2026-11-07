@@ -6,16 +6,16 @@ from research.listings import Listing
 from users.testing import make_user
 
 from . import journal
-from .models import Recommendation
 
 INSTRUMENT = Listing(ticker='NEWCO', symbol='NEWCO', name='NewCo', uic=77, asset_type='Stock', currency='USD', exchange='X')
+OTHER = Listing(ticker='OTHR', symbol='OTHR', name='Other', uic=78, asset_type='Stock', currency='USD', exchange='X')
 SAXO = SimpleNamespace(chart=lambda *args, user: [{'date': '2026-10-21', 'open': 1, 'high': 2, 'low': 1, 'close': 42.25, 'volume': 1}])
 
 
-def record(user):
+def record(user, listing=INSTRUMENT):
     return journal.log(
         user,
-        listing=INSTRUMENT,
+        listing=listing,
         saxo=SAXO,
         action='buy_new',
         thesis='Compounder.',
@@ -52,6 +52,9 @@ class JournalPerUserTest(TestCase):
 
     def test_every_users_tickers_are_wanted_for_price_history(self):
         record(self.alice)
+        record(self.bob, listing=OTHER)
 
-        self.assertIn('NEWCO', journal.wanted_tickers()[0])
-        self.assertEqual(Recommendation.objects.filter(user=self.bob).count(), 0)
+        current, ever = journal.wanted_tickers()
+
+        self.assertTrue({'NEWCO', 'OTHR'} <= current)
+        self.assertTrue({'NEWCO', 'OTHR'} <= ever)
