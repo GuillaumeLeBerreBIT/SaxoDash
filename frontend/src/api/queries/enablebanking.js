@@ -34,10 +34,11 @@ export const enableBankingKeys = {
   labeledAccountCandidates: ['labeled-account-candidates'],
 }
 
-export function useEnableBankingStatus() {
+export function useEnableBankingStatus({ enabled = true } = {}) {
   return useQuery({
     queryKey: enableBankingKeys.enableBankingStatus,
     queryFn: getEnableBankingStatus,
+    enabled,
     refetchOnMount: 'always',
     refetchInterval: 60_000,
   })

@@ -19,6 +19,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   queries.useInstrumentSearch.mockReturnValue({ data: [], isLoading: false, error: null })
+  queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true } })
 })
 afterEach(() => localStorage.clear())
 
@@ -27,6 +28,18 @@ describe('CommandPalette', () => {
     renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
     await userEvent.type(screen.getByRole('combobox'), query)
     expect(screen.getByRole('option', { name })).toBeInTheDocument()
+  })
+
+  it('offers the spending shortcut to the owner only', async () => {
+    const { unmount } = renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
+    await userEvent.type(screen.getByRole('combobox'), 'spend')
+    expect(screen.getByRole('option', { name: /Spending/ })).toBeInTheDocument()
+    unmount()
+
+    queries.useMe.mockReturnValue({ data: { username: 'alice', email: 'a@example.com', is_owner: false } })
+    renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
+    await userEvent.type(screen.getByRole('combobox'), 'spend')
+    expect(screen.queryByRole('option', { name: /Spending/ })).not.toBeInTheDocument()
   })
 
   it('renders nothing when closed', () => {

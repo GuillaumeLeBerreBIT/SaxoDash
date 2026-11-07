@@ -32,11 +32,6 @@ export async function login(username, password) {
   if (res.status === TOO_MANY_REQUESTS_STATUS) throw new ApiError(res.status);
   if (!res.ok) throw new Error("Invalid credentials");
   setTokens(await res.json());
-  localStorage.setItem("username", username);
-}
-
-export function getUsername() {
-  return localStorage.getItem("username");
 }
 
 export async function logout() {
@@ -138,11 +133,11 @@ export async function apiFetch(path, options = {}) {
         // The backend explains itself in `detail`; carrying it means callers
         // show the server's reason rather than inventing their own.
         const body = await res.json().catch(() => null)
-        throw new ApiError(res.status, body?.detail)
+        throw new ApiError(res.status, body?.detail, body)
     }
 
     // DELETE answers 204 with an empty body; res.json() would throw on it.
-    return res.status === 204 ? null : res.json()
+    return res.status === 204 || res.status === 205 ? null : res.json()
 }
 
 export const jsonRequest = (path, method, body) =>

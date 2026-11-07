@@ -19,6 +19,7 @@ const ARGENTA = {
 }
 
 function mockDefaults(overrides = {}) {
+  queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true } })
   queries.useBankAccounts.mockReturnValue(overrides.accounts ?? { data: [KBC, ARGENTA], isLoading: false, error: null })
   queries.useBankTransactions.mockReturnValue(
     overrides.transactions ?? {

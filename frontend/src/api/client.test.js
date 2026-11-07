@@ -7,7 +7,11 @@ import {
   ApiError,
   logout,
   isAuthenticated,
-  getUsername,
+  getMe,
+  stopTrackingInvestor,
+  updateMe,
+  changePassword,
+  signOutEverywhere,
   getPositions,
   getNetWorthHistory,
   getRiskMetrics,
@@ -54,7 +58,7 @@ describe('account creation and password reset', () => {
     expect(url).toMatch(/\/api\/auth\/signup\/$/)
     expect(JSON.parse(init.body)).toEqual({ email: 'a@b.com', username: 'alice', password: 'pw', website: '' })
     expect(localStorage.getItem('access')).toBe('a')
-    expect(getUsername()).toBe('alice')
+    expect(localStorage.getItem('username')).toBeNull()
   })
 
   it('signup carries the field errors and stores nothing', async () => {
@@ -100,7 +104,7 @@ describe('login', () => {
 
     expect(localStorage.getItem('access')).toBe('access-1')
     expect(localStorage.getItem('refresh')).toBe('refresh-1')
-    expect(getUsername()).toBe('alice')
+    expect(localStorage.getItem('username')).toBeNull()
   })
 
   it('throws and stores nothing on invalid credentials', async () => {
@@ -108,6 +112,69 @@ describe('login', () => {
 
     await expect(login('alice', 'wrong')).rejects.toThrow('Invalid credentials')
     expect(localStorage.getItem('access')).toBeNull()
+  })
+})
+
+describe('current user', () => {
+  it('reads the signed-in user', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ username: 'alice', email: 'a@b.com', is_owner: false }))
+
+    expect(await getMe()).toEqual({ username: 'alice', email: 'a@b.com', is_owner: false })
+    expect(window.fetch.mock.calls[0][0]).toMatch(/\/api\/auth\/me\/$/)
+  })
+
+  it('patches the profile and carries field errors on failure', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ username: 'bob', email: 'a@b.com', is_owner: false }))
+
+    await updateMe({ username: 'bob' })
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/me\/$/)
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body)).toEqual({ username: 'bob' })
+
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ current_password: ['Required.'] }, false, 400))
+    const failure = await updateMe({ email: 'x@y.com' }).catch((e) => e)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.body).toEqual({ current_password: ['Required.'] })
+  })
+
+  it('stores the new tokens after a password change', async () => {
+    localStorage.setItem('access', 'old')
+    localStorage.setItem('refresh', 'old-r')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ access: 'new', refresh: 'new-r' }))
+
+    await changePassword({ currentPassword: 'one', newPassword: 'two' })
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ current_password: 'one', new_password: 'two' })
+    expect(localStorage.getItem('access')).toBe('new')
+    expect(localStorage.getItem('refresh')).toBe('new-r')
+  })
+
+  it('asks the backend to sign every session out', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue({ ok: true, status: 205, json: async () => { throw new Error('empty') } })
+
+    await signOutEverywhere()
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/sign-out-everywhere\/$/)
+    expect(init.method).toBe('POST')
+  })
+})
+
+describe('removing an investor', () => {
+  it('surfaces the server reason when the removal is refused', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ detail: 'Only the person who added this investor can remove it.' }, false, 403))
+
+    const failure = await stopTrackingInvestor('acme').catch((e) => e)
+
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.status).toBe(403)
+    expect(failure.message).toBe('Only the person who added this investor can remove it.')
   })
 })
 

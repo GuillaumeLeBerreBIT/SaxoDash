@@ -1,9 +1,10 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
-import { getUsername, logout } from '../api/client'
-import { useNetWorth, usePortfolioSummary, useSaxoStatus } from '../api/queries'
+import { logout } from '../api/client'
+import { useMe, useNetWorth, usePortfolioSummary, useSaxoStatus } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { NAV_ITEMS, pageTitle } from '../lib/navigation'
+import { NAV_ITEMS, pageTitle, visibleTo } from '../lib/navigation'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
 import { MenuContent, MenuItem, MenuLabel, MenuRoot, MenuSeparator, MenuTrigger } from './overlays'
 import { useConnectSaxo } from '../lib/useConnectSaxo'
@@ -33,12 +34,13 @@ function saxoAccountValue(summary, netWorth) {
 }
 
 function Tabs() {
+  const { data: me } = useMe()
   return (
     <nav
       aria-label="Pages"
       className="hidden min-[760px]:flex items-center gap-x-[22px] min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {NAV_ITEMS.map(({ to, label, end }) => (
+      {visibleTo(NAV_ITEMS, me).map(({ to, label, end }) => (
         <NavLink
           key={to}
           to={to}
@@ -58,12 +60,15 @@ function AccountMenu() {
   const navigate = useNavigate()
   const { data: status } = useSaxoStatus()
   const saxo = deriveSaxoStatus(status)
-  const username = getUsername() || 'Account'
+  const { data: me } = useMe()
+  const queryClient = useQueryClient()
+  const username = me?.username || 'Account'
   const action = saxo && SAXO_ACTION[saxo.kind]
   const { connect, failed } = useConnectSaxo()
 
   const signOut = async () => {
     await logout()
+    queryClient.clear()
     navigate('/login')
   }
 
@@ -103,6 +108,7 @@ function AccountMenu() {
             {action && !failed && <span className="text-ink font-semibold">{action}</span>}
           </MenuItem>
         )}
+        <MenuItem onSelect={() => navigate('/settings?section=account')}>Account</MenuItem>
         <MenuItem onSelect={() => navigate('/settings')}>Theme and colours</MenuItem>
         <MenuItem onSelect={() => navigate('/settings?section=sync')}>Sync health</MenuItem>
         <MenuItem danger onSelect={signOut}>

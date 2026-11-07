@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Briefcase, CandlestickChart, ChevronRight, Compass, Ellipsis, LayoutDashboard, Search } from 'lucide-react'
-import { MOBILE_PRIMARY, NAV_ITEMS, mobileOverflow, ownsPath } from '../lib/navigation'
+import { useMe } from '../api/queries'
+import { MOBILE_PRIMARY, NAV_ITEMS, mobileOverflow, ownsPath, visibleTo } from '../lib/navigation'
 
 const PRIMARY_ICONS = {
   '/': LayoutDashboard,
@@ -29,8 +30,10 @@ export default function MobileNav({ onOpenPalette }) {
   const setOpen = (value) => setOpenedAt(value ? pathname : null)
   const moreRef = useRef(null)
   const dialogRef = useRef(null)
-  const overflow = mobileOverflow()
-  const primary = MOBILE_PRIMARY.map((to) => NAV_ITEMS.find((item) => item.to === to)).filter(Boolean)
+  const { data: me } = useMe()
+  const items = visibleTo(NAV_ITEMS, me)
+  const overflow = visibleTo(mobileOverflow(items), me)
+  const primary = MOBILE_PRIMARY.map((to) => items.find((item) => item.to === to)).filter(Boolean)
   const moreActive = overflow.some((item) => ownsPath(item, pathname))
 
   useEffect(() => {

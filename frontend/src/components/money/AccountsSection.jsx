@@ -1,4 +1,4 @@
-import { useBankAccounts, useBankTransactions } from '../../api/queries'
+import { useBankAccounts, useBankTransactions, useMe } from '../../api/queries'
 import { fmtEur } from '../../lib/format'
 import { useChartColors } from '../../theme/useChartColors'
 import { Card, EmptyState, QueryState, Tile } from '../ui'
@@ -17,7 +17,49 @@ const RECENT_ROWS = 5
 
 const Heading = () => <h1 className="sr-only">Accounts</h1>
 
+function BankAccountsPanel({ accounts, emptyHint = 'Connect a bank above to see its balance here.' }) {
+  return (
+    <Card className={SPAN_6} context="Open one for its transactions" dot={accounts.length ? 'ok' : 'off'} title="Bank accounts">
+      {accounts.length === 0 ? (
+        <EmptyState title="No bank accounts connected yet" hint={emptyHint} />
+      ) : (
+        <div className="flex flex-col gap-2">
+          {accounts.map((a) => (
+            <BankAccountTile key={a.id} account={a} />
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
+function SharedAccounts() {
+  const { data: allAccounts, error, refetch } = useBankAccounts()
+  if (error || !allAccounts) {
+    return (
+      <>
+        <Heading />
+        <QueryState isLoading={!error} error={error} onRetry={refetch} label="accounts" />
+      </>
+    )
+  }
+  const accounts = allAccounts.filter((a) => a.external_id !== SAXO_CASH_EXTERNAL_ID)
+  return (
+    <>
+      <Heading />
+      <div className={BOARD}>
+        <BankAccountsPanel accounts={accounts} emptyHint="Nothing to show here yet." />
+      </div>
+    </>
+  )
+}
+
 export default function AccountsSection() {
+  const { data: me } = useMe()
+  return me?.is_owner === true ? <OwnerAccounts /> : <SharedAccounts />
+}
+
+function OwnerAccounts() {
   const c = useChartColors()
   const { data: allAccounts, error, refetch: refetchAccounts } = useBankAccounts()
   const { data: allTransactions } = useBankTransactions()
@@ -69,17 +111,7 @@ export default function AccountsSection() {
           </div>
         </Card>
 
-        <Card className={SPAN_6} context="Open one for its transactions" dot={accounts.length ? 'ok' : 'off'} title="Bank accounts">
-          {accounts.length === 0 ? (
-            <EmptyState title="No bank accounts connected yet" hint="Connect a bank above to see its balance here." />
-          ) : (
-            <div className="flex flex-col gap-2">
-              {accounts.map((a) => (
-                <BankAccountTile key={a.id} account={a} />
-              ))}
-            </div>
-          )}
-        </Card>
+        <BankAccountsPanel accounts={accounts} />
         <RecentTransactionsPanel className={SPAN_6} transactions={recentAcrossAll} />
 
         <HistoryAreaChart

@@ -1,4 +1,4 @@
-import { ApiError, BASE_URL, setTokens } from './http'
+import { ApiError, BASE_URL, apiFetch, jsonRequest, setTokens } from './http'
 
 async function postPublic(path, payload) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -14,9 +14,23 @@ async function postPublic(path, payload) {
 export async function signup({ email, username, password, website }) {
   const body = await postPublic('/api/auth/signup/', { email, username, password, website })
   setTokens(body)
-  localStorage.setItem('username', body.user?.username ?? username)
   return body
 }
+
+export const getMe = () => apiFetch('/api/auth/me/')
+
+export const updateMe = (changes) => jsonRequest('/api/auth/me/', 'PATCH', changes)
+
+export async function changePassword({ currentPassword, newPassword }) {
+  const body = await jsonRequest('/api/auth/password/', 'POST', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+  setTokens(body)
+  return body
+}
+
+export const signOutEverywhere = () => apiFetch('/api/auth/sign-out-everywhere/', { method: 'POST' })
 
 export const requestPasswordReset = (email) => postPublic('/api/auth/password-reset/', { email })
 
