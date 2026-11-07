@@ -172,6 +172,28 @@ email variables are in "Password reset email (Gmail)" above.
    `SAXODASH_OWNER=<username>` in `/srv/saxodash/.env`; the owner can be left set.
 6. **Rehearse the migration** on a restored copy of the newest backup (`deploy/restore.sh`
    into a throwaway database): row counts unchanged, every row's `user` the owner.
+7. **Take a backup right before deploying this release**, and note its file name
+   (`ls -l /srv/saxodash/backups`). The deploy takes one too, but this one is yours to keep:
+
+   ```sh
+   cd /opt/saxodash && docker compose --env-file /srv/saxodash/.env -f deploy/compose.yaml \
+     run --rm --no-deps web python manage.py backup_database
+   ```
+
+   This release cannot be undone by rolling back the image alone. Its migrations drop
+   `Investor.followed` and add `user` columns that are `NOT NULL`, so the previous release's
+   code fails on the new schema (every investors query, every new position, transaction and
+   Saxo credential) while `/healthz` still passes, and `rollback.sh` reports success over a
+   broken app. Undoing it means `rollback.sh <previous sha>` and then
+   `restore.sh /srv/saxodash/backups/db-<stamp>.dump` with the pre-deploy dump (both as in
+   "Day to day" below).
+8. **Give the owner account an email address**, or a password reset has nowhere to go. Either
+   Settings → Account in the app, or on the server:
+
+   ```sh
+   cd /opt/saxodash && docker compose --env-file /srv/saxodash/.env -f deploy/compose.yaml \
+     exec web python manage.py shell -c "from users.owner import owner; u = owner(); u.email = 'you@example.com'; u.save(update_fields=['email'])"
+   ```
 
 ## Day to day
 
@@ -200,7 +222,7 @@ D="sudo -u saxodash-deploy /opt/saxodash/deploy"
 |---|---|---|
 | `refused <sha>: CI failure` | CI failed on that commit, so it was never deployed | Fix it through `develop` as usual; the next commit on `main` is tried |
 | `…building the images failed…` / `…backup failed…` / `…migrate failed…` | Stopped before starting anything; the old release keeps running | Read the journal, fix, merge again |
-| `…did not pass its health check; rolled back to <sha>` | The new release started but `/healthz` failed; the previous one is running again | `docker compose … logs web` for the cause. If it migrated, the old code is running on the new schema: usually fine, otherwise restore the pre-deploy backup |
+| `…did not pass its health check; rolled back to <sha>` | The new release started but `/healthz` failed; the previous one is running again | `docker compose … logs web` for the cause. If it migrated, the old code is running on the new schema: usually fine, otherwise restore the pre-deploy backup. Not fine for the accounts release (see "Going public" step 7): restore the pre-deploy backup |
 | `…rolling back … failed too, the site is down` | Neither release is healthy | `status.sh`, then the web logs. `rollback.sh` to an older release, or `restore.sh` |
 | `waiting for CI` in the journal | CI is still running on the new commit | Nothing; it deploys when CI finishes |
 | `could not fetch main` / `could not read CI's result` | GitHub was unreachable | Nothing; the next check retries |
