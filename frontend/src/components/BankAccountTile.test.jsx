@@ -20,6 +20,17 @@ describe('BankAccountTile', () => {
     expect(screen.getByText('€1,842.17')).toBeInTheDocument()
   })
 
+  it('links to the account page by default, and is plain when not linked', () => {
+    const account = { id: 7, bank: 'KBC', type: 'Current account', iban_masked: 'x', balance: '1.00', available: '1.00', accent: '#0284c7' }
+    const { unmount } = renderWithProviders(<BankAccountTile account={account} />)
+    expect(screen.getByRole('link', { name: /KBC/ })).toHaveAttribute('href', '/money/accounts/7')
+    unmount()
+
+    renderWithProviders(<BankAccountTile account={account} linked={false} />)
+    expect(screen.getByText('KBC')).toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
   it('does not show an available-balance line when available equals balance', () => {
     renderWithProviders(
       <BankAccountTile

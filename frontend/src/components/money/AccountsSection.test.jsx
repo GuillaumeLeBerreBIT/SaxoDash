@@ -12,6 +12,11 @@ const KBC = {
   balance: '1842.17', available: '1842.17', currency: 'EUR',
   gradient: 'from-sky-500 to-sky-700', accent: '#0284c7', external_id: 'enablebanking:kbc:acc-1',
 }
+const SAXO_CASH = {
+  id: 3, bank: 'Saxo', type: 'Cash', iban_masked: '',
+  balance: '512.40', available: '512.40', currency: 'EUR',
+  gradient: '', accent: '#2563eb', external_id: 'saxo:cash',
+}
 const ARGENTA = {
   id: 2, bank: 'Argenta', type: 'Savings account', iban_masked: 'BE34 •••• •••• 0002',
   balance: '6230.00', available: '6230.00', currency: 'EUR',
@@ -118,6 +123,16 @@ describe('AccountsSection', () => {
     })
     renderWithProviders(<AccountsSection />)
     expect(screen.queryByText(/^vs /)).not.toBeInTheDocument()
+  })
+
+  it("shows a non-owner their own Saxo cash account, without a link to the owner's transactions", () => {
+    mockDefaults({ accounts: { data: [SAXO_CASH], isLoading: false, error: null } })
+    queries.useMe.mockReturnValue({ data: { username: 'gf', email: 'gf@example.com', is_owner: false } })
+    renderWithProviders(<AccountsSection />)
+    expect(screen.getByText('Saxo')).toBeInTheDocument()
+    expect(screen.getByText('€512.40')).toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByText('Open one for its transactions')).not.toBeInTheDocument()
   })
 
   it('keeps the heading and offers Retry when accounts fail to load', () => {

@@ -17,15 +17,20 @@ const RECENT_ROWS = 5
 
 const Heading = () => <h1 className="sr-only">Accounts</h1>
 
-function BankAccountsPanel({ accounts, emptyHint = 'Connect a bank above to see its balance here.' }) {
+function BankAccountsPanel({
+  accounts,
+  emptyHint = 'Connect a bank above to see its balance here.',
+  context = 'Open one for its transactions',
+  linked = true,
+}) {
   return (
-    <Card className={SPAN_6} context="Open one for its transactions" dot={accounts.length ? 'ok' : 'off'} title="Bank accounts">
+    <Card className={SPAN_6} context={context} dot={accounts.length ? 'ok' : 'off'} title="Bank accounts">
       {accounts.length === 0 ? (
         <EmptyState title="No bank accounts connected yet" hint={emptyHint} />
       ) : (
         <div className="flex flex-col gap-2">
           {accounts.map((a) => (
-            <BankAccountTile key={a.id} account={a} />
+            <BankAccountTile key={a.id} account={a} linked={linked} />
           ))}
         </div>
       )}
@@ -43,12 +48,16 @@ function SharedAccounts() {
       </>
     )
   }
-  const accounts = allAccounts.filter((a) => a.external_id !== SAXO_CASH_EXTERNAL_ID)
   return (
     <>
       <Heading />
       <div className={BOARD}>
-        <BankAccountsPanel accounts={accounts} emptyHint="Nothing to show here yet." />
+        <BankAccountsPanel
+          accounts={allAccounts}
+          context="Balances only"
+          emptyHint="Connect Saxo to see your cash here."
+          linked={false}
+        />
       </div>
     </>
   )
