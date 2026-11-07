@@ -63,4 +63,8 @@ class Migration(migrations.Migration):
                 to=settings.AUTH_USER_MODEL,
             ),
         ),
+        migrations.RunSQL(
+            migrations.RunSQL.noop,
+            reverse_sql='DROP INDEX IF EXISTS "saxo_saxocredential_user_id_5befa6e6"',
+        ),
     ]
