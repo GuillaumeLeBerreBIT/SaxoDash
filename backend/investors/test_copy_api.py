@@ -11,6 +11,8 @@ from rest_framework.test import APITestCase
 from core.scheduling import PERIODIC_TASKS
 from research.providers import ProviderNotConnected
 from saxo.models import SyncRun
+from saxo.testing import saxo_credential
+from users.testing import make_user
 
 from . import tasks
 from .factories import make_investor
@@ -81,20 +83,24 @@ class CopyApiTest(APITestCase):
         self.assertIsNone(cards['other']['copy_excess_cagr_pct'])
 
 
-@patch('saxo.tasks.active_credential', return_value=object())
 @patch('investors.tasks.copying.rebuild_all', return_value=88)
 @patch('investors.tasks.price_feed.refresh', return_value=700)
 class RefreshTaskTest(TestCase):
+    def setUp(self):
+        self.owner = make_user('owner', owner=True)
+        saxo_credential(self.owner)
+
     def run_recorded(self):
         tasks.refresh_copy_performance()
         return SyncRun.objects.filter(task=tasks.COPY_TASK).first()
 
-    def test_fetches_prices_then_measures_every_investor(self, refresh, rebuild_all, _credential):
+    def test_fetches_prices_then_measures_every_investor(self, refresh, rebuild_all):
         run = self.run_recorded()
 
         self.assertEqual((run.outcome, run.rows, run.detail), ('ok', 88, '700 price series fetched'))
+        refresh.assert_called_once_with(user=self.owner)
 
-    def test_prices_already_fetched_are_measured_even_when_saxo_drops_out(self, refresh, rebuild_all, _credential):
+    def test_prices_already_fetched_are_measured_even_when_saxo_drops_out(self, refresh, rebuild_all):
         refresh.side_effect = ProviderNotConnected('expired')
 
         with self.assertRaises(ProviderNotConnected):
@@ -103,12 +109,12 @@ class RefreshTaskTest(TestCase):
         self.assertEqual(SyncRun.objects.filter(task=tasks.COPY_TASK).first().outcome, 'failed')
         rebuild_all.assert_called_once_with()
 
-    def test_it_never_touches_the_saxo_health_badge(self, refresh, rebuild_all, _credential):
+    def test_it_never_touches_the_saxo_health_badge(self, refresh, rebuild_all):
         from saxo.credentials import SYNC_TASKS
 
         self.assertNotIn(tasks.COPY_TASK, SYNC_TASKS)
 
-    def test_it_runs_nightly(self, refresh, rebuild_all, _credential):
+    def test_it_runs_nightly(self, refresh, rebuild_all):
         scheduled = [entry for entry in PERIODIC_TASKS.values() if entry['task'] == 'investors.tasks.refresh_copy_performance']
 
         self.assertEqual(len(scheduled), 1)

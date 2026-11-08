@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PAGE_COMMANDS } from './commands'
-import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle } from './navigation'
+import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle, visibleTo } from './navigation'
 
 describe('top-level navigation', () => {
   it('lists the nine tabs in order', () => {
@@ -42,8 +42,21 @@ describe('palette pages', () => {
       { to: '/settings', label: 'Settings' },
       { to: '/portfolio?view=transactions', label: 'Transactions' },
       { to: '/money?section=accounts', label: 'Accounts' },
-      { to: '/money?section=spending', label: 'Spending' },
+      { to: '/money?section=spending', label: 'Spending', ownerOnly: true },
     ])
+  })
+})
+
+describe('owner-only entries', () => {
+  const items = [{ to: '/a', label: 'A' }, { to: '/b', label: 'B', ownerOnly: true }]
+
+  it('are shown to the owner', () => {
+    expect(visibleTo(items, { is_owner: true })).toEqual(items)
+  })
+
+  it('are hidden from everyone else, and while the user is still loading', () => {
+    expect(visibleTo(items, { is_owner: false })).toEqual([items[0]])
+    expect(visibleTo(items, undefined)).toEqual([items[0]])
   })
 })
 

@@ -6,19 +6,23 @@ from accounts.models import BankAccount
 
 from .models import BankTransaction, ManualIbanLabel
 from .transfers import mark_transfers
+from users.testing import the_owner
 
 
 class MarkTransfersTest(TestCase):
     def setUp(self):
         self.kbc = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )
         self.argenta = BankAccount.objects.create(
+            user=the_owner(),
             bank='Argenta', type='Current account', iban_masked='BE12 •••• •••• 0002',
             balance=100, available=100, external_id='enablebanking:argenta:acc-2',
         )
         self.savings = BankAccount.objects.create(
+            user=the_owner(),
             bank='Argenta', type='Savings account', iban_masked='BE12 •••• •••• 0003',
             balance=100, available=100, external_id='enablebanking:argenta:acc-3',
         )

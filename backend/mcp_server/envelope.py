@@ -42,11 +42,11 @@ def answer(data, *, sources, warnings=(), as_of=None):
     }
 
 
-def saxo_warnings():
+def saxo_warnings(user):
     warnings = []
-    state = connection_state()
+    state = connection_state(user)
     if not state.usable:
         warnings.append(state.reason)
-    if worst_recent_outcome() == 'failed':
+    if worst_recent_outcome(user) == 'failed':
         warnings.append('A Saxo sync task is failing, so positions may be stale.')
     return warnings

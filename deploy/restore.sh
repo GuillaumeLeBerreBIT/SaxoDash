@@ -40,7 +40,9 @@ SAXODASH_TAG="${SAXODASH_TAG:-local}"
 
 take_lock
 
-compose ps --status running --services | grep -qx postgres \
+running="$(compose ps --status running --services)" \
+  || die "docker compose could not read the stack; its own error is above"
+grep -qx postgres <<<"$running" \
   || die "postgres is not running; start it with: docker compose --env-file $ENV_FILE -f $REPO_DIR/deploy/compose.yaml up -d postgres"
 
 if [ "$assume_yes" != 1 ]; then

@@ -6,6 +6,7 @@ export { unwrap } from './shared'
 export * from './portfolio'
 export * from './transactions'
 export * from './accounts'
+export * from './auth'
 export * from './core'
 export * from './portfolioStats'
 export * from './saxo'
@@ -15,6 +16,7 @@ export * from './investors'
 export * from './congress'
 
 import { accountsKeys } from './accounts'
+import { authKeys } from './auth'
 import { analyticsKeys } from './portfolioStats'
 import { coreKeys } from './core'
 import { enableBankingKeys } from './enablebanking'
@@ -31,6 +33,7 @@ export const queryKeys = {
   ...portfolioKeys,
   ...transactionsKeys,
   ...accountsKeys,
+  ...authKeys,
   ...coreKeys,
   ...analyticsKeys,
   ...saxoKeys,

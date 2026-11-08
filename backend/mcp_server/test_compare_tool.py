@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -12,6 +11,7 @@ from research.models import ScreenerRow
 
 from .envelope import Reply
 from .tools.compare import compare_companies
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 FOREIGN = {'ASML'}
@@ -61,7 +61,7 @@ class Providers:
         self.asked = []
 
         def recorded(name, produce):
-            def call(*args):
+            def call(*args, **kwargs):
                 self.asked.append((name, args))
                 return produce(*args)
 
@@ -96,7 +96,7 @@ def by_symbol(result):
 class CompareToolTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_one_symbol_is_refused(self):
         result = compare_companies(['NVDA'])

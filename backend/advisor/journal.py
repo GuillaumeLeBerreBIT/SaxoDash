@@ -41,19 +41,20 @@ def _scorable(listing):
 NO_CLOSES = 'the chart has no closes.'
 
 
-def _entry_price(listing, saxo):
-    bars, reason = daily.available(listing, saxo)
+def _entry_price(listing, saxo, user):
+    bars, reason = daily.available(listing, saxo, user=user)
     price = daily.latest_close(bars or [])
     if price is None:
         raise Refused(f'No entry price, so nothing was logged: {reason or NO_CLOSES}')
     return price
 
 
-def log(*, listing, saxo=market, **fields):
+def log(user, *, listing, saxo=market, **fields):
     values = _validated(fields)
     _scorable(listing)
-    price = _entry_price(listing, saxo)
+    price = _entry_price(listing, saxo, user)
     return Recommendation.objects.create(
+        user=user,
         ticker=listing.symbol,
         uic=listing.uic,
         asset_type=listing.asset_type,
@@ -63,9 +64,9 @@ def log(*, listing, saxo=market, **fields):
     )
 
 
-def _find(rec_id):
+def _find(user, rec_id):
     try:
-        found = Recommendation.objects.filter(pk=int(rec_id)).first()
+        found = Recommendation.objects.filter(user=user, pk=int(rec_id)).first()
     except (TypeError, ValueError):
         found = None
     if found is None:
@@ -73,17 +74,17 @@ def _find(rec_id):
     return found
 
 
-def decide(rec_id, decision):
+def decide(user, rec_id, decision):
     _choice('decision', decision)
-    rec = _find(rec_id)
+    rec = _find(user, rec_id)
     rec.decision = decision
     rec.save(update_fields=['decision'])
     return rec
 
 
-def close(rec_id, reason):
+def close(user, rec_id, reason):
     _choice('close_reason', reason)
-    rec = _find(rec_id)
+    rec = _find(user, rec_id)
     if rec.closed_at is not None:
         raise Refused(f'Recommendation {rec_id} is already closed.')
     rec.closed_at = timezone.now()
@@ -92,10 +93,10 @@ def close(rec_id, reason):
     return rec
 
 
-def review(status, today=None):
+def review(user, status, today=None):
     if status not in STATUSES:
         raise Refused(f'Unknown status {status!r}; use one of: {", ".join(STATUSES)}.')
-    rows = Recommendation.objects.all()
+    rows = Recommendation.objects.filter(user=user)
     if status != 'all':
         rows = rows.filter(closed_at__isnull=status == 'open')
     recs = list(rows)

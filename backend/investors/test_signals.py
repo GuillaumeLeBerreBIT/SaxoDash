@@ -1,10 +1,11 @@
 from datetime import date
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 
 from . import signals
 from .factories import make_investor, store_quarter
-from .models import Security
+from .models import InvestorFollow, Security
 
 Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
@@ -15,6 +16,10 @@ BEFORE = [(AAPL, 'APPLE INC', 100, 500), (TSLA, 'TESLA INC', 100, 500)]
 
 def fund(index, **over):
     return make_investor(name=f'Manager {index}', firm=f'Fund {index}', cik=index, slug=f'fund-{index}', **over)
+
+
+def reader():
+    return User.objects.get_or_create(username='reader')[0]
 
 
 def shelf(payload, key):
@@ -60,7 +65,7 @@ class HubShelvesTest(TestCase):
             self.after(investor, [*BEFORE, (NVDA, 'NVIDIA CORP', 10, 250)])
         self.after(self.funds[3], BEFORE)
 
-        buys = shelf(signals.hub(TODAY), 'convergent-buys')
+        buys = shelf(signals.hub(TODAY, reader()), 'convergent-buys')
 
         self.assertEqual((buys['kind'], buys['total']), ('stocks', 1))
         item = buys['items'][0]
@@ -77,13 +82,13 @@ class HubShelvesTest(TestCase):
         for investor in self.funds[2:]:
             self.after(investor, BEFORE)
 
-        self.assertIsNone(shelf(signals.hub(TODAY), 'convergent-buys'))
+        self.assertIsNone(shelf(signals.hub(TODAY, reader()), 'convergent-buys'))
 
     def test_options_never_count_as_a_stock_signal(self):
         for investor in self.funds:
             self.after(investor, [*BEFORE, (NVDA, 'NVIDIA CORP', 10, 250, 'CALL')])
 
-        payload = signals.hub(TODAY)
+        payload = signals.hub(TODAY, reader())
 
         self.assertIsNone(shelf(payload, 'convergent-buys'))
         self.assertIsNone(shelf(payload, 'new-bets'))
@@ -95,7 +100,7 @@ class HubShelvesTest(TestCase):
             self.after(investor, BEFORE)
         store_quarter(fund(9), Q2, [(NVDA, 'NVIDIA CORP', 10, 250)])
 
-        self.assertIsNone(shelf(signals.hub(TODAY), 'convergent-buys'))
+        self.assertIsNone(shelf(signals.hub(TODAY, reader()), 'convergent-buys'))
         owned = signals.stock_activity('owned', Q2)['rows']
         self.assertEqual(next(row for row in owned if row['cusip'] == NVDA)['owners'], 3)
 
@@ -105,7 +110,7 @@ class HubShelvesTest(TestCase):
         self.after(self.funds[2], [(AAPL, 'APPLE INC', 100, 500), (TSLA, 'TESLA INC', 40, 200)])
         self.after(self.funds[3], BEFORE)
 
-        sold = shelf(signals.hub(TODAY), 'most-sold')
+        sold = shelf(signals.hub(TODAY, reader()), 'most-sold')
 
         self.assertEqual((sold['total'], sold['items'][0]['issuer'], sold['items'][0]['sold']), (1, 'TESLA INC', 3))
 
@@ -116,7 +121,7 @@ class HubShelvesTest(TestCase):
         self.after(self.funds[2], [*BEFORE, (amd, 'ADVANCED MICRO DEVICES INC', 10, 100)])
         self.after(self.funds[3], BEFORE)
 
-        bets = shelf(signals.hub(TODAY), 'new-bets')
+        bets = shelf(signals.hub(TODAY, reader()), 'new-bets')
 
         self.assertEqual(bets['total'], 2)
         self.assertEqual(
@@ -126,20 +131,20 @@ class HubShelvesTest(TestCase):
         )
 
     def test_following_and_just_filed_are_investor_shelves(self):
-        self.funds[1].followed = True
+        InvestorFollow.objects.create(user=reader(), investor=self.funds[1])
         self.funds[1].last_filing_at = date(2026, 8, 14)
         self.funds[1].save()
         self.funds[0].last_filing_at = date(2026, 8, 20)
         self.funds[0].save()
 
-        payload = signals.hub(TODAY)
+        payload = signals.hub(TODAY, reader())
 
         self.assertEqual([card['slug'] for card in shelf(payload, 'following')['items']], ['fund-2'])
         self.assertEqual([card['slug'] for card in shelf(payload, 'just-filed')['items']], ['fund-1', 'fund-2'])
         self.assertEqual(shelf(payload, 'following')['kind'], 'investors')
 
     def test_empty_shelves_are_left_out_and_dates_are_iso(self):
-        payload = signals.hub(TODAY)
+        payload = signals.hub(TODAY, reader())
 
         self.assertEqual(payload['shelves'], [])
         self.assertEqual((payload['quarter'], payload['filed'], payload['tracked']), ('2026-03-31', 4, 4))
@@ -147,7 +152,7 @@ class HubShelvesTest(TestCase):
     def test_no_data_at_all_answers_an_empty_hub(self):
         signals.Investor.objects.all().delete()
         fund(1)
-        self.assertEqual(signals.hub(TODAY), {
+        self.assertEqual(signals.hub(TODAY, reader()), {
             'quarter': None, 'filed': 0, 'tracked': 1, 'newest_quarter': None, 'newest_filed': 0, 'shelves': [],
         })
 

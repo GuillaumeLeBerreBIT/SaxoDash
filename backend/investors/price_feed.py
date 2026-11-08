@@ -47,11 +47,11 @@ def _search_keywords(ticker, name):
         yield first_word
 
 
-def resolve(ticker, name=''):
+def resolve(ticker, name='', *, user):
     wanted = {form.upper() for form in saxo_symbols(ticker)}
     for keywords in _search_keywords(ticker, name):
         matches = [
-            found for found in market.search(keywords, SEARCH_TYPES)
+            found for found in market.search(keywords, SEARCH_TYPES, user=user)
             if found['symbol'].upper() in wanted and found.get('currency') == 'USD'
         ]
         if matches:
@@ -110,28 +110,28 @@ def _name(ticker):
     return Security.objects.filter(ticker=ticker).exclude(name='').values_list('name', flat=True).first() or ''
 
 
-def _fetch(row):
+def _fetch(row, user):
     if row.uic is None:
-        found = resolve(row.ticker, _name(row.ticker))
+        found = resolve(row.ticker, _name(row.ticker), user=user)
         if found is None:
             row.status = PriceHistory.UNMATCHED
             return
         row.uic = found['uic']
         row.asset_type = found['asset_type']
-    bars = market.chart(row.uic, row.asset_type, DAILY, BARS)
+    bars = market.chart(row.uic, row.asset_type, DAILY, BARS, user=user)
     if not bars:
         raise NoBars('Saxo returned no daily bars')
     row.closes = [[bar['date'], bar['close']] for bar in bars]
     row.status = PriceHistory.OK
 
 
-def refresh(pause=time.sleep, now=None):
+def refresh(pause=time.sleep, now=None, *, user):
     now = now or timezone.now()
     fetched = 0
     for row in _due(now):
         row.error = ''
         try:
-            _fetch(row)
+            _fetch(row, user)
         except ProviderNotConnected:
             raise
         except Exception as exc:

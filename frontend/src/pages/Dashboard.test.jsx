@@ -83,12 +83,37 @@ function stub(over = {}) {
     error: null,
   })
   queries.usePositionQuotes.mockReturnValue(new Map())
+  queries.useMe.mockReturnValue({ ...idle, data: { username: 'demo', email: 'd@example.com', is_owner: over.owner ?? true } })
 }
 
 describe('Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     stub()
+  })
+
+  it('asks for banking figures only as the owner', () => {
+    renderWithProviders(<Dashboard />)
+    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: true })
+    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: true })
+    expect(screen.getByText('Spent MTD')).toBeInTheDocument()
+  })
+
+  it('runs the banking hooks disabled and shows no banking figures for a non-owner', () => {
+    stub({ owner: false, spending: undefined })
+    queries.useSpendingSummary.mockReturnValue(idle)
+    renderWithProviders(<Dashboard />)
+    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: false })
+    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: false })
+    expect(screen.queryByText('Spent MTD')).not.toBeInTheDocument()
+    expect(screen.queryByText('Failed to load dashboard data')).not.toBeInTheDocument()
+  })
+
+  it('asks for no banking figures while the user is still loading', () => {
+    queries.useMe.mockReturnValue({ ...idle, isLoading: true })
+    renderWithProviders(<Dashboard />)
+    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: false })
+    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: false })
   })
 
   it('has exactly one h1 and no skipped heading level', () => {
@@ -159,7 +184,8 @@ describe('Dashboard', () => {
   it('scopes the spending summary query to the current month', () => {
     renderWithProviders(<Dashboard />)
     expect(queries.useSpendingSummary).toHaveBeenCalledWith(
-      expect.stringMatching(/^\?date_from=\d{4}-\d{2}-01$/)
+      expect.stringMatching(/^\?date_from=\d{4}-\d{2}-01$/),
+      expect.anything(),
     )
   })
 

@@ -37,8 +37,8 @@ class ConnectionState:
         return self.reason is None
 
 
-def connection_state():
-    credential = SaxoCredential.objects.first()
+def connection_state(user):
+    credential = SaxoCredential.objects.filter(user=user).first()
     if not credential:
         return ConnectionState(None, 'Saxo is not connected.', False)
     if credential.needs_reauth:
@@ -54,21 +54,21 @@ def connection_state():
     return ConnectionState(credential, None, False)
 
 
-def active_credential():
+def active_credential(user):
     """The credential a caller may talk to Saxo with.
 
     Raises rather than returning None because every caller that asks for one
     cannot proceed without it; the request-serving side turns this into a 409
     and the background tasks catch it to record a skipped run.
     """
-    state = connection_state()
+    state = connection_state(user)
     if not state.usable:
         raise SaxoNotConnected(state.reason)
     return state.credential
 
 
-def last_successful_sync():
-    return SyncRun.objects.filter(outcome='ok', task__in=SYNC_TASKS).first()
+def last_successful_sync(user):
+    return SyncRun.objects.filter(user=user, outcome='ok', task__in=SYNC_TASKS).first()
 
 
 # Weakest first, so the badge reflects the worst thing currently happening.
@@ -78,17 +78,18 @@ _OUTCOME_RANK = ['failed', 'skipped', 'ok']
 SYNC_TASKS = ('sync_positions', 'sync_closed_positions', 'sync_account_balance')
 
 
-def latest_run_per_task():
+def latest_run_per_task(user):
     """The newest run of each sync task.
 
     The newest run overall answers "what ran last", not "is anything broken":
     a sync_positions failing on every tick was hidden the moment a later
     sync_account_balance succeeded.
     """
-    return [run for task in SYNC_TASKS if (run := SyncRun.objects.filter(task=task).first())]
+    runs = SyncRun.objects.filter(user=user)
+    return [run for task in SYNC_TASKS if (run := runs.filter(task=task).first())]
 
 
-def worst_recent_outcome():
+def worst_recent_outcome(user):
     """The worst outcome among each task's most recent run, or None if none ran."""
-    outcomes = {run.outcome for run in latest_run_per_task()}
+    outcomes = {run.outcome for run in latest_run_per_task(user)}
     return next((outcome for outcome in _OUTCOME_RANK if outcome in outcomes), None)

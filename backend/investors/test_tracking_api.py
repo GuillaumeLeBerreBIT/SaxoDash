@@ -25,7 +25,8 @@ class FixedToday(date):
 class TrackingApiTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.client.force_authenticate(User.objects.create_user('me', password='x'))
+        self.me = User.objects.create_user('me', password='x')
+        self.client.force_authenticate(self.me)
         self.list_url = reverse('investor-list')
         self.search_url = reverse('investor-search')
 
@@ -147,7 +148,7 @@ class TrackingApiTest(APITestCase):
         self.assertEqual(self.client.post(self.list_url, {'cik': 9}, format='json').status_code, 502)
 
     def test_an_added_investor_can_be_removed(self):
-        make_investor(curated=False)
+        make_investor(curated=False, added_by=self.me)
 
         response = self.client.delete(reverse('investor-detail', args=['berkshire-hathaway']))
 

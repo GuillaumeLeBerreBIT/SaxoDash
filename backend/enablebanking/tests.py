@@ -4,17 +4,18 @@ from unittest.mock import Mock, patch
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from django.core.cache import cache
 from django.db import connection
 from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from decimal import Decimal
 
-from django.contrib.auth.models import User
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
+from users.testing import make_user, the_owner
 
 from .models import EnableBankingCredential, BankSyncRun
 from . import checks as eb_checks
@@ -292,6 +293,35 @@ BALANCES = {'balances': [{'balance_amount': {'currency': 'EUR', 'amount': '100.0
 
 
 class SyncEnableBankingBalancesTaskTest(TestCase):
+    def setUp(self):
+        self.owner = make_user('owner', owner=True)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_accounts_belong_to_the_owner(self, mock_get_balances):
+        mock_get_balances.return_value = BALANCES
+        make_user('someone-else')
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        self.assertEqual(BankAccount.objects.get(external_id='enablebanking:kbc:acc-1').user, self.owner)
+
+    @patch('enablebanking.tasks.client.get_balances')
+    def test_without_an_owner_nothing_is_written(self, mock_get_balances):
+        self.owner.profile.is_owner = False
+        self.owner.profile.save()
+        EnableBankingCredential.objects.create(
+            bank='kbc', session_id='s', valid_until=timezone.now() + timedelta(days=90),
+            linked_accounts=[LINKED_ACCOUNT],
+        )
+        tasks.sync_enablebanking_balances()
+
+        mock_get_balances.assert_not_called()
+        self.assertFalse(BankAccount.objects.exists())
+        self.assertEqual(BankSyncRun.objects.get(bank='kbc').detail, tasks.NO_OWNER)
+
     def test_skips_a_bank_with_no_credential(self):
         tasks.sync_enablebanking_balances()
         run = BankSyncRun.objects.get(bank='kbc')
@@ -434,7 +464,7 @@ class SyncEnableBankingBalancesTaskTest(TestCase):
 
 class EnableBankingConnectTicketViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='u', password='p')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -449,9 +479,13 @@ class EnableBankingConnectTicketViewTest(APITestCase):
         self.assertIn('ticket', response.data)
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'enablebanking-connect'}})
 class EnableBankingConnectViewTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+
     def _ticket(self):
-        user = User.objects.create_user(username='u2', password='p')
+        user = the_owner()
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
         return self.client.post('/api/enablebanking/connect-ticket/').data['ticket']
 
@@ -487,6 +521,31 @@ class EnableBankingConnectViewTest(APITestCase):
         self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
 
         self.assertIsNone(mock_build_url.call_args.kwargs.get('iban'))
+
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_another_browser_holding_the_ticket_is_refused(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        stranger = APIClient()
+        stranger.cookies['enablebanking_connect'] = 'someone-elses-nonce'
+
+        self.assertEqual(stranger.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}').status_code, 403)
+        self.assertEqual(APIClient().get(f'/api/enablebanking/connect/kbc/?ticket={ticket}').status_code, 403)
+        mock_build_url.assert_not_called()
+
+    @patch('enablebanking.views.client.build_authorize_url')
+    def test_a_ticket_works_once(self, mock_build_url):
+        mock_build_url.return_value = 'https://auth.enablebanking.com/ais/start?x=1'
+        ticket = self._ticket()
+        nonce = self.client.cookies['enablebanking_connect'].value
+        first = self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+        self.client.cookies['enablebanking_connect'] = nonce
+
+        second = self.client.get(f'/api/enablebanking/connect/kbc/?ticket={ticket}')
+
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.status_code, 403)
 
 
 class EnableBankingCallbackViewTest(APITestCase):
@@ -529,7 +588,7 @@ class EnableBankingCallbackViewTest(APITestCase):
 
 class EnableBankingStatusViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='u3', password='p')
+        user = the_owner()
         token = RefreshToken.for_user(user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 

@@ -12,9 +12,11 @@ from .services import get_bank_only_balance, get_broker_cash_balance
 
 
 class BankAccountListView(ListAPIView):
-    queryset = BankAccount.objects.all()
     serializer_class = BankAccountSerializer
     pagination_class = None
+
+    def get_queryset(self):
+        return BankAccount.objects.filter(user=self.request.user)
 
 
 class NetWorthView(APIView):
@@ -24,9 +26,9 @@ class NetWorthView(APIView):
         # problem to fix, not a server error: name the account and the currency
         # instead of a 500 they cannot act on.
         try:
-            net_worth = current_net_worth()
-            bank_only = get_bank_only_balance()
-            broker_cash = get_broker_cash_balance()
+            net_worth = current_net_worth(request.user)
+            bank_only = get_bank_only_balance(request.user)
+            broker_cash = get_broker_cash_balance(request.user)
         except CurrencyMismatch as exc:
             return Response(
                 {'detail': f'Cannot total your accounts: {exc}'},

@@ -8,13 +8,13 @@ from core.money import Money
 from .models import SAXO_SOURCE, PortfolioValuation, Position
 
 
-def get_positions_value():
+def get_positions_value(user):
     """Sum of the positions we hold, in REPORTING_CURRENCY.
 
     The relative view: what allocation and per-position weights divide into.
     """
     return Money.total(
-        (Money(p.value, settings.REPORTING_CURRENCY) for p in Position.objects.all()),
+        (Money(p.value, settings.REPORTING_CURRENCY) for p in Position.objects.filter(user=user)),
         settings.REPORTING_CURRENCY,
     )
 
@@ -23,7 +23,7 @@ def get_positions_value():
 VALUATION_MAX_AGE = timedelta(days=2)
 
 
-def get_portfolio_value():
+def get_portfolio_value(user):
     """The investment book's market value, in REPORTING_CURRENCY.
 
     Saxo's own figure when there is one: it arrives already converted and
@@ -37,10 +37,14 @@ def get_portfolio_value():
     A stale valuation is likewise declined - `as_of` is only evidence while the
     sync that wrote it is still running.
     """
-    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    valuation = _valuation(user)
     if valuation and _is_usable(valuation):
         return Money(valuation.positions_value, valuation.currency)
-    return get_positions_value()
+    return get_positions_value(user)
+
+
+def _valuation(user):
+    return PortfolioValuation.objects.filter(user=user, source=SAXO_SOURCE).first()
 
 
 def _is_usable(valuation):
@@ -50,7 +54,7 @@ def _is_usable(valuation):
     )
 
 
-def get_saxo_account_value():
+def get_saxo_account_value(user):
     """Saxo's single reconciled cash+positions total, in REPORTING_CURRENCY,
     or None when there is no usable figure right now.
 
@@ -69,7 +73,7 @@ def get_saxo_account_value():
     mismatch this value exists to avoid. None means "skip this day", not
     "guess".
     """
-    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    valuation = _valuation(user)
     if valuation and _is_usable(valuation):
         return Money(valuation.total_value, valuation.currency)
     return None

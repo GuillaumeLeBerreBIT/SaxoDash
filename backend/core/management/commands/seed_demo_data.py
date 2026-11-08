@@ -12,6 +12,7 @@ from accounts.models import BankAccount
 from saxo.mapping import SAXO_CASH_ACCOUNT_ID
 from accounts.services import get_total_bank_balance
 from core.models import NetWorthSnapshot
+from users.commands import add_user_argument, chosen_user
 
 
 POSITIONS = [
@@ -112,22 +113,28 @@ def build_networth_snapshots(portfolio_target, bank_target, days=365):
 class Command(BaseCommand):
     help = 'Seed the database with demo data (idempotent: clears then re-seeds)'
 
+    def add_arguments(self, parser):
+        add_user_argument(parser)
+
     @transaction.atomic
     def handle(self, *args, **options):
-        Position.objects.all().delete()
-        Transaction.objects.all().delete()
-        BankAccount.objects.all().delete()
-        NetWorthSnapshot.objects.all().delete()
+        user = chosen_user(options['user'])
+        Position.objects.filter(user=user).delete()
+        Transaction.objects.filter(user=user).delete()
+        BankAccount.objects.filter(user=user).delete()
+        NetWorthSnapshot.objects.filter(user=user).delete()
 
-        Position.objects.bulk_create([Position(**p) for p in POSITIONS])
+        Position.objects.bulk_create([Position(user=user, **p) for p in POSITIONS])
         Transaction.objects.bulk_create(
-            [Transaction(**t) for t in TRANSACTIONS])
+            [Transaction(user=user, **t) for t in TRANSACTIONS])
         BankAccount.objects.bulk_create(
-            [BankAccount(**b) for b in BANK_ACCOUNTS])
+            [BankAccount(user=user, **b) for b in BANK_ACCOUNTS])
 
         snapshots = build_networth_snapshots(
-            get_portfolio_value().amount, get_total_bank_balance().amount,
+            get_portfolio_value(user).amount, get_total_bank_balance(user).amount,
         )
+        for snapshot in snapshots:
+            snapshot.user = user
         NetWorthSnapshot.objects.bulk_create(snapshots)
 
         self.stdout.write(self.style.SUCCESS(

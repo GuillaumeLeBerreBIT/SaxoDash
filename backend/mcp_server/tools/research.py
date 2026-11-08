@@ -22,7 +22,7 @@ from ..bounds import at_most
 from ..envelope import Reply, Unavailable
 from ..shaping import capped, numbers, without
 from ..throttled import look_up
-from ..views import fetch, fetch_optional
+from ..views import app_user, fetch, fetch_optional
 from . import tool
 
 INTERVALS = {'daily': (daily.HORIZON, 260), 'weekly': (10080, 1200), 'monthly': (43200, 1200)}
@@ -209,8 +209,9 @@ def get_news(symbol: str, limit: at_most(MAX_NEWS) = 15):
 @tool("Research: your own notes for a ticker (thesis, risks, target and stop prices) and the price lines drawn on its chart.", sources=['notes'])
 def get_my_notes(symbol: str):
     listing = look_up(symbol)
-    note = SymbolNote.objects.filter(symbol=listing.ticker).first() or SymbolNote(symbol=listing.ticker)
-    lines = PriceLine.objects.filter(uic=listing.uic, asset_type=listing.asset_type) if listing.resolved else []
+    user = app_user()
+    note = SymbolNote.objects.filter(user=user, symbol=listing.ticker).first() or SymbolNote(user=user, symbol=listing.ticker)
+    lines = PriceLine.objects.filter(user=user, uic=listing.uic, asset_type=listing.asset_type) if listing.resolved else []
     return {
         **numbers(SymbolNoteSerializer(note).data, NOTE_NUMBERS),
         'price_lines': [numbers(line, ('price',)) for line in PriceLineSerializer(lines, many=True).data],
@@ -220,7 +221,7 @@ def get_my_notes(symbol: str):
 @tool('Watchlist: your watchlists and the instruments in each.', sources=['watchlists'])
 def get_watchlists():
     watchlists = []
-    for watchlist in Watchlist.objects.prefetch_related('items').order_by('order', 'id'):
+    for watchlist in Watchlist.objects.filter(user=app_user()).prefetch_related('items').order_by('order', 'id'):
         items = [
             without({'symbol': i.symbol, 'name': i.description, 'uic': i.uic, 'asset_type': i.asset_type})
             for i in watchlist.items.all()

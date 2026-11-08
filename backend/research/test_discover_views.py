@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from unittest import mock
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
@@ -13,6 +12,7 @@ from research import scan_progress
 from research.models import ScreenerRow
 from saxo.credentials import ConnectionState
 from saxo.models import SyncRun
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -21,7 +21,7 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 class DiscoverViewTest(APITestCase):
     def setUp(self):
         cache.clear()
-        user = get_user_model().objects.create_user('u', password='p')
+        user = the_owner()
         self.client.force_authenticate(user)
 
     def run_at(self, outcome, hours_ago, detail=''):
@@ -184,7 +184,7 @@ DISCONNECTED = ConnectionState(None, 'Saxo is not connected.', False)
 class StartDiscoverScanTest(APITestCase):
     def setUp(self):
         cache.clear()
-        self.client.force_authenticate(get_user_model().objects.create_user('u', password='p'))
+        self.client.force_authenticate(the_owner())
 
     def start(self):
         return self.client.post(reverse('research-discover-scan'))

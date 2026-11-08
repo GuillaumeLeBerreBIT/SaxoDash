@@ -4,6 +4,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 from redis.exceptions import TimeoutError as RedisTimeoutError
 
 from ..envelope import Reply, Unavailable, answer, json_safe, saxo_warnings
+from ..views import app_user
 
 REGISTRY = []
 REDIS_DOWN = 'Redis is not running — start it (scripts/dev.sh) and ask again.'
@@ -15,7 +16,7 @@ def answering(fn, *, sources, saxo):
         warnings = []
         try:
             if saxo:
-                warnings.extend(saxo_warnings())
+                warnings.extend(saxo_warnings(app_user()))
             reply = fn(*args, **kwargs)
         except Unavailable as missing:
             return answer(None, sources=sources, warnings=[*warnings, *missing.warnings])

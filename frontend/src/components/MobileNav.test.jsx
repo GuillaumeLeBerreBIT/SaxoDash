@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
-import { MemoryRouter, useNavigate } from 'react-router-dom'
+import { screen, within } from '@testing-library/react'
+import { useNavigate } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import MobileNav from './MobileNav'
 import { renderWithProviders } from '../test/renderWithProviders'
@@ -123,11 +123,12 @@ describe('MobileNav', () => {
         </>
       )
     }
-    render(
-      <MemoryRouter initialEntries={['/portfolio']}>
+    renderWithProviders(
+      <>
         <MobileNav onOpenPalette={() => {}} />
         <Jump />
-      </MemoryRouter>,
+      </>,
+      { route: '/portfolio' },
     )
     await userEvent.click(screen.getByRole('button', { name: 'More' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()

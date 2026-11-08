@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -12,6 +13,7 @@ class Transaction(models.Model):
         ('DEPOSIT', 'Deposit'), ('FEE', 'Fee'),
     ]
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
     date = models.DateField()
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     instrument = models.CharField(max_length=100)
@@ -20,7 +22,7 @@ class Transaction(models.Model):
     price = models.DecimalField(max_digits=12, decimal_places=2)
     account = models.CharField(max_length=50, default='Saxo')
     saxo_trade_id = models.CharField(max_length=64, null=True,
-                                     blank=True, default=None, unique=True)
+                                     blank=True, default=None)
     currency = models.CharField(max_length=3, null=True, blank=True, default=None)
     fx_rate = models.DecimalField(max_digits=18, decimal_places=8,
                                   null=True, blank=True, default=None)
@@ -30,6 +32,9 @@ class Transaction(models.Model):
         indexes = [
             models.Index(fields=['-date', '-id'], name='tx_date_id_desc_idx'),
             models.Index(fields=['type'], name='tx_type_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'saxo_trade_id'], name='tx_user_saxo_trade_uniq'),
         ]
 
     def __str__(self):

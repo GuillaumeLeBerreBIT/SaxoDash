@@ -12,7 +12,6 @@ vi.mock('../api/queries')
 import * as queries from '../api/queries'
 
 vi.mock('../api/client', () => ({
-  getUsername: () => 'guillaume',
   logout: vi.fn(() => Promise.resolve()),
   connectSaxo: vi.fn(),
 }))
@@ -20,6 +19,7 @@ import { connectSaxo, logout } from '../api/client'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  queries.useMe.mockReturnValue({ data: { username: 'guillaume', email: 'g@example.com', is_owner: true } })
   queries.useSaxoStatus.mockReturnValue({ data: { connected: true, usable: true, last_sync_outcome: 'ok' } })
   queries.usePortfolioSummary.mockReturnValue({ data: { total_value: '40000.00' } })
   queries.useNetWorth.mockReturnValue({ data: { broker_cash: '2634.84', bank_total: '821.54' } })
@@ -141,6 +141,21 @@ describe('account menu', () => {
     const menu = await openAccountMenu()
     expect(within(menu).getByText('Saxo connected')).toBeInTheDocument()
     expect(within(menu).queryByText(/Reconnect/)).not.toBeInTheDocument()
+  })
+
+  it('names the account from the current user, not from storage', async () => {
+    queries.useMe.mockReturnValue({ data: { username: 'renamed', email: 'r@example.com', is_owner: false } })
+    renderBar()
+    expect(screen.getByRole('button', { name: /^Account/ })).toHaveTextContent('R')
+    const menu = await openAccountMenu()
+    expect(within(menu).getByText('renamed')).toBeInTheDocument()
+  })
+
+  it('opens the account settings', async () => {
+    renderBar()
+    await openAccountMenu()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Account' }))
+    expect(screen.getByText('Settings page')).toBeInTheDocument()
   })
 
   it('opens Settings from Theme and colours', async () => {

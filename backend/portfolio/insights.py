@@ -35,11 +35,11 @@ MOVERS = 3
 CONTRIBUTORS = 8
 
 
-def _window_earnings(week_offset):
+def _window_earnings(week_offset, user):
     """Indirection so tests patch one seam. Function-level import of
     `research.earnings` breaks the portfolio <-> research module cycle."""
     from research import earnings as research_earnings
-    return research_earnings.window_earnings('mine', week_offset, moves=False)
+    return research_earnings.window_earnings('mine', week_offset, moves=False, user=user)
 
 
 def _delta(anchor, end):
@@ -137,12 +137,12 @@ def _contributors(positions, total_cost, total_pnl):
     return rows[:CONTRIBUTORS]
 
 
-def _upcoming_earnings(held_upper, today):
+def _upcoming_earnings(held_upper, today, user):
     horizon = (today + timedelta(days=EARNINGS_HORIZON_DAYS)).isoformat()
     try:
         events = []
         for offset in (0, 1):
-            events.extend(_window_earnings(offset).get('events', []))
+            events.extend(_window_earnings(offset, user).get('events', []))
     except Exception as exc:  # feed down, shape change - degrade, don't 500
         logger.warning('upcoming earnings unavailable: %s', exc)
         return None
@@ -171,12 +171,12 @@ def _upcoming_earnings(held_upper, today):
     return rows
 
 
-def _thesis_attention(positions, today):
+def _thesis_attention(positions, today, user):
     from research.thesis import notes_with_thesis
 
     by_ticker = {p.ticker: p for p in positions}
     items = []
-    for note in notes_with_thesis(list(by_ticker)):
+    for note in notes_with_thesis(list(by_ticker), user=user):
         position = by_ticker[note.symbol]
         if note.reviewed_at is None:
             items.append({'kind': 'thesis_review_due', 'severity': 'info', 'ticker': note.symbol,
@@ -194,7 +194,7 @@ def _thesis_attention(positions, today):
     return items
 
 
-def _idle_cash_pct():
+def _idle_cash_pct(user):
     """Cash as a share of the Saxo account (cash + positions), or None when
     there's no valuation to compute it from.
 
@@ -205,7 +205,7 @@ def _idle_cash_pct():
     are always the same currency (one Saxo balance response), so the ratio
     needs no reporting-currency conversion the way a summed total would.
     """
-    valuation = PortfolioValuation.objects.filter(source=SAXO_SOURCE).first()
+    valuation = PortfolioValuation.objects.filter(user=user, source=SAXO_SOURCE).first()
     if not valuation:
         return None
     total = valuation.cash_balance + valuation.positions_value
@@ -275,7 +275,7 @@ def _attention(positions, pairs, today, concentration, upcoming, idle_cash_pct=N
     )
 
 
-def _position_sections(positions, today):
+def _position_sections(positions, today, user):
     total = sum((p.value for p in positions), Decimal('0'))
     total_cost = sum((p.cost for p in positions), Decimal('0'))
     return {
@@ -284,12 +284,12 @@ def _position_sections(positions, today):
         'currency_exposure': _exposure(positions, total, 'currency', 'currency'),
         'movers': _movers(positions),
         'contributors': _contributors(positions, total_cost, total - total_cost),
-        'upcoming_earnings': _upcoming_earnings({p.ticker.upper() for p in positions if p.ticker}, today),
+        'upcoming_earnings': _upcoming_earnings({p.ticker.upper() for p in positions if p.ticker}, today, user),
     }
 
 
-def build_insights():
-    positions = list(Position.objects.all())
+def build_insights(user):
+    positions = list(Position.objects.filter(user=user))
     # net_worth (portfolio_value + bank_total), not saxo_account_value alone -
     # the latter excludes bank money entirely, which the headline never
     # claimed to do. net_worth is already trade-neutral for a BUY/SELL: a
@@ -298,18 +298,19 @@ def build_insights():
     # core.services.current_net_worth.
     pairs = list(
         NetWorthSnapshot.objects
+        .filter(user=user)
         .order_by('date')
         .values_list('date', 'net_worth')
     )
-    latest = NetWorthSnapshot.objects.order_by('date').last()
+    latest = NetWorthSnapshot.objects.filter(user=user).order_by('date').last()
     today = timezone.localdate()
-    net_worth_value = current_net_worth().total.rounded().amount
+    net_worth_value = current_net_worth(user).total.rounded().amount
     if pairs and pairs[-1][0] == today:
         pairs[-1] = (today, net_worth_value)
 
-    portfolio_value = get_portfolio_value().rounded().amount
+    portfolio_value = get_portfolio_value(user).rounded().amount
     bank = latest.bank_total if latest else Decimal('0')
-    sections = _position_sections(positions, today)
+    sections = _position_sections(positions, today, user)
 
     return {
         'as_of': pairs[-1][0].isoformat() if pairs else None,
@@ -318,8 +319,8 @@ def build_insights():
             'net_worth': net_worth_value,
             'portfolio': portfolio_value,
             'bank': bank,
-            'bank_only': get_bank_only_balance().rounded().amount,
-            'broker_cash': get_broker_cash_balance().rounded().amount,
+            'bank_only': get_bank_only_balance(user).rounded().amount,
+            'broker_cash': get_broker_cash_balance(user).rounded().amount,
         },
         'change': {
             'day': _day(pairs),
@@ -331,22 +332,22 @@ def build_insights():
         'spark': [{'date': d.isoformat(), 'value': float(v)} for d, v in pairs[-SPARK_POINTS:]],
         **sections,
         'attention': (
-            _attention(positions, pairs, today, sections['concentration'], sections['upcoming_earnings'], _idle_cash_pct())
-            + _thesis_attention(positions, today)
+            _attention(positions, pairs, today, sections['concentration'], sections['upcoming_earnings'], _idle_cash_pct(user))
+            + _thesis_attention(positions, today, user)
         ),
     }
 
 
-def build_position_insights():
-    positions = list(Position.objects.all())
+def build_position_insights(user):
+    positions = list(Position.objects.filter(user=user))
     today = timezone.localdate()
-    sections = _position_sections(positions, today)
+    sections = _position_sections(positions, today, user)
     return {
-        'value': {'portfolio': get_portfolio_value().rounded().amount},
+        'value': {'portfolio': get_portfolio_value(user).rounded().amount},
         **sections,
         'attention': (
             _concentration_attention(sections['concentration'])
-            + _holding_attention(positions, sections['upcoming_earnings'], _idle_cash_pct())
-            + _thesis_attention(positions, today)
+            + _holding_attention(positions, sections['upcoming_earnings'], _idle_cash_pct(user))
+            + _thesis_attention(positions, today, user)
         ),
     }

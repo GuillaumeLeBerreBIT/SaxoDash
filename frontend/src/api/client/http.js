@@ -12,7 +12,7 @@ const getTokens = () => ({
   refresh: localStorage.getItem("refresh"),
 });
 
-const setTokens = ({ access, refresh }) => {
+export const setTokens = ({ access, refresh }) => {
   if (access) localStorage.setItem("access", access);
   if (refresh) localStorage.setItem("refresh", refresh);
 };
@@ -29,13 +29,9 @@ export async function login(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
+  if (res.status === TOO_MANY_REQUESTS_STATUS) throw new ApiError(res.status);
   if (!res.ok) throw new Error("Invalid credentials");
   setTokens(await res.json());
-  localStorage.setItem("username", username);
-}
-
-export function getUsername() {
-  return localStorage.getItem("username");
 }
 
 export async function logout() {
@@ -59,17 +55,20 @@ export function isAuthenticated() {
   return Boolean(getTokens().access);
 }
 
+export const TOO_MANY_REQUESTS_STATUS = 429
+
 /** Carries the HTTP status so callers can tell failures apart.
  *
  *  The Research endpoints answer 409 when the app itself is not connected to
  *  Saxo, which is a prompt to reconnect rather than an error to report.
  */
 export class ApiError extends Error {
-  constructor(status, detail) {
+  constructor(status, detail, body = null) {
     super(detail || `Request failed: ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail ?? null
+    this.body = body
   }
 }
 
@@ -134,11 +133,11 @@ export async function apiFetch(path, options = {}) {
         // The backend explains itself in `detail`; carrying it means callers
         // show the server's reason rather than inventing their own.
         const body = await res.json().catch(() => null)
-        throw new ApiError(res.status, body?.detail)
+        throw new ApiError(res.status, body?.detail, body)
     }
 
     // DELETE answers 204 with an empty body; res.json() would throw on it.
-    return res.status === 204 ? null : res.json()
+    return res.status === 204 || res.status === 205 ? null : res.json()
 }
 
 export const jsonRequest = (path, method, body) =>

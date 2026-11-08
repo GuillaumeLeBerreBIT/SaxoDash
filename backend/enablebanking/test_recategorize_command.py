@@ -7,6 +7,7 @@ from django.test import TestCase
 from accounts.models import BankAccount
 
 from .models import BankTransaction, ManualIbanLabel
+from users.testing import the_owner
 
 
 class RecategorizeBankTransactionsCommandTest(TestCase):
@@ -18,6 +19,7 @@ class RecategorizeBankTransactionsCommandTest(TestCase):
 
     def setUp(self):
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

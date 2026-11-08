@@ -23,7 +23,8 @@ class Position(models.Model):
         ('cost', 'Open price (unpriced)'),
     ]
 
-    ticker = models.CharField(max_length=10, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    ticker = models.CharField(max_length=10)
     name = models.CharField(max_length=100)
     qty = models.DecimalField(max_digits=16, decimal_places=4)
     avg_cost = models.DecimalField(max_digits=12, decimal_places=2)
@@ -51,6 +52,9 @@ class Position(models.Model):
 
     class Meta:
         ordering = ['-ticker']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'ticker'], name='position_user_ticker_uniq'),
+        ]
 
     def __str__(self):
         return self.ticker
@@ -95,12 +99,18 @@ class PortfolioValuation(models.Model):
     only rebuild that figure from prices it may not be entitled to.
     """
 
-    source = models.CharField(max_length=32, unique=True, default=SAXO_SOURCE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    source = models.CharField(max_length=32, default=SAXO_SOURCE)
     currency = models.CharField(max_length=3)
     cash_balance = models.DecimalField(max_digits=14, decimal_places=2)
     positions_value = models.DecimalField(max_digits=14, decimal_places=2)
     total_value = models.DecimalField(max_digits=14, decimal_places=2)
     as_of = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'source'], name='valuation_user_source_uniq'),
+        ]
 
     def __str__(self):
         return f'{self.source} {self.total_value} {self.currency}'

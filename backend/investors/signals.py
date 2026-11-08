@@ -1,6 +1,6 @@
 from django.db.models import Count
 
-from . import changes, sectors, summaries
+from . import changes, follows, sectors, summaries
 from .models import Investor, PositionMove, Security
 from .photos import logo_url, photo_url
 
@@ -176,16 +176,17 @@ def _shelf(key, title, kind, total, items):
     return {'key': key, 'title': title, 'kind': kind, 'total': total, 'items': items}
 
 
-def _investor_shelf(key, title, members, today):
+def _investor_shelf(key, title, members, today, user):
     ordered = sorted(
         members,
         key=lambda investor: (-(investor.last_filing_at.toordinal() if investor.last_filing_at else 0), investor.name),
     )
-    return _shelf(key, title, 'investors', len(ordered), summaries.cards(ordered[:SHELF_LIMIT], today))
+    return _shelf(key, title, 'investors', len(ordered), summaries.cards(ordered[:SHELF_LIMIT], today, user))
 
 
-def hub(today):
+def hub(today, user):
     everyone = list(Investor.objects.all())
+    followed = follows.followed_ids(user)
     signal = signal_quarter()
     if signal is None:
         return {
@@ -194,11 +195,11 @@ def hub(today):
         }
     investors = {investor.pk: investor for investor in everyone}
     stocks = _stocks(signal['quarter'])
-    shelves = [_investor_shelf('following', 'Following', [i for i in everyone if i.followed], today)]
+    shelves = [_investor_shelf('following', 'Following', [i for i in everyone if i.pk in followed], today, user)]
     for key, title, view in STOCK_SHELVES:
         shelves.append(_shelf(key, title, 'stocks', *_items(stocks, view, investors, MIN_FUNDS, SHELF_LIMIT)))
     shelves.append(_shelf('new-bets', 'Biggest new bets', 'stocks', *_new_bets(stocks, investors)))
-    shelves.append(_investor_shelf('just-filed', 'Just filed', [i for i in everyone if i.last_filing_at], today))
+    shelves.append(_investor_shelf('just-filed', 'Just filed', [i for i in everyone if i.last_filing_at], today, user))
     return {
         'quarter': signal['quarter'].isoformat(),
         'filed': signal['filed'],

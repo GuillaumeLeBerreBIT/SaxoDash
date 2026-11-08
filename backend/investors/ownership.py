@@ -1,4 +1,4 @@
-from . import changes, signals
+from . import changes, follows, signals
 from .models import Investor, Security
 from .photos import logo_url, photo_url
 
@@ -79,9 +79,9 @@ def _weight(value):
     return None if value is None else round(value, 2)
 
 
-def _fund(position, investor):
+def _fund(position, investor, followed):
     return {
-        'slug': investor.slug, 'name': investor.name, 'firm': investor.firm, 'followed': investor.followed,
+        'slug': investor.slug, 'name': investor.name, 'firm': investor.firm, 'followed': investor.pk in followed,
         'photo_url': photo_url(investor),
         'logo_url': logo_url(investor),
         'kind': position['kind'],
@@ -92,8 +92,9 @@ def _fund(position, investor):
     }
 
 
-def detail(ticker):
+def detail(ticker, user):
     header = _header()
+    followed = follows.followed_ids(user)
     positions = _by_ticker(header['quarter'], [ticker]).get(ticker) if header['quarter'] else None
     if positions is None:
         return {**header, 'ticker': ticker, 'issuer': '', 'stock': None, 'funds': []}
@@ -105,5 +106,5 @@ def detail(ticker):
         'ticker': ticker,
         'issuer': largest['issuer'] if largest else '',
         'stock': _counts(ranked),
-        'funds': [_fund(position, investors[position['investor_id']]) for position in ranked],
+        'funds': [_fund(position, investors[position['investor_id']], followed) for position in ranked],
     }

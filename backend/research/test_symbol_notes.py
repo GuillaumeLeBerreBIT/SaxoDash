@@ -1,15 +1,15 @@
 from decimal import Decimal
-from django.contrib.auth.models import User
 from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import SymbolNote
+from users.testing import the_owner
 
 
 class SymbolNoteAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -87,11 +87,11 @@ class SymbolNoteAPITest(APITestCase):
         self.assertIsNotNone(response.data['reviewed_at'])
 
     def test_marking_reviewed_does_not_touch_the_thesis(self):
-        SymbolNote.objects.create(symbol='AAPL', bull_case='Services growth.')
+        SymbolNote.objects.create(user=self.user, symbol='AAPL', bull_case='Services growth.')
 
         self.client.post('/api/research/notes/AAPL/review/')
 
-        self.assertEqual(SymbolNote.objects.get(symbol='AAPL').bull_case, 'Services growth.')
+        self.assertEqual(SymbolNote.objects.get(user=self.user, symbol='AAPL').bull_case, 'Services growth.')
 
     def test_marking_reviewed_requires_authentication(self):
         self.client.credentials()

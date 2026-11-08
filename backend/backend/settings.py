@@ -29,6 +29,7 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+ADMIN_ENABLED = os.environ.get('ADMIN_ENABLED', str(DEBUG)) == 'True'
 
 DEV_SECRET_KEY = 'django-insecure-=#^80zr^o-1c684pjmbgjwum*87vc(=^%hk7)q5cc9h-*=*-30'
 SECRET_KEY = os.environ.get('SECRET_KEY', DEV_SECRET_KEY)
@@ -81,6 +82,7 @@ INSTALLED_APPS = [
     'congress',
     'advisor',
     'mcp_server',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -90,6 +92,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'users.acting.ActingUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -99,7 +102,7 @@ if not DEBUG:
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication'
+        'users.authentication.JWTAuthentication'
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -121,8 +124,17 @@ REST_FRAMEWORK = {
         # The one plausible brute-force target - everything else sits behind
         # JWTAuthentication already.
         'login': '10/min',
+        'login_ip': '30/min',
+        'signup': '5/hour',
+        'password_reset': '5/hour',
+        'password_reset_confirm': '20/hour',
     },
+    'NUM_PROXIES': int(os.environ.get('NUM_PROXIES') or 0),
 }
+
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailOrUsernameBackend',
+]
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -138,6 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     for o in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
     if o.strip()
 ]
+CORS_ALLOW_CREDENTIALS = True
 
 # Django admin uses session+CSRF auth (the API itself is JWT, which doesn't
 # need this) - without an origin here, admin login from a real domain fails
@@ -150,6 +163,19 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_BACKEND = (
+    'django.core.mail.backends.smtp.EmailBackend'
+    if EMAIL_HOST
+    else 'django.core.mail.backends.console.EmailBackend'
+)
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT') or 587)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() in ('1', 'true', 'yes')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'saxodash@localhost'
+PASSWORD_RESET_TIMEOUT = 3600
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -271,6 +297,9 @@ FINNHUB_API_KEY = os.environ.get('FINNHUB_API_KEY', '')
 FINNHUB_CALLS_PER_MINUTE = max(1, int(os.environ.get('FINNHUB_CALLS_PER_MINUTE') or 58))
 FINNHUB_BACKGROUND_RESERVE = min(
     FINNHUB_CALLS_PER_MINUTE - 1, max(0, int(os.environ.get('FINNHUB_BACKGROUND_RESERVE') or 15))
+)
+FINNHUB_OWNER_RESERVE = min(
+    FINNHUB_CALLS_PER_MINUTE - 1, max(0, int(os.environ.get('FINNHUB_OWNER_RESERVE') or 20))
 )
 SEC_USER_AGENT = os.environ.get('SEC_USER_AGENT', '')
 OPENFIGI_API_KEY = os.environ.get('OPENFIGI_API_KEY', '')

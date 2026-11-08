@@ -9,7 +9,7 @@ from . import house, performance, run_lock
 SYNC_TASK = 'sync_house'
 
 
-@synced(reports_health=False, task=SYNC_TASK, needs_credential=False)
+@synced(reports_health=False, task=SYNC_TASK, credential=None)
 def _sync(pause):
     now = timezone.now()
     years = {now.year} | ({now.year - 1} if now.month == 1 else set())

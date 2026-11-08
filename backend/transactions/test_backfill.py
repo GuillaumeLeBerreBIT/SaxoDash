@@ -8,6 +8,7 @@ from django.test import TestCase
 
 from portfolio.models import Position
 from transactions.models import Transaction
+from users.testing import the_owner
 
 backfill = import_module(
     'transactions.migrations.0005_backfill_currency_and_fx_rate'
@@ -16,6 +17,7 @@ backfill = import_module(
 
 def make_position(ticker, currency, fx_rate):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=ticker, qty=Decimal('1'), avg_cost=Decimal('1'),
         current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
         color='#000000', currency=currency, fx_rate=fx_rate,
@@ -28,6 +30,7 @@ _trade_ids = count(1)
 def make_transaction(ticker, type='BUY', **extra):
     extra.setdefault('saxo_trade_id', f'trade-{next(_trade_ids)}')
     return Transaction.objects.create(
+        user=the_owner(),
         date=date(2026, 8, 26), type=type, instrument=ticker, ticker=ticker,
         qty=Decimal('2'), price=Decimal('100.00'), account='Saxo', **extra,
     )

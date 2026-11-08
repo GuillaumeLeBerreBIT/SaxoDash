@@ -32,8 +32,11 @@ def _cache_key(name, **params):
     return f'research:{name}:{parts}'
 
 
-def _access_token():
-    return active_credential().access_token
+def _access_token(user):
+    try:
+        return active_credential(user).access_token
+    except SaxoNotConnected as exc:
+        raise ProviderNotConnected(str(exc)) from exc
 
 
 def _cached(key, produce, ttl):
@@ -41,8 +44,6 @@ def _cached(key, produce, ttl):
     view layer only ever catches one exception family."""
     try:
         return cache.get_or_set(key, produce, ttl)
-    except SaxoNotConnected as exc:
-        raise ProviderNotConnected(str(exc)) from exc
     except SaxoAPIError as exc:
         raise ProviderError('Saxo could not serve this request.') from exc
 
@@ -118,9 +119,11 @@ def to_quote(row):
     }
 
 
-def chart(uic, asset_type, horizon, count):
+def chart(uic, asset_type, horizon, count, *, user):
+    token = _access_token(user)
+
     def produce():
-        samples = client.get_chart(_access_token(), uic, asset_type, horizon, count)
+        samples = client.get_chart(token, uic, asset_type, horizon, count)
         candles = [candle for candle in map(to_candle, samples) if candle]
         # Saxo returns newest-first for some horizons; the chart draws left to right.
         return sorted(candles, key=lambda c: c['date'])
@@ -129,24 +132,28 @@ def chart(uic, asset_type, horizon, count):
     return _cached(key, produce, CHART_TTL)
 
 
-def search(keywords, asset_types='Stock,Etf'):
+def search(keywords, asset_types='Stock,Etf', *, user):
+    token = _access_token(user)
+
     def produce():
-        rows = client.search_instruments(_access_token(), keywords, asset_types)
+        rows = client.search_instruments(token, keywords, asset_types)
         return [to_instrument(r) for r in rows]
 
     key = _cache_key('search', q=keywords.lower(), asset_types=asset_types)
     return _cached(key, produce, SEARCH_TTL)
 
 
-def details(uic, asset_type):
+def details(uic, asset_type, *, user):
+    token = _access_token(user)
+
     def produce():
-        return to_details(client.get_instrument_details(_access_token(), uic, asset_type))
+        return to_details(client.get_instrument_details(token, uic, asset_type))
 
     key = _cache_key('details', uic=uic, asset_type=asset_type)
     return _cached(key, produce, DETAILS_TTL)
 
 
-def _last_session_change_pct(uic, asset_type):
+def _last_session_change_pct(uic, asset_type, user):
     """% move between the two most recent daily closes - Saxo's live quote
     entitlement withholds PriceInfo entirely on an account without market
     data access (confirmed against SIM: PriceTypeBid/Ask come back
@@ -155,7 +162,7 @@ def _last_session_change_pct(uic, asset_type):
     position show yesterday's move instead of a permanent dash.
     """
     try:
-        candles = chart(uic, asset_type, horizon=1440, count=2)
+        candles = chart(uic, asset_type, horizon=1440, count=2, user=user)
     except ProviderError:
         # A fallback that itself fails should not take the whole quote batch
         # down with it - the row just keeps its dash.
@@ -166,7 +173,7 @@ def _last_session_change_pct(uic, asset_type):
     return (latest - previous) / previous * 100
 
 
-def quotes(uics, asset_type):
+def quotes(uics, asset_type, *, user):
     """Prices for several instruments in one Saxo call.
 
     Batched deliberately: the watchlist rail asks for every row at once, and
@@ -174,13 +181,14 @@ def quotes(uics, asset_type):
     """
     if not uics:
         return []
+    token = _access_token(user)
 
     def produce():
-        rows = client.get_infoprices(_access_token(), uics, asset_type)
+        rows = client.get_infoprices(token, uics, asset_type)
         mapped = [to_quote(r) for r in rows]
         for row in mapped:
             if row['change_pct'] is None and row['uic'] is not None:
-                row['change_pct'] = _last_session_change_pct(row['uic'], asset_type)
+                row['change_pct'] = _last_session_change_pct(row['uic'], asset_type, user)
                 if row['change_pct'] is not None:
                     row['change_basis'] = 'last_close'
         return mapped

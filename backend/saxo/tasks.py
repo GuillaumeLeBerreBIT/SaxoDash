@@ -11,6 +11,7 @@ from django.utils import timezone
 from accounts.models import BankAccount
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
+from users.owner import owner
 
 from . import client, mapping
 from .credentials import SYNC_TASKS, SaxoNotConnected, active_credential
@@ -27,8 +28,9 @@ class SyncReport(NamedTuple):
     detail: str = ''
 
 
-def _upsert_transaction(fields):
+def _upsert_transaction(user, fields):
     transaction_row, created = Transaction.objects.update_or_create(
+        user=user,
         saxo_trade_id=fields['saxo_trade_id'],
         defaults={key: value for key, value in fields.items() if key != 'fx_rate'},
         create_defaults=fields,
@@ -52,7 +54,74 @@ class SyncRefused(Exception):
     """Raised when a sync would corrupt what it is meant to keep current."""
 
 
-def synced(fn=None, *, reports_health=True, task=None, needs_credential=True):
+CREDENTIAL_MODES = ('each', 'owner', None)
+NO_OWNER = 'No user is the owner of this instance.'
+
+
+def _recorded(name, user, fn, leading, args, kwargs, *, atomic):
+    try:
+        if atomic:
+            with transaction.atomic():
+                result = fn(*leading, *args, **kwargs)
+        else:
+            result = fn(*leading, *args, **kwargs)
+    except Exception as exc:
+        SyncRun.objects.create(task=name, user=user, outcome='failed', detail=str(exc)[:200])
+        raise
+    report = result if isinstance(result, SyncReport) else SyncReport(result)
+    SyncRun.objects.create(
+        task=name, user=user, outcome='ok', rows=report.rows, detail=report.detail[:200],
+    )
+    return report.rows
+
+
+def _skipped(name, user, reason):
+    SyncRun.objects.create(task=name, user=user, outcome='skipped', detail=str(reason)[:200])
+    logger.info('Skipping %s for %s: %s', name, user, reason)
+
+
+def _run_for_owner(name, fn, args, kwargs):
+    user = owner()
+    if user is None:
+        _skipped(name, None, NO_OWNER)
+        return None
+    try:
+        credential = active_credential(user)
+    except SaxoNotConnected as exc:
+        _skipped(name, user, exc)
+        return None
+    return _recorded(name, user, fn, (credential,), args, kwargs, atomic=False)
+
+
+def _run_for_each(name, fn, args, kwargs):
+    users = [credential.user for credential in SaxoCredential.objects.select_related('user').order_by('user_id')]
+    if not users:
+        _skipped(name, None, 'Saxo is not connected.')
+        return None
+    rows = 0
+    errors = []
+    for user in users:
+        try:
+            credential = active_credential(user)
+        except SaxoNotConnected as exc:
+            _skipped(name, user, exc)
+            continue
+        try:
+            rows += _recorded(name, user, fn, (credential,), args, kwargs, atomic=True)
+        except Exception as exc:
+            errors.append(exc)
+    _raise_first(name, errors)
+    return rows
+
+
+def _raise_first(name, errors):
+    for later in errors[1:]:
+        logger.error('%s also failed: %r', name, later)
+    if errors:
+        raise errors[0]
+
+
+def synced(fn=None, *, reports_health=True, task=None, credential='each'):
     """Give `fn` a usable credential and record what the run actually did.
 
     Every sync shared the same preamble - get a credential or bail - and bailed
@@ -60,9 +129,11 @@ def synced(fn=None, *, reports_health=True, task=None, needs_credential=True):
     keeps each task body to the work itself and makes a skip as visible as a
     completion. `fn` returns the number of rows it wrote.
     """
+    if credential not in CREDENTIAL_MODES:
+        raise ValueError(f'credential must be one of {CREDENTIAL_MODES}, not {credential!r}')
     if fn is None:
         return functools.partial(
-            synced, reports_health=reports_health, task=task, needs_credential=needs_credential,
+            synced, reports_health=reports_health, task=task, credential=credential,
         )
     name = task or fn.__name__
     if reports_health and name not in SYNC_TASKS:
@@ -70,31 +141,16 @@ def synced(fn=None, *, reports_health=True, task=None, needs_credential=True):
 
     @functools.wraps(fn)
     def run(*args, **kwargs):
-        leading = ()
-        if needs_credential:
-            try:
-                leading = (active_credential(),)
-            except SaxoNotConnected as exc:
-                SyncRun.objects.create(task=name, outcome='skipped', detail=str(exc))
-                logger.info('Skipping %s: %s', name, exc)
-                return
-
-        try:
-            result = fn(*leading, *args, **kwargs)
-        except Exception as exc:
-            SyncRun.objects.create(
-                task=name, outcome='failed', detail=str(exc)[:200]
-            )
-            raise
-
-        report = result if isinstance(result, SyncReport) else SyncReport(result)
-        SyncRun.objects.create(task=name, outcome='ok', rows=report.rows, detail=report.detail[:200])
-        return report.rows
+        if credential == 'each':
+            return _run_for_each(name, fn, args, kwargs)
+        if credential == 'owner':
+            return _run_for_owner(name, fn, args, kwargs)
+        return _recorded(name, None, fn, (), args, kwargs, atomic=False)
 
     # functools.wraps sets __wrapped__ and inspect.signature follows it, so
     # Celery validated calls against fn's own signature - credential included -
     # and rejected beat's argument-less call. Report what callers actually pass.
-    if needs_credential:
+    if credential is not None:
         run.__signature__ = inspect.Signature(
             list(inspect.signature(fn).parameters.values())[1:]
         )
@@ -117,10 +173,16 @@ def _mapped_rows(raw_rows, to_fields):
 def refresh_saxo_token():
     """Not a @synced task: an expired access token is this one's trigger, not
     its blocker, since it authenticates with the refresh token."""
-    credential = SaxoCredential.objects.first()
-    if not credential or credential.needs_reauth:
-        return
+    errors = []
+    for credential in SaxoCredential.objects.filter(needs_reauth=False).order_by('user_id'):
+        try:
+            _refresh(credential)
+        except Exception as exc:
+            errors.append(exc)
+    _raise_first('refresh_saxo_token', errors)
 
+
+def _refresh(credential):
     if credential.expires_at - timezone.now() > REFRESH_MARGIN:
         return
 
@@ -130,7 +192,7 @@ def refresh_saxo_token():
         refresh_token = token_data['refresh_token']
         expires_in = int(token_data['expires_in'])
     except client.SaxoAuthError:
-        logger.warning('Saxo token refresh rejected; re-authentication required')
+        logger.warning('Saxo token refresh rejected for user %s; re-authentication required', credential.user_id)
         credential.needs_reauth = True
         credential.save(update_fields=['needs_reauth'])
         return
@@ -157,7 +219,7 @@ def sync_positions(credential):
         for fields in mapping.merge_lots(_mapped_rows(saxo_positions, mapping.to_position_fields)):
             synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
             Position.objects.update_or_create(
-                ticker=fields['ticker'], defaults=synced, create_defaults=fields
+                user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
             )
             seen_tickers.append(fields['ticker'])
 
@@ -170,10 +232,10 @@ def sync_positions(credential):
                 f'mapped; refusing to prune the portfolio to empty.'
             )
 
-        Position.objects.exclude(ticker__in=seen_tickers).delete()
+        Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
 
         for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
-            _upsert_transaction(fields)
+            _upsert_transaction(credential.user, fields)
 
     return len(seen_tickers)
 
@@ -188,7 +250,7 @@ def sync_closed_positions(credential):
     rows = 0
     with transaction.atomic():
         for fields in _mapped_rows(saxo_closed_positions, mapping.to_closed_transaction_fields):
-            _upsert_transaction(fields)
+            _upsert_transaction(credential.user, fields)
             rows += 1
 
     return rows
@@ -202,12 +264,13 @@ def sync_account_balance(credential):
 
     with transaction.atomic():
         BankAccount.objects.update_or_create(
+            user=credential.user,
             external_id=mapping.SAXO_CASH_ACCOUNT_ID,
             defaults=mapping.to_account_fields(saxo_balance=saxo_balance),
         )
         if valuation:
             PortfolioValuation.objects.update_or_create(
-                source=SAXO_SOURCE, defaults=valuation
+                user=credential.user, source=SAXO_SOURCE, defaults=valuation
             )
 
     if not valuation:

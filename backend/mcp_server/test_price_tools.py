@@ -1,7 +1,6 @@
 from datetime import date, timedelta
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -10,6 +9,7 @@ from research.providers import ProviderNotConnected
 from research.technicals import sma
 
 from .tools.research import get_price_history, get_quotes, search_instruments
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -37,7 +37,7 @@ def instrument(symbol, uic, currency='USD', asset_type='Stock'):
 class PriceToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_search_instruments_lists_matches(self):
         with patch('research.market.search', return_value=[instrument('NVDA', 5)]):
@@ -49,7 +49,7 @@ class PriceToolsTest(APITestCase):
         daily = candles(300)
         weekly = candles(150, step=3)
 
-        def chart(uic, asset_type, horizon, count):
+        def chart(uic, asset_type, horizon, count, user):
             return daily if horizon == 1440 else weekly
 
         with patch('research.market.search', return_value=[instrument('NVDA', 5)]), \
@@ -105,11 +105,11 @@ class PriceToolsTest(APITestCase):
         listing = [instrument('NVDA', 5), instrument('SPY', 6, asset_type='Etf')]
         calls = []
 
-        def quotes(uics, asset_type):
+        def quotes(uics, asset_type, user):
             calls.append((tuple(uics), asset_type))
             return [{'uic': u, 'asset_type': asset_type, 'price': 10.0, 'change_pct': 1.5, 'change_basis': 'live'} for u in uics]
 
-        with patch('research.market.search', side_effect=lambda q, t: [r for r in listing if r['symbol'] == q.upper()]), \
+        with patch('research.market.search', side_effect=lambda q, t, user: [r for r in listing if r['symbol'] == q.upper()]), \
                 patch('research.market.quotes', side_effect=quotes):
             result = get_quotes(['NVDA', 'SPY', 'NOPE'])
         self.assertEqual(sorted(calls), [((5,), 'Stock'), ((6,), 'Etf')])

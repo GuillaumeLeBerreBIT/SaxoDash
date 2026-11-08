@@ -6,7 +6,7 @@ from saxo.mapping import SAXO_CASH_ACCOUNT_ID
 from .models import BankAccount
 
 
-def get_total_bank_balance():
+def get_total_bank_balance(user):
     """Total across bank accounts, in REPORTING_CURRENCY.
 
     Raises CurrencyMismatch on a foreign-currency account rather than adding
@@ -14,22 +14,22 @@ def get_total_bank_balance():
     """
     return Money.total(
         (Money(account.balance, account.currency)
-         for account in BankAccount.objects.all()),
+         for account in BankAccount.objects.filter(user=user)),
         settings.REPORTING_CURRENCY,
     )
 
 
-def get_bank_only_balance():
+def get_bank_only_balance(user):
     return Money.total(
         (Money(account.balance, account.currency)
-         for account in BankAccount.objects.exclude(external_id=SAXO_CASH_ACCOUNT_ID)),
+         for account in BankAccount.objects.filter(user=user).exclude(external_id=SAXO_CASH_ACCOUNT_ID)),
         settings.REPORTING_CURRENCY,
     )
 
 
-def get_broker_cash_balance():
+def get_broker_cash_balance(user):
     return Money.total(
         (Money(account.balance, account.currency)
-         for account in BankAccount.objects.filter(external_id=SAXO_CASH_ACCOUNT_ID)),
+         for account in BankAccount.objects.filter(user=user, external_id=SAXO_CASH_ACCOUNT_ID)),
         settings.REPORTING_CURRENCY,
     )

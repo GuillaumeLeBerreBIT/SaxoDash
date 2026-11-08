@@ -1,7 +1,6 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase
 
@@ -9,7 +8,8 @@ from portfolio.models import Position
 from research.models import Watchlist, WatchlistItem
 
 from .factories import make_investor, store_quarter
-from .models import Security
+from .models import InvestorFollow, Security
+from users.testing import the_owner
 
 Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
@@ -17,7 +17,7 @@ Q2 = date(2026, 6, 30)
 
 class InvestorDetailApiTest(APITestCase):
     def setUp(self):
-        self.client.force_authenticate(User.objects.create_user('me', password='x'))
+        self.client.force_authenticate(the_owner())
         self.investor = make_investor(last_filing_at=date(2026, 8, 14))
         store_quarter(self.investor, Q1, [
             ('037833100', 'APPLE INC', 100, 600), ('02005N100', 'ALLY FINL INC', 5, 400),
@@ -84,10 +84,11 @@ class InvestorDetailApiTest(APITestCase):
 
     def test_flags_what_you_own_and_watch(self):
         Position.objects.create(
+            user=the_owner(),
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#000000',
         )
-        WatchlistItem.objects.create(watchlist=Watchlist.objects.create(name='Tech'), symbol='nvda', uic=1)
+        WatchlistItem.objects.create(watchlist=Watchlist.objects.create(user=the_owner(), name='Tech'), symbol='nvda', uic=1)
 
         rows = self.holdings()
 
@@ -174,8 +175,7 @@ class InvestorDetailApiTest(APITestCase):
         response = self.client.patch(self.url(), {'followed': True}, format='json')
 
         self.assertEqual((response.status_code, response.data['followed'], response.data['slug']), (200, True, 'berkshire-hathaway'))
-        self.investor.refresh_from_db()
-        self.assertTrue(self.investor.followed)
+        self.assertEqual(InvestorFollow.objects.filter(investor=self.investor).count(), 1)
 
     def test_following_needs_a_boolean(self):
         self.assertEqual(self.client.patch(self.url(), {'followed': 'yes'}, format='json').status_code, 400)

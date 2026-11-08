@@ -3,6 +3,7 @@ from django.db import models
 
 
 class BankAccount(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
     bank = models.CharField(max_length=50)
     type = models.CharField(max_length=50)
     iban_masked = models.CharField(max_length=34)
@@ -15,10 +16,13 @@ class BankAccount(models.Model):
     # Stable key for synced accounts; null for ones entered by hand. `bank` is
     # not unique because one bank can hold several accounts.
     external_id = models.CharField(max_length=64, null=True, blank=True,
-                                   default=None, unique=True)
+                                   default=None)
 
     class Meta:
         ordering = ['bank', 'type']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'external_id'], name='bankaccount_user_external_id_uniq'),
+        ]
 
     def __str__(self):
         return f'{self.bank} {self.type}'

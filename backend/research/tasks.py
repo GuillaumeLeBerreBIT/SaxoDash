@@ -1,11 +1,18 @@
+import logging
+
 from celery import shared_task
+
+from django.contrib.auth import get_user_model
 
 from portfolio.models import Position
 from saxo.models import SyncRun
 from saxo.tasks import synced
 
 from . import scan, scan_progress
-from .watchlists import sync_open_positions_watchlist
+from .models import Watchlist
+from .watchlists import OPEN_POSITIONS_WATCHLIST, sync_open_positions_watchlist
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -19,15 +26,26 @@ def sync_watchlists():
     transaction used to guarantee they moved together. Needs its own
     periodic-task registration in admin, same as sync_account_balance did.
     """
-    sync_open_positions_watchlist(Position.objects.exclude(uic__isnull=True))
+    user_ids = set(Position.objects.values_list('user_id', flat=True)) | set(
+        Watchlist.objects.filter(name=OPEN_POSITIONS_WATCHLIST).values_list('user_id', flat=True)
+    )
+    errors = []
+    for user in get_user_model().objects.filter(pk__in=user_ids).order_by('pk'):
+        try:
+            sync_open_positions_watchlist(user, Position.objects.filter(user=user).exclude(uic__isnull=True))
+        except Exception as exc:
+            logger.exception('Could not reconcile the open-positions watchlist for %s', user)
+            errors.append(exc)
+    if errors:
+        raise errors[0]
 
 
 ALREADY_RUNNING = 'A scan was already running.'
 
 
-@synced(reports_health=False, task=scan.SCAN_TASK)
+@synced(reports_health=False, task=scan.SCAN_TASK, credential='owner')
 def _scan_with_credential(credential):
-    return scan.scan_universe()
+    return scan.scan_universe(user=credential.user)
 
 
 @shared_task

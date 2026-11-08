@@ -21,11 +21,11 @@ class NetWorthHistoryView(APIView):
         # History is recorded fact and does not depend on today's total being
         # computable; a currency we cannot sum must not take the chart down too.
         try:
-            ensure_todays_snapshot()
+            ensure_todays_snapshot(request.user)
         except CurrencyMismatch:
             logger.warning('Could not record today\'s snapshot', exc_info=True)
 
-        queryset = NetWorthSnapshot.objects.all()
+        queryset = NetWorthSnapshot.objects.filter(user=request.user)
         days = RANGE_DAYS.get(request.query_params.get('range', 'ALL'))
         if days is not None:
             queryset = queryset.filter(date__gte=timezone.localdate() - timedelta(days=days))

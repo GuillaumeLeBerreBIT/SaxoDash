@@ -4,7 +4,7 @@ import { renderWithProviders } from '../test/renderWithProviders'
 import Layout from './Layout'
 
 vi.mock('../api/client', () => ({
-  getUsername: () => 'Test User',
+  getMe: vi.fn(() => new Promise(() => {})),
   logout: vi.fn(),
   connectSaxo: vi.fn(),
   getSaxoStatus: vi.fn(() => new Promise(() => {})),

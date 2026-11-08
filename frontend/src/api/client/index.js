@@ -5,6 +5,7 @@
 // domain file directly, import from here instead so the split stays an
 // internal implementation detail.
 export * from './http'
+export * from './auth'
 export * from './portfolio'
 export * from './transactions'
 export * from './accounts'

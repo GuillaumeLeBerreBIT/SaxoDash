@@ -39,7 +39,7 @@ class ImportSqliteTest(TransactionTestCase):
             )
             Token.objects.using(SOURCE_ALIAS).create(key='a' * 40, user=owner)
             NetWorthSnapshot.objects.using(SOURCE_ALIAS).create(
-                date=date(2026, 8, 28), portfolio_value=Decimal('1000.00'),
+                user=owner, date=date(2026, 8, 28), portfolio_value=Decimal('1000.00'),
                 bank_total=Decimal('250.50'), net_worth=Decimal('1250.50'),
             )
 

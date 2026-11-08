@@ -20,17 +20,17 @@ US_EXCHANGES = ('NASDAQ', 'NYSE')
 EARNINGS_WINDOW_DAYS = 14
 
 
-def resolve(ticker):
+def resolve(ticker, *, user):
     matches = [
-        found for found in market.search(ticker, 'Stock')
+        found for found in market.search(ticker, 'Stock', user=user)
         if found['symbol'].upper() == ticker and found.get('currency') == 'USD'
     ]
     preferred = [found for found in matches if found.get('exchange') in US_EXCHANGES]
     return (preferred or matches or [None])[0]
 
 
-def _refresh_technicals(row):
-    bars = market.chart(row.uic, row.asset_type, DAILY_HORIZON, CHART_BARS)
+def _refresh_technicals(row, user):
+    bars = market.chart(row.uic, row.asset_type, DAILY_HORIZON, CHART_BARS, user=user)
     for field, value in technicals.technical_fields(bars).items():
         setattr(row, field, value)
     row.technicals_at = timezone.now()
@@ -43,10 +43,10 @@ def _refresh_fundamentals(row):
     row.fundamentals_at = timezone.now()
 
 
-def _resolved(row):
+def _resolved(row, user):
     if row.uic is not None:
         return True
-    found = resolve(row.ticker)
+    found = resolve(row.ticker, user=user)
     if found is None:
         return False
     row.uic = found['uic']
@@ -73,14 +73,14 @@ def _refresh_fundamentals_within_budget(row, pause):
             _refresh_fundamentals(row)
 
 
-def scan_row(row, *, with_fundamentals, pause=time.sleep):
+def scan_row(row, *, with_fundamentals, user, pause=time.sleep):
     try:
-        if not _resolved(row):
+        if not _resolved(row, user):
             row.status = ScreenerRow.UNMATCHED
             row.error = ''
             row.save()
             return with_fundamentals
-        _refresh_technicals(row)
+        _refresh_technicals(row, user)
     except ProviderNotConnected:
         raise
     except Exception as exc:
@@ -157,14 +157,14 @@ def refresh_earnings_dates(today):
         logger.warning('Earnings dates could not be stored; keeping stored dates', exc_info=True)
 
 
-def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV):
+def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV, *, user):
     load_universe(universe)
     rows = list(ScreenerRow.objects.order_by('ticker'))
     started_at = timezone.now().isoformat()
     with_fundamentals = True
     try:
         for done, row in enumerate(rows, start=1):
-            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals, pause=pause)
+            with_fundamentals = scan_row(row, with_fundamentals=with_fundamentals, user=user, pause=pause)
             scan_progress.report(done, len(rows), started_at)
             pause(PAUSE_SECONDS)
         refresh_earnings_dates(timezone.localdate())

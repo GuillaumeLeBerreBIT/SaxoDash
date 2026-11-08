@@ -27,9 +27,9 @@ def _empty_benchmark(key, reason):
     return {'key': key, 'name': benchmarks.BENCHMARKS[key]['name'], 'reason': reason, **empty}
 
 
-def _benchmark(key, port_dated_values):
+def _benchmark(key, port_dated_values, user):
     try:
-        bench_dated_values = benchmarks.eur_closes(key)
+        bench_dated_values = benchmarks.eur_closes(key, user=user)
     except benchmarks.BenchmarkUnavailable as exc:
         return _empty_benchmark(key, reason=str(exc))
 
@@ -39,19 +39,19 @@ def _benchmark(key, port_dated_values):
     return {'key': key, 'name': benchmarks.BENCHMARKS[key]['name'], 'reason': None, **result}
 
 
-def risk_report(port_dated_values, benchmark_key):
+def risk_report(port_dated_values, benchmark_key, *, user):
     key = resolve_benchmark_key(benchmark_key)
     summary = metrics.risk_summary(port_dated_values, settings.RISK_FREE_RATE_ANNUAL)
     summary['available_benchmarks'] = available_benchmarks()
     summary['benchmark'] = (
-        _benchmark(key, port_dated_values)
+        _benchmark(key, port_dated_values, user)
         if summary['has_data']
         else _empty_benchmark(key, reason=None)
     )
     return summary
 
 
-def performance_report(port_dated_values, benchmark_key):
+def performance_report(port_dated_values, benchmark_key, *, user):
     key = resolve_benchmark_key(benchmark_key)
 
     # Same threshold as risk_report's has_data: below it, the benchmark can add
@@ -60,7 +60,7 @@ def performance_report(port_dated_values, benchmark_key):
     reason = None
     if len(port_dated_values) >= metrics.MIN_DAILY_POINTS:
         try:
-            bench_dated_values = benchmarks.eur_closes(key)
+            bench_dated_values = benchmarks.eur_closes(key, user=user)
         except benchmarks.BenchmarkUnavailable as exc:
             reason = str(exc)  # every benchmark_pct/alpha_pct then comes back None
 

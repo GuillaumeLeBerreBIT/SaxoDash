@@ -3,7 +3,6 @@ from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -14,6 +13,7 @@ from transactions.models import Transaction
 
 from .tools.portfolio import get_portfolio, get_transactions
 from .views import ViewResult, call_view
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -24,14 +24,14 @@ def make_position(ticker, **overrides):
         current_price=Decimal('120'), sector='Tech', type='STOCK', color='#112233',
     )
     fields.update(overrides)
-    return Position.objects.create(**fields)
+    return Position.objects.create(user=the_owner(), **fields)
 
 
 @override_settings(CACHES=LOCMEM)
 class PortfolioToolsTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_portfolio_matches_the_summary_view(self):
         make_position('AAA')
@@ -71,6 +71,7 @@ class PortfolioToolsTest(APITestCase):
 
     def test_cash_is_reported_in_reporting_currency_only(self):
         PortfolioValuation.objects.create(
+            user=the_owner(),
             currency='EUR', cash_balance=Decimal('250.00'),
             positions_value=Decimal('0'), total_value=Decimal('250.00'),
         )
@@ -113,6 +114,7 @@ class PortfolioToolsTest(APITestCase):
     def test_negative_limit_returns_nothing(self):
         make_position('AAA')
         Transaction.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
             qty=Decimal('1'), price=Decimal('1'), saxo_trade_id='t',
         )
@@ -136,6 +138,7 @@ class PortfolioToolsTest(APITestCase):
     def test_transactions_are_capped(self):
         for i in range(60):
             Transaction.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 1), type='BUY', instrument='X', ticker='X',
                 qty=Decimal('1'), price=Decimal('1'), saxo_trade_id=f't{i}',
             )
@@ -148,7 +151,7 @@ class PortfolioToolsTest(APITestCase):
 class SerializedMoneyTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_position_prices_are_numbers(self):
         make_position('AAA')
@@ -157,6 +160,6 @@ class SerializedMoneyTest(APITestCase):
             self.assertIsInstance(row[key], float, key)
 
     def test_transaction_quantities_and_prices_are_numbers(self):
-        Transaction.objects.create(date=date(2026, 1, 2), type='BUY', instrument='A', ticker='A', qty=Decimal('3'), price=Decimal('12.50'))
+        Transaction.objects.create(user=the_owner(), date=date(2026, 1, 2), type='BUY', instrument='A', ticker='A', qty=Decimal('3'), price=Decimal('12.50'))
         item = get_transactions()['data']['items'][0]
         self.assertEqual((item['qty'], item['price']), (3.0, 12.5))

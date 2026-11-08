@@ -1,7 +1,13 @@
+from django.conf import settings
 from django.db import models
 
 
+def owned_by_user():
+    return models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+
+
 class Watchlist(models.Model):
+    user = owned_by_user()
     name = models.CharField(max_length=60)
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -42,11 +48,12 @@ class WatchlistItem(models.Model):
 class SymbolNote(models.Model):
     """The Research page's own-judgment fields, one record per symbol: what
     the company does, the case for and against it, and what would end the
-    thesis. Single-tenant, like Watchlist - no user FK. A row is created on
+    thesis. One record per user and symbol. A row is created on
     first GET (see SymbolNoteView), so an unannotated symbol is an empty
     record rather than a 404."""
 
-    symbol = models.CharField(max_length=20, unique=True)
+    user = owned_by_user()
+    symbol = models.CharField(max_length=20)
 
     business_summary = models.TextField(blank=True, default='')
     risks_to_watch = models.TextField(blank=True, default='')
@@ -62,12 +69,14 @@ class SymbolNote(models.Model):
 
     class Meta:
         ordering = ['symbol']
+        constraints = [models.UniqueConstraint(fields=['user', 'symbol'], name='symbolnote_user_symbol_uniq')]
 
     def __str__(self):
         return f'Note for {self.symbol}'
 
 
 class PriceLine(models.Model):
+    user = owned_by_user()
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)
     price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -76,13 +85,14 @@ class PriceLine(models.Model):
 
     class Meta:
         ordering = ['created_at', 'id']
-        indexes = [models.Index(fields=['uic', 'asset_type'])]
+        indexes = [models.Index(fields=['user', 'uic', 'asset_type'])]
 
     def __str__(self):
         return f'{self.price} on {self.uic}:{self.asset_type}'
 
 
 class TrendLine(models.Model):
+    user = owned_by_user()
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)
     start_bar_date = models.DateField()
@@ -94,13 +104,14 @@ class TrendLine(models.Model):
 
     class Meta:
         ordering = ['created_at', 'id']
-        indexes = [models.Index(fields=['uic', 'asset_type'])]
+        indexes = [models.Index(fields=['user', 'uic', 'asset_type'])]
 
     def __str__(self):
         return f'{self.start_price}@{self.start_bar_date} -> {self.end_price}@{self.end_bar_date} on {self.uic}:{self.asset_type}'
 
 
 class TextAnnotation(models.Model):
+    user = owned_by_user()
     uic = models.PositiveIntegerField()
     asset_type = models.CharField(max_length=20)
     bar_date = models.DateField()
@@ -110,7 +121,7 @@ class TextAnnotation(models.Model):
 
     class Meta:
         ordering = ['created_at', 'id']
-        indexes = [models.Index(fields=['uic', 'asset_type'])]
+        indexes = [models.Index(fields=['user', 'uic', 'asset_type'])]
 
     def __str__(self):
         return f'"{self.text}" at {self.price}@{self.bar_date} on {self.uic}:{self.asset_type}'

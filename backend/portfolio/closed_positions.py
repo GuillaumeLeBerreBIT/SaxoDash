@@ -25,22 +25,22 @@ def _with_uics(token, key, rows, today):
     return [{**row, 'Uic': uics.get((row.get('InstrumentSymbol'), row.get('AssetType')))} for row in rows]
 
 
-def _fetched(year, last, today):
-    token = active_credential().access_token
+def _fetched(year, last, today, user):
+    token = active_credential(user).access_token
     key = client.get_client_key(token)
     rows = client.get_closed_positions_report(token, key, f'{year}-01-01', last.isoformat())
     return _with_uics(token, key, rows, today)
 
 
-def for_year(year, today=None):
+def for_year(year, today=None, *, user):
     today = today or date.today()
     last = min(date(year, 12, 31), today)
-    cache_key = f'portfolio:closed-positions:v1:{year}:{last.isoformat()}'
+    cache_key = f'portfolio:closed-positions:v1:{user.pk}:{year}:{last.isoformat()}'
     rows = cache.get(cache_key)
     if rows is not None:
         return rows, None
     try:
-        rows = _fetched(year, last, today)
+        rows = _fetched(year, last, today, user)
     except SaxoNotConnected as error:
         return None, f'Realised gains unavailable, Saxo is not connected: {error}'
     except SaxoAPIError:

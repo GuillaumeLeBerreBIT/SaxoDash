@@ -2,7 +2,9 @@ from datetime import date, timedelta
 
 from django.utils.text import slugify
 
-from . import edgar, tasks
+from users.owner import is_owner
+
+from . import edgar, follows, tasks
 from .models import Investor
 
 RESERVED_SLUGS = frozenset({'hub', 'stocks', 'search'})
@@ -25,6 +27,10 @@ class ImportNotQueued(Exception):
 
 
 class CuratedInvestor(Exception):
+    pass
+
+
+class NotYours(Exception):
     pass
 
 
@@ -53,7 +59,7 @@ def _free_slug(name, cik):
     return slug
 
 
-def add(cik):
+def add(cik, user):
     existing = Investor.objects.filter(cik=cik).first()
     if existing is not None:
         raise AlreadyTracked(existing)
@@ -62,7 +68,7 @@ def add(cik):
         raise NotA13FFiler(found['name'])
     investor = Investor.objects.create(
         cik=cik, name=found['name'], firm=found['name'], slug=_free_slug(found['name'], cik),
-        curated=False, quarters_expected=0,
+        curated=False, quarters_expected=0, added_by=user,
     )
     try:
         tasks.backfill_investor.delay(investor.pk)
@@ -72,7 +78,15 @@ def add(cik):
     return investor
 
 
-def stop(investor):
+def may_remove(investor, user):
+    if is_owner(user):
+        return True
+    return investor.added_by_id == user.pk and not follows.followed_by_someone_else(investor, user)
+
+
+def stop(investor, user):
     if investor.curated:
         raise CuratedInvestor(investor.slug)
+    if not may_remove(investor, user):
+        raise NotYours(investor.slug)
     investor.delete()

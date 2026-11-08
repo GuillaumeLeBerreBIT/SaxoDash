@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   login,
+  signup,
+  requestPasswordReset,
+  confirmPasswordReset,
+  ApiError,
   logout,
   isAuthenticated,
-  getUsername,
+  getMe,
+  stopTrackingInvestor,
+  updateMe,
+  changePassword,
+  signOutEverywhere,
   getPositions,
   getNetWorthHistory,
   getRiskMetrics,
@@ -38,6 +46,54 @@ beforeEach(() => {
   vi.restoreAllMocks()
 })
 
+describe('account creation and password reset', () => {
+  it('signup posts the honeypot and stores the session', async () => {
+    window.fetch = vi.fn().mockResolvedValue(
+      jsonResponse({ access: 'a', refresh: 'r', user: { username: 'alice' } }, true, 201),
+    )
+
+    await signup({ email: 'a@b.com', username: 'alice', password: 'pw', website: '' })
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/signup\/$/)
+    expect(JSON.parse(init.body)).toEqual({ email: 'a@b.com', username: 'alice', password: 'pw', website: '' })
+    expect(localStorage.getItem('access')).toBe('a')
+    expect(localStorage.getItem('username')).toBeNull()
+  })
+
+  it('signup carries the field errors and stores nothing', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ email: ['Taken.'] }, false, 400))
+
+    const failure = await signup({ email: 'a', username: 'b', password: 'c', website: '' }).catch((e) => e)
+
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.body).toEqual({ email: ['Taken.'] })
+    expect(localStorage.getItem('access')).toBeNull()
+  })
+
+  it('login reports a throttle as a 429', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse(null, false, 429))
+
+    await expect(login('a', 'b')).rejects.toMatchObject({ status: 429 })
+  })
+
+  it('requestPasswordReset posts the email', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ detail: 'sent' }))
+
+    expect(await requestPasswordReset('a@b.com')).toEqual({ detail: 'sent' })
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ email: 'a@b.com' })
+  })
+
+  it('confirmPasswordReset maps newPassword and stores the session', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ access: 'a2', refresh: 'r2' }))
+
+    await confirmPasswordReset({ uid: 'u', token: 't', newPassword: 'pw' })
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ uid: 'u', token: 't', new_password: 'pw' })
+    expect(localStorage.getItem('refresh')).toBe('r2')
+  })
+})
+
 describe('login', () => {
   it('stores tokens and username on success', async () => {
     window.fetch = vi.fn().mockResolvedValue(
@@ -48,7 +104,7 @@ describe('login', () => {
 
     expect(localStorage.getItem('access')).toBe('access-1')
     expect(localStorage.getItem('refresh')).toBe('refresh-1')
-    expect(getUsername()).toBe('alice')
+    expect(localStorage.getItem('username')).toBeNull()
   })
 
   it('throws and stores nothing on invalid credentials', async () => {
@@ -56,6 +112,69 @@ describe('login', () => {
 
     await expect(login('alice', 'wrong')).rejects.toThrow('Invalid credentials')
     expect(localStorage.getItem('access')).toBeNull()
+  })
+})
+
+describe('current user', () => {
+  it('reads the signed-in user', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ username: 'alice', email: 'a@b.com', is_owner: false }))
+
+    expect(await getMe()).toEqual({ username: 'alice', email: 'a@b.com', is_owner: false })
+    expect(window.fetch.mock.calls[0][0]).toMatch(/\/api\/auth\/me\/$/)
+  })
+
+  it('patches the profile and carries field errors on failure', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ username: 'bob', email: 'a@b.com', is_owner: false }))
+
+    await updateMe({ username: 'bob' })
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/me\/$/)
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body)).toEqual({ username: 'bob' })
+
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ current_password: ['Required.'] }, false, 400))
+    const failure = await updateMe({ email: 'x@y.com' }).catch((e) => e)
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.body).toEqual({ current_password: ['Required.'] })
+  })
+
+  it('stores the new tokens after a password change', async () => {
+    localStorage.setItem('access', 'old')
+    localStorage.setItem('refresh', 'old-r')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ access: 'new', refresh: 'new-r' }))
+
+    await changePassword({ currentPassword: 'one', newPassword: 'two' })
+
+    expect(JSON.parse(window.fetch.mock.calls[0][1].body)).toEqual({ current_password: 'one', new_password: 'two' })
+    expect(localStorage.getItem('access')).toBe('new')
+    expect(localStorage.getItem('refresh')).toBe('new-r')
+  })
+
+  it('asks the backend to sign every session out', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue({ ok: true, status: 205, json: async () => { throw new Error('empty') } })
+
+    await signOutEverywhere()
+
+    const [url, init] = window.fetch.mock.calls[0]
+    expect(url).toMatch(/\/api\/auth\/sign-out-everywhere\/$/)
+    expect(init.method).toBe('POST')
+  })
+})
+
+describe('removing an investor', () => {
+  it('surfaces the server reason when the removal is refused', async () => {
+    localStorage.setItem('access', 'a')
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ detail: 'Only the person who added this investor can remove it.' }, false, 403))
+
+    const failure = await stopTrackingInvestor('acme').catch((e) => e)
+
+    expect(failure).toBeInstanceOf(ApiError)
+    expect(failure.status).toBe(403)
+    expect(failure.message).toBe('Only the person who added this investor can remove it.')
   })
 })
 
@@ -292,6 +411,7 @@ describe('connectSaxo', () => {
     const [url, options] = window.fetch.mock.calls[0]
     expect(url).toContain('/api/saxo/connect-ticket/')
     expect(options.method).toBe('POST')
+    expect(options.credentials).toBe('include')
     expect(window.location.href).toContain('/api/saxo/connect/?ticket=signed-xyz')
   })
 })
@@ -308,6 +428,7 @@ describe('connectEnableBanking', () => {
     const [url, options] = window.fetch.mock.calls[0]
     expect(url).toContain('/api/enablebanking/connect-ticket/')
     expect(options.method).toBe('POST')
+    expect(options.credentials).toBe('include')
     expect(window.location.href).toContain('/api/enablebanking/connect/kbc/?ticket=signed-xyz')
   })
 })

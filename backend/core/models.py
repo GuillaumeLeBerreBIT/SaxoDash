@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
 class NetWorthSnapshot(models.Model):
-    date = models.DateField(unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
+    date = models.DateField()
     portfolio_value = models.DecimalField(max_digits=14, decimal_places=2)
     bank_total = models.DecimalField(max_digits=14, decimal_places=2)
     bank_only_total = models.DecimalField(
@@ -26,6 +28,9 @@ class NetWorthSnapshot(models.Model):
 
     class Meta:
         ordering = ['date']
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'date'], name='networth_user_date_uniq'),
+        ]
 
     def __str__(self):
         return f'{self.date} net_worth={self.net_worth}'
