@@ -3,7 +3,7 @@ import { apiFetch, ENABLE_BANKING_CONNECT_BASE_URL, jsonRequest } from './http'
 export const getEnableBankingStatus = () => apiFetch('/api/enablebanking/status/')
 
 export async function connectEnableBanking(bank, iban) {
-  const { ticket } = await jsonRequest('/api/enablebanking/connect-ticket/', 'POST')
+  const { ticket } = await apiFetch('/api/enablebanking/connect-ticket/', { method: 'POST', credentials: 'include' })
   const ibanParam = iban ? `&iban=${encodeURIComponent(iban)}` : ''
   window.location.href = `${ENABLE_BANKING_CONNECT_BASE_URL}/api/enablebanking/connect/${bank}/?ticket=${encodeURIComponent(ticket)}${ibanParam}`
 }

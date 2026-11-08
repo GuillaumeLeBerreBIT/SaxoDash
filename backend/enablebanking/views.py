@@ -5,7 +5,6 @@ from decimal import Decimal, InvalidOperation
 
 from django.conf import settings
 from django.core.cache import cache
-from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,6 +12,9 @@ from rest_framework.exceptions import APIException
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView, Response
+
+from core.connect_ticket import ConnectTicket
+from users.permissions import IsOwner
 
 from . import client, credentials, tasks
 from .filters import BankTransactionFilter
@@ -35,7 +37,7 @@ def _back_to_frontend(outcome, bank=None):
 # Same reasoning as saxo.views: the connect redirect is a full-page
 # navigation, so a signed ticket stands in for the JWT header an
 # authenticated fetch would normally carry.
-_connect_ticket_signer = TimestampSigner(salt='enablebanking-connect')
+connect_ticket = ConnectTicket('enablebanking')
 CONNECT_TICKET_MAX_AGE = 120
 
 
@@ -48,10 +50,10 @@ def _fallback_valid_until():
 
 
 class EnableBankingConnectTicketView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request):
-        return Response({'ticket': _connect_ticket_signer.sign(str(request.user.pk))})
+        return connect_ticket.issue(request.user, CONNECT_TICKET_MAX_AGE)
 
 
 class EnableBankingConnectView(APIView):
@@ -61,11 +63,7 @@ class EnableBankingConnectView(APIView):
         if bank not in credentials.BANKS:
             raise Http404(f'Unknown bank: {bank}')
 
-        try:
-            _connect_ticket_signer.unsign(
-                request.query_params.get('ticket', ''), max_age=CONNECT_TICKET_MAX_AGE
-            )
-        except (BadSignature, SignatureExpired):
+        if connect_ticket.redeem(request, CONNECT_TICKET_MAX_AGE) is None:
             return HttpResponseForbidden('A fresh connect ticket is required.')
 
         state = f'{secrets.token_urlsafe(24)}:{bank}'
@@ -76,7 +74,7 @@ class EnableBankingConnectView(APIView):
             client.build_authorize_url(bank, state, settings.ENABLE_BANKING_REDIRECT_URI, iban=iban)
         )
         response['Referrer-Policy'] = 'no-referrer'
-        return response
+        return connect_ticket.forget(response)
 
 
 class EnableBankingCallbackView(APIView):
@@ -112,6 +110,7 @@ class EnableBankingCallbackView(APIView):
 
 
 class EnableBankingStatusView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         result = {}
@@ -136,6 +135,7 @@ class EnableBankingStatusView(APIView):
 
 
 class BankTransactionListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = BankTransaction.objects.select_related('bank_account').all()
     serializer_class = BankTransactionSerializer
     filterset_class = BankTransactionFilter
@@ -144,6 +144,7 @@ class BankTransactionListView(ListAPIView):
 
 
 class BankTransactionCategoryView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def patch(self, request, pk):
         tx = get_object_or_404(BankTransaction, pk=pk)
@@ -185,6 +186,7 @@ SYNC_COOLDOWN_SECONDS = 300
 
 
 class SyncNowView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def post(self, request):
         if not cache.add(SYNC_COOLDOWN_KEY, True, SYNC_COOLDOWN_SECONDS):
@@ -200,6 +202,7 @@ class SyncNowView(APIView):
 
 
 class SpendingSummaryView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(spending_summary(
@@ -209,6 +212,7 @@ class SpendingSummaryView(APIView):
 
 
 class SpendingTrendView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         months = min(max(int(request.query_params.get('months', 6)), 1), 120)
@@ -216,6 +220,7 @@ class SpendingTrendView(APIView):
 
 
 class SubscriptionListView(ListAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     serializer_class = SubscriptionSerializer
     pagination_class = None
 
@@ -227,6 +232,7 @@ class SubscriptionListView(ListAPIView):
 
 
 class SubscriptionDetailView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def patch(self, request, pk):
         sub = get_object_or_404(Subscription, pk=pk)
@@ -237,6 +243,7 @@ class SubscriptionDetailView(APIView):
 
 
 class BudgetListView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(BudgetSerializer(Budget.objects.all().order_by('category'), many=True).data)
@@ -260,12 +267,14 @@ class BudgetListView(APIView):
 
 
 class BudgetProgressView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
 
     def get(self, request):
         return Response(budget_progress())
 
 
 class LabeledAccountListCreateView(ListCreateAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = ManualIbanLabel.objects.all().order_by('label')
     serializer_class = ManualIbanLabelSerializer
     pagination_class = None
@@ -277,6 +286,7 @@ class LabeledAccountListCreateView(ListCreateAPIView):
 
 
 class LabeledAccountDetailView(RetrieveUpdateDestroyAPIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     queryset = ManualIbanLabel.objects.all()
     serializer_class = ManualIbanLabelSerializer
 
@@ -285,6 +295,7 @@ class LabeledAccountDetailView(RetrieveUpdateDestroyAPIView):
 
 
 class LabeledAccountCandidatesView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
     """Recurring counterparties still in OTHER/REFUND_CREDIT - a shortlist
     the user can label from, rather than hunting through raw transactions
     for an IBAN themselves."""

@@ -8,7 +8,7 @@ from . import report
 WEEKEND = (1, 7)
 
 
-def _portfolio_dated_values():
+def _portfolio_dated_values(user):
     """The series risk/performance metrics are computed from.
 
     saxo_account_value (Saxo's reconciled cash+positions total), not
@@ -21,6 +21,7 @@ def _portfolio_dated_values():
     """
     return list(
         NetWorthSnapshot.objects
+        .filter(user=user)
         .exclude(saxo_account_value__isnull=True)
         .exclude(date__week_day__in=WEEKEND)
         .order_by('date')
@@ -31,7 +32,7 @@ def _portfolio_dated_values():
 class RiskMetricsView(APIView):
     def get(self, request):
         return Response(report.risk_report(
-            _portfolio_dated_values(), request.query_params.get('benchmark', ''),
+            _portfolio_dated_values(request.user), request.query_params.get('benchmark', ''), user=request.user,
         ))
 
 
@@ -44,5 +45,5 @@ class PerformanceView(APIView):
 
     def get(self, request):
         return Response(report.performance_report(
-            _portfolio_dated_values(), request.query_params.get('benchmark', ''),
+            _portfolio_dated_values(request.user), request.query_params.get('benchmark', ''), user=request.user,
         ))

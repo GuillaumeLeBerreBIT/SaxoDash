@@ -17,7 +17,7 @@ const KBC = {
   balance: '1842.17', available: '1842.17', currency: 'EUR', accent: '#0284c7', external_id: 'enablebanking:kbc:acc-1',
 }
 
-function mockMoney({ netWorth, budgets = [], summary } = {}) {
+function mockMoney({ netWorth, budgets = [], summary, owner = true } = {}) {
   const ok = (data) => ({ data, isLoading: false, error: null, refetch: vi.fn() })
   queries.useBankAccounts.mockReturnValue(ok([KBC]))
   queries.useBankTransactions.mockReturnValue(ok([]))
@@ -35,6 +35,7 @@ function mockMoney({ netWorth, budgets = [], summary } = {}) {
   queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
   queries.useMarkTransactionReviewed.mockReturnValue({ mutate: vi.fn() })
   queries.useEnableBankingStatus.mockReturnValue(ok(null))
+  queries.useMe.mockReturnValue(ok({ username: 'demo', email: 'd@example.com', is_owner: owner }))
   queries.useSyncNow.mockReturnValue({ syncNow: vi.fn(), syncing: false, queueError: null, note: '' })
   queries.useNetWorthHistory.mockReturnValue(ok([]))
   queries.useLabeledAccounts.mockReturnValue(ok([]))
@@ -83,6 +84,37 @@ describe('Money', () => {
     const { container } = renderAt(url)
     expect(screen.getByRole('heading', { level: 1, name: heading })).toBeInTheDocument()
     expectValidHeadingOutline(container)
+  })
+
+  describe('for someone who is not the owner', () => {
+    beforeEach(() => mockMoney({ owner: false }))
+
+    it('offers only Accounts', () => {
+      renderAt('/money')
+      const tabs = within(screen.getByRole('tablist', { name: 'Money sections' }))
+      expect(tabs.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Accounts'])
+      expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
+    })
+
+    it.each(['spending', 'transactions', 'budgets', 'overview'])('falls back to Accounts for a deep link to %s', (section) => {
+      renderAt(`/money?section=${section}`)
+      expect(screen.getByRole('heading', { level: 1, name: 'Accounts' })).toBeInTheDocument()
+      expect(queries.useSpendingSummary).not.toHaveBeenCalled()
+      expect(queries.useBankTransactions).not.toHaveBeenCalled()
+    })
+
+    it('shows no bank connection panel or sync button', () => {
+      renderAt('/money?section=accounts')
+      expect(screen.queryByText(/Connected banks/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /sync/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders no owner sections while the user is still loading', () => {
+    queries.useMe.mockReturnValue({ data: undefined, isLoading: true, error: null })
+    renderAt('/money?section=spending')
+    expect(screen.queryByRole('tab', { name: 'Spending' })).not.toBeInTheDocument()
+    expect(queries.useSpendingSummary).not.toHaveBeenCalled()
   })
 
   it('marks the section in the URL as the selected sub-tab', () => {

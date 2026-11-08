@@ -6,7 +6,7 @@ from django.db.models import Max
 from portfolio.models import Position
 from research.models import WatchlistItem
 
-from . import changes, copying, importer, quarters, sectors
+from . import changes, copying, follows, importer, quarters, sectors
 from .photos import logo_url, photo_credit_url, photo_url
 from .models import PositionMove, Security
 
@@ -61,7 +61,7 @@ class QuarterNotFound(Exception):
     pass
 
 
-def _header(investor, today):
+def _header(investor, today, followed):
     return {
         'name': investor.name,
         'firm': investor.firm,
@@ -75,13 +75,16 @@ def _header(investor, today):
         'stale': is_stale(investor, today),
         'import': importer.progress(investor),
         'styles': investor.styles,
-        'followed': investor.followed,
+        'followed': followed,
     }
 
 
-def _yours():
-    owned = {ticker.upper() for ticker in Position.objects.values_list('ticker', flat=True)}
-    watched = {symbol.upper() for symbol in WatchlistItem.objects.values_list('symbol', flat=True)}
+def _yours(user):
+    owned = {ticker.upper() for ticker in Position.objects.filter(user=user).values_list('ticker', flat=True)}
+    watched = {
+        symbol.upper()
+        for symbol in WatchlistItem.objects.filter(watchlist__user=user).values_list('symbol', flat=True)
+    }
     return owned, watched
 
 
@@ -141,9 +144,9 @@ def _held(moves):
     return sorted(held, key=lambda move: (-move.value, move.cusip, move.put_call))
 
 
-def _card(investor, today, quarter_end, moves, held, tickers, copy_edge=None):
+def _card(investor, today, followed, quarter_end, moves, held, tickers, copy_edge=None):
     base = {
-        **_header(investor, today),
+        **_header(investor, today, followed),
         'latest_quarter': None,
         'total_value': None,
         'positions': None,
@@ -171,8 +174,9 @@ def _card(investor, today, quarter_end, moves, held, tickers, copy_edge=None):
     return base
 
 
-def cards(investors, today):
+def cards(investors, today, user):
     investors = list(investors)
+    followed = follows.followed_ids(user)
     latest = _latest_quarters([investor.pk for investor in investors])
     grouped = _moves_by_investor(latest)
     held = {pk: _held(moves) for pk, moves in grouped.items()}
@@ -180,15 +184,15 @@ def cards(investors, today):
     edges = copying.annualised_edges([investor.pk for investor in investors])
     return [
         _card(
-            investor, today, latest.get(investor.pk), grouped.get(investor.pk, []), held.get(investor.pk, []),
+            investor, today, investor.pk in followed, latest.get(investor.pk), grouped.get(investor.pk, []), held.get(investor.pk, []),
             tickers, edges.get(investor.pk),
         )
         for investor in investors
     ]
 
 
-def card(investor, today):
-    return cards([investor], today)[0]
+def card(investor, today, user):
+    return cards([investor], today, user)[0]
 
 
 def holder_ids(ticker):
@@ -232,10 +236,10 @@ def story_moves(investor, quarter_end):
     ]
 
 
-def detail(investor, quarter_end, today):
+def detail(investor, quarter_end, today, *, user):
     ends = quarters.quarter_ends(investor)
     base = {
-        **_header(investor, today),
+        **_header(investor, today, investor.pk in follows.followed_ids(user)),
         'quarters': [end.isoformat() for end in ends],
         'quarter': None,
         'previous_quarter': None,
@@ -258,7 +262,7 @@ def detail(investor, quarter_end, today):
     rows = weighted(snap, tickers_for(row['cusip'] for row in snap.values()))
     tickers = quarters.tickers_held(investor)
     held = quarters.quarters_held(quarters.held_keys_by_quarter(investor, tickers), quarter_end)
-    owned, watched = _yours()
+    owned, watched = _yours(user)
     inherited = inherited_cusips(row['cusip'] for row in rows)
 
     holdings = []

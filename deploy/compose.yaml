@@ -9,6 +9,7 @@ x-app: &app
     CACHE_URL: redis://redis:6379/1
     CELERY_BROKER_URL: redis://redis:6379/0
     DB_BACKUP_DIR: /backups
+    NUM_PROXIES: "2"
   volumes:
     - /srv/saxodash/backups:/backups
   depends_on:

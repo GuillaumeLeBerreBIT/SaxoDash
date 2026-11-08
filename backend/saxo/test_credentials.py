@@ -6,42 +6,42 @@ from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from . import credentials
-from .models import SaxoCredential
+from users.testing import make_user
+
+from .testing import saxo_credential
 
 TEST_KEY = Fernet.generate_key().decode()
 
 
 @override_settings(SAXO_TOKEN_ENCRYPTION_KEY=TEST_KEY)
 class ActiveCredentialTest(TestCase):
+    def setUp(self):
+        self.user = make_user('alice')
+
     def _create(self, **overrides):
-        return SaxoCredential.objects.create(**{
-            'access_token': 'access',
-            'refresh_token': 'refresh',
-            'expires_at': timezone.now() + timedelta(minutes=20),
-            **overrides,
-        })
+        return saxo_credential(self.user, **overrides)
 
     def test_returns_the_credential_when_it_is_usable(self):
         self._create()
-        self.assertEqual(credentials.active_credential().access_token, 'access')
+        self.assertEqual(credentials.active_credential(self.user).access_token, 'access')
 
     def test_raises_when_saxo_was_never_connected(self):
         with self.assertRaises(credentials.SaxoNotConnected):
-            credentials.active_credential()
+            credentials.active_credential(self.user)
 
     def test_raises_when_the_credential_needs_reauth(self):
         self._create(needs_reauth=True)
         with self.assertRaises(credentials.SaxoNotConnected):
-            credentials.active_credential()
+            credentials.active_credential(self.user)
 
     def test_raises_when_the_access_token_has_expired(self):
         self._create(expires_at=timezone.now() - timedelta(minutes=1))
         with self.assertRaises(credentials.SaxoNotConnected):
-            credentials.active_credential()
+            credentials.active_credential(self.user)
 
     def test_inside_the_grace_window_a_call_is_refused_but_reauth_is_not_asked(self):
         self._create(expires_at=timezone.now() - timedelta(minutes=1))
-        state = credentials.connection_state()
+        state = credentials.connection_state(self.user)
 
         self.assertTrue(state.connected)
         self.assertFalse(state.usable)
@@ -56,7 +56,7 @@ class ActiveCredentialTest(TestCase):
 
     def test_past_the_grace_window_the_user_has_to_act(self):
         self._create(expires_at=timezone.now() - credentials.REAUTH_GRACE - timedelta(minutes=1))
-        state = credentials.connection_state()
+        state = credentials.connection_state(self.user)
 
         self.assertFalse(state.usable)
         self.assertTrue(state.needs_reauth)
@@ -65,12 +65,13 @@ class ActiveCredentialTest(TestCase):
 class LatestRunPerTaskTest(TestCase):
     def test_reads_one_row_per_sync_task_however_long_the_history(self):
         from .models import SyncRun
+        user = make_user('alice')
         SyncRun.objects.bulk_create(
-            SyncRun(task=task, outcome='ok') for task in credentials.SYNC_TASKS for _ in range(50)
+            SyncRun(task=task, user=user, outcome='ok') for task in credentials.SYNC_TASKS for _ in range(50)
         )
 
         with CaptureQueriesContext(connection) as queries:
-            runs = credentials.latest_run_per_task()
+            runs = credentials.latest_run_per_task(user)
 
         self.assertEqual(sorted(run.task for run in runs), sorted(credentials.SYNC_TASKS))
         self.assertTrue(all('LIMIT 1' in q['sql'] for q in queries.captured_queries))

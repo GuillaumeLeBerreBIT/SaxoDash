@@ -2,6 +2,7 @@ from investors.models import PriceHistory
 from research.models import ScreenerRow
 from saxo.credentials import connection_state, latest_run_per_task
 
+from ..views import app_user
 from . import tool
 
 
@@ -20,10 +21,11 @@ def _latest(model, field):
     saxo=True,
 )
 def get_data_health():
-    state = connection_state()
+    user = app_user()
+    state = connection_state(user)
     tasks = {
         run.task: {'outcome': run.outcome, 'finished_at': _iso(run.ran_at)}
-        for run in latest_run_per_task()
+        for run in latest_run_per_task(user)
     }
     data = {
         'saxo_connected': state.connected,

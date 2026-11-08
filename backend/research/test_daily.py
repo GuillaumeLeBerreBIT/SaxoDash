@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 
 from django.test import SimpleTestCase
 
@@ -21,8 +21,8 @@ BARS = [
 class DailyTest(SimpleTestCase):
     def test_candles_always_ask_for_the_widest_range(self):
         with patch('research.market.chart', return_value=BARS) as chart:
-            self.assertEqual(daily.candles(LISTING), BARS)
-        chart.assert_called_once_with(4, 'Stock', daily.HORIZON, client.CHART_MAX_COUNT)
+            self.assertEqual(daily.candles(LISTING, user=sentinel.user), BARS)
+        chart.assert_called_once_with(4, 'Stock', daily.HORIZON, client.CHART_MAX_COUNT, user=sentinel.user)
 
     def test_latest_close_skips_null_closes(self):
         self.assertEqual(daily.latest_close(BARS), 12.0)
@@ -40,10 +40,10 @@ class DailyTest(SimpleTestCase):
 
     def test_available_turns_a_provider_failure_into_a_reason(self):
         with patch('research.market.chart', side_effect=ProviderNotConnected('x')):
-            self.assertEqual(daily.available(LISTING), (None, daily.NOT_CONNECTED))
+            self.assertEqual(daily.available(LISTING, user=sentinel.user), (None, daily.NOT_CONNECTED))
         with patch('research.market.chart', return_value=BARS):
-            self.assertEqual(daily.available(LISTING), (BARS, None))
+            self.assertEqual(daily.available(LISTING, user=sentinel.user), (BARS, None))
 
     def test_an_unresolved_listing_has_no_bars_and_no_reason(self):
         with patch('research.market.chart', side_effect=AssertionError):
-            self.assertEqual(daily.available(Listing.unresolved('NVDA')), (None, None))
+            self.assertEqual(daily.available(Listing.unresolved('NVDA'), user=sentinel.user), (None, None))

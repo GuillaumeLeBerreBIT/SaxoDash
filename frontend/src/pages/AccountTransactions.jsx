@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, Navigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
-import { useBankAccounts, useBankTransactions, useUpdateBankTransactionCategory } from '../api/queries'
+import { useBankAccounts, useBankTransactions, useMe, useUpdateBankTransactionCategory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { Card, EmptyState, Input, QueryState, Select, Tile } from '../components/ui'
 import { BOARD, SPAN_12, TILES } from '../components/money/layout'
@@ -10,6 +10,13 @@ import { CATEGORY_LABELS } from '../lib/categories'
 import { filterTransactions, paginate } from '../lib/accountTransactions'
 
 export default function AccountTransactions() {
+  const { data: me, isLoading } = useMe()
+  if (isLoading) return null
+  if (me?.is_owner !== true) return <Navigate to="/money" replace />
+  return <OwnerAccountTransactions />
+}
+
+function OwnerAccountTransactions() {
   const { accountId } = useParams()
   const { data, isLoading, error, refetch } = useBankTransactions(`?account=${accountId}`)
   // A drill-down page needs to confirm which account you're looking at -

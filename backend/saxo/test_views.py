@@ -1,17 +1,21 @@
 from datetime import timedelta
 from unittest.mock import patch
-from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import override_settings
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+from users.testing import the_owner, make_user
+
 from .models import SaxoCredential, SyncRun
 from . import client
 
 
+@override_settings(CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'saxo-connect'}})
 class SaxoConnectViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        cache.clear()
+        self.user = the_owner()
         self.token = str(RefreshToken.for_user(self.user).access_token)
 
     def _ticket(self):
@@ -44,17 +48,65 @@ class SaxoConnectViewTest(APITestCase):
         # The ticket rides in the URL; don't leak it to Saxo via Referer.
         self.assertEqual(response['Referrer-Policy'], 'no-referrer')
 
-    def test_a_ticket_is_replayable_within_its_short_window(self):
-        # Documented, bounded: a replayed ticket can only *start* a flow the user
-        # must still complete at Saxo, and the callback is guarded by `state`.
+    def test_minting_sets_an_http_only_cookie_scoped_to_saxo(self):
+        self._ticket()
+        cookie = self.client.cookies['saxo_connect']
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['samesite'], 'Lax')
+        self.assertEqual(cookie['path'], '/api/saxo/')
+        self.assertTrue(cookie['secure'])
+
+    def test_the_dev_frontend_may_store_the_cookie_across_origins(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
+
+        response = self.client.post(
+            '/api/saxo/connect-ticket/', HTTP_ORIGIN='http://localhost:5173'
+        )
+
+        self.assertEqual(response['Access-Control-Allow-Credentials'], 'true')
+
+    def test_another_browser_holding_the_ticket_is_refused(self):
         ticket = self._ticket()
+        stranger = APIClient()
+
+        response = stranger.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn('saxo_oauth_state', stranger.session)
+
+    def test_a_browser_with_a_different_cookie_is_refused(self):
+        ticket = self._ticket()
+        stranger = APIClient()
+        stranger.cookies['saxo_connect'] = 'someone-elses-nonce'
+
+        response = stranger.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_a_refused_browser_does_not_burn_the_ticket(self):
+        ticket = self._ticket()
+        APIClient().get(f'/api/saxo/connect/?ticket={ticket}')
+
+        response = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_a_ticket_works_once(self):
+        ticket = self._ticket()
+        nonce = self.client.cookies['saxo_connect'].value
         first = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+        self.client.cookies['saxo_connect'] = nonce
+
         second = self.client.get(f'/api/saxo/connect/?ticket={ticket}')
+
         self.assertEqual(first.status_code, 302)
-        self.assertEqual(second.status_code, 302)
+        self.assertEqual(second.status_code, 403)
 
 
 class SaxoCallbackViewTest(APITestCase):
+    def setUp(self):
+        self.user = make_user('alex')
+
     def test_rejects_mismatched_state(self):
         session = self.client.session
         session['saxo_oauth_state'] = 'expected-state'
@@ -71,6 +123,7 @@ class SaxoCallbackViewTest(APITestCase):
         }
         session = self.client.session
         session['saxo_oauth_state'] = 'matching-state'
+        session['saxo_oauth_user'] = str(self.user.pk)
         session.save()
 
         response = self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
@@ -87,6 +140,7 @@ class SaxoCallbackViewTest(APITestCase):
         }
         session = self.client.session
         session['saxo_oauth_state'] = 'matching-state'
+        session['saxo_oauth_user'] = str(self.user.pk)
         session.save()
 
         self.client.get('/api/saxo/callback/?code=abc&state=matching-state')
@@ -97,6 +151,7 @@ class SaxoCallbackViewTest(APITestCase):
         mock_exchange.side_effect = client.SaxoAuthError('boom')
         session = self.client.session
         session['saxo_oauth_state'] = 'matching-state'
+        session['saxo_oauth_user'] = str(self.user.pk)
         session.save()
 
         with self.assertLogs('saxo.views', level='ERROR'):
@@ -109,12 +164,14 @@ class SaxoCallbackViewTest(APITestCase):
     @patch('saxo.views.client.exchange_code_for_token')
     def test_keeps_existing_credential_when_exchange_fails(self, mock_exchange):
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='old', refresh_token='old-r',
             expires_at=timezone.now() + timedelta(minutes=20),
         )
         mock_exchange.side_effect = client.SaxoAuthError('boom')
         session = self.client.session
         session['saxo_oauth_state'] = 'matching-state'
+        session['saxo_oauth_user'] = str(self.user.pk)
         session.save()
 
         with self.assertLogs('saxo.views', level='ERROR'):
@@ -125,7 +182,7 @@ class SaxoCallbackViewTest(APITestCase):
 
 class SaxoStatusViewTest(APITestCase):
     def setUp(self):
-        user = User.objects.create_user(username='alex', password='pw')
+        self.user = user = make_user('alex')
         refresh = RefreshToken.for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
@@ -135,6 +192,7 @@ class SaxoStatusViewTest(APITestCase):
 
     def test_reports_connected_details_when_credential_exists(self):
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(minutes=20),
         )
@@ -145,6 +203,7 @@ class SaxoStatusViewTest(APITestCase):
 
     def test_needs_reauth_when_token_expired_well_past_refresh_window(self):
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='a', refresh_token='b',
             expires_at=timezone.now() - timedelta(hours=1),
         )
@@ -153,6 +212,7 @@ class SaxoStatusViewTest(APITestCase):
 
     def test_no_reauth_flap_during_normal_refresh_window(self):
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='a', refresh_token='b',
             expires_at=timezone.now() - timedelta(minutes=2),
         )
@@ -164,17 +224,18 @@ class SaxoStatusFreshnessTest(APITestCase):
     """D6: freshness used to live on the credential, which re-auth deletes."""
 
     def setUp(self):
-        user = User.objects.create_user(username='alex', password='pw')
+        self.user = user = make_user('alex')
         refresh = RefreshToken.for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
         self.cred = SaxoCredential.objects.create(
+            user=self.user,
             access_token='a', refresh_token='b',
             expires_at=timezone.now() + timedelta(hours=1),
         )
 
     def test_a_task_that_always_fails_is_not_masked_by_another_that_works(self):
-        SyncRun.objects.create(task='sync_positions', outcome='failed', detail='boom')
-        SyncRun.objects.create(task='sync_account_balance', outcome='ok', rows=1)
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='failed', detail='boom')
+        SyncRun.objects.create(user=self.user, task='sync_account_balance', outcome='ok', rows=1)
 
         response = self.client.get('/api/saxo/status/')
 
@@ -182,9 +243,9 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertEqual(response.data['failing_syncs'], ['sync_positions'])
 
     def test_reports_ok_only_when_every_task_last_succeeded(self):
-        SyncRun.objects.create(task='sync_positions', outcome='failed')
-        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
-        SyncRun.objects.create(task='sync_account_balance', outcome='ok', rows=1)
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='failed')
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(user=self.user, task='sync_account_balance', outcome='ok', rows=1)
 
         response = self.client.get('/api/saxo/status/')
 
@@ -192,8 +253,8 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertEqual(response.data['failing_syncs'], [])
 
     def test_reports_the_last_successful_sync_not_the_last_attempt(self):
-        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
-        SyncRun.objects.create(task='sync_positions', outcome='skipped', detail='expired')
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='skipped', detail='expired')
 
         response = self.client.get('/api/saxo/status/')
 
@@ -201,18 +262,19 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertEqual(response.data['last_sync_outcome'], 'skipped')
 
     def test_a_scan_run_is_not_reported_as_a_portfolio_sync(self):
-        SyncRun.objects.create(task='scan_universe', outcome='ok', rows=500)
+        SyncRun.objects.create(user=self.user, task='scan_universe', outcome='ok', rows=500)
 
         response = self.client.get('/api/saxo/status/')
 
         self.assertIsNone(response.data['last_synced_at'])
 
     def test_freshness_survives_reauthentication(self):
-        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok', rows=5)
 
         # What SaxoCallbackView does on a reconnect.
-        SaxoCredential.objects.all().delete()
+        SaxoCredential.objects.filter(user=self.user).delete()
         SaxoCredential.objects.create(
+            user=self.user,
             access_token='new', refresh_token='new',
             expires_at=timezone.now() + timedelta(hours=1),
         )
@@ -236,8 +298,8 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertTrue(response.data['needs_reauth'])
 
     def test_a_retired_task_no_longer_counts_against_sync_health(self):
-        SyncRun.objects.create(task='sync_transactions', outcome='skipped', detail='retired')
-        SyncRun.objects.create(task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(user=self.user, task='sync_transactions', outcome='skipped', detail='retired')
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok', rows=5)
 
         response = self.client.get('/api/saxo/status/')
 

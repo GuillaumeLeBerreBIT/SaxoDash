@@ -12,11 +12,14 @@ from rest_framework.generics import (
     RetrieveUpdateAPIView,
     RetrieveUpdateDestroyAPIView,
 )
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from saxo import client
 from saxo.credentials import connection_state
+from users.owner import owner
+from users.permissions import IsOwner
 
 from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
 from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
@@ -38,14 +41,21 @@ ALLOWED_HORIZONS = {1440, 10080, 43200}
 
 
 class WatchlistListCreateView(ListCreateAPIView):
-    queryset = Watchlist.objects.prefetch_related('items')
     serializer_class = WatchlistSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        return Watchlist.objects.filter(user=self.request.user).prefetch_related('items')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class WatchlistDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Watchlist.objects.prefetch_related('items')
     serializer_class = WatchlistSerializer
+
+    def get_queryset(self):
+        return Watchlist.objects.filter(user=self.request.user).prefetch_related('items')
 
 
 class WatchlistItemCreateView(CreateAPIView):
@@ -54,14 +64,17 @@ class WatchlistItemCreateView(CreateAPIView):
     def get_serializer_context(self):
         return {
             **super().get_serializer_context(),
-            'watchlist': get_object_or_404(Watchlist, pk=self.kwargs['pk']),
+            'watchlist': get_object_or_404(Watchlist, pk=self.kwargs['pk'], user=self.request.user),
         }
 
 
 class WatchlistItemDeleteView(DestroyAPIView):
     def get_object(self):
         return get_object_or_404(
-            WatchlistItem, pk=self.kwargs['item_pk'], watchlist_id=self.kwargs['pk']
+            WatchlistItem,
+            pk=self.kwargs['item_pk'],
+            watchlist_id=self.kwargs['pk'],
+            watchlist__user=self.request.user,
         )
 
 
@@ -103,7 +116,7 @@ class ChartView(APIView):
         asset_type = _asset_type(request.query_params)
         count = _int_param(request.query_params, 'count', client.CHART_MAX_COUNT)
 
-        return provider_response(lambda: market.chart(uic, asset_type, horizon, count))
+        return provider_response(lambda: market.chart(uic, asset_type, horizon, count, user=request.user))
 
 
 class InstrumentSearchView(APIView):
@@ -115,14 +128,14 @@ class InstrumentSearchView(APIView):
             return Response([])
 
         asset_types = request.query_params.get('asset_types', 'Stock,Etf')
-        return provider_response(lambda: market.search(keywords, asset_types))
+        return provider_response(lambda: market.search(keywords, asset_types, user=request.user))
 
 
 class InstrumentDetailsView(APIView):
     throttle_scope = 'research.market'
 
     def get(self, request, uic, asset_type):
-        return provider_response(lambda: market.details(int(uic), asset_type))
+        return provider_response(lambda: market.details(int(uic), asset_type, user=request.user))
 
 
 class QuotesView(APIView):
@@ -139,7 +152,7 @@ class QuotesView(APIView):
             return Response([])
 
         asset_type = _asset_type(request.query_params)
-        return provider_response(lambda: market.quotes(uics, asset_type))
+        return provider_response(lambda: market.quotes(uics, asset_type, user=request.user))
 
 
 class FundamentalsView(APIView):
@@ -197,7 +210,7 @@ class EarningsCalendarView(APIView):
         except (TypeError, ValueError):
             raise ValidationError({'week': 'Must be an integer.'})
         week = max(earnings.MIN_WEEK, min(earnings.MAX_WEEK, week))
-        return Response(earnings.window_earnings(scope, week))
+        return Response(earnings.window_earnings(scope, week, user=request.user))
 
 
 class SymbolEarningsView(APIView):
@@ -226,14 +239,14 @@ class SymbolNoteView(RetrieveUpdateAPIView):
 
     def get_object(self):
         symbol = _symbol(self.kwargs['symbol'])
-        note, _ = SymbolNote.objects.get_or_create(symbol=symbol)
+        note, _ = SymbolNote.objects.get_or_create(user=self.request.user, symbol=symbol)
         return note
 
 
 class SymbolNoteReviewView(APIView):
 
     def post(self, request, symbol):
-        note, _ = SymbolNote.objects.get_or_create(symbol=_symbol(symbol))
+        note, _ = SymbolNote.objects.get_or_create(user=request.user, symbol=_symbol(symbol))
         note.reviewed_at = timezone.now()
         note.save(update_fields=['reviewed_at'])
         return Response(SymbolNoteSerializer(note).data)
@@ -244,16 +257,20 @@ class PriceLineListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return PriceLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return PriceLine.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class PriceLineDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = PriceLineSerializer
-    queryset = PriceLine.objects.all()
+
+    def get_queryset(self):
+        return PriceLine.objects.filter(user=self.request.user)
 
 
 class TrendLineListCreateView(ListCreateAPIView):
@@ -261,16 +278,20 @@ class TrendLineListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return TrendLine.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return TrendLine.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class TrendLineDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = TrendLineSerializer
-    queryset = TrendLine.objects.all()
+
+    def get_queryset(self):
+        return TrendLine.objects.filter(user=self.request.user)
 
 
 class TextAnnotationListCreateView(ListCreateAPIView):
@@ -278,16 +299,20 @@ class TextAnnotationListCreateView(ListCreateAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return TextAnnotation.objects.filter(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        return TextAnnotation.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
 
     def perform_create(self, serializer):
-        serializer.save(uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
 
 
 class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
     http_method_names = ['patch', 'delete', 'options']
     serializer_class = TextAnnotationSerializer
-    queryset = TextAnnotation.objects.all()
+
+    def get_queryset(self):
+        return TextAnnotation.objects.filter(user=self.request.user)
 
 
 class DiscoverView(APIView):
@@ -301,8 +326,10 @@ class DiscoverView(APIView):
 
 
 class StartDiscoverScanView(APIView):
+    permission_classes = [IsAuthenticated, IsOwner]
+
     def post(self, request):
-        saxo = connection_state()
+        saxo = connection_state(owner())
         if not saxo.usable:
             return Response({'detail': saxo.reason}, status=status.HTTP_409_CONFLICT)
         if not scan_progress.claim():

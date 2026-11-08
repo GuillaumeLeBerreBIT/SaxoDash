@@ -14,6 +14,8 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 NEW_LOT = {'InstrumentSymbol': 'ZZZ:xnas', 'AssetType': 'Stock', 'TradeDateOpen': '2026-02-01'}
 OLD_LOT = {'InstrumentSymbol': 'OLD:xnas', 'AssetType': 'Stock', 'TradeDateOpen': '2023-05-01'}
 TODAY = date(2026, 10, 24)
+ALICE = SimpleNamespace(pk=1)
+BOB = SimpleNamespace(pk=2)
 
 
 def connected():
@@ -25,12 +27,12 @@ class ClosedPositionsTests(SimpleTestCase):
     def setUp(self):
         cache.clear()
 
-    def read(self, rows, trades=(), year=2026):
+    def read(self, rows, trades=(), year=2026, user=ALICE):
         with connected(), \
                 patch('saxo.client.get_client_key', return_value='K'), \
                 patch('saxo.client.get_closed_positions_report', return_value=rows) as report, \
                 patch('saxo.client.get_trades_report', return_value=list(trades)) as traded:
-            result = closed_positions.for_year(year, today=TODAY)
+            result = closed_positions.for_year(year, today=TODAY, user=user)
         return result, report, traded
 
     def test_the_report_covers_the_year_up_to_today(self):
@@ -51,9 +53,15 @@ class ClosedPositionsTests(SimpleTestCase):
         report.assert_not_called()
         self.assertEqual(rows, [NEW_LOT])
 
+    def test_one_users_cached_report_is_not_anothers(self):
+        self.read([NEW_LOT], user=ALICE)
+        (rows, _), report, _ = self.read([], user=BOB)
+        report.assert_called_once()
+        self.assertEqual(rows, [])
+
     def test_not_connected_is_a_reason_and_not_cached(self):
         with patch('portfolio.closed_positions.active_credential', side_effect=SaxoNotConnected('Token expired.')):
-            rows, reason = closed_positions.for_year(2026, today=TODAY)
+            rows, reason = closed_positions.for_year(2026, today=TODAY, user=ALICE)
         self.assertIsNone(rows)
         self.assertEqual(reason, 'Realised gains unavailable, Saxo is not connected: Token expired.')
         (rows, _), _, _ = self.read([NEW_LOT])
@@ -62,6 +70,6 @@ class ClosedPositionsTests(SimpleTestCase):
     def test_a_saxo_error_is_a_reason(self):
         with connected(), patch('saxo.client.get_client_key', side_effect=SaxoPermanentError('no key')):
             self.assertEqual(
-                closed_positions.for_year(2026, today=TODAY),
+                closed_positions.for_year(2026, today=TODAY, user=ALICE),
                 (None, 'Realised gains unavailable, Saxo did not answer.'),
             )

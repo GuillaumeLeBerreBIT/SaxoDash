@@ -1,14 +1,12 @@
 import { Link } from 'react-router-dom'
 import { fmtEur } from '../lib/format'
 
-export default function BankAccountTile({ account }) {
-  const hasAvailable = Number(account.available) !== Number(account.balance)
+const TILE = 'flex gap-3 bg-tile rounded-[10px] px-3.5 py-3 min-w-0'
 
-  return (
-    <Link
-      to={`/money/accounts/${account.id}`}
-      className="flex gap-3 bg-tile rounded-[10px] px-3.5 py-3 min-w-0 hover:bg-hover transition-colors"
-    >
+export default function BankAccountTile({ account, linked = true }) {
+  const hasAvailable = Number(account.available) !== Number(account.balance)
+  const body = (
+    <>
       <span className="w-1 rounded-full shrink-0" style={{ background: account.accent }} />
       <div className="flex-1 min-w-0 flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -21,6 +19,13 @@ export default function BankAccountTile({ account }) {
           {hasAvailable && <div className="mt-0.5 text-[12px] text-ink-2 num">{fmtEur(account.available)} available</div>}
         </div>
       </div>
+    </>
+  )
+
+  if (!linked) return <div className={TILE}>{body}</div>
+  return (
+    <Link to={`/money/accounts/${account.id}`} className={`${TILE} hover:bg-hover transition-colors`}>
+      {body}
     </Link>
   )
 }

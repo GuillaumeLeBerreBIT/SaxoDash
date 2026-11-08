@@ -17,6 +17,7 @@ BARS = [
     {'date': f'2025-{i:04d}', 'open': 100.0, 'high': 101.0, 'low': 99.0, 'close': 100.0 + i * 0.1, 'volume': 1_000_000}
     for i in range(260)
 ]
+USER = mock.sentinel.user
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 FINANCIALS = {'metric': {'peNormalizedAnnual': 20.0, 'roeTTM': 25.0}}
 
@@ -33,13 +34,13 @@ class ResolveTest(TestCase):
     @mock.patch('research.scan.market.search')
     def test_prefers_the_us_primary_listing(self, search):
         search.return_value = [instrument('NVDA', 1, 'XETR', 'EUR'), instrument('NVDA', 2, 'NASDAQ')]
-        self.assertEqual(scan.resolve('NVDA')['uic'], 2)
-        search.assert_called_once_with('NVDA', 'Stock')
+        self.assertEqual(scan.resolve('NVDA', user=USER)['uic'], 2)
+        search.assert_called_once_with('NVDA', 'Stock', user=USER)
 
     @mock.patch('research.scan.market.search')
     def test_ignores_a_different_symbol(self, search):
         search.return_value = [instrument('NVDX', 3)]
-        self.assertIsNone(scan.resolve('NVDA'))
+        self.assertIsNone(scan.resolve('NVDA', user=USER))
 
 
 @mock.patch('research.scan.finnhub.get_basic_financials', return_value=FINANCIALS)
@@ -81,10 +82,10 @@ class ScanUniverseTest(TestCase):
 
     def run_scan(self, **kwargs):
         kwargs.setdefault('pause', no_pause)
-        return scan.scan_universe(universe=self.universe, **kwargs)
+        return scan.scan_universe(universe=self.universe, user=USER, **kwargs)
 
     def search_for(self, search, known):
-        search.side_effect = lambda ticker, _types: [instrument(ticker, known[ticker])] if ticker in known else []
+        search.side_effect = lambda ticker, _types, user: [instrument(ticker, known[ticker])] if ticker in known else []
 
     def test_stores_the_recent_closes_it_already_fetched(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
@@ -103,7 +104,7 @@ class ScanUniverseTest(TestCase):
         self.assertIsNone(apple.net_margin)
         self.assertIsNotNone(apple.technicals_at)
         self.assertIsNotNone(apple.fundamentals_at)
-        chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.CHART_BARS)
+        chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.CHART_BARS, user=USER)
 
     def test_stores_revenue_growth_and_payout_from_the_same_metrics_call(self, search, chart, financials):
         financials.return_value = {'metric': {'peNormalizedAnnual': 20.0, 'revenueGrowth5Y': 12.5, 'payoutRatioTTM': 40.0}}
@@ -129,7 +130,7 @@ class ScanUniverseTest(TestCase):
     def test_one_failing_symbol_does_not_stop_the_run(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
 
-        def chart_for(uic, *_):
+        def chart_for(uic, *_, user):
             if uic == 211:
                 raise RuntimeError('boom')
             return BARS
@@ -159,7 +160,7 @@ class ScanUniverseTest(TestCase):
         self.assertEqual(financials.call_count, 1)
 
     def test_a_search_error_fails_only_that_symbol(self, search, chart, financials):
-        def search_for(ticker, _types):
+        def search_for(ticker, _types, user):
             if ticker == 'AAPL':
                 raise ProviderError('Saxo could not serve this request.')
             return [instrument(ticker, 212)]
@@ -364,7 +365,7 @@ class ScanBudgetTest(TestCase):
         mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS]
         pauses = []
 
-        scan.scan_row(self.row, with_fundamentals=True, pause=pauses.append)
+        scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=pauses.append)
 
         self.row.refresh_from_db()
         self.assertEqual(pauses, [17])
@@ -376,7 +377,7 @@ class ScanBudgetTest(TestCase):
     @mock.patch('research.scan.finnhub.seconds_until_budget_refills', return_value=17)
     @mock.patch('research.scan.finnhub.get_basic_financials', side_effect=finnhub.FinnhubBusy())
     def test_a_second_refusal_is_recorded_on_the_row(self, mock_financials, mock_seconds, mock_chart):
-        scan.scan_row(self.row, with_fundamentals=True, pause=lambda seconds: None)
+        scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=lambda seconds: None)
 
         self.row.refresh_from_db()
         self.assertEqual(mock_financials.call_count, 2)

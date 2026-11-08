@@ -1,7 +1,7 @@
 import inspect
 from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 
 from django.test import SimpleTestCase
 from redis.exceptions import ConnectionError as RedisConnectionError
@@ -11,9 +11,12 @@ from .envelope import Reply, Unavailable
 from .shaping import numbers
 from .tools import answering
 
+USER = sentinel.user
+
 
 def run(fn, *, sources=('src',), saxo=False, warnings=()):
-    with patch('mcp_server.tools.saxo_warnings', return_value=list(warnings)) as saxo_check:
+    with patch('mcp_server.tools.saxo_warnings', return_value=list(warnings)) as saxo_check, \
+            patch('mcp_server.tools.app_user', return_value=USER):
         result = answering(fn, sources=list(sources), saxo=saxo)()
     return result, saxo_check
 
@@ -42,6 +45,7 @@ class AnsweringTest(SimpleTestCase):
     def test_saxo_warnings_come_first_only_when_asked(self):
         result, check = run(lambda: Reply(1, ['own']), saxo=True, warnings=['Saxo is down.'])
         self.assertEqual(result['warnings'], ['Saxo is down.', 'own'])
+        check.assert_called_once_with(USER)
         _, unused = run(lambda: 1, saxo=False, warnings=['Saxo is down.'])
         unused.assert_not_called()
 

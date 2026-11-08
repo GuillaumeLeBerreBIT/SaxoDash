@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from .fields import EncryptedTextField
@@ -6,6 +7,7 @@ from .fields import EncryptedTextField
 class SaxoCredential(models.Model):
     ENVIRONMENT_CHOICES = [('sim', 'Simulation'), ('live', 'Live')]
 
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
     access_token = EncryptedTextField()
     refresh_token = EncryptedTextField()
     expires_at = models.DateTimeField()
@@ -32,6 +34,9 @@ class SyncRun(models.Model):
         ('failed', 'Failed'),
     ]
 
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+', null=True, blank=True,
+    )
     task = models.CharField(max_length=64)
     outcome = models.CharField(max_length=10, choices=OUTCOME_CHOICES)
     detail = models.CharField(max_length=200, blank=True, default='')

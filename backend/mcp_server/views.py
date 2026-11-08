@@ -7,6 +7,8 @@ from django.core.exceptions import ImproperlyConfigured
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from research.daily import NOT_CONNECTED
+from users.acting import acting_as
+from users.owner import owner
 
 from .envelope import Unavailable
 from .shaping import without
@@ -19,11 +21,11 @@ class ViewResult:
 
 
 def app_user():
-    users = get_user_model().objects.filter(is_active=True)
     if settings.MCP_USER:
-        users = users.filter(username=settings.MCP_USER)
-    user = users.order_by('id').first()
-    if user is None:
+        user = get_user_model().objects.filter(is_active=True, username=settings.MCP_USER).first()
+    else:
+        user = owner()
+    if user is None or not user.is_active:
         raise ImproperlyConfigured('No active user for the MCP server to act as.')
     return user
 
@@ -36,10 +38,12 @@ def _host():
     return next((host for host in named if host), FALLBACK_HOST)
 
 
-def call_view(view_class, *, kwargs=None, query=None):
+def call_view(view_class, *, kwargs=None, query=None, user=None):
     request = APIRequestFactory().get('/', query or {}, HTTP_HOST=_host())
-    force_authenticate(request, user=app_user())
-    response = view_class.as_view()(request, **(kwargs or {}))
+    acting = user or app_user()
+    force_authenticate(request, user=acting)
+    with acting_as(acting):
+        response = view_class.as_view()(request, **(kwargs or {}))
     return ViewResult(response.status_code, response.data)
 
 

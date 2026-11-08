@@ -56,8 +56,8 @@ class Listing:
         return fields
 
 
-def _held(ticker):
-    position = Position.objects.filter(ticker__iexact=ticker, uic__isnull=False).order_by('id').first()
+def _held(ticker, user):
+    position = Position.objects.filter(user=user, ticker__iexact=ticker, uic__isnull=False).order_by('id').first()
     if position is None or not position.asset_type:
         return None
     return Listing(
@@ -71,23 +71,23 @@ def _held(ticker):
     )
 
 
-def _details_currency(saxo, uic, asset_type):
+def _details_currency(saxo, uic, asset_type, user):
     try:
-        return saxo.details(uic, asset_type).get('currency') or None
+        return saxo.details(uic, asset_type, user=user).get('currency') or None
     except ProviderError:
         return None
 
 
-def _searched(ticker, saxo):
+def _searched(ticker, saxo, user):
     try:
-        rows = saxo.search(ticker, SEARCH_ASSET_TYPES)
+        rows = saxo.search(ticker, SEARCH_ASSET_TYPES, user=user)
     except ProviderError:
         return None
     matches = [row for row in rows if bare(row.get('symbol') or '') == ticker]
     if not matches:
         return None
     row = next((r for r in matches if r.get('currency') == company_data.COMPANY_DATA_CURRENCY), matches[0])
-    currency = row.get('currency') or _details_currency(saxo, row['uic'], row['asset_type'])
+    currency = row.get('currency') or _details_currency(saxo, row['uic'], row['asset_type'], user)
     return Listing(
         ticker=ticker,
         symbol=row['symbol'],
@@ -99,15 +99,15 @@ def _searched(ticker, saxo):
     )
 
 
-def look_up(symbol, saxo=market):
+def look_up(symbol, saxo=market, *, user):
     ticker = bare(symbol)
-    held = _held(ticker)
+    held = _held(ticker, user)
     if held is not None:
         return held
     key = f'{CACHE_PREFIX}{ticker}'
     found = cache.get(key)
     if found is None:
-        found = _searched(ticker, saxo)
+        found = _searched(ticker, saxo, user)
         if found is not None:
             cache.set(key, found, CACHE_TTL)
     return found or Listing.unresolved(ticker)

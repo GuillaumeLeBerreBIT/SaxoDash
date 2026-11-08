@@ -7,7 +7,9 @@ from .serializers import TransactionSerializer
 
 
 class TransactionListView(ListAPIView):
-    queryset = Transaction.objects.all()
     filterset_class = TransactionFilter
     serializer_class = TransactionSerializer
     filter_backends = [DjangoFilterBackend]
+
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user)

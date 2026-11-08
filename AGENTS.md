@@ -77,7 +77,7 @@ rest.
 ## Stack
 
 - Backend: Django + DRF, Postgres 17 (dev, CI and production alike), JWT auth
-  (SimpleJWT), single user.
+  (SimpleJWT), many users with one owner.
 - Frontend: Vite + React 19 (JavaScript, not TS), React Router, Recharts,
   Lucide icons, Tailwind. Components are the mockup's own bespoke
   primitives ported as-is — no MUI. `shadcn/ui` may be introduced in a
@@ -276,7 +276,15 @@ bypass the cache, and one fundamentals miss is four Finnhub calls against a
 was `AllowAny`; it now requires a 120s `TimestampSigner` ticket minted by the
 authenticated `POST /api/saxo/connect-ticket/` (the redirect is a full-page
 navigation and can't carry the JWT). The callback stays `AllowAny`, still
-guarded by the session `state` nonce.
+guarded by the session `state` nonce. The ticket is bound to the browser that minted it
+and works once (`core/connect_ticket.py`, shared with Enable Banking): minting also sets an
+HttpOnly `saxo_connect` cookie holding a nonce that is signed into the ticket, connect
+refuses a ticket whose nonce the cookie does not match, and a redeemed nonce is remembered
+in the cache for the ticket's lifetime. Without that, a stranger could mint a ticket for
+their own account, send the link, and receive the victim's Saxo tokens. The frontend mints
+with `credentials: 'include'` (`CORS_ALLOW_CREDENTIALS`), so the Vite dev origin can store
+the cookie too. A dev Enable Banking connect through an ngrok tunnel cannot see a cookie
+set on localhost, so it is refused there.
 
 **One seam maps a provider call to HTTP.** `research/providers.py` defines
 `ProviderError` (→502, logged), `ProviderNotConnected` (→409) and
@@ -408,7 +416,7 @@ so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
 quarter). OpenFIGI tickers are normalised `/` to `.`. An identifier
 starting with a letter is a CINS (a foreign-domiciled issuer listed in the US: Chubb, Aon,
 Medtronic) and is asked for as `ID_CINS`; `ID_CUSIP` answers "no identifier found" for those. `sync_investors` is
-`@synced(reports_health=False, needs_credential=False)`, so it never touches the
+`@synced(reports_health=False, credential=None)`, so it never touches the
 header's Saxo health badge and runs without a Saxo credential.
 
 **Investors pages read only `/api/investors/…`.** `/investors` (hub), `/investors/stocks`
@@ -609,7 +617,7 @@ move so far until the session closes, while universe names show `—` until the 
 **The advisor reads the app through `mcp_server`, which runs the pages' own views.**
 `manage.py mcp_serve` exposes read tools to Claude Desktop over stdio; a page-backed tool
 dispatches the matching DRF view in-process (`mcp_server/views.py::fetch`, authenticated as
-the single user), so the assistant and the page cannot disagree about a number, and the
+the user named by `MCP_USER`, else the owner), so the assistant and the page cannot disagree about a number, and the
 pages' throttles and the Finnhub budget still apply: even the domain modules' own Saxo
 calls (symbol lookup, daily closes) reach Saxo through the pages' views, passed in as a port
 (`mcp_server/throttled.py::PAGES`), and `get_quotes` takes at most 20 symbols. It never
@@ -623,3 +631,31 @@ key per instrument), `portfolio/tax_year.py::report` runs the tax year, `advisor
 the whole journal, entry price included (it reads the Saxo chart itself, so no caller can
 supply one). No app imports `mcp_server`. Setup: `docs/running-the-stack.md` →
 "The MCP server".
+
+**Accounts are open, and one of them is the owner.** Login takes an email or a username
+(10/min per IP and login, 30/min per IP) and hashes once whether or not the login exists, so
+its timing does not reveal an account; signup is 5/hour per IP, has a `website` honeypot and no email
+verification, and does say when an email or username is taken (accepted in the spec: hiding it
+needs email verification, and the throttle bounds the probing); password reset is 5/hour and its confirm step 20/hour, the link lasts an hour
+and works once. The reset mail is queued with Celery on commit, so a known and an unknown
+address answer alike. On the first migrate the only existing user becomes the owner; with
+several, `SAXODASH_OWNER=<username>` must name one or migrate stops. Banking belongs to the
+owner alone. The owner's Saxo credential runs the shared jobs (the Discover scan, the
+copy-performance price feed, congress prices) and only the owner may start a scan.
+`NUM_PROXIES` (default 0, `X-Forwarded-For` ignored) must equal the proxies that append to it before
+gunicorn: 2 in `deploy/compose.yaml` (edge Caddy, then the compose `proxy` Caddy), the expected
+value until the on-server check in `docs/deploying.md` "Going public" decides it. The admin
+site is routed only when `ADMIN_ENABLED`, which defaults to `DEBUG`.
+
+**Every person's row carries `user`, and the test enforces it.** Views scope by
+`request.user`; background tasks write to `credential.user`, and `@synced(credential=...)`
+takes `'each'` (once per connected user), `'owner'` or `None`. `users/test_isolation.py`
+fails when a model pointing at the user is missing from `COVERED`, and when any endpoint
+returns another user's rows, so a new per-person model is not finished until it is listed
+and covered there.
+
+**Finnhub keeps a reserve for the owner.** `FINNHUB_OWNER_RESERVE` (default 20) is held
+back from the per-minute budget: a signed-in non-owner request may use
+`FINNHUB_CALLS_PER_MINUTE - FINNHUB_OWNER_RESERVE`, so strangers cannot starve the owner's
+pages. The acting user comes from `users.acting.current_user()`; MCP calls act as
+`MCP_USER`.

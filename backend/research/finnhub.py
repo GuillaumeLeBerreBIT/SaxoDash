@@ -17,6 +17,8 @@ from django.conf import settings
 from django.core.cache import cache
 
 from core.http_client import request_json
+from users.acting import current_user
+from users.owner import is_owner
 
 from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
@@ -108,9 +110,18 @@ def _calls_in_the_last_minute(window, elapsed):
     return key, spent + carried
 
 
+def _allowed_calls():
+    background = _background_reserve.get()
+    allowed = settings.FINNHUB_CALLS_PER_MINUTE - background
+    user = current_user()
+    if background == 0 and user is not None and not is_owner(user):
+        allowed -= settings.FINNHUB_OWNER_RESERVE
+    return max(1, allowed)
+
+
 def _spend_call():
     window, into_window = divmod(_now(), BUDGET_WINDOW_SECONDS)
-    allowed = settings.FINNHUB_CALLS_PER_MINUTE - _background_reserve.get()
+    allowed = _allowed_calls()
     try:
         key, used = _calls_in_the_last_minute(int(window), into_window / BUDGET_WINDOW_SECONDS)
         if used > allowed:

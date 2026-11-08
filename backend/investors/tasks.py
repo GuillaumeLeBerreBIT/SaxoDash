@@ -15,7 +15,7 @@ def _detail(skipped):
     return f'skipped {len(skipped)} unreadable filing(s): {", ".join(skipped)}'
 
 
-@synced(reports_health=False, task=SYNC_TASK, needs_credential=False)
+@synced(reports_health=False, task=SYNC_TASK, credential=None)
 def _sync_all():
     since = importer.history_start()
     imported = 0
@@ -48,11 +48,11 @@ def backfill_investor(investor_id):
     importer.backfill(investor)
 
 
-@synced(reports_health=False, task=COPY_TASK)
+@synced(reports_health=False, task=COPY_TASK, credential='owner')
 def _refresh_copies(credential):
     fetched = 0
     try:
-        fetched = price_feed.refresh()
+        fetched = price_feed.refresh(user=credential.user)
     finally:
         measured = copying.rebuild_all()
     return SyncReport(rows=measured, detail=f'{fetched} price series fetched')

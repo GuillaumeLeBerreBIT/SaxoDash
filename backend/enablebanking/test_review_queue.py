@@ -1,7 +1,6 @@
 from datetime import date
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -11,10 +10,11 @@ from accounts.models import BankAccount
 
 from . import views
 from .models import BankTransaction
+from users.testing import the_owner
 
 
 def _auth_client(test_case):
-    user = User.objects.create_user(username='u1', password='p')
+    user = the_owner()
     token = RefreshToken.for_user(user).access_token
     test_case.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -23,6 +23,7 @@ class ReviewQueueTestCase(APITestCase):
     def setUp(self):
         _auth_client(self)
         self.account = BankAccount.objects.create(
+            user=the_owner(),
             bank='KBC', type='Current account', iban_masked='BE12 •••• •••• 0001',
             balance=100, available=100, external_id='enablebanking:kbc:acc-1',
         )

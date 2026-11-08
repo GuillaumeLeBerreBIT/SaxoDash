@@ -3,7 +3,6 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -14,6 +13,7 @@ from saxo.credentials import SaxoNotConnected
 from transactions.models import Transaction
 
 from .tools import tax as tools
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -36,6 +36,7 @@ CANDLES = [
 
 def make_position(ticker='AAA', uic=1):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=ticker, qty=Decimal('10'), avg_cost=Decimal('90'),
         current_price=Decimal('120'), sector='Tech', type='STOCK', color='#000000',
         uic=uic, asset_type='Stock', currency='USD', fx_rate=Decimal('0.9'),
@@ -59,7 +60,7 @@ def run(closed=CLOSED, candles=CANDLES, credential=True, trades=TRADES, **kwargs
 class TaxToolTests(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_adviser_note_and_fx_note_always_present(self):
         warnings = run(year=2026)['warnings']
@@ -76,7 +77,7 @@ class TaxToolTests(APITestCase):
 
     def test_pre_2026_position_uses_dec_31_close(self):
         make_position()
-        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=10, price=90)
+        Transaction.objects.create(user=the_owner(), date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=10, price=90)
         row = run(year=2026)['data']['unrealised'][0]
         self.assertEqual(row['basis_source'], 'dec_31_2025')
         self.assertEqual(row['basis'], 100.0)
@@ -100,7 +101,7 @@ class TaxToolTests(APITestCase):
 
     def test_missing_dec_31_close_is_null_and_warned(self):
         make_position()
-        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=10, price=90)
+        Transaction.objects.create(user=the_owner(), date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=10, price=90)
         result = run(year=2026, candles=[{'date': '2026-01-02', 'close': 110.0}])
         self.assertIsNone(result['data']['unrealised'][0]['unrealised_eur'])
         self.assertTrue(any('AAA' in w for w in result['warnings']))
@@ -147,16 +148,16 @@ class TaxToolTests(APITestCase):
 
     def test_mixed_lots_are_split_at_dec_31(self):
         make_position()
-        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
-        Transaction.objects.create(date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=4, price=110, saxo_trade_id='b')
+        Transaction.objects.create(user=the_owner(), date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
+        Transaction.objects.create(user=the_owner(), date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=4, price=110, saxo_trade_id='b')
         row = run(year=2026)['data']['unrealised'][0]
         self.assertEqual(row['basis_source'], 'dec_31_2025_and_cost')
         self.assertEqual(row['unrealised_eur'], 144.0)
 
     def test_unsplittable_lots_are_unknown_and_warned(self):
         make_position()
-        Transaction.objects.create(date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
-        Transaction.objects.create(date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=110, saxo_trade_id='b')
+        Transaction.objects.create(user=the_owner(), date=date(2025, 5, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=80, saxo_trade_id='a')
+        Transaction.objects.create(user=the_owner(), date=date(2026, 2, 1), type='BUY', instrument='AAA', ticker='AAA', qty=6, price=110, saxo_trade_id='b')
         result = run(year=2026)
         self.assertIsNone(result['data']['unrealised'][0]['unrealised_eur'])
         self.assertTrue(any('AAA' in w and 'both sides' in w for w in result['warnings']))

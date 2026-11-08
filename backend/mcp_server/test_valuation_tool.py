@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
@@ -8,6 +7,7 @@ from rest_framework.test import APITestCase
 from research.listings import Listing
 
 from .tools.research import get_valuation_history
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -35,7 +35,7 @@ def candles():
 class ValuationToolTest(APITestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_tool_withholds_non_usd(self):
         with patch('mcp_server.tools.research.look_up', return_value=instrument('EUR')), \

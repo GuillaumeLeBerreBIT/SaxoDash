@@ -12,6 +12,10 @@ export const NAV_ITEMS = [
   { to: '/money', label: 'Money' },
 ]
 
+export function visibleTo(items, me) {
+  return items.filter((item) => !item.ownerOnly || me?.is_owner === true)
+}
+
 export const SETTINGS_ITEM = { to: '/settings', label: 'Settings' }
 
 export const MOBILE_PRIMARY = ['/', '/portfolio', '/research', '/discover']

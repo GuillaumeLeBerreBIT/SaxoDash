@@ -93,3 +93,34 @@ class ProductionSettingsTest(SimpleTestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('SECRET_KEY', result.stderr)
+
+
+class AdminExposureTest(SimpleTestCase):
+    def _admin_routed(self, **env):
+        script = (
+            'import django; django.setup(); from django.urls import resolve, Resolver404\n'
+            'try:\n'
+            '    resolve("/admin/")\n'
+            '    print("routed")\n'
+            'except Resolver404:\n'
+            '    print("absent")\n'
+        )
+        result = subprocess.run(
+            [sys.executable, '-c', script],
+            cwd=BACKEND, capture_output=True, text=True,
+            env={**os.environ, 'DJANGO_SETTINGS_MODULE': 'backend.settings', **env},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip() == 'routed'
+
+    def test_admin_absent_when_disabled(self):
+        self.assertFalse(self._admin_routed(ADMIN_ENABLED='False'))
+
+    def test_admin_present_when_enabled(self):
+        self.assertTrue(self._admin_routed(ADMIN_ENABLED='True'))
+
+    def test_admin_follows_debug_by_default(self):
+        env = {k: v for k, v in os.environ.items() if k != 'ADMIN_ENABLED'}
+        with patch.dict(os.environ, env, clear=True):
+            self.assertFalse(self._admin_routed(**PRODUCTION_ENV))
+            self.assertTrue(self._admin_routed(DEBUG='True'))

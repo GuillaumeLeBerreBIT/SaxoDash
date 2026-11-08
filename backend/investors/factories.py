@@ -2,7 +2,7 @@ import itertools
 from datetime import timedelta
 
 from . import moves
-from .models import Filing, Holding, Investor
+from .models import Filing, Holding, Investor, InvestorFollow
 
 _accessions = itertools.count(1)
 
@@ -12,8 +12,12 @@ def make_investor(**overrides):
         'name': 'Warren Buffett', 'firm': 'Berkshire Hathaway', 'cik': 1067983,
         'slug': 'berkshire-hathaway', 'curated': True,
     }
+    followed_by = overrides.pop('followed_by', [])
     fields.update(overrides)
-    return Investor.objects.create(**fields)
+    investor = Investor.objects.create(**fields)
+    for user in followed_by:
+        InvestorFollow.objects.create(user=user, investor=investor)
+    return investor
 
 
 def store_quarter(investor, quarter_end, holdings, *, filed_on=None, amendment_type='', form=None, rebuild=True):

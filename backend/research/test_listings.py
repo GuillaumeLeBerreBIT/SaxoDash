@@ -9,6 +9,7 @@ from portfolio.models import Position
 from . import company_data
 from .listings import Listing, bare, look_up
 from .providers import ProviderError
+from users.testing import the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -22,6 +23,7 @@ def row(currency='USD', exchange='xnas', uic=1, symbol='NVDA'):
 
 def hold(ticker='GOOGL', uic=7, currency='USD', asset_type='Stock'):
     return Position.objects.create(
+        user=the_owner(),
         ticker=ticker, name=f'{ticker} Inc', qty=Decimal('1'), avg_cost=Decimal('1'),
         current_price=Decimal('1'), sector='T', type='STOCK', color='#000',
         uic=uic, asset_type=asset_type, currency=currency,
@@ -39,61 +41,61 @@ class LookUpTest(TestCase):
     def test_held_position_answers_without_saxo(self):
         hold()
         with patch('research.market.search', side_effect=AssertionError):
-            listing = look_up('googl')
+            listing = look_up('googl', user=the_owner())
         self.assertEqual((listing.ticker, listing.uic, listing.currency), ('GOOGL', 7, 'USD'))
         self.assertTrue(listing.resolved)
 
     def test_usd_row_wins_over_an_earlier_foreign_one(self):
         with patch('research.market.search', return_value=[row('EUR', 'xetr', 1), row('USD', 'xnas', 2)]):
-            self.assertEqual(look_up('NVDA').uic, 2)
+            self.assertEqual(look_up('NVDA', user=the_owner()).uic, 2)
 
     def test_first_match_when_none_is_usd(self):
         with patch('research.market.search', return_value=[row('EUR', 'xetr', 1), row('GBP', 'xlon', 2)]):
-            self.assertEqual(look_up('NVDA').uic, 1)
+            self.assertEqual(look_up('NVDA', user=the_owner()).uic, 1)
 
     def test_rows_for_other_symbols_are_ignored(self):
         with patch('research.market.search', return_value=[row(symbol='NVDL')]):
-            self.assertFalse(look_up('NVDA').resolved)
+            self.assertFalse(look_up('NVDA', user=the_owner()).resolved)
 
     def test_details_complete_a_missing_currency(self):
         with patch('research.market.search', return_value=[row(currency='')]), \
                 patch('research.market.details', return_value={'currency': 'USD'}):
-            self.assertEqual(look_up('NVDA').currency, 'USD')
+            self.assertEqual(look_up('NVDA', user=the_owner()).currency, 'USD')
 
     def test_a_found_listing_is_cached(self):
         with patch('research.market.search', return_value=[row()]) as search:
-            first = look_up('NVDA')
-            second = look_up('nvda')
+            first = look_up('NVDA', user=the_owner())
+            second = look_up('nvda', user=the_owner())
         self.assertEqual(first, second)
-        self.assertEqual(search.call_count, 1)
+        search.assert_called_once_with('NVDA', 'Stock,Etf', user=the_owner())
 
     def test_a_miss_is_not_cached(self):
         with patch('research.market.search', return_value=[]) as search:
-            look_up('ZZZZ')
-            look_up('ZZZZ')
+            look_up('ZZZZ', user=the_owner())
+            look_up('ZZZZ', user=the_owner())
         self.assertEqual(search.call_count, 2)
 
     def test_a_provider_failure_is_unresolved(self):
         with patch('research.market.search', side_effect=ProviderError('down')):
-            listing = look_up('NVDA')
+            listing = look_up('NVDA', user=the_owner())
         self.assertEqual(listing.ticker, 'NVDA')
         self.assertFalse(listing.resolved)
 
     def test_held_lookup_picks_the_lowest_id(self):
         hold('nvda', uic=20)
         hold('NVDA', uic=10)
-        self.assertEqual(look_up('NVDA').uic, 20)
+        self.assertEqual(look_up('NVDA', user=the_owner()).uic, 20)
 
     def test_an_exchange_suffix_is_ignored(self):
         with patch('research.market.search', return_value=[row(symbol='ASMLF', uic=1), row(currency='', uic=99, symbol='ASML')]), \
                 patch('research.market.details', return_value={'currency': 'EUR'}):
-            listing = look_up('ASML:xams')
+            listing = look_up('ASML:xams', user=the_owner())
         self.assertEqual((listing.uic, listing.currency), (99, 'EUR'))
 
     def test_as_dict_has_the_instrument_keys(self):
         hold()
         self.assertEqual(
-            look_up('GOOGL').as_dict(),
+            look_up('GOOGL', user=the_owner()).as_dict(),
             {'symbol': 'GOOGL', 'name': 'GOOGL Inc', 'uic': 7, 'asset_type': 'Stock', 'currency': 'USD', 'exchange': None},
         )
 

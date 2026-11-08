@@ -16,9 +16,9 @@ DAILY_HORIZON = 1440
 MINE_CHART_BARS = 60
 
 
-def _portfolio_total():
+def _portfolio_total(user):
     try:
-        total = get_portfolio_value()
+        total = get_portfolio_value(user)
     except CurrencyMismatch:
         logger.warning('portfolio total unavailable for earnings weights', exc_info=True)
         return None
@@ -35,23 +35,23 @@ def _instruments(positions, watch_items):
     return found
 
 
-def _watch_items():
+def _watch_items(user):
     found = {}
-    for item in WatchlistItem.objects.order_by('pk'):
+    for item in WatchlistItem.objects.filter(watchlist__user=user).order_by('pk'):
         found.setdefault(item.symbol.upper(), item)
     return found
 
 
-def _chart_bars(instrument):
+def _chart_bars(instrument, user):
     try:
-        return market.chart(*instrument, DAILY_HORIZON, MINE_CHART_BARS)
+        return market.chart(*instrument, DAILY_HORIZON, MINE_CHART_BARS, user=user)
     except ProviderError:
         logger.info('earnings move: no Saxo chart for %s', instrument)
         return []
 
 
-def _bars(symbol, mine, instruments, row):
-    charted = _chart_bars(instruments[symbol]) if mine and symbol in instruments else []
+def _bars(symbol, mine, instruments, row, user):
+    charted = _chart_bars(instruments[symbol], user) if mine and symbol in instruments else []
     return charted or (row.recent_closes if row else [])
 
 
@@ -78,13 +78,13 @@ def _holding(position, total):
     }
 
 
-def enrich(events, today, moves=True):
+def enrich(events, today, moves=True, *, user):
     symbols = {(event['symbol'] or '').upper() for event in events}
     rows = {row.ticker.upper(): row for row in ScreenerRow.objects.filter(ticker__in=symbols)}
-    positions = {position.ticker.upper(): position for position in Position.objects.all() if position.ticker}
-    watch_items = _watch_items()
+    positions = {position.ticker.upper(): position for position in Position.objects.filter(user=user) if position.ticker}
+    watch_items = _watch_items(user)
     instruments = _instruments(positions, watch_items)
-    total = _portfolio_total() if symbols & positions.keys() else None
+    total = _portfolio_total(user) if symbols & positions.keys() else None
     bars_by_symbol = {}
     today_iso = today.isoformat()
 
@@ -92,7 +92,7 @@ def enrich(events, today, moves=True):
         if not moves or event['date'] > today_iso:
             return None, None
         if symbol not in bars_by_symbol:
-            bars_by_symbol[symbol] = _bars(symbol, mine, instruments, row)
+            bars_by_symbol[symbol] = _bars(symbol, mine, instruments, row, user)
         return reaction.move(event['date'], event['session'], bars_by_symbol[symbol])
 
     enriched = []
@@ -151,8 +151,8 @@ def merge_share_classes(events):
     return sorted(merged + singles, key=lambda e: (e['date'], e['symbol'] or ''))
 
 
-def next_mine(after):
-    held = [ticker.upper() for ticker in Position.objects.values_list('ticker', flat=True) if ticker]
+def next_mine(after, *, user):
+    held = [ticker.upper() for ticker in Position.objects.filter(user=user).values_list('ticker', flat=True) if ticker]
     row = (
         ScreenerRow.objects.filter(ticker__in=held, next_earnings_date__gt=after)
         .order_by('next_earnings_date', 'ticker')

@@ -1,5 +1,4 @@
 from decimal import Decimal
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.utils import IntegrityError
 from django.test import TestCase, override_settings
@@ -10,40 +9,41 @@ from portfolio.models import Position
 
 from . import tasks
 from .models import Watchlist, WatchlistItem
+from users.testing import the_owner
 
 
 class WatchlistModelTest(TestCase):
     def test_items_are_reachable_from_the_list(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         self.assertEqual(watchlist.items.count(), 1)
         self.assertEqual(watchlist.items.first().symbol, 'NVDA')
 
     def test_the_same_instrument_cannot_be_added_twice(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         with self.assertRaises(IntegrityError), transaction.atomic():
             WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
     def test_one_symbol_on_two_exchanges_is_two_rows(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211, exchange='NASDAQ')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=9876, exchange='XETR')
 
         self.assertEqual(watchlist.items.count(), 2)
 
     def test_the_same_symbol_may_sit_in_two_lists(self):
-        first = Watchlist.objects.create(name='Tech')
-        second = Watchlist.objects.create(name='Watching')
+        first = Watchlist.objects.create(user=the_owner(), name='Tech')
+        second = Watchlist.objects.create(user=the_owner(), name='Watching')
         WatchlistItem.objects.create(watchlist=first, symbol='NVDA', uic=211)
         WatchlistItem.objects.create(watchlist=second, symbol='NVDA', uic=211)
 
         self.assertEqual(WatchlistItem.objects.count(), 2)
 
     def test_deleting_a_list_deletes_its_items(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         watchlist.delete()
@@ -61,6 +61,7 @@ class SyncWatchlistsTaskTest(TestCase):
 
     def _position(self, ticker, uic):
         return Position.objects.create(
+            user=the_owner(),
             ticker=ticker, name=ticker, qty=1, avg_cost=Decimal('1'),
             current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
             color='#000000', uic=uic,
@@ -86,7 +87,7 @@ class SyncWatchlistsTaskTest(TestCase):
         self.assertEqual(watchlist.items.count(), 0)
 
     def test_leaves_other_watchlists_untouched(self):
-        other = Watchlist.objects.create(name='My picks')
+        other = Watchlist.objects.create(user=the_owner(), name='My picks')
         WatchlistItem.objects.create(watchlist=other, symbol='AAPL', uic=999, asset_type='Stock')
         self._position('NVDA', 211)
 
@@ -112,12 +113,12 @@ class SyncWatchlistsTaskTest(TestCase):
 
 class WatchlistAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def test_every_route_requires_authentication(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         item = WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
         self.client.credentials()
 
@@ -143,7 +144,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(response.data[0]['items'], [])
 
     def test_renames_a_watchlist(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
 
         response = self.client.patch(
             f'/api/research/watchlists/{watchlist.pk}/', {'name': 'Semis'}, format='json'
@@ -154,7 +155,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(watchlist.name, 'Semis')
 
     def test_deletes_a_watchlist_and_its_items(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         response = self.client.delete(f'/api/research/watchlists/{watchlist.pk}/')
@@ -163,7 +164,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(WatchlistItem.objects.count(), 0)
 
     def test_adds_an_item_with_its_resolved_metadata(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
 
         response = self.client.post(
             f'/api/research/watchlists/{watchlist.pk}/items/',
@@ -183,7 +184,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(item.exchange, 'NASDAQ')
 
     def test_adding_a_duplicate_instrument_is_a_400(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         response = self.client.post(
@@ -196,7 +197,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(watchlist.items.count(), 1)
 
     def test_an_item_without_a_uic_is_rejected_rather_than_stored_unpriceable(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
 
         response = self.client.post(
             f'/api/research/watchlists/{watchlist.pk}/items/',
@@ -209,7 +210,7 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(watchlist.items.count(), 0)
 
     def test_removes_an_item(self):
-        watchlist = Watchlist.objects.create(name='Tech')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
         item = WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         response = self.client.delete(
@@ -220,8 +221,8 @@ class WatchlistAPITest(APITestCase):
         self.assertEqual(watchlist.items.count(), 0)
 
     def test_cannot_remove_an_item_through_the_wrong_list(self):
-        watchlist = Watchlist.objects.create(name='Tech')
-        other = Watchlist.objects.create(name='Watching')
+        watchlist = Watchlist.objects.create(user=the_owner(), name='Tech')
+        other = Watchlist.objects.create(user=the_owner(), name='Watching')
         item = WatchlistItem.objects.create(watchlist=watchlist, symbol='NVDA', uic=211)
 
         response = self.client.delete(f'/api/research/watchlists/{other.pk}/items/{item.pk}/')

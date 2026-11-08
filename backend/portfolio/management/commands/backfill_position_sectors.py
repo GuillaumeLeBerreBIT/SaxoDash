@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 
+from portfolio.models import Position
 from portfolio.sectors import backfill_sectors
+from users.commands import add_user_argument, chosen_user
 
 
 class Command(BaseCommand):
@@ -11,6 +13,10 @@ class Command(BaseCommand):
         'the periodic portfolio.tasks.backfill_position_sectors task.'
     )
 
+    def add_arguments(self, parser):
+        add_user_argument(parser)
+
     def handle(self, *args, **options):
-        updated = backfill_sectors()
+        user = chosen_user(options['user'])
+        updated = backfill_sectors(Position.objects.filter(user=user))
         self.stdout.write(self.style.SUCCESS(f'Backfilled sector for {updated} position(s).'))

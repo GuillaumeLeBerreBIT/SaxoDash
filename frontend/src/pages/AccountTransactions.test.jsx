@@ -22,6 +22,7 @@ function renderAt(id) {
       <MemoryRouter initialEntries={[`/money/accounts/${id}`]}>
         <Routes>
           <Route path="/money/accounts/:accountId" element={<AccountTransactions />} />
+          <Route path="/money" element={<p>Accounts page</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -37,6 +38,21 @@ describe('AccountTransactions', () => {
   beforeEach(() => {
     queries.useUpdateBankTransactionCategory.mockReturnValue({ mutate: vi.fn() })
     queries.useBankAccounts.mockReturnValue({ data: [KBC] })
+    queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true }, isLoading: false })
+  })
+
+  it('sends a non-owner back to Accounts without asking for bank transactions', () => {
+    queries.useMe.mockReturnValue({ data: { username: 'alice', email: 'a@example.com', is_owner: false }, isLoading: false })
+    renderAt(5)
+    expect(queries.useBankTransactions).not.toHaveBeenCalled()
+    expect(screen.getByText('Accounts page')).toBeInTheDocument()
+  })
+
+  it('asks for nothing while the user is still loading', () => {
+    queries.useMe.mockReturnValue({ data: undefined, isLoading: true })
+    renderAt(5)
+    expect(queries.useBankTransactions).not.toHaveBeenCalled()
+    expect(screen.queryByText('Accounts page')).not.toBeInTheDocument()
   })
 
   it('has exactly one h1 and no skipped heading level', () => {

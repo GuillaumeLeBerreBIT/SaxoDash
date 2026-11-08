@@ -2,7 +2,6 @@ import json
 from unittest.mock import patch
 
 import anyio
-from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TransactionTestCase, override_settings
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -18,6 +17,7 @@ from .server import build_server
 from .shaping import capped, without
 from .tools import market, portfolio, smart_money
 from .views import call_view
+from users.testing import the_owner
 
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -41,7 +41,7 @@ def foreign(symbol):
 class ProtocolTest(TransactionTestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_a_client_lists_and_calls_tools_over_the_protocol(self):
         with patch('mcp_server.tools.compare.look_up', side_effect=foreign):
@@ -63,7 +63,7 @@ def view_data(view, **params):
 class ParityTest(TransactionTestCase):
     def setUp(self):
         cache.clear()
-        get_user_model().objects.create_user('u', password='p')
+        the_owner()
 
     def test_page_backed_tools_answer_what_their_page_shows(self):
         cases = [

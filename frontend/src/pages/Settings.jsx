@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { connectEnableBanking } from '../api/client'
-import { useEnableBankingStatus, useSaxoStatus } from '../api/queries'
+import { useEnableBankingStatus, useMe, useSaxoStatus } from '../api/queries'
+import AccountSettings from '../components/settings/AccountSettings'
 import { Button, Card, PageHeader, Segmented, StatusDot } from '../components/ui'
 import { fmtDateTime } from '../lib/format'
 import { bankSyncBadge } from '../lib/bankSync'
@@ -10,6 +11,7 @@ import { THEMES } from '../lib/theme'
 import { useAppearance } from '../theme/ThemeProvider'
 
 const SECTIONS = [
+  { id: 'account', label: 'Account' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'connections', label: 'Connections' },
   { id: 'sync', label: 'Sync health' },
@@ -152,7 +154,8 @@ function bankRow(bank, state) {
 
 function Connections() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
-  const { data: banks } = useEnableBankingStatus()
+  const { data: me } = useMe()
+  const { data: banks } = useEnableBankingStatus({ enabled: me?.is_owner === true })
   const { connect, failed: connectFailed } = useConnectSaxo()
   const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
@@ -203,7 +206,8 @@ function syncRows(saxo, banks, failed) {
 
 function SyncHealth() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
-  const { data: banks, isError: banksFailed } = useEnableBankingStatus()
+  const { data: me } = useMe()
+  const { data: banks, isError: banksFailed } = useEnableBankingStatus({ enabled: me?.is_owner === true })
   const rows = syncRows(saxo, banks, { Saxo: saxoFailed, Banks: banksFailed })
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
@@ -227,7 +231,7 @@ function SyncHealth() {
   )
 }
 
-const BODIES = { appearance: Appearance, connections: Connections, sync: SyncHealth }
+const BODIES = { account: AccountSettings, appearance: Appearance, connections: Connections, sync: SyncHealth }
 
 export default function Settings() {
   const [params, setParams] = useSearchParams()

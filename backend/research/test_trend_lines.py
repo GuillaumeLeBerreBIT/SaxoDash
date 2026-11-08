@@ -1,10 +1,10 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import TrendLine
+from users.testing import the_owner
 
 LIST_URL = '/api/research/trend-lines/211/Stock/'
 
@@ -15,13 +15,13 @@ def detail_url(pk):
 
 class TrendLineAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def line(self, uic=211, asset_type='Stock', start_bar_date='2026-08-01', start_price='100.00',
               end_bar_date='2026-08-10', end_price='110.00', label=''):
-        return TrendLine.objects.create(
+        return TrendLine.objects.create(user=the_owner(), 
             uic=uic, asset_type=asset_type,
             start_bar_date=start_bar_date, start_price=Decimal(start_price),
             end_bar_date=end_bar_date, end_price=Decimal(end_price), label=label,

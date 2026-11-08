@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -11,6 +11,7 @@ import { ThemeProvider } from '../theme/ThemeProvider'
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
 
+vi.mock('../components/settings/AccountSettings', () => ({ default: () => <h2>Profile</h2> }))
 vi.mock('../api/client', () => ({
   connectSaxo: vi.fn(),
   connectEnableBanking: vi.fn(),
@@ -37,9 +38,26 @@ beforeEach(() => {
   localStorage.clear()
   queries.useSaxoStatus.mockReturnValue({ data: HEALTHY })
   queries.useEnableBankingStatus.mockReturnValue({ data: undefined })
+  queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true } })
 })
 
 describe('Settings', () => {
+  it('lists Account first and opens it on request', () => {
+    renderSettings('/settings?section=account')
+    const sections = screen.getByRole('navigation', { name: 'Settings sections' })
+    expect(within(sections).getAllByRole('button')[0]).toHaveTextContent('Account')
+    expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
+  })
+
+  it('does not ask for bank status unless the user is the owner', () => {
+    renderSettings('/settings?section=connections')
+    expect(queries.useEnableBankingStatus).toHaveBeenLastCalledWith({ enabled: true })
+
+    queries.useMe.mockReturnValue({ data: { username: 'alice', email: 'a@example.com', is_owner: false } })
+    renderSettings('/settings?section=connections')
+    expect(queries.useEnableBankingStatus).toHaveBeenLastCalledWith({ enabled: false })
+  })
+
   it('says the Saxo status is unavailable when the status request fails, rather than checking forever', () => {
     queries.useSaxoStatus.mockReturnValue({ data: undefined, isError: true })
     renderSettings('/settings?section=connections')

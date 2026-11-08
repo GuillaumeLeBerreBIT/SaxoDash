@@ -10,14 +10,12 @@ import logging
 
 from research.providers import ProviderError
 
-from .models import Position
-
 logger = logging.getLogger(__name__)
 
 UNCATEGORIZED = 'Uncategorized'
 
 
-def backfill_sectors():
+def backfill_sectors(positions):
     """Fetches and stores a real sector for every Position still at the
     default. Returns how many were updated.
 
@@ -29,7 +27,7 @@ def backfill_sectors():
     from research import finnhub  # function-level: avoid a portfolio<->research import cycle
 
     updated = 0
-    for position in Position.objects.filter(sector=UNCATEGORIZED):
+    for position in positions.filter(sector=UNCATEGORIZED):
         try:
             value = finnhub.industry(position.ticker)
         except ProviderError as exc:

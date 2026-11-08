@@ -145,6 +145,13 @@ writes while the copy runs. Run the second in another terminal.
 
 A different file: `manage.py import_sqlite path/to/other.sqlite3 --flush`.
 
+### Mail in development
+
+Password reset mail goes to the console backend whenever `EMAIL_HOST` is unset: the
+message, link included, is printed in the `web` and `worker` logs under `.dev/logs/`. Set
+the `EMAIL_*` variables in `backend/.env` to send real mail; production's are in
+`docs/deploying.md`.
+
 ### The CORS warning
 
 If `CORS_ALLOWED_ORIGINS` doesn't list the frontend origin, you get this at

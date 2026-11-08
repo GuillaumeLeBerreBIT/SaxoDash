@@ -5,6 +5,10 @@ import { MemoryRouter, Outlet, useLocation } from 'react-router-dom'
 import App from './App'
 
 vi.mock('./api/client', () => ({ isAuthenticated: () => true }))
+vi.mock('./api/queries', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useMe: () => ({ data: { username: 'demo', email: 'd@example.com', is_owner: true }, isLoading: false }),
+}))
 vi.mock('./components/Layout', () => ({
   default: () => (
     <div data-testid="frame">

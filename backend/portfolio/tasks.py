@@ -1,5 +1,6 @@
 from celery import shared_task
 
+from .models import Position
 from .sectors import backfill_sectors
 
 
@@ -12,4 +13,4 @@ def backfill_position_sectors():
     30 minutes and has no reason to recheck a classification that moves on
     the order of years. Safe to run repeatedly; see sectors.backfill_sectors.
     """
-    return backfill_sectors()
+    return backfill_sectors(Position.objects.all())

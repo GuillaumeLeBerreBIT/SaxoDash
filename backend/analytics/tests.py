@@ -1,9 +1,8 @@
 import math
 import statistics
 from datetime import date, timedelta
-from unittest.mock import patch
+from unittest.mock import patch, sentinel
 
-from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -12,6 +11,7 @@ from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
 
 from . import benchmarks, history, metrics, report, views
+from users.testing import the_owner
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -20,6 +20,7 @@ from . import benchmarks, history, metrics, report, views
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
 TRADING_DAYS = 252
+USER = sentinel.user
 
 
 class DailyReturnsTest(TestCase):
@@ -567,32 +568,32 @@ class BenchmarkEurClosesTest(TestCase):
             {'date': '2026-01-01', 'close': 50.0},
             {'date': '2026-01-02', 'close': 51.0},
         ]
-        closes = benchmarks.eur_closes('world')
+        closes = benchmarks.eur_closes('world', user=USER)
         self.assertEqual(closes, [(date(2026, 1, 1), 50.0), (date(2026, 1, 2), 51.0)])
-        mock_chart.assert_called_once_with(50629, 'Etf', 1440, benchmarks.CHART_COUNT)
+        mock_chart.assert_called_once_with(50629, 'Etf', 1440, benchmarks.CHART_COUNT, user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_usd_benchmark_is_converted_using_that_days_eurusd_rate(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 1.1}, {'date': '2026-01-02', 'close': 1.2}]
             return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
         mock_chart.side_effect = side_effect
 
-        closes = dict(benchmarks.eur_closes('sp500'))
+        closes = dict(benchmarks.eur_closes('sp500', user=USER))
 
         self.assertAlmostEqual(closes[date(2026, 1, 1)], 100.0)  # 110 USD / 1.1
         self.assertAlmostEqual(closes[date(2026, 1, 2)], 100.0)  # 120 USD / 1.2
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_date_missing_from_the_fx_series_is_skipped(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 1.1}]
             return [{'date': '2026-01-01', 'close': 110.0}, {'date': '2026-01-02', 'close': 120.0}]
         mock_chart.side_effect = side_effect
 
-        closes = benchmarks.eur_closes('sp500')
+        closes = benchmarks.eur_closes('sp500', user=USER)
 
         self.assertEqual(len(closes), 1)
 
@@ -600,17 +601,17 @@ class BenchmarkEurClosesTest(TestCase):
     def test_a_provider_failure_becomes_benchmark_unavailable(self, mock_chart):
         mock_chart.side_effect = ProviderNotConnected('Saxo is not connected.')
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('world')
+            benchmarks.eur_closes('world', user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_an_empty_chart_becomes_benchmark_unavailable(self, mock_chart):
         mock_chart.return_value = []
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('world')
+            benchmarks.eur_closes('world', user=USER)
 
     @patch('analytics.benchmarks.market.chart')
     def test_a_zero_fx_rate_is_skipped_not_divided_by(self, mock_chart):
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': '2026-01-01', 'close': 0.0}]  # bad rate
             return [{'date': '2026-01-01', 'close': 110.0}]
@@ -618,19 +619,20 @@ class BenchmarkEurClosesTest(TestCase):
 
         # No ZeroDivisionError; the one bad day drops out, leaving nothing.
         with self.assertRaises(benchmarks.BenchmarkUnavailable):
-            benchmarks.eur_closes('sp500')
+            benchmarks.eur_closes('sp500', user=USER)
 
 
 @override_settings(CACHES=LOCMEM)
 class PerformanceViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def _seed_snapshots(self, n=35):
         for day in range(1, n + 1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 1) + timedelta(days=day - 1),
                 portfolio_value=100 + day, saxo_account_value=100 + day,
                 bank_total=0, net_worth=100 + day,
@@ -669,6 +671,7 @@ class PerformanceViewTest(APITestCase):
     def test_a_week_of_history_reports_what_is_missing_instead_of_zeros(self):
         for offset in range(5):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, 5) + timedelta(days=offset),
                 portfolio_value=100, saxo_account_value=100 + offset,
                 bank_total=0, net_worth=100,
@@ -686,7 +689,7 @@ class PerformanceViewTest(APITestCase):
 @override_settings(RISK_FREE_RATE_ANNUAL=0.02, CACHES=LOCMEM)
 class RiskMetricsViewTest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='alex', password='pw')
+        self.user = the_owner()
         token = RefreshToken.for_user(self.user).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
@@ -697,6 +700,7 @@ class RiskMetricsViewTest(APITestCase):
 
     def test_reports_no_data_below_two_snapshots(self):
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100,
         )
         response = self.client.get('/api/analytics/risk/')
@@ -706,6 +710,7 @@ class RiskMetricsViewTest(APITestCase):
     def test_computes_risk_from_portfolio_value_history(self):
         for day, value in enumerate([100, 102, 101, 105, 103], start=5):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=value,
                 saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
@@ -732,6 +737,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         for day, (portfolio_value, saxo_value) in enumerate(rows, start=1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=portfolio_value,
                 saxo_account_value=saxo_value, bank_total=0, net_worth=portfolio_value,
             )
@@ -747,10 +753,12 @@ class RiskMetricsViewTest(APITestCase):
         # usable (see portfolio.services.get_saxo_account_value) - those
         # days must be excluded, not treated as a zero/blank data point.
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 1), portfolio_value=100,
             saxo_account_value=None, bank_total=0, net_worth=100,
         )
         NetWorthSnapshot.objects.create(
+            user=the_owner(),
             date=date(2026, 1, 2), portfolio_value=105,
             saxo_account_value=None, bank_total=0, net_worth=105,
         )
@@ -761,6 +769,7 @@ class RiskMetricsViewTest(APITestCase):
     def _seed_snapshots(self):
         for day, value in enumerate([100, 102, 101, 105, 103], start=1):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=date(2026, 1, day), portfolio_value=value,
                 saxo_account_value=value, bank_total=50, net_worth=value + 50,
             )
@@ -781,7 +790,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.data['benchmark']['key'], 'world')
-        mock_eur_closes.assert_called_once_with('world')
+        mock_eur_closes.assert_called_once_with('world', user=self.user)
 
     @patch('analytics.benchmarks.eur_closes')
     def test_accepts_a_benchmark_query_param(self, mock_eur_closes):
@@ -791,7 +800,7 @@ class RiskMetricsViewTest(APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/?benchmark=sp500')
         self.assertEqual(response.data['benchmark']['key'], 'sp500')
-        mock_eur_closes.assert_called_once_with('sp500')
+        mock_eur_closes.assert_called_once_with('sp500', user=self.user)
 
     @patch('analytics.benchmarks.eur_closes')
     def test_an_unknown_benchmark_falls_back_to_world(self, mock_eur_closes):
@@ -813,7 +822,7 @@ class RiskMetricsViewTest(APITestCase):
 
     @patch('analytics.benchmarks.eur_closes')
     def test_benchmark_is_not_fetched_without_enough_portfolio_history(self, mock_eur_closes):
-        NetWorthSnapshot.objects.create(date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100)
+        NetWorthSnapshot.objects.create(user=the_owner(), date=date(2026, 1, 1), portfolio_value=100, bank_total=0, net_worth=100)
         response = self.client.get('/api/analytics/risk/')
         self.assertFalse(response.data['has_data'])
         self.assertFalse(response.data['benchmark']['has_data'])
@@ -825,7 +834,7 @@ class RiskMetricsViewTest(APITestCase):
         # the whole risk page instead of just dropping the benchmark.
         self._seed_snapshots()
 
-        def side_effect(uic, asset_type, horizon, count):
+        def side_effect(uic, asset_type, horizon, count, user):
             if uic == benchmarks.EURUSD_UIC:
                 return [{'date': f'2026-01-0{d}', 'close': 0.0} for d in range(1, 6)]
             return [{'date': f'2026-01-0{d}', 'close': 100.0 + d} for d in range(1, 6)]
@@ -845,14 +854,14 @@ class RiskReportTest(TestCase):
     @patch('analytics.report.benchmarks.eur_closes')
     def test_an_unavailable_benchmark_is_a_reason_not_an_exception(self, mock_eur_closes):
         mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('not connected')
-        out = report.risk_report(self._dv(), 'sp500')
+        out = report.risk_report(self._dv(), 'sp500', user=USER)
         self.assertTrue(out['has_data'])
         self.assertEqual(out['benchmark']['reason'], 'not connected')
         self.assertIsNone(out['benchmark']['beta'])
 
     @patch('analytics.report.benchmarks.eur_closes')
     def test_no_portfolio_history_does_not_fetch_a_benchmark(self, mock_eur_closes):
-        out = report.risk_report([], 'world')
+        out = report.risk_report([], 'world', user=USER)
         self.assertFalse(out['has_data'])
         self.assertIsNone(out['benchmark']['reason'])
         mock_eur_closes.assert_not_called()
@@ -861,7 +870,7 @@ class RiskReportTest(TestCase):
     def test_the_benchmark_block_carries_history_and_needs(self, mock_eur_closes):
         mock_eur_closes.return_value = benchmark_series(400)
 
-        out = report.risk_report(synthetic_series(8), 'world')
+        out = report.risk_report(synthetic_series(8), 'world', user=USER)
 
         self.assertEqual(out['history_days'], 8)
         self.assertEqual(out['benchmark']['history_days'], 8)
@@ -880,7 +889,7 @@ class PerformanceReportTest(TestCase):
     @patch('analytics.report.benchmarks.eur_closes')
     def test_benchmark_is_best_effort(self, mock_eur_closes):
         mock_eur_closes.side_effect = benchmarks.BenchmarkUnavailable('x')
-        out = report.performance_report(self._dv(), 'world')
+        out = report.performance_report(self._dv(), 'world', user=USER)
         self.assertIn('periods', out)
         self.assertEqual(out['benchmark']['key'], 'world')
         one_month = next(r for r in out['periods'] if r['label'] == '1 month')
@@ -892,11 +901,12 @@ class PortfolioDatedValuesTest(TestCase):
         friday = date(2026, 9, 18)
         for offset, value in enumerate([100, 100, 100, 104]):
             NetWorthSnapshot.objects.create(
+                user=the_owner(),
                 date=friday + timedelta(days=offset),
                 portfolio_value=value, bank_total=0, net_worth=value, saxo_account_value=value,
             )
 
-        dates = [d for d, _ in views._portfolio_dated_values()]
+        dates = [d for d, _ in views._portfolio_dated_values(the_owner())]
 
         self.assertEqual(dates, [date(2026, 9, 18), date(2026, 9, 21)])
 
