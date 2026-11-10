@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from rest_framework.test import APITestCase
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
@@ -286,7 +287,7 @@ class BudgetProgressViewTest(APITestCase):
         Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
         BankTransaction.objects.create(
             bank='kbc', bank_account=account, external_id='t1', amount=Decimal('-40'),
-            currency='EUR', booking_date=date.today(), category='GROCERIES',
+            currency='EUR', booking_date=timezone.localdate(), category='GROCERIES',
         )
 
         response = self.client.get('/api/enablebanking/budgets/progress/')

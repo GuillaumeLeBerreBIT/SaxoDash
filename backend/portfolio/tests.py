@@ -722,7 +722,7 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_headline_is_live_and_is_todays_point_of_the_delta_series(self, _mock):
-        today = date.today()
+        today = timezone.localdate()
         _snap(today - timedelta(days=1), '1500', bank=Decimal('2000.00'))
         _snap(today, '1500', bank=Decimal('2500.00'))
         _pos('NVDA', '10', '100', '200')
@@ -749,7 +749,7 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
             bank='KBC', type='Checking', iban_masked='-',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = timezone.localdate() - timedelta(days=1)
         _snap(yesterday, '900', bank=Decimal('900.00'))  # a stale prior-day row
 
         payload = insights.build_insights(the_owner())

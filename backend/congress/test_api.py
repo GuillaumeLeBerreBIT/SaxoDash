@@ -1,12 +1,13 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework.test import APITestCase
+from django.utils import timezone
 
 from .models import Holding, Member, Report, Trade
 
-TODAY = date.today()
+TODAY = timezone.localdate()
 
 
 def trade(report, ticker, kind=Trade.PURCHASE, option='', priceable=True):

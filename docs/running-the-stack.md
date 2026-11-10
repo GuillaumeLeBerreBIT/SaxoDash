@@ -315,9 +315,9 @@ restart Claude Desktop:
 {
   "mcpServers": {
     "saxodash": {
-      "command": "/Users/guillaumeleberre/Develop/GuillaumesLab/WebDevelopment/SaxoDash/backend/.venv/bin/python",
+      "command": "/absolute/path/to/SaxoDash/backend/.venv/bin/python",
       "args": [
-        "/Users/guillaumeleberre/Develop/GuillaumesLab/WebDevelopment/SaxoDash/backend/manage.py",
+        "/absolute/path/to/SaxoDash/backend/manage.py",
         "mcp_serve"
       ],
       "env": { "MCP_USER": "demo" }
@@ -326,8 +326,8 @@ restart Claude Desktop:
 }
 ```
 
-`env` is optional. The server acts as the app's single user; `MCP_USER` names which
-username when more than one account exists.
+`env` is optional. The server acts as the owner; `MCP_USER` names another
+username to act as instead.
 
 Cowork: not yet verified whether Cowork tasks see local stdio servers. Claude Desktop
 chat does. If Cowork does not, the route is a desktop extension (`.mcpb`) packaging

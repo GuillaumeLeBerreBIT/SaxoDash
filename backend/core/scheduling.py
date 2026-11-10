@@ -56,6 +56,10 @@ PERIODIC_TASKS = {
         'task': 'portfolio.tasks.backfill_position_sectors',
         'crontab': {'minute': '0', 'hour': '4'},
     },
+    'Prune expired records': {
+        'task': 'core.tasks.prune_expired_records',
+        'crontab': {'minute': '0', 'hour': '3'},
+    },
     'Backup database': {
         'task': 'core.tasks.backup_database_task',
         'crontab': {'minute': '30', 'hour': '4'},

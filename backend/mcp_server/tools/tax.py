@@ -1,4 +1,3 @@
-from datetime import date
 from typing import Annotated
 
 from pydantic import Field
@@ -12,6 +11,7 @@ from ..bounds import Euros
 from ..envelope import Reply, Unavailable
 from ..views import app_user
 from . import tool
+from django.utils import timezone
 
 
 def _basis_close(uic, asset_type):
@@ -31,12 +31,12 @@ def _basis_close(uic, asset_type):
     saxo=True,
 )
 def get_tax_year(year: Annotated[int, Field(ge=0)] = 0, carry_over_eur: Euros = 0):
-    year = year or date.today().year
+    year = year or timezone.localdate().year
     try:
         tax_year.ensure_tax_year(year)
     except tax_year.NotATaxYear as refused:
         raise Unavailable(str(refused)) from refused
-    if year > date.today().year:
+    if year > timezone.localdate().year:
         raise Unavailable(f'The {year} tax year has not started yet.')
     user = app_user()
     rows, reason = closed_positions.for_year(year, user=user)

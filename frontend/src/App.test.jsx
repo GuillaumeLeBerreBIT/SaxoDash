@@ -52,7 +52,6 @@ function renderAt(url) {
       <Where />
     </MemoryRouter>,
   )
-  return screen.getByTestId('where').textContent
 }
 
 describe('legacy routes redirect with their query', () => {
@@ -69,9 +68,10 @@ describe('legacy routes redirect with their query', () => {
       '/money?section=transactions&category=GROCERIES&from=2026-01-01',
       'Transactions section',
     ],
-  ])('%s → %s', (from, to, rendered) => {
-    expect(renderAt(from)).toBe(to)
-    expect(screen.getByText(rendered)).toBeInTheDocument()
+  ])('%s → %s', async (from, to, rendered) => {
+    renderAt(from)
+    expect(await screen.findByText(rendered)).toBeInTheDocument()
+    expect(screen.getByTestId('where').textContent).toBe(to)
     expect(screen.getByTestId('frame')).toBeInTheDocument()
   })
 })
@@ -88,15 +88,24 @@ describe('new routes', () => {
     ['/money/accounts/3', 'AccountTransactions page'],
     ['/boards', 'Boards page'],
     ['/boards/b1', 'Boards page'],
-  ])('%s renders %s inside the frame', (url, rendered) => {
+  ])('%s renders %s inside the frame', async (url, rendered) => {
     renderAt(url)
-    expect(screen.getByText(rendered)).toBeInTheDocument()
+    expect(await screen.findByText(rendered)).toBeInTheDocument()
     expect(screen.getByTestId('frame')).toBeInTheDocument()
   })
 
-  it('renders the Settings page inside the frame', () => {
+  it('renders the Settings page inside the frame', async () => {
     renderAt('/settings')
-    expect(screen.getByText('Settings page')).toBeInTheDocument()
+    expect(await screen.findByText('Settings page')).toBeInTheDocument()
     expect(screen.getByTestId('frame')).toBeInTheDocument()
+  })
+})
+
+describe('pages load on demand', () => {
+  it('says the page is loading until its code arrives, then shows it', async () => {
+    renderAt('/earnings')
+    expect(screen.getByRole('status', { name: 'Loading page' })).toBeInTheDocument()
+    expect(await screen.findByText('Earnings page')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Loading page' })).not.toBeInTheDocument()
   })
 })

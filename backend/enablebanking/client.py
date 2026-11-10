@@ -19,10 +19,6 @@ ASPSPS = {
 }
 
 
-class EnableBankingAuthError(Exception):
-    """Raised when JWT signing or authentication fails."""
-
-
 class EnableBankingAPIError(Exception):
     """Raised when an Enable Banking API request fails."""
 

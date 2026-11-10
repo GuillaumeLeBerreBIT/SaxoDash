@@ -41,6 +41,10 @@ case "${STUB_CI:-success}" in
 esac
 STUB
   chmod +x "$T/bin/docker" "$T/bin/curl"
+  if ! command -v flock > /dev/null; then
+    printf '#!/usr/bin/env bash\nexit 0\n' > "$T/bin/flock"
+    chmod +x "$T/bin/flock"
+  fi
 }
 
 setup() {

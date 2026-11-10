@@ -27,7 +27,6 @@ export const getSubscriptions = () => apiFetch('/api/enablebanking/subscriptions
 export const updateSubscription = (id, patch) =>
   jsonRequest(`/api/enablebanking/subscriptions/${id}/`, 'PATCH', patch)
 
-export const getBudgets = () => apiFetch('/api/enablebanking/budgets/')
 
 export const setBudget = (category, monthlyLimit) =>
   jsonRequest('/api/enablebanking/budgets/', 'PUT', { category, monthly_limit: monthlyLimit })
@@ -40,9 +39,6 @@ export const getLabeledAccountCandidates = () => apiFetch('/api/enablebanking/la
 
 export const createLabeledAccount = (label) =>
   jsonRequest('/api/enablebanking/labeled-accounts/', 'POST', label)
-
-export const updateLabeledAccount = (id, patch) =>
-  jsonRequest(`/api/enablebanking/labeled-accounts/${id}/`, 'PATCH', patch)
 
 export const deleteLabeledAccount = (id) =>
   apiFetch(`/api/enablebanking/labeled-accounts/${id}/`, { method: 'DELETE' })

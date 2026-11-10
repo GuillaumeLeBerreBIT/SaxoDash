@@ -7,11 +7,11 @@ Read it before starting implementation work if you haven't already.
 
 A personal finance dashboard (Django REST Framework backend, Vite + React
 frontend) rebuilding the SaxoDash Claude Design mockup into a real app.
-Current milestone: Dashboard, Portfolio, Transactions, Accounts, Research,
-Earnings and Analytics, against the live Saxo OpenAPI plus Finnhub for
-company fundamentals. Bank-aggregation (auto-syncing real external banks,
-vs. the hand-entered/Saxo-cash accounts `accounts` already supports) is the
-one still-future milestone — do not pull it forward mid-task.
+Shipped: Overview, Portfolio (with transactions), Research, Boards, Discover,
+Earnings, Investors (13F and House trades), Analytics and Money, against the
+live Saxo OpenAPI plus Finnhub for company fundamentals. Money includes bank
+aggregation through Enable Banking (`enablebanking`, owner only), beside the
+hand-entered/Saxo-cash accounts in `accounts`; further banking work is paused.
 
 Research fundamentals (P/E, market cap, dividend yield, growth/valuation
 ratios) come from Finnhub's free tier — see "Company fundamentals come from
@@ -399,7 +399,7 @@ the wrong candle, so a foreign filer (6-Ks carry no item numbers; NBIS) shows no
 move is `lib/reaction.js::earningsMove` over every fetched bar, the twin of
 `research/reaction.py`, pinned to it by the shared `lib/fixtures/reaction-parity.json`.
 
-**The active chart pane is the URL.** `/research/chart` shows up to four panes
+**The active chart pane is the URL.** `/boards` (the Chart workspace; `/research/chart` redirects to it) shows up to four panes
 (`lib/chartLayouts.js`), saved per browser under `saxodash:chart-workspace`. The
 active pane is whatever `?symbol=` names: the watchlist, search and ⌘K reach it by
 navigating, unchanged. `useChartWorkspace` copies each navigation into the active
@@ -497,7 +497,7 @@ positions), knows Saxo's share-class spellings (`BRK.B` is `BRKb`, `LEN.B` is `L
 nothing (`ETN` does, `Eaton` does not) — always requiring the symbol itself to match.
 
 **The chart page's symbol panel computes from what the page already fetched.**
-`SymbolPanel` sits under the watchlist on `/research/chart` and follows the URL's
+`SymbolPanel` sits under the watchlist on `/boards` and follows the URL's
 symbol. Performance, seasonals and the technicals gauge are arithmetic over the one
 1,200-bar fetch (`lib/performance.js::trailingReturns`, `lib/seasonals.js`,
 `lib/technicalRating.js`); earnings dots reuse the page's `useSymbolEarnings`; only
@@ -659,3 +659,16 @@ back from the per-minute budget: a signed-in non-owner request may use
 `FINNHUB_CALLS_PER_MINUTE - FINNHUB_OWNER_RESERVE`, so strangers cannot starve the owner's
 pages. The acting user comes from `users.acting.current_user()`; MCP calls act as
 `MCP_USER`.
+
+**One nightly job prunes what only grows.** `core.housekeeping.prune` (03:00, `core.tasks.prune_expired_records`)
+deletes expired refresh tokens with their blacklist entries, expired sessions (they only carry OAuth
+state), and `SyncRun` / `BankSyncRun` rows older than 90 days. The newest run and the newest `ok` run of
+every (user, task) and (bank, kind) are kept however old, because the status badges and "last synced"
+read exactly those rows.
+
+**Pages are loaded on demand.** `App.jsx` imports every page with `lazy`, so the entry bundle holds the
+shell and each page (and Recharts) arrives with the first route that needs it. `Layout` wraps its
+`Outlet` in `Suspense`, so the top bar stays while a page's code loads. React Router navigates inside a
+transition: the previous page stays on screen until the next one is ready, so a test must wait for the
+page (`findBy…`) before reading the location.
+

@@ -72,9 +72,9 @@ class ManualIbanLabelModelTest(TestCase):
         # The residual case ManualIbanLabel can't match by IBAN at all - a
         # Bancontact/instant-payment row Enable Banking never structured a
         # counterparty_iban for.
-        label = ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account')
+        label = ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='My other account')
         self.assertIsNone(label.iban)
-        self.assertEqual(label.counterparty_name, 'GUILLAUME LE BERRE')  # normalized on save
+        self.assertEqual(label.counterparty_name, 'JAN JANSSENS')  # normalized on save
 
     def test_requires_at_least_one_of_iban_or_counterparty_name(self):
         label = ManualIbanLabel(label='Nothing to match on')

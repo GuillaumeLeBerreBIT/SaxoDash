@@ -10,11 +10,12 @@ import logging
 import re
 import statistics
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from django.conf import settings
 from django.core.cache import cache
+from django.utils.timezone import localdate
 
 from core.http_client import request_json
 from users.acting import current_user
@@ -656,7 +657,7 @@ def news(symbol):
     """Company headlines for the last NEWS_WINDOW_DAYS, newest first, capped.
     Drops the image (kept deliberately spare) and any row missing a headline,
     url or timestamp."""
-    today = date.today()
+    today = localdate()
     start = today - timedelta(days=NEWS_WINDOW_DAYS)
     key = f'research:news:v2:{symbol}:{today.isoformat()}'
 

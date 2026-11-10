@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from portfolio.models import Position
 
@@ -29,7 +30,7 @@ class WindowEarningsTest(TestCase):
         }
 
     def _monday(self, week_offset=0):
-        today = date.today()
+        today = timezone.localdate()
         monday = today - timedelta(days=today.weekday())
         if today.weekday() >= 5:
             monday += timedelta(weeks=1)
@@ -241,7 +242,7 @@ class SymbolEarningsTest(TestCase):
             {'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7},
             {'period': '2026-03-31', 'actual': 1.4, 'estimate': 1.45, 'surprisePercent': -3.4},
         ]
-        future = (date.today() + timedelta(days=30)).isoformat()
+        future = (timezone.localdate() + timedelta(days=30)).isoformat()
         mock_cal.return_value = {'earningsCalendar': [
             {'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
              'epsEstimate': 2.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None},
@@ -302,7 +303,7 @@ class SymbolEarningsTest(TestCase):
     def test_a_legacy_list_cache_entry_cannot_500_the_response(self, mock_hist, mock_cal):
         # An earlier build cached a bare list under the unversioned key; the
         # versioned key sidesteps it rather than `{**a_list}` blowing up.
-        cache.set(f'research:earnings-sym:AAPL:{date.today().isoformat()}', [{'date': 'x'}], 60)
+        cache.set(f'research:earnings-sym:AAPL:{timezone.localdate().isoformat()}', [{'date': 'x'}], 60)
 
         result = earnings.symbol_earnings('AAPL')
 

@@ -8,7 +8,8 @@ A personal finance dashboard combining live brokerage and bank data in one place
 
 ## Features
 
-- Dashboard, Portfolio, Transactions, Accounts, Research, Earnings and Analytics views
+- Dashboard, Portfolio, Transactions, Money, Research, Discover, Earnings and Analytics views
+- Investors (13F filings) and Congress (House trades) trackers
 - Live Saxo positions and P/L alongside hand-entered/aggregated bank accounts
 - Company research (valuation, earnings, fundamentals) via Finnhub
 
@@ -18,7 +19,7 @@ A personal finance dashboard combining live brokerage and bank data in one place
 scripts/dev.sh
 ```
 
-This starts Redis, the Celery worker, Celery beat, Django and Vite together in one terminal.
+This starts Postgres (Docker), Redis, the Celery worker, Celery beat, Django and Vite together in one terminal. Details: [docs/running-the-stack.md](docs/running-the-stack.md).
 
 ## License
 

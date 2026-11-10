@@ -11,7 +11,7 @@ import * as queries from '../api/queries'
 const idle = { data: undefined, isLoading: false, error: null }
 
 const householdLabel = {
-  id: 1, iban: null, counterparty_name: 'GUILLAUME LE BERRE', label: 'My other account', category: 'TRANSFER',
+  id: 1, iban: null, counterparty_name: 'JAN JANSSENS', label: 'My other account', category: 'TRANSFER',
 }
 
 function stub({ labels = [], candidates = [] } = {}) {
@@ -40,7 +40,7 @@ describe('LabeledAccountsSection', () => {
     stub({ labels: [householdLabel] })
     renderWithProviders(<LabeledAccountsSection />)
     expect(screen.getByText('My other account')).toBeInTheDocument()
-    expect(screen.getByText(/GUILLAUME LE BERRE/)).toBeInTheDocument()
+    expect(screen.getByText(/JAN JANSSENS/)).toBeInTheDocument()
   })
 
   it('removes a label', async () => {

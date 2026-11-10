@@ -15,12 +15,6 @@ LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'
 PERSHING = {'cik': 1336528, 'name': 'Pershing Square Capital Management, L.P.', 'last_13f': '2026-08-14'}
 
 
-class FixedToday(date):
-    @classmethod
-    def today(cls):
-        return date(2026, 10, 5)
-
-
 @override_settings(CACHES=LOCMEM)
 class TrackingApiTest(APITestCase):
     def setUp(self):
@@ -46,7 +40,7 @@ class TrackingApiTest(APITestCase):
         )
         search_filers.assert_called_once_with('capital')
 
-    @patch('investors.views.date', FixedToday)
+    @patch('investors.views.timezone.localdate', lambda: date(2026, 10, 5))
     @patch('investors.tracking.edgar.search_filers')
     def test_search_flags_filers_that_stopped_and_lists_them_last(self, search_filers):
         search_filers.return_value = [

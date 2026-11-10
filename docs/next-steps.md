@@ -51,13 +51,9 @@ A small toolbar for a selected line: colour, maybe style.
 
 ## 5. "App store / Netflix" browse view for stocks
 
-**Built** on branch `feat/discover-shelves` (Discover page at `/discover`, spec `docs/superpowers/specs/2026-09-30-discover-shelves-design.md`).
+Done 2026-10-04: Discover page at `/discover`, spec `docs/superpowers/specs/2026-09-30-discover-shelves-design.md`.
 
-Remains:
-- **Post-merge steps:** `python manage.py migrate`, then `python manage.py scan_universe` (it loads the universe CSV itself, so no separate `load_universe` run)
-- **Live scan:** `python manage.py scan_universe` against the dev database with Saxo connected (~10–11 minutes)
-- **Screenshot review:** follow the `saxodash-design-system` skill's harness recipe at 1440×1000 and 390×844
-- **Follow-ups out of scope:**
+Follow-ups out of scope:
   - User-defined shelves and custom filters
   - Intraday refresh (snapshot is nightly only)
   - Other markets (S&P 500 ∪ Nasdaq-100 only)
@@ -77,7 +73,7 @@ Remains:
 - Hovering a line badge shows the resize cursor rather than a text cursor.
 - Manual browser checks of the annotation features are worth a pass after any chart
   change.
-- At `/research/chart` with Volume + RSI + MACD all on, `MIN_PRICE_HEIGHT`'s
+- At `/boards` (the Chart workspace) with Volume + RSI + MACD all on, `MIN_PRICE_HEIGHT`'s
   240px floor can still push the canvas a little past the container at narrow
   widths, since the legend height is now measured rather than assumed — a
   pre-existing, accepted trade-off (see `chartGeometry.test.js`'s "never

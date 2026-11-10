@@ -45,10 +45,10 @@ class LabeledAccountListCreateViewTest(APITestCase):
 
     def test_creates_a_label_by_counterparty_name_with_no_iban(self):
         response = self.client.post('/api/enablebanking/labeled-accounts/', {
-            'counterparty_name': 'Guillaume Le Berre', 'label': 'My other account', 'category': 'TRANSFER',
+            'counterparty_name': 'Jan Janssens', 'label': 'My other account', 'category': 'TRANSFER',
         })
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(ManualIbanLabel.objects.get().counterparty_name, 'GUILLAUME LE BERRE')
+        self.assertEqual(ManualIbanLabel.objects.get().counterparty_name, 'JAN JANSSENS')
 
     def test_rejects_a_label_with_neither_iban_nor_name(self):
         response = self.client.post('/api/enablebanking/labeled-accounts/', {
@@ -64,11 +64,11 @@ class LabeledAccountListCreateViewTest(APITestCase):
         BankTransaction.objects.create(
             bank='kbc', bank_account=self.account, external_id='t1', amount=300,
             currency='EUR', booking_date=date(2026, 1, 5), category='REFUND_CREDIT',
-            counterparty_name='GUILLAUME LE BERRE',
+            counterparty_name='JAN JANSSENS',
         )
 
         self.client.post('/api/enablebanking/labeled-accounts/', {
-            'counterparty_name': 'Guillaume Le Berre', 'label': 'My other account', 'category': 'TRANSFER',
+            'counterparty_name': 'Jan Janssens', 'label': 'My other account', 'category': 'TRANSFER',
         })
 
         tx = BankTransaction.objects.get(external_id='t1')
@@ -78,11 +78,11 @@ class LabeledAccountListCreateViewTest(APITestCase):
         BankTransaction.objects.create(
             bank='kbc', bank_account=self.account, external_id='t2', amount=300,
             currency='EUR', booking_date=date(2026, 1, 5), category='REFUND_CREDIT',
-            category_override='SHOPPING', counterparty_name='GUILLAUME LE BERRE',
+            category_override='SHOPPING', counterparty_name='JAN JANSSENS',
         )
 
         self.client.post('/api/enablebanking/labeled-accounts/', {
-            'counterparty_name': 'Guillaume Le Berre', 'label': 'My other account', 'category': 'TRANSFER',
+            'counterparty_name': 'Jan Janssens', 'label': 'My other account', 'category': 'TRANSFER',
         })
 
         tx = BankTransaction.objects.get(external_id='t2')

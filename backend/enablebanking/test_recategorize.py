@@ -30,8 +30,8 @@ class RecategorizeTest(TestCase):
         )
 
     def test_returns_only_the_rows_whose_category_actually_changed(self):
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='Mine', category='TRANSFER')
-        self._tx('GUILLAUME LE BERRE', '300', 't1', category='REFUND_CREDIT')
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='Mine', category='TRANSFER')
+        self._tx('JAN JANSSENS', '300', 't1', category='REFUND_CREDIT')
         self._tx('COLRUYT ANTWERPEN', '-40', 't2', category='GROCERIES')  # already correct, no-op
 
         changed = recategorize()
@@ -40,8 +40,8 @@ class RecategorizeTest(TestCase):
         self.assertEqual(changed[0].category, 'TRANSFER')
 
     def test_does_not_persist_by_itself(self):
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='Mine', category='TRANSFER')
-        tx = self._tx('GUILLAUME LE BERRE', '300', 't3', category='REFUND_CREDIT')
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='Mine', category='TRANSFER')
+        tx = self._tx('JAN JANSSENS', '300', 't3', category='REFUND_CREDIT')
 
         recategorize()
 
@@ -64,11 +64,11 @@ class RecategorizeTest(TestCase):
         # The labeled-accounts API only wants to touch rows matching the
         # label just saved, not the whole table, on every keystroke-adjacent
         # save.
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='Mine', category='TRANSFER')
-        self._tx('GUILLAUME LE BERRE', '300', 't5', category='REFUND_CREDIT')
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='Mine', category='TRANSFER')
+        self._tx('JAN JANSSENS', '300', 't5', category='REFUND_CREDIT')
         other = self._tx('TRANSPORT & LOGISTICS COMPETENCE CE', '4104.12', 't6', category='REFUND_CREDIT')
 
-        changed = recategorize(BankTransaction.objects.filter(counterparty_name='GUILLAUME LE BERRE'))
+        changed = recategorize(BankTransaction.objects.filter(counterparty_name='JAN JANSSENS'))
 
         self.assertEqual(len(changed), 1)
         other.refresh_from_db()
@@ -79,9 +79,9 @@ class RecategorizeTest(TestCase):
         # through the UI takes effect right away, not at the next sync or a
         # manually-run command.
         label = ManualIbanLabel.objects.create(
-            counterparty_name='Guillaume Le Berre', label='Mine', category='TRANSFER',
+            counterparty_name='Jan Janssens', label='Mine', category='TRANSFER',
         )
-        tx = self._tx('GUILLAUME LE BERRE', '300', 't8', category='REFUND_CREDIT')
+        tx = self._tx('JAN JANSSENS', '300', 't8', category='REFUND_CREDIT')
 
         changed = recategorize_for_label(label)
 
@@ -104,12 +104,12 @@ class RecategorizeTest(TestCase):
     def test_a_custom_queryset_still_respects_a_manual_override(self):
         # The override guarantee must hold regardless of which queryset a
         # caller passes in, not just the default one.
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='Mine', category='TRANSFER')
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='Mine', category='TRANSFER')
         tx = self._tx(
-            'GUILLAUME LE BERRE', '300', 't7', category='REFUND_CREDIT', override='SHOPPING',
+            'JAN JANSSENS', '300', 't7', category='REFUND_CREDIT', override='SHOPPING',
         )
 
-        changed = recategorize(BankTransaction.objects.filter(counterparty_name='GUILLAUME LE BERRE'))
+        changed = recategorize(BankTransaction.objects.filter(counterparty_name='JAN JANSSENS'))
 
         self.assertEqual(changed, [])
         tx.refresh_from_db()
