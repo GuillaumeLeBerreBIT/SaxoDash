@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { chartHref } from '../lib/research'
 import TopBar from './TopBar'
 import MobileNav from './MobileNav'
 import CommandPalette from './CommandPalette'
+import PageFallback from './PageFallback'
 import { useCommandPalette } from './useCommandPalette'
 
 export default function Layout() {
@@ -15,7 +17,9 @@ export default function Layout() {
       <TopBar onOpenPalette={openPalette} />
       <main>
         <div className="sd-gutter pt-2 pb-24 min-[760px]:pb-8 animate-pagein">
-          <Outlet context={{ openPalette }} />
+          <Suspense fallback={<PageFallback />}>
+            <Outlet context={{ openPalette }} />
+          </Suspense>
         </div>
       </main>
       <MobileNav onOpenPalette={openPalette} />
