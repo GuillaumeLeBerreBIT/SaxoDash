@@ -50,8 +50,8 @@ class RecategorizeBankTransactionsCommandTest(TestCase):
         self.assertEqual(tx.category, 'TRANSFER')
 
     def test_applies_a_manual_name_label_to_a_row_with_no_iban(self):
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account', category='TRANSFER')
-        tx = self._tx('GUILLAUME LE BERRE', '300', 't5', category='REFUND_CREDIT')  # no iban=
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='My other account', category='TRANSFER')
+        tx = self._tx('JAN JANSSENS', '300', 't5', category='REFUND_CREDIT')  # no iban=
 
         call_command('recategorize_bank_transactions', '--apply', stdout=StringIO())
 

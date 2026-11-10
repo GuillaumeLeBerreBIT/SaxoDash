@@ -97,21 +97,21 @@ class MarkTransfersTest(TestCase):
         self.assertEqual(tx.category, 'SAVINGS')
 
     def test_manual_name_label_matches_a_row_with_no_iban_at_all(self):
-        ManualIbanLabel.objects.create(counterparty_name='Guillaume Le Berre', label='My other account', category='TRANSFER')
+        ManualIbanLabel.objects.create(counterparty_name='Jan Janssens', label='My other account', category='TRANSFER')
         tx = BankTransaction(
             bank='kbc', bank_account=self.kbc, external_id='o8', amount=300,
             currency='EUR', booking_date=date(2026, 1, 16), category='REFUND_CREDIT',
-            counterparty_name='GUILLAUME LE BERRE', counterparty_iban=None,
+            counterparty_name='JAN JANSSENS', counterparty_iban=None,
         )
         mark_transfers([tx])
         self.assertEqual(tx.category, 'TRANSFER')
 
     def test_manual_name_label_is_case_insensitive(self):
-        ManualIbanLabel.objects.create(counterparty_name='guillaume le berre', label='My other account', category='TRANSFER')
+        ManualIbanLabel.objects.create(counterparty_name='jan janssens', label='My other account', category='TRANSFER')
         tx = BankTransaction(
             bank='kbc', bank_account=self.kbc, external_id='o9', amount=300,
             currency='EUR', booking_date=date(2026, 1, 16), category='REFUND_CREDIT',
-            counterparty_name='Guillaume Le Berre',
+            counterparty_name='Jan Janssens',
         )
         mark_transfers([tx])
         self.assertEqual(tx.category, 'TRANSFER')

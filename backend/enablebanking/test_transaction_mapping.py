@@ -64,10 +64,10 @@ class ToBankTransactionFieldsTest(TestCase):
             'status': 'BOOK',
             'booking_date': '2026-09-21',
             'creditor': None,
-            'debtor': {'name': 'LE BERRE GUILLAUME'},
+            'debtor': {'name': 'JANSSENS JAN'},
             'remittance_information': [
                 'Cherry Picker BE8000 BRUGGE Betaling met KBC-Debetkaart via Bancontact '
-                '19-09-2026 om 15.32 uur 5127 88XX XXXX 9803 LE BERRE GUILLAUME',
+                '19-09-2026 om 15.32 uur 1234 56XX XXXX 7890 JANSSENS JAN',
             ],
         }
         fields = to_bank_transaction_fields('kbc', 'acc-1', raw)
@@ -81,10 +81,10 @@ class ToBankTransactionFieldsTest(TestCase):
             'status': 'BOOK',
             'booking_date': '2026-09-19',
             'creditor': None,
-            'debtor': {'name': 'LE BERRE GUILLAUME'},
+            'debtor': {'name': 'JANSSENS JAN'},
             'remittance_information': [
                 'KRUIDVAT 8924 OOSTKAMP BE8020 OOSTKAMP Betaling met KBC-Debetkaart via '
-                'Bancontact 19-09-2026 om 12.49 uur 5127 88XX XXXX 9803 LE BERRE GUILLAUME',
+                'Bancontact 19-09-2026 om 12.49 uur 1234 56XX XXXX 7890 JANSSENS JAN',
             ],
         }
         fields = to_bank_transaction_fields('kbc', 'acc-1', raw)
@@ -124,10 +124,10 @@ class ToBankTransactionFieldsTest(TestCase):
             'status': 'BOOK',
             'booking_date': '2026-09-01',
             'creditor': None,
-            'debtor': {'name': 'LE BERRE GUILLAUME'},
+            'debtor': {'name': 'JANSSENS JAN'},
             'remittance_information': [
                 '2THELOO NMBS Gent St P BE9000 Gent Betaling met KBC-Debetkaart via '
-                'Debit Mastercard 01-09-2026 om 17.35 uur 5127 88XX XXXX 9803 LE BERRE GUILLAUME',
+                'Debit Mastercard 01-09-2026 om 17.35 uur 1234 56XX XXXX 7890 JANSSENS JAN',
             ],
         }
         fields = to_bank_transaction_fields('kbc', 'acc-1', raw)
