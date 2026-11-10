@@ -24,7 +24,7 @@ def aged(model, days, **fields):
 
 class ExpiredTokensTest(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user('alice', password='pw-for-tests-1')
+        self.user = get_user_model().objects.create_user('alice')
 
     def test_an_expired_refresh_token_is_removed_with_its_blacklist_entry(self):
         RefreshToken.for_user(self.user).blacklist()
@@ -65,8 +65,8 @@ class ExpiredSessionsTest(TestCase):
 
 class SyncRunHistoryTest(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user('alice', password='pw-for-tests-1')
-        self.other = get_user_model().objects.create_user('bob', password='pw-for-tests-1')
+        self.user = get_user_model().objects.create_user('alice')
+        self.other = get_user_model().objects.create_user('bob')
 
     def test_old_runs_go_and_recent_ones_stay(self):
         aged(SyncRun, 200, user=self.user, task='sync_positions', outcome='ok')
