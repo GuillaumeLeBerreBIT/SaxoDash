@@ -1,5 +1,5 @@
 from research import daily, finnhub, valuation
-from research.listings import SEARCH_ASSET_TYPES, bare
+from research.listings import SEARCH_ASSET_TYPES
 from research.price_summary import summarise
 from research.providers import ProviderError, ProviderUnavailable
 from research.models import PriceLine, SymbolNote, Watchlist

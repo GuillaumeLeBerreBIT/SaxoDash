@@ -11,7 +11,6 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TransactionTestCase
 from django_celery_beat.models import PeriodicTask
-from rest_framework.authtoken.models import Token
 
 from core.models import NetWorthSnapshot
 from core.scheduling import PERIODIC_TASKS
@@ -37,7 +36,6 @@ class ImportSqliteTest(TransactionTestCase):
             owner.user_permissions.add(
                 Permission.objects.using(SOURCE_ALIAS).get(codename='view_networthsnapshot')
             )
-            Token.objects.using(SOURCE_ALIAS).create(key='a' * 40, user=owner)
             NetWorthSnapshot.objects.using(SOURCE_ALIAS).create(
                 user=owner, date=date(2026, 8, 28), portfolio_value=Decimal('1000.00'),
                 bank_total=Decimal('250.50'), net_worth=Decimal('1250.50'),
@@ -53,7 +51,6 @@ class ImportSqliteTest(TransactionTestCase):
 
         owner = User.objects.get(username='guillaume')
         self.assertTrue(owner.check_password('pw'))
-        self.assertEqual(Token.objects.get(user=owner).key, 'a' * 40)
         snapshot = NetWorthSnapshot.objects.get()
         self.assertEqual(snapshot.net_worth, Decimal('1250.50'))
 

@@ -1,6 +1,7 @@
 import statistics
 from bisect import bisect_right
 from datetime import date
+from django.utils import timezone
 
 QUARTERS_PER_YEAR = 4
 
@@ -20,7 +21,7 @@ def trailing_pe(closes, quarterly_eps):
 
 
 def median_since(points, years=5, today=None):
-    today = today or date.today()
+    today = today or timezone.localdate()
     try:
         cutoff = today.replace(year=today.year - years)
     except ValueError:

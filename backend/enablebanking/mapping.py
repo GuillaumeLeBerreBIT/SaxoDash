@@ -63,8 +63,8 @@ def _merchant_name_from_description(description):
     leave both creditor and debtor either null or pointing at the account
     holder - the merchant only exists as free text in remittance_information,
     e.g. "Cherry Picker BE8000 BRUGGE Betaling met KBC-Debetkaart via
-    Bancontact 19-09-2026 om 15.32 uur 5127 88XX XXXX 9803 LE BERRE
-    GUILLAUME". The merchant name is the leading run of words before the
+    Bancontact 19-09-2026 om 15.32 uur 1234 56XX XXXX 7890 JANSSENS
+    JAN". The merchant name is the leading run of words before the
     first postcode/date/card-number-like token - one that is *mostly* digits,
     not merely containing one, since some real merchant names start with a
     digit (e.g. "2TheLoo"). Verified against live KBC data on 2026-09-20."""

@@ -153,7 +153,7 @@ describe('AccountTransactions', () => {
   })
 
   it('truncates a long description to one line and keeps the full text in the title', () => {
-    const raw = 'NYX*CandySnackService|.|02-10-2026|.|11:07|.|Meule|.|BE|.|524784XXXXXX0999 |.| |.|'
+    const raw = 'NYX*CandySnackService|.|02-10-2026|.|11:07|.|Meule|.|BE|.|123456XXXXXX7890 |.| |.|'
     queries.useBankTransactions.mockReturnValue({
       data: [{ id: 1, booking_date: '2026-01-05', counterparty_name: 'NYX', description: raw, amount: '-3.00', effective_category: 'GROCERIES' }],
       isLoading: false, error: null,

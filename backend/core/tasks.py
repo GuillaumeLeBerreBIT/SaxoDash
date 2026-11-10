@@ -2,6 +2,7 @@ import logging
 
 from celery import shared_task
 
+from . import housekeeping
 from .backup import backup_database
 from .services import ensure_todays_snapshot, users_with_holdings
 
@@ -39,3 +40,8 @@ def backup_database_task():
     visible the same way any other scheduled job's failure is - rather than
     only in a log file nobody is tailing."""
     return str(backup_database())
+
+
+@shared_task
+def prune_expired_records():
+    return housekeeping.prune()

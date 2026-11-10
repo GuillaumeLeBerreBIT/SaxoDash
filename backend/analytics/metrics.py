@@ -241,30 +241,6 @@ def benchmark_window_return(dated_values, start, end):
     return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
 
 
-def period_return(dated_values, days):
-    """Compound % change over the trailing `days` calendar days, or None."""
-    if len(dated_values) < MIN_DAILY_POINTS:
-        return None
-    end_date = dated_values[-1][0]
-    return window_return(dated_values, end_date - timedelta(days=days), end_date)
-
-
-def ytd_return(dated_values):
-    if not dated_values:
-        return None
-    year = dated_values[-1][0].year
-    window = [(d, v) for d, v in dated_values if d.year == year]
-    if len(window) < MIN_DAILY_POINTS:
-        return None
-    return (float(window[-1][1]) / float(window[0][1]) - 1) * 100
-
-
-def since_inception_return(dated_values):
-    if len(dated_values) < MIN_DAILY_POINTS:
-        return None
-    return (float(dated_values[-1][1]) / float(dated_values[0][1]) - 1) * 100
-
-
 def annualize(total_pct, years):
     if total_pct is None:
         return None

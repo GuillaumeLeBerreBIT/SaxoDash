@@ -22,7 +22,6 @@ from portfolio.models import PortfolioValuation, Position
 from research.models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from saxo.models import SaxoCredential, SyncRun
 from transactions.models import Transaction
-from users.models import Profile
 from users.testing import make_user
 
 COVERED = {
@@ -147,11 +146,11 @@ class IsolationSweepTests(APITestCase):
             positions_value=Decimal('7654321.09'), total_value=Decimal('8888888.98'),
         )
         transaction = Transaction.objects.create(
-            user=user, date=date.today(), type='BUY', instrument=SECRET, ticker=TICKER,
+            user=user, date=timezone.localdate(), type='BUY', instrument=SECRET, ticker=TICKER,
             qty=Decimal('1'), price=Decimal('1'),
         )
         snapshot = NetWorthSnapshot.objects.create(
-            user=user, date=date.today(), portfolio_value=Decimal('1'), bank_total=Decimal('1'),
+            user=user, date=timezone.localdate(), portfolio_value=Decimal('1'), bank_total=Decimal('1'),
             net_worth=Decimal('9999999.99'),
         )
         account = BankAccount.objects.create(
@@ -159,18 +158,18 @@ class IsolationSweepTests(APITestCase):
         )
         bank_transaction = BankTransaction.objects.create(
             bank='kbc', bank_account=account, external_id='ext-a', amount=Decimal('1'), currency='EUR',
-            booking_date=date.today(), counterparty_name=SECRET, description=SECRET,
+            booking_date=timezone.localdate(), counterparty_name=SECRET, description=SECRET,
         )
         watchlist = Watchlist.objects.create(user=user, name=SECRET)
         WatchlistItem.objects.create(watchlist=watchlist, symbol=TICKER, uic=UIC, asset_type='Stock')
         note = SymbolNote.objects.create(user=user, symbol=TICKER, bull_case='a-secret-thesis')
         price_line = PriceLine.objects.create(user=user, uic=UIC, asset_type='Stock', price=Decimal('1'), label=SECRET)
         trend_line = TrendLine.objects.create(
-            user=user, uic=UIC, asset_type='Stock', start_bar_date=date.today(), start_price=Decimal('1'),
-            end_bar_date=date.today(), end_price=Decimal('2'), label=SECRET,
+            user=user, uic=UIC, asset_type='Stock', start_bar_date=timezone.localdate(), start_price=Decimal('1'),
+            end_bar_date=timezone.localdate(), end_price=Decimal('2'), label=SECRET,
         )
         annotation = TextAnnotation.objects.create(
-            user=user, uic=UIC, asset_type='Stock', bar_date=date.today(), price=Decimal('1'), text=SECRET,
+            user=user, uic=UIC, asset_type='Stock', bar_date=timezone.localdate(), price=Decimal('1'), text=SECRET,
         )
         recommendation = Recommendation.objects.create(
             user=user, ticker=TICKER, uic=UIC, asset_type='Stock', action='watch', thesis=SECRET,

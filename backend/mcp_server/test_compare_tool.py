@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
+from django.utils import timezone
 
 from research import finnhub
 from research.listings import Listing
@@ -32,7 +33,7 @@ def fundamentals(symbol, **metrics):
 
 
 def series(symbol):
-    recent = date.today() - timedelta(days=400)
+    recent = timezone.localdate() - timedelta(days=400)
     periods = [(recent + timedelta(days=91 * i)).isoformat() for i in range(3)]
     return {
         'annual': {},

@@ -6,19 +6,13 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 
 from .factories import make_investor, store_quarter
-from .models import Investor, Security
+from .models import Security
 
 Q1 = date(2026, 3, 31)
 Q2 = date(2026, 6, 30)
 
 
-class FixedToday(date):
-    @classmethod
-    def today(cls):
-        return date(2026, 10, 5)
-
-
-@patch('investors.views.date', FixedToday)
+@patch('investors.views.timezone.localdate', lambda: date(2026, 10, 5))
 class InvestorListApiTest(APITestCase):
     def setUp(self):
         self.me = User.objects.create_user('me', password='x')

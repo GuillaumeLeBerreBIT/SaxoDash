@@ -3,7 +3,6 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 
-from investors.models import PriceHistory
 from research.models import ScreenerRow
 from saxo.models import SyncRun
 from users.testing import make_user

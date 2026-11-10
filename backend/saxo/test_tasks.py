@@ -7,7 +7,7 @@ from django.utils import timezone
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from transactions.models import Transaction
 from accounts.models import BankAccount
-from .models import SaxoCredential, SyncRun
+from .models import SyncRun
 from . import client, mapping, tasks
 from .tasks import SyncReport, synced
 from .testing import saxo_credential

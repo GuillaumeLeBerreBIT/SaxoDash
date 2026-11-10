@@ -5,7 +5,6 @@ import {
   deleteLabeledAccount,
   getBankTransactions,
   getBudgetProgress,
-  getBudgets,
   getEnableBankingStatus,
   getLabeledAccountCandidates,
   getLabeledAccounts,
@@ -16,7 +15,6 @@ import {
   setBudget,
   syncBanksNow,
   updateBankTransactionCategory,
-  updateLabeledAccount,
   updateSubscription,
 } from '../client'
 import { latestSyncedAt, syncAdvanced, syncOutcomeNote } from '../../lib/syncNow'
@@ -28,7 +26,6 @@ export const enableBankingKeys = {
   spendingSummary: (query = '') => ['spending-summary', query],
   spendingTrend: (months = 6) => ['spending-trend', months],
   subscriptions: ['subscriptions'],
-  budgets: ['budgets'],
   budgetProgress: ['budget-progress'],
   labeledAccounts: ['labeled-accounts'],
   labeledAccountCandidates: ['labeled-account-candidates'],
@@ -155,10 +152,6 @@ export function useDismissSubscription() {
   })
 }
 
-export function useBudgets() {
-  return useQuery({ queryKey: enableBankingKeys.budgets, queryFn: getBudgets })
-}
-
 export function useBudgetProgress({ enabled = true } = {}) {
   return useQuery({ queryKey: enableBankingKeys.budgetProgress, queryFn: getBudgetProgress, enabled })
 }
@@ -168,7 +161,6 @@ export function useSetBudget() {
   return useMutation({
     mutationFn: ({ category, monthlyLimit }) => setBudget(category, monthlyLimit),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgets })
       queryClient.invalidateQueries({ queryKey: enableBankingKeys.budgetProgress })
     },
   })
@@ -202,14 +194,6 @@ export function useCreateLabeledAccount() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createLabeledAccount,
-    onSuccess: () => invalidateLabelEffects(queryClient),
-  })
-}
-
-export function useUpdateLabeledAccount() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, patch }) => updateLabeledAccount(id, patch),
     onSuccess: () => invalidateLabelEffects(queryClient),
   })
 }

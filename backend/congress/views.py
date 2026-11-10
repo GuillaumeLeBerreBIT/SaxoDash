@@ -1,9 +1,9 @@
-from datetime import date
 
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils import timezone
 
 from investors.ownership import BadTickers, parse_tickers
 
@@ -13,7 +13,7 @@ from .models import Member
 
 class MemberListView(APIView):
     def get(self, request):
-        today = date.today()
+        today = timezone.localdate()
         return Response({
             'members': summaries.cards(list(Member.objects.all())),
             'most_bought': ownership.most_bought(today),
@@ -32,9 +32,9 @@ class OwnershipSummaryView(APIView):
             tickers = parse_tickers(request.query_params.get('tickers', ''))
         except BadTickers as exc:
             raise ValidationError(str(exc))
-        return Response(ownership.summary(tickers, date.today()))
+        return Response(ownership.summary(tickers, timezone.localdate()))
 
 
 class OwnershipDetailView(APIView):
     def get(self, request, ticker):
-        return Response(ownership.detail(ticker.upper(), date.today()))
+        return Response(ownership.detail(ticker.upper(), timezone.localdate()))

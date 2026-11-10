@@ -6,15 +6,15 @@ held/watched tagging and the rest of the per-request enrichment live in
 `calendar_enrichment.py`.
 """
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
 
 from . import calendar_enrichment, finnhub, report_dates
 from .provider_cache import cached
 from .providers import ProviderUnavailable
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-HISTORY_AHEAD = timedelta(days=120)
 UPCOMING_AHEAD = timedelta(days=300)
 
 # Bump when a cached payload's SHAPE changes, so a deploy never hands new code
@@ -155,7 +155,7 @@ def window_earnings(scope='all', week_offset=0, today=None, moves=True, *, user)
     The market week is cached un-tagged (one entry per calendar week), so
     'all' and 'mine' share it; tagging is per request.
     """
-    today = today or date.today()
+    today = today or timezone.localdate()
     start = current_week_start(today) + timedelta(weeks=week_offset)
     end = start + timedelta(days=6)
     window = {'from': start.isoformat(), 'to': end.isoformat(), 'week': week_offset}
@@ -245,7 +245,7 @@ def _upcoming(symbol, today):
 
 
 def symbol_earnings(symbol):
-    today = date.today()
+    today = timezone.localdate()
     key = f'research:earnings-sym:{SYMBOL_CACHE_V}:{symbol}:{today.isoformat()}'
 
     def produce():

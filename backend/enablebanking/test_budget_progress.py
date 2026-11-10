@@ -3,6 +3,7 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import TestCase
+from django.utils import timezone
 
 from accounts.models import BankAccount
 
@@ -28,7 +29,7 @@ class BudgetProgressTest(TestCase):
 
     def test_computes_spent_and_pct_for_current_month(self):
         Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
-        self._tx(Decimal('-40'), 'GROCERIES', date.today().replace(day=1), 't1')
+        self._tx(Decimal('-40'), 'GROCERIES', timezone.localdate().replace(day=1), 't1')
 
         row = next(r for r in budget_progress() if r['category'] == 'GROCERIES')
 
@@ -38,7 +39,7 @@ class BudgetProgressTest(TestCase):
 
     def test_ignores_transactions_outside_current_month(self):
         Budget.objects.create(category='GROCERIES', monthly_limit=Decimal('100'))
-        last_month_day = date.today().replace(day=1) - timedelta(days=1)
+        last_month_day = timezone.localdate().replace(day=1) - timedelta(days=1)
         self._tx(Decimal('-40'), 'GROCERIES', last_month_day, 't1')
 
         row = next(r for r in budget_progress() if r['category'] == 'GROCERIES')
@@ -47,7 +48,7 @@ class BudgetProgressTest(TestCase):
 
     def test_respects_category_override(self):
         Budget.objects.create(category='DINING', monthly_limit=Decimal('50'))
-        self._tx(Decimal('-40'), 'GROCERIES', date.today().replace(day=1), 't1', category_override='DINING')
+        self._tx(Decimal('-40'), 'GROCERIES', timezone.localdate().replace(day=1), 't1', category_override='DINING')
 
         row = next(r for r in budget_progress() if r['category'] == 'DINING')
 
@@ -62,13 +63,13 @@ class BudgetProgressTest(TestCase):
         self.assertEqual(row['pct'], 0.0)
 
     def test_category_with_spend_but_no_budget_is_absent(self):
-        self._tx(Decimal('-40'), 'GROCERIES', date.today().replace(day=1), 't1')
+        self._tx(Decimal('-40'), 'GROCERIES', timezone.localdate().replace(day=1), 't1')
 
         self.assertEqual(budget_progress(), [])
 
     def test_exceeding_budget_reports_over_100_pct_uncapped(self):
         Budget.objects.create(category='SHOPPING', monthly_limit=Decimal('50'))
-        self._tx(Decimal('-71'), 'SHOPPING', date.today().replace(day=1), 't1')
+        self._tx(Decimal('-71'), 'SHOPPING', timezone.localdate().replace(day=1), 't1')
 
         row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
 
@@ -76,8 +77,8 @@ class BudgetProgressTest(TestCase):
 
     def test_matched_refund_reduces_spent_this_month(self):
         Budget.objects.create(category='SHOPPING', monthly_limit=Decimal('100'))
-        self._tx(Decimal('-71'), 'SHOPPING', date.today().replace(day=1), 't1')
-        self._tx(Decimal('21'), 'SHOPPING', date.today().replace(day=1), 't2')
+        self._tx(Decimal('-71'), 'SHOPPING', timezone.localdate().replace(day=1), 't1')
+        self._tx(Decimal('21'), 'SHOPPING', timezone.localdate().replace(day=1), 't2')
 
         row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
 
@@ -85,8 +86,8 @@ class BudgetProgressTest(TestCase):
 
     def test_refunds_exceeding_spend_clamp_to_zero_not_negative(self):
         Budget.objects.create(category='SHOPPING', monthly_limit=Decimal('100'))
-        self._tx(Decimal('-20'), 'SHOPPING', date.today().replace(day=1), 't1')
-        self._tx(Decimal('50'), 'SHOPPING', date.today().replace(day=1), 't2')
+        self._tx(Decimal('-20'), 'SHOPPING', timezone.localdate().replace(day=1), 't1')
+        self._tx(Decimal('50'), 'SHOPPING', timezone.localdate().replace(day=1), 't2')
 
         row = next(r for r in budget_progress() if r['category'] == 'SHOPPING')
 

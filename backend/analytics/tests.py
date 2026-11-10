@@ -9,9 +9,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.models import NetWorthSnapshot
 from research.providers import ProviderNotConnected
+from users.testing import the_owner
 
 from . import benchmarks, history, metrics, report, views
-from users.testing import the_owner
 
 # The real cache is Redis (see CACHES in settings), shared with whatever else
 # is running against it - a prior live call can leave a benchmark's chart data
@@ -146,33 +146,6 @@ class PositiveMonthsPctTest(TestCase):
         self.assertIsNone(metrics.positive_months_pct([]))
 
 
-class PeriodReturnTest(TestCase):
-    def test_compounds_from_the_start_to_the_end_of_the_trailing_window(self):
-        dated = [(date(2026, 1, 1), 100), (date(2026, 1, 15), 105), (date(2026, 1, 31), 110)]
-        result = metrics.period_return(dated, days=31)
-        self.assertAlmostEqual(result, (110 / 100 - 1) * 100)
-
-    def test_excludes_rows_outside_the_window(self):
-        dated = [(date(2025, 1, 1), 50), (date(2026, 1, 1), 100), (date(2026, 1, 31), 110)]
-        result = metrics.period_return(dated, days=31)
-        self.assertAlmostEqual(result, (110 / 100 - 1) * 100)
-
-    def test_too_few_points_in_the_window_reports_no_data(self):
-        dated = [(date(2020, 1, 1), 50), (date(2026, 1, 31), 110)]
-        self.assertIsNone(metrics.period_return(dated, days=31))
-        self.assertIsNone(metrics.period_return([], days=31))
-
-
-class YtdReturnTest(TestCase):
-    def test_compounds_within_the_latest_calendar_year_only(self):
-        dated = [(date(2025, 12, 15), 90), (date(2026, 1, 1), 100), (date(2026, 3, 1), 108)]
-        result = metrics.ytd_return(dated)
-        self.assertAlmostEqual(result, (108 / 100 - 1) * 100)
-
-    def test_one_point_this_year_reports_no_data(self):
-        self.assertIsNone(metrics.ytd_return([(date(2026, 1, 1), 100)]))
-
-
 class AnnualizeTest(TestCase):
     def test_matches_the_compound_annual_growth_formula(self):
         # 33.1% total over 3 years -> 10% a year
@@ -181,15 +154,6 @@ class AnnualizeTest(TestCase):
 
     def test_no_total_return_reports_no_data(self):
         self.assertIsNone(metrics.annualize(None, 3))
-
-
-class SinceInceptionReturnTest(TestCase):
-    def test_compounds_the_whole_series(self):
-        dated = [(date(2024, 1, 1), 100), (date(2026, 1, 1), 150)]
-        self.assertAlmostEqual(metrics.since_inception_return(dated), 50.0)
-
-    def test_too_few_points_reports_no_data(self):
-        self.assertIsNone(metrics.since_inception_return([(date(2026, 1, 1), 100)]))
 
 
 class CalendarYearReturnsTest(TestCase):
