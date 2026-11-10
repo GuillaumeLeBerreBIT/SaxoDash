@@ -8,6 +8,7 @@ from users.owner import owner
 
 from . import categorization, client, credentials, mapping, subscriptions, transfers
 from .models import BankSyncRun, BankTransaction
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ def _fetch_transactions_for_account(bank, credential, account, account_owner):
     )
     fetch_kwargs = (
         {'strategy': 'longest'} if latest is None
-        else {'date_from': str(min(latest.booking_date, date.today()))}
+        else {'date_from': str(min(latest.booking_date, timezone.localdate()))}
     )
 
     batch = []

@@ -4,6 +4,7 @@ from datetime import date
 from . import finnhub
 from .provider_cache import SHAPING_ERRORS, cached
 from .providers import ProviderUnavailable
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ OPEN_MARKET = {'P': 'bought', 'S': 'sold'}
 
 
 def _today():
-    return date.today()
+    return timezone.localdate()
 
 
 def _filings_key(symbol):

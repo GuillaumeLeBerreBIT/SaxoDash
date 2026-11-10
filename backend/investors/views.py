@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.utils import timezone
 
 from . import alerts, copying, edgar, follows, ownership, signals, summaries, tracking
 from .models import Investor
@@ -34,7 +35,7 @@ class InvestorListView(APIView):
         holds = request.query_params.get('holds', '').strip()
         if holds:
             investors = investors.filter(pk__in=summaries.holder_ids(holds))
-        return Response(summaries.cards(investors, date.today(), request.user))
+        return Response(summaries.cards(investors, timezone.localdate(), request.user))
 
     def post(self, request):
         cik = request.data.get('cik')
@@ -50,7 +51,7 @@ class InvestorListView(APIView):
             raise BadGateway(EDGAR_DOWN)
         except tracking.ImportNotQueued:
             raise ServiceUnavailable('Could not start the import. Is the worker running?')
-        return Response(summaries.card(investor, date.today(), request.user), status=201)
+        return Response(summaries.card(investor, timezone.localdate(), request.user), status=201)
 
 
 def _quarter_param(request):
@@ -77,7 +78,7 @@ class InvestorDetailView(APIView):
     def get(self, request, slug):
         investor = get_object_or_404(Investor, slug=slug)
         try:
-            return Response(summaries.detail(investor, _quarter_param(request), date.today(), user=request.user))
+            return Response(summaries.detail(investor, _quarter_param(request), timezone.localdate(), user=request.user))
         except summaries.QuarterNotFound:
             raise NotFound('No filing is stored for that quarter.')
 
@@ -87,7 +88,7 @@ class InvestorDetailView(APIView):
         if not isinstance(followed, bool):
             raise ValidationError({'followed': 'Send true or false.'})
         follows.set_followed(request.user, investor, followed)
-        return Response(summaries.card(investor, date.today(), request.user))
+        return Response(summaries.card(investor, timezone.localdate(), request.user))
 
 
 class InvestorChangesView(APIView):
@@ -106,7 +107,7 @@ class InvestorCopyView(APIView):
 
 class InvestorHubView(APIView):
     def get(self, request):
-        return Response(signals.hub(date.today(), request.user))
+        return Response(signals.hub(timezone.localdate(), request.user))
 
 
 class InvestorAlertsView(APIView):
@@ -151,6 +152,6 @@ class InvestorSearchView(APIView):
         if len(query) < MIN_QUERY:
             return Response([])
         try:
-            return Response(tracking.search(query, date.today()))
+            return Response(tracking.search(query, timezone.localdate()))
         except edgar.EdgarError:
             raise BadGateway(EDGAR_DOWN)

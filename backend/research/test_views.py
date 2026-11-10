@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
@@ -8,6 +8,7 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 from rest_framework.test import APITestCase
 from rest_framework.throttling import ScopedRateThrottle
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from portfolio.models import Position
@@ -445,7 +446,7 @@ class EarningsCalendarViewTest(APITestCase):
             ticker='AAPL', name='Apple', qty=1, avg_cost=1, current_price=1,
             sector='Tech', type='STOCK', color='#fff',
         )
-        today = date.today()
+        today = timezone.localdate()
         monday = (today - timedelta(days=today.weekday())).isoformat()
         mock_cal.return_value = {'earningsCalendar': [{
             'symbol': 'AAPL', 'date': monday, 'hour': 'amc', 'quarter': 1, 'year': 2026,
@@ -493,7 +494,7 @@ class SymbolEarningsViewTest(APITestCase):
     @patch('research.earnings.finnhub.get_earnings_history')
     def test_returns_available_true_with_history_and_next(self, mock_hist, mock_cal):
         mock_hist.return_value = [{'period': '2026-06-30', 'actual': 1.6, 'estimate': 1.5, 'surprisePercent': 6.7}]
-        future = (date.today() + timedelta(days=20)).isoformat()
+        future = (timezone.localdate() + timedelta(days=20)).isoformat()
         mock_cal.return_value = {'earningsCalendar': [{
             'symbol': 'AAPL', 'date': future, 'hour': 'amc', 'quarter': 1, 'year': 2027,
             'epsEstimate': 2.0, 'epsActual': None, 'revenueEstimate': 9, 'revenueActual': None,

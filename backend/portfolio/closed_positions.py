@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.core.cache import cache
+from django.utils import timezone
 
 from saxo import client
 from saxo.client import SaxoAPIError
@@ -33,7 +34,7 @@ def _fetched(year, last, today, user):
 
 
 def for_year(year, today=None, *, user):
-    today = today or date.today()
+    today = today or timezone.localdate()
     last = min(date(year, 12, 31), today)
     cache_key = f'portfolio:closed-positions:v1:{user.pk}:{year}:{last.isoformat()}'
     rows = cache.get(cache_key)

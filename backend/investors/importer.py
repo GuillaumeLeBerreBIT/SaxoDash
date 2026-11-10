@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.db import IntegrityError, transaction
 from django.db.models import F, Max
@@ -21,7 +21,7 @@ class SyncResult:
 
 
 def history_start(today=None):
-    return (today or date.today()) - timedelta(days=365 * HISTORY_YEARS + 1)
+    return (today or timezone.localdate()) - timedelta(days=365 * HISTORY_YEARS + 1)
 
 
 def _import_filing(investor, entry):

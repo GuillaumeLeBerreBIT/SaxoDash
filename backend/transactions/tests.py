@@ -1,6 +1,5 @@
 from django.test import TestCase
-from datetime import datetime, date
-from django.test import TestCase
+from datetime import date
 from transactions.models import Transaction
 from decimal import Decimal
 from rest_framework_simplejwt.tokens import RefreshToken

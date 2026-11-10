@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
+from django.utils import timezone
 
 from portfolio.models import Position
 from portfolio.tax_year import ADVISER_NOTE
@@ -126,17 +127,17 @@ class TaxToolTests(APITestCase):
         data = run(year=2026, closed=[OLD_LOT])['data']
         self.assertEqual(data['realised'][0]['realised_eur'], 360.0)
         self.assertEqual(data['realised'][0]['basis_source'], 'dec_31_2025')
-        run.traded.assert_called_once_with('t', 'K', '2023-05-01', date.today().isoformat())
+        run.traded.assert_called_once_with('t', 'K', '2023-05-01', timezone.localdate().isoformat())
 
     def test_a_future_year_is_refused_without_asking_saxo(self):
         with patch('portfolio.closed_positions.for_year', side_effect=AssertionError('asked Saxo')):
-            result = tools.get_tax_year(year=date.today().year + 1)
+            result = tools.get_tax_year(year=timezone.localdate().year + 1)
         self.assertIsNone(result['data'])
         self.assertIn('has not started yet', result['warnings'][-1])
 
     def test_the_report_covers_the_tax_year(self):
         run(year=2026)
-        self.assertEqual(run.report.call_args.args, ('t', 'K', '2026-01-01', min(date(2026, 12, 31), date.today()).isoformat()))
+        self.assertEqual(run.report.call_args.args, ('t', 'K', '2026-01-01', min(date(2026, 12, 31), timezone.localdate()).isoformat()))
         run.traded.assert_not_called()
 
     def test_missing_close_date_warning_names_the_close_date(self):

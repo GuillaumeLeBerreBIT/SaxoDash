@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 
-from . import edgar, figi, importer, parse
+from . import edgar, figi, importer
 from .factories import make_investor, store_quarter
 from .models import Filing, Holding, Investor, Security
 
