@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 from portfolio.models import Position
 from portfolio.services import get_portfolio_value
@@ -78,7 +79,7 @@ BANK_ACCOUNTS = [
 
 def build_networth_snapshots(portfolio_target, bank_target, days=365):
     rng = random.Random(42)
-    today = date.today()
+    today = timezone.localdate()
 
     def walk(target, start_ratio, noise_pct, jump_chance=0.0, jump_range=(0, 0)):
         values = []
