@@ -5,6 +5,7 @@ from django.test import TestCase
 from portfolio.models import Position
 from research import coverage
 from research.models import ScreenerRow, Watchlist, WatchlistItem
+from research.providers import ProviderError, ProviderNotConnected
 from users.testing import the_owner
 
 USER = mock.sentinel.user
@@ -83,6 +84,29 @@ class SyncExtrasTest(TestCase):
         self.assertEqual(
             set(ScreenerRow.everything.filter(in_universe=False).values_list('ticker', flat=True)), {'AAA', 'BBB'},
         )
+
+    def test_a_failed_lookup_does_not_stop_the_other_additions(self, resolve):
+        hold('HELD', uic=1)
+        watch('BAD:xnas', 2)
+        watch('GOOD:xnas', 3)
+        resolve.side_effect = lambda ticker, user: (
+            {'uic': 3} if ticker == 'GOOD' else (_ for _ in ()).throw(ProviderError('down'))
+        )
+        with self.assertLogs('research.coverage', level='WARNING'):
+            result = coverage.sync_extras(user=USER)
+        self.assertEqual(result['added'], 2)
+        self.assertEqual(
+            set(ScreenerRow.everything.filter(in_universe=False).values_list('ticker', flat=True)), {'HELD', 'GOOD'},
+        )
+
+    def test_nothing_is_removed_when_a_lookup_failed(self, resolve):
+        ScreenerRow.everything.create(ticker='OLD', name='Old', indexes='', in_universe=False)
+        watch('BAD:xnas', 2)
+        resolve.side_effect = ProviderNotConnected()
+        with self.assertLogs('research.coverage', level='WARNING'):
+            result = coverage.sync_extras(user=USER)
+        self.assertEqual(result, {'added': 0, 'removed': 0})
+        self.assertTrue(ScreenerRow.everything.filter(ticker='OLD').exists())
 
     def test_a_known_extra_is_not_resolved_again(self, resolve):
         ScreenerRow.everything.create(ticker='NBIS', name='Nebius', indexes='', in_universe=False, uic=11)

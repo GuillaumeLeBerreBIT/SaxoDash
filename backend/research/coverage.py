@@ -1,7 +1,12 @@
+import logging
+
 from portfolio.models import Position
 
 from . import listings
 from .models import ScreenerRow, WatchlistItem
+from .providers import ProviderError, ProviderNotConnected
+
+logger = logging.getLogger(__name__)
 
 
 def _held():
@@ -15,6 +20,7 @@ def _watched(user, skip, extras):
     from . import scan
 
     watched = {}
+    lookups_failed = False
     for item in WatchlistItem.objects.filter(asset_type='Stock'):
         ticker = listings.bare(item.symbol)
         if ticker in skip or ticker in watched:
@@ -22,17 +28,22 @@ def _watched(user, skip, extras):
         if ticker in extras:
             watched[ticker] = (item.description or ticker, item.uic)
             continue
-        found = scan.resolve(ticker, user=user)
+        try:
+            found = scan.resolve(ticker, user=user)
+        except (ProviderError, ProviderNotConnected):
+            logger.warning('Could not confirm the watched listing for %s', ticker, exc_info=True)
+            lookups_failed = True
+            continue
         if found is not None and found['uic'] == item.uic:
             watched[ticker] = (item.description or ticker, item.uic)
-    return watched
+    return watched, lookups_failed
 
 
 def sync_extras(*, user):
     universe = set(ScreenerRow.objects.values_list('ticker', flat=True))
     extras = {row.ticker for row in ScreenerRow.everything.filter(in_universe=False)}
     held = {ticker: value for ticker, value in _held().items() if ticker not in universe}
-    watched = _watched(user, universe | set(held), extras)
+    watched, lookups_failed = _watched(user, universe | set(held), extras)
     wanted = {**held, **watched}
 
     added = 0
@@ -44,6 +55,6 @@ def sync_extras(*, user):
         )
         added += 1
 
-    stale = extras - set(wanted)
+    stale = set() if lookups_failed else extras - set(wanted)
     ScreenerRow.everything.filter(in_universe=False, ticker__in=stale).delete()
     return {'added': added, 'removed': len(stale)}
