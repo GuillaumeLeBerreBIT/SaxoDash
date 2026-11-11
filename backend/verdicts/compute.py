@@ -28,6 +28,7 @@ def _store(row, quality, valuation):
         ticker=row.ticker,
         defaults={
             'name': row.name[:NAME_MAX_LENGTH],
+            'uic': row.uic,
             'quality': quality['grade'],
             'valuation': valuation['grade'],
             'checks': quality['checks'],

@@ -243,51 +243,42 @@ describe('WatchlistRail', () => {
     expect(screen.queryByRole('button', { name: /watchlist/i })).not.toBeInTheDocument()
   })
 
-  it('asks for the verdicts of every stock row in one request and badges each row', () => {
+  it('asks for every stock row once and shows a verdict only on the listing it was computed for', () => {
     const mixed = {
       ...list,
       items: [
-        { id: 7, symbol: 'NVDA:xnas', uic: 211, asset_type: 'Stock', exchange: 'NASDAQ' },
+        { id: 7, symbol: 'NVDA', uic: 1249, asset_type: 'Stock', exchange: '' },
         { id: 8, symbol: 'IWDA:xams', uic: 500, asset_type: 'Etf', exchange: 'AMS' },
-        { id: 9, symbol: 'amd:xnas', uic: 300, asset_type: 'Stock', exchange: 'NASDAQ' },
-        { id: 10, symbol: 'ASML:xams', uic: 400, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
-        { id: 11, symbol: 'NVDA:xetr', uic: 401, asset_type: 'Stock', exchange: 'Xetra' },
-        { id: 12, symbol: 'MYSTERY', uic: 402, asset_type: 'Stock', exchange: '' },
+        { id: 9, symbol: 'ASML:xams', uic: 999, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
+        { id: 10, symbol: 'AMD:xnas', uic: 300, asset_type: 'Stock', exchange: 'NASDAQ' },
       ],
     }
     stub({ watchlists: [mixed] })
     queries.useVerdictSummary.mockReturnValue({
-      data: { NVDA: { action: 'buy', reason: 'Strong and cheap.' }, AMD: null },
+      data: {
+        NVDA: { action: 'buy', reason: 'Strong and cheap.', uic: 1249 },
+        ASML: { action: 'hold', reason: 'Other listing.', uic: 111 },
+        AMD: { action: 'hold', reason: 'No uic.', uic: null },
+      },
       isLoading: false,
     })
 
     render()
 
     expect(queries.useVerdictSummary).toHaveBeenCalledTimes(1)
-    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'NVDA'])
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'ASML', 'NVDA'])
     expect(screen.getByText('Buy')).toBeInTheDocument()
-    expect(screen.getByTitle('Strong and cheap.')).toBeInTheDocument()
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByText('Hold')).not.toBeInTheDocument()
+    expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(3)
   })
 
-  it('dashes a foreign or unlisted-exchange row without asking about it', () => {
-    stub({
-      watchlists: [
-        {
-          ...list,
-          items: [
-            { id: 10, symbol: 'ASML:xams', uic: 400, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
-            { id: 12, symbol: 'MYSTERY', uic: 402, asset_type: 'Stock', exchange: '' },
-          ],
-        },
-      ],
-    })
+  it('asks for nothing when no row is a stock', () => {
+    stub({ watchlists: [{ ...list, items: [{ id: 8, symbol: 'IWDA', uic: 500, asset_type: 'Etf', exchange: 'AMS' }] }] })
     queries.useVerdictSummary.mockReturnValue({ data: {}, isLoading: false })
 
     render()
 
     expect(queries.useVerdictSummary).toHaveBeenCalledWith([])
-    expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(2)
   })
 
   it('shows no verdict badge until the summary has answered', () => {

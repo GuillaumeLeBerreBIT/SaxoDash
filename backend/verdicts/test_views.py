@@ -43,7 +43,7 @@ class VerdictApiTests(APITestCase):
         self.assertEqual(set(body['verdicts']), {'AAA', 'NOPE'})
         self.assertIsNone(body['verdicts']['NOPE'])
         self.assertEqual(
-            set(body['verdicts']['AAA']), {'action', 'reason', 'quality', 'valuation', 'as_of'},
+            set(body['verdicts']['AAA']), {'action', 'reason', 'uic', 'quality', 'valuation', 'as_of'},
         )
         self.assertEqual(body['verdicts']['AAA']['as_of'], '2026-11-10')
 
@@ -98,6 +98,15 @@ class VerdictApiTests(APITestCase):
         detail = self.client.get('/api/verdicts/AAA/').json()['verdict']
         self.assertFalse(detail['held'])
         self.assertEqual(detail['weight_cap_pct'], WEIGHT_CAP_PCT)
+
+    def test_summary_and_detail_expose_the_uic_the_verdict_was_computed_for(self):
+        verdict('AAA', uic=1249)
+        verdict('BBB')
+        self.client.force_authenticate(self.bob)
+        summary = self.client.get('/api/verdicts/?tickers=AAA,BBB').json()['verdicts']
+        self.assertEqual(summary['AAA']['uic'], 1249)
+        self.assertIsNone(summary['BBB']['uic'])
+        self.assertEqual(self.client.get('/api/verdicts/aaa/').json()['verdict']['uic'], 1249)
 
     def test_detail_lists_six_checks_and_both_levels(self):
         verdict('AAA')

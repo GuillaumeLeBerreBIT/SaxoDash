@@ -57,6 +57,15 @@ class ComputeTest(TestCase):
         self.assertEqual(len(verdict.checks), 6)
         self.assertEqual(verdict.name, 'AAPL Inc')
 
+    def test_verdict_stores_the_uic_the_scan_resolved(self):
+        make_row('AAPL', uic=211)
+        make_row('NBIS', uic=None, in_universe=False)
+
+        compute.run(today=DAY_ONE)
+
+        self.assertEqual(StockVerdict.objects.get(ticker='AAPL').uic, 211)
+        self.assertIsNone(StockVerdict.objects.get(ticker='NBIS').uic)
+
     def test_skips_rows_never_given_fundamentals(self):
         make_row('AAPL', fundamentals_at=None)
 

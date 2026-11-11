@@ -83,6 +83,32 @@ describe('Portfolio holdings table', () => {
     expect(within(asmlRow).getByText('—', { selector: 'span[title="No verdict for this one"]' })).toBeInTheDocument()
   })
 
+  it('dashes a position whose verdict was computed for another listing', () => {
+    stub([{ ...msft, uic: 1000 }])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Other listing.', uic: 2000 } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Microsoft Corp.').closest('tr')
+    expect(within(row).getByTitle('No verdict for this one')).toBeInTheDocument()
+    expect(within(row).queryByText('Hold')).not.toBeInTheDocument()
+  })
+
+  it('shows the verdict when the position and the verdict share a uic', () => {
+    stub([{ ...msft, uic: 1000 }])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Fairly priced.', uic: 1000 } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(screen.getByText('Hold')).toBeInTheDocument()
+  })
+
   it('does not ask about an ETF and dashes its row', () => {
     const ivv = { ...msft, ticker: 'IVV', name: 'iShares Core S&P 500', type: 'ETF' }
     stub([msft, ivv])

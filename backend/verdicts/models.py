@@ -4,6 +4,7 @@ from django.db import models
 class StockVerdict(models.Model):
     ticker = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=120)
+    uic = models.PositiveIntegerField(null=True, blank=True)
     quality = models.CharField(max_length=10)
     valuation = models.CharField(max_length=12)
     checks = models.JSONField(default=list)

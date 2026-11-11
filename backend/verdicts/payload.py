@@ -34,6 +34,7 @@ def _summary(verdict, weight):
     decided = action(verdict.quality, verdict.valuation, weight_pct, _failed_labels(verdict))
     return {
         **decided,
+        'uic': verdict.uic,
         'quality': verdict.quality,
         'valuation': verdict.valuation,
         'as_of': verdict.as_of.isoformat() if verdict.as_of else None,
