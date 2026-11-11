@@ -18,6 +18,12 @@ class SyncPeriodicTasksTest(TestCase):
         self.assertEqual(task.task, 'research.tasks.scan_universe')
         self.assertEqual((task.crontab.minute, task.crontab.hour), ('30', '22'))
 
+    def test_compute_verdicts_runs_after_the_nightly_scan(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Compute verdicts')
+        self.assertEqual(task.task, 'verdicts.tasks.compute_verdicts')
+        self.assertEqual((task.crontab.minute, task.crontab.hour), ('15', '0'))
+
     def test_is_idempotent(self):
         sync_periodic_tasks()
         sync_periodic_tasks()

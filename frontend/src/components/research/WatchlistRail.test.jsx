@@ -37,6 +37,7 @@ function stub({ watchlists = [list], results = [] } = {}) {
     data: [{ uic: 211, price: 875.4, change_pct: 1.42 }],
     isLoading: false,
   })
+  queries.useVerdictSummary.mockReturnValue({ data: undefined, isLoading: false })
 }
 
 const render = (props = {}) =>
@@ -240,6 +241,50 @@ describe('WatchlistRail', () => {
   it('offers no collapse control unless asked to', () => {
     render()
     expect(screen.queryByRole('button', { name: /watchlist/i })).not.toBeInTheDocument()
+  })
+
+  it('asks for every stock row once and shows a verdict only on the listing it was computed for', () => {
+    const mixed = {
+      ...list,
+      items: [
+        { id: 7, symbol: 'NVDA', uic: 1249, asset_type: 'Stock', exchange: '' },
+        { id: 8, symbol: 'IWDA:xams', uic: 500, asset_type: 'Etf', exchange: 'AMS' },
+        { id: 9, symbol: 'ASML:xams', uic: 999, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
+        { id: 10, symbol: 'AMD:xnas', uic: 300, asset_type: 'Stock', exchange: 'NASDAQ' },
+      ],
+    }
+    stub({ watchlists: [mixed] })
+    queries.useVerdictSummary.mockReturnValue({
+      data: {
+        NVDA: { action: 'buy', reason: 'Strong and cheap.', uic: 1249 },
+        ASML: { action: 'hold', reason: 'Other listing.', uic: 111 },
+        AMD: { action: 'hold', reason: 'No uic.', uic: null },
+      },
+      isLoading: false,
+    })
+
+    render()
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledTimes(1)
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'ASML', 'NVDA'])
+    expect(screen.getByText('Buy')).toBeInTheDocument()
+    expect(screen.queryByText('Hold')).not.toBeInTheDocument()
+    expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(3)
+  })
+
+  it('asks for nothing when no row is a stock', () => {
+    stub({ watchlists: [{ ...list, items: [{ id: 8, symbol: 'IWDA', uic: 500, asset_type: 'Etf', exchange: 'AMS' }] }] })
+    queries.useVerdictSummary.mockReturnValue({ data: {}, isLoading: false })
+
+    render()
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith([])
+  })
+
+  it('shows no verdict badge until the summary has answered', () => {
+    render()
+
+    expect(screen.queryByText('Buy')).not.toBeInTheDocument()
   })
 
   it('folds the list away and back from the chevron', async () => {

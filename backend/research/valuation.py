@@ -20,6 +20,40 @@ def trailing_pe(closes, quarterly_eps):
     return result
 
 
+MIN_PE_WEEKS = 104
+
+
+def _latest_eps_ttm(ordered, last_day):
+    known = bisect_right([period for period, _ in ordered], last_day)
+    if known < QUARTERS_PER_YEAR:
+        return None
+    return sum(value for _, value in ordered[known - QUARTERS_PER_YEAR:known])
+
+
+def pe_percentiles(closes, quarterly_eps):
+    points = [(day, close) for day, close in closes if close is not None]
+    if not points:
+        return None
+    ordered = sorted(quarterly_eps, key=lambda point: point[0])
+    eps_ttm = _latest_eps_ttm(ordered, points[-1][0])
+    if eps_ttm is None or eps_ttm <= 0:
+        return None
+    weekly = {}
+    for day, pe in trailing_pe(points, ordered):
+        weekly[day.isocalendar()[:2]] = pe
+    values = [pe for _, pe in sorted(weekly.items()) if pe is not None and pe > 0]
+    if len(values) < MIN_PE_WEEKS:
+        return None
+    quartiles = statistics.quantiles(values, n=4, method='inclusive')
+    return {
+        'current': round(points[-1][1] / eps_ttm, 2),
+        'p25': round(quartiles[0], 2),
+        'p75': round(quartiles[2], 2),
+        'eps_ttm': round(eps_ttm, 2),
+        'weeks': len(values),
+    }
+
+
 def median_since(points, years=5, today=None):
     today = today or timezone.localdate()
     try:

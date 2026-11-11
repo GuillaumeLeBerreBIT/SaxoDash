@@ -5,13 +5,16 @@ import {
   useInstrumentSearch,
   useQuotesByAssetType,
   useWatchlistMutations,
+  useVerdictSummary,
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum } from '../../lib/format'
 import { activatesRow } from '../../lib/keys'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
+import { watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
 import { Card, DayChange, InstrumentLogo, TBtn } from '../ui'
+import ActionBadge from '../verdicts/ActionBadge'
 import { Menu, MenuRow, MenuSeparator } from './menu'
 import WatchlistHeatmap from './WatchlistHeatmap'
 
@@ -100,6 +103,12 @@ export default function WatchlistRail({
   const quoteGroups = useMemo(() => uicsByAssetType(items), [items])
   const { data: quoteRows } = useQuotesByAssetType(quoteGroups)
   const quotes = useMemo(() => quotesByUic(quoteRows), [quoteRows])
+
+  const verdictTickers = useMemo(
+    () => [...new Set(items.map(watchlistVerdictTicker).filter(Boolean))].sort(),
+    [items],
+  )
+  const verdicts = useVerdictSummary(verdictTickers).data
 
   const createList = () => {
     const name = newName.trim()
@@ -316,11 +325,18 @@ export default function WatchlistRail({
                 >
                   <div className="min-w-0 flex items-center gap-1.5">
                     <InstrumentLogo symbol={item.symbol} size={24} />
-                    <span className="text-[13px] font-semibold text-ink shrink-0">{item.symbol}</span>
-                    {heldSymbols.has(item.symbol) ? (
-                      <span className="w-1.5 h-1.5 rounded-full bg-held" title="In portfolio" />
-                    ) : null}
-                    <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
+                    <div className="min-w-0 flex flex-col items-start">
+                      <div className="max-w-full flex items-center gap-1.5 leading-4">
+                        <span className="text-[13px] font-semibold text-ink shrink-0">{item.symbol}</span>
+                        {heldSymbols.has(item.symbol) ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-held" title="In portfolio" />
+                        ) : null}
+                        <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
+                      </div>
+                      <div className="h-[18px] max-w-full flex items-center">
+                        <ActionBadge verdict={watchlistVerdict(item, verdicts)} />
+                      </div>
+                    </div>
                   </div>
                   <span className="text-[13px] num font-semibold text-ink text-right">
                     {quote?.price == null ? '—' : fmtNum(quote.price, 2)}

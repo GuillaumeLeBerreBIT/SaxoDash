@@ -127,6 +127,11 @@ class TextAnnotation(models.Model):
         return f'"{self.text}" at {self.price}@{self.bar_date} on {self.uic}:{self.asset_type}'
 
 
+class UniverseManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(in_universe=True)
+
+
 class ScreenerRow(models.Model):
     OK = 'ok'
     UNMATCHED = 'unmatched'
@@ -139,6 +144,7 @@ class ScreenerRow(models.Model):
     indexes = models.CharField(max_length=20)
     uic = models.PositiveIntegerField(null=True, blank=True)
     asset_type = models.CharField(max_length=20, default='Stock')
+    in_universe = models.BooleanField(default=True, db_index=True)
 
     last_close = models.FloatField(null=True, blank=True)
     change_1d = models.FloatField(null=True, blank=True)
@@ -165,11 +171,16 @@ class ScreenerRow(models.Model):
     revenue_growth_5y = models.FloatField(null=True, blank=True)
     payout_ratio = models.FloatField(null=True, blank=True)
     next_earnings_date = models.DateField(null=True, blank=True)
+    fundamentals_history = models.JSONField(default=dict, blank=True)
+    pe_history = models.JSONField(default=dict, blank=True)
 
     technicals_at = models.DateTimeField(null=True, blank=True)
     fundamentals_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=UNMATCHED)
     error = models.CharField(max_length=200, blank=True, default='')
+
+    objects = UniverseManager()
+    everything = models.Manager()
 
     class Meta:
         ordering = ['ticker']

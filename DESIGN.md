@@ -420,11 +420,23 @@ chart sits on Overview only; the watchlist rail sits beside every tab.
 | Left (8) | Right (4) |
 |---|---|
 | Price chart | Your position |
-| Performance | Investment snapshot (the five verdicts) |
-| Range statistics | Analysts, Funds and Congress |
-| Thesis and risks | Capital structure |
+| Performance | Verdict (action, quality checks, price levels) |
+| Range statistics | Investment snapshot (the five verdicts) |
+| Thesis and risks | Analysts, Funds and Congress |
+| | Capital structure |
 | | Next earnings |
 | | Company facts |
+
+The **Verdict** card sits directly above the Investment snapshot. It names the action as a tag
+(Buy, Add, Hold, Trim, Sell (review), Wait, Not a fit, No verdict), gives the reason and the as-of
+date, lists the quality checks with their figures and thresholds, and shows the "cheap below" and
+"expensive above" price levels. A US-listed stock the app has not scanned yet shows the card with "Not covered by the nightly scan". The
+same action appears as a small tag on watchlist rows and in a **Verdict** column on Portfolio's
+positions table, matched by Saxo uic; where no verdict exists it shows "—".
+
+The action tag follows the move rule: it is **words, never colour alone**. Buy and Add use the up
+tone, Trim and Sell (review) use the warning tone, and **Sell (review) is never the down colour**,
+because it asks for a second look at the story, not a sale.
 
 **The other tabs** contain:
 

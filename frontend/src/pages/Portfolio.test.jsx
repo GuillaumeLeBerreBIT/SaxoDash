@@ -49,6 +49,7 @@ function stub(positions = [msft]) {
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useOwnershipSummary.mockReturnValue(idle)
   queries.useCongressOwnershipSummary.mockReturnValue(idle)
+  queries.useVerdictSummary.mockReturnValue(idle)
 }
 
 describe('Portfolio holdings table', () => {
@@ -60,6 +61,71 @@ describe('Portfolio holdings table', () => {
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderWithProviders(<Portfolio />)
     expectValidHeadingOutline(container)
+  })
+
+  it('adds a Verdict column after Weight, asked for in one request and dashed for a foreign listing', () => {
+    const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
+    stub([msft, asml])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Fairly priced.' } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['MSFT'])
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent)
+    expect(headers.indexOf('Verdict')).toBe(headers.indexOf('Weight') + 1)
+    expect(screen.getByRole('columnheader', { name: 'Verdict' })).not.toHaveAttribute('aria-sort')
+    expect(screen.getByText('Hold')).toBeInTheDocument()
+    expect(screen.getByTitle('Fairly priced.')).toBeInTheDocument()
+    const asmlRow = screen.getByText('ASML Holding').closest('tr')
+    expect(within(asmlRow).getByText('—', { selector: 'span[title="No verdict for this one"]' })).toBeInTheDocument()
+  })
+
+  it('dashes a position whose verdict was computed for another listing', () => {
+    stub([{ ...msft, uic: 1000 }])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Other listing.', uic: 2000 } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Microsoft Corp.').closest('tr')
+    expect(within(row).getByTitle('No verdict for this one')).toBeInTheDocument()
+    expect(within(row).queryByText('Hold')).not.toBeInTheDocument()
+  })
+
+  it('shows the verdict when the position and the verdict share a uic', () => {
+    stub([{ ...msft, uic: 1000 }])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Fairly priced.', uic: 1000 } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(screen.getByText('Hold')).toBeInTheDocument()
+  })
+
+  it('does not ask about an ETF and dashes its row', () => {
+    const ivv = { ...msft, ticker: 'IVV', name: 'iShares Core S&P 500', type: 'ETF' }
+    stub([msft, ivv])
+    queries.useVerdictSummary.mockReturnValue({ ...idle, data: { MSFT: { action: 'hold', reason: 'Fairly priced.' } } })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['MSFT'])
+    const row = screen.getByText('iShares Core S&P 500').closest('tr')
+    expect(within(row).getByTitle('No verdict for this one')).toBeInTheDocument()
+  })
+
+  it('leaves the Verdict cell blank while the summary is loading', () => {
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Microsoft Corp.').closest('tr')
+    expect(within(row).queryByTitle('No verdict for this one')).not.toBeInTheDocument()
   })
 
   it('shows the shares tracked funds hold and their net change, skipping non-USD holdings', () => {

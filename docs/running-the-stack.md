@@ -333,7 +333,7 @@ Cowork: not yet verified whether Cowork tasks see local stdio servers. Claude De
 chat does. If Cowork does not, the route is a desktop extension (`.mcpb`) packaging
 the same command.
 
-31 tools, by group (each description names the page it mirrors):
+33 tools, by group (each description names the page it mirrors):
 
 - **Portfolio**: `get_portfolio`, `get_performance`, `get_transactions`, `get_tax_year`
 - **Research**: `search_instruments`, `get_quotes`, `get_price_history`,
@@ -343,6 +343,7 @@ the same command.
 - **Smart money**: `list_investors`, `get_investor`, `get_fund_signals`,
   `get_fund_stocks`, `get_ticker_ownership`, `list_congress_members`,
   `get_congress_member`, `get_filing_alerts`
+- **Verdicts**: `get_verdict`, `get_verdict_track_record`
 - **Journal**: `log_recommendation`, `set_decision`, `close_recommendation`,
   `list_recommendations`
 - **System**: `get_data_health`
@@ -371,6 +372,19 @@ a Belgian tax adviser." It refuses years before 2026. A holding with no recorded
 purchase has an unknown basis rather than its average cost. Realised gains come from
 Saxo's closed-positions report (`/cs/v1/reports/closedPositions`), which covers the whole year
 in account currency; see `docs/notes/2026-10-21-mcp-probes.md`.
+
+### Verdicts
+
+`Compute verdicts` (`verdicts.tasks.compute_verdicts`, `core/scheduling.py`) runs at 00:15,
+after the 22:30 Discover scan, and turns the scan's stored rows into each stock's quality and
+valuation grade. The scan also covers the US stocks you hold or watch, beyond the index universe.
+The `get_verdict` and `get_verdict_track_record` MCP tools read the result.
+
+The verdict feature adds two migration chains, `research` 0015-0016 and `verdicts` 0001-0002;
+run `manage.py migrate` on any existing database before starting. Verdicts appear only after one
+full nightly scan followed by `compute_verdicts` (`manage.py shell -c "from verdicts.tasks import
+compute_verdicts; compute_verdicts()"` runs it by hand); until then the card says "Not covered by
+the nightly scan", the badges show a dash and the track record is empty.
 
 ---
 

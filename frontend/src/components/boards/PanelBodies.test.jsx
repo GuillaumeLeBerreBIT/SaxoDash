@@ -37,6 +37,7 @@ function stub() {
   queries.useTextAnnotations.mockReturnValue({ ...idle, data: [] })
   queries.useTextAnnotationMutations.mockReturnValue(mutations())
   queries.useWatchlists.mockReturnValue({ ...idle, data: [] })
+  queries.useVerdictSummary.mockReturnValue(idle)
   queries.useWatchlistMutations.mockReturnValue({ ...mutations(), rename: { mutate: vi.fn() }, addItem: { mutate: vi.fn() }, removeItem: { mutate: vi.fn() } })
 }
 

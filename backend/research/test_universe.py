@@ -43,6 +43,20 @@ class LoadUniverseTest(TestCase):
         load_universe(csv_file(' brk.b ,Berkshire Hathaway,Financials,SP500\n'))
         self.assertTrue(ScreenerRow.objects.filter(ticker='BRK.B').exists())
 
+    def test_default_manager_hides_extra_rows(self):
+        ScreenerRow.everything.create(ticker='NBIS', name='Nebius', indexes='', in_universe=False)
+        self.assertFalse(ScreenerRow.objects.filter(ticker='NBIS').exists())
+        self.assertTrue(ScreenerRow.everything.filter(ticker='NBIS').exists())
+
+    def test_load_universe_promotes_an_extra_row_and_keeps_others(self):
+        ScreenerRow.everything.create(ticker='AAA', name='x', indexes='', in_universe=False, uic=7)
+        ScreenerRow.everything.create(ticker='NBIS', name='Nebius', indexes='', in_universe=False)
+        load_universe(csv_file('AAA,Triple A,Tech,SP500\n'))
+        promoted = ScreenerRow.objects.get(ticker='AAA')
+        self.assertTrue(promoted.in_universe)
+        self.assertEqual((promoted.uic, promoted.name, promoted.indexes), (7, 'Triple A', 'SP500'))
+        self.assertTrue(ScreenerRow.everything.filter(ticker='NBIS', in_universe=False).exists())
+
     def test_checked_in_universe_is_large_and_unique(self):
         load_universe(UNIVERSE_CSV)
         self.assertGreater(ScreenerRow.objects.count(), 480)

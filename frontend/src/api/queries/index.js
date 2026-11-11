@@ -14,6 +14,7 @@ export * from './enablebanking'
 export * from './research'
 export * from './investors'
 export * from './congress'
+export * from './verdicts'
 
 import { accountsKeys } from './accounts'
 import { authKeys } from './auth'
