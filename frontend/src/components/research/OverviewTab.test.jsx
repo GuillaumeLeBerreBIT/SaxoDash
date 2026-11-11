@@ -286,3 +286,47 @@ describe('OverviewTab on the new design', () => {
     expect(screen.getByTestId('overview-col-side')).toContainElement(screen.getByTestId('side-slot'))
   })
 })
+
+describe('OverviewTab verdict card', () => {
+  const verdict = {
+    isLoading: false,
+    data: {
+      ticker: 'AAPL',
+      name: 'Apple',
+      action: 'hold',
+      reason: 'Fairly priced.',
+      quality: 'strong',
+      valuation: 'fair',
+      as_of: '2026-11-10',
+      checks: [],
+      cheap_below: null,
+      expensive_above: null,
+      pct_vs_ma200: null,
+      held: false,
+      weight_pct: null,
+      weight_cap_pct: 10,
+    },
+  }
+  const fundamentals = { isLoading: false, data: { available: true, name: 'Apple Inc', pe_ratio: 30 } }
+
+  it('sits above the investment snapshot for an eligible company', () => {
+    renderOverview({ verdict, fundamentals })
+
+    const card = screen.getByRole('heading', { name: 'Verdict' })
+    const snapshot = screen.getByRole('heading', { name: 'Investment snapshot' })
+    expect(card.compareDocumentPosition(snapshot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText('Fairly priced.')).toBeInTheDocument()
+  })
+
+  it('is absent for an ETF', () => {
+    renderOverview({ verdict, companyData: 'fund' })
+
+    expect(screen.queryByRole('heading', { name: 'Verdict' })).not.toBeInTheDocument()
+  })
+
+  it('is absent for a foreign listing', () => {
+    renderOverview({ verdict, companyData: 'foreign' })
+
+    expect(screen.queryByRole('heading', { name: 'Verdict' })).not.toBeInTheDocument()
+  })
+})

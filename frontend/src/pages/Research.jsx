@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 
-import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation } from '../api/queries'
+import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { Card } from '../components/ui'
@@ -94,6 +94,7 @@ export default function Research() {
   })
   const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
   const fundamentals = useFundamentals(companySymbol)
+  const verdict = useVerdict(companySymbol)
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
@@ -181,6 +182,7 @@ export default function Research() {
           allBars={allBars}
           range={controls.range}
           fundamentals={fundamentals}
+          verdict={verdict}
           note={note}
           onSaveNote={(patch) => noteMutation.mutate(patch)}
           onMarkReviewed={() => reviewMutation.mutate()}
