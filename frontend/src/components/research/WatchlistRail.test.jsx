@@ -250,6 +250,9 @@ describe('WatchlistRail', () => {
         { id: 7, symbol: 'NVDA:xnas', uic: 211, asset_type: 'Stock', exchange: 'NASDAQ' },
         { id: 8, symbol: 'IWDA:xams', uic: 500, asset_type: 'Etf', exchange: 'AMS' },
         { id: 9, symbol: 'amd:xnas', uic: 300, asset_type: 'Stock', exchange: 'NASDAQ' },
+        { id: 10, symbol: 'ASML:xams', uic: 400, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
+        { id: 11, symbol: 'NVDA:xetr', uic: 401, asset_type: 'Stock', exchange: 'Xetra' },
+        { id: 12, symbol: 'MYSTERY', uic: 402, asset_type: 'Stock', exchange: '' },
       ],
     }
     stub({ watchlists: [mixed] })
@@ -265,6 +268,26 @@ describe('WatchlistRail', () => {
     expect(screen.getByText('Buy')).toBeInTheDocument()
     expect(screen.getByTitle('Strong and cheap.')).toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('dashes a foreign or unlisted-exchange row without asking about it', () => {
+    stub({
+      watchlists: [
+        {
+          ...list,
+          items: [
+            { id: 10, symbol: 'ASML:xams', uic: 400, asset_type: 'Stock', exchange: 'Euronext Amsterdam' },
+            { id: 12, symbol: 'MYSTERY', uic: 402, asset_type: 'Stock', exchange: '' },
+          ],
+        },
+      ],
+    })
+    queries.useVerdictSummary.mockReturnValue({ data: {}, isLoading: false })
+
+    render()
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith([])
+    expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(2)
   })
 
   it('shows no verdict badge until the summary has answered', () => {

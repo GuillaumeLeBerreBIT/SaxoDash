@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions, useVerdictSummary } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { ownershipTickers } from '../lib/ownership'
+import { positionVerdictTickers } from '../lib/verdicts'
 import { colorForTicker } from '../lib/charts'
 import { nextSort, sortRows } from '../lib/sort'
 import { useChartColors } from '../theme/useChartColors'
@@ -108,7 +109,8 @@ export default function Portfolio() {
   const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
   const congress = useCongressOwnershipSummary(fundTickers).data
-  const verdicts = useVerdictSummary(fundTickers).data
+  const verdictTickers = useMemo(() => positionVerdictTickers(holdings ?? NO_POSITIONS), [holdings])
+  const verdicts = useVerdictSummary(verdictTickers).data
   const sortedHoldings = useMemo(() => sortRows(holdings ?? NO_POSITIONS, sort, HOLDING_ACCESSORS), [holdings, sort])
   const onSort = (key) => setSort((current) => nextSort(current, key))
 

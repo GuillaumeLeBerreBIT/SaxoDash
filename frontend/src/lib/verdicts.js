@@ -39,3 +39,28 @@ export function trendSentence(pctVsMa200) {
 }
 
 export const verdictTicker = (instrument) => ownershipTicker(instrument)
+
+export const US_LISTING_SUFFIXES = new Set(['xnas', 'xnys', 'xase'])
+
+const positionVerdictTicker = (position) => (position.type === 'ETF' ? null : verdictTicker(position))
+
+export function watchlistVerdictTicker(item) {
+  if (item.asset_type !== 'Stock') return null
+  const [ticker, suffix] = item.symbol.split(':')
+  if (!US_LISTING_SUFFIXES.has((suffix ?? '').toLowerCase())) return null
+  return verdictTicker({ ticker })
+}
+
+export function positionVerdictTickers(positions = []) {
+  return [...new Set(positions.map(positionVerdictTicker).filter(Boolean))].sort()
+}
+
+function lookUpVerdict(ticker, verdicts) {
+  if (!ticker) return null
+  if (!verdicts) return undefined
+  return verdicts[ticker] ?? null
+}
+
+export const positionVerdict = (position, verdicts) => lookUpVerdict(positionVerdictTicker(position), verdicts)
+
+export const watchlistVerdict = (item, verdicts) => lookUpVerdict(watchlistVerdictTicker(item), verdicts)

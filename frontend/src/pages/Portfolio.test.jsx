@@ -83,6 +83,25 @@ describe('Portfolio holdings table', () => {
     expect(within(asmlRow).getByText('—', { selector: 'span[title="No verdict for this one"]' })).toBeInTheDocument()
   })
 
+  it('does not ask about an ETF and dashes its row', () => {
+    const ivv = { ...msft, ticker: 'IVV', name: 'iShares Core S&P 500', type: 'ETF' }
+    stub([msft, ivv])
+    queries.useVerdictSummary.mockReturnValue({ ...idle, data: { MSFT: { action: 'hold', reason: 'Fairly priced.' } } })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['MSFT'])
+    const row = screen.getByText('iShares Core S&P 500').closest('tr')
+    expect(within(row).getByTitle('No verdict for this one')).toBeInTheDocument()
+  })
+
+  it('leaves the Verdict cell blank while the summary is loading', () => {
+    renderWithProviders(<Portfolio />)
+
+    const row = screen.getByText('Microsoft Corp.').closest('tr')
+    expect(within(row).queryByTitle('No verdict for this one')).not.toBeInTheDocument()
+  })
+
   it('shows the shares tracked funds hold and their net change, skipping non-USD holdings', () => {
     const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
     const flat = { ...msft, ticker: 'AAPL', name: 'Apple Inc.' }

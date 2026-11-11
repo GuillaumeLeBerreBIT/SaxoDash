@@ -7,7 +7,7 @@ import { ownershipTicker } from '../../lib/ownership'
 import { WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { moveLabel, priceBasis, weakestPriceBasis } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
-import { verdictTicker } from '../../lib/verdicts'
+import { positionVerdict } from '../../lib/verdicts'
 import { useChartColors } from '../../theme/useChartColors'
 import { Card, DayChange, InstrumentLogo, Move, SortableTh, Tag, Td, Th, Tr } from '../ui'
 import PriceBasisNote from '../PriceBasisNote'
@@ -91,10 +91,6 @@ function InstrumentCell({ position }) {
 
 export default function PositionsTable({ positions, sortedPositions, summary, quotes, ownership, congress, verdicts, sort, onSort, className = '' }) {
   const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
-  const verdictFor = (position) => {
-    const ticker = verdictTicker(position)
-    return ticker ? verdicts?.[ticker] : null
-  }
   const dayLabel = moveLabel(quotes.values())
   const basis = weakestPriceBasis(positions)
   const sortedBy = sort ? ` · sorted by ${SORT_NAMES[sort.key]}` : ''
@@ -152,7 +148,7 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                 </Td>
                 <Td align="right" hideBelow="md"><WeightBar weight={p.weight} /></Td>
                 <Td align="right" hideBelow="md" className="max-w-[120px]">
-                  <ActionBadge verdict={verdictFor(p)} className="justify-end" />
+                  <ActionBadge verdict={positionVerdict(p, verdicts)} />
                 </Td>
                 <Td align="right" hideBelow="wide">
                   <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
