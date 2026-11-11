@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  growthVerdict, profitabilityVerdict, healthVerdict, valuationVerdict, momentumVerdict,
+  T, growthVerdict, profitabilityVerdict, healthVerdict, valuationVerdict, momentumVerdict,
 } from './snapshot'
 
 describe('growthVerdict', () => {
@@ -53,5 +53,11 @@ describe('momentumVerdict', () => {
   })
   it('notes YTD lag', () => {
     expect(momentumVerdict({ price_return_1y: 15, price_return_ytd: -3 }).text).toMatch(/lagging YTD/)
+  })
+})
+
+describe('quality thresholds', () => {
+  it('shares its quality thresholds with the nightly verdict engine (backend/verdicts/test_rules.py)', () => {
+    expect([T.roeStrong, T.marginStrong, T.deLow, T.revSteady]).toEqual([15, 10, 1, 5])
   })
 })
