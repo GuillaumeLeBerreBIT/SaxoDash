@@ -537,3 +537,32 @@ class AnnualResultsTest(SimpleTestCase):
     def test_omitted_without_reported_data_or_revenue(self):
         self.assertNotIn('annual_results', finnhub.to_fundamentals(SAMPLE_PROFILE, {'metric': {}}, [], []))
         self.assertNotIn('annual_results', self.shaped(_annual_filing(2025, None, 5)))
+
+
+class ScreenerHistoryTest(SimpleTestCase):
+    PAYLOAD = {
+        'series': {
+            'annual': {
+                'roe': [{'period': f'20{y}-12-31', 'v': 0.1 + y / 100} for y in (16, 17, 18, 19, 20, 21, 22)],
+                'roic': [{'period': '2022-12-31', 'v': 0.2}],
+                'netMargin': [{'period': '2022-12-31', 'v': 0.25}],
+                'eps': [{'period': '2022-12-31', 'v': 5.5}],
+            },
+            'quarterly': {'eps': [{'period': '2023-03-31', 'v': 1.4}, {'period': '2022-12-31', 'v': 1.3}]},
+        }
+    }
+
+    def test_keeps_five_years_as_percent_oldest_first(self):
+        out = finnhub.to_screener_history(self.PAYLOAD)
+        periods = [row['period'] for row in out['annual']]
+        self.assertEqual(periods, sorted(periods))
+        self.assertEqual(len(periods), 5)
+        self.assertEqual(out['annual'][-1], {'period': '2022-12-31', 'roe': 32.0, 'roic': 20.0, 'net_margin': 25.0, 'eps': 5.5})
+        self.assertNotIn('roic', out['annual'][0])
+
+    def test_quarterly_eps_is_oldest_first(self):
+        out = finnhub.to_screener_history(self.PAYLOAD)
+        self.assertEqual(out['quarterly_eps'], [['2022-12-31', 1.3], ['2023-03-31', 1.4]])
+
+    def test_without_a_series_block_is_empty(self):
+        self.assertEqual(finnhub.to_screener_history({'metric': {}}), {'annual': [], 'quarterly_eps': []})

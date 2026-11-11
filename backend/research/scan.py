@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from . import coverage, finnhub, market, scan_progress, technicals
+from . import coverage, finnhub, market, scan_progress, technicals, valuation
 from .models import ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 
 SCAN_TASK = 'scan_universe'
 DAILY_HORIZON = 1440
-CHART_BARS = 260
+HISTORY_BARS = 1200
+TECHNICAL_BARS = 260
 PAUSE_SECONDS = 1.2
 US_EXCHANGES = ('NASDAQ', 'NYSE')
 EARNINGS_WINDOW_DAYS = 14
@@ -30,16 +31,26 @@ def resolve(ticker, *, user):
 
 
 def _refresh_technicals(row, user):
-    bars = market.chart(row.uic, row.asset_type, DAILY_HORIZON, CHART_BARS, user=user)
-    for field, value in technicals.technical_fields(bars).items():
+    bars = market.chart(row.uic, row.asset_type, DAILY_HORIZON, HISTORY_BARS, user=user)
+    for field, value in technicals.technical_fields(bars[-TECHNICAL_BARS:]).items():
         setattr(row, field, value)
     row.technicals_at = timezone.now()
+    return bars
 
 
-def _refresh_fundamentals(row):
-    shaped = finnhub.to_screener_fundamentals(finnhub.get_basic_financials(row.ticker))
-    for field, value in shaped.items():
+def _dated_closes(bars):
+    return [(date.fromisoformat(bar['date']), bar['close']) for bar in bars if bar.get('close') is not None]
+
+
+def _refresh_fundamentals(row, bars):
+    financials = finnhub.get_basic_financials(row.ticker)
+    for field, value in finnhub.to_screener_fundamentals(financials).items():
         setattr(row, field, value)
+    history = finnhub.to_screener_history(financials)
+    if history['annual'] or history['quarterly_eps']:
+        row.fundamentals_history = history
+        quarterly_eps = [(date.fromisoformat(period), value) for period, value in history['quarterly_eps']]
+        row.pe_history = valuation.pe_percentiles(_dated_closes(bars), quarterly_eps) or {}
     row.fundamentals_at = timezone.now()
 
 
@@ -64,13 +75,13 @@ def _mark_failed(row, exc):
         logger.error('Could not record the failure for %s', row.ticker, exc_info=True)
 
 
-def _refresh_fundamentals_within_budget(row, pause):
+def _refresh_fundamentals_within_budget(row, bars, pause):
     with finnhub.background_calls():
         try:
-            _refresh_fundamentals(row)
+            _refresh_fundamentals(row, bars)
         except finnhub.FinnhubBusy:
             pause(finnhub.seconds_until_budget_refills())
-            _refresh_fundamentals(row)
+            _refresh_fundamentals(row, bars)
 
 
 def scan_row(row, *, with_fundamentals, user, pause=time.sleep):
@@ -80,7 +91,7 @@ def scan_row(row, *, with_fundamentals, user, pause=time.sleep):
             row.error = ''
             row.save()
             return with_fundamentals
-        _refresh_technicals(row, user)
+        bars = _refresh_technicals(row, user)
     except ProviderNotConnected:
         raise
     except Exception as exc:
@@ -91,7 +102,7 @@ def scan_row(row, *, with_fundamentals, user, pause=time.sleep):
     row.error = ''
     if with_fundamentals:
         try:
-            _refresh_fundamentals_within_budget(row, pause)
+            _refresh_fundamentals_within_budget(row, bars, pause)
         except finnhub.FinnhubNotConfigured:
             with_fundamentals = False
         except ProviderUnavailable as exc:

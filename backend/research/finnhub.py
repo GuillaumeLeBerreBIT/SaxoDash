@@ -572,6 +572,31 @@ def _shape_series(raw, names):
     return {key: rows for key, rows in shaped.items() if rows}
 
 
+SCREENER_HISTORY_YEARS = 5
+SCREENER_ANNUAL_RATIOS = ('roe', 'roic', 'net_margin')
+
+
+def _annual_history_rows(annual):
+    by_period = {}
+    for field in SCREENER_ANNUAL_RATIOS:
+        series_key, scale = RATIO_SERIES[field]
+        for point in _oldest_first(annual.get(series_key)):
+            by_period.setdefault(point['period'], {})[field] = round(point['v'] * scale, 2)
+    for point in _oldest_first(annual.get('eps')):
+        by_period.setdefault(point['period'], {})['eps'] = point['v']
+    periods = sorted(by_period)[-SCREENER_HISTORY_YEARS:]
+    return [{'period': period, **by_period[period]} for period in periods]
+
+
+def to_screener_history(financials):
+    series = (financials or {}).get('series') or {}
+    quarterly = _shape_series(series.get('quarterly') or {}, {'eps': 'eps'}).get('eps', [])
+    return {
+        'annual': _annual_history_rows(series.get('annual') or {}),
+        'quarterly_eps': [[row['period'], row['v']] for row in quarterly],
+    }
+
+
 def _country(symbol):
     try:
         return _shared_profile(symbol).get('country') or None

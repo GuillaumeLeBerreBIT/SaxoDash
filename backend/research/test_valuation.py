@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
-from research.valuation import NO_DAILY_PE_WARNING, current_pe, history, median_since, trailing_pe
+from research.valuation import NO_DAILY_PE_WARNING, current_pe, history, median_since, pe_percentiles, trailing_pe
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -167,3 +167,35 @@ class CurrentPeTest(SimpleTestCase):
         self.assertIsNone(current_pe(None, {'pe_ratio': 20.0, 'eps_ttm': -1.0}))
         self.assertIsNone(current_pe(None, {'pe_ratio': -5.0}))
         self.assertIsNone(current_pe(None, None))
+
+
+def daily_closes(start, days):
+    return [(start + timedelta(days=i), 40.0 + i * 0.05) for i in range(days)]
+
+
+def quarterly_eps(value, count=16, start=date(2021, 3, 31)):
+    return [(start + timedelta(days=91 * i), value) for i in range(count)]
+
+
+class PePercentilesTest(SimpleTestCase):
+    def test_over_weekly_positive_points(self):
+        closes = daily_closes(date(2023, 1, 2), 3 * 365)
+        out = pe_percentiles(closes, quarterly_eps(1.0))
+        self.assertEqual(out['eps_ttm'], 4.0)
+        self.assertLess(out['p25'], out['p75'])
+        self.assertEqual(out['current'], round(closes[-1][1] / 4.0, 2))
+        self.assertGreaterEqual(out['weeks'], 104)
+
+    def test_none_under_104_weeks(self):
+        closes = daily_closes(date(2023, 1, 2), 80 * 7)
+        self.assertIsNone(pe_percentiles(closes, quarterly_eps(1.0)))
+
+    def test_none_when_latest_trailing_eps_is_not_positive(self):
+        closes = daily_closes(date(2023, 1, 2), 3 * 365)
+        eps = quarterly_eps(1.0)
+        eps[-4:] = [(day, -1.0) for day, _ in eps[-4:]]
+        self.assertIsNone(pe_percentiles(closes, eps))
+
+    def test_bars_without_a_close_are_dropped(self):
+        closes = daily_closes(date(2023, 1, 2), 3 * 365) + [(date(2026, 1, 5), None)]
+        self.assertEqual(pe_percentiles(closes, quarterly_eps(1.0))['current'], round(closes[-2][1] / 4.0, 2))

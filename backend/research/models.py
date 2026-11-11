@@ -171,6 +171,8 @@ class ScreenerRow(models.Model):
     revenue_growth_5y = models.FloatField(null=True, blank=True)
     payout_ratio = models.FloatField(null=True, blank=True)
     next_earnings_date = models.DateField(null=True, blank=True)
+    fundamentals_history = models.JSONField(default=dict, blank=True)
+    pe_history = models.JSONField(default=dict, blank=True)
 
     technicals_at = models.DateTimeField(null=True, blank=True)
     fundamentals_at = models.DateTimeField(null=True, blank=True)

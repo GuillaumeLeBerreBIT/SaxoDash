@@ -11,15 +11,36 @@ from django.utils import timezone
 from research import finnhub, scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
 from research.models import ScreenerRow
-from research.providers import ProviderError, ProviderNotConnected
+from research.providers import ProviderError, ProviderNotConnected, ProviderUnavailable
 
 BARS = [
-    {'date': f'2025-{i:04d}', 'open': 100.0, 'high': 101.0, 'low': 99.0, 'close': 100.0 + i * 0.1, 'volume': 1_000_000}
+    {'date': (date(2024, 1, 1) + timedelta(days=i)).isoformat(), 'open': 100.0, 'high': 101.0, 'low': 99.0, 'close': 100.0 + i * 0.1, 'volume': 1_000_000}
     for i in range(260)
 ]
 USER = mock.sentinel.user
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 FINANCIALS = {'metric': {'peNormalizedAnnual': 20.0, 'roeTTM': 25.0}}
+
+
+def weekly_bars(count):
+    return [
+        {'date': (date(2020, 1, 6) + timedelta(days=7 * i)).isoformat(), 'open': 50.0, 'high': 51.0, 'low': 49.0,
+         'close': 50.0 + i * 0.1, 'volume': 1_000}
+        for i in range(count)
+    ]
+
+
+def quarterly_eps_points():
+    return [{'period': (date(2019, 3, 31) + timedelta(days=91 * i)).isoformat(), 'v': 1.0} for i in range(40)]
+
+
+FINANCIALS_WITH_SERIES = {
+    'metric': {'peNormalizedAnnual': 20.0},
+    'series': {
+        'annual': {'roe': [{'period': '2023-12-31', 'v': 0.312}], 'eps': [{'period': '2023-12-31', 'v': 6.1}]},
+        'quarterly': {'eps': quarterly_eps_points()},
+    },
+}
 
 
 def instrument(symbol, uic, exchange='NASDAQ', currency='USD'):
@@ -118,7 +139,7 @@ class ScanUniverseTest(TestCase):
         self.assertIsNone(apple.net_margin)
         self.assertIsNotNone(apple.technicals_at)
         self.assertIsNotNone(apple.fundamentals_at)
-        chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.CHART_BARS, user=USER)
+        chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.HISTORY_BARS, user=USER)
 
     def test_stores_revenue_growth_and_payout_from_the_same_metrics_call(self, search, chart, financials):
         financials.return_value = {'metric': {'peNormalizedAnnual': 20.0, 'revenueGrowth5Y': 12.5, 'payoutRatioTTM': 40.0}}
@@ -367,6 +388,64 @@ class EarningsDatesTest(TestCase):
 
 
 @override_settings(CACHES=LOCMEM)
+@override_settings(CACHES=LOCMEM)
+class ScanHistoryTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.row = ScreenerRow.objects.create(ticker='AAPL', name='Apple', indexes='SP500', uic=211, asset_type='Stock')
+
+    def scan_with(self, bars, financials):
+        with mock.patch('research.scan.market.chart', return_value=bars) as chart, \
+                mock.patch('research.scan.finnhub.get_basic_financials', return_value=financials) as basic:
+            scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=no_pause)
+        self.row.refresh_from_db()
+        return chart, basic
+
+    def test_scan_stores_history_and_percentiles(self):
+        self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertEqual(self.row.fundamentals_history['annual'], [{'period': '2023-12-31', 'roe': 31.2, 'eps': 6.1}])
+        self.assertEqual(len(self.row.fundamentals_history['quarterly_eps']), 40)
+        self.assertEqual(set(self.row.pe_history), {'current', 'p25', 'p75', 'eps_ttm', 'weeks'})
+        self.assertEqual(self.row.pe_history['eps_ttm'], 4.0)
+
+    def test_unavailable_percentiles_are_stored_as_empty(self):
+        self.row.pe_history = {'current': 1.0}
+        self.row.save()
+        self.scan_with(weekly_bars(50), FINANCIALS_WITH_SERIES)
+        self.assertEqual(self.row.pe_history, {})
+        self.assertNotEqual(self.row.fundamentals_history, {})
+
+    def test_fundamentals_failure_keeps_last_nights_history(self):
+        self.row.fundamentals_history = {'annual': [{'period': '2022-12-31', 'roe': 10.0}], 'quarterly_eps': []}
+        self.row.pe_history = {'current': 20.0, 'p25': 15.0, 'p75': 25.0, 'eps_ttm': 4.0, 'weeks': 200}
+        self.row.save()
+        with mock.patch('research.scan.market.chart', return_value=weekly_bars(150)), \
+                mock.patch('research.scan.finnhub.get_basic_financials', side_effect=ProviderUnavailable('down')):
+            scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=no_pause)
+        self.row.refresh_from_db()
+        self.assertEqual(self.row.fundamentals_history['annual'][0]['roe'], 10.0)
+        self.assertEqual(self.row.pe_history['weeks'], 200)
+
+    def test_an_unusable_series_keeps_last_nights_history(self):
+        self.row.fundamentals_history = {'annual': [{'period': '2022-12-31', 'roe': 10.0}], 'quarterly_eps': []}
+        self.row.pe_history = {'current': 20.0}
+        self.row.save()
+        self.scan_with(weekly_bars(150), FINANCIALS)
+        self.assertEqual(self.row.fundamentals_history['annual'][0]['roe'], 10.0)
+        self.assertEqual(self.row.pe_history, {'current': 20.0})
+
+    def test_technicals_still_read_the_last_260_bars(self):
+        bars = weekly_bars(scan.HISTORY_BARS)
+        with mock.patch('research.scan.technicals.technical_fields', return_value={}) as fields:
+            self.scan_with(bars, FINANCIALS_WITH_SERIES)
+        self.assertEqual(fields.call_args.args[0], bars[-260:])
+
+    def test_request_budget_is_one_call_each(self):
+        chart, basic = self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertEqual(chart.call_count, 1)
+        self.assertEqual(basic.call_count, 1)
+
+
 class ScanBudgetTest(TestCase):
     def setUp(self):
         cache.clear()
