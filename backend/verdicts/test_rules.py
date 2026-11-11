@@ -155,6 +155,18 @@ class ValuationTest(SimpleTestCase):
             'grade': 'not_judged', 'current_pe': None, 'cheap_below': None, 'expensive_above': None,
         })
 
+    def test_non_positive_earnings_are_not_judged_with_no_levels(self):
+        row = stub(pe_history={'current': 18, 'p25': 20, 'p75': 30, 'eps_ttm': -1, 'weeks': 200})
+        self.assertEqual(rules.valuation(row), {
+            'grade': 'not_judged', 'current_pe': None, 'cheap_below': None, 'expensive_above': None,
+        })
+
+    def test_non_positive_percentile_or_current_is_not_judged(self):
+        for key in ('current', 'p25', 'p75'):
+            with self.subTest(key=key):
+                history = {'current': 18, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200, key: 0}
+                self.assertEqual(rules.valuation(stub(pe_history=history))['grade'], 'not_judged')
+
 
 class ThresholdParityTest(SimpleTestCase):
     def test_thresholds_match_frontend_snapshot_js_T_table(self):

@@ -108,6 +108,8 @@ def _levels(history) -> Optional[dict]:
     keys = ('current', 'p25', 'p75', 'eps_ttm')
     if not history or any(history.get(key) is None for key in keys):
         return None
+    if any(history[key] <= 0 for key in keys):
+        return None
     return history
 
 

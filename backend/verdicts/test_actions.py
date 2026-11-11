@@ -35,6 +35,9 @@ class ActionTest(SimpleTestCase):
         self.assertEqual(result['action'], 'add')
         self.assertEqual(result['reason'], 'Quality passes and the price is in its cheap range')
 
+    def test_held_unknown_quality_over_cap_and_expensive_is_no_verdict_not_trim(self):
+        self.assertEqual(self.check('unknown', 'expensive', 30)['action'], 'no_verdict')
+
     def test_held_anything_else_is_hold(self):
         self.assertEqual(
             self.check('mixed', 'fair', 5),
