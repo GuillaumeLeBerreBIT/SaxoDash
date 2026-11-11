@@ -75,7 +75,7 @@ describe('VerdictCard', () => {
 
   it('shows the weight of a held stock against its cap', () => {
     renderCard({ data: { ...verdict, held: true, weight_pct: 12.5, weight_cap_pct: 10 }, isLoading: false })
-    expect(screen.getByText('You hold it at 12.5% of your portfolio (cap 10%)')).toBeInTheDocument()
+    expect(screen.getByText('You hold it at 12.5% of your portfolio (cap 10.0%)')).toBeInTheDocument()
   })
 
   it('says a stock outside the scan is not covered', () => {
@@ -90,6 +90,28 @@ describe('VerdictCard', () => {
     })
     expect(screen.getByText('No verdict')).toBeInTheDocument()
     expect(screen.getByText('Not enough filings to judge.')).toBeInTheDocument()
+  })
+
+  it('says the verdict is unavailable when the request failed, not that it is uncovered', () => {
+    renderCard({ data: undefined, isError: true, isLoading: false })
+    expect(screen.getByText('Verdict unavailable right now')).toBeInTheDocument()
+    expect(screen.queryByText('Not covered by the nightly scan')).not.toBeInTheDocument()
+  })
+
+  it('omits the held line when the weight is unknown', () => {
+    renderCard({ data: { ...verdict, held: true, weight_pct: null }, isLoading: false })
+    expect(screen.queryByText(/You hold it/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the raw key for a value it has no label for', () => {
+    renderCard({
+      data: { ...verdict, action: 'mystery', quality: 'odd', valuation: 'weird', checks: [{ ...checks[0], status: 'maybe' }] },
+      isLoading: false,
+    })
+    expect(screen.getByText('mystery')).toBeInTheDocument()
+    expect(screen.getByText('Quality: odd')).toBeInTheDocument()
+    expect(screen.getByText('Price vs its own history: weird')).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).toHaveTextContent('maybe')
   })
 
   it('renders a skeleton while loading', () => {

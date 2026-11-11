@@ -333,7 +333,7 @@ Cowork: not yet verified whether Cowork tasks see local stdio servers. Claude De
 chat does. If Cowork does not, the route is a desktop extension (`.mcpb`) packaging
 the same command.
 
-31 tools, by group (each description names the page it mirrors):
+33 tools, by group (each description names the page it mirrors):
 
 - **Portfolio**: `get_portfolio`, `get_performance`, `get_transactions`, `get_tax_year`
 - **Research**: `search_instruments`, `get_quotes`, `get_price_history`,
