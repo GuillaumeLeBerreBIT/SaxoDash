@@ -130,7 +130,7 @@ PAGES = {
     'Advisor', 'Portfolio', 'Analytics', 'Transactions', 'Research', 'Research › Chart', 'Research › Overview',
     'Research › Financials', 'Research › Filings', 'Research › News', 'Research › Statistics', 'Watchlist',
     'Discover', 'Earnings', 'Investors', 'Investors › Fund', 'Investors › Stocks', 'Investors › Alerts',
-    'Congress', 'Congress › Member',
+    'Congress', 'Congress › Member', 'Verdict › Stock', 'Verdict › Track record',
 }
 
 

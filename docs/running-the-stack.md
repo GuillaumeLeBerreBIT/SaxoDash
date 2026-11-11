@@ -343,6 +343,7 @@ the same command.
 - **Smart money**: `list_investors`, `get_investor`, `get_fund_signals`,
   `get_fund_stocks`, `get_ticker_ownership`, `list_congress_members`,
   `get_congress_member`, `get_filing_alerts`
+- **Verdicts**: `get_verdict`, `get_verdict_track_record`
 - **Journal**: `log_recommendation`, `set_decision`, `close_recommendation`,
   `list_recommendations`
 - **System**: `get_data_health`
