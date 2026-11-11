@@ -430,7 +430,7 @@ chart sits on Overview only; the watchlist rail sits beside every tab.
 The **Verdict** card sits directly above the Investment snapshot. It names the action as a tag
 (Buy, Add, Hold, Trim, Sell (review), Wait, Not a fit, No verdict), gives the reason and the as-of
 date, lists the quality checks with their figures and thresholds, and shows the "cheap below" and
-"expensive above" price levels. A US-listed stock the app has not scanned yet shows no card. The
+"expensive above" price levels. A US-listed stock the app has not scanned yet shows the card with "Not covered by the nightly scan". The
 same action appears as a small tag on watchlist rows and in a **Verdict** column on Portfolio's
 positions table, matched by Saxo uic; where no verdict exists it shows "—".
 

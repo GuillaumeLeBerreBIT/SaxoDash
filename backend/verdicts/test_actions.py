@@ -51,7 +51,7 @@ class ActionTest(SimpleTestCase):
         result = self.check('strong', 'fair', 16)
         self.assertEqual(result['action'], 'hold')
         self.assertIn('over your 15% cap', result['reason'].lower())
-        self.assertTrue(result['reason'].endswith(' Over your 15% cap.'))
+        self.assertEqual(result['reason'], 'Nothing in your plan says to act. Over your 15% cap.')
 
     def test_not_held_strong_cheap_is_buy(self):
         result = self.check('strong', 'cheap', None)

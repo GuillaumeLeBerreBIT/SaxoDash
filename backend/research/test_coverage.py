@@ -11,10 +11,10 @@ from users.testing import the_owner
 USER = mock.sentinel.user
 
 
-def hold(ticker, *, uic=11, currency='USD', asset_type='Stock', owner=None):
+def hold(ticker, *, uic=11, currency='USD', asset_type='Stock', owner=None, sector='Tech'):
     return Position.objects.create(
         user=owner or the_owner(), ticker=ticker, name=f'{ticker} Inc', qty=1, avg_cost=1, current_price=1,
-        sector='Tech', type='STOCK', color='#fff', uic=uic, asset_type=asset_type, currency=currency,
+        sector=sector, type='STOCK', color='#fff', uic=uic, asset_type=asset_type, currency=currency,
     )
 
 
@@ -114,3 +114,33 @@ class SyncExtrasTest(TestCase):
         coverage.sync_extras(user=USER)
         resolve.assert_not_called()
         self.assertEqual(ScreenerRow.everything.filter(ticker='NBIS').count(), 1)
+
+    def test_a_held_extra_takes_its_sector_from_the_position(self, resolve):
+        hold('JPM', uic=5, sector='Banking')
+        coverage.sync_extras(user=USER)
+        self.assertEqual(ScreenerRow.everything.get(ticker='JPM').sector, 'Banking')
+
+    def test_an_uncategorized_position_leaves_the_sector_empty(self, resolve):
+        hold('NBIS', sector='Uncategorized')
+        coverage.sync_extras(user=USER)
+        self.assertEqual(ScreenerRow.everything.get(ticker='NBIS').sector, '')
+
+    def test_a_watched_only_extra_keeps_an_empty_sector(self, resolve):
+        watch('NBIS:xnas', 11)
+        resolve.return_value = {'uic': 11}
+        coverage.sync_extras(user=USER)
+        self.assertEqual(ScreenerRow.everything.get(ticker='NBIS').sector, '')
+
+    def test_an_existing_extra_with_no_sector_gets_the_holders(self, resolve):
+        ScreenerRow.everything.create(ticker='JPM', name='JPM', indexes='', in_universe=False, uic=5)
+        hold('JPM', uic=5, sector='Banking')
+        coverage.sync_extras(user=USER)
+        self.assertEqual(ScreenerRow.everything.get(ticker='JPM').sector, 'Banking')
+
+    def test_an_existing_extra_keeps_the_sector_it_has(self, resolve):
+        ScreenerRow.everything.create(
+            ticker='JPM', name='JPM', indexes='', in_universe=False, uic=5, sector='Financial Services',
+        )
+        hold('JPM', uic=5, sector='Banking')
+        coverage.sync_extras(user=USER)
+        self.assertEqual(ScreenerRow.everything.get(ticker='JPM').sector, 'Financial Services')

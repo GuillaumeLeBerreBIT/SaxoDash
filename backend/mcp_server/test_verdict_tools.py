@@ -4,6 +4,7 @@ from django.core.cache import cache
 from django.test import override_settings
 from rest_framework.test import APITestCase
 
+from research.models import ScreenerRow
 from users.testing import the_owner
 from verdicts.models import StockVerdict
 from verdicts.views import TrackRecordView
@@ -22,6 +23,7 @@ class VerdictToolsTest(APITestCase):
         the_owner()
 
     def test_known_symbol_returns_the_pages_verdict(self):
+        ScreenerRow.objects.create(ticker='NVDA', name='NVIDIA', indexes='sp500')
         StockVerdict.objects.create(
             ticker='NVDA', name='NVIDIA', quality='Strong', valuation='Fair', as_of=date(2026, 11, 10)
         )

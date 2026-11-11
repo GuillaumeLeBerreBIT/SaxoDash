@@ -19,7 +19,7 @@ def get_verdict(symbol: str):
 
 
 @tool(
-    'Verdict › Track record: every logged buy-grade call scored against the S&P 500, with the summary. '
+    'Verdict › Track record: every logged buy-grade call scored against the S&P 500, with the summary. Figures exist only once a window has elapsed, so the first 3-month figure appears three months after the first nightly run. '
     'Labels are rule output, not advice, and the server never trades.',
     sources=[VERDICTS, 'price history'],
 )

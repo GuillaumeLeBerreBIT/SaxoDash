@@ -19,7 +19,7 @@ def _held(quality_grade, valuation_grade, weight_pct, failed_labels):
         return _result('add', QUALITY_AND_CHEAP)
     reason = 'Nothing in your plan says to act'
     if over_cap:
-        reason += f' Over your {WEIGHT_CAP_PCT}% cap.'
+        reason += f'. Over your {WEIGHT_CAP_PCT}% cap.'
     return _result('hold', reason)
 
 

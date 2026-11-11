@@ -85,9 +85,35 @@ class QualityTest(SimpleTestCase):
             check = rules.quality(stub(sector=sector, debt_to_equity=5.0))['checks'][5]
             self.assertEqual(check['status'], 'unknown')
 
-    def test_empty_sector_is_judged_on_debt(self):
+    def test_finnhub_industry_names_for_financials_and_real_estate_skip_debt(self):
+        for sector in ('Banking', 'Insurance', 'Financial Services', 'Real Estate'):
+            check = rules.quality(stub(sector=sector, debt_to_equity=5.0))['checks'][5]
+            self.assertEqual(check['status'], 'unknown', sector)
+
+    def test_empty_sector_leaves_debt_unknown(self):
         check = rules.quality(stub(sector='', debt_to_equity=5.0))['checks'][5]
-        self.assertEqual(check['status'], 'fail')
+        self.assertEqual((check['status'], check['value']), ('unknown', None))
+
+    def test_negative_equity_fails_debt_keeping_its_value(self):
+        check = rules.quality(stub(debt_to_equity=-2.5))['checks'][5]
+        self.assertEqual(
+            (check['status'], check['value'], check['threshold']), ('fail', -2.5, 'at most 1.0'),
+        )
+
+    def test_negative_equity_makes_return_on_equity_unknown(self):
+        row = stub(debt_to_equity=-2.5, fundamentals_history={'annual': annual(roe=[80] * 5)})
+        check = rules.quality(row)['checks'][0]
+        self.assertEqual((check['status'], check['value']), ('unknown', None))
+
+    def test_positive_equity_still_judges_return_on_equity_and_debt(self):
+        result = rules.quality(stub(debt_to_equity=0.3))
+        self.assertEqual(statuses(result)['roe'], 'pass')
+        self.assertEqual(statuses(result)['debt'], 'pass')
+
+    def test_missing_debt_ratio_is_unknown_and_roe_is_still_judged(self):
+        result = rules.quality(stub(debt_to_equity=None))
+        self.assertEqual(statuses(result)['debt'], 'unknown')
+        self.assertEqual(statuses(result)['roe'], 'pass')
 
     def test_debt_boundary_passes(self):
         self.assertEqual(statuses(rules.quality(stub(debt_to_equity=1.0)))['debt'], 'pass')

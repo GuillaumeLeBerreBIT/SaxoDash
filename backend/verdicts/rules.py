@@ -3,7 +3,7 @@ from statistics import median
 from typing import Callable, Optional
 
 THRESHOLDS = {'roe': 15, 'roic': 10, 'net_margin': 10, 'revenue_growth': 5, 'debt_to_equity': 1.0}
-FINANCIAL_SECTORS = {'Financials', 'Real Estate'}
+FINANCIAL_SECTORS = {'Financials', 'Real Estate', 'Banking', 'Insurance', 'Financial Services'}
 MIN_ANSWERED = 4
 STRONG_SHARE = 0.8
 WEAK_SHARE = 0.5
@@ -29,8 +29,14 @@ def _outcome(value, passed):
     return ('pass' if passed else 'fail'), value
 
 
+def _negative_equity(row):
+    return row.debt_to_equity is not None and row.debt_to_equity < 0
+
+
 def _median_at_least(key, floor):
     def judge(row):
+        if key == 'roe' and _negative_equity(row):
+            return 'unknown', None
         values = _annual(row, key)
         if not values:
             return 'unknown', None
@@ -65,8 +71,10 @@ def _revenue_growth(row):
 
 
 def _debt(row):
-    if row.sector in FINANCIAL_SECTORS or row.debt_to_equity is None:
+    if not row.sector or row.sector in FINANCIAL_SECTORS or row.debt_to_equity is None:
         return 'unknown', None
+    if _negative_equity(row):
+        return 'fail', row.debt_to_equity
     return _outcome(row.debt_to_equity, row.debt_to_equity <= THRESHOLDS['debt_to_equity'])
 
 

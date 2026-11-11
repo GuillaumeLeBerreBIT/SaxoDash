@@ -383,8 +383,8 @@ The `get_verdict` and `get_verdict_track_record` MCP tools read the result.
 The verdict feature adds two migration chains, `research` 0015-0016 and `verdicts` 0001-0002;
 run `manage.py migrate` on any existing database before starting. Verdicts appear only after one
 full nightly scan followed by `compute_verdicts` (`manage.py shell -c "from verdicts.tasks import
-compute_verdicts; compute_verdicts()"` runs it by hand); until then the card and badges show
-nothing and the track record is empty.
+compute_verdicts; compute_verdicts()"` runs it by hand); until then the card says "Not covered by
+the nightly scan", the badges show a dash and the track record is empty.
 
 ---
 

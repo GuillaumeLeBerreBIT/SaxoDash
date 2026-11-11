@@ -696,24 +696,31 @@ night (`lookups_failed`), since an unconfirmed listing is not evidence the user 
 **The action is computed per request, from the shared verdict row plus the signed-in user's own weight.**
 `StockVerdict` holds only what is the same for everyone (grades, checks, P/E levels);
 `payload.for_user` reads that user's `Position` rows, sums same-ticker USD stocks into a weight and hands
-it to `actions.action`, so two users can see Buy and Trim for one stock and no per-user table exists to
+it to `actions.action`, so two users can see Wait and Trim, or Buy and Add, for one stock and no per-user table exists to
 keep fresh. `sell_review` ("Sell (review)") comes only from a `weak` quality grade: no rule reads a price
 change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) and expensive is
-`trim`; a stock not held has a weight of `None`, never zero.
+`trim`; a stock not held has a weight of `None`, never zero. A non-universe verdict (a ticker only held or
+watched) is served only to a user who holds or watches it (`verdicts/visibility.py`), and the track record
+lists only universe calls plus the user's own, otherwise any signed-in user could learn what another holds
+by asking for its ticker; for anyone else the answer is `null`, as for an unknown ticker.
 
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the
 failure logged, so one ticker's bad data never stops the run (the task reports `N failed: ...` as
 detail). A row that failed tonight keeps yesterday's verdict and open `VerdictCall`: `_retire` looks at
-every ticker in `everything`, not at tonight's successes, otherwise one Finnhub hiccup would close a call
-and the next night would open a new one at a new entry price, wrecking the track record.
+every ticker in `everything`, not at tonight's successes, otherwise one Saxo chart failure, which marks a row failed for the night, would close a call
+(a Finnhub failure leaves the row ok with last night's history) and the next night would open a new one at a new entry price, wrecking the track record.
 `compute_verdicts` is `@synced(reports_health=False, credential=None)`: it never touches the Saxo
-health badge and needs no credential.
+health badge and needs no credential. Negative equity (a negative `debt_to_equity`, from buybacks) fails
+Debt with its value kept and makes Return on equity unknown, since ROE over negative equity is meaningless.
+An extra row takes its sector from the holder's `Position.sector` (Finnhub's industry text, `Uncategorized`
+counting as none), and a row with no sector leaves Debt unknown rather than judging a bank as industrial.
 
 **A listing is matched by Saxo uic on the watchlist and Portfolio, not by ticker or exchange suffix.**
 Real watchlist rows carry bare symbols (`NVDA`, no `:xnas`), so a suffix cannot say which listing a row
 is, and a European listing shares a ticker with an unrelated US stock. `lib/verdicts.js` asks only
-about a `Stock` (a position that is not an ETF) quoted in USD, through `ownershipTicker`, and
+about a `Stock` (a position that is not an ETF) quoted in USD, through `ownershipTicker`; that holds for
+positions, while watchlist rows are asked by bare symbol for any `Stock`, so the uic match is what protects them. And
 `sameListing` shows a verdict only when the row's uic equals the verdict's `uic` (the listing the scan
 priced). A row with no uic shows the verdict; a verdict for a different listing is `null`, drawn as a dash.
 

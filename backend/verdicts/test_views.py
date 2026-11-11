@@ -4,6 +4,7 @@ from decimal import Decimal
 from rest_framework.test import APITestCase
 
 from portfolio.models import Position
+from research.models import ScreenerRow, Watchlist, WatchlistItem
 from users.testing import make_user
 
 from .actions import WEIGHT_CAP_PCT
@@ -15,7 +16,8 @@ CHECKS = [
 ]
 
 
-def verdict(ticker='AAA', quality='strong', valuation='expensive', **extra):
+def verdict(ticker='AAA', quality='strong', valuation='expensive', universe=True, **extra):
+    ScreenerRow.everything.create(ticker=ticker, name=ticker, indexes='sp500', in_universe=universe)
     return StockVerdict.objects.create(
         ticker=ticker, name=f'{ticker} Corp', quality=quality, valuation=valuation,
         checks=CHECKS, current_pe=30.0, cheap_below=20.0, expensive_above=28.0,
@@ -58,7 +60,7 @@ class VerdictApiTests(APITestCase):
             verdict(f'T{index}')
         self.client.force_authenticate(self.bob)
         tickers = ','.join(f'T{index}' for index in range(20))
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(5):
             self.client.get(f'/api/verdicts/?tickers={tickers}')
 
     def test_action_follows_the_requesting_users_weight(self):
@@ -142,3 +144,45 @@ class VerdictApiTests(APITestCase):
         self.assertEqual(body['calls'], [])
         self.assertIn('summary', body)
         self.assertNotIn('verdict', body)
+
+
+class NonUniverseVisibilityTests(APITestCase):
+    def setUp(self):
+        self.alice = make_user('alice')
+        self.bob = make_user('bob')
+        verdict('NBIS', universe=False)
+        verdict('AAA')
+
+    def summary(self, user, tickers='NBIS,AAA'):
+        self.client.force_authenticate(user)
+        return self.client.get(f'/api/verdicts/?tickers={tickers}').json()['verdicts']
+
+    def detail(self, user, ticker='NBIS'):
+        self.client.force_authenticate(user)
+        return self.client.get(f'/api/verdicts/{ticker}/').json()
+
+    def test_the_holder_of_an_extra_gets_its_verdict(self):
+        hold(self.alice, 'NBIS:xnas', '100')
+        self.assertIsNotNone(self.summary(self.alice)['NBIS'])
+        self.assertEqual(self.detail(self.alice)['verdict']['ticker'], 'NBIS')
+
+    def test_another_user_gets_null_as_for_an_unknown_ticker(self):
+        hold(self.alice, 'NBIS', '100')
+        self.assertIsNone(self.summary(self.bob)['NBIS'])
+        self.assertEqual(self.detail(self.bob), {'verdict': None})
+
+    def test_a_universe_ticker_is_visible_to_everyone(self):
+        hold(self.alice, 'NBIS', '100')
+        self.assertIsNotNone(self.summary(self.alice)['AAA'])
+        self.assertIsNotNone(self.summary(self.bob)['AAA'])
+
+    def test_a_user_who_only_watches_the_extra_sees_it(self):
+        watchlist = Watchlist.objects.create(user=self.bob, name='W')
+        WatchlistItem.objects.create(watchlist=watchlist, symbol='nbis:xnas', uic=7)
+        self.assertIsNotNone(self.summary(self.bob)['NBIS'])
+        self.assertEqual(self.detail(self.bob)['verdict']['ticker'], 'NBIS')
+
+    def test_another_users_watchlist_does_not_open_it(self):
+        watchlist = Watchlist.objects.create(user=self.alice, name='W')
+        WatchlistItem.objects.create(watchlist=watchlist, symbol='NBIS', uic=7)
+        self.assertIsNone(self.summary(self.bob)['NBIS'])

@@ -7,6 +7,9 @@ from advisor import scoring
 from investors.copying import BENCHMARK_NAME, BENCHMARK_TICKER, price_series
 from investors.prices import Series
 
+from research.models import ScreenerRow
+
+from . import visibility
 from .models import VerdictCall
 
 
@@ -45,9 +48,17 @@ def _row(call, result):
     }
 
 
-def report(today=None):
+def _visible_calls(user):
+    calls = VerdictCall.objects.order_by('opened_on', 'ticker')
+    if user is None:
+        return list(calls)
+    allowed = set(ScreenerRow.objects.values_list('ticker', flat=True)) | visibility.own_tickers(user)
+    return [call for call in calls if call.ticker in allowed]
+
+
+def report(today=None, user=None):
     today = today or timezone.localdate()
-    calls = list(VerdictCall.objects.order_by('opened_on', 'ticker'))
+    calls = _visible_calls(user)
     prices = price_series({call.ticker for call in calls} | {BENCHMARK_TICKER})
     benchmark = prices.get(BENCHMARK_TICKER) or Series([], [])
     scored = [(call, scoring.score(_as_scored(call), prices, benchmark, today)) for call in calls]
