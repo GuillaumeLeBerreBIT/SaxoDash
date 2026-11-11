@@ -73,6 +73,9 @@ EXTRA_URLS = (
     f'/api/investors/ownership/{TICKER}/',
     '/api/investors/ownership/?tickers=' + TICKER,
     '/api/enablebanking/transactions/?search=' + SECRET,
+    f'/api/verdicts/{TICKER}/',
+    '/api/verdicts/?tickers=' + TICKER,
+    '/api/verdicts/track-record/',
 )
 
 
