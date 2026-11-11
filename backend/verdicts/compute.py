@@ -1,3 +1,6 @@
+import logging
+from typing import NamedTuple
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -5,6 +8,15 @@ from research.models import ScreenerRow
 
 from . import rules
 from .models import StockVerdict, VerdictCall
+
+logger = logging.getLogger(__name__)
+
+NAME_MAX_LENGTH = StockVerdict._meta.get_field('name').max_length
+
+
+class Result(NamedTuple):
+    written: int
+    failed: list
 
 
 def _is_buy_grade(quality, valuation):
@@ -15,7 +27,7 @@ def _store(row, quality, valuation):
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
-            'name': row.name,
+            'name': row.name[:NAME_MAX_LENGTH],
             'quality': quality['grade'],
             'valuation': valuation['grade'],
             'checks': quality['checks'],
@@ -51,10 +63,10 @@ def _judge(row, today):
         _track(row, quality, valuation, today)
 
 
-def _retire(live_tickers, today):
+def _retire(present_tickers, today):
     with transaction.atomic():
-        StockVerdict.objects.exclude(ticker__in=live_tickers).delete()
-        VerdictCall.objects.filter(ended_on__isnull=True).exclude(ticker__in=live_tickers).update(
+        StockVerdict.objects.exclude(ticker__in=present_tickers).delete()
+        VerdictCall.objects.filter(ended_on__isnull=True).exclude(ticker__in=present_tickers).update(
             ended_on=today,
         )
 
@@ -63,10 +75,14 @@ def run(today=None):
     today = today or timezone.localdate()
     rows = ScreenerRow.everything.filter(status=ScreenerRow.OK, fundamentals_at__isnull=False)
     written = 0
-    live_tickers = []
+    failed = []
     for row in rows:
-        _judge(row, today)
-        live_tickers.append(row.ticker)
+        try:
+            _judge(row, today)
+        except Exception:
+            logger.exception('Verdict for %s could not be computed', row.ticker)
+            failed.append(row.ticker)
+            continue
         written += 1
-    _retire(live_tickers, today)
-    return written
+    _retire(list(ScreenerRow.everything.values_list('ticker', flat=True)), today)
+    return Result(written, failed)

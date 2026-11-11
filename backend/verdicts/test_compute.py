@@ -35,9 +35,9 @@ class ComputeTest(TestCase):
         make_row('NBIS', in_universe=False)
         make_row('BAD', status=ScreenerRow.FAILED)
 
-        written = compute.run(today=DAY_ONE)
+        result = compute.run(today=DAY_ONE)
 
-        self.assertEqual(written, 2)
+        self.assertEqual((result.written, result.failed), (2, []))
         self.assertEqual(
             set(StockVerdict.objects.values_list('ticker', flat=True)), {'AAPL', 'NBIS'},
         )
@@ -60,7 +60,7 @@ class ComputeTest(TestCase):
     def test_skips_rows_never_given_fundamentals(self):
         make_row('AAPL', fundamentals_at=None)
 
-        self.assertEqual(compute.run(today=DAY_ONE), 0)
+        self.assertEqual(compute.run(today=DAY_ONE).written, 0)
         self.assertFalse(StockVerdict.objects.exists())
 
     def test_becoming_strong_and_cheap_opens_one_call_at_the_close(self):
@@ -134,16 +134,58 @@ class ComputeTest(TestCase):
         self.assertFalse(StockVerdict.objects.exists())
         self.assertEqual(VerdictCall.objects.get().ended_on, DAY_TWO)
 
-    def test_a_row_that_loses_its_ok_status_ends_its_call_and_verdict(self):
+    def test_a_present_row_that_is_not_ok_tonight_keeps_its_verdict_and_open_call(self):
         row = make_row('AAPL')
         compute.run(today=DAY_ONE)
         row.status = ScreenerRow.FAILED
         row.save()
 
-        compute.run(today=DAY_TWO)
+        result = compute.run(today=DAY_TWO)
 
-        self.assertFalse(StockVerdict.objects.exists())
-        self.assertEqual(VerdictCall.objects.get().ended_on, DAY_TWO)
+        self.assertEqual(result.written, 0)
+        self.assertEqual(StockVerdict.objects.get().ticker, 'AAPL')
+        self.assertIsNone(VerdictCall.objects.get().ended_on)
+
+    def test_one_row_raising_does_not_stop_the_others_or_retirement(self):
+        make_row('AAA')
+        make_row('BBB', fundamentals_history='not a dict')
+        make_row('CCC')
+        gone = make_row('GONE')
+        compute.run(today=DAY_ONE)
+        gone.delete()
+
+        with self.assertLogs('verdicts.compute', level='ERROR') as logged:
+            result = compute.run(today=DAY_TWO)
+
+        self.assertEqual(result.failed, ['BBB'])
+        self.assertEqual(result.written, 2)
+        self.assertIn('BBB', logged.output[0])
+        self.assertEqual(
+            set(StockVerdict.objects.values_list('ticker', flat=True)), {'AAA', 'CCC'},
+        )
+        self.assertEqual(VerdictCall.objects.get(ticker='GONE').ended_on, DAY_TWO)
+
+    def test_a_ticker_that_failed_to_compute_keeps_its_verdict_and_open_call(self):
+        row = make_row('AAPL')
+        compute.run(today=DAY_ONE)
+        row.fundamentals_history = 'not a dict'
+        row.save()
+
+        with self.assertLogs('verdicts.compute', level='ERROR'):
+            result = compute.run(today=DAY_TWO)
+
+        self.assertEqual(result.failed, ['AAPL'])
+        self.assertEqual(StockVerdict.objects.get().quality, 'strong')
+        self.assertIsNone(VerdictCall.objects.get().ended_on)
+
+    def test_an_overlong_name_is_truncated_not_raised(self):
+        row = ScreenerRow(
+            ticker='AAPL', name='z' * 300, fundamentals_at=FUNDAMENTALS_AT, last_close=100.0,
+        )
+
+        compute._judge(row, DAY_ONE)
+
+        self.assertEqual(StockVerdict.objects.get().name, 'z' * 120)
 
     def test_run_is_repeatable(self):
         make_row('AAPL')
@@ -152,8 +194,10 @@ class ComputeTest(TestCase):
                   'expensive_above', 'last_close', 'pct_vs_ma200', 'as_of']
         before = list(StockVerdict.objects.values(*fields))
         calls = list(VerdictCall.objects.values())
+        computed_before = StockVerdict.objects.get().computed_at
 
         compute.run(today=DAY_ONE)
 
+        self.assertGreater(StockVerdict.objects.get().computed_at, computed_before)
         self.assertEqual(list(StockVerdict.objects.values(*fields)), before)
         self.assertEqual(list(VerdictCall.objects.values()), calls)

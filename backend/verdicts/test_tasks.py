@@ -13,4 +13,14 @@ class ComputeVerdictsTaskTest(TestCase):
         tasks.compute_verdicts()
 
         run = SyncRun.objects.get(task='compute_verdicts')
-        self.assertEqual((run.outcome, run.rows, run.user_id), ('ok', 1, None))
+        self.assertEqual((run.outcome, run.rows, run.user_id, run.detail), ('ok', 1, None, ''))
+
+    def test_the_run_names_the_tickers_that_failed(self):
+        make_row('AAA')
+        make_row('BBB', fundamentals_history='not a dict')
+
+        with self.assertLogs('verdicts.compute', level='ERROR'):
+            tasks.compute_verdicts()
+
+        run = SyncRun.objects.get(task='compute_verdicts')
+        self.assertEqual((run.rows, run.detail), (1, '1 failed: BBB'))
