@@ -388,7 +388,6 @@ class EarningsDatesTest(TestCase):
 
 
 @override_settings(CACHES=LOCMEM)
-@override_settings(CACHES=LOCMEM)
 class ScanHistoryTest(TestCase):
     def setUp(self):
         cache.clear()
@@ -446,6 +445,7 @@ class ScanHistoryTest(TestCase):
         self.assertEqual(basic.call_count, 1)
 
 
+@override_settings(CACHES=LOCMEM)
 class ScanBudgetTest(TestCase):
     def setUp(self):
         cache.clear()
