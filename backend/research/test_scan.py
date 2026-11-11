@@ -87,6 +87,20 @@ class ScanUniverseTest(TestCase):
     def search_for(self, search, known):
         search.side_effect = lambda ticker, _types, user: [instrument(ticker, known[ticker])] if ticker in known else []
 
+    def test_scan_universe_scans_extra_rows_too(self, search, chart, financials):
+        from portfolio.models import Position
+        from users.testing import the_owner
+
+        Position.objects.create(
+            user=the_owner(), ticker='NBIS', name='Nebius', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#fff', uic=11, asset_type='Stock', currency='USD',
+        )
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.assertEqual(self.run_scan(), 2)
+        extra = ScreenerRow.everything.get(ticker='NBIS')
+        self.assertEqual(extra.status, ScreenerRow.OK)
+        self.assertFalse(extra.in_universe)
+
     def test_stores_the_recent_closes_it_already_fetched(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.run_scan()
@@ -346,7 +360,7 @@ class EarningsDatesTest(TestCase):
     def test_a_failing_write_does_not_escape_and_keeps_the_dates(self, calendar):
         ScreenerRow.objects.filter(ticker='AAPL').update(next_earnings_date=date(2026, 10, 9))
         calendar.return_value = {'earningsCalendar': [{'symbol': 'KO', 'date': '2026-10-06'}]}
-        with mock.patch('research.scan.ScreenerRow.objects.exclude', side_effect=DatabaseError('locked')):
+        with mock.patch('research.scan.ScreenerRow.everything.exclude', side_effect=DatabaseError('locked')):
             with self.assertLogs('research.scan', level='WARNING'):
                 scan.refresh_earnings_dates(self.today)
         self.assertEqual(self.dates()['AAPL'], date(2026, 10, 9))

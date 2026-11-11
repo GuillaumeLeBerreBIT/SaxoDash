@@ -1,0 +1,49 @@
+from portfolio.models import Position
+
+from . import listings
+from .models import ScreenerRow, WatchlistItem
+
+
+def _held():
+    return {
+        listings.bare(position.ticker): (position.name, position.uic)
+        for position in Position.objects.filter(asset_type='Stock', currency='USD')
+    }
+
+
+def _watched(user, skip, extras):
+    from . import scan
+
+    watched = {}
+    for item in WatchlistItem.objects.filter(asset_type='Stock'):
+        ticker = listings.bare(item.symbol)
+        if ticker in skip or ticker in watched:
+            continue
+        if ticker in extras:
+            watched[ticker] = (item.description or ticker, item.uic)
+            continue
+        found = scan.resolve(ticker, user=user)
+        if found is not None and found['uic'] == item.uic:
+            watched[ticker] = (item.description or ticker, item.uic)
+    return watched
+
+
+def sync_extras(*, user):
+    universe = set(ScreenerRow.objects.values_list('ticker', flat=True))
+    extras = {row.ticker for row in ScreenerRow.everything.filter(in_universe=False)}
+    held = {ticker: value for ticker, value in _held().items() if ticker not in universe}
+    watched = _watched(user, universe | set(held), extras)
+    wanted = {**held, **watched}
+
+    added = 0
+    for ticker, (name, uic) in wanted.items():
+        if ticker in extras:
+            continue
+        ScreenerRow.everything.create(
+            ticker=ticker, name=name, indexes='', uic=uic, asset_type='Stock', in_universe=False,
+        )
+        added += 1
+
+    stale = extras - set(wanted)
+    ScreenerRow.everything.filter(in_universe=False, ticker__in=stale).delete()
+    return {'added': added, 'removed': len(stale)}

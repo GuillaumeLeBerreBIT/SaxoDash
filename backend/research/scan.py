@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from . import finnhub, market, scan_progress, technicals
+from . import coverage, finnhub, market, scan_progress, technicals
 from .models import ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -133,15 +133,15 @@ def _read_calendar(today, until):
 
 
 def _store_earnings_dates(earliest):
-    known = set(ScreenerRow.objects.values_list('ticker', flat=True))
+    known = set(ScreenerRow.everything.values_list('ticker', flat=True))
     matched = {ticker: when for ticker, when in earliest.items() if ticker in known}
     by_date = {}
     for ticker, when in matched.items():
         by_date.setdefault(when, []).append(ticker)
     with transaction.atomic():
-        ScreenerRow.objects.exclude(ticker__in=matched).update(next_earnings_date=None)
+        ScreenerRow.everything.exclude(ticker__in=matched).update(next_earnings_date=None)
         for when, tickers in by_date.items():
-            ScreenerRow.objects.filter(ticker__in=tickers).update(next_earnings_date=when)
+            ScreenerRow.everything.filter(ticker__in=tickers).update(next_earnings_date=when)
 
 
 def refresh_earnings_dates(today):
@@ -159,7 +159,11 @@ def refresh_earnings_dates(today):
 
 def scan_universe(pause=time.sleep, universe=UNIVERSE_CSV, *, user):
     load_universe(universe)
-    rows = list(ScreenerRow.objects.order_by('ticker'))
+    try:
+        coverage.sync_extras(user=user)
+    except Exception:
+        logger.warning('Extra coverage could not be synced; scanning the universe only', exc_info=True)
+    rows = list(ScreenerRow.everything.order_by('ticker'))
     started_at = timezone.now().isoformat()
     with_fundamentals = True
     try:
