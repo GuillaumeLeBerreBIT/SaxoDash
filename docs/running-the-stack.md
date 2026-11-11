@@ -373,6 +373,19 @@ purchase has an unknown basis rather than its average cost. Realised gains come 
 Saxo's closed-positions report (`/cs/v1/reports/closedPositions`), which covers the whole year
 in account currency; see `docs/notes/2026-10-21-mcp-probes.md`.
 
+### Verdicts
+
+`Compute verdicts` (`verdicts.tasks.compute_verdicts`, `core/scheduling.py`) runs at 00:15,
+after the 22:30 Discover scan, and turns the scan's stored rows into each stock's quality and
+valuation grade. The scan also covers the US stocks you hold or watch, beyond the index universe.
+The `get_verdict` and `get_verdict_track_record` MCP tools read the result.
+
+The verdict feature adds two migration chains, `research` 0015-0016 and `verdicts` 0001-0002;
+run `manage.py migrate` on any existing database before starting. Verdicts appear only after one
+full nightly scan followed by `compute_verdicts` (`manage.py shell -c "from verdicts.tasks import
+compute_verdicts; compute_verdicts()"` runs it by hand); until then the card and badges show
+nothing and the track record is empty.
+
 ---
 
 ## Platform note
