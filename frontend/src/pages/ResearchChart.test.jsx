@@ -46,6 +46,7 @@ function stubQueries() {
   queries.useQuotes.mockReturnValue({ ...idle, data: [{ uic: 211, price: 875.4, change_pct: 1.42 }] })
   queries.useQuotesByAssetType.mockReturnValue({ data: [], isLoading: false })
   queries.useWatchlists.mockReturnValue({ ...idle, data: [watchlist] })
+  queries.useVerdictSummary.mockReturnValue(idle)
   queries.useWatchlistMutations.mockReturnValue({
     create: { mutate: vi.fn() },
     rename: { mutate: vi.fn() },

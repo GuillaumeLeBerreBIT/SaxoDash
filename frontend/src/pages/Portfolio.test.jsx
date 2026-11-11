@@ -49,6 +49,7 @@ function stub(positions = [msft]) {
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useOwnershipSummary.mockReturnValue(idle)
   queries.useCongressOwnershipSummary.mockReturnValue(idle)
+  queries.useVerdictSummary.mockReturnValue(idle)
 }
 
 describe('Portfolio holdings table', () => {
@@ -60,6 +61,26 @@ describe('Portfolio holdings table', () => {
   it('has exactly one h1 and no skipped heading level', () => {
     const { container } = renderWithProviders(<Portfolio />)
     expectValidHeadingOutline(container)
+  })
+
+  it('adds a Verdict column after Weight, asked for in one request and dashed for a foreign listing', () => {
+    const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
+    stub([msft, asml])
+    queries.useVerdictSummary.mockReturnValue({
+      ...idle,
+      data: { MSFT: { action: 'hold', reason: 'Fairly priced.' } },
+    })
+
+    renderWithProviders(<Portfolio />)
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['MSFT'])
+    const headers = screen.getAllByRole('columnheader').map((header) => header.textContent)
+    expect(headers.indexOf('Verdict')).toBe(headers.indexOf('Weight') + 1)
+    expect(screen.getByRole('columnheader', { name: 'Verdict' })).not.toHaveAttribute('aria-sort')
+    expect(screen.getByText('Hold')).toBeInTheDocument()
+    expect(screen.getByTitle('Fairly priced.')).toBeInTheDocument()
+    const asmlRow = screen.getByText('ASML Holding').closest('tr')
+    expect(within(asmlRow).getByText('—', { selector: 'span[title="No verdict for this one"]' })).toBeInTheDocument()
   })
 
   it('shows the shares tracked funds hold and their net change, skipping non-USD holdings', () => {

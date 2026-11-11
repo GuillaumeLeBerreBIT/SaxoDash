@@ -7,11 +7,13 @@ import { ownershipTicker } from '../../lib/ownership'
 import { WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { moveLabel, priceBasis, weakestPriceBasis } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
+import { verdictTicker } from '../../lib/verdicts'
 import { useChartColors } from '../../theme/useChartColors'
 import { Card, DayChange, InstrumentLogo, Move, SortableTh, Tag, Td, Th, Tr } from '../ui'
 import PriceBasisNote from '../PriceBasisNote'
 import { FundChange, FundShares } from '../investors/FundHoldings'
 import CongressActivity from '../congress/CongressActivity'
+import ActionBadge from '../verdicts/ActionBadge'
 
 const WEIGHT_SCALE_PCT = 30
 const STICKY = 'sticky top-0 z-10 bg-pane'
@@ -87,8 +89,12 @@ function InstrumentCell({ position }) {
   )
 }
 
-export default function PositionsTable({ positions, sortedPositions, summary, quotes, ownership, congress, sort, onSort, className = '' }) {
+export default function PositionsTable({ positions, sortedPositions, summary, quotes, ownership, congress, verdicts, sort, onSort, className = '' }) {
   const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
+  const verdictFor = (position) => {
+    const ticker = verdictTicker(position)
+    return ticker ? verdicts?.[ticker] : null
+  }
   const dayLabel = moveLabel(quotes.values())
   const basis = weakestPriceBasis(positions)
   const sortedBy = sort ? ` · sorted by ${SORT_NAMES[sort.key]}` : ''
@@ -116,6 +122,7 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
               <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'pnl_pct' })}>Return</SortableTh>
               <SortableTh align="right" {...header({ sortKey: 'pnl' })}>P/L</SortableTh>
               <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'weight' })}>Weight</SortableTh>
+              <Th align="right" hideBelow="md" className={STICKY}>Verdict</Th>
               <Th align="right" hideBelow="wide" className={STICKY}>Fund shares</Th>
               <Th align="right" hideBelow="wide" className={STICKY}>Fund change</Th>
               <Th edge align="right" hideBelow="wide" className={STICKY}>Congress</Th>
@@ -144,6 +151,9 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                   {fmtEur(p.pnl, { sign: true })}
                 </Td>
                 <Td align="right" hideBelow="md"><WeightBar weight={p.weight} /></Td>
+                <Td align="right" hideBelow="md" className="max-w-[120px]">
+                  <ActionBadge verdict={verdictFor(p)} className="justify-end" />
+                </Td>
                 <Td align="right" hideBelow="wide">
                   <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
                 </Td>
@@ -172,6 +182,7 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                 {fmtEur(summary.total_pnl, { sign: true })}
               </Td>
               <Td align="right" hideBelow="md" className="text-ink-2">100.0%</Td>
+              <Td hideBelow="md" />
               <Td hideBelow="wide" />
               <Td hideBelow="wide" />
               <Td edge hideBelow="wide" />

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions } from '../api/queries'
+import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions, useVerdictSummary } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { ownershipTickers } from '../lib/ownership'
 import { colorForTicker } from '../lib/charts'
@@ -108,6 +108,7 @@ export default function Portfolio() {
   const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
   const congress = useCongressOwnershipSummary(fundTickers).data
+  const verdicts = useVerdictSummary(fundTickers).data
   const sortedHoldings = useMemo(() => sortRows(holdings ?? NO_POSITIONS, sort, HOLDING_ACCESSORS), [holdings, sort])
   const onSort = (key) => setSort((current) => nextSort(current, key))
 
@@ -159,6 +160,7 @@ export default function Portfolio() {
               quotes={quotes}
               ownership={ownership}
               congress={congress}
+              verdicts={verdicts}
               sort={sort}
               onSort={onSort}
             />

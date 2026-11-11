@@ -37,6 +37,7 @@ function stub({ watchlists = [list], results = [] } = {}) {
     data: [{ uic: 211, price: 875.4, change_pct: 1.42 }],
     isLoading: false,
   })
+  queries.useVerdictSummary.mockReturnValue({ data: undefined, isLoading: false })
 }
 
 const render = (props = {}) =>
@@ -240,6 +241,36 @@ describe('WatchlistRail', () => {
   it('offers no collapse control unless asked to', () => {
     render()
     expect(screen.queryByRole('button', { name: /watchlist/i })).not.toBeInTheDocument()
+  })
+
+  it('asks for the verdicts of every stock row in one request and badges each row', () => {
+    const mixed = {
+      ...list,
+      items: [
+        { id: 7, symbol: 'NVDA:xnas', uic: 211, asset_type: 'Stock', exchange: 'NASDAQ' },
+        { id: 8, symbol: 'IWDA:xams', uic: 500, asset_type: 'Etf', exchange: 'AMS' },
+        { id: 9, symbol: 'amd:xnas', uic: 300, asset_type: 'Stock', exchange: 'NASDAQ' },
+      ],
+    }
+    stub({ watchlists: [mixed] })
+    queries.useVerdictSummary.mockReturnValue({
+      data: { NVDA: { action: 'buy', reason: 'Strong and cheap.' }, AMD: null },
+      isLoading: false,
+    })
+
+    render()
+
+    expect(queries.useVerdictSummary).toHaveBeenCalledTimes(1)
+    expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'NVDA'])
+    expect(screen.getByText('Buy')).toBeInTheDocument()
+    expect(screen.getByTitle('Strong and cheap.')).toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows no verdict badge until the summary has answered', () => {
+    render()
+
+    expect(screen.queryByText('Buy')).not.toBeInTheDocument()
   })
 
   it('folds the list away and back from the chevron', async () => {

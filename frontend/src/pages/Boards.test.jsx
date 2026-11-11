@@ -42,6 +42,7 @@ function stubQueries() {
   queries.useQuotes.mockReturnValue({ ...idle, data: [] })
   queries.useQuotesByAssetType.mockReturnValue({ data: [], isLoading: false })
   queries.useWatchlists.mockReturnValue({ ...idle, data: [watchlist] })
+  queries.useVerdictSummary.mockReturnValue(idle)
   queries.useWatchlistMutations.mockReturnValue({
     create: { mutate: vi.fn() },
     rename: { mutate: vi.fn() },
