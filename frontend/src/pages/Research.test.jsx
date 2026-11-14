@@ -191,6 +191,21 @@ describe('Research', () => {
     expect(screen.getByText('+2.7% against the average stock over 60 sessions, 1,295 cases')).toBeInTheDocument()
   })
 
+  it('sizes a trade only once your positions have loaded', () => {
+    const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000' }
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, data: { total_value: '100000' } })
+    queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: true })
+    const { unmount } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(screen.getByRole('heading', { name: 'Trade plan' })).toBeInTheDocument()
+    expect(screen.getByText(/Size at 1% risk/)).toBeInTheDocument()
+    unmount()
+
+    queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: false, isLoading: true })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(screen.getByRole('heading', { name: 'Trade plan' })).toBeInTheDocument()
+    expect(screen.queryByText(/Size at/)).not.toBeInTheDocument()
+  })
+
   it('shows no signals computed for a different listing of the same ticker', () => {
     queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
     queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals(999) })

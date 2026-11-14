@@ -9,7 +9,7 @@ const FALLBACK_SYMBOL = 'NVDA'
 
 export function useResearchInstrument() {
   const [params, setParams] = useSearchParams()
-  const { data: positions = [], isLoading: positionsLoading } = usePositions()
+  const { data: positions = [], isLoading: positionsLoading, isSuccess: positionsReady } = usePositions()
   const symbol = params.get('symbol') ?? positions[0]?.ticker ?? FALLBACK_SYMBOL
   const position = positions.find((p) => p.ticker === symbol) ?? null
 
@@ -47,5 +47,5 @@ export function useResearchInstrument() {
     setParams(nextParams, { replace: true })
   }
 
-  return { symbol, instrument, resolving, position, positions, selectSymbol }
+  return { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol }
 }
