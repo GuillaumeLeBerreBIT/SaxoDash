@@ -19,7 +19,9 @@ import {
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
+import { placeSignalMarkers } from '../../lib/signals'
 import PriceLines, { PriceEditor } from './PriceLines'
+import { SIGNAL_LANE, SignalCard, SignalLane } from './SignalLane'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -244,7 +246,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
   )
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, clipId, colors }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, signalMarkers, signalLaneOffset, onInspectSignal, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -347,6 +349,16 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         <EarningsLane markers={earningsMarkers} geometry={geometry} colors={colors} onInspect={onInspectEarnings} />
       ) : null}
 
+      {signalMarkers.length > 0 ? (
+        <SignalLane
+          markers={signalMarkers}
+          geometry={geometry}
+          colors={colors}
+          top={PAD_T + chartH + signalLaneOffset}
+          onInspect={onInspectSignal}
+        />
+      ) : null}
+
       <g>
         <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.primary} />
         <text
@@ -399,6 +411,7 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
 }
 
 const NO_LINES = []
+const NO_SIGNALS = []
 const NO_TREND_LINES = []
 const NO_TEXT_ANNOTATIONS = []
 
@@ -460,6 +473,7 @@ export function TVChart({
   hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
+  signalMarkers = NO_SIGNALS,
   slots,
   yScale = 1,
   onYScaleChange,
@@ -509,7 +523,10 @@ export function TVChart({
     setTextDraftPoint(null)
   }
   const [inspected, setInspected] = useState(null)
-  const lane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
+  const [inspectedSignal, setInspectedSignal] = useState(null)
+  const placedSignals = useMemo(() => placeSignalMarkers(signalMarkers, data), [signalMarkers, data])
+  const earningsLane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
+  const lane = earningsLane + (placedSignals.length > 0 ? SIGNAL_LANE : 0)
   const [rayStart, setRayStart] = useState(null)
   const [rayPreview, setRayPreview] = useState(null)
   const [rayTool, setRayTool] = useState(tool)
@@ -664,6 +681,9 @@ export function TVChart({
           width={width}
           earningsMarkers={earningsMarkers}
           onInspectEarnings={setInspected}
+          signalMarkers={placedSignals}
+          signalLaneOffset={earningsLane}
+          onInspectSignal={setInspectedSignal}
           clipId={clipId}
           colors={colors}
         />
@@ -734,6 +754,14 @@ export function TVChart({
         <EarningsCard
           marker={inspected}
           x={geometry.xAt(inspected.index)}
+          bottom={height - PAD_T - geometry.chartH + 4}
+          width={width}
+        />
+      ) : null}
+      {inspectedSignal && placedSignals.includes(inspectedSignal) ? (
+        <SignalCard
+          marker={inspectedSignal}
+          x={geometry.xAt(inspectedSignal.index)}
           bottom={height - PAD_T - geometry.chartH + 4}
           width={width}
         />

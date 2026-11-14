@@ -6,7 +6,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from . import coverage, finnhub, market, scan_progress, technicals, valuation
-from .models import ScreenerRow
+from .models import DailyBars, ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
 
@@ -52,6 +52,25 @@ def _refresh_fundamentals(row, bars):
         quarterly_eps = [(date.fromisoformat(period), value) for period, value in history['quarterly_eps']]
         row.pe_history = valuation.pe_percentiles(_dated_closes(bars), quarterly_eps) or {}
     row.fundamentals_at = timezone.now()
+
+
+PRICE_FIELDS = ('open', 'high', 'low', 'close')
+
+
+def stored_bars(bars):
+    by_date = {}
+    for bar in bars:
+        if bar.get('date') is None or any(bar.get(field) is None for field in PRICE_FIELDS):
+            continue
+        by_date[bar['date']] = [bar['date'], *(bar[field] for field in PRICE_FIELDS), bar.get('volume') or 0]
+    return [by_date[day] for day in sorted(by_date)]
+
+
+def _store_bars(row, bars):
+    try:
+        DailyBars.objects.update_or_create(row=row, defaults={'bars': stored_bars(bars)})
+    except Exception:
+        logger.warning('Could not store the daily bars for %s', row.ticker, exc_info=True)
 
 
 def _resolved(row, user):
@@ -116,6 +135,8 @@ def scan_row(row, *, with_fundamentals, user, pause=time.sleep):
         row.save()
     except Exception as exc:
         _mark_failed(row, exc)
+        return with_fundamentals
+    _store_bars(row, bars)
     return with_fundamentals
 
 

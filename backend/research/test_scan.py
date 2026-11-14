@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from research import finnhub, scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
-from research.models import ScreenerRow
+from research.models import DailyBars, ScreenerRow
 from research.providers import ProviderError, ProviderNotConnected, ProviderUnavailable
 
 BARS = [
@@ -128,6 +128,43 @@ class ScanUniverseTest(TestCase):
         stored = ScreenerRow.objects.get(ticker='AAPL').recent_closes
         self.assertEqual(len(stored), 15)
         self.assertEqual(stored[-1], {'date': BARS[-1]['date'], 'close': BARS[-1]['close']})
+
+    def test_keeps_the_daily_bars_oldest_first(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        chart.return_value = list(reversed(BARS))
+        self.run_scan()
+        stored = ScreenerRow.objects.get(ticker='AAPL').daily_bars.bars
+        self.assertEqual(len(stored), 260)
+        self.assertEqual(stored[0], [BARS[0]['date'], 100.0, 101.0, 99.0, 100.0, 1_000_000])
+        self.assertEqual(stored[-1][0], BARS[-1]['date'])
+
+    def test_a_second_scan_replaces_the_stored_bars(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        chart.return_value = BARS[10:]
+        self.run_scan()
+        self.assertEqual(DailyBars.objects.count(), 2)
+        self.assertEqual(len(ScreenerRow.objects.get(ticker='AAPL').daily_bars.bars), 250)
+
+    def test_a_failed_chart_keeps_the_bars_it_had(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        chart.side_effect = RuntimeError('boom')
+        with self.assertLogs('research.scan', level='WARNING'):
+            self.run_scan()
+        self.assertEqual(len(ScreenerRow.objects.get(ticker='AAPL').daily_bars.bars), 260)
+
+    def test_stored_bars_drops_incomplete_bars_and_keeps_one_per_date(self, search, chart, financials):
+        bars = [
+            {'date': '2026-01-03', 'open': 3, 'high': 4, 'low': 2, 'close': 3.5, 'volume': None},
+            {'date': '2026-01-02', 'open': 1, 'high': 2, 'low': 0.5, 'close': None, 'volume': 10},
+            {'date': '2026-01-01', 'open': 1, 'high': 2, 'low': 0.5, 'close': 1.5, 'volume': 10},
+            {'date': '2026-01-01', 'open': 1, 'high': 2, 'low': 0.5, 'close': 1.6, 'volume': 12},
+        ]
+        self.assertEqual(scan.stored_bars(bars), [
+            ['2026-01-01', 1, 2, 0.5, 1.6, 12],
+            ['2026-01-03', 3, 4, 2, 3.5, 0],
+        ])
 
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})

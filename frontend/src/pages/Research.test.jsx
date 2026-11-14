@@ -59,6 +59,8 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useQuotesByAssetType.mockReturnValue({ data: [], isLoading: false })
   queries.useWatchlists.mockReturnValue({ ...idle, data: [] })
   queries.useVerdictSummary.mockReturnValue(idle)
+  queries.useSignals.mockReturnValue(idle)
+  queries.useStockSignals.mockReturnValue(idle)
   queries.useWatchlistMutations.mockReturnValue({
     create: { mutate: vi.fn() },
     rename: { mutate: vi.fn() },
@@ -153,6 +155,50 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.getByText('Held')).toBeInTheDocument()
+  })
+
+  const thrust = {
+    key: 'volume_thrust', code: 'VT', label: 'Volume thrust', description: 'Closed higher on heavy volume.',
+    kind: 'event', grade: 'supported', period: { from: '2023-02-15', to: '2026-08-20' },
+    horizons: { 60: { mean_excess: 0.027, cases: 1295 } },
+  }
+  const stockSignals = (uic = 211) => ({
+    ticker: 'NVDA', uic, as_of: bars.at(-1).date, active: ['volume_thrust'],
+    events: { volume_thrust: [bars.at(-3).date] },
+  })
+
+  it('offers a Signals menu and draws a marker only for a signal that was switched on', async () => {
+    queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
+    queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals() })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.queryByTestId('signal-marker')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Signals/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Volume thrust/ }))
+    expect(screen.getAllByTestId('signal-marker')).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).signals).toEqual({ volume_thrust: true })
+  })
+
+  it('lists the active signals with their evidence on the Overview', () => {
+    queries.useVerdict.mockReturnValue({ ...idle, data: null })
+    queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
+    queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals() })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByRole('heading', { name: 'Setup' })).toBeInTheDocument()
+    expect(screen.getByText('+2.7% against the average stock over 60 sessions, 1,295 cases')).toBeInTheDocument()
+  })
+
+  it('shows no signals computed for a different listing of the same ticker', () => {
+    queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
+    queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals(999) })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.queryByRole('button', { name: /Signals/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Setup' })).not.toBeInTheDocument()
   })
 
   it('names the verdict action beside the company name', () => {

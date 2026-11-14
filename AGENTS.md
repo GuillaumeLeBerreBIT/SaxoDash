@@ -737,3 +737,21 @@ from the scan row, and `wanted_tickers` is how its tickers reach the price feed.
 backtest: the rules read fundamentals and P/E levels as they stand today, and replaying them over past
 years would use figures nobody could have had, flattering every call. The record is empty until the
 nightly runs have made it.
+
+**A chart signal is shown with the grade it earned on the app's own bars, and never as an instruction.**
+The nightly scan keeps the 1,200 daily bars it already fetches (`research.DailyBars`, written after the row
+saves; a failure only logs). `signals/definitions.py` is the one place a signal is defined, and the `signals`
+app reads stored rows only: it imports neither `finnhub`, `market` nor `requests`. `compute_signals` (00:45,
+`@synced(reports_health=False, credential=None)`) scores each signal on universe stocks as forward return
+minus the same-date average, entered at the next session's open (`C[i+h] / O[i+1] - 1`), since a signal is
+only known at its close. The grade is decided on 60 sessions: at least 300 cases, a 95% interval wholly on
+one side of zero (the wider of a by-stock and a by-calendar-month bootstrap, seeded so two runs agree), and
+both halves of the period on that side; anything else is `no_edge`, and under 300 cases is `too_few`.
+Seventeen signals are tested at once, so the two-halves rule is what keeps a lucky one out. The popular
+signals with no edge (RSI, MACD, crosses, candlestick patterns) are included on purpose so the app can say
+so. Markers are coded dots coloured by grade (accent held up, warning worked against, grey otherwise), never
+arrows and never green or red, and no copy says buy or sell; all are off by default. Support and resistance
+zones were tested first and dropped: zone touches did worse than a same-sized dip on a random day
+(`docs/superpowers/specs/2026-11-14-chart-signals-roadmap.md`). RSI in signals is the simple form, not the
+chart's Wilder form, and its description says so. An extra's signals are served only to a user who holds or
+watches it (`verdicts.visibility`).

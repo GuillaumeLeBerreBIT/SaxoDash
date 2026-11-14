@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 
-import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation, useVerdict } from '../api/queries'
+import { useFundamentals, useMarkReviewedMutation, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
+import { signalMarkers as markersFor, signalsForListing } from '../lib/signals'
 import { Card } from '../components/ui'
 import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
@@ -95,6 +96,18 @@ export default function Research() {
   const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
   const fundamentals = useFundamentals(companySymbol)
   const verdict = useVerdict(companySymbol)
+  const signals = useSignals({ enabled: Boolean(companySymbol) }).data
+  const stockSignalsAnswer = useStockSignals(companySymbol).data
+  const stockSignals = useMemo(
+    () => signalsForListing(stockSignalsAnswer, instrument?.uic),
+    [stockSignalsAnswer, instrument?.uic],
+  )
+  const chartSignals = useMemo(() => ({ stock: stockSignals, catalogue: signals }), [stockSignals, signals])
+  const chosenSignals = controls.signals
+  const signalMarkers = useMemo(
+    () => markersFor(stockSignals, chosenSignals, signals),
+    [stockSignals, chosenSignals, signals],
+  )
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
@@ -158,6 +171,8 @@ export default function Research() {
       symbol={symbol}
       unresolved={!instrument && !chart.isLoading}
       earningsMarkers={earningsMarkers}
+      signals={stockSignals ? signals : undefined}
+      signalMarkers={signalMarkers}
       futureDates={futureDates}
       lines={priceLines.lines}
       onMoveLine={priceLines.move}
@@ -184,6 +199,7 @@ export default function Research() {
           range={controls.range}
           fundamentals={fundamentals}
           verdict={verdict}
+          chartSignals={chartSignals}
           note={note}
           onSaveNote={(patch) => noteMutation.mutate(patch)}
           onMarkReviewed={() => reviewMutation.mutate()}

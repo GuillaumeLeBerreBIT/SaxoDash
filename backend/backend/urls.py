@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/investors/', include('investors.urls')),
     path('api/congress/', include('congress.urls')),
     path('api/verdicts/', include('verdicts.urls')),
+    path('api/signals/', include('signals.urls')),
 ]
 
 if settings.ADMIN_ENABLED:

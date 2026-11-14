@@ -18,8 +18,20 @@ describe('sanitizeChartPrefs', () => {
       type: 'line',
       overlays: { ...DEFAULT_CHART_PREFS.overlays, bb: true },
       panes: { ...DEFAULT_CHART_PREFS.panes, macd: true },
+      signals: { momentum_top: true },
     }
     expect(sanitizeChartPrefs(stored)).toEqual(stored)
+  })
+
+  it('loads a blob saved before signals existed with every signal off', () => {
+    const old = { range: '1Y', type: 'line', overlays: DEFAULT_CHART_PREFS.overlays, panes: DEFAULT_CHART_PREFS.panes }
+    expect(sanitizeChartPrefs(old).signals).toEqual({})
+  })
+
+  it('keeps only signals switched on under a plausible key', () => {
+    const prefs = sanitizeChartPrefs({ signals: { momentum_top: true, hammer: false, 'bad key!': true, new_high: 'yes' } })
+    expect(prefs.signals).toEqual({ momentum_top: true })
+    expect(sanitizeChartPrefs({ signals: ['momentum_top'] }).signals).toEqual({})
   })
 
   it('falls back to the default range and type for values the chart does not know', () => {
