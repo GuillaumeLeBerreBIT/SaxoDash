@@ -1,11 +1,12 @@
 import { fmtDate } from '../../lib/format'
-import { GRADE_WORDS, activeSignals, evidenceLine, signalGrade } from '../../lib/signals'
+import { GRADE_WORDS, activeSignals, evidenceLine, signalGrade, standingRows } from '../../lib/signals'
 import { Card } from '../ui'
 
 const GRADE_TONE = {
   supported: 'text-accent',
   against: 'text-warn-text',
   no_edge: 'text-ink-3',
+  unproven: 'text-ink-3',
   too_few: 'text-ink-3',
 }
 
@@ -13,6 +14,24 @@ function footer(signals) {
   const period = signals.find((signal) => signal.period)?.period
   const span = period ? `Tested on index stocks from ${fmtDate(period.from)} to ${fmtDate(period.to)}` : 'Not tested yet'
   return `${span}, against the average stock, before costs. What happened in the past does not promise what happens next.`
+}
+
+function Standing({ context }) {
+  const rows = standingRows(context)
+  if (!rows.length) return null
+  return (
+    <dl data-testid="price-standing" className="mb-3 flex flex-col gap-1.5 border-b border-line pb-3">
+      {rows.map((row) => (
+        <div key={row.key} className="flex items-baseline justify-between gap-3">
+          <dt className="text-[12px] text-ink-2">{row.label}</dt>
+          <dd className="text-right text-[13px] font-semibold text-ink tabular-nums">
+            {row.value}
+            {row.note ? <span className="block text-[12px] font-normal text-ink-3">{row.note}</span> : null}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
 }
 
 export default function SetupCard({ stockSignals, signals }) {
@@ -24,6 +43,7 @@ export default function SetupCard({ stockSignals, signals }) {
       dot={active.length ? 'ok' : 'off'}
       title="Setup"
     >
+      <Standing context={stockSignals.context} />
       {active.length === 0 ? (
         <p className="text-[13px] text-ink-3">No signals active on the latest session</p>
       ) : (

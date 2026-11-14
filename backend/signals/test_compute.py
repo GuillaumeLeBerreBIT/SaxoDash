@@ -54,6 +54,7 @@ class RunTest(TestCase):
         apple = StockSignals.objects.get(ticker='AAPL')
         self.assertEqual((apple.uic, apple.as_of), (211, START + timedelta(days=299)))
         self.assertEqual(len(apple.events), 17)
+        self.assertEqual(apple.context, {'below_high_pct': 0.0, 'momentum_pct': 0.0, 'momentum_rank_pct': None})
         self.assertTrue(StockSignals.objects.filter(ticker='NBIS').exists())
 
     def test_active_lists_what_is_true_on_the_last_bar(self):

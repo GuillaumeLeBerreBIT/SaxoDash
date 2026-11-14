@@ -1,7 +1,9 @@
-export const GRADE_ORDER = ['supported', 'no_edge', 'against', 'too_few']
+import { fmtPct } from './format'
+export const GRADE_ORDER = ['supported', 'unproven', 'no_edge', 'against', 'too_few']
 
 export const GRADE_WORDS = {
   supported: 'Held up in testing',
+  unproven: 'Cannot be judged fairly',
   no_edge: 'No edge found',
   against: 'Worked against',
   too_few: 'Too few cases',
@@ -23,7 +25,9 @@ export function evidenceLine(signal, horizon = GRADE_HORIZON) {
   if (!signal.grade || !figures) return 'Not tested yet'
   if (signal.grade === 'too_few') return `Only ${count(figures.cases)} cases, too few to judge`
   if (signal.grade === 'no_edge' || figures.mean_excess == null) return `No edge found in ${count(figures.cases)} cases`
-  return `${signedPercent(figures.mean_excess)} against the average stock over ${horizon} sessions, ${count(figures.cases)} cases`
+  const result = `${signedPercent(figures.mean_excess)} against the average stock over ${horizon} sessions, ${count(figures.cases)} cases`
+  if (signal.grade === 'unproven') return `${result}. Companies that failed are missing from the test, which flatters a signal that buys weakness`
+  return result
 }
 
 export function groupedByGrade(signals) {
@@ -80,7 +84,7 @@ export function placeSignalMarkers(markers, data) {
   )
 }
 
-const KEEP_ORDER = ['supported', 'against', 'no_edge', 'too_few']
+const KEEP_ORDER = ['supported', 'against', 'unproven', 'no_edge', 'too_few']
 
 export function spreadSignalMarkers(placed, xAt, width) {
   const ranked = placed
@@ -94,4 +98,26 @@ export function spreadSignalMarkers(placed, xAt, width) {
     if (kept.every((other) => Math.abs(other.x - marker.x) >= width)) kept.push(marker)
   }
   return kept.sort((a, b) => a.x - b.x)
+}
+
+export function standingRows(context) {
+  if (!context) return []
+  const { below_high_pct: below, momentum_pct: momentum, momentum_rank_pct: rank } = context
+  const rows = []
+  if (below != null) {
+    rows.push({
+      key: 'high',
+      label: 'Against its 1-year high',
+      value: below >= 0 ? 'At the high' : `${fmtPct(below, { decimals: 1 })}`,
+    })
+  }
+  if (momentum != null) {
+    rows.push({
+      key: 'momentum',
+      label: 'Momentum, 12 months skipping the last',
+      value: fmtPct(momentum, { decimals: 1 }),
+      note: rank == null ? null : `Ahead of ${rank}% of index stocks`,
+    })
+  }
+  return rows
 }

@@ -243,3 +243,12 @@ class ReferenceParityTest(SimpleTestCase):
             measured = definitions.momentum(series)
             for index, value in case['expected']['momentum'].items():
                 self.assertAlmostEqual(measured[int(index)], value, places=12)
+
+
+class BuysWeaknessTest(SimpleTestCase):
+    def test_the_signals_that_buy_a_falling_price_are_marked(self):
+        marked = {signal.key for signal in definitions.SIGNALS if signal.buys_weakness}
+        self.assertEqual(marked, {
+            'news_gap_down', 'deep_pullback', 'death_cross', 'rsi_oversold', 'pullback_in_uptrend',
+            'bullish_engulfing', 'hammer',
+        })

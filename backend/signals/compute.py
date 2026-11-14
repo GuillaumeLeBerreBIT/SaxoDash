@@ -6,12 +6,18 @@ from django.db import transaction
 
 from research.models import DailyBars, ScreenerRow
 
-from . import definitions, evaluate
+from . import context, definitions, evaluate
 from .models import SignalScore, StockSignals
 from .series import from_bars
 
 logger = logging.getLogger(__name__)
 BAR_FIELDS = 6
+
+
+@dataclass(frozen=True)
+class Listing:
+    uic: int | None
+    in_universe: bool
 
 
 @dataclass
@@ -50,7 +56,7 @@ def _load(result):
             continue
         if len(series):
             series_by_ticker[ticker] = series
-            rows[ticker] = stored.row
+            rows[ticker] = Listing(stored.row.uic, stored.row.in_universe)
     return series_by_ticker, rows
 
 
@@ -68,7 +74,7 @@ def _write_scores(scores):
     SignalScore.objects.exclude(key__in=definitions.BY_KEY).delete()
 
 
-def _write_stock(ticker, row, series, flags):
+def _write_stock(ticker, row, series, flags, standing):
     StockSignals.objects.update_or_create(
         ticker=ticker,
         defaults={
@@ -78,6 +84,7 @@ def _write_stock(ticker, row, series, flags):
                 signal.key: events_of(signal.kind, flags[signal.key], series.dates)
                 for signal in definitions.SIGNALS
             },
+            'context': standing,
         },
     )
 
@@ -89,14 +96,19 @@ def run():
     StockSignals.objects.exclude(ticker__in=known).delete()
     if not series_by_ticker:
         return result
-    flags = evaluate.flags_by_stock(series_by_ticker)
     universe = {ticker: series for ticker, series in series_by_ticker.items() if rows[ticker].in_universe}
+    flags = evaluate.flags_by_stock(series_by_ticker, universe=set(universe))
     with transaction.atomic():
         _write_scores(evaluate.score(universe, flags))
+    standings = {ticker: context.standing(series) for ticker, series in series_by_ticker.items()}
+    ranks = context.ranked({ticker: found['momentum_pct'] for ticker, found in standings.items()}, set(universe))
     for ticker, series in series_by_ticker.items():
         try:
             with transaction.atomic():
-                _write_stock(ticker, rows[ticker], series, flags[ticker])
+                _write_stock(
+                    ticker, rows[ticker], series, flags[ticker],
+                    {**standings[ticker], 'momentum_rank_pct': ranks[ticker]},
+                )
             result.written += 1
         except Exception:
             logger.error('Could not store the signals for %s', ticker, exc_info=True)

@@ -57,7 +57,7 @@ export function SignalLane({ markers, geometry, colors, top, onInspect }) {
   )
 }
 
-const GRADE_TONE = { supported: 'text-accent', against: 'text-warn-text', no_edge: 'text-ink-2', too_few: 'text-ink-2' }
+const GRADE_TONE = { supported: 'text-accent', against: 'text-warn-text', unproven: 'text-ink-2', no_edge: 'text-ink-2', too_few: 'text-ink-2' }
 
 export function SignalCard({ marker, x, bottom, width }) {
   const cardWidth = 264

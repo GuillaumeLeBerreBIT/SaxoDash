@@ -144,6 +144,20 @@ class ScoreTest(SimpleTestCase):
         self.assertEqual(found(scores, 'volume_thrust', 5).grade, 'supported')
 
 
+    def test_a_signal_that_buys_weakness_cannot_earn_supported_among_survivors(self):
+        stocks = market()
+        flags = no_flags(stocks)
+        bars = list(range(262, 530, 4))
+        for n in range(20):
+            ticker = f'S{n:02d}'
+            for i in bars:
+                stocks[ticker].closes[i + 60] = 100.0 + 5 + (n % 3)
+            mark(stocks, flags, ticker, 'deep_pullback', bars)
+        scores = evaluate.score(stocks, flags)
+        self.assertEqual(found(scores, 'deep_pullback', 60).grade, 'unproven')
+        self.assertGreater(found(scores, 'deep_pullback', 60).ci_low, 0)
+
+
 class MomentumLeadersTest(SimpleTestCase):
     def test_the_top_quarter_by_momentum_on_each_date(self):
         stocks = {}
@@ -162,3 +176,17 @@ class MomentumLeadersTest(SimpleTestCase):
         stocks = {f'S{n}': flat_series(300) for n in range(7)}
         flags = evaluate.flags_by_stock(stocks)
         self.assertFalse(any(any(flags[ticker]['momentum_top']) for ticker in stocks))
+
+    def test_only_index_stocks_set_the_cutoff_and_an_extra_is_judged_against_it(self):
+        def rising(rate):
+            series = flat_series(300)
+            for i in range(300):
+                series.closes[i] = 100 * (1 + rate) ** i
+            return series
+
+        stocks = {f'S{n}': rising(0.001 * (n + 1)) for n in range(8)}
+        extras = {f'X{n}': rising(0.02 + 0.001 * n) for n in range(8)}
+        flags = evaluate.flags_by_stock({**stocks, **extras}, universe=set(stocks))
+        leaders = sorted(ticker for ticker in stocks if flags[ticker]['momentum_top'][299])
+        self.assertEqual(leaders, ['S6', 'S7'])
+        self.assertTrue(all(flags[ticker]['momentum_top'][299] for ticker in extras))
