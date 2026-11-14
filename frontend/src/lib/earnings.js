@@ -29,6 +29,12 @@ export function currentWeekLabel(date = new Date()) {
 
 /** "today" / "tomorrow" / "in 4 days" / "past" for an ISO date, relative to
  *  local midnight. Shared by the Earnings and Valuation tabs. */
+export function reportsWithin(next, days) {
+  if (!next?.date) return null
+  const away = Math.round((new Date(`${next.date}T00:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
+  return away >= 0 && away <= days ? `Reports ${daysUntil(next.date)} (${fmtDate(next.date)}): the price can gap on the news.` : null
+}
+
 export function daysUntil(iso) {
   const target = new Date(iso + 'T00:00:00').getTime()
   const midnight = new Date().setHours(0, 0, 0, 0)

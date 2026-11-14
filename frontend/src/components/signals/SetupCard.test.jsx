@@ -16,17 +16,25 @@ const SIGNALS = [
 const stock = (active) => ({ ticker: 'NVDA', uic: 211, as_of: '2026-11-13', active, events: {} })
 
 describe('SetupCard', () => {
-  it('lists what is active on the latest session, signals that held up first, each with its evidence', () => {
-    render(<SetupCard stockSignals={stock(['macd_cross_up', 'momentum_top'])} signals={SIGNALS} />)
+  it('lists only active signals that held up or worked against, and counts the rest in one line', () => {
+    render(<SetupCard stockSignals={stock(['macd_cross_up', 'momentum_top', 'squeeze_breakout'])} signals={SIGNALS} />)
     expect(screen.getByRole('heading', { name: 'Setup' })).toBeInTheDocument()
-    expect(screen.getByText('Active on the latest session')).toBeInTheDocument()
     const items = screen.getAllByRole('listitem')
     expect(items).toHaveLength(2)
     expect(within(items[0]).getByText('Momentum leader')).toBeInTheDocument()
-    expect(within(items[0]).getByText('Held up in testing')).toBeInTheDocument()
     expect(within(items[0]).getByText('+2.9% against the average stock over 60 sessions, 27,280 cases')).toBeInTheDocument()
-    expect(within(items[1]).getByText('No edge found')).toBeInTheDocument()
-    expect(within(items[1]).getByText('No edge found in 4,352 cases')).toBeInTheDocument()
+    expect(within(items[1]).getByText('Worked against')).toBeInTheDocument()
+    expect(screen.queryByText('MACD bullish cross')).not.toBeInTheDocument()
+    expect(screen.getByTestId('other-signals')).toHaveTextContent(
+      'One other chart signal is active; it showed no reliable edge in testing and is listed in the Guide.',
+    )
+  })
+
+  it('says so when only signals without an edge are active', () => {
+    render(<SetupCard stockSignals={stock(['macd_cross_up'])} signals={SIGNALS} />)
+    expect(screen.getByText('No signal that held up in testing is active on the latest session')).toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(screen.getByTestId('other-signals')).toBeInTheDocument()
   })
 
   it('shows where the price stands when the figures exist', () => {
@@ -44,8 +52,9 @@ describe('SetupCard', () => {
 
   it('says so when nothing is active', () => {
     render(<SetupCard stockSignals={stock([])} signals={SIGNALS} />)
-    expect(screen.getByText('No signals active on the latest session')).toBeInTheDocument()
+    expect(screen.getByText('No signal that held up in testing is active on the latest session')).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('other-signals')).not.toBeInTheDocument()
   })
 
   it('states the test period and that results are before costs', () => {

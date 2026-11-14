@@ -57,7 +57,14 @@ describe('TradePlanCard', () => {
   it('warns when the company reports within ten days', () => {
     const soon = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
     render(<TradePlanCard {...base} nextEarnings={{ date: soon }} />)
-    expect(screen.getByText(/the price can gap past a stop/)).toBeInTheDocument()
+    expect(screen.getByText(/the price can gap on the news/)).toBeInTheDocument()
+  })
+
+  it('says the size is not a suggestion when the verdict is not a buy', () => {
+    const { rerender } = render(<TradePlanCard {...base} verdict={{ action: 'not_a_fit' }} />)
+    expect(screen.getByTestId('plan-verdict-note')).toHaveTextContent('The verdict for this stock is Not a fit.')
+    rerender(<TradePlanCard {...base} verdict={{ action: 'buy' }} />)
+    expect(screen.queryByTestId('plan-verdict-note')).not.toBeInTheDocument()
   })
 
   it('draws nothing without enough bars', () => {

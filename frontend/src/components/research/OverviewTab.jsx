@@ -40,7 +40,7 @@ function ListingNote({ context, title, children }) {
   )
 }
 
-function CompanyReads({ companyData, fundamentals, verdict, chartSignals }) {
+function CompanyReads({ companyData, fundamentals, verdict, chartSignals, returns }) {
   if (companyData === COMPANY_DATA.fund) {
     return (
       <ListingNote context="Company fundamentals don't apply" title="Fund">
@@ -71,7 +71,7 @@ function CompanyReads({ companyData, fundamentals, verdict, chartSignals }) {
     <>
       {verdict && <VerdictCard verdict={verdict} />}
       <SetupCard stockSignals={chartSignals?.stock} signals={chartSignals?.catalogue} />
-      <SnapshotSection fundamentals={fundamentals} />
+      <SnapshotSection fundamentals={fundamentals} returns={returns} />
     </>
   )
 }
@@ -237,7 +237,7 @@ export default function OverviewTab({
 
         <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
           {rail}
-          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} />
+          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
           <TradePlanCard
             bars={allBars}
             currency={details?.currency ?? position?.currency}
@@ -246,6 +246,7 @@ export default function OverviewTab({
             positions={tradePlan?.positions}
             portfolioValue={tradePlan?.portfolioValue}
             nextEarnings={earnings?.data?.available ? earnings.data.next : null}
+            verdict={companyData === COMPANY_DATA.eligible ? verdict?.data : null}
           />
           {company && <AnalystRatingCard fundamentals={company} />}
           {signals}

@@ -5,8 +5,7 @@ import {
   actionLabel,
   actionTone,
   checkLine,
-  trendSentence,
-} from '../../lib/verdicts'
+  trendSentence, CHECK_BASIS_NOTE } from '../../lib/verdicts'
 import { Card, Skeleton, Tag } from '../ui'
 
 const PLAIN = { sign: false, decimals: 1 }
@@ -54,6 +53,7 @@ function Body({ verdict }) {
         <span>{`Price vs its own history: ${GRADE_LABEL.valuation[verdict.valuation] ?? verdict.valuation}`}</span>
       </div>
       <Checks checks={verdict.checks} />
+      <p className="mt-2 text-[12px] text-ink-3">{CHECK_BASIS_NOTE}</p>
       <div className="mt-3 flex flex-col gap-1">
         <PriceLevels verdict={verdict} />
         {trend && <p className="text-[13px] text-ink-2">{trend}</p>}

@@ -31,10 +31,22 @@ export const actionTone = (action) => TONE[action]
 
 const oneDecimal = (value) => Number(Number(value).toFixed(1))
 
+const CHECK_BASIS = {
+  roe: ' in a typical year',
+  roic: ' in a typical year',
+  margins: ' in a typical year',
+  earnings_growth: ' a year over 5 years',
+  revenue_growth: ' a year over 5 years',
+  debt: ' × equity, latest quarter',
+}
+
+export const CHECK_BASIS_NOTE =
+  'Quality looks at the middle of the last five fiscal years and at five-year growth, so these figures can differ from the last-twelve-month ones in the snapshot.'
+
 export function checkLine({ key, label, value, threshold }) {
   if (value == null) return `${label} · no figure`
   const unit = PERCENT_CHECKS.has(key) ? '%' : ''
-  return `${label} ${oneDecimal(value)}${unit} · needs ${threshold}`
+  return `${label} ${oneDecimal(value)}${unit}${CHECK_BASIS[key] ?? ''} · needs ${threshold}`
 }
 
 export function trendSentence(pctVsMa200) {

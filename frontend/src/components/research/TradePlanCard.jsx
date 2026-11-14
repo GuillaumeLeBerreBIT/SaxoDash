@@ -1,18 +1,14 @@
-import { daysUntil } from '../../lib/earnings'
-import { fmtDate, fmtEur, fmtMoney, fmtPct } from '../../lib/format'
+import { reportsWithin } from '../../lib/earnings'
+import { fmtEur, fmtMoney, fmtPct } from '../../lib/format'
 import { ATR_PERIOD, RISK_CHOICES, STOP_ATRS, planFromPage } from '../../lib/tradePlan'
+import { actionLabel } from '../../lib/verdicts'
 import { Card, Segmented } from '../ui'
 import { useTradeRisk } from './useTradeRisk'
 
 const EARNINGS_WARNING_DAYS = 10
+const NOT_A_BUY = new Set(['not_a_fit', 'sell_review', 'trim', 'wait', 'no_verdict'])
 const PLAIN = { sign: false, decimals: 1 }
 const RISK_OPTIONS = RISK_CHOICES.map((value) => ({ value, label: `${value}%` }))
-
-function reportsSoon(next) {
-  if (!next?.date) return null
-  const days = Math.round((new Date(`${next.date}T00:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
-  return days >= 0 && days <= EARNINGS_WARNING_DAYS ? `Reports ${daysUntil(next.date)} (${fmtDate(next.date)}): the price can gap past a stop.` : null
-}
 
 function Row({ label, value, note }) {
   return (
@@ -53,14 +49,20 @@ function sizeRows(size, riskPct) {
   )
 }
 
-export default function TradePlanCard({ bars, currency, note, positions, position, portfolioValue, nextEarnings }) {
+export default function TradePlanCard({ bars, currency, note, positions, position, portfolioValue, nextEarnings, verdict }) {
   const [riskPct, choose] = useTradeRisk()
   const plan = planFromPage({ bars, currency, note, positions, position, portfolioValue, riskPct })
   if (!plan) return null
-  const warning = reportsSoon(nextEarnings)
+  const warning = reportsWithin(nextEarnings, EARNINGS_WARNING_DAYS)
+  const caution = verdict && NOT_A_BUY.has(verdict.action)
 
   return (
     <Card context="Stop distance and position size from the latest close" dot="off" title="Trade plan">
+      {caution ? (
+        <p data-testid="plan-verdict-note" className="mb-3 text-[12.5px] text-ink-2">
+          {`The verdict for this stock is ${actionLabel(verdict)}. The figures below are arithmetic for a trade you decide on yourself, not a suggestion to buy.`}
+        </p>
+      ) : null}
       <dl className="flex flex-col gap-1.5">
         <Row
           label="Stop-loss"

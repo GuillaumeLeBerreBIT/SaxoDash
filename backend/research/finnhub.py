@@ -246,8 +246,15 @@ SCREENER_METRICS = {
 }
 
 
+LATEST_DEBT_TO_EQUITY = 'totalDebt/totalEquityQuarterly'
+
+
 def to_screener_fundamentals(financials):
-    return {field: _metric(financials, key) for field, key in SCREENER_METRICS.items()}
+    shaped = {field: _metric(financials, key) for field, key in SCREENER_METRICS.items()}
+    latest_debt = _metric(financials, LATEST_DEBT_TO_EQUITY)
+    if latest_debt is not None:
+        shaped['debt_to_equity'] = latest_debt
+    return shaped
 
 
 def _peg_ratio(pe, eps_growth_5y):

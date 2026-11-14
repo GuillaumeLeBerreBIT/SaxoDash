@@ -23,6 +23,13 @@ describe('SnapshotSection', () => {
     expect(screen.getByText(/P\/E above its 6-yr range/)).toBeInTheDocument()
   })
 
+  it('takes its price returns from the page, so it agrees with the Performance card', () => {
+    const returns = [{ key: '1M', pct: 4.4 }, { key: 'YTD', pct: 31.05 }, { key: '1Y', pct: null }, { key: '3M', pct: 9 }]
+    render(<SnapshotSection fundamentals={{ data, isLoading: false }} returns={returns} />)
+    const value = (label) => screen.getByText(label).nextSibling.textContent
+    expect([value('1 month'), value('YTD'), value('1 year')]).toEqual(['4.4%', '31.1%', '25.0%'])
+  })
+
   it('shows an em dash for a missing metric but still renders the group', () => {
     render(<SnapshotSection fundamentals={{ data: { available: true, roe: 25, net_margin: 15 }, isLoading: false }} />)
     expect(screen.getByText('Profitability')).toBeInTheDocument()

@@ -366,6 +366,13 @@ class ScreenerFundamentalsTest(SimpleTestCase):
             'market_cap': 250000.0, 'revenue_growth_5y': 7.75, 'payout_ratio': 77.24,
         })
 
+    def test_debt_is_the_latest_quarters_balance_sheet_when_there_is_one(self):
+        metric = {'totalDebt/totalEquityAnnual': 2.44, 'totalDebt/totalEquityQuarterly': 1.83}
+        self.assertEqual(finnhub.to_screener_fundamentals({'metric': metric})['debt_to_equity'], 1.83)
+        self.assertEqual(
+            finnhub.to_screener_fundamentals({'metric': {'totalDebt/totalEquityAnnual': 2.44}})['debt_to_equity'], 2.44,
+        )
+
     def test_screener_fundamentals_carry_revenue_growth_and_payout(self):
         shaped = finnhub.to_screener_fundamentals({'metric': {'revenueGrowth5Y': 7.75, 'payoutRatioTTM': 77.24}})
         self.assertEqual(shaped['revenue_growth_5y'], 7.75)

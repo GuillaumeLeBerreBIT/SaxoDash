@@ -30,7 +30,16 @@ function Group({ group, data }) {
   )
 }
 
-export default function SnapshotSection({ fundamentals }) {
+const RETURN_FIELDS = { '1M': 'price_return_1m', YTD: 'price_return_ytd', '1Y': 'price_return_1y' }
+
+function withPageReturns(data, returns = []) {
+  const own = Object.fromEntries(
+    returns.filter((row) => RETURN_FIELDS[row.key] && row.pct != null).map((row) => [RETURN_FIELDS[row.key], row.pct]),
+  )
+  return { ...data, ...own }
+}
+
+export default function SnapshotSection({ fundamentals, returns }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
@@ -47,13 +56,14 @@ export default function SnapshotSection({ fundamentals }) {
               Growth reads TTM YoY revenue and EPS growth. Profitability reads ROE and net
               margin. Financial health reads debt/equity, current ratio and interest coverage.
               Valuation reads PEG and P/E against its own annual history. Momentum reads the
-              1-year and YTD price return. No composite score.
+              1-year and YTD price return, from the same prices as the Performance card. No
+              composite score.
             </InfoTip>
           }
         >
           <div className="divide-y divide-line">
             {SNAPSHOT_GROUPS.map((group) => (
-              <Group key={group.key} group={group} data={data} />
+              <Group key={group.key} group={group} data={withPageReturns(data, returns)} />
             ))}
           </div>
         </Card>

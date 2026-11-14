@@ -810,3 +810,16 @@ what buying the planned shares today would risk. The Guides menu holds both swit
 and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
 valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
 points a year, not reliably different from zero.
+
+**Cards on the Research page must agree, or say why they differ (audit, 2026-11-15).** The verdict's quality
+checks read the median of the last five fiscal years and five-year growth, while the Investment snapshot
+reads the last twelve months, so one page showed Apple's return on equity as 156% and 128%. Each check line
+now names its basis (`lib/verdicts.js::CHECK_BASIS`) and the card says the two can differ. Debt is the one
+check meant to be current: the scan now stores `totalDebt/totalEquityQuarterly` (falling back to the annual
+figure), the same balance sheet the page shows, where it used last fiscal year's. The snapshot's "1 month"
+was Finnhub's month-to-date return; its three price returns now come from the page's own bars
+(`trailingReturns`), the Performance card's source. The Setup card lists only active signals graded
+`supported` or `against` and counts the rest in one line. The Trade plan card says its size is arithmetic,
+not a suggestion, when the verdict is not Buy, Add or Hold, and the sentence above the chart warns when the
+company reports within ten days (`lib/earnings.js::reportsWithin`, shared with the card).
+

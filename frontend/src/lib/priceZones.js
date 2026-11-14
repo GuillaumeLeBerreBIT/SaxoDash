@@ -47,9 +47,9 @@ function riskLine(plan, held) {
   return `${where} ${held ? 'Adding' : 'Buying'} ${plan.size.shares} shares today would risk ${loss}.`
 }
 
-export function entrySentence({ verdict, price, plan, held = false, currency = plan?.currency ?? 'USD' }) {
+export function entrySentence({ verdict, price, plan, held = false, earnings = null, currency = plan?.currency ?? 'USD' }) {
   const risk = riskLine(plan, held)
-  if (!verdict) return risk ? { word: null, tone: undefined, why: null, next: null, risk } : null
+  if (!verdict) return risk || earnings ? { word: null, tone: undefined, why: null, next: null, risk, earnings } : null
   const zones = priceZones(verdict)
   const zone = zoneOf(price, zones)
   const quality = QUALITY_WORDS[verdict.quality] ?? QUALITY_WORDS.unknown
@@ -62,5 +62,6 @@ export function entrySentence({ verdict, price, plan, held = false, currency = p
       ? `${nextLine(zones, zone, price, currency)}${moved}`
       : 'Too little earnings history to say what is cheap for this company.',
     risk,
+    earnings,
   }
 }

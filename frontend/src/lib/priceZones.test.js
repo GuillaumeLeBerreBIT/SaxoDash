@@ -40,6 +40,7 @@ describe('entrySentence', () => {
       why: 'Strong company, fair price.',
       next: 'Becomes cheap below US$312.00 (12% lower). Expensive above US$401.00.',
       risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",
+      earnings: null,
     })
   })
 
@@ -79,6 +80,12 @@ describe('entrySentence', () => {
     const held = (avgCost) => entrySentence({ verdict: verdict({ action: 'hold' }), price: 356, plan: { ...plan, avgCost }, held: true }).risk
     expect(held(200)).toBe("Stop-loss at US$340.00, 4.6% below today's close and 70.0% above your average price of US$200.00. Adding 3 shares today would risk €45.")
     expect(held(400)).toMatch(/and 15\.0% below your average price of US\$400\.00\./)
+  })
+
+  it('carries a warning that the company reports soon', () => {
+    const soon = 'Reports in 3 days (17 Nov 2026): the price can gap on the news.'
+    expect(entrySentence({ verdict: verdict(), price: 356, plan: null, earnings: soon }).earnings).toBe(soon)
+    expect(entrySentence({ verdict: null, price: 356, plan: null, earnings: soon }).earnings).toBe(soon)
   })
 
   it('is nothing without a verdict or a plan', () => {

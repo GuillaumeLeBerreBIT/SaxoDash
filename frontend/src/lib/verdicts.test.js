@@ -48,13 +48,19 @@ describe('verdict wording', () => {
 describe('checkLine', () => {
   it('prints a percent figure beside what it needs', () => {
     expect(checkLine({ key: 'roe', label: 'Return on equity', status: 'pass', value: 31.24, threshold: '15%' })).toBe(
-      'Return on equity 31.2% · needs 15%',
+      'Return on equity 31.2% in a typical year · needs 15%',
     )
   })
 
   it('prints debt as a plain ratio', () => {
     expect(checkLine({ key: 'debt', label: 'Debt', status: 'fail', value: 1.46, threshold: 'at most 1.0' })).toBe(
-      'Debt 1.5 · needs at most 1.0',
+      'Debt 1.5 × equity, latest quarter · needs at most 1.0',
+    )
+  })
+
+  it('says growth is a yearly rate over five years', () => {
+    expect(checkLine({ key: 'revenue_growth', label: 'Revenue growth', value: 5.5, threshold: '5% a year' })).toBe(
+      'Revenue growth 5.5% a year over 5 years · needs 5% a year',
     )
   })
 
@@ -66,7 +72,7 @@ describe('checkLine', () => {
 
   it('keeps a real zero', () => {
     expect(checkLine({ key: 'margins', label: 'Margins', status: 'fail', value: 0, threshold: '10%' })).toBe(
-      'Margins 0% · needs 10%',
+      'Margins 0% in a typical year · needs 10%',
     )
   })
 })
