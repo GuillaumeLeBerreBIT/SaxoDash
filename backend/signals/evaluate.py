@@ -47,13 +47,16 @@ def grade(cases, ci_low, ci_high, first_half, second_half):
 
 
 def _momentum_leaders(series_by_ticker, universe):
-    values = {ticker: definitions.momentum(series) for ticker, series in series_by_ticker.items()}
+    values = {
+        ticker: array('d', (math.nan if value is None else value for value in definitions.momentum(series)))
+        for ticker, series in series_by_ticker.items()
+    }
     by_date = defaultdict(lambda: array('d'))
     for ticker, series in series_by_ticker.items():
         if universe is not None and ticker not in universe:
             continue
         for i, value in enumerate(values[ticker]):
-            if value is not None:
+            if value == value:
                 by_date[series.dates[i]].append(value)
     cutoffs = {}
     for day, found in by_date.items():
@@ -64,7 +67,7 @@ def _momentum_leaders(series_by_ticker, universe):
     for ticker, series in series_by_ticker.items():
         marked = bytearray(len(series))
         for i, value in enumerate(values[ticker]):
-            if value is not None and value >= cutoffs.get(series.dates[i], math.inf):
+            if value == value and value >= cutoffs.get(series.dates[i], math.inf):
                 marked[i] = 1
         leaders[ticker] = marked
     return leaders

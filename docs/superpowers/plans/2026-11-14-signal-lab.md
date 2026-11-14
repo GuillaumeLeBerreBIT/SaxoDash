@@ -112,7 +112,7 @@
 **Interfaces:**
 - Consumes: `verdicts.visibility.own_tickers(user)`, `ScreenerRow.everything`.
 - Produces: `GET /api/signals/` -> `{"signals": [{key, code, label, description, kind, grade, period: {from, to} | null, horizons: {"5": {cases, stocks, mean_excess, ci_low, ci_high, positive_share, first_half, second_half}, "20": {...}, "60": {...}}}]}` in `SIGNALS` order; before the first run `grade` and `period` are `null` and `horizons` is `{}`.
-- Produces: `GET /api/signals/<ticker>/` -> `{"stock_signals": {ticker, uic, as_of, active, events}}`, or `{"stock_signals": null}` (status 200).
+- Produces: `GET /api/signals/<ticker>/` -> `{"stock_signals": {ticker, uic, as_of, active, events, context}}` (`context` added after this plan), or `{"stock_signals": null}` (status 200).
 
 - [ ] **Step 1: Failing tests:** anonymous is 401 on both; list before any run; list after a run carries the stored figures; detail for a universe ticker; detail is case-insensitive on the ticker; detail for an unknown ticker is `null`; detail for an extra is `null` for a stranger and present for its holder.
 - [ ] **Step 2:** Run; expect failures. **Step 3:** Implement. **Step 4:** Tests pass, then run `manage.py test users.test_isolation` (no per-user model was added; it must still pass).
