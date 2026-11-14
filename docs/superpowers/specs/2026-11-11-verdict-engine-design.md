@@ -143,7 +143,8 @@ read time from the verdict plus `Position`. First match wins:
 |---|---|---|
 | Held, quality Weak | **Sell (review)** | "Story check failed: …" plus the failed checks |
 | Held, weight > 15%, Expensive | **Trim** | "Over your 15% cap and expensive against its own history" |
-| Held, quality Strong, Cheap | **Add** | |
+| Held, quality Strong, Cheap, weight ≤ 15% | **Add** | |
+| Held, quality Strong, Cheap, weight > 15% | **Hold** | "Cheap, but you are already over your 15% cap" |
 | Held, anything else | **Hold** | over-cap noted as "over your 15% cap" without a trim order |
 | Not held, Strong, Cheap | **Buy** | |
 | Not held, Strong, Fair or Expensive | **Wait** | "Quality passes; price is not in its cheap range" |

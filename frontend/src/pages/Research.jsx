@@ -128,6 +128,7 @@ export default function Research() {
       details={details.data}
       position={position}
       positions={positions}
+      verdict={verdict}
       quote={quote}
       bars={rangeBars}
       company={company}

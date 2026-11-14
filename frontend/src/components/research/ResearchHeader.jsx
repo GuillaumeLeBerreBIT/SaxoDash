@@ -6,6 +6,7 @@ import { chartHref, isEtf, moveCaption } from '../../lib/research'
 import InstrumentSearchBar from '../InstrumentSearchBar'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
 import { Card, Chip, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
+import ActionBadge from '../verdicts/ActionBadge'
 import { Menu, MenuRow } from './menu'
 
 const LINK_BUTTON =
@@ -105,6 +106,7 @@ export default function ResearchHeader({
   details,
   position,
   positions = [],
+  verdict,
   quote,
   bars,
   company,
@@ -152,6 +154,7 @@ export default function ResearchHeader({
             <h1 className="text-[22px] font-bold text-ink [text-wrap:balance]">{name}</h1>
             {isEtf(instrument) ? <Tag tone="warn">ETF</Tag> : null}
             {position ? <Tag tone="held">Held</Tag> : null}
+            {verdict?.data ? <ActionBadge verdict={verdict.data} /> : null}
           </div>
           <div className="text-[13px] text-ink-2 num">{identityLine(symbol, company)}</div>
         </div>

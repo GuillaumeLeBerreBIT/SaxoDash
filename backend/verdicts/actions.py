@@ -16,6 +16,8 @@ def _held(quality_grade, valuation_grade, weight_pct, failed_labels):
             'trim', f'Over your {WEIGHT_CAP_PCT}% cap and expensive against its own history',
         )
     if quality_grade == 'strong' and valuation_grade == 'cheap':
+        if over_cap:
+            return _result('hold', f'Cheap, but you are already over your {WEIGHT_CAP_PCT}% cap')
         return _result('add', QUALITY_AND_CHEAP)
     reason = 'Nothing in your plan says to act'
     if over_cap:
