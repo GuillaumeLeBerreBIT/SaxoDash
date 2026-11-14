@@ -26,13 +26,13 @@ describe('sanitizeChartPrefs', () => {
   it('loads a blob saved before the guides existed with every guide on, and ignores the old signal choices', () => {
     const old = { range: '1Y', type: 'line', overlays: DEFAULT_CHART_PREFS.overlays, panes: DEFAULT_CHART_PREFS.panes, signals: { hammer: true } }
     const prefs = sanitizeChartPrefs(old)
-    expect(prefs.guides).toEqual({ zones: true, plan: true })
+    expect(prefs.guides).toEqual({ zones: true, plan: false })
     expect(prefs.signals).toBeUndefined()
   })
 
   it('keeps only real on or off choices for the guides', () => {
     const prefs = sanitizeChartPrefs({ guides: { zones: false, plan: 'yes', marks: true } })
-    expect(prefs.guides).toEqual({ zones: false, plan: true })
+    expect(prefs.guides).toEqual({ zones: false, plan: false })
   })
 
   it('falls back to the default range and type for values the chart does not know', () => {

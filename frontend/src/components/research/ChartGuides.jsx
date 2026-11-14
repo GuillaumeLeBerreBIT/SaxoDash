@@ -1,5 +1,5 @@
 import { PAD_T } from '../../lib/chartGeometry'
-import { fmtEur, fmtMoney } from '../../lib/format'
+import { fmtMoney } from '../../lib/format'
 
 const TAG_HEIGHT = 16
 const TAG_CHAR = 6
@@ -57,9 +57,8 @@ export function PriceZones({ zones, currency, geometry, colors }) {
 
 function stopWords(plan, compact) {
   const stop = fmtMoney(plan.stop.price, plan.currency)
-  if (compact) return `STOP ${stop}`
-  if (plan.size?.shares > 0) return `STOP ${stop} · lose ${fmtEur(plan.size.lossAtStop, { decimals: 0 })} with ${plan.size.shares} shares`
-  return `STOP ${stop} · ${plan.stopDistancePct.toFixed(1)}%`
+  if (compact) return `Stop-loss ${stop}`
+  return `Stop-loss ${stop} · ${Math.abs(plan.stopDistancePct).toFixed(1)}% below today's close`
 }
 
 export function StopGuide({ plan, data, geometry, colors }) {

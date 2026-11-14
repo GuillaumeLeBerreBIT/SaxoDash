@@ -39,7 +39,7 @@ export function IndicatorMenuItems({ controls }) {
 
 const GUIDES = {
   zones: ['Buy and expensive zones', 'Where the price is cheap or expensive for this company'],
-  plan: ['Stop', 'Where the trade is wrong, and what you lose there'],
+  plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
 }
 
 export function GuideMenuItems({ controls, available }) {

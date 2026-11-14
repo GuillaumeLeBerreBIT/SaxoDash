@@ -100,7 +100,8 @@ export function planFromPage({ bars, currency, note, positions, position, portfo
     fxRate: fxRateFor(currency, positions),
     heldWeightPct: heldWeight(position, portfolioValue),
   })
-  return plan && { ...plan, currency, asOf: latest.date, riskPct }
+  const avgCost = Number(position?.avg_cost)
+  return plan && { ...plan, currency, asOf: latest.date, riskPct, avgCost: avgCost > 0 ? avgCost : null }
 }
 
 const RISK_KEY = 'saxodash:trade-risk-pct'

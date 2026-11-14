@@ -31,13 +31,20 @@ function nextLine(zones, zone, price, currency) {
   return `Becomes cheap below ${buy} (${lower(price, zones.buyBelow)}). Expensive above ${expensive}.`
 }
 
+const percent = (value) => `${Math.abs(value).toFixed(1)}%`
+
+function againstAverage(plan) {
+  if (!plan.avgCost) return ''
+  const gap = (plan.stop.price / plan.avgCost - 1) * 100
+  return ` and ${percent(gap)} ${gap >= 0 ? 'above' : 'below'} your average price of ${fmtMoney(plan.avgCost, plan.currency)}`
+}
+
 function riskLine(plan, held) {
   if (!plan) return null
-  const stop = fmtMoney(plan.stop.price, plan.currency)
-  if (plan.size?.shares > 0) {
-    return `If you ${held ? 'add' : 'buy'} today: stop at ${stop}, ${plan.size.shares} shares, ${fmtEur(plan.size.lossAtStop, { decimals: 0 })} at risk.`
-  }
-  return `Stop at ${stop} (${plan.stopDistancePct.toFixed(1)}%).`
+  const where = `Stop-loss at ${fmtMoney(plan.stop.price, plan.currency)}, ${percent(plan.stopDistancePct)} below today's close${againstAverage(plan)}.`
+  if (!(plan.size?.shares > 0)) return where
+  const loss = fmtEur(plan.size.lossAtStop, { decimals: 0 })
+  return `${where} ${held ? 'Adding' : 'Buying'} ${plan.size.shares} shares today would risk ${loss}.`
 }
 
 export function entrySentence({ verdict, price, plan, held = false, currency = plan?.currency ?? 'USD' }) {

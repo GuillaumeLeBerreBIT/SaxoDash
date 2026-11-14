@@ -45,7 +45,7 @@ function sizeRows(size, riskPct) {
         note={`${fmtEur(size.value, { decimals: 0 })}, ${fmtPct(size.weightPct, PLAIN)} of your portfolio`}
       />
       <Row
-        label="Loss if the stop is hit"
+        label="Loss if the stop-loss is hit"
         value={fmtEur(size.lossAtStop, { decimals: 0 })}
         note={size.limitedByCap ? 'Size limited by the weight cap' : null}
       />
@@ -63,12 +63,12 @@ export default function TradePlanCard({ bars, currency, note, positions, positio
     <Card context="Stop distance and position size from the latest close" dot="off" title="Trade plan">
       <dl className="flex flex-col gap-1.5">
         <Row
-          label="Stop"
+          label="Stop-loss"
           value={fmtMoney(plan.stop.price, currency)}
-          note={plan.stop.source === 'yours' ? 'Your stop' : `${STOP_ATRS} × the average daily range (${ATR_PERIOD} sessions)`}
+          note={plan.stop.source === 'yours' ? 'Your own stop-loss' : `${STOP_ATRS} × the average daily range (${ATR_PERIOD} sessions)`}
         />
         <Row
-          label="Distance to the stop"
+          label="Distance to the stop-loss"
           value={fmtPct(plan.stopDistancePct, { decimals: 1 })}
           note={plan.stopAtrs == null ? null : `${plan.stopAtrs.toFixed(1)} average daily ranges`}
         />

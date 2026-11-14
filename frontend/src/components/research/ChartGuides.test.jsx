@@ -41,23 +41,21 @@ describe('PriceZones', () => {
 describe('StopGuide', () => {
   const plan = { asOf: data[39].date, stop: { price: 92, source: 'atr' }, stopDistancePct: -9.8, currency: 'USD', size: { shares: 16, lossAtStop: 290 } }
 
-  it('draws a suggested stop as a dashed line and says what it costs', () => {
+  it('draws a suggested stop-loss as a dashed line and says how far below today it is', () => {
     draw(<StopGuide plan={plan} data={data} geometry={geometry()} colors={colors} />)
     const guide = screen.getByTestId('stop-guide')
     expect(guide.querySelector('line')).toHaveAttribute('stroke-dasharray', '6 4')
-    expect(guide).toHaveTextContent(/STOP \S*92\.00 · lose €290 with 16 shares/)
+    expect(guide).toHaveTextContent(/Stop-loss \S*92\.00 · 9\.8% below today's close/)
   })
 
-  it('leaves the line to your own stop line and gives the distance when there is no size', () => {
-    draw(<StopGuide plan={{ ...plan, stop: { price: 92, source: 'yours' }, size: null }} data={data} geometry={geometry()} colors={colors} />)
-    const guide = screen.getByTestId('stop-guide')
-    expect(guide.querySelector('line')).toBeNull()
-    expect(guide).toHaveTextContent(/STOP \S*92\.00 · -9\.8%/)
+  it('leaves the line to your own stop line', () => {
+    draw(<StopGuide plan={{ ...plan, stop: { price: 92, source: 'yours' } }} data={data} geometry={geometry()} colors={colors} />)
+    expect(screen.getByTestId('stop-guide').querySelector('line')).toBeNull()
   })
 
   it('is short on a narrow chart and absent when the latest bar or the stop is out of view', () => {
     draw(<StopGuide plan={plan} data={data} geometry={geometry(360)} colors={colors} />)
-    expect(screen.getByTestId('stop-guide')).not.toHaveTextContent('lose')
+    expect(screen.getByTestId('stop-guide')).not.toHaveTextContent('below')
     expect(draw(<StopGuide plan={plan} data={data.slice(0, 30)} geometry={geometry()} colors={colors} />).container.querySelector('[data-testid="stop-guide"]')).toBeNull()
     expect(draw(<StopGuide plan={{ ...plan, stop: { price: 10, source: 'atr' } }} data={data} geometry={geometry()} colors={colors} />).container.querySelector('[data-testid="stop-guide"]')).toBeNull()
   })

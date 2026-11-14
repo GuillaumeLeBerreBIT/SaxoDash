@@ -39,7 +39,7 @@ describe('entrySentence', () => {
       tone: undefined,
       why: 'Strong company, fair price.',
       next: 'Becomes cheap below US$312.00 (12% lower). Expensive above US$401.00.',
-      risk: 'If you buy today: stop at US$340.00, 3 shares, €45 at risk.',
+      risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",
     })
   })
 
@@ -72,11 +72,13 @@ describe('entrySentence', () => {
     const sentence = entrySentence({ verdict: unjudged, price: 356, plan: { ...plan, size: null } })
     expect(sentence.why).toBe('Strong company, no valuation yet.')
     expect(sentence.next).toBe('Too little earnings history to say what is cheap for this company.')
-    expect(sentence.risk).toBe('Stop at US$340.00 (-4.6%).')
+    expect(sentence.risk).toBe("Stop-loss at US$340.00, 4.6% below today's close.")
   })
 
-  it('speaks of adding when you already hold the stock', () => {
-    expect(entrySentence({ verdict: verdict({ action: 'hold' }), price: 356, plan, held: true }).risk).toMatch(/^If you add today: stop at/)
+  it('compares the stop-loss with your average price when you hold the stock', () => {
+    const held = (avgCost) => entrySentence({ verdict: verdict({ action: 'hold' }), price: 356, plan: { ...plan, avgCost }, held: true }).risk
+    expect(held(200)).toBe("Stop-loss at US$340.00, 4.6% below today's close and 70.0% above your average price of US$200.00. Adding 3 shares today would risk €45.")
+    expect(held(400)).toMatch(/and 15\.0% below your average price of US\$400\.00\./)
   })
 
   it('is nothing without a verdict or a plan', () => {

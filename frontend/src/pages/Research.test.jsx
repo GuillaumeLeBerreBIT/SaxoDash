@@ -186,15 +186,18 @@ describe('Research', () => {
     expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.zones).toBe(false)
   })
 
-  it('draws the stop on the chart and says what it costs', () => {
-    const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000' }
+  it('keeps the stop-loss off until it is switched on, then draws it against today\'s close and your average price', async () => {
+    const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000', avg_cost: '50' }
     queries.usePortfolioSummary.mockReturnValue({ ...idle, data: { total_value: '100000' } })
     queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: true })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('stop-guide')).toHaveTextContent(/STOP .+ lose .+ with \d+ shares/)
-    expect(screen.getByTestId('entry-banner')).toHaveTextContent(/If you add today: stop at/)
+    expect(screen.queryByTestId('stop-guide')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Stop-loss/ }))
+    expect(screen.getByTestId('stop-guide')).toHaveTextContent(/Stop-loss .+ below today's close/)
+    expect(screen.getByTestId('entry-banner')).toHaveTextContent(/above your average price of \S*50\.00\. Adding \d+ shares today would risk/)
   })
 
   it('lists the active signals with their evidence on the Overview', () => {

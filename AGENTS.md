@@ -801,9 +801,12 @@ history, recomputed nightly): the chart shades green below the first and amber a
 in words, and points at a zone that is out of view instead of stretching the price scale. The cheap zone is
 called a buy zone only when quality is `strong`, the verdict's own Buy rule. A sentence above the chart
 (`entrySentence`) gives the verdict's action, why, the price at which it changes and what a stop costs; when
-today's close sits in another zone than last night's verdict it says the verdict updates tonight. The stop is
-one red line with what is lost there, from the same `planFromPage` as the Trade plan card. Both are switches in
-the Guides menu (`chartPrefs.guides`: `zones`, `plan`), on by default. Chart signals stay in the Setup card
+today's close sits in another zone than last night's verdict it says the verdict updates tonight. The
+stop-loss is one red line from the same `planFromPage` as the Trade plan card, off by default because a
+long-term holder sells on a weaker business, not on a price: when switched on, the chart and the sentence say
+how far it is below today's close, how it compares with the average price paid when the stock is held, and
+what buying the planned shares today would risk. The Guides menu holds both switches (`chartPrefs.guides`:
+`zones` on, `plan` off). Chart signals stay in the Setup card
 and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
 valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
 points a year, not reliably different from zero.
