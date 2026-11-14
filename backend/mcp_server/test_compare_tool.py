@@ -6,6 +6,7 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 from django.utils import timezone
 
+from portfolio.models import Position
 from research import finnhub
 from research.listings import Listing
 from research.models import ScreenerRow
@@ -150,6 +151,21 @@ class CompareToolTest(APITestCase):
             by = by_symbol(compare_companies(['NVDA', 'AAPL']))
         self.assertEqual(by['NVDA']['pillars']['growth']['eps_growth_5y_pct'], 17.5)
         self.assertIsNone(by['AAPL']['pillars']['growth']['eps_growth_5y_pct'])
+
+    def test_an_extra_row_fills_growth_only_for_a_user_who_holds_it(self):
+        ScreenerRow.everything.create(
+            ticker='NVDA', name='NVDA', indexes='', in_universe=False, eps_growth_5y=17.5,
+        )
+        with Providers():
+            stranger = by_symbol(compare_companies(['NVDA', 'AAPL']))
+        self.assertIsNone(stranger['NVDA']['pillars']['growth']['eps_growth_5y_pct'])
+        Position.objects.create(
+            user=the_owner(), ticker='NVDA', name='NVDA', qty=1, avg_cost=1, current_price=1,
+            sector='Tech', type='STOCK', color='#000000', asset_type='Stock', currency='USD',
+        )
+        with Providers():
+            holder = by_symbol(compare_companies(['NVDA', 'AAPL']))
+        self.assertEqual(holder['NVDA']['pillars']['growth']['eps_growth_5y_pct'], 17.5)
 
     def test_busy_finnhub_degrades_one_company(self):
         def busy_for_aapl(symbol):

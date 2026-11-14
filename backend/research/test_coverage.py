@@ -29,7 +29,7 @@ def watch(symbol, uic, *, asset_type='Stock', owner=None):
 class SyncExtrasTest(TestCase):
     def test_adds_a_held_usd_stock_outside_the_universe(self, resolve):
         hold('NBIS', uic=11)
-        self.assertEqual(coverage.sync_extras(user=USER), {'added': 1, 'removed': 0})
+        self.assertEqual(coverage.sync_extras(user=USER), {'added': 1, 'removed': 0, 'skipped': 0})
         row = ScreenerRow.everything.get(ticker='NBIS')
         self.assertFalse(row.in_universe)
         self.assertEqual((row.uic, row.asset_type, row.indexes, row.name), (11, 'Stock', '', 'NBIS Inc'))
@@ -61,7 +61,7 @@ class SyncExtrasTest(TestCase):
         hold('SAP', uic=3, currency='EUR')
         watch('QQQ:xnas', 2, asset_type='Etf')
         watch('AAPL:xnas', 1)
-        self.assertEqual(coverage.sync_extras(user=USER), {'added': 0, 'removed': 0})
+        self.assertEqual(coverage.sync_extras(user=USER), {'added': 0, 'removed': 0, 'skipped': 0})
         resolve.assert_not_called()
         self.assertEqual(ScreenerRow.everything.count(), 1)
 
@@ -69,7 +69,7 @@ class SyncExtrasTest(TestCase):
         ScreenerRow.everything.create(ticker='OLD', name='Old', indexes='', in_universe=False)
         ScreenerRow.everything.create(ticker='KEEP', name='Keep', indexes='', in_universe=False)
         hold('KEEP')
-        self.assertEqual(coverage.sync_extras(user=USER), {'added': 0, 'removed': 1})
+        self.assertEqual(coverage.sync_extras(user=USER), {'added': 0, 'removed': 1, 'skipped': 0})
         self.assertFalse(ScreenerRow.everything.filter(ticker='OLD').exists())
         self.assertTrue(ScreenerRow.everything.filter(ticker='KEEP').exists())
 
@@ -105,8 +105,36 @@ class SyncExtrasTest(TestCase):
         resolve.side_effect = ProviderNotConnected()
         with self.assertLogs('research.coverage', level='WARNING'):
             result = coverage.sync_extras(user=USER)
-        self.assertEqual(result, {'added': 0, 'removed': 0})
+        self.assertEqual(result, {'added': 0, 'removed': 0, 'skipped': 0})
         self.assertTrue(ScreenerRow.everything.filter(ticker='OLD').exists())
+
+    def test_watched_stocks_beyond_the_cap_are_left_out_and_counted(self, resolve):
+        resolve.side_effect = lambda ticker, user: {'uic': int(ticker[1:])}
+        for index in range(1, 5):
+            watch(f'W{index}', index)
+        with mock.patch.object(coverage, 'MAX_WATCHED_EXTRAS', 3):
+            result = coverage.sync_extras(user=USER)
+        self.assertEqual((result['added'], result['skipped']), (3, 1))
+        self.assertEqual(ScreenerRow.everything.filter(in_universe=False).count(), 3)
+        self.assertEqual(resolve.call_count, 3)
+
+    def test_the_cap_keeps_known_extras_before_admitting_new_ones(self, resolve):
+        resolve.side_effect = lambda ticker, user: {'uic': int(ticker[1:])}
+        watch('W1', 1)
+        watch('W2', 2)
+        ScreenerRow.everything.create(ticker='W2', name='W2', indexes='', uic=2, in_universe=False)
+        with mock.patch.object(coverage, 'MAX_WATCHED_EXTRAS', 1):
+            result = coverage.sync_extras(user=USER)
+        self.assertEqual(
+            list(ScreenerRow.everything.filter(in_universe=False).values_list('ticker', flat=True)), ['W2'],
+        )
+        self.assertEqual((result['removed'], result['skipped']), (0, 1))
+
+    def test_a_held_stock_is_admitted_whatever_the_cap(self, resolve):
+        hold('NBIS')
+        with mock.patch.object(coverage, 'MAX_WATCHED_EXTRAS', 0):
+            coverage.sync_extras(user=USER)
+        self.assertTrue(ScreenerRow.everything.filter(ticker='NBIS').exists())
 
     def test_a_known_extra_is_not_resolved_again(self, resolve):
         ScreenerRow.everything.create(ticker='NBIS', name='Nebius', indexes='', in_universe=False, uic=11)

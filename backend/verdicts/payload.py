@@ -16,12 +16,15 @@ def weights_by_ticker(user):
         (Money(position.value, settings.REPORTING_CURRENCY) for position in positions),
         settings.REPORTING_CURRENCY,
     ).amount
+    held = [
+        position for position in positions
+        if position.asset_type == 'Stock' and position.currency == 'USD'
+    ]
     if not total:
-        return {}
+        return {bare(position.ticker): None for position in held}
     weights = defaultdict(Decimal)
-    for position in positions:
-        if position.asset_type == 'Stock' and position.currency == 'USD':
-            weights[bare(position.ticker)] += position.weight_of(total)
+    for position in held:
+        weights[bare(position.ticker)] += position.weight_of(total)
     return dict(weights)
 
 
@@ -29,8 +32,8 @@ def _failed_labels(verdict):
     return [check['label'] for check in verdict.checks if check['status'] == 'fail']
 
 
-def _summary(verdict, weight):
-    weight_pct = float(weight) if weight is not None else None
+def _summary(verdict, weight, held):
+    weight_pct = float(weight or 0) if held else None
     decided = action(verdict.quality, verdict.valuation, weight_pct, _failed_labels(verdict))
     return {
         **decided,
@@ -41,9 +44,9 @@ def _summary(verdict, weight):
     }
 
 
-def _detail(verdict, weight):
+def _detail(verdict, weight, held):
     return {
-        **_summary(verdict, weight),
+        **_summary(verdict, weight, held),
         'ticker': verdict.ticker,
         'name': verdict.name,
         'checks': verdict.checks,
@@ -52,7 +55,7 @@ def _detail(verdict, weight):
         'expensive_above': verdict.expensive_above,
         'last_close': verdict.last_close,
         'pct_vs_ma200': verdict.pct_vs_ma200,
-        'held': weight is not None,
+        'held': held,
         'weight_pct': round(float(weight), 1) if weight is not None else None,
         'weight_cap_pct': WEIGHT_CAP_PCT,
     }
@@ -61,4 +64,7 @@ def _detail(verdict, weight):
 def for_user(verdicts, user, detailed=False):
     weights = weights_by_ticker(user)
     build = _detail if detailed else _summary
-    return {verdict.ticker: build(verdict, weights.get(verdict.ticker)) for verdict in verdicts}
+    return {
+        verdict.ticker: build(verdict, weights.get(verdict.ticker), verdict.ticker in weights)
+        for verdict in verdicts
+    }

@@ -155,6 +155,27 @@ describe('Research', () => {
     expect(screen.getByText('Held')).toBeInTheDocument()
   })
 
+  it('names the verdict action beside the company name', () => {
+    queries.useVerdict.mockReturnValue({
+      ...idle,
+      data: { action: 'trim', reason: 'Over your 15% cap and expensive against its own history', checks: [] },
+    })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(within(heading.parentElement).getByText('Trim')).toBeInTheDocument()
+  })
+
+  it('shows no verdict action in the header when there is no verdict', () => {
+    queries.useVerdict.mockReturnValue({ ...idle, data: null })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(within(heading.parentElement).queryByText('—')).not.toBeInTheDocument()
+  })
+
   it('does not mark an instrument that is not held', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=TSLA' })
 

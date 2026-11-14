@@ -1,4 +1,4 @@
-import { ACTION_LABEL, actionTone } from '../../lib/verdicts'
+import { actionLabel, actionTone } from '../../lib/verdicts'
 import { Tag } from '../ui'
 
 export default function ActionBadge({ verdict }) {
@@ -13,7 +13,7 @@ export default function ActionBadge({ verdict }) {
   return (
     <span title={verdict.reason} className="inline-flex max-w-full">
       <Tag tone={actionTone(verdict.action)} className="h-[18px] max-w-full overflow-hidden">
-        {ACTION_LABEL[verdict.action] ?? verdict.action}
+        {actionLabel(verdict)}
       </Tag>
     </span>
   )

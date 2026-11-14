@@ -1,8 +1,8 @@
 import { fmtDate, fmtMoney, fmtPct } from '../../lib/format'
 import {
-  ACTION_LABEL,
   CHECK_STATUS_LABEL,
   GRADE_LABEL,
+  actionLabel,
   actionTone,
   checkLine,
   trendSentence,
@@ -44,7 +44,7 @@ function Body({ verdict }) {
     <>
       <div className="flex items-center gap-2.5">
         <Tag tone={actionTone(verdict.action)} className="h-[26px] text-[13px]">
-          {ACTION_LABEL[verdict.action] ?? verdict.action}
+          {actionLabel(verdict)}
         </Tag>
         <span className="text-[13px] text-ink-3">As of {fmtDate(verdict.as_of)}</span>
       </div>

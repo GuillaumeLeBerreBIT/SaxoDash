@@ -4,11 +4,12 @@ from research.models import ScreenerRow
 from research.price_summary import summarise
 from research.providers import ProviderUnavailable
 from research.views import FundamentalsView
+from verdicts.visibility import own_tickers
 
 from .. import throttled
 from ..envelope import Reply, Unavailable
 from ..throttled import look_up
-from ..views import fetch_optional
+from ..views import app_user, fetch_optional
 from . import tool
 from .research import FINNHUB, SAXO, _scalar_metrics
 from .smart_money import CONGRESS, EDGAR, ownership
@@ -52,7 +53,10 @@ def _ratio_vs_median(current, median):
 
 
 def _screener_row(ticker):
-    return ScreenerRow.objects.filter(ticker__iexact=ticker).first()
+    row = ScreenerRow.everything.filter(ticker__iexact=ticker).first()
+    if row is None or row.in_universe or row.ticker in own_tickers(app_user()):
+        return row
+    return None
 
 
 def _fill_from_screener(growth, ticker):
