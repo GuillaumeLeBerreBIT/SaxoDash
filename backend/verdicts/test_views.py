@@ -75,6 +75,15 @@ class VerdictApiTests(APITestCase):
         self.assertEqual(alice['action'], 'trim')
         self.assertEqual(bob['action'], 'wait')
 
+    def test_a_holding_in_an_unpriced_book_is_still_held_with_no_weight(self):
+        verdict('AAA', quality='strong', valuation='cheap')
+        hold(self.alice, 'AAA', '0')
+        self.client.force_authenticate(self.alice)
+        detail = self.client.get('/api/verdicts/AAA/').json()['verdict']
+        self.assertEqual(detail['action'], 'add')
+        self.assertTrue(detail['held'])
+        self.assertIsNone(detail['weight_pct'])
+
     def test_two_lots_of_one_ticker_are_one_weight(self):
         verdict('AAA')
         hold(self.alice, 'AAA', '100')
