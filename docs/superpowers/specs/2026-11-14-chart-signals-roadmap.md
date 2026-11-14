@@ -1,6 +1,6 @@
 # Chart signals: evidence and roadmap
 
-Date: 2026-11-14. Status: proposed, awaiting the owner's go-ahead.
+Date: 2026-11-14. Status: approved. Item 1 is built (PR #53); item 2 is built on `feat/deeper-history`.
 
 This document records what was tested before any chart-analysis feature was designed, what the
 results mean, and the order of features that follows from them. Each feature below gets its own
@@ -109,9 +109,11 @@ feature (patterns, scanners, ML) plugs into.
 1. **Signal Lab** (design written). Store daily bars for the universe, define signals once,
    score each nightly against the average stock, show them as a toggleable lane on the Research
    chart and as a "Setup" card listing what is active today with its evidence.
-2. **Deeper history.** Page Saxo charts back beyond 1,200 bars (the `Time` + `Mode=UpTo`
-   parameters) so scores cover 2020 and 2022. Without this every grade stays provisional. Small,
-   backend only; verify first how far back Saxo serves daily bars.
+2. **Deeper history** (built, `feat/deeper-history`). Verified 2026-11-14: Saxo pages daily bars
+   back over a listing's whole life with `Time` + `Mode=UpTo` (NVDA to 1999, KO to 1988), consistently
+   split-adjusted. `research/backfill.py` pages each stock back to about 5,900 bars (early 2003),
+   150 stocks a night; the scan merges instead of overwriting and drops stored history when a split
+   restates it. Scores now span 2008, 2020 and 2022. Still today's index members only.
 3. **Value range and entry checklist.** The cheap/expensive price range drawn through time from
    P/E percentiles known at each date, stepping on the real report day (EDGAR dates the app
    already reads). A sidebar checklist: quality, valuation, percent below the 1-year high,

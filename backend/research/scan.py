@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from . import coverage, finnhub, market, scan_progress, technicals, valuation
+from . import coverage, finnhub, history, market, scan_progress, technicals, valuation
 from .models import DailyBars, ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -68,7 +68,10 @@ def stored_bars(bars):
 
 def _store_bars(row, bars):
     try:
-        DailyBars.objects.update_or_create(row=row, defaults={'bars': stored_bars(bars)})
+        daily = DailyBars.objects.filter(row=row).first() or DailyBars(row=row)
+        daily.bars, kept = history.merged(daily.bars, stored_bars(bars))
+        daily.history_complete = daily.history_complete and kept
+        daily.save()
     except Exception:
         logger.warning('Could not store the daily bars for %s', row.ticker, exc_info=True)
 

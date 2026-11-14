@@ -68,6 +68,10 @@ PERIODIC_TASKS = {
         'task': 'research.tasks.scan_universe',
         'crontab': {'minute': '30', 'hour': '22'},
     },
+    'Backfill daily bars': {
+        'task': 'research.tasks.backfill_daily_bars',
+        'crontab': {'minute': '30', 'hour': '23'},
+    },
     'Refresh copy performance': {
         'task': 'investors.tasks.refresh_copy_performance',
         'crontab': {'minute': '30', 'hour': '1'},

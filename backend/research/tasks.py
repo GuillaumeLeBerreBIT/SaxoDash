@@ -6,9 +6,9 @@ from django.contrib.auth import get_user_model
 
 from portfolio.models import Position
 from saxo.models import SyncRun
-from saxo.tasks import synced
+from saxo.tasks import SyncReport, synced
 
-from . import scan, scan_progress
+from . import backfill, scan, scan_progress
 from .models import Watchlist
 from .watchlists import OPEN_POSITIONS_WATCHLIST, sync_open_positions_watchlist
 
@@ -57,3 +57,18 @@ def scan_universe(claimed=False):
         return _scan_with_credential()
     finally:
         scan_progress.clear()
+
+
+BACKFILL_TASK = 'backfill_daily_bars'
+
+
+@synced(reports_health=False, task=BACKFILL_TASK, credential='owner')
+def _backfill_with_credential(credential):
+    result = backfill.backfill(user=credential.user)
+    detail = f'{len(result.failed)} failed: {", ".join(result.failed[:10])}' if result.failed else ''
+    return SyncReport(rows=result.completed, detail=detail)
+
+
+@shared_task
+def backfill_daily_bars():
+    return _backfill_with_credential()

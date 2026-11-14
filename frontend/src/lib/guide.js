@@ -92,7 +92,7 @@ export const SIGNALS_GUIDE = [
   { name: 'What a grade means', text: 'Every chart signal is tested each night on the index stocks the app scans. "Held up in testing" means stocks did better than the average stock over the 60 sessions after the signal; "Worked against" means they did worse; "No edge found" means the result cannot be told apart from chance.' },
   { name: 'Against the average stock', text: 'The figure is the return after the signal minus the average return of all stocks over the same days, so a rising market does not make every signal look good. The return is counted from the next session\'s open, the first price you could have traded at.' },
   { name: 'How strict the test is', text: 'A signal is graded only with 300 cases or more. Its 95% range must sit wholly above (or below) zero, measured two ways, and the earlier and the later half of the period must agree. One lucky stretch is not enough.' },
-  { name: 'What it does not say', text: 'A marker is not an instruction. Results cover a few mostly rising years, today\'s index members only, and no trading costs. Effects of one to three points over 60 sessions are a tilt in the odds, not a trading system.' },
+  { name: 'What it does not say', text: 'A marker is not an instruction. Results cover only companies that are in the index today, so the ones that failed or were dropped are missing; that flatters signals that buy weakness (deep pullback, oversold) most. No trading costs are counted. Effects of one to three points over 60 sessions are a tilt in the odds, not a trading system.' },
   { name: 'Crowded markers', text: 'When markers would overlap, the chart keeps the better-graded and the newer one. Zoom in to see the rest.' },
 ]
 

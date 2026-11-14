@@ -160,6 +160,19 @@ class MarketDataViewTest(APITestCase):
         self.assertEqual([c['date'] for c in response.data], ['2026-08-28', '2026-08-31'])
 
     @patch('research.market.client.get_chart')
+    def test_chart_before_asks_for_the_bars_up_to_a_day_oldest_first(self, mock_get_chart):
+        self._connect_saxo()
+        mock_get_chart.return_value = [
+            {**SAMPLE_CANDLE, 'Time': '2022-02-03T00:00:00Z'},
+            {**SAMPLE_CANDLE, 'Time': '2022-02-02T00:00:00Z'},
+        ]
+
+        bars = market.chart_before(211, 'Stock', 1440, '2022-02-03', user=self.user)
+
+        self.assertEqual([bar['date'] for bar in bars], ['2022-02-02', '2022-02-03'])
+        self.assertEqual(mock_get_chart.call_args.kwargs['up_to'], '2022-02-03T00:00:00Z')
+
+    @patch('research.market.client.get_chart')
     def test_chart_is_served_from_cache_on_the_second_request(self, mock_get_chart):
         self._connect_saxo()
         mock_get_chart.return_value = [SAMPLE_CANDLE]

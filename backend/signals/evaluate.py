@@ -1,4 +1,6 @@
+import math
 import random
+from array import array
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -49,7 +51,7 @@ def _momentum_leaders(series_by_ticker):
         for i, value in enumerate(definitions.momentum(series)):
             if value is not None:
                 by_date[series.dates[i]].append((value, ticker, i))
-    leaders = {ticker: [False] * len(series) for ticker, series in series_by_ticker.items()}
+    leaders = {ticker: bytearray(len(series)) for ticker, series in series_by_ticker.items()}
     for ranked in by_date.values():
         if len(ranked) < MIN_RANKED_STOCKS:
             continue
@@ -62,7 +64,10 @@ def _momentum_leaders(series_by_ticker):
 def flags_by_stock(series_by_ticker):
     leaders = _momentum_leaders(series_by_ticker)
     return {
-        ticker: {**definitions.detect(series), 'momentum_top': leaders[ticker]}
+        ticker: {
+            **{key: bytearray(marked) for key, marked in definitions.detect(series).items()},
+            'momentum_top': leaders[ticker],
+        }
         for ticker, series in series_by_ticker.items()
     }
 
@@ -70,11 +75,15 @@ def flags_by_stock(series_by_ticker):
 def _forward_returns(series, horizon):
     opens, closes = series.opens, series.closes
     count = len(closes)
-    return {
-        i: closes[i + horizon] / opens[i + 1] - 1
-        for i in range(FIRST_BAR, count - horizon)
-        if opens[i + 1]
-    }
+    returns = array('d', [math.nan]) * count
+    for i in range(FIRST_BAR, count - horizon):
+        if opens[i + 1]:
+            returns[i] = closes[i + horizon] / opens[i + 1] - 1
+    return returns
+
+
+def _known(returns):
+    return ((i, value) for i, value in enumerate(returns) if value == value)
 
 
 def _interval(groups, seed):
@@ -102,7 +111,7 @@ def _score_horizon(eligible, flags, horizon):
     returns = {ticker: _forward_returns(series, horizon) for ticker, series in eligible.items()}
     date_totals = defaultdict(lambda: [0.0, 0])
     for ticker, series in eligible.items():
-        for i, value in returns[ticker].items():
+        for i, value in _known(returns[ticker]):
             entry = date_totals[series.dates[i]]
             entry[0] += value
             entry[1] += 1
@@ -123,7 +132,7 @@ def _score_horizon(eligible, flags, horizon):
             marked = flags.get(ticker, {}).get(signal.key)
             if not marked:
                 continue
-            for i, value in returns[ticker].items():
+            for i, value in _known(returns[ticker]):
                 if not marked[i]:
                     continue
                 day = series.dates[i]
