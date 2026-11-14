@@ -749,8 +749,8 @@ one side of zero (the wider of a by-stock and a by-calendar-month bootstrap, see
 both halves of the period on that side; anything else is `no_edge`, and under 300 cases is `too_few`.
 Seventeen signals are tested at once, so the two-halves rule is what keeps a lucky one out. The popular
 signals with no edge (RSI, MACD, crosses, candlestick patterns) are included on purpose so the app can say
-so. Markers are coded dots coloured by grade (accent held up, warning worked against, grey otherwise), never
-arrows and never green or red, and no copy says buy or sell; all are off by default. Support and resistance
+so. No copy says buy or sell. How signals are drawn changed on 2026-11-15 (see "Chart guides" below): the first
+version, a lane of two-letter pills for all seventeen signals, was unreadable and is gone. Support and resistance
 zones were tested first and dropped: zone touches did worse than a same-sized dip on a random day
 (`docs/superpowers/specs/2026-11-14-chart-signals-roadmap.md`). RSI in signals is the simple form, not the
 chart's Wilder form, and its description says so. An extra's signals are served only to a user who holds or
@@ -790,4 +790,18 @@ report within ten days adds a warning, because a stop does not protect against a
 the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache) for the portfolio value, and
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
+
+**Chart guides are drawn on the candles, and only what earned it is drawn.** The owner found the pill lane
+useless: it gave no visual help on the candles and most pills were signals with no edge. The Research chart's
+Guides menu now has three switches, all on by default (`chartPrefs.guides`): (1) a triangle under the candle
+for an event signal graded `supported` and over it for one graded `against`, with the figure this stock made
+over the next 60 sessions from the next open (`lib/chartGuides.js::candleMarks`, fainter while the 60 sessions
+are still running, a dashed path on hover); (2) a faint shade over periods a `supported` state or rank signal
+was true, which today is the momentum leader (`StockSignals.runs`, runs under five sessions apart joined, runs
+under three sessions dropped); (3) the trade plan as a red risk box to the stop and a green reward box to the
+target at the latest close, from the same `planFromPage` the Trade plan card uses, so the two cannot disagree.
+Signals with no edge, unproven or too few cases are never drawn; the Guide tab lists all seventeen with their
+evidence. The triangle is the owner's choice over the earlier "never arrows" rule, which still holds for
+earnings badges. The per-stock figure is what happened, not a forecast, and the card says both that and the
+all-stock result.
 

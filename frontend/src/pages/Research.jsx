@@ -4,7 +4,9 @@ import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
-import { signalMarkers as markersFor, signalsForListing } from '../lib/signals'
+import { candleMarks, momentumBands } from '../lib/chartGuides'
+import { signalsForListing } from '../lib/signals'
+import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
 import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
@@ -24,6 +26,7 @@ import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
+import { useTradeRisk } from '../components/research/useTradeRisk'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 const TABS = [
@@ -108,11 +111,21 @@ export default function Research() {
     [positions, positionsReady, portfolioValue],
   )
   const chartSignals = useMemo(() => ({ stock: stockSignals, catalogue: signals }), [stockSignals, signals])
-  const chosenSignals = controls.signals
-  const signalMarkers = useMemo(
-    () => markersFor(stockSignals, chosenSignals, signals),
-    [stockSignals, chosenSignals, signals],
-  )
+  const [riskPct] = useTradeRisk()
+  const guides = useMemo(() => {
+    const shown = controls.guides
+    const plan = planFromPage({
+      bars: allBars, currency: details.data?.currency ?? position?.currency, note: note?.data, positions, position,
+      portfolioValue: tradePlan.portfolioValue, riskPct,
+    })
+    const signalled = stockSignals && signals?.length
+    return {
+      available: [...(signalled ? ['marks', 'momentum'] : []), ...(plan ? ['plan'] : [])],
+      marks: shown.marks ? candleMarks(stockSignals, signals, allBars) : [],
+      bands: shown.momentum ? momentumBands(stockSignals, signals) : [],
+      plan: shown.plan ? plan : null,
+    }
+  }, [controls.guides, allBars, details.data?.currency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, stockSignals, signals])
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
@@ -176,8 +189,7 @@ export default function Research() {
       symbol={symbol}
       unresolved={!instrument && !chart.isLoading}
       earningsMarkers={earningsMarkers}
-      signals={stockSignals ? signals : undefined}
-      signalMarkers={signalMarkers}
+      guides={guides}
       futureDates={futureDates}
       lines={priceLines.lines}
       onMoveLine={priceLines.move}
@@ -251,7 +263,7 @@ export default function Research() {
           {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
           {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
           {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
-          {shown('guide') ? <GuideTab /> : null}
+          {shown('guide') ? <GuideTab signals={signals} /> : null}
         </div>
         <div className="min-w-0 min-[1440px]:col-span-3">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />

@@ -167,17 +167,41 @@ describe('Research', () => {
     events: { volume_thrust: [bars.at(-3).date] },
   })
 
-  it('offers a Signals menu and draws a marker only for a signal that was switched on', async () => {
+  it('marks a signal that held up on its candle with what followed, and the Guides menu switches it off', async () => {
     queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
     queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals() })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.queryByTestId('signal-marker')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /Signals/ }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Volume thrust/ }))
-    expect(screen.getAllByTestId('signal-marker')).toHaveLength(1)
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).signals).toEqual({ volume_thrust: true })
+    const marks = screen.getAllByTestId('candle-mark')
+    expect(marks).toHaveLength(1)
+    expect(marks[0]).toHaveAttribute('aria-label', expect.stringMatching(/^Volume thrust on .+ The stock moved \+.+% in 2 sessions so far\.$/))
+    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Signals on the candles/ }))
+    expect(screen.queryByTestId('candle-mark')).not.toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.marks).toBe(false)
+  })
+
+  it('shades the periods a stock was a momentum leader', () => {
+    const leader = { ...thrust, key: 'momentum_top', label: 'Momentum leader', kind: 'rank' }
+    queries.useSignals.mockReturnValue({ ...idle, data: [leader] })
+    queries.useStockSignals.mockReturnValue({
+      ...idle, data: { ...stockSignals(), events: {}, runs: { momentum_top: [[bars.at(-12).date, bars.at(-4).date]] } },
+    })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getAllByTestId('momentum-band')).toHaveLength(1)
+  })
+
+  it('draws the trade plan on the chart from the latest close', () => {
+    const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000' }
+    queries.usePortfolioSummary.mockReturnValue({ ...idle, data: { total_value: '100000' } })
+    queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: true })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByTestId('trade-plan-box')).toHaveTextContent(/Stop .+ at risk/)
   })
 
   it('lists the active signals with their evidence on the Overview', () => {

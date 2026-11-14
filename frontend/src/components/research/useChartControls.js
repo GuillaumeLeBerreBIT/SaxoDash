@@ -34,10 +34,6 @@ export function useChartControls() {
     setType: (next) => setPrefs((p) => ({ ...p, type: next })),
     toggleOverlay: (key) => setPrefs((p) => ({ ...p, overlays: { ...p.overlays, [key]: !p.overlays[key] } })),
     togglePane: (key) => setPrefs((p) => ({ ...p, panes: { ...p.panes, [key]: !p.panes[key] } })),
-    toggleSignal: (key) =>
-      setPrefs((p) => {
-        const { [key]: chosen, ...rest } = p.signals
-        return { ...p, signals: chosen ? rest : { ...rest, [key]: true } }
-      }),
+    toggleGuide: (key) => setPrefs((p) => ({ ...p, guides: { ...p.guides, [key]: !p.guides[key] } })),
   }
 }

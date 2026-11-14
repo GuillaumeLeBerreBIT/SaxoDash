@@ -43,21 +43,6 @@ export const signalsForListing = (stockSignals, uic) => {
   return Number(stockSignals.uic) === Number(uic) ? stockSignals : null
 }
 
-export function signalMarkers(stockSignals, chosen, signals) {
-  if (!stockSignals || !signals) return []
-  const markers = []
-  signals.forEach((signal, order) => {
-    if (!chosen?.[signal.key]) return
-    for (const date of stockSignals.events?.[signal.key] ?? []) {
-      markers.push({
-        date, key: signal.key, code: signal.code, label: signal.label, description: signal.description,
-        grade: gradeOf(signal), evidence: evidenceLine(signal), order,
-      })
-    }
-  })
-  return markers.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order))
-}
-
 export function activeSignals(stockSignals, signals) {
   if (!stockSignals || !signals) return []
   const active = new Set(stockSignals.active ?? [])
@@ -69,36 +54,6 @@ export function activeSignals(stockSignals, signals) {
 }
 
 export const signalGrade = gradeOf
-
-export function placeSignalMarkers(markers, data) {
-  if (!markers.length || !data.length) return []
-  const indexByDate = new Map(data.map((bar, index) => [bar.date, index]))
-  const byDate = new Map()
-  for (const marker of markers) {
-    const index = indexByDate.get(marker.date)
-    if (index == null) continue
-    byDate.set(marker.date, [...(byDate.get(marker.date) ?? []), { ...marker, index }])
-  }
-  return [...byDate.values()].flatMap((group) =>
-    group.map((marker, slot) => ({ ...marker, slot, of: group.length })),
-  )
-}
-
-const KEEP_ORDER = ['supported', 'against', 'unproven', 'no_edge', 'too_few']
-
-export function spreadSignalMarkers(placed, xAt, width) {
-  const ranked = placed
-    .map((marker) => ({ ...marker, x: xAt(marker.index) + (marker.slot - (marker.of - 1) / 2) * width }))
-    .sort(
-      (a, b) =>
-        KEEP_ORDER.indexOf(a.grade) - KEEP_ORDER.indexOf(b.grade) || b.index - a.index || a.slot - b.slot,
-    )
-  const kept = []
-  for (const marker of ranked) {
-    if (kept.every((other) => Math.abs(other.x - marker.x) >= width)) kept.push(marker)
-  }
-  return kept.sort((a, b) => a.x - b.x)
-}
 
 export function standingRows(context) {
   if (!context) return []

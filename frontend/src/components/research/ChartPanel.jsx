@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Activity, CandlestickChart, Maximize2, Sigma } from 'lucide-react'
+import { CandlestickChart, Crosshair, Maximize2, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card } from '../ui'
 import { Menu } from './menu'
-import { ChartTypeMenuItems, IndicatorMenuItems, SignalMenuItems } from './chartMenus'
+import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
@@ -22,8 +22,7 @@ export default function ChartPanel({
   symbol,
   unresolved,
   earningsMarkers = [],
-  signals,
-  signalMarkers,
+  guides,
   futureDates,
   lines,
   onMoveLine,
@@ -35,7 +34,6 @@ export default function ChartPanel({
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
-  const chosenSignals = Object.keys(controls.signals ?? {}).length
 
   return (
     <Card padding={false}>
@@ -52,9 +50,9 @@ export default function ChartPanel({
           <IndicatorMenuItems controls={controls} />
         </Menu>
 
-        {signals?.length ? (
-          <Menu label={`Signals${chosenSignals ? ` · ${chosenSignals}` : ''}`} icon={Activity} width={360}>
-            <SignalMenuItems controls={controls} signals={signals} />
+        {guides?.available.length ? (
+          <Menu label="Guides" icon={Crosshair} width={300}>
+            <GuideMenuItems controls={controls} available={guides.available} />
           </Menu>
         ) : null}
 
@@ -87,7 +85,9 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
-        signalMarkers={signalMarkers}
+        candleMarks={guides?.marks}
+        momentumBands={guides?.bands}
+        tradePlan={guides?.plan}
         futureDates={futureDates}
         lines={lines}
         onMoveLine={onMoveLine}

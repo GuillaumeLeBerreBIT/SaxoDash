@@ -9,7 +9,7 @@ export const DEFAULT_CHART_PREFS = {
   type: 'candles',
   overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
   panes: { volume: true, rsi: false, macd: false },
-  signals: {},
+  guides: { marks: true, momentum: true, plan: true },
 }
 
 function sanitizeToggles(raw, defaults) {
@@ -22,15 +22,6 @@ function sanitizeToggles(raw, defaults) {
   )
 }
 
-const SIGNAL_KEY = /^[a-z0-9_]{1,40}$/
-
-function sanitizeSignals(raw) {
-  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
-  return Object.fromEntries(
-    Object.entries(source).filter(([key, value]) => SIGNAL_KEY.test(key) && value === true),
-  )
-}
-
 export function sanitizeChartPrefs(raw, defaults = DEFAULT_CHART_PREFS) {
   const source = raw && typeof raw === 'object' ? raw : {}
   return {
@@ -38,7 +29,7 @@ export function sanitizeChartPrefs(raw, defaults = DEFAULT_CHART_PREFS) {
     type: CHART_TYPE_KEYS.has(source.type) ? source.type : defaults.type,
     overlays: sanitizeToggles(source.overlays, defaults.overlays),
     panes: sanitizeToggles(source.panes, defaults.panes),
-    signals: sanitizeSignals(source.signals),
+    guides: sanitizeToggles(source.guides, defaults.guides),
   }
 }
 
@@ -50,9 +41,9 @@ export function readChartPrefs() {
   }
 }
 
-export function writeChartPrefs({ range, type, overlays, panes, signals = {} }) {
+export function writeChartPrefs({ range, type, overlays, panes, guides }) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ range, type, overlays, panes, signals }))
+    localStorage.setItem(KEY, JSON.stringify({ range, type, overlays, panes, guides }))
     return true
   } catch {
     return false
