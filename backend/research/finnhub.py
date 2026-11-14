@@ -219,7 +219,7 @@ NEWS_MAX_ITEMS = 30
 PEERS_TTL = 86400  # peer sets rarely change; same cadence as fundamentals
 MAX_PEERS = 5
 
-CACHE_V = 'v7'  # bump when the shaped fundamentals payload changes shape
+CACHE_V = 'v8'  # bump when the shaped fundamentals payload changes shape
 
 
 def _cache_key(symbol):
@@ -233,7 +233,7 @@ def _metric(financials, key):
 
 
 SCREENER_METRICS = {
-    'pe': 'peNormalizedAnnual',
+    'pe': 'peTTM',
     'forward_pe': 'forwardPE',
     'roe': 'roeTTM',
     'net_margin': 'netProfitMarginTTM',
@@ -423,7 +423,7 @@ def _annual_results(annual_rows):
 
 
 def to_fundamentals(profile, financials, recommendations, earnings, annual_rows=None):
-    pe = _metric(financials, 'peNormalizedAnnual')
+    pe = _metric(financials, 'peTTM')
     eps_growth_5y = _metric(financials, 'epsGrowth5Y')
 
     shaped = {

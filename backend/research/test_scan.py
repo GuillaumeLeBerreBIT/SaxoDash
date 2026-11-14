@@ -19,7 +19,7 @@ BARS = [
 ]
 USER = mock.sentinel.user
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
-FINANCIALS = {'metric': {'peNormalizedAnnual': 20.0, 'roeTTM': 25.0}}
+FINANCIALS = {'metric': {'peTTM': 20.0, 'roeTTM': 25.0}}
 
 
 def weekly_bars(count):
@@ -35,7 +35,7 @@ def quarterly_eps_points():
 
 
 FINANCIALS_WITH_SERIES = {
-    'metric': {'peNormalizedAnnual': 20.0},
+    'metric': {'peTTM': 20.0},
     'series': {
         'annual': {'roe': [{'period': '2023-12-31', 'v': 0.312}], 'eps': [{'period': '2023-12-31', 'v': 6.1}]},
         'quarterly': {'eps': quarterly_eps_points()},
@@ -142,7 +142,7 @@ class ScanUniverseTest(TestCase):
         chart.assert_any_call(211, 'Stock', scan.DAILY_HORIZON, scan.HISTORY_BARS, user=USER)
 
     def test_stores_revenue_growth_and_payout_from_the_same_metrics_call(self, search, chart, financials):
-        financials.return_value = {'metric': {'peNormalizedAnnual': 20.0, 'revenueGrowth5Y': 12.5, 'payoutRatioTTM': 40.0}}
+        financials.return_value = {'metric': {'peTTM': 20.0, 'revenueGrowth5Y': 12.5, 'payoutRatioTTM': 40.0}}
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.run_scan()
         aapl = ScreenerRow.objects.get(ticker='AAPL')

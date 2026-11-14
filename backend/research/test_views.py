@@ -31,7 +31,7 @@ SAMPLE_PROFILE = {
     'shareOutstanding': 15_200.0,
 }
 
-SAMPLE_FINANCIALS = {'metric': {'peNormalizedAnnual': 32.1}}
+SAMPLE_FINANCIALS = {'metric': {'peTTM': 32.1}}
 
 SAMPLE_RECOMMENDATION = [
     {'buy': 20, 'hold': 8, 'period': '2026-09-01', 'sell': 1, 'strongBuy': 12, 'strongSell': 0},

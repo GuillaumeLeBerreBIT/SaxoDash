@@ -239,7 +239,10 @@ endpoint, `GET /api/research/fundamentals/<symbol>/`, one 24h cache entry per
 symbol, no background sync. It always answers 200 with an `available`
 boolean rather than a status code: 409 already means "not connected to
 Saxo" and reusing it here would blur that. A metric the free tier doesn't
-return is omitted, never guessed or defaulted to zero. `FundamentalsView`
+return is omitted, never guessed or defaulted to zero. The P/E shown everywhere (`pe_ratio`, `ScreenerRow.pe`) is
+Finnhub's `peTTM`, price over the last four quarters' earnings: `peNormalizedAnnual` divides by the last
+fiscal year's EPS, which for a fast grower was 60% above the trailing figure the verdict uses (NVDA 33.4
+against 20.8) and contradicted the EPS (TTM) printed beside it. `FundamentalsView`
 just uppercases whatever ticker the URL hands it - that only works because
 callers already pass a bare, US-listed symbol; the frontend decides who may
 ask (see "One module decides who gets US company data" below). Market
