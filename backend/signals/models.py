@@ -31,6 +31,7 @@ class StockSignals(models.Model):
     as_of = models.DateField(null=True, blank=True)
     active = models.JSONField(default=list)
     events = models.JSONField(default=dict)
+    context = models.JSONField(default=dict)
     computed_at = models.DateTimeField(auto_now=True)
 
     class Meta:

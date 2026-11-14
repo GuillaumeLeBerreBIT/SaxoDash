@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalMarkers, signalsForListing, spreadSignalMarkers,
+  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalMarkers, signalsForListing, spreadSignalMarkers, standingRows,
 } from './signals'
 
 const figures = (mean_excess, cases) => ({ 60: { mean_excess, cases }, 20: { mean_excess: mean_excess / 3, cases } })
@@ -120,5 +120,23 @@ describe('spreadSignalMarkers', () => {
   it('keeps two signals of one day side by side', () => {
     const kept = spreadSignalMarkers([placed(3, 'no_edge', 'a', 0, 2), placed(3, 'no_edge', 'b', 1, 2)], xAt, 19)
     expect(kept.map((marker) => marker.x)).toEqual([20.5, 39.5])
+  })
+})
+
+describe('standingRows', () => {
+  it('words the distance from the high and the momentum with its rank', () => {
+    expect(standingRows({ below_high_pct: -12.5, momentum_pct: 40, momentum_rank_pct: 82 })).toEqual([
+      { key: 'high', label: 'Against its 1-year high', value: '-12.5%' },
+      { key: 'momentum', label: 'Momentum, 12 months skipping the last', value: '+40.0%', note: 'Ahead of 82% of index stocks' },
+    ])
+  })
+
+  it('says a stock is at its high, and leaves out what is unknown', () => {
+    expect(standingRows({ below_high_pct: 0, momentum_pct: null, momentum_rank_pct: null })).toEqual([
+      { key: 'high', label: 'Against its 1-year high', value: 'At the high' },
+    ])
+    expect(standingRows({ below_high_pct: null, momentum_pct: 5, momentum_rank_pct: null })[0].note).toBeNull()
+    expect(standingRows(undefined)).toEqual([])
+    expect(standingRows({})).toEqual([])
   })
 })

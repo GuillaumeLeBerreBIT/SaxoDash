@@ -1,3 +1,4 @@
+import { fmtPct } from './format'
 export const GRADE_ORDER = ['supported', 'no_edge', 'against', 'too_few']
 
 export const GRADE_WORDS = {
@@ -94,4 +95,26 @@ export function spreadSignalMarkers(placed, xAt, width) {
     if (kept.every((other) => Math.abs(other.x - marker.x) >= width)) kept.push(marker)
   }
   return kept.sort((a, b) => a.x - b.x)
+}
+
+export function standingRows(context) {
+  if (!context) return []
+  const { below_high_pct: below, momentum_pct: momentum, momentum_rank_pct: rank } = context
+  const rows = []
+  if (below != null) {
+    rows.push({
+      key: 'high',
+      label: 'Against its 1-year high',
+      value: below >= 0 ? 'At the high' : `${fmtPct(below, { decimals: 1 })}`,
+    })
+  }
+  if (momentum != null) {
+    rows.push({
+      key: 'momentum',
+      label: 'Momentum, 12 months skipping the last',
+      value: fmtPct(momentum, { decimals: 1 }),
+      note: rank == null ? null : `Ahead of ${rank}% of index stocks`,
+    })
+  }
+  return rows
 }

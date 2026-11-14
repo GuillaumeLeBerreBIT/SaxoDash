@@ -12,7 +12,8 @@ from users.testing import make_user
 def stock_signals(ticker, universe=True, **fields):
     ScreenerRow.everything.create(ticker=ticker, name=ticker, indexes='sp500', in_universe=universe)
     defaults = {'uic': 211, 'as_of': date(2026, 11, 13), 'active': ['volume_thrust'],
-                'events': {'volume_thrust': ['2026-11-13']}}
+                'events': {'volume_thrust': ['2026-11-13']},
+                'context': {'below_high_pct': -12.5, 'momentum_pct': 40.0, 'momentum_rank_pct': 82}}
     return StockSignals.objects.create(ticker=ticker, **{**defaults, **fields})
 
 
@@ -69,6 +70,7 @@ class SignalApiTests(APITestCase):
         self.assertEqual(self.client.get('/api/signals/AAPL/').json(), {'stock_signals': {
             'ticker': 'AAPL', 'uic': 211, 'as_of': '2026-11-13',
             'active': ['volume_thrust'], 'events': {'volume_thrust': ['2026-11-13']},
+            'context': {'below_high_pct': -12.5, 'momentum_pct': 40.0, 'momentum_rank_pct': 82},
         }})
 
     def test_a_saxo_symbol_in_any_case_is_read_as_its_ticker(self):

@@ -29,6 +29,19 @@ describe('SetupCard', () => {
     expect(within(items[1]).getByText('No edge found in 4,352 cases')).toBeInTheDocument()
   })
 
+  it('shows where the price stands when the figures exist', () => {
+    const standing = { below_high_pct: -12.5, momentum_pct: 40, momentum_rank_pct: 82 }
+    render(<SetupCard stockSignals={{ ...stock([]), context: standing }} signals={SIGNALS} />)
+    const block = screen.getByTestId('price-standing')
+    expect(within(block).getByText('-12.5%')).toBeInTheDocument()
+    expect(within(block).getByText('Ahead of 82% of index stocks')).toBeInTheDocument()
+  })
+
+  it('leaves the standing out when there are no figures', () => {
+    render(<SetupCard stockSignals={stock([])} signals={SIGNALS} />)
+    expect(screen.queryByTestId('price-standing')).not.toBeInTheDocument()
+  })
+
   it('says so when nothing is active', () => {
     render(<SetupCard stockSignals={stock([])} signals={SIGNALS} />)
     expect(screen.getByText('No signals active on the latest session')).toBeInTheDocument()

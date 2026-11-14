@@ -47,5 +47,5 @@ class StockSignalsView(APIView):
             return Response({'stock_signals': None})
         return Response({'stock_signals': {
             'ticker': found.ticker, 'uic': found.uic, 'as_of': found.as_of,
-            'active': found.active, 'events': found.events,
+            'active': found.active, 'events': found.events, 'context': found.context,
         }})
