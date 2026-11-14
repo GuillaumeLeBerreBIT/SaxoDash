@@ -14,7 +14,7 @@ SAMPLE_PROFILE = {
 
 SAMPLE_FINANCIALS = {
     'metric': {
-        'peNormalizedAnnual': 32.1,
+        'peTTM': 32.1,
         'psTTM': 8.4,
         'pbAnnual': 48.2,
         'epsGrowth5Y': 12.5,
@@ -86,7 +86,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertAlmostEqual(result['peg_ratio'], 32.1 / 12.5, places=2)
 
     def test_a_metric_the_free_tier_does_not_return_is_none_not_zero(self):
-        thin_financials = {'metric': {'peNormalizedAnnual': 32.1}}
+        thin_financials = {'metric': {'peTTM': 32.1}}
 
         result = finnhub.to_fundamentals(SAMPLE_PROFILE, thin_financials, [], [])
 
@@ -129,9 +129,24 @@ class FundamentalsShapingTest(TestCase):
         self.assertEqual(result['interest_coverage'], 622.5)
         self.assertEqual(result['quick_ratio'], 0.93)
 
+    def test_pe_is_the_trailing_twelve_month_figure_not_last_fiscal_years(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, {'metric': {'peTTM': 20.77, 'peNormalizedAnnual': 33.36, 'epsGrowth5Y': 10.0}},
+            SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS,
+        )
+        self.assertEqual(result['pe_ratio'], 20.77)
+        self.assertEqual(result['peg_ratio'], 2.08)
+
+    def test_pe_is_absent_when_only_the_annual_figure_exists(self):
+        result = finnhub.to_fundamentals(
+            SAMPLE_PROFILE, {'metric': {'peNormalizedAnnual': 33.36}},
+            SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS,
+        )
+        self.assertIsNone(result['pe_ratio'])
+
     def test_growth_and_leverage_fields_absent_from_the_free_tier_are_none(self):
         result = finnhub.to_fundamentals(
-            SAMPLE_PROFILE, {'metric': {'peNormalizedAnnual': 32.1}},
+            SAMPLE_PROFILE, {'metric': {'peTTM': 32.1}},
             SAMPLE_RECOMMENDATION, SAMPLE_EARNINGS,
         )
         self.assertIsNone(result['revenue_growth_ttm_yoy'])
@@ -139,7 +154,7 @@ class FundamentalsShapingTest(TestCase):
         self.assertIsNone(result['interest_coverage'])
 
     def test_cache_key_carries_the_shape_version(self):
-        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v7:AAPL')
+        self.assertEqual(finnhub._cache_key('AAPL'), 'research:fundamentals:v8:AAPL')
 
 
 SAMPLE_SERIES = {
@@ -339,7 +354,7 @@ class CashFlowTrendRemovedTest(TestCase):
 class ScreenerFundamentalsTest(SimpleTestCase):
     def test_maps_every_screener_metric(self):
         financials = {'metric': {
-            'peNormalizedAnnual': 24.5, 'forwardPE': 21.0, 'roeTTM': 31.2,
+            'peTTM': 24.5, 'forwardPE': 21.0, 'roeTTM': 31.2,
             'netProfitMarginTTM': 18.4, 'epsGrowth5Y': 12.0,
             'totalDebt/totalEquityAnnual': 0.8, 'dividendYieldIndicatedAnnual': 1.1,
             'marketCapitalization': 250000.0,
@@ -356,8 +371,12 @@ class ScreenerFundamentalsTest(SimpleTestCase):
         self.assertEqual(shaped['revenue_growth_5y'], 7.75)
         self.assertEqual(shaped['payout_ratio'], 77.24)
 
+    def test_screener_pe_is_the_trailing_twelve_month_figure(self):
+        shaped = finnhub.to_screener_fundamentals({'metric': {'peTTM': 20.77, 'peNormalizedAnnual': 33.36}})
+        self.assertEqual(shaped['pe'], 20.77)
+
     def test_missing_metrics_are_null_not_zero(self):
-        shaped = finnhub.to_screener_fundamentals({'metric': {'peNormalizedAnnual': 10.0}})
+        shaped = finnhub.to_screener_fundamentals({'metric': {'peTTM': 10.0}})
         self.assertEqual(shaped['pe'], 10.0)
         self.assertIsNone(shaped['roe'])
         self.assertIsNone(shaped['market_cap'])
