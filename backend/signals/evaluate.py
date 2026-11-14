@@ -46,10 +46,12 @@ def grade(cases, ci_low, ci_high, first_half, second_half):
     return NO_EDGE
 
 
-def _momentum_leaders(series_by_ticker):
+def _momentum_leaders(series_by_ticker, universe):
     values = {ticker: definitions.momentum(series) for ticker, series in series_by_ticker.items()}
     by_date = defaultdict(lambda: array('d'))
     for ticker, series in series_by_ticker.items():
+        if universe is not None and ticker not in universe:
+            continue
         for i, value in enumerate(values[ticker]):
             if value is not None:
                 by_date[series.dates[i]].append(value)
@@ -68,8 +70,8 @@ def _momentum_leaders(series_by_ticker):
     return leaders
 
 
-def flags_by_stock(series_by_ticker):
-    leaders = _momentum_leaders(series_by_ticker)
+def flags_by_stock(series_by_ticker, universe=None):
+    leaders = _momentum_leaders(series_by_ticker, universe)
     return {
         ticker: {
             **{key: bytearray(marked) for key, marked in definitions.detect(series).items()},

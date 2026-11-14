@@ -176,3 +176,17 @@ class MomentumLeadersTest(SimpleTestCase):
         stocks = {f'S{n}': flat_series(300) for n in range(7)}
         flags = evaluate.flags_by_stock(stocks)
         self.assertFalse(any(any(flags[ticker]['momentum_top']) for ticker in stocks))
+
+    def test_only_index_stocks_set_the_cutoff_and_an_extra_is_judged_against_it(self):
+        def rising(rate):
+            series = flat_series(300)
+            for i in range(300):
+                series.closes[i] = 100 * (1 + rate) ** i
+            return series
+
+        stocks = {f'S{n}': rising(0.001 * (n + 1)) for n in range(8)}
+        extras = {f'X{n}': rising(0.02 + 0.001 * n) for n in range(8)}
+        flags = evaluate.flags_by_stock({**stocks, **extras}, universe=set(stocks))
+        leaders = sorted(ticker for ticker in stocks if flags[ticker]['momentum_top'][299])
+        self.assertEqual(leaders, ['S6', 'S7'])
+        self.assertTrue(all(flags[ticker]['momentum_top'][299] for ticker in extras))

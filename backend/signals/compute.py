@@ -96,8 +96,8 @@ def run():
     StockSignals.objects.exclude(ticker__in=known).delete()
     if not series_by_ticker:
         return result
-    flags = evaluate.flags_by_stock(series_by_ticker)
     universe = {ticker: series for ticker, series in series_by_ticker.items() if rows[ticker].in_universe}
+    flags = evaluate.flags_by_stock(series_by_ticker, universe=set(universe))
     with transaction.atomic():
         _write_scores(evaluate.score(universe, flags))
     standings = {ticker: context.standing(series) for ticker, series in series_by_ticker.items()}
