@@ -779,3 +779,12 @@ shown with its figures and the reason. `no_edge` and `against` stand, since the 
 favour. The Setup card also shows where the price stands (`StockSignals.context`: distance below the 1-year
 high, 12-1 momentum and the share of index stocks it is ahead of), as plain figures with no grade.
 
+**The Trade plan card is arithmetic on the user's own figures, not a prediction.** `lib/tradePlan.js` is
+the only place it is computed, from what the Research page already fetched: the stop is the note's
+`stop_price` when it is below the latest close, else two 14-session average true ranges (Wilder) below it;
+reward-to-risk appears only when the note has a target above the close; the size is the share count that
+loses the chosen share of the portfolio (0.5, 1 or 2%, remembered per browser) at the stop, converted with
+the `fx_rate` of a held position in the same currency, and never past `WEIGHT_CAP_PCT` counting what is
+already held. Without a portfolio value or an exchange rate the size is left out rather than guessed. A
+report within ten days adds a warning, because a stop does not protect against a gap. No request is added.
+

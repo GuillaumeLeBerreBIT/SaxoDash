@@ -1,6 +1,6 @@
 # Chart signals: evidence and roadmap
 
-Date: 2026-11-14. Status: approved. Item 1 is built (PR #53); item 2 is built on `feat/deeper-history`.
+Date: 2026-11-14. Status: approved. Item 1 is built (PR #53). Built and stacked on it, not yet in a PR: item 2 (`feat/deeper-history`), the price-standing part of item 3 and the survivorship rule (`feat/entry-context`), and the stop and sizing part of item 5 (`feat/trade-plan`).
 
 This document records what was tested before any chart-analysis feature was designed, what the
 results mean, and the order of features that follows from them. Each feature below gets its own
@@ -75,7 +75,11 @@ lead with (RSI, MACD, moving-average crosses, engulfing, hammer) showed nothing.
 
 ### Limits of all three tests
 
-- One market period, mostly rising. No 2008, 2020 or 2022-style decline is in the sample.
+- One market period, mostly rising. No 2008, 2020 or 2022-style decline is in the sample. (Since
+  deeper history was built, the nightly scores do span 2004 to today; on 134 stocks the same three
+  signals held up at about half the size: gap up +2.6, volume thrust +1.4, momentum +1.2 points over
+  60 sessions. Deep pullback and gap down also cleared the test there, which is survivorship: see
+  the `unproven` grade.)
 - Today's index members only, so companies that fell out are missing.
 - Twenty signals were tried, so one or two would look reliable by chance. The ones that held up
   are trusted more because independent research agrees, not because of this sample alone.
@@ -114,18 +118,20 @@ feature (patterns, scanners, ML) plugs into.
    split-adjusted. `research/backfill.py` pages each stock back to about 5,900 bars (early 2003),
    150 stocks a night; the scan merges instead of overwriting and drops stored history when a split
    restates it. Scores now span 2008, 2020 and 2022. Still today's index members only.
-3. **Value range and entry checklist.** The cheap/expensive price range drawn through time from
-   P/E percentiles known at each date, stepping on the real report day (EDGAR dates the app
-   already reads). A sidebar checklist: quality, valuation, percent below the 1-year high,
-   momentum rank, active signals, next earnings date, portfolio weight against the 15% cap. No
-   line is called a buy zone.
+3. **Value range and entry checklist.** Built so far: the Setup card shows the distance below the
+   1-year high, 12-1 momentum and its rank among index stocks, beside the verdict card (quality,
+   valuation, weight against the cap) and the next-earnings card. Not built: the cheap/expensive
+   price range drawn through time. It must use P/E percentiles known at each date, stepping on the
+   real report day (EDGAR dates the app already reads), and test 2 found no reliable edge in it, so
+   it would be context, not a signal. No line is called a buy zone.
 4. **Earnings drift.** The gap-on-volume signal is a proxy for earnings. Use the real thing:
    surprise against the estimate, report day and first-session reaction, stored nightly for the
    universe (one Finnhub earnings call per symbol, spread across the week to stay inside the
    60-a-minute key), scored in the Signal Lab like any other signal.
-5. **Risk tools for swing trades.** Average-true-range stop distance, position size from a
-   chosen risk per trade and the weight cap, and a risk-to-reward ruler on the chart. This is
-   where chart analysis helps most reliably: sizing and exits, not prediction.
+5. **Risk tools for swing trades.** Built: the Trade plan card (`lib/tradePlan.js`): stop from the
+   note or two average true ranges, reward-to-risk against the note's target, position size from a
+   chosen risk per trade held to the weight cap, and a warning when a report is within ten days.
+   Not built: a risk-to-reward ruler drawn on the chart.
 6. **Discover shelves from signals.** "Strong, cheap and in the momentum top quarter", "High
    volume thrust this week", each shelf showing its signal's grade.
 7. **Live track record for signals.** Log each supported signal when it fires and score it

@@ -8,6 +8,7 @@ import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
 import { Card, Move, Tile } from '../ui'
 import SetupCard from '../signals/SetupCard'
+import TradePlanCard from './TradePlanCard'
 import VerdictCard from '../verdicts/VerdictCard'
 import AnalystRatingCard from './AnalystRatingCard'
 import CapitalStructureCard from './CapitalStructureCard'
@@ -187,6 +188,7 @@ export default function OverviewTab({
   fundamentals,
   verdict,
   chartSignals,
+  tradePlan,
   note,
   onSaveNote,
   onMarkReviewed,
@@ -236,6 +238,15 @@ export default function OverviewTab({
         <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
           {rail}
           <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} />
+          <TradePlanCard
+            bars={allBars}
+            currency={details?.currency ?? position?.currency}
+            note={note?.data}
+            position={position}
+            positions={tradePlan?.positions}
+            portfolioValue={tradePlan?.portfolioValue}
+            nextEarnings={earnings?.data?.available ? earnings.data.next : null}
+          />
           {company && <AnalystRatingCard fundamentals={company} />}
           {signals}
           {company && <CapitalStructureCard fundamentals={company} />}

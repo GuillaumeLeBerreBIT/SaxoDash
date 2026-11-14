@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 
-import { useFundamentals, useMarkReviewedMutation, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
+import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { signalMarkers as markersFor, signalsForListing } from '../lib/signals'
@@ -102,6 +102,8 @@ export default function Research() {
     () => signalsForListing(stockSignalsAnswer, instrument?.uic),
     [stockSignalsAnswer, instrument?.uic],
   )
+  const portfolioValue = usePortfolioSummary()?.data?.total_value
+  const tradePlan = useMemo(() => ({ positions, portfolioValue }), [positions, portfolioValue])
   const chartSignals = useMemo(() => ({ stock: stockSignals, catalogue: signals }), [stockSignals, signals])
   const chosenSignals = controls.signals
   const signalMarkers = useMemo(
@@ -200,6 +202,7 @@ export default function Research() {
           fundamentals={fundamentals}
           verdict={verdict}
           chartSignals={chartSignals}
+          tradePlan={tradePlan}
           note={note}
           onSaveNote={(patch) => noteMutation.mutate(patch)}
           onMarkReviewed={() => reviewMutation.mutate()}
