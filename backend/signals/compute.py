@@ -40,7 +40,7 @@ def _series(stored):
 
 def _load(result):
     series_by_ticker, rows = {}, {}
-    for stored in DailyBars.objects.select_related('row'):
+    for stored in DailyBars.objects.select_related('row').iterator(chunk_size=20):
         ticker = stored.row.ticker
         try:
             series = _series(stored)

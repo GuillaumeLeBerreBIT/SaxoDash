@@ -1,3 +1,5 @@
+import sys
+from array import array
 from dataclasses import dataclass
 
 
@@ -16,5 +18,9 @@ class Series:
 
 def from_bars(bars):
     columns = list(zip(*bars)) if bars else [(), (), (), (), (), ()]
-    dates, opens, highs, lows, closes, volumes = (list(column) for column in columns)
-    return Series(dates, opens, highs, lows, closes, [volume or 0 for volume in volumes])
+    dates, opens, highs, lows, closes, volumes = columns
+    return Series(
+        [sys.intern(day) for day in dates],
+        *(array('d', column) for column in (opens, highs, lows, closes)),
+        array('d', [volume or 0 for volume in volumes]),
+    )

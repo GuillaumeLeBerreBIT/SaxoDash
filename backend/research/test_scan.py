@@ -138,13 +138,25 @@ class ScanUniverseTest(TestCase):
         self.assertEqual(stored[0], [BARS[0]['date'], 100.0, 101.0, 99.0, 100.0, 1_000_000])
         self.assertEqual(stored[-1][0], BARS[-1]['date'])
 
-    def test_a_second_scan_replaces_the_stored_bars(self, search, chart, financials):
+    def test_a_second_scan_keeps_the_older_bars_it_no_longer_fetches(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.run_scan()
+        DailyBars.objects.update(history_complete=True)
         chart.return_value = BARS[10:]
         self.run_scan()
         self.assertEqual(DailyBars.objects.count(), 2)
-        self.assertEqual(len(ScreenerRow.objects.get(ticker='AAPL').daily_bars.bars), 250)
+        daily = ScreenerRow.objects.get(ticker='AAPL').daily_bars
+        self.assertEqual((len(daily.bars), daily.history_complete), (260, True))
+
+    def test_restated_prices_replace_the_stored_bars_and_reopen_the_history(self, search, chart, financials):
+        self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
+        self.run_scan()
+        DailyBars.objects.update(history_complete=True)
+        chart.return_value = [{**bar, 'close': bar['close'] / 2} for bar in BARS[10:]]
+        self.run_scan()
+        daily = ScreenerRow.objects.get(ticker='AAPL').daily_bars
+        self.assertEqual((len(daily.bars), daily.history_complete), (250, False))
+        self.assertEqual(daily.bars[0][4], BARS[10]['close'] / 2)
 
     def test_a_failed_chart_keeps_the_bars_it_had(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})

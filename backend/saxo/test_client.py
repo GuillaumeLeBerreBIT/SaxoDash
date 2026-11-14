@@ -178,6 +178,15 @@ class SaxoMarketDataClientTest(TestCase):
         self.assertNotIn('Time', params)
 
     @patch('saxo.client.requests.get')
+    def test_get_chart_asks_for_the_samples_up_to_a_time(self, mock_get):
+        mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
+
+        client.get_chart('token', 211, 'Stock', 1440, up_to='2022-02-03T00:00:00Z')
+
+        params = mock_get.call_args.kwargs['params']
+        self.assertEqual((params['Time'], params['Mode'], params['Count']), ('2022-02-03T00:00:00Z', 'UpTo', 1200))
+
+    @patch('saxo.client.requests.get')
     def test_get_chart_clamps_count_to_saxos_ceiling(self, mock_get):
         mock_get.return_value = Mock(ok=True, json=lambda: {'Data': []})
 

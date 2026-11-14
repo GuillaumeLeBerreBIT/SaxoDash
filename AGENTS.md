@@ -755,3 +755,18 @@ zones were tested first and dropped: zone touches did worse than a same-sized di
 (`docs/superpowers/specs/2026-11-14-chart-signals-roadmap.md`). RSI in signals is the simple form, not the
 chart's Wilder form, and its description says so. An extra's signals are served only to a user who holds or
 watches it (`verdicts.visibility`).
+
+**Stored daily bars go back about 23 years, paged from Saxo once and merged nightly.** Saxo's chart
+endpoint returns at most 1,200 samples, but `Time` + `Mode=UpTo` pages further back (inclusive of the
+named day), and it serves a listing's whole life. `research/backfill.py` (23:30, `backfill_daily_bars`,
+owner's credential, 150 stocks a night; `manage.py backfill_bars` to run it now) pages each `DailyBars`
+row back until it holds `history.TARGET_BARS` (5,900) or the listing begins, then sets `history_complete`.
+The nightly scan no longer overwrites: `history.merged` keeps the older bars and takes the fresh 1,200.
+Saxo's bars are split-adjusted, so a split restates every past price: when a close the two sides share
+differs by more than 0.5%, the stored history is dropped, the fresh bars kept and the row backfilled again;
+an older page that disagrees with what is stored is not stored at all. Signal scores therefore include 2008,
+2020 and 2022, but still only today's index members: companies that failed or were dropped are absent, which
+flatters any signal that buys weakness (deep pullback, oversold) more than it flatters momentum. `signals`
+holds the series as `array('d')` and its flags as `bytearray`, because 520 stocks of Python floats and
+booleans is over a gigabyte.
+

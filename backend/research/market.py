@@ -132,6 +132,17 @@ def chart(uic, asset_type, horizon, count, *, user):
     return _cached(key, produce, CHART_TTL)
 
 
+def chart_before(uic, asset_type, horizon, day, *, user):
+    token = _access_token(user)
+
+    def produce():
+        samples = client.get_chart(token, uic, asset_type, horizon, client.CHART_MAX_COUNT, up_to=f'{day}T00:00:00Z')
+        return sorted((candle for candle in map(to_candle, samples) if candle), key=lambda c: c['date'])
+
+    key = _cache_key('chart_before', uic=uic, asset_type=asset_type, horizon=horizon, day=day)
+    return _cached(key, produce, CHART_TTL)
+
+
 def search(keywords, asset_types='Stock,Etf', *, user):
     token = _access_token(user)
 
