@@ -770,3 +770,12 @@ flatters any signal that buys weakness (deep pullback, oversold) more than it fl
 holds the series as `array('d')` and its flags as `bytearray`, because 520 stocks of Python floats and
 booleans is over a gigabyte.
 
+**A signal that buys weakness can never be graded "held up".** The scores only know today's index
+members, and with history back to 2003 that bias is large for anything that buys a falling price: on the
+deeper bars deep pullback and gap down both cleared the interval and the two-halves rule. `Signal.buys_weakness`
+marks them (gap down, deep pullback, death cross, RSI oversold, pullback in an uptrend, bullish engulfing,
+hammer), and `evaluate.score` turns a `supported` result for one into `unproven` ("Cannot be judged fairly"),
+shown with its figures and the reason. `no_edge` and `against` stand, since the bias runs in the signal's
+favour. The Setup card also shows where the price stands (`StockSignals.context`: distance below the 1-year
+high, 12-1 momentum and the share of index stocks it is ahead of), as plain figures with no grade.
+

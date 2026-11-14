@@ -16,6 +16,7 @@ MIN_RANKED_STOCKS = 8
 BOOTSTRAP_ROUNDS = 400
 BOOTSTRAP_SEED = 7
 SUPPORTED, NO_EDGE, AGAINST, TOO_FEW = 'supported', 'no_edge', 'against', 'too_few'
+UNPROVEN = 'unproven'
 
 
 @dataclass(frozen=True)
@@ -46,18 +47,24 @@ def grade(cases, ci_low, ci_high, first_half, second_half):
 
 
 def _momentum_leaders(series_by_ticker):
-    by_date = defaultdict(list)
+    values = {ticker: definitions.momentum(series) for ticker, series in series_by_ticker.items()}
+    by_date = defaultdict(lambda: array('d'))
     for ticker, series in series_by_ticker.items():
-        for i, value in enumerate(definitions.momentum(series)):
+        for i, value in enumerate(values[ticker]):
             if value is not None:
-                by_date[series.dates[i]].append((value, ticker, i))
-    leaders = {ticker: bytearray(len(series)) for ticker, series in series_by_ticker.items()}
-    for ranked in by_date.values():
-        if len(ranked) < MIN_RANKED_STOCKS:
-            continue
-        ranked.sort(reverse=True)
-        for _, ticker, i in ranked[:len(ranked) // 4]:
-            leaders[ticker][i] = True
+                by_date[series.dates[i]].append(value)
+    cutoffs = {}
+    for day, found in by_date.items():
+        leading = len(found) // 4
+        if len(found) >= MIN_RANKED_STOCKS and leading:
+            cutoffs[day] = sorted(found)[-leading]
+    leaders = {}
+    for ticker, series in series_by_ticker.items():
+        marked = bytearray(len(series))
+        for i, value in enumerate(values[ticker]):
+            if value is not None and value >= cutoffs.get(series.dates[i], math.inf):
+                marked[i] = 1
+        leaders[ticker] = marked
     return leaders
 
 
@@ -168,6 +175,8 @@ def score(series_by_ticker, flags):
     for signal in definitions.SIGNALS:
         decider = by_horizon[GRADE_HORIZON][signal.key]
         decided = grade(decider.cases, decider.ci_low, decider.ci_high, decider.first_half, decider.second_half)
+        if decided == SUPPORTED and signal.buys_weakness:
+            decided = UNPROVEN
         for horizon in HORIZONS:
             found = by_horizon[horizon][signal.key]
             out.append(Score(**{**found.__dict__, 'grade': decided}))

@@ -144,6 +144,20 @@ class ScoreTest(SimpleTestCase):
         self.assertEqual(found(scores, 'volume_thrust', 5).grade, 'supported')
 
 
+    def test_a_signal_that_buys_weakness_cannot_earn_supported_among_survivors(self):
+        stocks = market()
+        flags = no_flags(stocks)
+        bars = list(range(262, 530, 4))
+        for n in range(20):
+            ticker = f'S{n:02d}'
+            for i in bars:
+                stocks[ticker].closes[i + 60] = 100.0 + 5 + (n % 3)
+            mark(stocks, flags, ticker, 'deep_pullback', bars)
+        scores = evaluate.score(stocks, flags)
+        self.assertEqual(found(scores, 'deep_pullback', 60).grade, 'unproven')
+        self.assertGreater(found(scores, 'deep_pullback', 60).ci_low, 0)
+
+
 class MomentumLeadersTest(SimpleTestCase):
     def test_the_top_quarter_by_momentum_on_each_date(self):
         stocks = {}

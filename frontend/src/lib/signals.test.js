@@ -43,10 +43,25 @@ describe('evidenceLine', () => {
   })
 })
 
+describe('a signal that buys weakness', () => {
+  const PULLBACK = signal('deep_pullback', 'unproven', 0.0125, 70816, 'DP')
+
+  it('shows its result with the reason it cannot be trusted', () => {
+    expect(GRADE_WORDS.unproven).toBe('Cannot be judged fairly')
+    expect(evidenceLine(PULLBACK)).toBe(
+      '+1.3% against the average stock over 60 sessions, 70,816 cases. Companies that failed are missing from the test, which flatters a signal that buys weakness',
+    )
+  })
+
+  it('is listed after the signals that held up', () => {
+    expect(groupedByGrade([MACD, PULLBACK, MOMENTUM]).map((group) => group.grade)).toEqual(['supported', 'unproven', 'no_edge'])
+  })
+})
+
 describe('groupedByGrade', () => {
   it('orders groups by grade, drops empty ones and files ungraded signals under too few', () => {
     const groups = groupedByGrade(ALL)
-    expect(groups.map((group) => group.grade)).toEqual(GRADE_ORDER)
+    expect(groups.map((group) => group.grade)).toEqual(['supported', 'no_edge', 'against', 'too_few'])
     expect(groups[3].signals.map((item) => item.key)).toEqual(['rare', 'untested'])
     expect(groupedByGrade([MACD]).map((group) => group.grade)).toEqual(['no_edge'])
     expect(groupedByGrade(undefined)).toEqual([])

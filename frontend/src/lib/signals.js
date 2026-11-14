@@ -1,8 +1,9 @@
 import { fmtPct } from './format'
-export const GRADE_ORDER = ['supported', 'no_edge', 'against', 'too_few']
+export const GRADE_ORDER = ['supported', 'unproven', 'no_edge', 'against', 'too_few']
 
 export const GRADE_WORDS = {
   supported: 'Held up in testing',
+  unproven: 'Cannot be judged fairly',
   no_edge: 'No edge found',
   against: 'Worked against',
   too_few: 'Too few cases',
@@ -24,7 +25,9 @@ export function evidenceLine(signal, horizon = GRADE_HORIZON) {
   if (!signal.grade || !figures) return 'Not tested yet'
   if (signal.grade === 'too_few') return `Only ${count(figures.cases)} cases, too few to judge`
   if (signal.grade === 'no_edge' || figures.mean_excess == null) return `No edge found in ${count(figures.cases)} cases`
-  return `${signedPercent(figures.mean_excess)} against the average stock over ${horizon} sessions, ${count(figures.cases)} cases`
+  const result = `${signedPercent(figures.mean_excess)} against the average stock over ${horizon} sessions, ${count(figures.cases)} cases`
+  if (signal.grade === 'unproven') return `${result}. Companies that failed are missing from the test, which flatters a signal that buys weakness`
+  return result
 }
 
 export function groupedByGrade(signals) {
@@ -81,7 +84,7 @@ export function placeSignalMarkers(markers, data) {
   )
 }
 
-const KEEP_ORDER = ['supported', 'against', 'no_edge', 'too_few']
+const KEEP_ORDER = ['supported', 'against', 'unproven', 'no_edge', 'too_few']
 
 export function spreadSignalMarkers(placed, xAt, width) {
   const ranked = placed

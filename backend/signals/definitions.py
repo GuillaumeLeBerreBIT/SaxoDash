@@ -14,6 +14,7 @@ class Signal:
     label: str
     description: str
     kind: str
+    buys_weakness: bool = False
 
 
 SIGNALS = (
@@ -22,33 +23,33 @@ SIGNALS = (
     Signal('news_gap_up', 'GU', 'Gap up on heavy volume',
            'Opened more than 4% above the last close on at least twice the usual volume and held it.', EVENT),
     Signal('news_gap_down', 'GD', 'Gap down on heavy volume',
-           'Opened more than 4% below the last close on at least twice the usual volume.', EVENT),
+           'Opened more than 4% below the last close on at least twice the usual volume.', EVENT, buys_weakness=True),
     Signal('volume_thrust', 'VT', 'Volume thrust',
            'Closed more than 2% higher on at least twice the usual volume.', EVENT),
     Signal('new_high', 'NH', 'New 1-year high',
            'Closed above every high of the past year.', EVENT),
     Signal('deep_pullback', 'DP', 'Deep pullback',
-           'More than 20% below its highest price of the past year.', STATE),
+           'More than 20% below its highest price of the past year.', STATE, buys_weakness=True),
     Signal('above_ma200', 'A2', 'Above 200-day average',
            'The close is above the average close of the last 200 sessions.', STATE),
     Signal('golden_cross', 'GC', 'Golden cross',
            'The 50-day average moved above the 200-day average within the last five sessions.', EVENT),
     Signal('death_cross', 'DC', 'Death cross',
-           'The 50-day average moved below the 200-day average within the last five sessions.', EVENT),
+           'The 50-day average moved below the 200-day average within the last five sessions.', EVENT, buys_weakness=True),
     Signal('rsi_oversold', 'OS', 'RSI oversold',
-           'RSI (simple, 14 sessions) is below 30.', STATE),
+           'RSI (simple, 14 sessions) is below 30.', STATE, buys_weakness=True),
     Signal('rsi_overbought', 'OB', 'RSI overbought',
            'RSI (simple, 14 sessions) is above 70.', STATE),
     Signal('pullback_in_uptrend', 'PU', 'Pullback in an uptrend',
-           'Above the 200-day average with RSI (simple, 2 sessions) below 10.', EVENT),
+           'Above the 200-day average with RSI (simple, 2 sessions) below 10.', EVENT, buys_weakness=True),
     Signal('macd_cross_up', 'MC', 'MACD bullish cross',
            'MACD (12, 26) moved above its 9-session signal line.', EVENT),
     Signal('bullish_engulfing', 'BE', 'Bullish engulfing',
-           'After three falling closes, an up candle whose body covers the previous down candle.', EVENT),
+           'After three falling closes, an up candle whose body covers the previous down candle.', EVENT, buys_weakness=True),
     Signal('bearish_engulfing', 'SE', 'Bearish engulfing',
            'After three rising closes, a down candle whose body covers the previous up candle.', EVENT),
     Signal('hammer', 'HA', 'Hammer',
-           'After three falling closes, a small body with a long lower wick and almost no upper wick.', EVENT),
+           'After three falling closes, a small body with a long lower wick and almost no upper wick.', EVENT, buys_weakness=True),
     Signal('squeeze_breakout', 'SQ', 'Squeeze breakout',
            'Bollinger bands narrower than 6% of the price, and a close above the upper band.', EVENT),
 )

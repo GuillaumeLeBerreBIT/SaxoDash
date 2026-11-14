@@ -6,6 +6,7 @@ const GRADE_TONE = {
   supported: 'text-accent',
   against: 'text-warn-text',
   no_edge: 'text-ink-3',
+  unproven: 'text-ink-3',
   too_few: 'text-ink-3',
 }
 

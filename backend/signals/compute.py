@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 BAR_FIELDS = 6
 
 
+@dataclass(frozen=True)
+class Listing:
+    uic: int | None
+    in_universe: bool
+
+
 @dataclass
 class Result:
     written: int = 0
@@ -50,7 +56,7 @@ def _load(result):
             continue
         if len(series):
             series_by_ticker[ticker] = series
-            rows[ticker] = stored.row
+            rows[ticker] = Listing(stored.row.uic, stored.row.in_universe)
     return series_by_ticker, rows
 
 
