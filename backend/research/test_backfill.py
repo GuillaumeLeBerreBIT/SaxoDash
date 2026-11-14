@@ -93,3 +93,74 @@ class BackfillTest(TestCase):
         self.assertEqual(self.run_backfill(limit=1), backfill.Result(1, ()))
         self.assertTrue(DailyBars.objects.get(row__ticker='CCC').history_complete)
         self.assertFalse(DailyBars.objects.get(row__ticker='DDD').history_complete)
+
+    def test_a_scan_during_the_backfill_keeps_its_newer_bars(self, chart_before):
+        daily = self.daily('AAPL')
+        older = pages()
+        newest = [day(10200), 10.0, 11.0, 9.0, 112.0, 100]
+
+        def scan_meanwhile(*args, **kwargs):
+            DailyBars.objects.filter(pk=daily.pk).update(bars=[*stored(9000, 10200), newest])
+            return older(*args, **kwargs)
+
+        chart_before.side_effect = scan_meanwhile
+        self.assertEqual(self.run_backfill(), backfill.Result(1, ()))
+        daily.refresh_from_db()
+        self.assertEqual(daily.bars[-1], newest)
+        self.assertGreaterEqual(len(daily.bars), history.TARGET_BARS)
+        self.assertTrue(daily.history_complete)
+
+    def test_a_restatement_during_the_backfill_keeps_the_scans_bars_and_leaves_the_history_open(self, chart_before):
+        daily = self.daily('NVDA')
+        halved = [[bar[0], bar[1], bar[2], bar[3], bar[4] / 2, bar[5]] for bar in stored(9000, 10200)]
+        older = pages()
+
+        def split_meanwhile(*args, **kwargs):
+            DailyBars.objects.filter(pk=daily.pk).update(bars=halved)
+            return older(*args, **kwargs)
+
+        chart_before.side_effect = split_meanwhile
+        with self.assertLogs('research.backfill', level='WARNING'):
+            self.assertEqual(self.run_backfill(), backfill.Result(0, ('NVDA',)))
+        daily.refresh_from_db()
+        self.assertEqual((daily.bars, daily.history_complete), (halved, False))
+
+    def test_an_empty_page_leaves_the_history_open(self, chart_before):
+        chart_before.return_value = []
+        daily = self.daily('AAPL')
+        with self.assertLogs('research.backfill', level='WARNING'):
+            self.assertEqual(self.run_backfill(), backfill.Result(0, ('AAPL',)))
+        daily.refresh_from_db()
+        self.assertEqual((len(daily.bars), daily.history_complete), (1200, False))
+
+    def test_an_unreadable_page_fails_only_that_stock(self, chart_before):
+        self.daily('AAA')
+        self.daily('BBB')
+        good = pages()
+        bad_uic = ScreenerRow.objects.get(ticker='AAA').uic
+
+        def answer(uic, *args, **kwargs):
+            if uic == bad_uic:
+                raise ValueError("could not convert string to float: 'n/a'")
+            return good(uic, *args, **kwargs)
+
+        chart_before.side_effect = answer
+        with self.assertLogs('research.backfill', level='WARNING'):
+            self.assertEqual(self.run_backfill(), backfill.Result(1, ('AAA',)))
+
+    def test_a_stock_that_keeps_failing_goes_to_the_back_of_the_queue(self, chart_before):
+        self.daily('AAA')
+        self.daily('BBB')
+        good = pages()
+        bad_uic = ScreenerRow.objects.get(ticker='AAA').uic
+
+        def answer(uic, *args, **kwargs):
+            if uic == bad_uic:
+                raise ProviderError('502')
+            return good(uic, *args, **kwargs)
+
+        chart_before.side_effect = answer
+        with self.assertLogs('research.backfill', level='WARNING'):
+            self.assertEqual(self.run_backfill(limit=1), backfill.Result(0, ('AAA',)))
+        self.assertEqual(self.run_backfill(limit=1), backfill.Result(1, ()))
+        self.assertTrue(DailyBars.objects.get(row__ticker='BBB').history_complete)
