@@ -119,6 +119,10 @@ the signal description says "RSI (simple)".
    - `supported`: interval entirely above zero, and both halves above zero.
    - `against`: interval entirely below zero, and both halves below zero.
    - `no_edge`: everything else.
+   - `unproven` (added later): a `supported` result for a signal marked `buys_weakness` (gap down,
+     deep pullback, death cross, RSI oversold, pullback in an uptrend, bullish engulfing, hammer).
+     The sample holds only today's index members, which flatters buying a falling price, so such a
+     signal is shown with its figures as "Cannot be judged fairly", never as held up.
 
 The two-halves rule is the guard against one lucky stretch: twenty-odd signals are tested, so
 an interval alone would pass one of them by chance.
@@ -141,8 +145,9 @@ skipped and named in the run's detail; the rest are written. A stock that leaves
 - `GET /api/signals/` answers every signal: key, label, code, kind, description, grade, and per
   horizon the cases, stocks, mean excess, interval, positive share and both halves, plus the
   period covered. Empty scores (before the first run) give `grade: null`.
-- `GET /api/signals/<ticker>/` answers `{"stock_signals": {ticker, uic, as_of, active, events}}`, with
-  `null` inside for an unknown ticker or an extra the user neither holds nor watches.
+- `GET /api/signals/<ticker>/` answers `{"stock_signals": {ticker, uic, as_of, active, events, context}}`, with
+  `context` = `{below_high_pct, momentum_pct, momentum_rank_pct}` (rank: share of index stocks
+  with lower unrounded 12-1 momentum, floored), and `null` inside for an unknown ticker or an extra the user neither holds nor watches.
 
 Both need a signed-in user and read only the two tables.
 

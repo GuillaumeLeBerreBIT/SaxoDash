@@ -101,7 +101,9 @@ def run():
     with transaction.atomic():
         _write_scores(evaluate.score(universe, flags))
     standings = {ticker: context.standing(series) for ticker, series in series_by_ticker.items()}
-    ranks = context.ranked({ticker: found['momentum_pct'] for ticker, found in standings.items()}, set(universe))
+    ranks = context.ranked(
+        {ticker: context.latest_momentum(series) for ticker, series in series_by_ticker.items()}, set(universe),
+    )
     for ticker, series in series_by_ticker.items():
         try:
             with transaction.atomic():
