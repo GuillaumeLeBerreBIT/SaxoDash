@@ -80,6 +80,7 @@ export default function ChartCanvas({
   error,
   unresolved,
   earningsMarkers = [],
+  signalMarkers,
   futureDates = NO_DATES,
   lines,
   onMoveLine,
@@ -172,6 +173,7 @@ export default function ChartCanvas({
             hoverDimmed={hoverDimmed}
             height={resolvedPriceHeight}
             earningsMarkers={earningsMarkers}
+            signalMarkers={signalMarkers}
             slots={slots}
             yScale={yScale}
             onYScaleChange={setYScale}

@@ -7,6 +7,7 @@ import { priceBasis } from '../../lib/pricing'
 import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
 import { Card, Move, Tile } from '../ui'
+import SetupCard from '../signals/SetupCard'
 import VerdictCard from '../verdicts/VerdictCard'
 import AnalystRatingCard from './AnalystRatingCard'
 import CapitalStructureCard from './CapitalStructureCard'
@@ -38,7 +39,7 @@ function ListingNote({ context, title, children }) {
   )
 }
 
-function CompanyReads({ companyData, fundamentals, verdict }) {
+function CompanyReads({ companyData, fundamentals, verdict, chartSignals }) {
   if (companyData === COMPANY_DATA.fund) {
     return (
       <ListingNote context="Company fundamentals don't apply" title="Fund">
@@ -68,6 +69,7 @@ function CompanyReads({ companyData, fundamentals, verdict }) {
   return (
     <>
       {verdict && <VerdictCard verdict={verdict} />}
+      <SetupCard stockSignals={chartSignals?.stock} signals={chartSignals?.catalogue} />
       <SnapshotSection fundamentals={fundamentals} />
     </>
   )
@@ -184,6 +186,7 @@ export default function OverviewTab({
   range,
   fundamentals,
   verdict,
+  chartSignals,
   note,
   onSaveNote,
   onMarkReviewed,
@@ -232,7 +235,7 @@ export default function OverviewTab({
 
         <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
           {rail}
-          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} />
+          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} />
           {company && <AnalystRatingCard fundamentals={company} />}
           {signals}
           {company && <CapitalStructureCard fundamentals={company} />}

@@ -1,5 +1,6 @@
 import { overlayStrokes } from '../../lib/chartGeometry'
 import { CHART_TYPES, OVERLAY_DEFS, PANE_DEFS } from '../../lib/chartOptions'
+import { GRADE_WORDS, evidenceLine, groupedByGrade } from '../../lib/signals'
 import { MenuLabel, MenuRow, MenuSeparator } from './menu'
 import { useChartColors } from '../../theme/useChartColors'
 
@@ -35,4 +36,23 @@ export function IndicatorMenuItems({ controls }) {
       ))}
     </>
   )
+}
+
+export function SignalMenuItems({ controls, signals }) {
+  return groupedByGrade(signals).map((group, position) => (
+    <div key={group.grade} role="group" aria-label={GRADE_WORDS[group.grade]}>
+      {position > 0 ? <MenuSeparator /> : null}
+      <MenuLabel>{GRADE_WORDS[group.grade]}</MenuLabel>
+      {group.signals.map((signal) => (
+        <MenuRow
+          key={signal.key}
+          checked={Boolean(controls.signals?.[signal.key])}
+          onClick={() => controls.toggleSignal(signal.key)}
+        >
+          <span className="block truncate">{signal.label}</span>
+          <span className="block truncate text-[11px] text-ink-3">{evidenceLine(signal)}</span>
+        </MenuRow>
+      ))}
+    </div>
+  ))
 }

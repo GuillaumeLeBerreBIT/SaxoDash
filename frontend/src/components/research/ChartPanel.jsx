@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import { CandlestickChart, Maximize2, Sigma } from 'lucide-react'
+import { Activity, CandlestickChart, Maximize2, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card } from '../ui'
 import { Menu } from './menu'
-import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
+import { ChartTypeMenuItems, IndicatorMenuItems, SignalMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
@@ -22,6 +22,8 @@ export default function ChartPanel({
   symbol,
   unresolved,
   earningsMarkers = [],
+  signals,
+  signalMarkers,
   futureDates,
   lines,
   onMoveLine,
@@ -33,6 +35,7 @@ export default function ChartPanel({
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
+  const chosenSignals = Object.keys(controls.signals ?? {}).length
 
   return (
     <Card padding={false}>
@@ -48,6 +51,12 @@ export default function ChartPanel({
         <Menu label={`Indicators${activeCount ? ` · ${activeCount}` : ''}`} icon={Sigma} width={230}>
           <IndicatorMenuItems controls={controls} />
         </Menu>
+
+        {signals?.length ? (
+          <Menu label={`Signals${chosenSignals ? ` · ${chosenSignals}` : ''}`} icon={Activity} width={330}>
+            <SignalMenuItems controls={controls} signals={signals} />
+          </Menu>
+        ) : null}
 
         <LineSaveAlert failed={lineSaveFailed} />
 
@@ -78,6 +87,7 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
+        signalMarkers={signalMarkers}
         futureDates={futureDates}
         lines={lines}
         onMoveLine={onMoveLine}

@@ -45,7 +45,10 @@ export function signalMarkers(stockSignals, chosen, signals) {
   signals.forEach((signal, order) => {
     if (!chosen?.[signal.key]) return
     for (const date of stockSignals.events?.[signal.key] ?? []) {
-      markers.push({ date, key: signal.key, code: signal.code, label: signal.label, grade: gradeOf(signal), order })
+      markers.push({
+        date, key: signal.key, code: signal.code, label: signal.label, description: signal.description,
+        grade: gradeOf(signal), evidence: evidenceLine(signal), order,
+      })
     }
   })
   return markers.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.order - b.order))
