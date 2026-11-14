@@ -10,6 +10,11 @@ describe('averageTrueRange', () => {
     expect(averageTrueRange(bars)).toBeCloseTo(2, 6)
   })
 
+  it('smooths later ranges the Wilder way, not as a plain average', () => {
+    const bars = [bar(10, 9, 10), bar(11, 9, 10), bar(11, 9, 10), bar(14, 10, 12), bar(20, 12, 16)]
+    expect(averageTrueRange(bars, 2)).toBeCloseTo(5.5, 6)
+  })
+
   it('counts a gap from the last close as range', () => {
     const bars = [bar(10, 9, 10), bar(13, 12, 12.5), bar(13, 12, 12.5)]
     expect(averageTrueRange(bars, 2)).toBeCloseTo(2, 6)

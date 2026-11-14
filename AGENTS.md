@@ -786,5 +786,8 @@ reward-to-risk appears only when the note has a target above the close; the size
 loses the chosen share of the portfolio (0.5, 1 or 2%, remembered per browser) at the stop, converted with
 the `fx_rate` of a held position in the same currency, and never past `WEIGHT_CAP_PCT` counting what is
 already held. Without a portfolio value or an exchange rate the size is left out rather than guessed. A
-report within ten days adds a warning, because a stop does not protect against a gap. No request is added.
+report within ten days adds a warning, because a stop does not protect against a gap. The only request it adds is
+the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache) for the portfolio value, and
+the size waits until positions have loaded so a held stock is never sized as if it were not held. The
+frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 

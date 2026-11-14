@@ -35,6 +35,13 @@ describe('TradePlanCard', () => {
     expect(window.localStorage.getItem('saxodash:trade-risk-pct')).toBe('0.5')
   })
 
+  it('opens with the risk chosen last time', () => {
+    window.localStorage.setItem('saxodash:trade-risk-pct', '2')
+    render(<TradePlanCard {...base} />)
+    expect(screen.getByRole('button', { name: '2%' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('Size at 2% risk')).toBeInTheDocument()
+  })
+
   it('counts what you already hold against the same portfolio value the size uses', () => {
     render(<TradePlanCard {...base} position={{ value: '6000', weight: '40' }} />)
     expect(row('Size at 1% risk')).toHaveTextContent('15 shares')
