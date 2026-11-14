@@ -53,7 +53,7 @@ export default function ChartPanel({
         </Menu>
 
         {signals?.length ? (
-          <Menu label={`Signals${chosenSignals ? ` · ${chosenSignals}` : ''}`} icon={Activity} width={330}>
+          <Menu label={`Signals${chosenSignals ? ` · ${chosenSignals}` : ''}`} icon={Activity} width={360}>
             <SignalMenuItems controls={controls} signals={signals} />
           </Menu>
         ) : null}

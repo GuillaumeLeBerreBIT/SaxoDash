@@ -1,4 +1,4 @@
-import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
+import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SIGNALS_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
 import { Card } from '../ui'
 
 const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
@@ -95,6 +95,18 @@ function EarningsSignals() {
   )
 }
 
+function ChartSignals() {
+  return (
+    <Card context="How the Signals menu and the Setup card grade a chart signal" dot="off" title="Chart signals">
+      <div className="space-y-3">
+        {SIGNALS_GUIDE.map((e) => (
+          <GuideMetric key={e.name} name={e.name} text={e.text} />
+        ))}
+      </div>
+    </Card>
+  )
+}
+
 export default function GuideTab() {
   return (
     <div className={BOARD}>
@@ -106,6 +118,7 @@ export default function GuideTab() {
         <Playbooks />
         <Quadrant />
         <EarningsSignals />
+        <ChartSignals />
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ describe('GuideTab', () => {
     expect(screen.getByText('Quality vs. valuation quadrant')).toBeInTheDocument()
     expect(screen.getByText('Earnings signals')).toBeInTheDocument()
     expect(screen.getByText('Putting it together')).toBeInTheDocument()
+    expect(screen.getByText('Chart signals')).toBeInTheDocument()
   })
 
   it('names all five snapshot groups', () => {

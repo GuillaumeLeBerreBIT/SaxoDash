@@ -141,8 +141,8 @@ skipped and named in the run's detail; the rest are written. A stock that leaves
 - `GET /api/signals/` answers every signal: key, label, code, kind, description, grade, and per
   horizon the cases, stocks, mean excess, interval, positive share and both halves, plus the
   period covered. Empty scores (before the first run) give `grade: null`.
-- `GET /api/signals/<ticker>/` answers `{ticker, uic, as_of, active, events}` or `null` for an
-  unknown ticker or an extra the user neither holds nor watches.
+- `GET /api/signals/<ticker>/` answers `{"stock_signals": {ticker, uic, as_of, active, events}}`, with
+  `null` inside for an unknown ticker or an extra the user neither holds nor watches.
 
 Both need a signed-in user and read only the two tables.
 
@@ -155,7 +155,8 @@ Both need a signed-in user and read only the two tables.
 - **Signal lane**: a 20-pixel lane under the earnings lane, drawn only when a chosen signal has
   a marker in view. A marker is a small dot with the signal's code. Colour follows the grade:
   the accent colour for supported, muted ink for no edge and too few, the warning colour for
-  against. Two signals on one day stack side by side. Hover or focus opens a card: label, date,
+  against. Two signals on one day stack side by side; markers that would overlap are thinned, keeping
+  the better grade and then the newer one. Hover or focus opens a card: label, date,
   description, and the evidence line.
 - **Setup card** on the Overview tab under the verdict card: "Active on the latest session"
   followed by each active signal with its grade word and evidence line, supported first. With

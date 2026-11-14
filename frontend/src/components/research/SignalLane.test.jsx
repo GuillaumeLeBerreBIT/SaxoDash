@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
-import { SIGNAL_LANE, SignalCard, SignalLane, placeSignalMarkers } from './SignalLane'
+import { placeSignalMarkers } from '../../lib/signals'
+import { SIGNAL_LANE, SignalCard, SignalLane } from './SignalLane'
 
 const data = [{ date: '2026-07-01' }, { date: '2026-07-02' }, { date: '2026-07-03' }]
 const marker = (date, key, grade = 'supported') => ({
@@ -40,9 +41,26 @@ describe('SignalLane', () => {
     draw([marker('2026-07-01', 'aa', 'supported'), marker('2026-07-02', 'bb', 'against'), marker('2026-07-03', 'cc', 'no_edge')])
     const markers = screen.getAllByTestId('signal-marker')
     expect(markers).toHaveLength(3)
-    expect(markers[0]).toHaveAttribute('aria-label', expect.stringMatching(/^Label aa on .+\. Held up in testing\.$/))
-    expect(markers[0]).toHaveTextContent('AA')
-    expect(markers.map((item) => item.querySelector('rect').getAttribute('stroke'))).toEqual(['accent', 'warn', 'axis'])
+    const held = markers.find((item) => item.textContent === 'AA')
+    expect(held).toHaveAttribute('aria-label', expect.stringMatching(/^Label aa on .+\. Held up in testing\.$/))
+    const strokes = Object.fromEntries(markers.map((item) => [item.textContent, item.querySelector('rect').getAttribute('stroke')]))
+    expect(strokes).toEqual({ AA: 'accent', BB: 'warn', CC: 'axis' })
+  })
+
+  it('leaves out a marker that would cover a better-graded one, keeping the one that held up', () => {
+    const tight = { ...geometry, xAt: (index) => 40 + index * 4 }
+    render(
+      <svg>
+        <SignalLane
+          markers={placeSignalMarkers([marker('2026-07-01', 'bb', 'no_edge'), marker('2026-07-02', 'aa', 'supported')], data)}
+          geometry={tight}
+          colors={colors}
+          top={300}
+          onInspect={vi.fn()}
+        />
+      </svg>,
+    )
+    expect(screen.getAllByTestId('signal-marker').map((item) => item.textContent)).toEqual(['AA'])
   })
 
   it('places two markers on one day beside each other, not on top', () => {

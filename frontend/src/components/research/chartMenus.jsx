@@ -46,11 +46,12 @@ export function SignalMenuItems({ controls, signals }) {
       {group.signals.map((signal) => (
         <MenuRow
           key={signal.key}
+          tall
           checked={Boolean(controls.signals?.[signal.key])}
           onClick={() => controls.toggleSignal(signal.key)}
         >
-          <span className="block truncate">{signal.label}</span>
-          <span className="block truncate text-[11px] text-ink-3">{evidenceLine(signal)}</span>
+          <span className="block leading-5">{signal.label}</span>
+          <span className="block text-[11px] leading-4 text-ink-3">{evidenceLine(signal)}</span>
         </MenuRow>
       ))}
     </div>

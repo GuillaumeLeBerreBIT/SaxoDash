@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalMarkers, signalsForListing,
+  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalMarkers, signalsForListing, spreadSignalMarkers,
 } from './signals'
 
 const figures = (mean_excess, cases) => ({ 60: { mean_excess, cases }, 20: { mean_excess: mean_excess / 3, cases } })
@@ -98,5 +98,27 @@ describe('signalsForListing', () => {
     expect(signalsForListing(stock, 999)).toBeNull()
     expect(signalsForListing(stock, undefined)).toBe(stock)
     expect(signalsForListing(null, 211)).toBeNull()
+  })
+})
+
+describe('spreadSignalMarkers', () => {
+  const placed = (index, grade, key = `k${index}`, slot = 0, of = 1) => ({ key, grade, index, slot, of })
+  const xAt = (index) => index * 10
+
+  it('keeps every marker when none would touch, left to right', () => {
+    const kept = spreadSignalMarkers([placed(5, 'no_edge'), placed(1, 'supported')], xAt, 19)
+    expect(kept.map((marker) => [marker.key, marker.x])).toEqual([['k1', 10], ['k5', 50]])
+  })
+
+  it('drops the weaker grade when two would overlap, and the older of two equal ones', () => {
+    const kept = spreadSignalMarkers(
+      [placed(1, 'no_edge'), placed(2, 'supported'), placed(10, 'no_edge'), placed(11, 'no_edge')], xAt, 19,
+    )
+    expect(kept.map((marker) => marker.key)).toEqual(['k2', 'k11'])
+  })
+
+  it('keeps two signals of one day side by side', () => {
+    const kept = spreadSignalMarkers([placed(3, 'no_edge', 'a', 0, 2), placed(3, 'no_edge', 'b', 1, 2)], xAt, 19)
+    expect(kept.map((marker) => marker.x)).toEqual([20.5, 39.5])
   })
 })
