@@ -11,6 +11,11 @@ export const ACTION_LABEL = {
   no_verdict: 'No verdict',
 }
 
+export function actionLabel(verdict) {
+  if (verdict.capped) return 'Hold · still cheap'
+  return ACTION_LABEL[verdict.action] ?? verdict.action
+}
+
 export const GRADE_LABEL = {
   quality: { strong: 'Strong', mixed: 'Mixed', weak: 'Weak', unknown: 'Not enough data' },
   valuation: { cheap: 'Cheap', fair: 'Fair', expensive: 'Expensive', not_judged: 'Not judged' },

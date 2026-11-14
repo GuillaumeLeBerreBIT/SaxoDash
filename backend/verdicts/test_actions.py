@@ -38,8 +38,15 @@ class ActionTest(SimpleTestCase):
     def test_held_strong_cheap_over_cap_is_hold_not_add(self):
         self.assertEqual(
             self.check('strong', 'cheap', 23),
-            {'action': 'hold', 'reason': 'Cheap, but you are already over your 15% cap'},
+            {
+                'action': 'hold', 'capped': True,
+                'reason': 'Still cheap, but its weight is already over your 15% cap',
+            },
         )
+
+    def test_only_the_capped_hold_is_marked_capped(self):
+        self.assertNotIn('capped', self.check('strong', 'cheap', 5))
+        self.assertNotIn('capped', self.check('strong', 'fair', 23))
 
     def test_held_strong_cheap_exactly_at_cap_is_add(self):
         self.assertEqual(self.check('strong', 'cheap', 15)['action'], 'add')

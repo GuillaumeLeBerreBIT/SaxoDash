@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ACTION_LABEL, GRADE_LABEL, actionTone, checkLine, trendSentence, verdictTicker } from './verdicts'
+import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSentence, verdictTicker } from './verdicts'
 
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
@@ -14,6 +14,12 @@ describe('verdict wording', () => {
       not_a_fit: 'Not a fit',
       no_verdict: 'No verdict',
     })
+  })
+
+  it('says a hold forced by the weight cap is still cheap', () => {
+    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · still cheap')
+    expect(actionLabel({ action: 'hold' })).toBe('Hold')
+    expect(actionLabel({ action: 'sell_review' })).toBe('Sell (review)')
   })
 
   it('colours buying up and trimming as a warning', () => {
