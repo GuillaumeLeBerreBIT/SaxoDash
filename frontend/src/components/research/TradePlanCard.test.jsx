@@ -35,8 +35,8 @@ describe('TradePlanCard', () => {
     expect(window.localStorage.getItem('saxodash:trade-risk-pct')).toBe('0.5')
   })
 
-  it('says when the weight cap limits the size', () => {
-    render(<TradePlanCard {...base} position={{ weight: '12' }} />)
+  it('counts what you already hold against the same portfolio value the size uses', () => {
+    render(<TradePlanCard {...base} position={{ value: '6000', weight: '40' }} />)
     expect(row('Size at 1% risk')).toHaveTextContent('15 shares')
     expect(row('Loss if the stop is hit')).toHaveTextContent('Size limited by the weight cap')
   })

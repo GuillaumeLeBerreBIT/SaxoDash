@@ -33,6 +33,12 @@ function reportsSoon(next) {
   return days >= 0 && days <= EARNINGS_WARNING_DAYS ? `Reports ${daysUntil(next.date)} (${fmtDate(next.date)}): the price can gap past a stop.` : null
 }
 
+function heldWeight(position, portfolioValue) {
+  const value = Number(position?.value)
+  const total = Number(portfolioValue)
+  return value > 0 && total > 0 ? (value / total) * 100 : 0
+}
+
 function Row({ label, value, note }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
@@ -84,7 +90,7 @@ export default function TradePlanCard({ bars, currency, note, positions, positio
     riskPct,
     portfolioValue,
     fxRate: fxRateFor(currency, positions),
-    heldWeightPct: Number(position?.weight) || 0,
+    heldWeightPct: heldWeight(position, portfolioValue),
   })
   if (!plan || !currency) return null
   const warning = reportsSoon(nextEarnings)

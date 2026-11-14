@@ -53,7 +53,7 @@ const REFUSALS = {
 export default function Research() {
   const [params] = useSearchParams()
   const outlet = useOutletContext()
-  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
@@ -103,7 +103,10 @@ export default function Research() {
     [stockSignalsAnswer, instrument?.uic],
   )
   const portfolioValue = usePortfolioSummary()?.data?.total_value
-  const tradePlan = useMemo(() => ({ positions, portfolioValue }), [positions, portfolioValue])
+  const tradePlan = useMemo(
+    () => ({ positions, portfolioValue: positionsReady ? portfolioValue : null }),
+    [positions, positionsReady, portfolioValue],
+  )
   const chartSignals = useMemo(() => ({ stock: stockSignals, catalogue: signals }), [stockSignals, signals])
   const chosenSignals = controls.signals
   const signalMarkers = useMemo(
