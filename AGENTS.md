@@ -791,17 +791,19 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**Chart guides are drawn on the candles, and only what earned it is drawn.** The owner found the pill lane
-useless: it gave no visual help on the candles and most pills were signals with no edge. The Research chart's
-Guides menu now has three switches, all on by default (`chartPrefs.guides`): (1) a triangle under the candle
-for an event signal graded `supported` and over it for one graded `against`, with the figure this stock made
-over the next 60 sessions from the next open (`lib/chartGuides.js::candleMarks`, fainter while the 60 sessions
-are still running, a dashed path on hover); (2) a faint shade over periods a `supported` state or rank signal
-was true, which today is the momentum leader (`StockSignals.runs`, runs under five sessions apart joined, runs
-under three sessions dropped); (3) the trade plan as a red risk box to the stop and a green reward box to the
-target at the latest close, from the same `planFromPage` the Trade plan card uses, so the two cannot disagree.
-Signals with no edge, unproven or too few cases are never drawn; the Guide tab lists all seventeen with their
-evidence. The triangle is the owner's choice over the earlier "never arrows" rule, which still holds for
-earnings badges. The per-stock figure is what happened, not a forecast, and the card says both that and the
-all-stock result.
-
+**The chart shows where the price is cheap or expensive for the company, in words, and nothing from the candles.**
+Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
+on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
+showed the marks win no more often than a random day: 58% against 59%). What is drawn now comes from the
+verdict, not from chart signals. `lib/priceZones.js` reads the verdict's `cheap_below` and `expensive_above`,
+which are already prices (trailing-twelve-month EPS times the 25th and 75th percentile of the stock's own P/E
+history, recomputed nightly): the chart shades green below the first and amber above the second, each labelled
+in words, and points at a zone that is out of view instead of stretching the price scale. The cheap zone is
+called a buy zone only when quality is `strong`, the verdict's own Buy rule. A sentence above the chart
+(`entrySentence`) gives the verdict's action, why, the price at which it changes and what a stop costs; when
+today's close sits in another zone than last night's verdict it says the verdict updates tonight. The stop is
+one red line with what is lost there, from the same `planFromPage` as the Trade plan card. Both are switches in
+the Guides menu (`chartPrefs.guides`: `zones`, `plan`), on by default. Chart signals stay in the Setup card
+and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
+valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
+points a year, not reliably different from zero.

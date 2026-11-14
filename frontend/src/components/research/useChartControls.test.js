@@ -12,12 +12,12 @@ beforeEach(() => localStorage.clear())
 describe('useChartControls', () => {
   it('switches a chart guide off and on and stores the choice', () => {
     const { result } = renderHook(() => useChartControls())
-    expect(result.current.guides).toEqual({ marks: true, momentum: true, plan: true })
-    act(() => result.current.toggleGuide('momentum'))
-    expect(result.current.guides.momentum).toBe(false)
-    expect(stored().guides).toEqual({ marks: true, momentum: false, plan: true })
-    act(() => result.current.toggleGuide('momentum'))
-    expect(result.current.guides.momentum).toBe(true)
+    expect(result.current.guides).toEqual({ zones: true, plan: true })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(false)
+    expect(stored().guides).toEqual({ zones: false, plan: true })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(true)
   })
 
   it('starts from the defaults when nothing is stored', () => {

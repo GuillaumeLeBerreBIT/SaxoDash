@@ -6,6 +6,7 @@ import { Card } from '../ui'
 import { Menu } from './menu'
 import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
+import EntryBanner from './EntryBanner'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
@@ -73,6 +74,8 @@ export default function ChartPanel({
         </div>
       </div>
 
+      <EntryBanner sentence={guides?.sentence} />
+
       <ChartCanvas
         bars={bars}
         ind={ind}
@@ -85,8 +88,8 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
-        candleMarks={guides?.marks}
-        momentumBands={guides?.bands}
+        priceZones={guides?.zones}
+        zoneCurrency={guides?.currency}
         tradePlan={guides?.plan}
         futureDates={futureDates}
         lines={lines}

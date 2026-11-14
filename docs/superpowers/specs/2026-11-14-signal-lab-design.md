@@ -145,7 +145,7 @@ skipped and named in the run's detail; the rest are written. A stock that leaves
 - `GET /api/signals/` answers every signal: key, label, code, kind, description, grade, and per
   horizon the cases, stocks, mean excess, interval, positive share and both halves, plus the
   period covered. Empty scores (before the first run) give `grade: null`.
-- `GET /api/signals/<ticker>/` answers `{"stock_signals": {ticker, uic, as_of, active, events, context, runs}}`, with
+- `GET /api/signals/<ticker>/` answers `{"stock_signals": {ticker, uic, as_of, active, events, context}}`, with
   `context` = `{below_high_pct, momentum_pct, momentum_rank_pct}` (rank: share of index stocks
   with lower unrounded 12-1 momentum, floored), and `null` inside for an unknown ticker or an extra the user neither holds nor watches.
 
@@ -153,9 +153,10 @@ Both need a signed-in user and read only the two tables.
 
 ### Research page
 
-> Superseded on 2026-11-15 for the chart part: the Signals menu and the pill lane below were replaced by
-> the Guides menu (marks on the candles with the stock's own outcome, momentum shade, trade-plan box). See
-> "Chart guides" in `AGENTS.md`. The Setup card and the evidence line are unchanged.
+> Superseded on 2026-11-15 for the chart part: the Signals menu and the pill lane below were removed. The
+> chart now shows the verdict's buy and expensive zones, a one-sentence answer and the stop line. See "The
+> chart shows where the price is cheap or expensive" in `AGENTS.md`. The Setup card and the evidence line are
+> unchanged.
 
 - **Signals menu** beside the indicator menu on the chart. Signals are grouped under "Held up
   in testing", "No edge found", "Worked against" and "Too few cases", each row a checkbox with

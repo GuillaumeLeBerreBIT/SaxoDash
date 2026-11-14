@@ -4,7 +4,7 @@ import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
-import { candleMarks, momentumBands } from '../lib/chartGuides'
+import { entrySentence, priceZones } from '../lib/priceZones'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
@@ -114,18 +114,25 @@ export default function Research() {
   const [riskPct] = useTradeRisk()
   const guides = useMemo(() => {
     const shown = controls.guides
+    const guideCurrency = details.data?.currency ?? position?.currency
     const plan = planFromPage({
-      bars: allBars, currency: details.data?.currency ?? position?.currency, note: note?.data, positions, position,
+      bars: allBars, currency: guideCurrency, note: note?.data, positions, position,
       portfolioValue: tradePlan.portfolioValue, riskPct,
     })
-    const signalled = stockSignals && signals?.length
+    const judged = signalsForListing(verdict?.data, instrument?.uic)
+    const zones = priceZones(judged)
+    const latest = allBars.length ? allBars[allBars.length - 1].close : null
     return {
-      available: [...(signalled ? ['marks', 'momentum'] : []), ...(plan ? ['plan'] : [])],
-      marks: shown.marks ? candleMarks(stockSignals, signals, allBars) : [],
-      bands: shown.momentum ? momentumBands(stockSignals, signals) : [],
+      available: [...(judged ? ['zones'] : []), ...(plan ? ['plan'] : [])],
+      currency: guideCurrency,
+      zones: shown.zones ? zones : null,
       plan: shown.plan ? plan : null,
+      sentence: entrySentence({
+        verdict: shown.zones ? judged : null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position),
+        currency: guideCurrency,
+      }),
     }
-  }, [controls.guides, allBars, details.data?.currency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, stockSignals, signals])
+  }, [controls.guides, allBars, details.data?.currency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, verdict?.data, instrument?.uic])
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)

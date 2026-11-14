@@ -37,20 +37,6 @@ class EventsOfTest(TestCase):
         self.assertEqual(compute.events_of('rank', [False, True, True, False, True], self.DATES), ['b', 'e'])
 
 
-class RunsOfTest(TestCase):
-    DATES = ['a', 'b', 'c', 'd', 'e']
-
-    def test_each_run_is_its_first_and_last_date(self):
-        self.assertEqual(compute.runs_of([True, True, False, True, False], self.DATES), [['a', 'b'], ['d', 'd']])
-
-    def test_a_run_still_going_ends_on_the_last_bar(self):
-        self.assertEqual(compute.runs_of([False, False, True, True, True], self.DATES), [['c', 'e']])
-
-    def test_nothing_true_gives_no_runs(self):
-        self.assertEqual(compute.runs_of([False] * 5, self.DATES), [])
-        self.assertEqual(compute.runs_of([], []), [])
-
-
 class RunTest(TestCase):
     def test_with_no_stored_bars_nothing_is_written(self):
         stock('AAPL')
@@ -68,7 +54,6 @@ class RunTest(TestCase):
         apple = StockSignals.objects.get(ticker='AAPL')
         self.assertEqual((apple.uic, apple.as_of), (211, START + timedelta(days=299)))
         self.assertEqual(len(apple.events), 17)
-        self.assertEqual(set(apple.runs), {'momentum_top', 'deep_pullback', 'above_ma200', 'rsi_oversold', 'rsi_overbought'})
         self.assertEqual(apple.context, {'below_high_pct': 0.0, 'momentum_pct': 0.0, 'momentum_rank_pct': None})
         self.assertTrue(StockSignals.objects.filter(ticker='NBIS').exists())
 

@@ -167,41 +167,34 @@ describe('Research', () => {
     events: { volume_thrust: [bars.at(-3).date] },
   })
 
-  it('marks a signal that held up on its candle with what followed, and the Guides menu switches it off', async () => {
-    queries.useSignals.mockReturnValue({ ...idle, data: [thrust] })
-    queries.useStockSignals.mockReturnValue({ ...idle, data: stockSignals() })
+  const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
+
+  it('shades the buy and expensive zones, says what to do in one sentence, and the Guides menu switches them off', async () => {
+    queries.useVerdict.mockReturnValue({ ...idle, data: judged })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const marks = screen.getAllByTestId('candle-mark')
-    expect(marks).toHaveLength(1)
-    expect(marks[0]).toHaveAttribute('aria-label', expect.stringMatching(/^Volume thrust on .+ The stock moved \+.+% in 2 sessions so far\.$/))
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/BUY ZONE · cheap for this company below \S*100\.00/)
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*200\.00/)
+    const banner = screen.getByTestId('entry-banner')
+    expect(banner).toHaveTextContent('WAIT')
+    expect(banner).toHaveTextContent('Strong company, fair price.')
+    expect(banner).toHaveTextContent(/Becomes cheap below \S*100\.00 \(\d+% lower\)/)
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Signals on the candles/ }))
-    expect(screen.queryByTestId('candle-mark')).not.toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.marks).toBe(false)
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Buy and expensive zones/ }))
+    expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.zones).toBe(false)
   })
 
-  it('shades the periods a stock was a momentum leader', () => {
-    const leader = { ...thrust, key: 'momentum_top', label: 'Momentum leader', kind: 'rank' }
-    queries.useSignals.mockReturnValue({ ...idle, data: [leader] })
-    queries.useStockSignals.mockReturnValue({
-      ...idle, data: { ...stockSignals(), events: {}, runs: { momentum_top: [[bars.at(-12).date, bars.at(-4).date]] } },
-    })
-
-    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
-
-    expect(screen.getAllByTestId('momentum-band')).toHaveLength(1)
-  })
-
-  it('draws the trade plan on the chart from the latest close', () => {
+  it('draws the stop on the chart and says what it costs', () => {
     const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000' }
     queries.usePortfolioSummary.mockReturnValue({ ...idle, data: { total_value: '100000' } })
     queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: true })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('trade-plan-box')).toHaveTextContent(/Stop .+ at risk/)
+    expect(screen.getByTestId('stop-guide')).toHaveTextContent(/STOP .+ lose .+ with \d+ shares/)
+    expect(screen.getByTestId('entry-banner')).toHaveTextContent(/If you add today: stop at/)
   })
 
   it('lists the active signals with their evidence on the Overview', () => {

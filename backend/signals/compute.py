@@ -32,17 +32,6 @@ def events_of(kind, flags, dates):
     return [dates[i] for i, flag in enumerate(flags) if flag and (i == 0 or not flags[i - 1])]
 
 
-def runs_of(flags, dates):
-    runs, start = [], None
-    for i, flag in enumerate(flags):
-        if flag and start is None:
-            start = i
-        if start is not None and (not flag or i == len(flags) - 1):
-            runs.append([dates[start], dates[i if flag else i - 1]])
-            start = None
-    return runs
-
-
 def _series(stored):
     if any(len(bar) != BAR_FIELDS for bar in stored.bars):
         raise ValueError('a stored bar does not have six fields')
@@ -96,10 +85,6 @@ def _write_stock(ticker, row, series, flags, standing):
                 for signal in definitions.SIGNALS
             },
             'context': standing,
-            'runs': {
-                signal.key: runs_of(flags[signal.key], series.dates)
-                for signal in definitions.SIGNALS if signal.kind != definitions.EVENT
-            },
         },
     )
 

@@ -80,8 +80,8 @@ export default function ChartCanvas({
   error,
   unresolved,
   earningsMarkers = [],
-  candleMarks,
-  momentumBands,
+  priceZones,
+  zoneCurrency,
   tradePlan,
   futureDates = NO_DATES,
   lines,
@@ -175,8 +175,8 @@ export default function ChartCanvas({
             hoverDimmed={hoverDimmed}
             height={resolvedPriceHeight}
             earningsMarkers={earningsMarkers}
-            candleMarks={candleMarks}
-            momentumBands={momentumBands}
+            priceZones={priceZones}
+            zoneCurrency={zoneCurrency}
             tradePlan={tradePlan}
             slots={slots}
             yScale={yScale}

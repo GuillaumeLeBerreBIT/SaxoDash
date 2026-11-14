@@ -19,9 +19,8 @@ import {
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
-import { placeBands, placeMarks } from '../../lib/chartGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { CandleMarks, MarkCard, MomentumBands, OutcomePath, TradePlanBox } from './ChartGuides'
+import { PriceZones, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -246,7 +245,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
   )
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, bands, marks, onInspectMark, plan, clipId, colors }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, zones, zoneCurrency, plan, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -264,7 +263,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} />
 
       <g clipPath={`url(#${clipId})`}>
-        {bands.length > 0 ? <MomentumBands bands={bands} geometry={geometry} colors={colors} /> : null}
+        <PriceZones zones={zones} currency={zoneCurrency} geometry={geometry} colors={colors} />
         {type === 'area' ? (
           <g>
             <defs>
@@ -344,10 +343,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           strokeDasharray="3 3"
           opacity="0.7"
         />
-        <TradePlanBox plan={plan} data={data} geometry={geometry} colors={colors} />
-        {marks.length > 0 ? (
-          <CandleMarks marks={marks} data={data} geometry={geometry} colors={colors} onInspect={onInspectMark} />
-        ) : null}
+        <StopGuide plan={plan} data={data} geometry={geometry} colors={colors} />
       </g>
 
       {earningsMarkers.length > 0 ? (
@@ -406,8 +402,6 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
 }
 
 const NO_LINES = []
-const NO_MARKS = []
-const NO_BANDS = []
 const NO_TREND_LINES = []
 const NO_TEXT_ANNOTATIONS = []
 
@@ -469,8 +463,8 @@ export function TVChart({
   hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
-  candleMarks = NO_MARKS,
-  momentumBands = NO_BANDS,
+  priceZones = null,
+  zoneCurrency,
   tradePlan = null,
   slots,
   yScale = 1,
@@ -521,11 +515,7 @@ export function TVChart({
     setTextDraftPoint(null)
   }
   const [inspected, setInspected] = useState(null)
-  const [inspectedMark, setInspectedMark] = useState(null)
-  const placedMarks = useMemo(() => placeMarks(candleMarks, data), [candleMarks, data])
-  const placedBands = useMemo(() => placeBands(momentumBands, data), [momentumBands, data])
   const lane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
-  const shownMark = placedMarks.find((mark) => mark.key === inspectedMark?.key && mark.date === inspectedMark?.date) ?? null
   const [rayStart, setRayStart] = useState(null)
   const [rayPreview, setRayPreview] = useState(null)
   const [rayTool, setRayTool] = useState(tool)
@@ -680,16 +670,12 @@ export function TVChart({
           width={width}
           earningsMarkers={earningsMarkers}
           onInspectEarnings={setInspected}
-          bands={placedBands}
-          marks={placedMarks}
-          onInspectMark={setInspectedMark}
+          zones={priceZones}
+          zoneCurrency={zoneCurrency}
           plan={tradePlan}
           clipId={clipId}
           colors={colors}
         />
-        <g clipPath={`url(#${clipId})`}>
-          <OutcomePath mark={shownMark} data={data} geometry={geometry} colors={colors} />
-        </g>
         <ScaleHandle
           width={width}
           height={height}
@@ -761,7 +747,6 @@ export function TVChart({
           width={width}
         />
       ) : null}
-      {shownMark ? <MarkCard mark={shownMark} x={geometry.xAt(shownMark.index)} top={PAD_T + 4} width={width} /> : null}
       {editing ? (
         <PriceEditor
           key={editing.id}

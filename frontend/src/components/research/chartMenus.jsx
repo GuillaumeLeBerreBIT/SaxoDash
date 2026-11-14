@@ -38,9 +38,8 @@ export function IndicatorMenuItems({ controls }) {
 }
 
 const GUIDES = {
-  marks: ['Signals on the candles', 'Signals that held up in testing, with what this stock did next'],
-  momentum: ['Momentum periods', 'Shaded while the stock was a momentum leader'],
-  plan: ['Trade plan', 'Risk to your stop and reward to your target, from the latest close'],
+  zones: ['Buy and expensive zones', 'Where the price is cheap or expensive for this company'],
+  plan: ['Stop', 'Where the trade is wrong, and what you lose there'],
 }
 
 export function GuideMenuItems({ controls, available }) {
