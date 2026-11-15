@@ -17,8 +17,17 @@ function Figure({ label, children }) {
   )
 }
 
+const COMPARABLE_PCT = 100
+
 function Delta({ label, delta }) {
   const known = delta && delta.pct != null
+  if (known && Math.abs(delta.pct) > COMPARABLE_PCT) {
+    return (
+      <Figure label={label}>
+        <span className="text-ink" title="Mostly money added, so no percentage is shown">{fmtEur(delta.abs, { sign: true, decimals: 0 })}</span>
+      </Figure>
+    )
+  }
   return (
     <Figure label={label}>
       <Move value={known ? delta.pct : null} />

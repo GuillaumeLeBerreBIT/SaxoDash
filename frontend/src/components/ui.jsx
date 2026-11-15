@@ -639,13 +639,14 @@ function TileFrame({ label, right, children, sub, listItem = false }) {
 }
 
 const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
+const TILE_VALUE_WRAP = 'mt-1 text-[15px] font-bold num break-all'
 
-export function Tile({ label, value, sub, tone, right, listItem = false }) {
+export function Tile({ label, value, sub, tone, right, listItem = false, wrap = false }) {
   const absent = value == null
   return (
     <TileFrame label={label} right={right} sub={sub} listItem={listItem}>
       {(Detail) => (
-        <Detail className={`${TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
+        <Detail className={`${wrap ? TILE_VALUE_WRAP : TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
       )}
     </TileFrame>
   )
@@ -739,5 +740,15 @@ export function Tr({ children, selected = false, className = '', ...props }) {
     >
       {children}
     </tr>
+  )
+}
+
+export function ShowMore({ paged, className = '' }) {
+  if (!paged.more) return null
+  return (
+    <div className={`flex items-center justify-between gap-3 text-[12px] text-ink-3 num ${className}`}>
+      <span>{`Showing ${paged.shown} of ${paged.total}`}</span>
+      <Button size="sm" onClick={paged.more}>Show more</Button>
+    </div>
   )
 }

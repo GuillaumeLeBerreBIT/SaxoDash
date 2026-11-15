@@ -57,6 +57,15 @@ describe('HeroValue', () => {
     expect(screen.getByText('Unrealised').parentElement).toHaveTextContent('—')
   })
 
+  it('shows only the money change when the starting value was too small to compare with', () => {
+    const change = { ...base.change, ytd: { abs: '9000.00', pct: 4200 } }
+    render(<HeroValue {...base} change={change} />)
+    expect(screen.queryByText(/4,?200/)).toBeNull()
+    const money = screen.getByText('+€9,000')
+    expect(money).not.toHaveClass('text-up')
+    expect(money).toHaveAttribute('title', 'Mostly money added, so no percentage is shown')
+  })
+
   it('labels the change figures as net worth', () => {
     render(<HeroValue {...base} />)
     expect(screen.getByText('Net worth change')).toBeInTheDocument()
