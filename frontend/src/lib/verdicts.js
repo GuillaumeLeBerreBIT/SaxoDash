@@ -23,7 +23,7 @@ export const GRADE_LABEL = {
 
 export const CHECK_STATUS_LABEL = { pass: 'Pass', fail: 'Fail', unknown: 'Unknown' }
 
-const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth'])
+const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth', 'cash'])
 
 const TONE = { buy: 'up', add: 'up', trim: 'warn', sell_review: 'warn' }
 
@@ -38,6 +38,7 @@ const CHECK_BASIS = {
   earnings_growth: ' a year over 5 years',
   revenue_growth: ' a year over 5 years',
   debt: ' × equity, latest quarter',
+  cash: ' of profit, in a typical year',
 }
 
 export const CHECK_BASIS_NOTE =

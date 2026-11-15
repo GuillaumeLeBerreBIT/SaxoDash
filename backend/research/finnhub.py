@@ -581,12 +581,12 @@ def _shape_series(raw, names):
 
 SCREENER_HISTORY_YEARS = 5
 SCREENER_ANNUAL_RATIOS = ('roe', 'roic', 'net_margin')
+SCREENER_ANNUAL_SERIES = {**{field: RATIO_SERIES[field] for field in SCREENER_ANNUAL_RATIOS}, 'fcf_margin': ('fcfMargin', PERCENT)}
 
 
 def _annual_history_rows(annual):
     by_period = {}
-    for field in SCREENER_ANNUAL_RATIOS:
-        series_key, scale = RATIO_SERIES[field]
+    for field, (series_key, scale) in SCREENER_ANNUAL_SERIES.items():
         for point in _oldest_first(annual.get(series_key)):
             by_period.setdefault(point['period'], {})[field] = round(point['v'] * scale, 2)
     for point in _oldest_first(annual.get('eps')):

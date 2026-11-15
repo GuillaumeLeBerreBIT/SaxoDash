@@ -64,6 +64,12 @@ describe('checkLine', () => {
     )
   })
 
+  it('says how much of the profit arrived as free cash', () => {
+    expect(checkLine({ key: 'cash', label: 'Cash behind the profit', value: 97.52, threshold: '80% of profit' })).toBe(
+      'Cash behind the profit 97.5% of profit, in a typical year · needs 80% of profit',
+    )
+  })
+
   it('says no figure instead of a zero', () => {
     expect(checkLine({ label: 'Return on capital', status: 'unknown', value: null, threshold: '10%' })).toBe(
       'Return on capital · no figure',

@@ -54,7 +54,7 @@ class ComputeTest(TestCase):
         )
         self.assertEqual((verdict.last_close, verdict.pct_vs_ma200), (100.0, 4.5))
         self.assertEqual(verdict.as_of, date(2026, 11, 10))
-        self.assertEqual(len(verdict.checks), 6)
+        self.assertEqual(len(verdict.checks), 7)
         self.assertEqual(verdict.name, 'AAPL Inc')
 
     def test_verdict_stores_the_uic_the_scan_resolved(self):
@@ -82,7 +82,7 @@ class ComputeTest(TestCase):
             (call.ticker, call.opened_on, call.entry_close, call.quality, call.valuation, call.ended_on),
             ('AAPL', DAY_ONE, 100.0, 'strong', 'cheap', None),
         )
-        self.assertEqual(len(call.checks), 6)
+        self.assertEqual(len(call.checks), 7)
 
     def test_no_call_opens_without_a_close(self):
         make_row('AAPL', last_close=None)

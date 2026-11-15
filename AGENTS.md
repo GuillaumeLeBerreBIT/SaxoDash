@@ -677,7 +677,7 @@ page (`findBy…`) before reading the location.
 
 
 **The verdict is rules over stored scan rows, never a provider call.** `verdicts/rules.py` grades
-quality (six entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
+quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
 (today's P/E against its own 25th and 75th percentile, else `not_judged`) from
 `ScreenerRow.fundamentals_history` and `pe_history`, which the nightly scan fills from the Finnhub and
 Saxo data it already fetches. The `verdicts` app imports neither `finnhub`, `market` nor `requests`, so
@@ -822,4 +822,12 @@ was Finnhub's month-to-date return; its three price returns now come from the pa
 `supported` or `against` and counts the rest in one line. The Trade plan card says its size is arithmetic,
 not a suggestion, when the verdict is not Buy, Add or Hold, and the sentence above the chart warns when the
 company reports within ten days (`lib/earnings.js::reportsWithin`, shared with the card).
+
+**The seventh quality check asks whether profit arrives as cash.** `rules._cash` takes, for each of the last
+five fiscal years with a profit, free-cash-flow margin over net margin (both from Finnhub's annual series the
+scan already fetches; `fcf_margin` is stored in `fundamentals_history`), and passes when the median is at
+least 80% (`CASH_CONVERSION_FLOOR`). A financial company or an unknown sector is `unknown`, as for Debt,
+because a bank's free cash flow means nothing. The floor is not in `THRESHOLDS`, which stays the snapshot's
+parity table. Rows scanned before this change have no `fcf_margin`, so the check reads "no figure" until the
+next nightly scan and verdict run.
 
