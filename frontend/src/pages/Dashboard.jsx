@@ -17,16 +17,14 @@ import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
 import { CATEGORY_LABELS } from '../lib/categories'
 import { capBreaches } from '../lib/portfolioStats'
 import { ownershipTickers } from '../lib/ownership'
+import { needsYou, standingSentence } from '../lib/standing'
 import { Alert, Badge, Card, EmptyState, Skeleton, Th, Td, Tr } from '../components/ui'
 import NetWorthChart from '../components/NetWorthChart'
 import HeroValue from '../components/dashboard/HeroValue'
 import ThisWeek from '../components/dashboard/ThisWeek'
 import PositionsPanel from '../components/dashboard/PositionsPanel'
 import VsBenchmark from '../components/dashboard/VsBenchmark'
-import AllocationPanel from '../components/dashboard/AllocationPanel'
 import SmartMoney from '../components/dashboard/SmartMoney'
-import MoversCard from '../components/dashboard/MoversCard'
-import PortfolioHeatmap from '../components/dashboard/PortfolioHeatmap'
 
 const NO_POSITIONS = []
 const SPAN_8 = 'min-[1100px]:col-span-8'
@@ -142,6 +140,9 @@ export default function Dashboard() {
       text: `${CATEGORY_LABELS[row.category] ?? row.category} is over budget (${fmtEur(row.spent)} of ${fmtEur(row.limit)})`,
     }))
 
+  const breaches = capBreaches(positions)
+  const sentence = standingSentence(summary)
+
   return (
     <>
       <h1 className="sr-only">Overview</h1>
@@ -149,8 +150,8 @@ export default function Dashboard() {
         <Card
           className={SPAN_8}
           context={`Saxo + bank · as of ${fmtDate(insights.as_of)}${insights.stale ? ' · stale' : ''}`}
-          dot={insights.stale ? 'warn' : 'ok'}
-          title="Net worth"
+          dot={insights.stale ? 'warn' : undefined}
+          title="Where you stand"
         >
           <HeroValue
             value={insights.value}
@@ -158,6 +159,7 @@ export default function Dashboard() {
             spendingThisMonth={spending?.total}
             unrealised={summary.total_pnl}
           />
+          {sentence ? <p data-testid="standing-sentence" className="mt-3 text-[14px] text-ink num">{sentence}</p> : null}
           <div className="mt-5">
             <NetWorthChart />
           </div>
@@ -165,26 +167,14 @@ export default function Dashboard() {
         </Card>
         <ThisWeek
           className={SPAN_4}
-          attention={[...insights.attention, ...budgetAttentionItems]}
-          breaches={capBreaches(positions)}
+          attention={needsYou([...insights.attention, ...budgetAttentionItems], breaches)}
+          breaches={breaches}
           upcomingEarnings={insights.upcoming_earnings}
         />
         <PositionsPanel className={SPAN_8} summary={summary} positions={positions} quotes={quotes} />
-        <div className={`${SPAN_4} min-w-0`}>
-          <PortfolioHeatmap positions={positions} quotes={quotes} />
-        </div>
-        <VsBenchmark className={SPAN_4} data={performanceQuery.data} />
         <SmartMoney className={SPAN_4} positions={positions} ownership={ownership} />
-        <AllocationPanel
-          className={SPAN_4}
-          positions={positions}
-          currency={insights.currency_exposure}
-          concentration={insights.concentration}
-        />
         <RecentTransactions className={SPAN_8} rows={recentTx} />
-        <div className={`${SPAN_4} min-w-0`}>
-          <MoversCard movers={insights.movers} positions={positions} quotes={quotes} />
-        </div>
+        <VsBenchmark className={SPAN_4} data={performanceQuery.data} />
       </div>
     </>
   )

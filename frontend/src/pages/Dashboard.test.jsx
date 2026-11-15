@@ -128,9 +128,21 @@ describe('Dashboard', () => {
     expect(screen.getByText('▲ 0.56%')).toBeInTheDocument()
   })
 
-  it('shows an attention chip', () => {
+  it('says a holding is over the cap once, not again as a concentration note', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByText('Above your 15% cap')).toBeInTheDocument()
+    expect(screen.queryByText(/NVDA alone is 60%/)).not.toBeInTheDocument()
+  })
+
+  it('keeps the concentration note when no holding is over the cap', () => {
+    stub({ positions: smallPositions })
     renderWithProviders(<Dashboard />)
     expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
+  })
+
+  it('says in one sentence how the investments stand against what was paid', () => {
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByTestId('standing-sentence')).toHaveTextContent(/^Your investments are worth €[\d,]+, €[\d,]+ (more|less) than you paid/)
   })
 
   it('shows movers with a linked ticker', () => {
@@ -200,19 +212,21 @@ describe('Dashboard', () => {
       budgetProgress: [{ category: 'GROCERIES', limit: '100.00', spent: '142.00', pct: 142 }],
     })
     renderWithProviders(<Dashboard />)
-    expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
+    expect(screen.getByText('Above your 15% cap')).toBeInTheDocument()
     expect(screen.getByText(/Groceries is over budget/)).toBeInTheDocument()
   })
 
-  it('maps where the capital sits and what is moving it', () => {
+  it('leaves the split and the movers to the Portfolio page', () => {
     renderWithProviders(<Dashboard />)
-    expect(screen.getByText('Allocation & movement')).toBeInTheDocument()
+    for (const name of ['Allocation & movement', 'Allocation', 'Movers', 'Portfolio currency']) {
+      expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
   })
 
   it('null total_pnl still renders a dash in the hero', () => {
     stub({ summary: { total_value: '13131.00', total_pnl: null, total_pnl_pct: null, allocation: [] } })
     renderWithProviders(<Dashboard />)
-    const hero = panel('Net worth')
+    const hero = panel('Where you stand')
     const unrealised = within(hero).getByText('Unrealised').parentElement
     expect(unrealised).toHaveTextContent('—')
     expect(unrealised).not.toHaveTextContent(/0\.00/)
@@ -234,12 +248,9 @@ describe('Dashboard', () => {
   it('every existing card heading is still present', () => {
     renderWithProviders(<Dashboard />)
     for (const name of [
-      'Net worth',
+      'Where you stand',
       'Net worth history',
       'Portfolio',
-      'Allocation & movement',
-      'Movers',
-      'Portfolio currency',
       'Upcoming earnings',
       'Recent transactions',
     ]) {
@@ -249,7 +260,7 @@ describe('Dashboard', () => {
 
   it('lays the board out as the Overview panels', () => {
     renderWithProviders(<Dashboard />)
-    for (const name of ['Overview', 'This week', 'Vs the US 500', 'Smart money', 'Allocation']) {
+    for (const name of ['Overview', 'This week', 'Vs the US 500', 'Smart money']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument()
     }
     expect(screen.queryByText('Overview of your investments and bank accounts')).toBeNull()
@@ -300,12 +311,6 @@ describe('Dashboard', () => {
     const vs = panel('Vs the US 500')
     expect(within(vs).getAllByText('—')).toHaveLength(2)
     expect(within(vs).getByText(/Saxo is not connected/)).toBeInTheDocument()
-  })
-
-  it('flags holdings above the cap in the allocation list', () => {
-    renderWithProviders(<Dashboard />)
-    const allocation = panel('Allocation')
-    expect(within(allocation).getByText('100.0%')).toHaveClass('text-warn')
   })
 
   it('shows recent trades with instrument-currency price, signed euro total and fractional qty', () => {
