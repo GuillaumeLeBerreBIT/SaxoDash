@@ -89,14 +89,14 @@ white-on-light-grey does not separate on its own.
 |---|---|---|---|---|---|
 | Ink | `--sd-ink` | Values, titles, cell text | `#FFFFFF` | `#E6E9ED` | `#111827` |
 | Ink 2 | `--sd-ink-2` | Labels, names beside symbols | `#929191` | `#8B95A3` | `#4B5563` |
-| Ink 3 | `--sd-ink-3` | Units, timestamps, column heads, inactive tabs | `#7E7B78` | `#77818F` | `#6B7280` |
+| Ink 3 | `--sd-ink-3` | Units, timestamps, column heads, inactive tabs | `#868380` | `#798391` | `#656C7A` |
 | On accent | `--sd-on-accent` | Text on a primary button | `#12100E` | `#0A0C0F` | `#FFFFFF` |
 | Disabled | `--sd-disabled` | Disabled controls only | `#2C2A2A` | `#3D4550` | `#A3A9B3` |
 | Line | `--sd-line` | Row dividers, Porcelain rings | `#1A1A1A` | `#1C2129` | `#E5E7EB` |
 | Input line | `--sd-line-input` | Inputs and selects (≥ 3:1) | `#6B6865` | `#5E6876` | `#8A919C` |
 | Focus | `--sd-focus` | 2 px keyboard focus ring | `#FFFFFF` | `#7FB2FF` | `#1F5FD1` |
 
-Republic's Ink 3 is lifted from Trade Republic's `#4E4E4E` (2.3:1) to `#7E7B78` (4.5:1 on the
+Republic's Ink 3 is lifted from Trade Republic's `#4E4E4E` (2.3:1) to `#868380` (4.5:1 on the
 pane). Input line is added because Trade Republic draws inputs with no border at all. These two
 are the only deliberate departures from the measured palette, and both are for accessibility.
 
@@ -120,7 +120,7 @@ Porcelain only; in Republic the active tab is just white text), selected chips, 
 | Down | `--sd-down` | `#EB503F` | `#E5534B` | `#C0362C` | `#FF9A3C` | `#C2570C` |
 | Up subtle | `--sd-up-subtle` | `#1E2E1A` | `#12291F` | `#EAF5EE` | `#152238` | `#E3EBFA` |
 | Down subtle | `--sd-down-subtle` | `#2A120F` | `#2D1517` | `#FBECEA` | `#3A220F` | `#FBEADF` |
-| Flat | `--sd-flat` | `#929191` | `#8B95A3` | `#6B7280` | same | same |
+| Flat | `--sd-flat` | `#929191` | `#8B95A3` | `#656C7A` | same | same |
 
 The Republic up/down pair was checked with the palette validator: its colour-blind ΔE is 9.2,
 which passes. A move is **never colour alone**. It always carries ▲ / ▼ and a sign, and
@@ -158,7 +158,7 @@ Axis text uses Ink 3.
 - **Categorical series** `--sd-s1 … s8`, assigned in fixed order and never cycled. A 9th series
   folds into "Other".
   - Dark: `#3987e5 #d95926 #199e70 #c98500 #d55181 #008300 #9085e9 #e66767`
-  - Porcelain: `#2a78d6 #eb6834 #1baf7a #eda100 #e87ba4 #008300 #6250d6 #e34948`
+  - Porcelain: `#2a78d6 #eb6834 #1baf7a #c98500 #e87ba4 #008300 #6250d6 #e34948`
 - **Heat, diverging**: `--sd-heat-d3 d2 d1 0 u1 u2 u3`, used for day-move heatmaps and monthly
   returns. Thresholds are −3 / −1.5 / <0 / 0 / <1.5 / <3 / ≥3 %.
 

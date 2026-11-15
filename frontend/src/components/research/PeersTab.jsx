@@ -70,7 +70,7 @@ function AddPeerSearch({ onPick }) {
       {menuRect && isError && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-raised border border-line rounded-lg shadow-lg px-2.5 py-1.5 text-[12px] text-warn"
+          className="z-50 bg-raised border border-line rounded-lg shadow-lg px-2.5 py-1.5 text-[12px] text-warn-text"
         >
           Search unavailable — reconnect Saxo
         </div>,

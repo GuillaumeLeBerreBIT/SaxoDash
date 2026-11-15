@@ -142,7 +142,7 @@ export default function FilingsTab({ symbol }) {
         {(data) => (
           <>
             {data.missing?.length > 0 && (
-              <p data-testid="filings-missing" className="mb-3 text-[13px] text-warn">
+              <p data-testid="filings-missing" className="mb-3 text-[13px] text-warn-text">
                 {`Could not load ${data.missing.join(', ')} filings just now; showing the rest.`}
               </p>
             )}

@@ -161,7 +161,8 @@ function EarningsLane({ markers, geometry, colors, onInspect }) {
             role="img"
             tabIndex={0}
             aria-label={earningsLabel(marker)}
-            className="cursor-default outline-none"
+            aria-describedby="earnings-card"
+            className="sd-focus-ring cursor-default outline-none"
             onMouseEnter={show}
             onMouseLeave={hide}
             onFocus={show}
@@ -214,8 +215,9 @@ export function EarningsCard({ marker, x, bottom, width }) {
   return (
     <div
       data-testid="earnings-card"
+      id="earnings-card"
       role="tooltip"
-      className="absolute z-20 pointer-events-none rounded-lg border border-line bg-raised px-3 py-2 text-[11.5px] leading-5 shadow-lg"
+      className="absolute z-20 pointer-events-none rounded-lg border border-line bg-raised px-3 py-2 text-[12px] leading-5 shadow-lg"
       style={{ left, bottom, width: cardWidth }}
     >
       {marker.upcoming ? (

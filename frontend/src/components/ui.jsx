@@ -601,7 +601,7 @@ export function Metric({ label, value, tone = 'text-ink', hint }) {
 const TILE_TONES = {
   up: 'text-up',
   down: 'text-down',
-  warn: 'text-warn',
+  warn: 'text-warn-text',
   earn: 'text-earn',
   flat: 'text-flat',
 }

@@ -102,7 +102,7 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref, stac
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 sd-raised bg-raised rounded-lg shadow-lg px-3 py-2 text-[13px] text-warn"
+          className="z-50 sd-raised bg-raised rounded-lg shadow-lg px-3 py-2 text-[13px] text-warn-text"
         >
           Search unavailable — reconnect Saxo
         </div>,

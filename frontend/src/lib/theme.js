@@ -11,7 +11,7 @@ const TABLE = {
   bar: ['#1D1D1D', '#161B22', '#FFFFFF'],
   ink: ['#FFFFFF', '#E6E9ED', '#111827'],
   ink2: ['#929191', '#8B95A3', '#4B5563'],
-  ink3: ['#7E7B78', '#77818F', '#6B7280'],
+  ink3: ['#868380', '#798391', '#656C7A'],
   onAccent: ['#12100E', '#0A0C0F', '#FFFFFF'],
   disabled: ['#2C2A2A', '#3D4550', '#A3A9B3'],
   line: ['#1A1A1A', '#1C2129', '#E5E7EB'],
@@ -24,7 +24,7 @@ const TABLE = {
   down: ['#EB503F', '#E5534B', '#C0362C'],
   upSubtle: ['#1E2E1A', '#12291F', '#EAF5EE'],
   downSubtle: ['#2A120F', '#2D1517', '#FBECEA'],
-  flat: ['#929191', '#8B95A3', '#6B7280'],
+  flat: ['#929191', '#8B95A3', '#656C7A'],
   warn: ['#F5C542', '#E8A23A', '#B88A00'],
   warnText: ['#F5C542', '#E8A23A', '#8A6700'],
   ok: ['#5BC860', '#3FB27F', '#12733A'],
@@ -48,7 +48,7 @@ const TABLE = {
 }
 
 const SERIES_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']
-const SERIES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948']
+const SERIES_LIGHT = ['#2a78d6', '#eb6834', '#1baf7a', '#c98500', '#e87ba4', '#008300', '#6250d6', '#e34948']
 
 const THEME_NAMES = ['republic', 'blue', 'light']
 

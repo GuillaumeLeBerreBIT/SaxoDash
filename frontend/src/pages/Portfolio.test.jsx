@@ -631,7 +631,7 @@ describe('Portfolio redesign', () => {
     renderWithProviders(<Portfolio />)
     const concentration = screen.getByRole('heading', { name: 'Concentration' }).closest('.sd-panel')
     expect(within(concentration).getByText('MSFT')).toBeInTheDocument()
-    expect(within(concentration).getByText('27.8%')).toHaveClass('text-warn')
+    expect(within(concentration).getByText('27.8%')).toHaveClass('text-warn-text')
     expect(within(concentration).getByText(/1 holding sits above the 15% cap/)).toBeInTheDocument()
     const currency = screen.getByRole('heading', { name: 'Currency' }).closest('.sd-panel')
     expect(within(currency).getByText('USD')).toBeInTheDocument()
