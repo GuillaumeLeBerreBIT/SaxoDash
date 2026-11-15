@@ -6,9 +6,11 @@ import {
   actionTone,
   checkLine,
   trendSentence, CHECK_BASIS_NOTE } from '../../lib/verdicts'
-import { Card, Skeleton, Tag } from '../ui'
+import { Button, Card, Skeleton, Tag } from '../ui'
 
 const PLAIN = { sign: false, decimals: 1 }
+
+const STATUS_TONE = { fail: 'text-down' }
 
 const FOOTER = 'Rules, not advice. Sell (review) means check the story, not an order.'
 
@@ -18,7 +20,7 @@ function Checks({ checks }) {
       {checks.map((check) => (
         <li key={check.key} className="flex items-baseline justify-between gap-3 py-1.5 text-[13px]">
           <span className="text-ink-2 num">{checkLine(check)}</span>
-          <span className="font-semibold text-ink">{CHECK_STATUS_LABEL[check.status] ?? check.status}</span>
+          <span className={`font-semibold ${STATUS_TONE[check.status] ?? 'text-ink-3'}`}>{CHECK_STATUS_LABEL[check.status] ?? check.status}</span>
         </li>
       ))}
     </ul>
@@ -72,12 +74,24 @@ function Content({ verdict }) {
     return (
       <div role="status" aria-label="Loading verdict" className="flex flex-col gap-3">
         <span className="sr-only">Loading verdict…</span>
-        <Skeleton className="h-6 w-1/4" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-[26px] w-1/4" />
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-3/4" />
+        <Skeleton className="h-[230px] w-full" />
+        <Skeleton className="h-12 w-2/3" />
       </div>
     )
   }
-  if (verdict.isError) return <p role="alert" className="text-[13px] text-ink-3">Verdict unavailable right now</p>
+  if (verdict.isError) {
+    return (
+      <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-ink-3">Verdict unavailable right now</p>
+        <Button size="sm" onClick={() => verdict.refetch?.()}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
   if (!verdict.data) return <p className="text-[13px] text-ink-3">Not covered by the nightly scan</p>
   return <Body verdict={verdict.data} />
 }

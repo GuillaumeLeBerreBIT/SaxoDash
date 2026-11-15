@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 import { fmtMoney } from '../../lib/format'
 import VerdictCard from './VerdictCard'
@@ -53,6 +53,21 @@ describe('VerdictCard', () => {
     expect(rows[1]).toHaveTextContent('Return on capital · no figure')
     expect(rows[1]).toHaveTextContent('Unknown')
     expect(rows[4]).toHaveTextContent('Fail')
+  })
+
+  it('marks a failed check in the down colour and keeps the others quiet', () => {
+    renderCard({ data: verdict, isLoading: false })
+    const rows = screen.getAllByRole('listitem')
+    expect(within(rows[4]).getByText('Fail')).toHaveClass('text-down')
+    expect(within(rows[0]).getByText('Pass')).toHaveClass('text-ink-3')
+    expect(within(rows[1]).getByText('Unknown')).toHaveClass('text-ink-3')
+  })
+
+  it('offers a retry that refetches when the request failed', () => {
+    const refetch = vi.fn()
+    renderCard({ data: undefined, isError: true, isLoading: false, refetch })
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalled()
   })
 
   it('shows both price levels and the trend', () => {

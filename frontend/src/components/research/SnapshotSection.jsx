@@ -1,21 +1,24 @@
 import { fmtNum, fmtPct } from '../../lib/format'
 import { SNAPSHOT_GROUPS } from '../../lib/snapshot'
-import { Card, InfoTip } from '../ui'
+import { Card, InfoTip, Move } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 import VerdictBadge from './VerdictBadge'
 
 function fmtField(value, fmt) {
+  if (fmt === 'move') return <Move value={value} />
   if (value == null) return '—'
+  if (fmt === 'times') return `${fmtNum(value, 2)}×`
+  if (fmt === 'wholeTimes') return `${fmtNum(value, 0)}×`
   if (fmt === 'pct') return fmtPct(value, { sign: false, decimals: 1 })
   return fmtNum(value, 2)
 }
 
-function Group({ group, data }) {
-  const verdict = group.verdict(data)
+function Group({ group, data, valuationGrade }) {
+  const verdict = group.verdict(data, valuationGrade)
   return (
     <div className="py-3 first:pt-0 last:pb-0">
       <div className="flex items-start justify-between gap-3">
-        <span className="text-[13.5px] font-bold text-ink">{group.label}</span>
+        <span className="text-[13px] font-bold text-ink">{group.label}</span>
         <VerdictBadge {...verdict} />
       </div>
       <dl className="mt-1.5">
@@ -39,7 +42,7 @@ function withPageReturns(data, returns = []) {
   return { ...data, ...own }
 }
 
-export default function SnapshotSection({ fundamentals, returns }) {
+export default function SnapshotSection({ fundamentals, returns, valuationGrade }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
@@ -55,7 +58,8 @@ export default function SnapshotSection({ fundamentals, returns }) {
             <InfoTip>
               Growth reads TTM YoY revenue and EPS growth. Profitability reads ROE and net
               margin. Financial health reads debt/equity, current ratio and interest coverage.
-              Valuation reads PEG and P/E against its own annual history. Momentum reads the
+              Valuation reads PEG and the verdict's P/E grade, or P/E against its own annual
+              history when there is no verdict. Momentum reads the
               1-year and YTD price return, from the same prices as the Performance card. No
               composite score.
             </InfoTip>
@@ -63,7 +67,7 @@ export default function SnapshotSection({ fundamentals, returns }) {
         >
           <div className="divide-y divide-line">
             {SNAPSHOT_GROUPS.map((group) => (
-              <Group key={group.key} group={group} data={withPageReturns(data, returns)} />
+              <Group key={group.key} group={group} data={withPageReturns(data, returns)} valuationGrade={valuationGrade} />
             ))}
           </div>
         </Card>

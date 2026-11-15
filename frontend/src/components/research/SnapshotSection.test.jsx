@@ -27,7 +27,24 @@ describe('SnapshotSection', () => {
     const returns = [{ key: '1M', pct: 4.4 }, { key: 'YTD', pct: 31.05 }, { key: '1Y', pct: null }, { key: '3M', pct: 9 }]
     render(<SnapshotSection fundamentals={{ data, isLoading: false }} returns={returns} />)
     const value = (label) => screen.getByText(label).nextSibling.textContent
-    expect([value('1 month'), value('YTD'), value('1 year')]).toEqual(['4.4%', '31.1%', '25.0%'])
+    expect([value('1 month'), value('YTD'), value('1 year')]).toEqual(['▲ 4.40%', '▲ 31.05%', '▲ 25.00%'])
+  })
+
+  it('draws a falling return with its arrow and the down colour', () => {
+    render(<SnapshotSection fundamentals={{ data: { ...data, price_return_1y: -12.5 }, isLoading: false }} />)
+    expect(screen.getByText('▼ 12.50%')).toHaveClass('text-down')
+  })
+
+  it('writes multiples with a times sign and interest coverage as a whole number', () => {
+    render(<SnapshotSection fundamentals={{ data: { ...data, interest_coverage: 621.6 }, isLoading: false }} />)
+    const value = (label) => screen.getByText(label).nextSibling.textContent
+    expect([value('Int. coverage'), value('Debt/equity'), value('Current ratio')]).toEqual(['622×', '0.40×', '2.00×'])
+  })
+
+  it('takes its P/E phrase from the verdict when the page has one', () => {
+    render(<SnapshotSection fundamentals={{ data, isLoading: false }} valuationGrade="expensive" />)
+    expect(screen.getByText('Growth looks cheap vs. earnings growth; P/E high for its own history')).toBeInTheDocument()
+    expect(screen.queryByText(/6-yr range/)).not.toBeInTheDocument()
   })
 
   it('shows an em dash for a missing metric but still renders the group', () => {

@@ -89,6 +89,7 @@ describe('OverviewTab fundamentals', () => {
 
     expect(screen.getByText('US0378331005')).toBeInTheDocument()
     expect(screen.getByText('Nasdaq')).toBeInTheDocument()
+    expect(screen.queryByText('Uic')).not.toBeInTheDocument()
     expect(screen.queryByText(/reference data from Saxo/)).not.toBeInTheDocument()
   })
 
@@ -235,7 +236,7 @@ describe('OverviewTab on the new design', () => {
   })
 
   it('pairs the header with Your position in one row so they stand level', () => {
-    renderOverview({ header: <div data-testid="header" /> })
+    renderOverview({ header: <div data-testid="header" />, position: { symbol: 'AAPL', qty: 10, value: 1900, avg_cost: 180, currency: 'USD', price_source: 'live' } })
 
     const row = screen.getByTestId('overview-top')
     const [main, side] = row.children
@@ -245,16 +246,53 @@ describe('OverviewTab on the new design', () => {
     expect(screen.getByRole('heading', { name: 'Your position' }).closest('.sd-panel')).toHaveClass('h-full')
   })
 
-  it('puts the watchlist first in the side column, under Your position', () => {
-    renderOverview({ rail: <div data-testid="rail" />, signals: <div data-testid="side-slot" /> })
+  it('leads the side column with the verdict, the watchlist after the company cards', () => {
+    const verdict = { isLoading: false, data: null }
+    renderOverview({
+      rail: <div data-testid="rail" />,
+      verdict,
+      fundamentals: { isLoading: false, data: { available: true, name: 'Apple Inc', pe_ratio: 30 } },
+    })
 
-    expect(screen.getByTestId('overview-col-side').firstChild).toBe(screen.getByTestId('rail'))
+    const side = screen.getByTestId('overview-col-side')
+    expect(side.firstChild).toContainElement(screen.getByRole('heading', { name: 'Verdict' }))
+    const snapshot = screen.getByRole('heading', { name: 'Investment snapshot' })
+    expect(snapshot.compareDocumentPosition(screen.getByTestId('rail')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('says when the symbol is not in the book', () => {
+  it('says when the symbol is not in the portfolio, in a card that keeps its own height', () => {
     renderOverview()
 
     expect(screen.getByText(/You don’t hold AAPL/)).toBeInTheDocument()
+    expect(screen.getByText('Not in your portfolio')).toBeInTheDocument()
+    const panel = screen.getByRole('heading', { name: 'Your position' }).closest('.sd-panel')
+    expect(panel).not.toHaveClass('h-full')
+    expect(panel).toHaveClass('flex-none!')
+  })
+
+  it('speaks of the portfolio and the average price paid for a held symbol', () => {
+    renderOverview({ position: { symbol: 'AAPL', qty: 10, weight: 12.5, value: 1900, pnl: 100, pnl_pct: 5, avg_cost: 180, currency: 'USD', price_source: 'live' } })
+
+    expect(screen.getByText(/12\.5% of your portfolio/)).toBeInTheDocument()
+    expect(screen.getByText('Average price paid')).toBeInTheDocument()
+    expect(screen.queryByText(/of the book|Avg buy/)).not.toBeInTheDocument()
+  })
+
+  it('states the range low and high once, in the tiles', () => {
+    renderOverview({ bars: risingBars(20) })
+
+    const panel = screen.getByRole('heading', { name: 'Range statistics' }).closest('.sd-panel')
+    expect(panel).not.toHaveTextContent(/\d low/)
+    expect(panel).toHaveTextContent('1M low')
+  })
+
+  it('hands the verdict grade to the snapshot so the page gives one valuation answer', () => {
+    renderOverview({
+      verdict: { isLoading: false, data: { action: 'hold', reason: 'x', quality: 'strong', valuation: 'expensive', as_of: '2026-11-10', checks: [], held: false } },
+      fundamentals: { isLoading: false, data: { available: true, pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } } },
+    })
+
+    expect(screen.getByText('P/E high for its own history')).toBeInTheDocument()
   })
 
   it('shows the next earnings date from the earnings calendar', () => {

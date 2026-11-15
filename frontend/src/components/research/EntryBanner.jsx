@@ -9,8 +9,8 @@ export default function EntryBanner({ sentence }) {
       ) : null}
       {sentence.why ? <span className="text-[13px] font-semibold text-ink">{sentence.why}</span> : null}
       {sentence.next ? <span className="text-[13px] text-ink-2">{sentence.next}</span> : null}
-      {sentence.risk ? <span className="basis-full text-[12.5px] text-ink-3">{sentence.risk}</span> : null}
-      {sentence.earnings ? <span className="basis-full text-[12.5px] font-medium text-warn-text">{sentence.earnings}</span> : null}
+      {sentence.risk ? <span className="basis-full text-[13px] text-ink-3">{sentence.risk}</span> : null}
+      {sentence.earnings ? <span className="basis-full text-[13px] font-medium text-warn-text">{sentence.earnings}</span> : null}
     </div>
   )
 }

@@ -33,11 +33,10 @@ const WIDEST_VALUES = {
 }
 
 function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) {
-  const up = bar.close >= bar.open
   const strokes = overlayStrokes(useChartColors())
 
   return (
-    <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[var(--fig-2xs)] num flex-wrap ${className}`} {...rest}>
+    <div className={`flex items-center gap-x-3 gap-y-0.5 md:gap-y-3 px-3 pt-2 text-[13px] num flex-wrap ${className}`} {...rest}>
       <span className="text-ink-2">{fmtDate(bar.date)}</span>
       {[
         ['O', bar.open],
@@ -46,7 +45,7 @@ function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) 
         ['C', bar.close],
       ].map(([key, value]) => (
         <span key={key} className={key === 'C' ? 'text-ink-3' : 'hidden md:inline text-ink-3'}>
-          {key} <span className={up ? 'text-up' : 'text-down'}>{fmtNum(value, 2)}</span>
+          {key} <span className="text-ink">{fmtNum(value, 2)}</span>
         </span>
       ))}
       {change == null ? null : (
@@ -59,7 +58,7 @@ function OhlcLegend({ bar, change, overlays, values, className = '', ...rest }) 
       {OVERLAY_DEFS.filter((o) => overlays[o.key] && o.key !== 'bb').map((o) => {
         const value = values.overlays[o.key]
         return (
-          <span key={o.key} style={{ color: strokes[o.key] }} className="text-[var(--fig-2xs)]">
+          <span key={o.key} style={{ color: strokes[o.key] }}>
             {o.label} {value == null ? '—' : fmtNum(value, 2)}
           </span>
         )

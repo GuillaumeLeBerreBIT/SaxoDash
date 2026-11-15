@@ -70,11 +70,20 @@ export function healthVerdict(f) {
   return { tone: 'neutral', text: 'Adequate balance sheet' }
 }
 
-export function valuationVerdict(f) {
+const VERDICT_PE_PHRASE = {
+  cheap: 'P/E low for its own history',
+  fair: 'P/E in the middle of its own history',
+  expensive: 'P/E high for its own history',
+}
+
+const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)
+
+export function valuationVerdict(f, verdictGrade) {
   const peg = f.peg_ratio
   const pe = f.pe_ratio
   const hist = f.valuation_history?.pe
-  if (!has(peg, pe) && !hist) return limited
+  const fromVerdict = VERDICT_PE_PHRASE[verdictGrade]
+  if (!has(peg, pe) && !hist && !fromVerdict) return limited
 
   let tone = 'neutral'
   const parts = []
@@ -89,7 +98,11 @@ export function valuationVerdict(f) {
       parts.push('fairly priced vs. growth')
     }
   }
-  if (hist && pe != null) {
+  if (fromVerdict) {
+    if (verdictGrade === 'expensive') tone = 'caution'
+    else if (verdictGrade === 'cheap' && tone !== 'caution') tone = 'pos'
+    parts.push(fromVerdict)
+  } else if (hist && pe != null) {
     if (pe > hist.median * (1 + T.histBand)) {
       tone = 'caution'
       parts.push(`P/E above its ${hist.n}-yr range`)
@@ -100,7 +113,7 @@ export function valuationVerdict(f) {
       parts.push(`P/E in line with its ${hist.n}-yr range`)
     }
   }
-  return { tone, text: parts.join('; ') || 'Limited data' }
+  return { tone, text: capitalised(parts.join('; ')) || 'Limited data' }
 }
 
 export function momentumVerdict(f) {
@@ -143,27 +156,27 @@ export const SNAPSHOT_GROUPS = [
   {
     key: 'health', label: 'Financial health', verdict: healthVerdict,
     metrics: [
-      { label: 'Current ratio', field: 'current_ratio', fmt: 'num' },
-      { label: 'Debt/equity', field: 'debt_to_equity', fmt: 'num' },
-      { label: 'Int. coverage', field: 'interest_coverage', fmt: 'num' },
-      { label: 'Quick ratio', field: 'quick_ratio', fmt: 'num' },
+      { label: 'Current ratio', field: 'current_ratio', fmt: 'times' },
+      { label: 'Debt/equity', field: 'debt_to_equity', fmt: 'times' },
+      { label: 'Int. coverage', field: 'interest_coverage', fmt: 'wholeTimes' },
+      { label: 'Quick ratio', field: 'quick_ratio', fmt: 'times' },
     ],
   },
   {
     key: 'valuation', label: 'Valuation', verdict: valuationVerdict,
     metrics: [
-      { label: 'P/E', field: 'pe_ratio', fmt: 'num' },
-      { label: 'Forward P/E', field: 'forward_pe', fmt: 'num' },
+      { label: 'P/E', field: 'pe_ratio', fmt: 'times' },
+      { label: 'Forward P/E', field: 'forward_pe', fmt: 'times' },
       { label: 'PEG', field: 'peg_ratio', fmt: 'num' },
-      { label: 'EV/EBITDA', field: 'ev_ebitda', fmt: 'num' },
+      { label: 'EV/EBITDA', field: 'ev_ebitda', fmt: 'times' },
     ],
   },
   {
     key: 'momentum', label: 'Momentum', verdict: momentumVerdict,
     metrics: [
-      { label: '1 month', field: 'price_return_1m', fmt: 'pct' },
-      { label: 'YTD', field: 'price_return_ytd', fmt: 'pct' },
-      { label: '1 year', field: 'price_return_1y', fmt: 'pct' },
+      { label: '1 month', field: 'price_return_1m', fmt: 'move' },
+      { label: 'YTD', field: 'price_return_ytd', fmt: 'move' },
+      { label: '1 year', field: 'price_return_1y', fmt: 'move' },
       { label: 'Beta', field: 'beta', fmt: 'num' },
     ],
   },

@@ -26,7 +26,7 @@ function Note({ item, geometry, data, selected, onSelect, onMove, onEdit }) {
         x={x + 6}
         y={y}
         fill={selected ? c.ink : c.axisCategory}
-        fontSize="10"
+        fontSize="11"
         pointerEvents="none"
       >
         {item.text}

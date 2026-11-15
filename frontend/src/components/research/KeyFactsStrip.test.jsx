@@ -29,6 +29,20 @@ describe('KeyFactsStrip', () => {
     expect(value('Country')).toBe('US')
   })
 
+  it('leaves Saxo’s internal identifiers out of the reference data', () => {
+    render(<KeyFactsStrip details={{ exchange_name: 'Nasdaq', currency: 'USD', uic: 211, asset_type: 'Stock', lot_size: 1 }} />)
+
+    expect(screen.getByText('Nasdaq')).toBeInTheDocument()
+    expect(screen.queryByText('Uic')).not.toBeInTheDocument()
+    expect(screen.queryByText('Asset type')).not.toBeInTheDocument()
+  })
+
+  it('names a truncated fact in full on hover', () => {
+    render(<KeyFactsStrip fundamentals={facts} />)
+
+    expect(screen.getByText('Technology')).toHaveAttribute('title', 'Technology')
+  })
+
   it('links the website by its host name, opening safely in a new tab', () => {
     render(<KeyFactsStrip fundamentals={facts} />)
 

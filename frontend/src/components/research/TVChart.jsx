@@ -53,7 +53,7 @@ function PriceAxis({ ticks, scaleY, width, colors }) {
         x={width - PAD_R + 8}
         y={scaleY(value) + 3.5}
         fill={colors.axis}
-        fontSize="10"
+        fontSize="11"
         className="num"
       >
         {value.toFixed(value > 100 ? 0 : 2)}
@@ -177,7 +177,7 @@ function EarningsLane({ markers, geometry, colors, onInspect }) {
               stroke={color}
               strokeDasharray={marker.upcoming ? '2 2' : undefined}
             />
-            <text x={x} y={top + BADGE_SIZE / 2 + 3.5} fill={color} fontSize="10" fontWeight="700" textAnchor="middle">
+            <text x={x} y={top + BADGE_SIZE / 2 + 3.5} fill={color} fontSize="11" fontWeight="700" textAnchor="middle">
               E
             </text>
           </g>
@@ -356,7 +356,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           x={width - PAD_R + 6}
           y={scaleY(last) + 3.5}
           fill={colors.onAccent}
-          fontSize="10"
+          fontSize="11"
           className="num"
         >
           {last.toFixed(2)}
@@ -392,7 +392,7 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
         x={width - PAD_R + 6}
         y={scaleY(bar.close) + 3.5}
         fill={colors.tooltip.text}
-        fontSize="10"
+        fontSize="11"
         className="num"
       >
         {bar.close.toFixed(2)}

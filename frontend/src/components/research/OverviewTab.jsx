@@ -71,21 +71,21 @@ function CompanyReads({ companyData, fundamentals, verdict, chartSignals, return
     <>
       {verdict && <VerdictCard verdict={verdict} />}
       <SetupCard stockSignals={chartSignals?.stock} signals={chartSignals?.catalogue} />
-      <SnapshotSection fundamentals={fundamentals} returns={returns} />
+      <SnapshotSection fundamentals={fundamentals} returns={returns} valuationGrade={verdict?.data?.valuation} />
     </>
   )
 }
 
 function positionContext(position) {
   const parts = [`Held · ${fmtQty(position.qty)} shares`]
-  if (position.weight != null) parts.push(`${fmtPct(position.weight, { sign: false, decimals: 1 })} of the book`)
+  if (position.weight != null) parts.push(`${fmtPct(position.weight, { sign: false, decimals: 1 })} of your portfolio`)
   return parts.join(' · ')
 }
 
 function PositionCard({ symbol, position }) {
   if (!position) {
     return (
-      <Card context="Not in your book" dot="off" title="Your position" className="h-full">
+      <Card context="Not in your portfolio" dot="off" title="Your position" className="flex-none!">
         <p className="text-[13px] text-ink-2">You don’t hold {symbol}.</p>
       </Card>
     )
@@ -106,7 +106,7 @@ function PositionCard({ symbol, position }) {
           sub={<Move value={position.pnl_pct} />}
         />
         <Tile label="Quantity" value={fmtQty(position.qty)} />
-        <Tile label="Avg buy" value={fmtMoney(position.avg_cost, position.currency)} />
+        <Tile label="Average price paid" value={fmtMoney(position.avg_cost, position.currency)} />
       </div>
       {basis && <p className="mt-2 text-[12px] text-ink-3">{basis}</p>}
     </Card>
@@ -120,10 +120,6 @@ function RangeStatsCard({ bars, range }) {
 
   return (
     <Card context={`Computed from the ${range} candles on screen`} dot="ok" title="Range statistics">
-      <div className="flex items-baseline justify-between text-[13px] font-semibold num text-ink">
-        <span>{fmtNum(stats.low, 2)} low</span>
-        <span>{fmtNum(stats.high, 2)} high</span>
-      </div>
       <div className="relative h-3.5 my-2">
         <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-track" />
         <span
@@ -236,8 +232,8 @@ export default function OverviewTab({
         </div>
 
         <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
-          {rail}
           <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
+          {rail}
           <TradePlanCard
             bars={allBars}
             currency={details?.currency ?? position?.currency}

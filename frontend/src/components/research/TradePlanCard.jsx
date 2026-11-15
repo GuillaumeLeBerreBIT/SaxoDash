@@ -59,7 +59,7 @@ export default function TradePlanCard({ bars, currency, note, positions, positio
   return (
     <Card context="Stop distance and position size from the latest close" dot="off" title="Trade plan">
       {caution ? (
-        <p data-testid="plan-verdict-note" className="mb-3 text-[12.5px] text-ink-2">
+        <p data-testid="plan-verdict-note" className="mb-3 text-[13px] text-ink-2">
           {`The verdict for this stock is ${actionLabel(verdict)}. The figures below are arithmetic for a trade you decide on yourself, not a suggestion to buy.`}
         </p>
       ) : null}
