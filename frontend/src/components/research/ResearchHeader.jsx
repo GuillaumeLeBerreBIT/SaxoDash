@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Search, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 
 import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct } from '../../lib/format'
 import { chartHref, isEtf, moveCaption } from '../../lib/research'
-import InstrumentSearchBar from '../InstrumentSearchBar'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
-import { Card, Chip, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
+import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
 import { Menu, MenuRow } from './menu'
 
 const LINK_BUTTON =
@@ -104,7 +103,6 @@ export default function ResearchHeader({
   instrument,
   details,
   position,
-  positions = [],
   quote,
   bars,
   company,
@@ -114,16 +112,10 @@ export default function ResearchHeader({
   tabs,
   activeTab,
   onSelectTab,
-  recentSymbols = [],
-  onSelectSymbol,
-  onOpenPalette,
   showPosition = false,
   className = '',
 }) {
   const name = details?.description ?? position?.name ?? symbol
-  const held = [...new Map(positions.map((p) => [p.ticker, p])).values()]
-  const heldTickers = new Set(held.map((p) => p.ticker))
-  const recent = recentSymbols.filter((s) => !heldTickers.has(s))
 
   return (
     <Card className={className}>
@@ -183,32 +175,6 @@ export default function ResearchHeader({
           </TabButton>
         ))}
       </TabList>
-
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
-          {held.map((p) => (
-            <Chip
-              key={p.ticker}
-              active={p.ticker === symbol}
-              onClick={() => onSelectSymbol(p.ticker, { uic: p.uic, assetType: p.asset_type })}
-            >
-              {p.ticker}
-            </Chip>
-          ))}
-          {recent.map((s) => (
-            <Chip key={s} onClick={() => onSelectSymbol(s)}>
-              {s}
-            </Chip>
-          ))}
-          <Chip onClick={() => onOpenPalette?.()}>
-            <Search size={14} aria-hidden="true" />
-            Any instrument
-          </Chip>
-        </div>
-        <div className="w-full md:w-[360px]">
-          <InstrumentSearchBar />
-        </div>
-      </div>
 
       {showPosition && position ? <InlinePosition position={position} /> : null}
     </Card>

@@ -9,7 +9,6 @@ import { Button, Card } from '../ui'
 import SetupCard from '../signals/SetupCard'
 import TradePlanCard from './TradePlanCard'
 import AnswerCard from './AnswerCard'
-import AnalystRatingCard from './AnalystRatingCard'
 import KeyFactsStrip from './KeyFactsStrip'
 import PerformanceTiles from './PerformanceTiles'
 import SnapshotSection from './SnapshotSection'
@@ -200,7 +199,6 @@ export default function OverviewTab({
             />
           </PlanSection>
           {signals}
-          {company && <AnalystRatingCard fundamentals={company} />}
           <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
         </div>
       </div>

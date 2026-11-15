@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useOutletContext, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
@@ -9,7 +9,6 @@ import { entrySentence, priceZones } from '../lib/priceZones'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
-import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import FundsTab from '../components/research/FundsTab'
@@ -56,7 +55,6 @@ const REFUSALS = {
 
 export default function Research() {
   const [params] = useSearchParams()
-  const outlet = useOutletContext()
   const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
@@ -71,7 +69,6 @@ export default function Research() {
     controls.resetView()
   }
 
-  const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
   const {
     chart,
@@ -170,7 +167,6 @@ export default function Research() {
       instrument={instrument}
       details={details.data}
       position={position}
-      positions={positions}
       verdict={verdict}
       quote={quote}
       bars={rangeBars}
@@ -181,9 +177,6 @@ export default function Research() {
       tabs={visibleTabs}
       activeTab={tab}
       onSelectTab={setTab}
-      recentSymbols={recentSymbols}
-      onSelectSymbol={selectSymbol}
-      onOpenPalette={outlet?.openPalette}
       showPosition={!onOverview}
     />
   )
@@ -240,7 +233,7 @@ export default function Research() {
           onOpenTab={setTab}
           header={header}
           lead={chartPanel}
-          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} onOpenTab={setTab} />}
+          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
           rail={<WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
       </div>

@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+
 import { fmtNum, fmtPct } from '../../lib/format'
 import { SNAPSHOT_GROUPS } from '../../lib/snapshot'
 import { Card, InfoTip, Move } from '../ui'
@@ -14,21 +17,33 @@ function fmtField(value, fmt) {
 }
 
 function Group({ group, data, valuationGrade }) {
+  const [open, setOpen] = useState(false)
   const verdict = group.verdict(data, valuationGrade)
   return (
-    <div className="py-3 first:pt-0 last:pb-0">
-      <div className="flex items-start justify-between gap-3">
+    <div className="py-1">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`${group.label} figures`}
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-3 rounded py-1.5 text-left"
+      >
         <span className="text-[13px] font-bold text-ink">{group.label}</span>
-        <VerdictBadge {...verdict} />
-      </div>
-      <dl className="mt-1.5">
-        {group.metrics.map((m) => (
-          <div key={m.field} className="flex items-baseline justify-between gap-3 py-0.5">
-            <dt className="text-[13px] text-ink-2">{m.label}</dt>
-            <dd className="text-[13px] num text-ink">{fmtField(data[m.field], m.fmt)}</dd>
-          </div>
-        ))}
-      </dl>
+        <span className="flex min-w-0 items-center gap-2">
+          <VerdictBadge {...verdict} />
+          <ChevronDown size={14} aria-hidden="true" className={`shrink-0 text-ink-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </span>
+      </button>
+      {open ? (
+        <dl className="pb-1.5">
+          {group.metrics.map((m) => (
+            <div key={m.field} className="flex items-baseline justify-between gap-3 py-0.5">
+              <dt className="text-[13px] text-ink-2">{m.label}</dt>
+              <dd className="text-[13px] num text-ink">{fmtField(data[m.field], m.fmt)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
     </div>
   )
 }
@@ -51,8 +66,7 @@ export default function SnapshotSection({ fundamentals, returns, valuationGrade 
     >
       {(data) => (
         <Card
-          context="Grouped reads from Finnhub fundamentals"
-          dot="ok"
+          context="Five reads of the last twelve months. Open one for its figures."
           title="Investment snapshot"
           right={
             <InfoTip>

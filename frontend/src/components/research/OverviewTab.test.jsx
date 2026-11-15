@@ -164,7 +164,7 @@ describe('OverviewTab company view', () => {
     expect(screen.getByText('1Y')).toBeInTheDocument()
   })
 
-  it('keeps the analyst rating and leaves ownership and capital structure to the Statistics tab', () => {
+  it('leaves the analyst gauge, ownership and capital structure out of the Overview', () => {
     renderOverview({
       fundamentals: {
         isLoading: false,
@@ -182,7 +182,7 @@ describe('OverviewTab company view', () => {
 
     expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
     expect(screen.queryByText('Capital structure')).not.toBeInTheDocument()
-    expect(screen.getByRole('img', { name: /analyst rating/i })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /analyst rating/i })).not.toBeInTheDocument()
   })
 
   it('shows none of the company cards for an ETF', () => {
