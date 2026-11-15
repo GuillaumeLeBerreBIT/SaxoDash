@@ -131,10 +131,10 @@ export default function Research() {
       currency: guideCurrency,
       zones: shown.zones ? zones : null,
       plan: shown.plan ? plan : null,
-      sentence: entrySentence({
-        verdict: shown.zones ? judged : null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position),
-        earnings: shown.zones && judged ? reportsWithin(nextReport, 10) : null,
-        currency: guideCurrency,
+      sentence: entrySentence({ verdict: null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
+      answer: entrySentence({
+        verdict: judged, price: latest, plan: null, held: Boolean(position),
+        earnings: judged ? reportsWithin(nextReport, 10) : null, currency: guideCurrency,
       }),
     }
   }, [controls.guides, allBars, guideCurrency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, judgedVerdict, listingUic, nextReport])
@@ -228,6 +228,7 @@ export default function Research() {
           range={controls.range}
           fundamentals={fundamentals}
           verdict={verdict}
+          answer={guides.answer}
           chartSignals={chartSignals}
           tradePlan={tradePlan}
           note={note}

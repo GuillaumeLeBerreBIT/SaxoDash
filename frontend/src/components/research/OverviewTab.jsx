@@ -1,27 +1,30 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
-import { fmtCompact, fmtDate, fmtEur, fmtMoney, fmtNum, fmtPct, fmtQty, fmtShares } from '../../lib/format'
+import { fmtCompact, fmtDate, fmtNum, fmtShares } from '../../lib/format'
 import { COMPANY_DATA } from '../../lib/companyData'
 import { daysUntil, sessionWords } from '../../lib/earnings'
-import { priceBasis } from '../../lib/pricing'
 import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
-import { Card, Move, Tile } from '../ui'
+import { Button, Card } from '../ui'
 import SetupCard from '../signals/SetupCard'
 import TradePlanCard from './TradePlanCard'
-import VerdictCard from '../verdicts/VerdictCard'
+import AnswerCard from './AnswerCard'
 import AnalystRatingCard from './AnalystRatingCard'
-import CapitalStructureCard from './CapitalStructureCard'
 import KeyFactsStrip from './KeyFactsStrip'
-import OwnershipCard from './OwnershipCard'
 import PerformanceTiles from './PerformanceTiles'
 import SnapshotSection from './SnapshotSection'
 import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
 const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
 const COL = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
-const TOP_ROW = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch'
-const TOP_CELL = 'flex flex-col min-w-0 [&>*]:flex-1'
+const PLAN_ACTIONS = new Set(['buy', 'add'])
+const ANSWER_NOTES = {
+  [COMPANY_DATA.fund]: 'This is an ETF, so there is no company to judge: no earnings, margins or valuation ratios.',
+  [COMPANY_DATA.foreign]:
+    'No verdict: this is listed outside the US. Company data is looked up by ticker alone, and that ticker belongs to a US-listed company that may not be this one.',
+  [COMPANY_DATA.unverified]:
+    'No verdict: Saxo could not confirm where this instrument is listed, so company data is held back until it can.',
+}
 
 function Fact({ label, value }) {
   return (
@@ -32,94 +35,24 @@ function Fact({ label, value }) {
   )
 }
 
-function ListingNote({ context, title, children }) {
-  return (
-    <Card context={context} dot="off" title={title}>
-      <p className="text-[13px] text-ink-2">{children}</p>
-    </Card>
-  )
-}
-
 function CompanyReads({ companyData, fundamentals, verdict, chartSignals, returns }) {
-  if (companyData === COMPANY_DATA.fund) {
-    return (
-      <ListingNote context="Company fundamentals don't apply" title="Fund">
-        This is an ETF, so there are no earnings, margins or valuation ratios to show. Range statistics and your notes
-        are beside it.
-      </ListingNote>
-    )
-  }
-  if (companyData === COMPANY_DATA.foreign) {
-    return (
-      <ListingNote context="Company data covers US-listed shares" title="Listed outside the US">
-        Fundamentals, statements, earnings and SEC filings are looked up by ticker alone, and that ticker belongs to a
-        US-listed company that may not be this one. They are left out here. Range statistics and your notes are beside
-        it.
-      </ListingNote>
-    )
-  }
-  if (companyData === COMPANY_DATA.unverified) {
-    return (
-      <ListingNote context="Company data is held back" title="Listing not confirmed">
-        Saxo could not confirm where this instrument is listed. Fundamentals and filings are looked up by US ticker, so
-        they are held back until it can. Range statistics and your notes are beside it.
-      </ListingNote>
-    )
-  }
-  if (companyData === COMPANY_DATA.pending) return null
+  if (companyData !== COMPANY_DATA.eligible) return null
   return (
     <>
-      {verdict && <VerdictCard verdict={verdict} />}
       <SetupCard stockSignals={chartSignals?.stock} signals={chartSignals?.catalogue} />
       <SnapshotSection fundamentals={fundamentals} returns={returns} valuationGrade={verdict?.data?.valuation} />
     </>
   )
 }
 
-function positionContext(position) {
-  const parts = [`Held · ${fmtQty(position.qty)} shares`]
-  if (position.weight != null) parts.push(`${fmtPct(position.weight, { sign: false, decimals: 1 })} of your portfolio`)
-  return parts.join(' · ')
-}
-
-function PositionCard({ symbol, position }) {
-  if (!position) {
-    return (
-      <Card context="Not in your portfolio" dot="off" title="Your position" className="flex-none!">
-        <p className="text-[13px] text-ink-2">You don’t hold {symbol}.</p>
-      </Card>
-    )
-  }
-
-  const pnl = position.pnl == null ? null : Number(position.pnl)
-  const basis =
-    position.price_source && position.price_source !== 'live' ? priceBasis(position.price_source).note : undefined
-
-  return (
-    <Card context={positionContext(position)} dot={basis ? 'warn' : 'ok'} title="Your position" className="h-full">
-      <div className="grid grid-cols-2 gap-2">
-        <Tile label="Market value" value={fmtEur(position.value, { decimals: 0 })} />
-        <Tile
-          label="Unrealised P&L"
-          value={pnl == null ? null : fmtEur(pnl, { sign: true, decimals: 0 })}
-          tone={pnl == null ? undefined : pnl >= 0 ? 'up' : 'down'}
-          sub={<Move value={position.pnl_pct} />}
-        />
-        <Tile label="Quantity" value={fmtQty(position.qty)} />
-        <Tile label="Average price paid" value={fmtMoney(position.avg_cost, position.currency)} />
-      </div>
-      {basis && <p className="mt-2 text-[12px] text-ink-3">{basis}</p>}
-    </Card>
-  )
-}
-
-function RangeStatsCard({ bars, range }) {
+function RangeFacts({ bars, range }) {
   const stats = rangeStats(bars)
   if (!stats) return null
   const marker = Math.min(100, Math.max(0, stats.positionInRange))
 
   return (
-    <Card context={`Computed from the ${range} candles on screen`} dot="ok" title="Range statistics">
+    <div data-testid="range-facts" className="mt-3">
+      <div className="text-[12px] text-ink-3">{`Where the price sits in its ${range} range`}</div>
       <div className="relative h-3.5 my-2">
         <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-track" />
         <span
@@ -127,12 +60,22 @@ function RangeStatsCard({ bars, range }) {
           style={{ left: `${marker}%` }}
         />
       </div>
-      <div className="grid gap-2 grid-cols-[repeat(auto-fit,minmax(120px,1fr))]">
-        <Fact label={`${range} high`} value={fmtNum(stats.high, 2)} />
+      <div className="grid gap-2 grid-cols-3">
         <Fact label={`${range} low`} value={fmtNum(stats.low, 2)} />
-        <Fact label="Last close" value={fmtNum(stats.last, 2)} />
-        <Fact label="Avg volume" value={fmtShares(stats.avgVolume)} />
+        <Fact label={`${range} high`} value={fmtNum(stats.high, 2)} />
+        <Fact label="Average volume" value={fmtShares(stats.avgVolume)} />
       </div>
+    </div>
+  )
+}
+
+function PlanSection({ action, children }) {
+  const [open, setOpen] = useState(false)
+  if (!action || PLAN_ACTIONS.has(action) || open) return children
+  return (
+    <Card context="For a new purchase" dot="off" title="Trade plan">
+      <p className="text-[13px] text-ink-2">Stop-loss, size and risk. Closed because the verdict is not Buy or Add.</p>
+      <Button size="sm" className="mt-2.5" onClick={() => setOpen(true)}>Show the trade plan</Button>
     </Card>
   )
 }
@@ -174,7 +117,6 @@ function NextEarningsCard({ earnings, onOpenTab }) {
 }
 
 export default function OverviewTab({
-  symbol,
   position,
   details,
   detailsLoading,
@@ -183,6 +125,7 @@ export default function OverviewTab({
   range,
   fundamentals,
   verdict,
+  answer,
   chartSignals,
   tradePlan,
   note,
@@ -197,29 +140,39 @@ export default function OverviewTab({
   rail,
   onOpenTab,
 }) {
-  const company = companyData === COMPANY_DATA.eligible && fundamentals?.data?.available ? fundamentals.data : null
+  const eligible = companyData === COMPANY_DATA.eligible
+  const company = eligible && fundamentals?.data?.available ? fundamentals.data : null
   const returns = useMemo(() => trailingReturns(allBars), [allBars])
   const hasReturns = returns.some((row) => row.pct != null)
+  const pending = companyData === COMPANY_DATA.pending
 
   return (
     <div className={COL}>
-      <div data-testid="overview-top" className={TOP_ROW}>
-        <div className={`min-[1100px]:col-span-8 ${TOP_CELL}`}>{header}</div>
-        <div className={`min-[1100px]:col-span-4 ${TOP_CELL}`}>
-          <PositionCard symbol={symbol} position={position} />
-        </div>
+      <div data-testid="overview-top" className={COL}>
+        {header}
+        {pending ? null : (
+          <AnswerCard
+            verdict={eligible ? verdict : undefined}
+            sentence={eligible ? answer : null}
+            position={position}
+            note={ANSWER_NOTES[companyData]}
+          />
+        )}
       </div>
       <div className={BOARD}>
         <div data-testid="overview-col-main" className={`min-[1100px]:col-span-8 ${COL}`}>
           {lead}
-          {hasReturns && (
-            <Card context="Change in price up to the latest close" dot="ok" title="Performance">
-              <div className="sm:[&>ul]:grid-cols-6">
-                <PerformanceTiles returns={returns} />
-              </div>
+          {hasReturns || bars?.length ? (
+            <Card context="Change in price up to the latest close" title="Performance">
+              {hasReturns ? (
+                <div className="sm:[&>ul]:grid-cols-6">
+                  <PerformanceTiles returns={returns} />
+                </div>
+              ) : null}
+              <RangeFacts bars={bars} range={range} />
             </Card>
-          )}
-          <RangeStatsCard bars={bars} range={range} />
+          ) : null}
+          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
           <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />
           <ThesisAndRisksCard
             note={note?.data}
@@ -232,23 +185,22 @@ export default function OverviewTab({
         </div>
 
         <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
-          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
           {rail}
-          <TradePlanCard
-            bars={allBars}
-            currency={details?.currency ?? position?.currency}
-            note={note?.data}
-            position={position}
-            positions={tradePlan?.positions}
-            portfolioValue={tradePlan?.portfolioValue}
-            nextEarnings={earnings?.data?.available ? earnings.data.next : null}
-            verdict={companyData === COMPANY_DATA.eligible ? verdict?.data : null}
-          />
-          {company && <AnalystRatingCard fundamentals={company} />}
-          {signals}
-          {company && <CapitalStructureCard fundamentals={company} />}
-          {company && <OwnershipCard fundamentals={company} />}
           <NextEarningsCard earnings={earnings} onOpenTab={onOpenTab} />
+          <PlanSection action={eligible ? verdict?.data?.action : null}>
+            <TradePlanCard
+              bars={allBars}
+              currency={details?.currency ?? position?.currency}
+              note={note?.data}
+              position={position}
+              positions={tradePlan?.positions}
+              portfolioValue={tradePlan?.portfolioValue}
+              nextEarnings={earnings?.data?.available ? earnings.data.next : null}
+              verdict={eligible ? verdict?.data : null}
+            />
+          </PlanSection>
+          {signals}
+          {company && <AnalystRatingCard fundamentals={company} />}
           <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 import OverviewTab from './OverviewTab'
 
@@ -164,7 +164,7 @@ describe('OverviewTab company view', () => {
     expect(screen.getByText('1Y')).toBeInTheDocument()
   })
 
-  it('shows ownership, capital structure and the analyst rating when the data is there', () => {
+  it('keeps the analyst rating and leaves ownership and capital structure to the Statistics tab', () => {
     renderOverview({
       fundamentals: {
         isLoading: false,
@@ -180,8 +180,8 @@ describe('OverviewTab company view', () => {
       },
     })
 
-    expect(screen.getByText('Ownership')).toBeInTheDocument()
-    expect(screen.getByText('Capital structure')).toBeInTheDocument()
+    expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
+    expect(screen.queryByText('Capital structure')).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: /analyst rating/i })).toBeInTheDocument()
   })
 
@@ -203,7 +203,7 @@ describe('OverviewTab company view', () => {
       fundamentals: { isLoading: false, data: { available: true, market_cap: 100, shares_outstanding: 10, free_float: 8 } },
     })
 
-    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     expect(screen.queryByText('Market cap')).not.toBeInTheDocument()
     expect(screen.queryByText('Ownership')).not.toBeInTheDocument()
     expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
@@ -213,7 +213,7 @@ describe('OverviewTab company view', () => {
     renderOverview({ companyData: 'pending', fundamentals: { isLoading: false, data: undefined } })
 
     expect(screen.queryByText('Investment snapshot')).not.toBeInTheDocument()
-    expect(screen.queryByText('Listed outside the US')).not.toBeInTheDocument()
+    expect(screen.queryByText(/listed outside the US/)).not.toBeInTheDocument()
   })
 
   it('shows none of the company cards while fundamentals are unavailable', () => {
@@ -235,55 +235,58 @@ describe('OverviewTab on the new design', () => {
     expect(right).toContainElement(screen.getByTestId('side-slot'))
   })
 
-  it('pairs the header with Your position in one row so they stand level', () => {
-    renderOverview({ header: <div data-testid="header" />, position: { symbol: 'AAPL', qty: 10, value: 1900, avg_cost: 180, currency: 'USD', price_source: 'live' } })
+  it('puts the answer directly under the header, above the chart', () => {
+    renderOverview({ header: <div data-testid="header" />, lead: <div data-testid="chart" />, position: { symbol: 'AAPL', qty: 10, value: 1900, avg_cost: 180, currency: 'USD', price_source: 'live' } })
 
-    const row = screen.getByTestId('overview-top')
-    const [main, side] = row.children
-    expect(main).toContainElement(screen.getByTestId('header'))
-    expect(side).toContainElement(screen.getByRole('heading', { name: 'Your position' }))
-    expect(row).toHaveClass('items-stretch')
-    expect(screen.getByRole('heading', { name: 'Your position' }).closest('.sd-panel')).toHaveClass('h-full')
+    const top = screen.getByTestId('overview-top')
+    expect(top.firstChild).toBe(screen.getByTestId('header'))
+    expect(top).toContainElement(screen.getByTestId('answer-card'))
+    expect(screen.getByTestId('answer-card').compareDocumentPosition(screen.getByTestId('chart')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Your position' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Verdict' })).not.toBeInTheDocument()
   })
 
-  it('leads the side column with the verdict, the watchlist after the company cards', () => {
-    const verdict = { isLoading: false, data: null }
+  it('leads the side column with the watchlist and keeps the snapshot under the chart', () => {
     renderOverview({
       rail: <div data-testid="rail" />,
-      verdict,
+      verdict: { isLoading: false, data: null },
       fundamentals: { isLoading: false, data: { available: true, name: 'Apple Inc', pe_ratio: 30 } },
     })
 
-    const side = screen.getByTestId('overview-col-side')
-    expect(side.firstChild).toContainElement(screen.getByRole('heading', { name: 'Verdict' }))
-    const snapshot = screen.getByRole('heading', { name: 'Investment snapshot' })
-    expect(snapshot.compareDocumentPosition(screen.getByTestId('rail')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByTestId('overview-col-side').firstChild).toBe(screen.getByTestId('rail'))
+    expect(screen.getByTestId('overview-col-main')).toContainElement(screen.getByRole('heading', { name: 'Investment snapshot' }))
   })
 
-  it('says when the symbol is not in the portfolio, in a card that keeps its own height', () => {
+  it('says when the symbol is not in the portfolio', () => {
     renderOverview()
 
-    expect(screen.getByText(/You don’t hold AAPL/)).toBeInTheDocument()
-    expect(screen.getByText('Not in your portfolio')).toBeInTheDocument()
-    const panel = screen.getByRole('heading', { name: 'Your position' }).closest('.sd-panel')
-    expect(panel).not.toHaveClass('h-full')
-    expect(panel).toHaveClass('flex-none!')
+    expect(within(screen.getByTestId('answer-you')).getByText('Not in your portfolio')).toBeInTheDocument()
   })
 
   it('speaks of the portfolio and the average price paid for a held symbol', () => {
     renderOverview({ position: { symbol: 'AAPL', qty: 10, weight: 12.5, value: 1900, pnl: 100, pnl_pct: 5, avg_cost: 180, currency: 'USD', price_source: 'live' } })
 
     expect(screen.getByText(/12\.5% of your portfolio/)).toBeInTheDocument()
-    expect(screen.getByText('Average price paid')).toBeInTheDocument()
+    expect(screen.getByText(/average price paid/)).toBeInTheDocument()
     expect(screen.queryByText(/of the book|Avg buy/)).not.toBeInTheDocument()
   })
 
-  it('states the range low and high once, in the tiles', () => {
+  it('states the range low and high once, inside the Performance card', () => {
     renderOverview({ bars: risingBars(20) })
 
-    const panel = screen.getByRole('heading', { name: 'Range statistics' }).closest('.sd-panel')
-    expect(panel).not.toHaveTextContent(/\d low/)
-    expect(panel).toHaveTextContent('1M low')
+    const facts = screen.getByTestId('range-facts')
+    expect(facts.closest('.sd-panel')).toContainElement(screen.getByRole('heading', { name: 'Performance' }))
+    expect(facts).toHaveTextContent('1M low')
+    expect(screen.queryByRole('heading', { name: 'Range statistics' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the trade plan closed unless the verdict is Buy or Add', () => {
+    const data = { action: 'hold', reason: 'x', quality: 'strong', valuation: 'expensive', as_of: '2026-11-10', checks: [], held: false }
+    renderOverview({ verdict: { isLoading: false, data }, allBars: risingBars(40), details: { currency: 'USD' } })
+
+    expect(screen.getByText(/Closed because the verdict is not Buy or Add/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show the trade plan' }))
+    expect(screen.queryByText(/Closed because the verdict is not Buy or Add/)).not.toBeInTheDocument()
   })
 
   it('hands the verdict grade to the snapshot so the page gives one valuation answer', () => {
@@ -348,23 +351,24 @@ describe('OverviewTab verdict card', () => {
   const fundamentals = { isLoading: false, data: { available: true, name: 'Apple Inc', pe_ratio: 30 } }
 
   it('sits above the investment snapshot for an eligible company', () => {
-    renderOverview({ verdict, fundamentals })
+    renderOverview({ verdict, fundamentals, answer: { word: 'HOLD', why: 'Strong company, fair price.', next: null } })
 
-    const card = screen.getByRole('heading', { name: 'Verdict' })
+    const card = screen.getByTestId('answer-card')
     const snapshot = screen.getByRole('heading', { name: 'Investment snapshot' })
     expect(card.compareDocumentPosition(snapshot) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText('Fairly priced.')).toBeInTheDocument()
+    expect(within(card).getByText('Strong company, fair price.')).toBeInTheDocument()
+    expect(screen.getByTestId('answer-company')).toBeInTheDocument()
   })
 
   it('is absent for an ETF', () => {
     renderOverview({ verdict, companyData: 'fund' })
 
-    expect(screen.queryByRole('heading', { name: 'Verdict' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('answer-company')).not.toBeInTheDocument()
   })
 
   it('is absent for a foreign listing', () => {
     renderOverview({ verdict, companyData: 'foreign' })
 
-    expect(screen.queryByRole('heading', { name: 'Verdict' })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('answer-company')).not.toBeInTheDocument()
   })
 })

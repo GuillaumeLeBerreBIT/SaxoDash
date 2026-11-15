@@ -1,11 +1,14 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card } from '../ui'
+import CapitalStructureCard from './CapitalStructureCard'
 import FundamentalsGate from './FundamentalsGate'
+import OwnershipCard from './OwnershipCard'
 import RatioHistoryChart from './RatioHistoryChart'
 import RatioHistoryTable from './RatioHistoryTable'
 import VerdictBadge from './VerdictBadge'
 
+const SPAN_6 = 'min-[1100px]:col-span-6 min-w-0'
 const SPAN_5 = 'min-[1100px]:col-span-5'
 const SPAN_7 = 'min-[1100px]:col-span-7'
 const SPAN_12 = 'min-[1100px]:col-span-12'
@@ -137,6 +140,8 @@ export default function StatisticsTab({ fundamentals }) {
                 </Card>
               </>
             )}
+            <div className={SPAN_6}><CapitalStructureCard fundamentals={data} /></div>
+            <div className={SPAN_6}><OwnershipCard fundamentals={data} /></div>
           </div>
         )
       }}

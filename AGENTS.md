@@ -831,3 +831,14 @@ because a bank's free cash flow means nothing. The floor is not in `THRESHOLDS`,
 parity table. Rows scanned before this change have no `fcf_margin`, so the check reads "no figure" until the
 next nightly scan and verdict run.
 
+**The Research Overview answers first, and says each thing once (2026-11-15, approved from a mockup).**
+`components/research/AnswerCard.jsx` sits directly under the header: the verdict's action word and reason
+(`entrySentence`), then three cells. Company gives the quality grade and "N of N checks pass" or names the
+failures, with the full list behind "Show the checks". Price gives the valuation grade and both price
+levels. You gives shares, value, result and weight against the cap, or "Not in your portfolio". It replaces
+the header's verdict badge, the Verdict card and the Your position card, and the sentence above the chart
+now carries only the stop-loss and nothing about the verdict. An ETF, a foreign listing or an unconfirmed
+one gets its reason in the same card instead of a separate note. Range statistics are part of the
+Performance card; Capital structure and Ownership live on the Statistics tab; the Trade plan is closed
+unless the verdict is Buy or Add. The audit behind this and the layouts proposed for the other pages are in
+`docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.

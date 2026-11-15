@@ -176,7 +176,8 @@ describe('Research', () => {
 
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/BUY ZONE · cheap for this company below \S*100\.00/)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*200\.00/)
-    const banner = screen.getByTestId('entry-banner')
+    expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
+    const banner = screen.getByTestId('answer-card')
     expect(banner).toHaveTextContent('WAIT')
     expect(banner).toHaveTextContent('Strong company, fair price.')
     expect(banner).toHaveTextContent(/Becomes cheap below \S*100\.00 \(\d+% lower\)/)
@@ -236,7 +237,7 @@ describe('Research', () => {
     expect(screen.queryByRole('heading', { name: 'Setup' })).not.toBeInTheDocument()
   })
 
-  it('names the verdict action beside the company name', () => {
+  it('names the verdict action once, in the answer card and not beside the company name', () => {
     queries.useVerdict.mockReturnValue({
       ...idle,
       data: { action: 'trim', reason: 'Over your 15% cap and expensive against its own history', checks: [] },
@@ -245,7 +246,8 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const heading = screen.getByRole('heading', { level: 1 })
-    expect(within(heading.parentElement).getByText('Trim')).toBeInTheDocument()
+    expect(within(heading.parentElement).queryByText('Trim')).not.toBeInTheDocument()
+    expect(screen.getByTestId('answer-card')).toHaveTextContent('TRIM')
   })
 
   it('shows no verdict action in the header when there is no verdict', () => {
@@ -292,7 +294,7 @@ describe('Research', () => {
   it('shows the live position card on the overview tab', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByText('Your position')).toBeInTheDocument()
+    expect(screen.getByTestId('answer-you')).toBeInTheDocument()
   })
 
   it('shows the statistics tab, using the fundamentals already fetched for overview', async () => {
@@ -518,7 +520,7 @@ describe('Research', () => {
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
-    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     for (const hook of [queries.useFundamentals, queries.useStatements, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
       expect(hook).not.toHaveBeenCalledWith('NVDA')
     }
@@ -552,7 +554,7 @@ describe('Research', () => {
     stubQueries({ positions: [{ ...position, currency: 'EUR' }] })
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByText('Listed outside the US')).toBeInTheDocument()
+    expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     expect(queries.useFundamentals).not.toHaveBeenCalledWith('NVDA')
   })
 
@@ -618,7 +620,7 @@ describe('Research', () => {
 
   it('falls back to Overview for the retired ?tab=market link', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=market' })
-    expect(screen.getByText('Your position')).toBeInTheDocument()
+    expect(screen.getByTestId('answer-you')).toBeInTheDocument()
   })
 
   it('records the viewed symbol as recent', () => {
@@ -688,7 +690,6 @@ describe('Research panning', () => {
     fireEvent.pointerUp(plot, { clientX: 500, clientY: 150, pointerId: 1 })
 
     expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
-    expect(screen.getByText('Last close').parentElement).toHaveTextContent('141.00')
     expect(screen.getByText('1W high').parentElement).toHaveTextContent('143.00')
   })
 
@@ -783,11 +784,11 @@ describe('Research header and Overview on the new design', () => {
     expect(inline).toHaveTextContent('▲ 112.35%')
   })
 
-  it('keeps the position out of the header on the Overview, where it has its own panel', () => {
+  it('keeps the position out of the header on the Overview, where the answer card holds it', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.queryByTestId('header-position')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Your position' })).toBeInTheDocument()
+    expect(screen.getByTestId('answer-you')).toBeInTheDocument()
   })
 
   it('a foreign listing still shows the company-data note and hides company tabs', () => {
@@ -799,17 +800,23 @@ describe('Research header and Overview on the new design', () => {
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
-    expect(screen.getByRole('heading', { name: 'Listed outside the US' })).toBeInTheDocument()
+    expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Investment snapshot' })).not.toBeInTheDocument()
   })
 
-  it('Overview keeps Thesis and risks, Range statistics, Capital structure, Ownership, Analysts', () => {
+  it('Overview keeps Thesis and risks, Performance and Analysts, and leaves reference cards to Statistics', async () => {
     queries.useFundamentals.mockReturnValue({ ...idle, data: company })
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    for (const name of ['Thesis and risks', 'Range statistics', 'Capital structure', 'Ownership', 'Analysts']) {
+    for (const name of ['Thesis and risks', 'Performance', 'Analysts']) {
       expect(screen.getAllByRole('heading', { name })).toHaveLength(1)
     }
+    for (const name of ['Range statistics', 'Capital structure', 'Ownership']) {
+      expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument()
+    }
+    await userEvent.click(screen.getByRole('tab', { name: 'Statistics' }))
+    expect(await screen.findByRole('heading', { name: 'Capital structure' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Ownership' })).toBeInTheDocument()
   })
 
   it('summarises funds and Congress on the Overview and opens their tabs', async () => {
