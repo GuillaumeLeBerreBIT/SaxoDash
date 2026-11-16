@@ -5,9 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEarningsCalendar } from '../api/queries'
 import DayList from '../components/earnings/DayList'
 import DayStrip from '../components/earnings/DayStrip'
-import WeekGrid from '../components/earnings/WeekGrid'
 import YourWeek from '../components/earnings/YourWeek'
-import { Alert, Card, Segmented } from '../components/ui'
+import { Alert, Segmented, Skeleton } from '../components/ui'
 import { buildWeekGrid, currentWeekLabel, groupByWeekday, weekLabel, weekdayKey } from '../lib/earnings'
 
 const MIN_WEEK = -8
@@ -87,26 +86,26 @@ export default function Earnings() {
       </div>
 
       {isLoading && (
-        <Card>
-          <p className="text-[12px] text-ink-3">Loading…</p>
-        </Card>
+        <div role="status" aria-label="Loading earnings" className="space-y-3">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-64" />
+        </div>
       )}
 
       {!isLoading && failed && <Alert>Couldn’t load the earnings calendar.</Alert>}
 
       {!isLoading && !failed && data && (
         <>
-          <div className="md:hidden">
-            <DayStrip days={grid.days} counts={counts} windowFrom={data.window?.from} selectedDay={day} onSelect={select} />
-          </div>
-
           <YourWeek events={events} nextMine={data.next_mine} onOpen={openSymbol} />
 
-          <Card context={scope === 'all' && data.stats ? marketLine(data.stats) : undefined} title="Market week" className="mb-4 hidden md:block">
-            <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
-          </Card>
+          {scope === 'all' && data.stats ? (
+            <p className="mb-2 text-[12px] text-ink-3">This week: {marketLine(data.stats)}</p>
+          ) : null}
+          <DayStrip days={grid.days} counts={counts} windowFrom={data.window?.from} selectedDay={day} onSelect={select} />
 
           <DayList
+            key={`${week}:${day}`}
             day={day}
             events={groups[day] || []}
             scope={scope}

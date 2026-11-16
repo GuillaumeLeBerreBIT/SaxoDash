@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 
 import { Card, InfoTip } from '../ui'
@@ -11,6 +11,7 @@ import { CompanyCell, EpsCell, MoveCell, RevenueCell } from './EarningsCells'
 const ROW_GRID =
   'grid-cols-[minmax(0,1fr)_112px_64px_14px] md:grid-cols-[minmax(0,1.4fr)_72px_76px_minmax(0,1fr)_minmax(0,0.8fr)_80px_14px]'
 const PHONE_HIDDEN = 'hidden md:block'
+const LARGEST_SHOWN = 15
 const gridSessionLabel = (key) => (GRID_SESSIONS.find(([k]) => k === key) || ['', key])[1].toLowerCase()
 
 function edge(event, colors) {
@@ -71,7 +72,11 @@ function ColumnHeader() {
 }
 
 export default function DayList({ day, events, scope, focusSession, onOpen, onViewAll }) {
-  const sections = useMemo(() => splitBySession(rankEvents(events)), [events])
+  const [everyone, setEveryone] = useState(false)
+  const ranked = useMemo(() => rankEvents(events), [events])
+  const lead = useMemo(() => ranked.filter((event, index) => event.mine || index < LARGEST_SHOWN), [ranked])
+  const smaller = ranked.length - lead.length
+  const sections = useMemo(() => splitBySession(everyone ? ranked : lead), [everyone, ranked, lead])
   const refs = useRef({})
 
   useEffect(() => {
@@ -123,6 +128,16 @@ export default function DayList({ day, events, scope, focusSession, onOpen, onVi
               ))}
             </div>
           ))}
+          {smaller > 0 && (
+            <button
+              type="button"
+              aria-expanded={everyone}
+              onClick={() => setEveryone((open) => !open)}
+              className="w-full h-11 border-t border-line text-[13px] font-semibold text-ink-2 hover:text-ink hover:bg-hover"
+            >
+              {everyone ? 'Show the largest only' : `Show ${smaller} smaller ${smaller === 1 ? 'company' : 'companies'}`}
+            </button>
+          )}
         </>
       )}
     </Card>

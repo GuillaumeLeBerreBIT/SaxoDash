@@ -219,7 +219,7 @@ it('calls the way back Upcoming week on a weekend, since week 0 is then the comi
   expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
 })
 
-it('labels each grid day with its date', () => {
+it('labels each day of the strip with its date', () => {
   stub()
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(screen.getByRole('button', { name: /^Mon 26/ })).toBeInTheDocument()
@@ -250,32 +250,32 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(hidden).toHaveLength(3)
   })
 
-  it('hides the whole Market week card on a phone, header included', () => {
+  it('offers the day strip on every width and no market grid', () => {
     stub()
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    const card = screen.getByRole('heading', { level: 2, name: 'Market week' }).closest('.sd-panel')
-    expect(card).toHaveClass('hidden', 'md:block')
+    expect(screen.getByRole('button', { name: /^Mon 26/ }).parentElement).not.toHaveClass('md:hidden')
+    expect(screen.queryByRole('heading', { name: 'Market week' })).not.toBeInTheDocument()
   })
 
-  it('opens with the Your week band above the market grid', () => {
+  it('opens with the Your week band above the day strip', () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
     const band = screen.getByRole('heading', { level: 2, name: 'Your week' })
-    const grid = screen.getByText('Before open')
+    const grid = screen.getByRole('button', { name: /^Mon 26/ })
     expect(band.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('summarises the market week in one line', () => {
     stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('412 reporting · 61% of reported beat')).toBeInTheDocument()
+    expect(screen.getByText('This week: 412 reporting · 61% of reported beat')).toBeInTheDocument()
   })
 
   it('says nothing about beats before anything has reported', () => {
     stub({ stats: { total: 40, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('40 reporting')).toBeInTheDocument()
+    expect(screen.getByText('This week: 40 reporting')).toBeInTheDocument()
   })
 
   it('keeps the band when the toggle switches the list to Mine', async () => {
@@ -301,7 +301,7 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.queryByText('Net by day')).not.toBeInTheDocument()
   })
 
-  it('a grid day header switches the day list to that day', async () => {
+  it('a day of the strip switches the day list to that day', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-26T12:00:00'))
     stub({ events: [ev({ symbol: 'MONCO', date: '2026-10-26' }), ev({ symbol: 'THUCO', date: '2026-10-29' })] })
@@ -315,16 +315,16 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
   })
 })
 
-it('a picked cell lists that day and session', async () => {
-  stub({
-    events: [
-      ev({ symbol: 'MORN', session: 'bmo' }),
-      ev({ symbol: 'EVEN', session: 'amc' }),
-    ],
-  })
+it('lists the largest companies and keeps the smaller ones behind one button', async () => {
+  const events = Array.from({ length: 20 }, (_, index) => ev({ symbol: `C${String(index).padStart(2, '0')}`, market_cap: 1000 - index }))
+  stub({ events: [...events, ev({ symbol: 'MINE', market_cap: 1, mine: true, held: true })] })
   renderWithProviders(<Earnings />, { route: '/earnings' })
 
-  await userEvent.click(screen.getByRole('button', { name: 'Show Mon after close' }))
-
-  expect(screen.getByRole('heading', { name: 'Monday, after close' })).toBeInTheDocument()
+  const dayCard = screen.getByRole('heading', { level: 2, name: 'Monday' }).closest('.sd-panel')
+  expect(within(dayCard).getByText('C13')).toBeInTheDocument()
+  expect(within(dayCard).queryByText('C14')).not.toBeInTheDocument()
+  expect(within(dayCard).getByText('MINE')).toBeInTheDocument()
+  await userEvent.click(within(dayCard).getByRole('button', { name: 'Show 6 smaller companies' }))
+  expect(within(dayCard).getByText('C19')).toBeInTheDocument()
+  expect(within(dayCard).getByRole('button', { name: 'Show the largest only' })).toHaveAttribute('aria-expanded', 'true')
 })

@@ -11,10 +11,10 @@ const ev = (o = {}) => ({
 })
 
 describe('EarningsCells', () => {
-  it('an upcoming EPS shows the estimate marked e', () => {
+  it('an upcoming EPS shows the estimate marked est.', () => {
     render(<EpsCell event={ev()} />)
     expect(screen.getByText('1.50')).toBeInTheDocument()
-    expect(screen.getByText('e')).toBeInTheDocument()
+    expect(screen.getByText('est.')).toBeInTheDocument()
   })
 
   it('an empty estimate is a plain dash', () => {

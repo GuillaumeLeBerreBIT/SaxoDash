@@ -23,7 +23,7 @@ export function EpsCell({ event }) {
     return (
       <span className={`text-[13px] num ${pending ? 'text-warn' : 'text-ink-2'}`}>
         {fmtNum(event.eps_estimate, 2)}
-        <span className={pending ? 'text-warn' : 'text-ink-3'}>{pending ? ' pending' : 'e'}</span>
+        <span className={pending ? 'text-warn' : 'text-ink-3'}>{pending ? ' pending' : ' est.'}</span>
       </span>
     )
   }
@@ -46,7 +46,7 @@ export function RevenueCell({ event }) {
     return (
       <span className="text-[12px] num text-ink-2">
         {fmtRevenue(est)}
-        <span className="text-ink-3">e</span>
+        <span className="text-ink-3"> est.</span>
       </span>
     )
   }
