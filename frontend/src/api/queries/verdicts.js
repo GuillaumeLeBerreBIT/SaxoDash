@@ -1,12 +1,13 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getVerdict, getVerdictSummary, getVerdictTrackRecord } from '../client'
+import { getVerdict, getVerdictSummary, getVerdictTrackRecord, getWorthALook } from '../client'
 
 export const verdictKeys = {
   summaries: ['verdicts', 'summary'],
   summary: (tickers) => ['verdicts', 'summary', tickers.join(',')],
   detail: (ticker) => ['verdicts', 'detail', ticker],
   trackRecord: ['verdicts', 'track-record'],
+  worthALook: ['verdicts', 'worth-a-look'],
 }
 
 export const MAX_VERDICT_TICKERS = 200
@@ -60,4 +61,8 @@ export function useVerdict(ticker) {
 
 export function useVerdictTrackRecord() {
   return useQuery({ queryKey: verdictKeys.trackRecord, queryFn: getVerdictTrackRecord })
+}
+
+export function useWorthALook() {
+  return useQuery({ queryKey: verdictKeys.worthALook, queryFn: getWorthALook })
 }

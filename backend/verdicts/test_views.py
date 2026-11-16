@@ -18,10 +18,12 @@ CHECKS = [
 
 def verdict(ticker='AAA', quality='strong', valuation='expensive', universe=True, **extra):
     ScreenerRow.everything.create(ticker=ticker, name=ticker, indexes='sp500', in_universe=universe)
+    fields = {
+        'checks': CHECKS, 'current_pe': 30.0, 'cheap_below': 20.0, 'expensive_above': 28.0,
+        'last_close': 100.0, 'pct_vs_ma200': 4.5, 'as_of': date(2026, 11, 10), **extra,
+    }
     return StockVerdict.objects.create(
-        ticker=ticker, name=f'{ticker} Corp', quality=quality, valuation=valuation,
-        checks=CHECKS, current_pe=30.0, cheap_below=20.0, expensive_above=28.0,
-        last_close=100.0, pct_vs_ma200=4.5, as_of=date(2026, 11, 10), **extra,
+        ticker=ticker, name=f'{ticker} Corp', quality=quality, valuation=valuation, **fields,
     )
 
 
@@ -195,3 +197,46 @@ class NonUniverseVisibilityTests(APITestCase):
         watchlist = Watchlist.objects.create(user=self.alice, name='W')
         WatchlistItem.objects.create(watchlist=watchlist, symbol='NBIS', uic=7)
         self.assertIsNone(self.summary(self.bob)['NBIS'])
+
+
+class WorthALookTests(APITestCase):
+    def setUp(self):
+        self.alice = make_user('alice')
+        self.client.force_authenticate(self.alice)
+
+    def rows(self):
+        return self.client.get('/api/verdicts/worth-a-look/').json()['stocks']
+
+    def test_lists_only_strong_and_cheap_universe_stocks_deepest_discount_first(self):
+        verdict('AAA', valuation='cheap', last_close=18.0)
+        verdict('BBB', valuation='cheap', last_close=10.0)
+        verdict('CCC', valuation='expensive')
+        verdict('DDD', quality='weak', valuation='cheap')
+        verdict('NBIS', valuation='cheap', universe=False)
+        rows = self.rows()
+        self.assertEqual([row['ticker'] for row in rows], ['BBB', 'AAA'])
+        self.assertEqual(rows[0]['discount_pct'], 50.0)
+        self.assertEqual(rows[0]['cheap_below'], 20.0)
+        self.assertEqual(rows[0]['name'], 'BBB Corp')
+        self.assertEqual(rows[0]['action'], 'buy')
+
+    def test_a_held_stock_is_an_add(self):
+        verdict('AAA', valuation='cheap', last_close=18.0)
+        hold(self.alice, 'AAA', '100')
+        hold(self.alice, 'ZZZ', '1900')
+        self.assertEqual(self.rows()[0]['action'], 'add')
+
+    def test_stops_at_the_limit_and_reports_the_total(self):
+        for index in range(14):
+            verdict(f'T{index:02d}', valuation='cheap', last_close=10.0 + index / 10)
+        body = self.client.get('/api/verdicts/worth-a-look/').json()
+        self.assertEqual(len(body['stocks']), 12)
+        self.assertEqual(body['total'], 14)
+
+    def test_a_stock_without_a_price_level_is_left_out(self):
+        verdict('AAA', valuation='cheap', last_close=None)
+        self.assertEqual(self.rows(), [])
+
+    def test_requires_login(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get('/api/verdicts/worth-a-look/').status_code, 401)

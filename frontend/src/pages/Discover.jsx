@@ -1,40 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 import { isNotConnected } from '../api/client'
 import { useDiscover, useStartDiscoverScan } from '../api/queries'
 import DiscoverHealth from '../components/discover/DiscoverHealth'
-import LensChips from '../components/discover/LensChips'
-import LensColumn from '../components/discover/LensColumn'
 import ScanProgress from '../components/discover/ScanProgress'
-import ShelfRow from '../components/discover/ShelfRow'
-import { REFRESH_HINT, groupShelves, readDiscoverView, SCANNING_POLL_MS, updatedLabel, writeDiscoverView } from '../lib/discover'
+import ShelfBrowser from '../components/discover/ShelfBrowser'
+import WorthALook from '../components/discover/WorthALook'
+import { REFRESH_HINT, SCANNING_POLL_MS, updatedLabel } from '../lib/discover'
 import { fmtDateTime } from '../lib/format'
 import { useNow } from '../lib/useNow'
-import { Alert, Button, Card, Segmented, Skeleton } from '../components/ui'
+import { Alert, Button, Card, Skeleton } from '../components/ui'
 
 const SKELETON_SHELVES = 3
 const SHELVES_HIDDEN = new Set(['never', 'scanning'])
 
 const exactTime = fmtDateTime
-
-function ShelfGroup({ group, children }) {
-  return (
-    <section aria-labelledby={`group-${group.key}`} className="space-y-3.5">
-      <h2 id={`group-${group.key}`} className="text-[12px] font-medium text-ink-3">{group.title}</h2>
-      {children}
-    </section>
-  )
-}
-
-const VIEW_OPTIONS = [
-  { value: 'cards', label: 'Cards' },
-  { value: 'compact', label: 'Compact' },
-]
-
-function ViewToggle({ view, onChange }) {
-  return <Segmented label="View" options={VIEW_OPTIONS} value={view} onChange={onChange} className="shrink-0 self-end sm:self-auto" />
-}
 
 function ShelfSkeleton() {
   return (
@@ -87,11 +68,6 @@ function ScanStatus({ health, now }) {
 
 export default function Discover() {
   const { data, isLoading, error } = useDiscover()
-  const [view, setView] = useState(readDiscoverView)
-  const chooseView = (next) => {
-    setView(next)
-    writeDiscoverView(next)
-  }
   const startScan = useFirstScanOnOpen(data?.health)
   const now = useNow(data?.health?.progress ? SCANNING_POLL_MS : 60_000)
   const showShelves = data && !SHELVES_HIDDEN.has(data.health?.state)
@@ -105,7 +81,7 @@ export default function Discover() {
         <Alert tone="warning">{firstScan ? 'Connect Saxo to run the first scan.' : 'Connect Saxo to refresh.'}</Alert>
       ) : null}
       {data ? (
-        <section aria-label="Lenses">
+        <section aria-label="Scan status">
           <Card
             dot={DOT_BY_STATE[data.health?.state] ?? 'ok'}
             context={<ScanStatus health={data.health} now={now} />}
@@ -114,29 +90,12 @@ export default function Discover() {
           >
             <ScanProgress progress={data.health?.progress} now={now} />
             <DiscoverHealth health={data.health} asOf={data.as_of} />
-            {showShelves && data.shelves.length > 0 ? (
-              <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                <LensChips shelves={data.shelves} />
-                <ViewToggle view={view} onChange={chooseView} />
-              </div>
-            ) : null}
           </Card>
         </section>
       ) : null}
       {isLoading ? Array.from({ length: SKELETON_SHELVES }, (_, i) => <ShelfSkeleton key={i} />) : null}
-      {showShelves
-        ? groupShelves(data.groups, data.shelves).map((group) => (
-            <ShelfGroup key={group.key} group={group}>
-              {view === 'compact' ? (
-                <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-                  {group.shelves.map((shelf) => <LensColumn key={shelf.key} shelf={shelf} />)}
-                </div>
-              ) : (
-                group.shelves.map((shelf) => <ShelfRow key={shelf.key} shelf={shelf} />)
-              )}
-            </ShelfGroup>
-          ))
-        : null}
+      {showShelves ? <WorthALook /> : null}
+      {showShelves ? <ShelfBrowser shelves={data.shelves} /> : null}
     </div>
   )
 }
