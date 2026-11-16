@@ -5,15 +5,12 @@ import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortf
 import { fmtEur } from '../lib/format'
 import { ownershipTickers } from '../lib/ownership'
 import { positionVerdictTickers } from '../lib/verdicts'
-import { colorForTicker } from '../lib/charts'
 import { nextSort, sortRows } from '../lib/sort'
 import { useChartColors } from '../theme/useChartColors'
-import { Card, EmptyState, Move, QueryState, Segmented, Tile } from '../components/ui'
+import { Card, Move, QueryState, Segmented, Tile } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
 import HistoryAreaChart from '../components/HistoryAreaChart'
-import GainersLosersChart from '../components/GainersLosersChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
-import AllocationDonut from '../components/AllocationDonut'
 import PositionsTable from '../components/portfolio/PositionsTable'
 import TransactionsView from '../components/portfolio/TransactionsView'
 import { ConcentrationPanel, CurrencyPanel, SectorsPanel } from '../components/portfolio/BalancePanels'
@@ -21,8 +18,8 @@ import { ConcentrationPanel, CurrencyPanel, SectorsPanel } from '../components/p
 const NO_POSITIONS = []
 const SPAN_12 = 'min-[1100px]:col-span-12'
 const SPAN_8 = 'min-[1100px]:col-span-8'
+const SPAN_6 = 'min-[1100px]:col-span-6'
 const SPAN_4 = 'min-[1100px]:col-span-4'
-const TOP_HOLDINGS = 5
 
 const VIEWS = [
   { value: 'positions', label: 'Positions' },
@@ -42,12 +39,11 @@ const HOLDING_ACCESSORS = {
 
 const pnlTone = (value) => (value == null ? undefined : Number(value) >= 0 ? 'up' : 'down')
 
-function SummaryTiles({ summary, netWorth }) {
+function SummaryTiles({ summary }) {
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-      <Tile label="Total net worth" value={fmtEur(netWorth.net_worth)} sub="Portfolio + bank accounts" />
       <Tile
-        label="Investment portfolio"
+        label="Portfolio value"
         value={fmtEur(summary.total_value)}
         sub={
           summary.total_pnl_pct == null ? (
@@ -60,37 +56,12 @@ function SummaryTiles({ summary, netWorth }) {
         }
       />
       <Tile
-        label="Total P&L"
+        label="Profit since purchase"
         value={summary.total_pnl == null ? null : fmtEur(summary.total_pnl, { sign: true })}
         tone={pnlTone(summary.total_pnl)}
         sub={`${fmtEur(summary.total_cost)} invested`}
       />
-      <Tile
-        label="Bank balance"
-        value={fmtEur(netWorth.bank_only_total)}
-        sub={`+ ${fmtEur(netWorth.broker_cash)} cash at Saxo, included in net worth`}
-      />
     </div>
-  )
-}
-
-function HoldingsAllocation({ positions, className }) {
-  const c = useChartColors()
-  const positionsValue = positions.reduce((sum, p) => sum + Number(p.value), 0)
-  const top = positions.slice().sort((a, b) => Number(b.value) - Number(a.value)).slice(0, TOP_HOLDINGS)
-  const other = Math.max(positionsValue - top.reduce((sum, p) => sum + Number(p.value), 0), 0)
-  const items = [
-    ...top.map((p) => ({ name: p.ticker, value: Number(p.value), color: colorForTicker(p.ticker, c) })),
-    ...(other > 0 ? [{ name: 'Other', value: other, color: c.flat, logo: false }] : []),
-  ]
-  return (
-    <Card className={className} context={`Top ${TOP_HOLDINGS} by value`} dot={positionsValue > 0 ? 'ok' : 'off'} title="Holdings allocation">
-      {positionsValue > 0 ? (
-        <AllocationDonut items={items} formatValue={fmtEur} showIcons />
-      ) : (
-        <EmptyState title="No priced holdings yet" hint="Allocation needs a value per holding to chart." />
-      )}
-    </Card>
   )
 }
 
@@ -129,7 +100,7 @@ export default function Portfolio() {
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
         <Card
           className={SPAN_12}
-          context={`Saxo + bank accounts${holdings ? ` · ${positions.length} position${positions.length === 1 ? '' : 's'}` : ''} · in euros`}
+          context={`Saxo${holdings ? ` · ${positions.length} position${positions.length === 1 ? '' : 's'}` : ''} · in euros`}
           dot={failed ? 'warn' : 'ok'}
           right={
             <div className="flex flex-wrap items-center justify-end gap-2">
@@ -138,7 +109,7 @@ export default function Portfolio() {
             </div>
           }
         >
-          {ready && <SummaryTiles summary={summary} netWorth={netWorth} />}
+          {ready && <SummaryTiles summary={summary} />}
         </Card>
 
         {view === 'positions' && !ready && (
@@ -166,20 +137,18 @@ export default function Portfolio() {
               sort={sort}
               onSort={onSort}
             />
-            <SectorsPanel className={SPAN_4} positions={positions} />
-            <ConcentrationPanel className={SPAN_4} positions={positions} />
-            <CurrencyPanel className={SPAN_4} positions={positions} cash={netWorth.broker_cash} />
             <div className={`${SPAN_8} min-w-0`}>
               <HistoryAreaChart
-                title="Portfolio value"
-                subtitle="Investment value over time"
+                title="Value over time"
+                subtitle="Your investments, in euros"
                 dataKey="portfolio_value"
                 name="Portfolio"
                 color={c.primary}
               />
             </div>
-            <HoldingsAllocation className={SPAN_4} positions={positions} />
-            <GainersLosersChart className={SPAN_12} positions={positions} />
+            <SectorsPanel className={SPAN_4} positions={positions} />
+            <ConcentrationPanel className={SPAN_6} positions={positions} />
+            <CurrencyPanel className={SPAN_6} positions={positions} cash={netWorth.broker_cash} />
           </>
         )}
       </div>
