@@ -181,12 +181,12 @@ export default function PeersTab({ symbol, fundamentals }) {
                 <table className="w-full">
                   <thead>
                     <tr>
-                      <th className={`${HEAD} pl-[18px] w-[180px]`} />
-                      <th className={`${HEAD} bg-selected rounded-t-lg`}>
+                      <th scope="col" className={`${HEAD} pl-[18px] w-[180px]`} />
+                      <th scope="col" className={`${HEAD} bg-selected rounded-t-lg`}>
                         <PeerHead symbol={symbol} note="this company" />
                       </th>
                       {slots.map((s, i) => (
-                        <th key={s.symbol} className={HEAD}>
+                        <th key={s.symbol} scope="col" className={HEAD}>
                           <PeerHead
                             symbol={s.symbol}
                             action={
@@ -204,7 +204,7 @@ export default function PeersTab({ symbol, fundamentals }) {
                         </th>
                       ))}
                       {emptySlot !== -1 ? (
-                        <th className={`${HEAD} w-40 pr-[18px]`}>
+                        <th scope="col" className={`${HEAD} w-40 pr-[18px]`}>
                           <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
                         </th>
                       ) : null}

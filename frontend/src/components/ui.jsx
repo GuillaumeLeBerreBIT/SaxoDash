@@ -681,6 +681,7 @@ export function Th({ children, align = 'left', edge = false, hideBelow, classNam
   const hideClass = HIDE_BELOW[hideBelow] ?? ''
   return (
     <th
+      scope="col"
       aria-sort={ariaSort}
       className={`h-[30px] text-[12px] font-medium text-ink-3 whitespace-nowrap ${edge ? 'px-[18px]' : 'px-2.5'} ${
         align === 'right' ? 'text-right' : 'text-left'
