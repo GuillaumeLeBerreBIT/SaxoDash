@@ -2,7 +2,6 @@ import { colorForRank } from '../../lib/charts'
 import { REPORTING_CURRENCY, fmtEur } from '../../lib/format'
 import { capBreaches, WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { useChartColors } from '../../theme/useChartColors'
-import AllocationDonut from '../AllocationDonut'
 import { Card, EmptyState, Tile } from '../ui'
 
 const MAX_SECTOR_SLICES = 5
@@ -24,11 +23,28 @@ function sectorSlices(positions, c) {
 
 export function SectorsPanel({ positions, className = '' }) {
   const c = useChartColors()
-  const priced = positions.reduce((sum, p) => sum + valueOf(p), 0) > 0
+  const total = positions.reduce((sum, p) => sum + valueOf(p), 0)
+  const slices = sectorSlices(positions, c)
   return (
-    <Card className={className} context="Share of positions value" dot={priced ? 'ok' : 'off'} title="Sectors">
-      {priced ? (
-        <AllocationDonut items={sectorSlices(positions, c)} formatValue={fmtEur} height="240px" />
+    <Card className={className} context="Share of positions value" title="Sectors">
+      {total > 0 ? (
+        <>
+          <div role="img" aria-label="Value by sector" className="flex h-2.5 gap-[2px] rounded-full overflow-hidden bg-track">
+            {slices.map((s) => (
+              <i key={s.name} style={{ width: `${(s.value / total) * 100}%`, background: s.color }} />
+            ))}
+          </div>
+          <ul className="mt-2">
+            {slices.map((s) => (
+              <li key={s.name} className="flex items-center gap-2.5 min-h-[30px] text-[13.5px]">
+                <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ background: s.color }} />
+                <span className="flex-1 min-w-0 truncate text-ink">{s.name}</span>
+                <span className="num text-ink-2">{fmtEur(s.value)}</span>
+                <span className="w-14 text-right num text-ink-3">{weightText((s.value / total) * 100)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
         <EmptyState title="No priced holdings yet" hint="Sector weight needs a value per holding to chart." />
       )}

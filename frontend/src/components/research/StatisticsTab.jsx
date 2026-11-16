@@ -89,7 +89,7 @@ export default function StatisticsTab({ fundamentals }) {
         const withHistory = HISTORY_RATIOS.some(([key]) => hasRange(data.valuation_history?.[key]))
         const byYear = data.ratio_history?.length > 0
         return (
-          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
             <Card
               className={SPAN_12}
               context="Computed in-app from Finnhub's raw fundamentals"

@@ -15,7 +15,7 @@ import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
 const CONTEXT = 'Daily portfolio value · computed from your own history'
 const RESULT_CONTEXT = 'Your Saxo account, day by day · deposits and withdrawals count as gains and losses'
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const SPAN_6 = 'min-[1100px]:col-span-6'
 const SPAN_12 = 'min-[1100px]:col-span-12'
 const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'

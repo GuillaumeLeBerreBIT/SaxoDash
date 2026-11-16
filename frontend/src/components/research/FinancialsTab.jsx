@@ -19,7 +19,7 @@ const STATEMENT_OPTIONS = STATEMENTS.map(({ key, label }) => ({ value: key, labe
 const SOURCE = 'SEC filings via Finnhub'
 
 const HALVES =
-  'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start min-[1100px]:[&>*]:col-span-6 min-[1100px]:[&>:last-child:nth-child(odd)]:col-span-12'
+  'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1 min-[1100px]:[&>*]:col-span-6 min-[1100px]:[&>:last-child:nth-child(odd)]:col-span-12'
 
 function Halves({ children }) {
   return <div className={HALVES}>{children}</div>

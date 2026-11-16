@@ -45,8 +45,8 @@ export default function LatestMoves({ detail }) {
   const empty = detail.previous_quarter == null ? FIRST_QUARTER : detail.moves.length === 0 ? NOTHING_MOVED : null
 
   return (
-    <section aria-label="What changed">
-      <Card context={compared(detail)} title="What changed">
+    <section aria-label="What changed" className="h-full">
+      <Card context={compared(detail)} title="What changed" className="h-full">
         {empty ? (
           <p className="text-[13px] text-ink-3">{empty}</p>
         ) : (

@@ -108,7 +108,7 @@ export function FundFlows({ bought, sold, held, hub }) {
   if (!bought.length && !sold.length) return null
   const when = hub?.quarter ? `in ${quarterLabel(hub.quarter)} (${hub.filed} of ${hub.tracked} filed)` : 'last quarter'
   return (
-    <div data-testid="bought-and-sold" className="grid grid-cols-1 items-start gap-[var(--sd-gap,12px)] min-[1100px]:grid-cols-2">
+    <div data-testid="bought-and-sold" className="grid grid-cols-1 items-stretch gap-[var(--sd-gap,12px)] min-[1100px]:grid-cols-2">
       {bought.length ? (
         <Flow title="What funds bought" sub={`Most tracked funds adding ${when}, with what the rules say today`} items={bought.slice(0, FLOW_ROWS).filter((item) => item.ticker)} field="bought" stocks={stocks} held={held} />
       ) : null}

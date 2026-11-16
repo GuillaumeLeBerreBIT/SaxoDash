@@ -139,7 +139,7 @@ export default function Dashboard() {
   return (
     <>
       <h1 className="sr-only">Overview</h1>
-      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
         <BriefHero className={SPAN_12} headline={briefHeadline(items.length)} summary={summary} day={dayChange(positions, quotes)} />
         <BriefList className={SPAN_8} items={items} />
         <HoldingsList className={SPAN_4} positions={positions} verdictOf={verdictOf} quotes={quotes} upcomingEarnings={insights.upcoming_earnings} />

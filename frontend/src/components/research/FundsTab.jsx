@@ -16,7 +16,7 @@ const US_ONLY = '13F filings cover US-listed securities only.'
 const SOLD_OUT = 'sold_out'
 const PCT_LIMIT = 1000
 
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const SPAN_12 = 'min-[1100px]:col-span-12'
 
 const shownWeight = (fund) => (fund.kind === SOLD_OUT ? fund.previous_weight : fund.weight)

@@ -169,7 +169,7 @@ export default function PeersTab({ symbol, fundamentals }) {
         const unscored = scored.filter(({ point }) => !point).map(({ symbol: missing }) => missing)
 
         return (
-          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
             <Card
               flush
               className={SPAN_12}

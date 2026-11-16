@@ -2,7 +2,7 @@ import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SIGNALS_GUIDE, 
 import { GRADE_WORDS, evidenceLine, groupedByGrade } from '../../lib/signals'
 import { Card } from '../ui'
 
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const COLUMN = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
 const SPAN_5 = `${COLUMN} min-[1100px]:col-span-5`
 const SPAN_7 = `${COLUMN} min-[1100px]:col-span-7`

@@ -64,7 +64,7 @@ export default function Portfolio() {
   return (
     <>
       <h1 className="sr-only">Portfolio</h1>
-      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
         {ready ? (
           <div className={`${SPAN_12} min-w-0`}>
             <PortfolioHero

@@ -107,7 +107,7 @@ export default function Investor() {
         </div>
       </Card>
       {data.quarter ? (
-        <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
           <div className={`min-w-0 ${SPAN_12}`}><CopyPerformancePanel slug={slug} name={data.name} /></div>
           <div className={`min-w-0 ${SPAN_5}`}><LatestMoves key={data.quarter} detail={data} /></div>
           <div className={`min-w-0 ${SPAN_7}`}><ConcentrationPanel detail={data} /></div>

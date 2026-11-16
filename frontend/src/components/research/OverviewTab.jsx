@@ -14,7 +14,7 @@ import PerformanceTiles from './PerformanceTiles'
 import SnapshotSection from './SnapshotSection'
 import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const COL = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
 const PLAN_ACTIONS = new Set(['buy', 'add'])
 const ANSWER_NOTES = {
