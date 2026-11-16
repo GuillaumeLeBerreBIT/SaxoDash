@@ -197,12 +197,12 @@ describe('Investor profile', () => {
     expect(screen.getByText('No position changed by 1% or more this quarter.')).toBeInTheDocument()
   })
 
-  it('shows sector weights beside the top holdings', () => {
+  it('shows sector weights and leaves the positions to the one holdings table', () => {
     renderPage()
     const sectors = screen.getByRole('region', { name: 'Sectors' })
     expect(within(sectors).getByText('Consumer')).toBeInTheDocument()
     expect(within(sectors).getByText('55.0%')).toBeInTheDocument()
-    expect(screen.getByTestId('top-holdings')).toBeInTheDocument()
+    expect(screen.queryByTestId('top-holdings')).toBeNull()
     expect(screen.getByTestId('holdings-tab')).toBeInTheDocument()
   })
 
