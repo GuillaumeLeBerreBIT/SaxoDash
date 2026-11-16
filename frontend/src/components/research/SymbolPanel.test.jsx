@@ -43,6 +43,7 @@ beforeEach(() => {
   vi.resetAllMocks()
   queries.useFundamentals.mockReturnValue({ data: fundamentals, isLoading: false })
   queries.useStatements.mockReturnValue({ data: undefined, isLoading: false })
+  queries.useVerdict.mockReturnValue({ data: undefined })
 })
 
 const annualResults = [
@@ -58,9 +59,8 @@ describe('SymbolPanel', () => {
 
     expect(screen.getByRole('heading', { name: 'NOW' })).toBeInTheDocument()
     expect(screen.getByText('145.09B')).toBeInTheDocument()
-    expect(screen.getByText('2.00M', { selector: '[data-stat="volume"]' })).toBeInTheDocument()
     expect(screen.getByText(/After close/)).toBeInTheDocument()
-    for (const name of ['Performance', 'Earnings', 'Analyst rating', 'Technicals', 'Seasonals']) {
+    for (const name of ['Earnings', 'Analyst rating', 'Technicals', 'Seasonals']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument()
     }
     expect(screen.getByText(`55 analysts · as of ${fmtMonthYear('2026-09-01')}`)).toBeInTheDocument()
@@ -78,7 +78,6 @@ describe('SymbolPanel', () => {
     renderWithProviders(panel({ companyData: 'fund' }))
 
     expect(queries.useFundamentals).toHaveBeenCalledWith('')
-    expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Technicals' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Earnings' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Analyst rating' })).not.toBeInTheDocument()
@@ -89,16 +88,25 @@ describe('SymbolPanel', () => {
     queries.useFundamentals.mockReturnValue({ data: { available: false, reason: 'x' }, isLoading: false })
     renderWithProviders(panel())
 
-    expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Technicals' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Analyst rating' })).not.toBeInTheDocument()
     expect(screen.queryByText('Market cap')).not.toBeInTheDocument()
   })
 
-  it('leaves volume rows out when the bars carry no volume', () => {
-    renderWithProviders(panel({ bars: dailyBars(700, { volume: 0 }) }))
+  it('says what the verdict is in words, and leaves performance and volume to the chart', () => {
+    queries.useVerdict.mockReturnValue({ data: { action: 'wait', reason: 'Quality passes; price is not in its cheap range' } })
+    renderWithProviders(panel())
 
+    expect(screen.getByTestId('panel-verdict')).toHaveTextContent('Wait. Quality passes; price is not in its cheap range.')
+    expect(queries.useVerdict).toHaveBeenCalledWith('NOW')
+    expect(screen.queryByRole('heading', { name: 'Performance' })).not.toBeInTheDocument()
     expect(screen.queryByText('Volume')).not.toBeInTheDocument()
     expect(screen.queryByText('Average volume (30D)')).not.toBeInTheDocument()
+  })
+
+  it('asks for no verdict for an ETF', () => {
+    renderWithProviders(panel({ companyData: 'fund' }))
+    expect(queries.useVerdict).toHaveBeenCalledWith('')
   })
 
   it('renders nothing when there is nothing to show', () => {
@@ -210,13 +218,6 @@ describe('SymbolPanel', () => {
     const technicals = screen.getByText('Neutral').closest('div')
     expect(technicals.firstElementChild.tagName).toBe('DT')
     expect(technicals).toHaveClass('justify-end')
-  })
-
-  it('averages volume over the bars that carry it', () => {
-    const bars = dailyBars(700).map((bar, i, all) => ({ ...bar, volume: (all.length - 1 - i) % 2 === 0 ? 2_000_000 : 0 }))
-    renderWithProviders(panel({ bars }))
-
-    expect(screen.getByText('2.00M', { selector: '[data-stat="average-volume"]' })).toBeInTheDocument()
   })
 
   it('names the earnings section briefly', () => {

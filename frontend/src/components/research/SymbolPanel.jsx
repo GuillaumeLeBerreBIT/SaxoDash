@@ -1,30 +1,21 @@
 import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-import { useFundamentals } from '../../api/queries'
+import { useFundamentals, useVerdict } from '../../api/queries'
 import { analystRating } from '../../lib/analystRating'
 import { SESSION_LABEL, daysUntil } from '../../lib/earnings'
-import { fmtCompact, fmtMonthYear, fmtShares } from '../../lib/format'
-import { trailingReturns } from '../../lib/performance'
+import { fmtCompact, fmtMonthYear } from '../../lib/format'
 import { COMPANY_DATA } from '../../lib/companyData'
 import { seasonalSeries } from '../../lib/seasonals'
 import { technicalRating } from '../../lib/technicalRating'
+import { actionLabel } from '../../lib/verdicts'
 import { Card, Skeleton } from '../ui'
 import AnalystCounts from './AnalystCounts'
 import EarningsDots from './EarningsDots'
 import MiniFinancials from './MiniFinancials'
-import PerformanceTiles from './PerformanceTiles'
 import RatingGauge from './RatingGauge'
 import SeasonalsChart from './SeasonalsChart'
 import TechnicalsTable from './TechnicalsTable'
-
-const AVERAGE_VOLUME_SESSIONS = 30
-
-function averageVolume(bars) {
-  const traded = bars.slice(-AVERAGE_VOLUME_SESSIONS).filter((bar) => bar.volume > 0)
-  if (!traded.length) return 0
-  return traded.reduce((sum, bar) => sum + bar.volume, 0) / traded.length
-}
 
 const upcoming = (next) => (next?.date && daysUntil(next.date) !== 'past' ? next : null)
 
@@ -90,30 +81,30 @@ export default function SymbolPanel({ symbol, companyData, bars, earnings, href,
   const reported = hasCompany && earnings.data?.available ? earnings.data : null
   const nextReport = upcoming(reported?.next)
 
-  const returns = useMemo(() => trailingReturns(bars), [bars])
+  const verdict = useVerdict(hasCompany ? symbol : '').data
   const seasons = useMemo(() => seasonalSeries(bars), [bars])
   const technical = useMemo(() => technicalRating(bars), [bars])
   const analyst = analystRating(company?.recommendation)
   const loadingCompany = hasCompany && fundamentals.isLoading
 
-  const latestVolume = bars.length ? bars[bars.length - 1].volume : 0
-  const typicalVolume = averageVolume(bars)
   const stats = [
     ['next-earnings', 'Next earnings', nextEarningsParts(nextReport)],
-    ['volume', 'Volume', latestVolume > 0 ? fmtShares(latestVolume) : null],
-    ['average-volume', 'Average volume (30D)', typicalVolume > 0 ? fmtShares(typicalVolume) : null],
     ['market-cap', 'Market cap', company?.market_cap == null ? null : fmtCompact(company.market_cap)],
   ].filter(([, , value]) => value != null)
 
-  const hasReturns = returns.some((row) => row.pct != null)
   const hasEarnings = Boolean(reported?.history?.some((row) => row.eps_actual != null) || nextReport?.eps_estimate != null)
   const hasAnything =
-    stats.length > 0 || hasReturns || hasEarnings || hasFinancials || analyst || technical || seasons.length > 0 || loadingCompany
+    stats.length > 0 || verdict || hasEarnings || hasFinancials || analyst || technical || seasons.length > 0 || loadingCompany
   if (!hasAnything) return null
 
   return (
     <Card>
       <Section title={symbol} note={<Link to={href} className="font-semibold text-ink-2 hover:text-ink">Open in Research →</Link>}>
+        {verdict && (
+          <p data-testid="panel-verdict" className="mb-2 text-[13px] text-ink-2">
+            <b className="font-semibold text-ink">{actionLabel(verdict)}.</b> {verdict.reason}.
+          </p>
+        )}
         {stats.length > 0 && (
           <dl className="text-[13px]">
             {stats.map(([key, label, value]) => (
@@ -127,12 +118,6 @@ export default function SymbolPanel({ symbol, companyData, bars, earnings, href,
           </dl>
         )}
       </Section>
-
-      {hasReturns && (
-        <Section title="Performance">
-          <PerformanceTiles returns={returns} />
-        </Section>
-      )}
 
       {hasEarnings && (
         <Section title="Earnings" note="EPS vs estimate">

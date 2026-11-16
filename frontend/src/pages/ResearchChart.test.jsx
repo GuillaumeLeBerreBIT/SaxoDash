@@ -57,6 +57,7 @@ function stubQueries() {
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useVerdict.mockReturnValue(idle)
   queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: { symbol: 'NVDA', target_price: '130.00' } })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
