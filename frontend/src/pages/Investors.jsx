@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { useInvestorHub, useInvestors } from '../api/queries'
-import { Alert, Button, Card, Segmented, Skeleton } from '../components/ui'
+import { useInvestorHub, useInvestors, usePositions } from '../api/queries'
+import { Alert, Button, Segmented, Skeleton } from '../components/ui'
 import CongressDirectory from '../components/congress/CongressDirectory'
 import AddInvestorDialog from '../components/investors/AddInvestorDialog'
 import InvestorDirectory from '../components/investors/InvestorDirectory'
 import LimitsNote from '../components/investors/LimitsNote'
 import Shelf from '../components/investors/Shelf'
+import { FundFlows, Following } from '../components/investors/HubSections'
+import { investorsHeadline } from '../lib/investorsBrief'
 import { hubSubtitle } from '../lib/investorHub'
 
 const TABS = [{ value: 'funds', label: 'Funds' }, { value: 'congress', label: 'Congress' }]
@@ -23,24 +25,20 @@ function SignalsState({ hub }) {
   return null
 }
 
-const PAIRED = ['convergent-buys', 'most-sold']
-const LEFT_TO_STOCKS = 'new-bets'
+const SHOWN_ELSEWHERE = new Set(['following', 'convergent-buys', 'most-sold', 'new-bets'])
+const NO_POSITIONS = []
 
-function Shelves({ hub }) {
+const shelfItems = (hub, key) => hub.data?.shelves?.find((shelf) => shelf.key === key)?.items ?? []
+
+function Hub({ hub, held }) {
   if (hub.error || !hub.data) return null
-  const shelves = hub.data.shelves.filter((shelf) => shelf.key !== LEFT_TO_STOCKS)
-  const paired = PAIRED.map((key) => shelves.find((shelf) => shelf.key === key)).filter(Boolean)
-  const before = shelves.filter((shelf) => shelf.key === 'following')
-  const after = shelves.filter((shelf) => shelf.key !== 'following' && !PAIRED.includes(shelf.key))
+  const following = shelfItems(hub, 'following')
+  const rest = hub.data.shelves.filter((shelf) => !SHOWN_ELSEWHERE.has(shelf.key))
   return (
     <>
-      {before.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
-      {paired.length > 0 && (
-        <div data-testid="bought-and-sold" className="grid grid-cols-1 gap-[var(--sd-gap,12px)] min-[1100px]:grid-cols-2 items-start">
-          {paired.map((shelf) => <div key={shelf.key} className="min-w-0"><Shelf shelf={shelf} /></div>)}
-        </div>
-      )}
-      {after.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
+      <Following investors={following} held={held} />
+      <FundFlows bought={shelfItems(hub, 'convergent-buys')} sold={shelfItems(hub, 'most-sold')} held={held} />
+      {rest.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
     </>
   )
 }
@@ -59,26 +57,31 @@ export default function Investors() {
   const hub = useInvestorHub({ enabled: funds })
   const { data: cards = [], isLoading, error } = useInvestors({ enabled: funds })
   const signals = funds ? <SignalsState hub={hub} /> : null
+  const positions = usePositions().data ?? NO_POSITIONS
+  const held = useMemo(() => new Set(positions.map((position) => position.ticker)), [positions])
+  const headline = funds ? investorsHeadline(hub.data, shelfItems(hub, 'following')) : null
 
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       <h1 className="sr-only">Investors</h1>
-      <Card
-        dot={funds && hub.error ? 'warn' : 'ok'}
-        context={funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}
-        title={funds ? 'Smart money' : 'Congress'}
-        right={(
-          <>
-            <Segmented label="Investor type" options={TABS} value={tab} onChange={pick} />
-            {funds ? <Button size="sm" onClick={() => setAdding(true)}>Add investor</Button> : null}
-          </>
-        )}
-      >
-        {signals}
-      </Card>
+      <section aria-label="Investors" className="flex flex-col gap-4 pt-2 md:flex-row md:items-end md:justify-between">
+        <div className="flex max-w-[820px] flex-col gap-2">
+          <span className="text-[14px] font-medium text-ink-2">{funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}</span>
+          {headline ? (
+            <p data-testid="investors-headline" className="text-[24px] font-bold leading-tight tracking-tight text-ink md:text-[32px] [text-wrap:balance]">
+              {headline}
+            </p>
+          ) : null}
+          {signals}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented label="Investor type" options={TABS} value={tab} onChange={pick} />
+          {funds ? <Button onClick={() => setAdding(true)}>Add an investor</Button> : null}
+        </div>
+      </section>
       {funds ? (
         <>
-          <Shelves hub={hub} />
+          <Hub hub={hub} held={held} />
           <InvestorDirectory cards={cards} isLoading={isLoading} error={error} />
           <LimitsNote />
         </>

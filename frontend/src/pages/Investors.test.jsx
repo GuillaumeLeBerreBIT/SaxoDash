@@ -37,7 +37,10 @@ vi.mock('../api/queries', () => ({
   usePrefetchInvestor: () => () => {},
   useCongressMembers: () => ({ isLoading: false, data: { members: [], most_bought: [], window_days: 90 } }),
   useCongressOwnership: () => ({ isFetching: false, data: undefined }),
+  usePositions: () => ({ data: [{ ticker: 'AAPL' }] }),
+  useBrowse: (query) => browseCalls.push(query) && { data: { stocks: [{ ticker: 'NVDA', name: 'NVIDIA', action: 'buy', last_close: 50, cheap_below: 100, expensive_above: 150 }] } },
 }))
+const browseCalls = []
 vi.mock('../components/investors/AddInvestorDialog', () => ({ default: ({ onClose }) => <div role="dialog"><button onClick={onClose}>close</button></div> }))
 
 function Where() {
@@ -77,8 +80,8 @@ describe('Investors hub', () => {
     }
     renderPage()
     const pair = screen.getByTestId('bought-and-sold')
-    expect(within(pair).getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(['Convergent buys', 'Most sold'])
-    expect(screen.queryByRole('region', { name: 'Biggest new bets' })).not.toBeInTheDocument()
+    expect(within(pair).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent)).toEqual(['What funds bought', 'What funds sold'])
+    expect(screen.queryByText('Biggest new bets')).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Just filed' })).toBeInTheDocument()
   })
 
@@ -103,7 +106,7 @@ describe('Investors hub', () => {
     expect(within(who).getByRole('button', { name: 'Congress' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByTestId('where')).toHaveTextContent('/investors?tab=congress')
     expect(screen.getByText('No House trades imported yet')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add investor' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add an investor' })).not.toBeInTheDocument()
   })
 
   it('keeps other query params when switching tabs and has no fund-quarter subtitle on Congress', () => {
@@ -137,14 +140,25 @@ describe('Investors hub', () => {
     expect(screen.getByText('3 tracked · signals for Q2 2026 · 3 of 3 filed')).toBeInTheDocument()
   })
 
-  it('shows each shelf the server sent, with a see-all link to its target', () => {
+  it('opens on how many funds have filed and where the people you follow stand', () => {
     renderPage()
-    const buys = screen.getByRole('region', { name: 'Convergent buys' })
-    expect(within(buys).getByText('NVDA')).toBeInTheDocument()
-    expect(within(buys).getByText('7 funds bought · 2 new')).toBeInTheDocument()
-    expect(within(buys).getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/investors/stocks?view=bought')
-    expect(within(screen.getByRole('region', { name: 'Following' })).getByRole('link', { name: 'See all 1' })).toHaveAttribute('href', expect.any(String))
-    expect(within(screen.getByRole('region', { name: 'Following' })).getByRole('link', { name: 'Warren Buffett' })).toHaveAttribute('href', '/investors/berkshire-hathaway')
+    expect(screen.getByTestId('investors-headline')).toHaveTextContent('3 of 3 funds have filed for the second quarter, including the one you follow.')
+  })
+
+  it('shows the people you follow with what they did and how copying them went', () => {
+    renderPage()
+    const people = screen.getByRole('region', { name: 'People you follow' })
+    expect(within(people).getByRole('link', { name: 'Warren Buffett' })).toHaveAttribute('href', '/investors/berkshire-hathaway')
+    expect(people).toHaveTextContent('Last quarter they opened 1 position and closed none. One of their biggest holdings is one you own.')
+  })
+
+  it('lists what funds bought with the verdict beside each stock', () => {
+    renderPage()
+    const flows = screen.getByTestId('bought-and-sold')
+    expect(within(flows).getByText('NVIDIA')).toBeInTheDocument()
+    expect(within(flows).getByText('7 funds bought · 2 new')).toBeInTheDocument()
+    expect(within(flows).getByText('Opportunity')).toBeInTheDocument()
+    expect(browseCalls.at(-1)).toContain('tickers=NVDA')
   })
 
   it('shows one line instead of a column of empty shelves', () => {
@@ -219,7 +233,7 @@ describe('Investors hub', () => {
 
   it('opens and closes the add-investor dialog', () => {
     renderPage()
-    fireEvent.click(screen.getByRole('button', { name: 'Add investor' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add an investor' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     fireEvent.click(screen.getByText('close'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
