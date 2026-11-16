@@ -5,11 +5,11 @@ import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSen
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
     expect(ACTION_LABEL).toEqual({
-      buy: 'Buy',
+      buy: 'Opportunity',
       add: 'Add',
       hold: 'Hold',
       trim: 'Trim',
-      sell_review: 'Sell (review)',
+      sell_review: 'Review',
       wait: 'Wait',
       not_a_fit: 'Not a fit',
       no_verdict: 'No verdict',
@@ -17,9 +17,9 @@ describe('verdict wording', () => {
   })
 
   it('says a hold forced by the weight cap is still cheap', () => {
-    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · still cheap')
+    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · over cap')
     expect(actionLabel({ action: 'hold' })).toBe('Hold')
-    expect(actionLabel({ action: 'sell_review' })).toBe('Sell (review)')
+    expect(actionLabel({ action: 'sell_review' })).toBe('Review')
   })
 
   it('colours buying up and trimming as a warning', () => {

@@ -32,7 +32,7 @@ export function PriceZones({ zones, currency, geometry, colors }) {
   const expensivePrice = fmtMoney(zones.expensiveAbove, currency)
   const compact = geometry.chartW < COMPACT_BELOW
   const scope = compact ? '' : ' for this company'
-  const buyLead = zones.buyable ? (compact ? 'BUY ZONE' : 'BUY ZONE · cheap') : 'CHEAP'
+  const buyLead = zones.buyable ? (compact ? 'OPPORTUNITY' : 'OPPORTUNITY · cheap') : 'CHEAP'
   const buyWords = `${buyLead}${scope} below ${buyPrice}`
   const expensiveWords = `EXPENSIVE${scope} above ${expensivePrice}`
   const cheapColor = zones.buyable ? colors.up : colors.axisCategory

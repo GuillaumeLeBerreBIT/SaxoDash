@@ -14,7 +14,7 @@ describe('PriceZones', () => {
     draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: true }} currency="USD" geometry={geometry()} colors={colors} />)
     expect(screen.getByTestId('buy-zone').querySelector('rect')).toHaveAttribute('fill', 'up')
     expect(screen.getByTestId('expensive-zone').querySelector('rect')).toHaveAttribute('fill', 'warn')
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/BUY ZONE · cheap for this company below \S*80\.00/)
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY · cheap for this company below \S*80\.00/)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*150\.00/)
   })
 
@@ -22,14 +22,14 @@ describe('PriceZones', () => {
     draw(<PriceZones zones={{ buyBelow: 20, expensiveAbove: 400, buyable: true }} currency="USD" geometry={geometry()} colors={colors} />)
     expect(screen.queryByTestId('buy-zone')).not.toBeInTheDocument()
     expect(screen.queryByTestId('expensive-zone')).not.toBeInTheDocument()
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/↓ BUY ZONE/)
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/↓ OPPORTUNITY/)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/↑ EXPENSIVE/)
   })
 
   it('does not call a cheap price a buy zone for a company that fails the checks', () => {
     draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: false }} currency="USD" geometry={geometry()} colors={colors} />)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/CHEAP for this company below/)
-    expect(screen.getByTestId('price-zones')).not.toHaveTextContent('BUY ZONE')
+    expect(screen.getByTestId('price-zones')).not.toHaveTextContent('OPPORTUNITY')
     expect(screen.getByTestId('buy-zone').querySelector('rect')).toHaveAttribute('fill', 'ink2')
     expect(screen.getByTestId('buy-zone').querySelector('line')).toHaveAttribute('stroke', 'ink2')
   })
@@ -43,7 +43,7 @@ describe('PriceZones', () => {
 
   it('shortens the labels on a phone-width chart so they are not clipped', () => {
     draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: true }} currency="USD" geometry={geometry(330)} colors={colors} />)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/BUY ZONE below \S*80\.00/)
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY below \S*80\.00/)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE above \S*150\.00/)
     expect(screen.getByTestId('price-zones')).not.toHaveTextContent('for this company')
   })

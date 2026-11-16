@@ -76,9 +76,9 @@ describe('Discover page', () => {
     const rows = within(screen.getByRole('list', { name: 'Worth a look today' })).getAllByRole('listitem')
     expect(rows[0]).toHaveTextContent('ADBE')
     expect(rows[0]).toHaveTextContent('US$320.00, 20% under the US$400.00 where it stops being cheap')
-    expect(rows[0]).toHaveTextContent('Buy')
+    expect(rows[0]).toHaveTextContent('Opportunity')
     expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/research?symbol=ADBE')
-    expect(rows[1]).toHaveTextContent('Hold · still cheap')
+    expect(rows[1]).toHaveTextContent('Hold · over cap')
     expect(screen.getByText('Showing 2 of 14, furthest under its cheap price first.')).toBeInTheDocument()
   })
 

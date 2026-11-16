@@ -1,7 +1,9 @@
 import { useState } from 'react'
 
 import { fmtDate, fmtEur, fmtMoney, fmtPct, fmtQty } from '../../lib/format'
+import { priceZone } from '../../lib/priceBar'
 import { priceBasis } from '../../lib/pricing'
+import PriceBar from '../verdicts/PriceBar'
 import { CHECK_BASIS_NOTE, CHECK_STATUS_LABEL, GRADE_LABEL, checkLine, trendSentence } from '../../lib/verdicts'
 import { Button, Move, Skeleton, Tag } from '../ui'
 
@@ -12,7 +14,7 @@ const CELL = 'bg-tile rounded-[10px] px-3.5 py-3 min-w-0 flex flex-col gap-1'
 const CELL_LABEL = 'text-[12px] font-medium text-ink-3'
 const CELL_VALUE = 'text-[17px] font-bold text-ink'
 const CELL_LINE = 'text-[13px] text-ink-2 num'
-const FOOTER = 'Rules, not advice. Sell (review) means check the story, not an order.'
+const FOOTER = 'Rules, not advice. Review means read the story again, not an order to sell.'
 
 const names = (checks) => checks.map((check) => check.label).join(', ')
 
@@ -71,12 +73,19 @@ function CompanyCell({ verdict }) {
 function PriceCell({ verdict }) {
   const trend = trendSentence(verdict.pct_vs_ma200)
   const judged = verdict.cheap_below != null || verdict.expensive_above != null
+  const barred = priceZone({ price: verdict.last_close, cheapBelow: verdict.cheap_below, expensiveAbove: verdict.expensive_above }) != null
   return (
     <div data-testid="answer-price" className={CELL}>
       <span className={CELL_LABEL}>Price</span>
       <span className={CELL_VALUE}>{GRADE_LABEL.valuation[verdict.valuation] ?? verdict.valuation}</span>
-      {verdict.cheap_below != null ? <span className={CELL_LINE}>{`Cheap for this company below ${fmtMoney(verdict.cheap_below, 'USD')}`}</span> : null}
-      {verdict.expensive_above != null ? <span className={CELL_LINE}>{`Expensive above ${fmtMoney(verdict.expensive_above, 'USD')}`}</span> : null}
+      {barred ? (
+        <PriceBar price={verdict.last_close} cheapBelow={verdict.cheap_below} expensiveAbove={verdict.expensive_above} className="mt-1.5" />
+      ) : (
+        <>
+          {verdict.cheap_below != null ? <span className={CELL_LINE}>{`Cheap for this company below ${fmtMoney(verdict.cheap_below, 'USD')}`}</span> : null}
+          {verdict.expensive_above != null ? <span className={CELL_LINE}>{`Expensive above ${fmtMoney(verdict.expensive_above, 'USD')}`}</span> : null}
+        </>
+      )}
       {judged ? null : <span className="text-[13px] text-ink-3">Too little earnings history to say what is cheap for this company.</span>}
       {trend ? <span className="text-[13px] text-ink-3 num">{trend}</span> : null}
     </div>

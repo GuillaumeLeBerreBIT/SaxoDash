@@ -136,7 +136,7 @@ describe('DiscoverShelf', () => {
       expect(rows).toHaveLength(2)
       expect(rows[0]).toHaveTextContent('GOOGL')
       expect(rows[0]).toHaveTextContent('also GOOG')
-      expect(within(rows[0]).getByText('Buy')).toBeInTheDocument()
+      expect(within(rows[0]).getByText('Opportunity')).toBeInTheDocument()
       expect(within(rows[1]).getByText('Wait')).toBeInTheDocument()
       expect(screen.getByRole('columnheader', { name: 'Action' })).not.toHaveClass('hidden')
       expect(screen.getByRole('columnheader', { name: 'Why it is here' })).toHaveClass('hidden', 'md:table-cell')

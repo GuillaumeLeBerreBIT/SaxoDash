@@ -700,7 +700,7 @@ night (`lookups_failed`), since an unconfirmed listing is not evidence the user 
 `StockVerdict` holds only what is the same for everyone (grades, checks, P/E levels);
 `payload.for_user` reads that user's `Position` rows, sums same-ticker USD stocks into a weight and hands
 it to `actions.action`, so two users can see Wait and Trim, or Buy and Add, for one stock and no per-user table exists to
-keep fresh. `sell_review` ("Sell (review)") comes only from a `weak` quality grade: no rule reads a price
+keep fresh. `sell_review` (shown as "Review") comes only from a `weak` quality grade: no rule reads a price
 change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) and expensive is
 `trim`, and over it and cheap is `hold`, never `add`, so the badge cannot contradict the cap drawn beside it; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
 watched) is served only to a user who holds or watches it (`verdicts/visibility.py`), and the track record

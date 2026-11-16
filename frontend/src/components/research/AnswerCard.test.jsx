@@ -52,6 +52,14 @@ describe('AnswerCard', () => {
     expect(within(cell).getByText('Expensive above US$316.01')).toBeInTheDocument()
   })
 
+  it('draws the price bar instead of the two lines when the last close is known', () => {
+    renderCard({ verdict: { isLoading: false, data: verdictData({ last_close: 353.06 }) } })
+    const cell = screen.getByTestId('answer-price')
+    expect(within(cell).getByTestId('price-bar')).toHaveAttribute('data-zone', 'expensive')
+    expect(within(cell).getByText('Cheap below US$249.55')).toBeInTheDocument()
+    expect(within(cell).queryByText('Cheap for this company below US$249.55')).not.toBeInTheDocument()
+  })
+
   it('shows what you hold, the result and the weight against the cap', () => {
     renderCard()
     const cell = screen.getByTestId('answer-you')

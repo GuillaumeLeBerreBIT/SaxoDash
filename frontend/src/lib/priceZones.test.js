@@ -46,8 +46,8 @@ describe('entrySentence', () => {
 
   it('names the buy zone when the price is in it', () => {
     const sentence = entrySentence({ verdict: verdict({ action: 'buy', valuation: 'cheap' }), price: 300, plan })
-    expect([sentence.word, sentence.tone, sentence.why]).toEqual(['BUY', 'up', 'Strong company, cheap price.'])
-    expect(sentence.next).toBe('In the buy zone: cheap for this company below US$312.00. Expensive above US$401.00.')
+    expect([sentence.word, sentence.tone, sentence.why]).toEqual(['OPPORTUNITY', 'up', 'Strong company, cheap price.'])
+    expect(sentence.next).toBe('In the opportunity zone: cheap for this company below US$312.00. Expensive above US$401.00.')
   })
 
   it('says a cheap price is not a buy when the company fails the checks', () => {

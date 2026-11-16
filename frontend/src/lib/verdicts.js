@@ -1,18 +1,18 @@
 import { ownershipTicker } from './ownership'
 
 export const ACTION_LABEL = {
-  buy: 'Buy',
+  buy: 'Opportunity',
   add: 'Add',
   hold: 'Hold',
   trim: 'Trim',
-  sell_review: 'Sell (review)',
+  sell_review: 'Review',
   wait: 'Wait',
   not_a_fit: 'Not a fit',
   no_verdict: 'No verdict',
 }
 
 export function actionLabel(verdict) {
-  if (verdict.capped) return 'Hold · still cheap'
+  if (verdict.capped) return 'Hold · over cap'
   return ACTION_LABEL[verdict.action] ?? verdict.action
 }
 

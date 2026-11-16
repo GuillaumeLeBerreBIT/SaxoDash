@@ -427,16 +427,20 @@ chart sits on Overview only; the watchlist rail sits beside every tab.
 | | Next earnings |
 | | Company facts |
 
-The **Verdict** card sits directly above the Investment snapshot. It names the action as a tag
-(Buy, Add, Hold, Trim, Sell (review), Wait, Not a fit, No verdict), gives the reason and the as-of
-date, lists the quality checks with their figures and thresholds, and shows the "cheap below" and
-"expensive above" price levels. A US-listed stock the app has not scanned yet shows the card with "Not covered by the nightly scan". The
-same action appears as a small tag on watchlist rows and in a **Verdict** column on Portfolio's
-positions table, matched by Saxo uic; where no verdict exists it shows "—".
+The verdict's action is one word: Opportunity, Add, Hold, Wait, Trim, Review, Not a fit or No verdict
+(Research's answer card states it with the reason and the as-of date). Opportunity replaced "Buy" and
+Review replaced "Sell (review)" on 2026-11-16: the app describes, it does not instruct. A held stock above
+the 15% cap that is still cheap reads "Hold · over cap". The same word appears on watchlist rows and in
+Portfolio's Action column, matched by Saxo uic; where no verdict exists it shows "—".
 
-The action tag follows the move rule: it is **words, never colour alone**. Buy and Add use the up
-tone, Trim and Sell (review) use the warning tone, and **Sell (review) is never the down colour**,
-because it asks for a second look at the story, not a sale.
+The action is **coloured text, never a filled pill** (`components/verdicts/ActionBadge.jsx`), and words,
+never colour alone. Opportunity and Add use the up tone, Trim, Review and "over cap" the warning tone, the
+rest Ink 2. **Review is never the down colour**, because it asks for a second look at the story, not a sale.
+
+Wherever a price is judged, the **price bar** (`components/verdicts/PriceBar.jsx`, geometry in
+`lib/priceBar.js`) draws three equal thirds, cheap, fair and expensive, with a marker for the last close.
+The fair third is linear between the two levels; the outer thirds run to half the cheap level and one and a
+half times the expensive one, then clamp. It says the same thing in its accessible name.
 
 **The other tabs** contain:
 

@@ -24,7 +24,7 @@ function nextLine(zones, zone, price, currency) {
   const expensive = fmtMoney(zones.expensiveAbove, currency)
   if (zone === 'cheap') {
     return zones.buyable
-      ? `In the buy zone: cheap for this company below ${buy}. Expensive above ${expensive}.`
+      ? `In the opportunity zone: cheap for this company below ${buy}. Expensive above ${expensive}.`
       : `Cheap for this company below ${buy}, but it does not pass the quality checks.`
   }
   if (zone === 'expensive') return `Expensive for this company above ${expensive}. Cheap below ${buy} (${lower(price, zones.buyBelow)}).`

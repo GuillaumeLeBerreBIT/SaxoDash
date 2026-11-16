@@ -38,7 +38,7 @@ export function IndicatorMenuItems({ controls }) {
 }
 
 const GUIDES = {
-  zones: ['Buy and expensive zones', 'Where the price is cheap or expensive for this company'],
+  zones: ['Opportunity and expensive zones', 'Where the price is cheap or expensive for this company'],
   plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
 }
 

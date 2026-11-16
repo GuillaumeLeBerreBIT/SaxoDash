@@ -174,7 +174,7 @@ describe('Research', () => {
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/BUY ZONE · cheap for this company below \S*100\.00/)
+    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY · cheap for this company below \S*100\.00/)
     expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*200\.00/)
     expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
     const banner = screen.getByTestId('answer-card')
@@ -182,7 +182,7 @@ describe('Research', () => {
     expect(banner).toHaveTextContent('Strong company, fair price.')
     expect(banner).toHaveTextContent(/Becomes cheap below \S*100\.00 \(\d+% lower\)/)
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Buy and expensive zones/ }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: /Opportunity and expensive zones/ }))
     expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.zones).toBe(false)
   })
