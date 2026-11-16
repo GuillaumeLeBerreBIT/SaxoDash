@@ -89,6 +89,8 @@ async function pickLayout(user, label) {
   await user.click(screen.getByRole('menuitem', { name: label }))
 }
 
+const rail = () => screen.getByTestId('chart-watchlist')
+
 describe('ResearchChart', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -102,7 +104,6 @@ describe('ResearchChart', () => {
     const { container } = renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     expect(container.firstChild.style.getPropertyValue('--rail-width')).toBe('420px')
-    expect(screen.getByTestId('chart-watchlist')).toHaveStyle({ height: '500px' })
   })
 
   it('resizes the sidebar from its handle and remembers the width', () => {
@@ -114,13 +115,17 @@ describe('ResearchChart', () => {
     expect(localStorage.getItem('saxodash:chart-rail-width')).toBe('316')
   })
 
-  it('resizes the watchlist from its handle and remembers the height', () => {
+  it('shows the whole watchlist in the sidebar, with no scroll area of its own', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
-    fireEvent.keyDown(screen.getByRole('separator', { name: 'Watchlist height' }), { key: 'ArrowDown' })
+    expect(screen.queryByRole('separator', { name: 'Watchlist height' })).toBeNull()
+    expect(screen.getByTestId('chart-watchlist').getAttribute('style')).toBeNull()
+  })
 
-    expect(screen.getByTestId('chart-watchlist')).toHaveStyle({ height: '356px' })
-    expect(localStorage.getItem('saxodash:chart-watchlist-height')).toBe('356')
+  it('offers the watchlist on a phone as its own section under the chart', () => {
+    renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
+
+    expect(screen.getByTestId('chart-watchlist-phone')).toHaveClass('lg:hidden')
   })
 
   it('shows the symbol panel under the watchlist', () => {
@@ -197,15 +202,15 @@ describe('ResearchChart', () => {
 
     expect(screen.getByRole('navigation', { name: 'Chart tools' })).toBeInTheDocument()
     expect(screen.getByTestId('price-scale')).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
-    expect(screen.getByText('Tech')).toBeInTheDocument()
+    expect(within(rail()).getByRole('textbox', { name: 'Search symbol to add' })).toBeInTheDocument()
+    expect(within(rail()).getByText('Tech')).toBeInTheDocument()
   })
 
-  it('gives the rail search its full width by stacking the asset filter on its own row', () => {
+  it('has one search, which opens a stock or adds it to the list', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
-    expect(screen.getByTestId('instrument-search')).toHaveClass('flex-col')
-    expect(screen.getByRole('textbox', { name: /search instruments/i })).toHaveAttribute('placeholder', 'Search any stock or ETF…')
+    expect(screen.queryByTestId('instrument-search')).toBeNull()
+    expect(within(rail()).getByRole('textbox', { name: 'Search symbol to add' })).toHaveAttribute('placeholder', 'Search a stock to open or add')
   })
 
   it('fetches the same widest-range chart as Research, so the two views share a cache entry', () => {
@@ -237,7 +242,7 @@ describe('ResearchChart', () => {
   it('switches symbol within the chart view from a watchlist row', async () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
-    await userEvent.click(screen.getByRole('button', { name: /^TSLA/ }))
+    await userEvent.click(within(rail()).getByRole('button', { name: /^TSLA/ }))
 
     expect(backLink()).toHaveAttribute('href', '/research?symbol=TSLA&uic=9&assetType=Stock')
   })
@@ -245,7 +250,7 @@ describe('ResearchChart', () => {
   it('keeps a search pick in the chart view', async () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
-    await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), 'tsla')
+    await userEvent.type(within(rail()).getByRole('textbox', { name: 'Search symbol to add' }), 'tsla')
     await userEvent.click(screen.getByText('Tesla Inc'))
 
     expect(backLink()).toHaveAttribute('href', '/research?symbol=TSLA&uic=9&assetType=Stock')
@@ -289,7 +294,7 @@ describe('ResearchChart', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
-    await userEvent.type(screen.getByRole('textbox', { name: /search instruments/i }), '{Escape}')
+    await userEvent.type(within(rail()).getByRole('textbox', { name: 'Search symbol to add' }), '{Escape}')
 
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'true')
   })
@@ -298,7 +303,7 @@ describe('ResearchChart', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
-    await userEvent.click(screen.getByRole('button', { name: /^TSLA/ }))
+    await userEvent.click(within(rail()).getByRole('button', { name: /^TSLA/ }))
 
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'false')
   })
@@ -356,7 +361,7 @@ describe('ResearchChart', () => {
     renderWithProviders(<ResearchChart />, { route: '/boards?symbol=NVDA' })
 
     await pickLayout(user, 'Side by side')
-    await user.click(screen.getByRole('button', { name: /^TSLA/ }))
+    await user.click(within(rail()).getByRole('button', { name: /^TSLA/ }))
 
     expect(screen.getByRole('region', { name: 'NVDA chart' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'TSLA chart' })).toHaveAttribute('aria-current', 'true')

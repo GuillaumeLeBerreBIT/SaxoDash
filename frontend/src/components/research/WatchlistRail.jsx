@@ -69,6 +69,7 @@ export default function WatchlistRail({
   fill = false,
   gridView = false,
   collapsible = false,
+  unbounded = false,
 }) {
   const { data: watchlists = [], isLoading } = useWatchlists()
   const { create, remove, addItem, removeItem } = useWatchlistMutations()
@@ -224,7 +225,7 @@ export default function WatchlistRail({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search symbol to add"
+            placeholder="Search a stock to open or add"
             aria-label="Search symbol to add"
             className="w-full h-8 pl-7 pr-2 bg-track border border-line-input rounded-lg text-[13px] text-ink placeholder:text-ink-3 outline-none"
           />
@@ -277,7 +278,7 @@ export default function WatchlistRail({
           </div>
         )}
 
-        <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
+        <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : unbounded ? '' : 'max-h-[420px] overflow-y-auto'}>
           {isLoading ? <div className="px-3.5 py-6 text-center text-[13px] text-ink-3">Loading…</div> : null}
 
           {!isLoading && watchlists.length === 0 ? (

@@ -3,9 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions'
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
-import { RAIL_WIDTH, WATCHLIST_HEIGHT } from '../lib/railLayout'
-import { chartHref, researchHref } from '../lib/research'
-import InstrumentSearchBar from '../components/InstrumentSearchBar'
+import { RAIL_WIDTH } from '../lib/railLayout'
+import { researchHref } from '../lib/research'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
@@ -24,7 +23,6 @@ import { useResearchInstrument } from '../components/research/useResearchInstrum
 import { usePersistedSize } from '../components/research/usePersistedSize'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
-const chartResultHref = (result) => chartHref(result.symbol, { uic: result.uic, assetType: result.asset_type })
 
 export default function ResearchChart() {
   const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
@@ -76,13 +74,13 @@ export default function ResearchChart() {
   const { watchlists, toggleList } = useWatchlistToggle({ symbol, instrument, details: details.data, position })
   const heldSymbols = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
   const [railWidth, setRailWidth] = usePersistedSize(RAIL_WIDTH)
-  const [watchlistHeight, setWatchlistHeight] = usePersistedSize(WATCHLIST_HEIGHT)
 
   const split = layout.panes > 1
   const activeSlot = workspace.slots[workspace.active]
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
 
   return (
+    <>
     <div
       className="relative h-[calc(100dvh-12rem)] min-[760px]:h-[calc(100dvh-8.5rem)] min-h-[480px] text-ink flex flex-col gap-3 lg:grid lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]"
       style={{ '--rail-width': `${railWidth}px` }}
@@ -161,18 +159,9 @@ export default function ResearchChart() {
       />
 
       <aside className="hidden lg:flex flex-col gap-1.5 min-h-0 overflow-y-auto">
-        <InstrumentSearchBar stacked hrefFor={chartResultHref} />
-        <div className="shrink-0 mt-1.5" style={{ height: watchlistHeight }} data-testid="chart-watchlist">
-          <WatchlistRail fill gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+        <div className="shrink-0" data-testid="chart-watchlist">
+          <WatchlistRail unbounded gridView symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
         </div>
-        <ResizeHandle
-          label="Watchlist height"
-          orientation="horizontal"
-          value={watchlistHeight}
-          limits={WATCHLIST_HEIGHT}
-          onResize={setWatchlistHeight}
-          className="h-2 shrink-0 flex"
-        />
         <SymbolPanel
           symbol={symbol}
           companyData={companyData}
@@ -182,7 +171,10 @@ export default function ResearchChart() {
           financialsHref={researchHref(symbol, 'financials', instrument)}
         />
       </aside>
-
     </div>
+    <div className="mt-3 lg:hidden" data-testid="chart-watchlist-phone">
+      <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+    </div>
+    </>
   )
 }
