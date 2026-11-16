@@ -260,7 +260,7 @@ export default function Boards() {
   if (!board) {
     return (
       <>
-        <h1 className="sr-only">Boards</h1>
+        <h1 className="sr-only">Charts</h1>
         {tabs}
         {saveNote}
         <MissingBoard />
