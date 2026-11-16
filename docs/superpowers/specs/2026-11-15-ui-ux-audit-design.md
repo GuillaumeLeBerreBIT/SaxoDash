@@ -175,7 +175,11 @@ or PR per step into `develop`.
 | Shared (second pass, mockup https://claude.ai/artifact/B2EvaLBg6PqKjMqMsufrm9) | Opportunity and Review replace Buy and Sell (review); action as coloured text; price bar | `36809ae` |
 | Portfolio (second pass) | Value, today's move and a full-width history chart with buys and sales marked | `a838521` |
 | Discover (second pass) | A shop: search, filters with counts, rows of cards with a year of prices, filtered grid; `GET /api/verdicts/browse/` | `c1eeeaa`, `d628d8e` |
-| Overview (second pass) | Daily summary of what to look at, holdings with action words | next commit |
+| Overview (second pass) | Daily summary of what to look at, holdings with action words | `bc45780` |
+| Earnings (round two) | Sentence about your own reports, a card per report with the last four results, beat or missed in words | `4e5f2b8` |
+| Investors (round two) | Who has filed, people you follow with what they did, what funds bought and sold with the verdict | `c064110` |
+| Analytics (round two) | One sentence and a chart of you against the index from 100 (`growth` on the performance endpoint) | `2adcf58` |
+| Research (round two) | Header with "You own it", a bar per check, weight against the cap as a bar | `6b1ea8e` |
 
 Bugs 1 to 7 and 9 to 10 of the list above are fixed. Bug 8 is half fixed: the overflowing Performance
 tiles are gone, the palette clipping its last row is not checked.
