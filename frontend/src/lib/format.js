@@ -64,11 +64,13 @@ export function fmtNum(value, decimals = 0) {
 
 // Finnhub sends market cap in millions of the reporting currency; this turns
 // 3105000 into '3.11T' instead of a wall of digits.
+export const threeDigits = (value) => String(Number(Number(value).toPrecision(3)))
+
 export function fmtCompact(millions) {
   if (millions == null) return '—'
   const abs = Math.abs(millions)
-  if (abs >= 1_000_000) return `${(millions / 1_000_000).toFixed(2)}T`
-  if (abs >= 1_000) return `${(millions / 1_000).toFixed(2)}B`
+  if (abs >= 1_000_000) return `${threeDigits(millions / 1_000_000)}T`
+  if (abs >= 1_000) return `${threeDigits(millions / 1_000)}B`
   return `${millions.toFixed(0)}M`
 }
 

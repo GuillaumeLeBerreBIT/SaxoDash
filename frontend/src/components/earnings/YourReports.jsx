@@ -2,6 +2,7 @@ import { useSymbolEarnings } from '../../api/queries'
 import { eventKey, rankEvents } from '../../lib/earnings'
 import { lastResults, resultWord, whenWords } from '../../lib/earningsBrief'
 import { fmtEur, fmtNum, fmtPct } from '../../lib/format'
+import { displayName } from '../../lib/names'
 import { InstrumentLogo, LetterAvatar } from '../ui'
 
 const TONE = { up: 'text-up bg-up-subtle', down: 'text-down bg-down-subtle', flat: 'text-ink-2 bg-pill', warn: 'text-warn-text bg-pill' }
@@ -62,7 +63,7 @@ function ReportCard({ event, onOpen }) {
       <div className="flex min-w-0 items-center gap-3.5">
         <InstrumentLogo symbol={event.symbol} size={44} fallback={<LetterAvatar symbol={event.symbol} size={44} chars={2} className="rounded-full" />} />
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-[17px] font-bold text-ink">{event.name || event.symbol}</span>
+          <span className="truncate text-[17px] font-bold text-ink">{displayName(event.name) || event.symbol}</span>
           <span className="text-[13px] font-semibold text-earn first-letter:uppercase">{whenWords(event)}</span>
         </div>
       </div>

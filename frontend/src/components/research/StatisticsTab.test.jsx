@@ -58,7 +58,7 @@ describe('StatisticsTab', () => {
       />,
     )
 
-    expect(screen.getByText('3.10T')).toBeInTheDocument()
+    expect(screen.getByText('3.1T')).toBeInTheDocument()
     expect(screen.getByText('150.00 – 260.00')).toBeInTheDocument()
   })
 

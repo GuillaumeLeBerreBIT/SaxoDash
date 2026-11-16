@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 
 import { checksLine, priceLine } from '../../lib/discoverBrowse'
 import { fmtMoney } from '../../lib/format'
+import { displayName } from '../../lib/names'
 import { researchHref } from '../../lib/research'
 import { InstrumentLogo } from '../ui'
 import ActionBadge from '../verdicts/ActionBadge'
@@ -26,7 +27,7 @@ export default function StockCard({ stock, note, className = '' }) {
             to={researchHref(stock.ticker, 'overview', instrument)}
             className="block truncate text-[15px] font-bold text-ink after:absolute after:inset-0 after:rounded-[14px] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-focus"
           >
-            {stock.name}
+            {displayName(stock.name)}
           </Link>
           <div className="truncate text-[12px] text-ink-3">{[stock.ticker, stock.sector].filter(Boolean).join(' · ')}</div>
         </div>

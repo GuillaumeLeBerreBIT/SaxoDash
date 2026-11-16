@@ -9,15 +9,15 @@ describe('CapitalStructureCard', () => {
   it('reads net debt as enterprise value minus market cap', () => {
     render(<CapitalStructureCard fundamentals={{ market_cap: 4_000_000, enterprise_value: 4_050_000 }} />)
 
-    expect(value('Market cap')).toBe('4.00T')
-    expect(value('Net debt')).toBe('50.00B')
+    expect(value('Market cap')).toBe('4T')
+    expect(value('Net debt')).toBe('50B')
     expect(value('Enterprise value')).toBe('4.05T')
   })
 
   it('calls it net cash when the company holds more cash than debt', () => {
     render(<CapitalStructureCard fundamentals={{ market_cap: 4_000_000, enterprise_value: 3_900_000 }} />)
 
-    expect(value('Net cash')).toBe('100.00B')
+    expect(value('Net cash')).toBe('100B')
     expect(screen.queryByText('Net debt')).not.toBeInTheDocument()
   })
 

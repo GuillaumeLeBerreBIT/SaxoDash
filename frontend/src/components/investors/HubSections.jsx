@@ -5,6 +5,7 @@ import { browseQuery } from '../../lib/discoverBrowse'
 import { fmtNum } from '../../lib/format'
 import { copyLine, flowLine, personSentence } from '../../lib/investorsBrief'
 import { fmtUsdCompact, quarterLabel } from '../../lib/investors'
+import { displayName } from '../../lib/names'
 import { researchHref } from '../../lib/research'
 import StockLogo from '../StockLogo'
 import { Card } from '../ui'
@@ -73,7 +74,7 @@ function FlowRow({ item, field, stock, held }) {
       >
         <StockLogo ticker={item.ticker} label={item.issuer} size={32} />
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[14px] font-bold text-ink">{stock?.name ?? item.ticker}</span>
+          <span className="truncate text-[14px] font-bold text-ink">{stock ? displayName(stock.name) : item.ticker}</span>
           <span className="truncate text-[12px] text-ink-3 num">{flowLine(item, field, held.has(item.ticker))}</span>
         </span>
         <span className="hidden md:block">

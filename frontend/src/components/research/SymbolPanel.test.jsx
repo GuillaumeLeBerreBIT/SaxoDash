@@ -58,7 +58,7 @@ describe('SymbolPanel', () => {
     renderWithProviders(panel())
 
     expect(screen.getByRole('heading', { name: 'NOW' })).toBeInTheDocument()
-    expect(screen.getByText('145.09B')).toBeInTheDocument()
+    expect(screen.getByText('145B')).toBeInTheDocument()
     expect(screen.getByText(/After close/)).toBeInTheDocument()
     for (const name of ['Earnings', 'Analyst rating', 'Technicals', 'Seasonals']) {
       expect(screen.getByRole('heading', { name })).toBeInTheDocument()

@@ -33,7 +33,7 @@ describe('EarningsCells', () => {
   it('reported revenue says beat or missed too', () => {
     render(<RevenueCell event={ev({ revenue_actual: 2.2e9, revenue_surprise_pct: 10 })} />)
     expect(screen.getByText('Beat')).toBeInTheDocument()
-    expect(screen.getByText('2.20B, +10.0%')).toBeInTheDocument()
+    expect(screen.getByText('2.2B, +10.0%')).toBeInTheDocument()
   })
 
   it('a move shows its sign and window; no move is a dash', () => {

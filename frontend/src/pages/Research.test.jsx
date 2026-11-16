@@ -742,7 +742,7 @@ describe('Research header and Overview on the new design', () => {
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
     expect(tabs).toHaveLength(10)
     expect(screen.getByRole('heading', { level: 1, name: 'NVIDIA Corporation' })).toBeInTheDocument()
-    expect(screen.getByText('NVDA · Semiconductors · 4.20T market cap · You own it')).toBeInTheDocument()
+    expect(screen.getByText('NVDA · Semiconductors · 4.2T market cap · You own it')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
       'href',
       '/boards?symbol=NVDA&uic=211&assetType=Stock',

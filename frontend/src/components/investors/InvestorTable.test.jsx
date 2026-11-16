@@ -16,7 +16,7 @@ describe('InvestorTable', () => {
   it('links each row to the profile and shows its numbers', () => {
     render(<MemoryRouter><InvestorTable investors={[investor]} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: /Bill Ackman/ })).toHaveAttribute('href', '/investors/pershing-square')
-    expect(screen.getByText('$14.0B')).toBeInTheDocument()
+    expect(screen.getByText('$14B')).toBeInTheDocument()
     expect(screen.getByText('+2 · 0')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Follow Bill Ackman' })).toBeInTheDocument()
   })

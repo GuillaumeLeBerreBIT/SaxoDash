@@ -83,11 +83,11 @@ describe('Discover page', () => {
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
     expect(headings).toEqual(["Today's opportunities", 'Fell hard, still strong', 'Browse by idea'])
     const first = within(screen.getByRole('region', { name: "Today's opportunities" })).getAllByTestId('stock-card')[0]
-    expect(first).toHaveTextContent('ZTS Corp')
+    expect(first).toHaveTextContent('ZTS')
     expect(first).toHaveTextContent('50% below its cheap line')
     expect(first).toHaveTextContent('6 of 7 quality checks pass; debt fails.')
     expect(first).toHaveTextContent('Opportunity')
-    expect(within(first).getByRole('link', { name: 'ZTS Corp' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
+    expect(within(first).getByRole('link', { name: 'ZTS' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
     expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('valuation=cheap&quality=strong'))
   })
 
