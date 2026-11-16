@@ -147,14 +147,14 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research' })
 
     // NVDA labels both the symbol bar and the instrument card below it.
-    expect(screen.getAllByText('NVDA').length).toBeGreaterThan(0)
-    expect(screen.getByText('Held')).toBeInTheDocument()
+    expect(screen.getAllByText(/^NVDA/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/You own it/).length).toBeGreaterThan(0)
   })
 
   it('marks an instrument that is in the portfolio as held', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByText('Held')).toBeInTheDocument()
+    expect(screen.getAllByText(/You own it/).length).toBeGreaterThan(0)
   })
 
   const thrust = {
@@ -262,7 +262,7 @@ describe('Research', () => {
   it('does not mark an instrument that is not held', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=TSLA' })
 
-    expect(screen.queryByText('Held')).not.toBeInTheDocument()
+    expect(screen.queryByText(/You own it/)).not.toBeInTheDocument()
   })
 
   it('fetches the widest range once and slices it, rather than refetching per range', async () => {
@@ -742,7 +742,7 @@ describe('Research header and Overview on the new design', () => {
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
     expect(tabs).toHaveLength(10)
     expect(screen.getByRole('heading', { level: 1, name: 'NVIDIA Corporation' })).toBeInTheDocument()
-    expect(screen.getByText('NVDA · Semiconductors · 4.20T market cap')).toBeInTheDocument()
+    expect(screen.getByText('NVDA · Semiconductors · 4.20T market cap · You own it')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
       'href',
       '/boards?symbol=NVDA&uic=211&assetType=Stock',

@@ -25,6 +25,33 @@ function checkCount(checks) {
   return { failed, unknown, answered }
 }
 
+const BAR_TONE = { pass: 'bg-up', fail: 'bg-down', unknown: 'bg-ink-3/30' }
+
+function CheckBars({ checks }) {
+  if (!checks.length) return null
+  return (
+    <span data-testid="check-bars" className="mt-1 flex gap-1" aria-hidden="true">
+      {checks.map((check) => (
+        <span key={check.key} title={`${check.label}: ${CHECK_STATUS_LABEL[check.status] ?? check.status}`} className={`h-1.5 flex-1 rounded-full ${BAR_TONE[check.status] ?? BAR_TONE.unknown}`} />
+      ))}
+    </span>
+  )
+}
+
+function WeightBar({ weight, cap }) {
+  if (weight == null || cap == null) return null
+  const scale = cap * 2.2
+  const over = Number(weight) > cap
+  return (
+    <span data-testid="weight-bar" className="mt-1 flex items-center gap-2.5" aria-hidden="true">
+      <span className="relative h-1.5 flex-1 rounded-full bg-track">
+        <span className={`absolute inset-y-0 left-0 rounded-full ${over ? 'bg-warn' : 'bg-ink'}`} style={{ width: `${Math.min(100, (Number(weight) / scale) * 100)}%` }} />
+        <span className="absolute -top-1 h-3.5 w-0.5 bg-ink-3" style={{ left: `${(cap / scale) * 100}%` }} />
+      </span>
+    </span>
+  )
+}
+
 function CompanyCell({ verdict }) {
   const [open, setOpen] = useState(false)
   const { failed, unknown, answered } = checkCount(verdict.checks ?? [])
@@ -40,6 +67,7 @@ function CompanyCell({ verdict }) {
           </Tag>
         ) : null}
       </span>
+      <CheckBars checks={verdict.checks ?? []} />
       {failed.length > 0 ? <span className={CELL_LINE}>{`Fails: ${names(failed)}.`}</span> : null}
       {unknown.length > 0 ? <span className="text-[13px] text-ink-3">{`No figure for: ${names(unknown)}.`}</span> : null}
       {allPass && answered > 0 ? <span className={CELL_LINE}>Every check clears the bar.</span> : null}
@@ -123,6 +151,7 @@ function YouCell({ position, verdict }) {
         </span>
       )}
       {weight ? <span className={CELL_LINE}>{weight}</span> : null}
+      <WeightBar weight={verdict?.weight_pct ?? position.weight} cap={verdict?.weight_cap_pct} />
       {basis ? <span className="text-[12px] text-ink-3">{basis}</span> : null}
     </div>
   )
@@ -150,8 +179,8 @@ function Headline({ verdict, sentence, note }) {
   }
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span className={`text-[24px] font-bold tracking-wide ${WORD_TONE[sentence.tone] ?? 'text-ink'}`}>{sentence.word}</span>
-      <span className="text-[16px] font-semibold text-ink">{sentence.why}</span>
+      <span className={`inline-block text-[30px] font-extrabold leading-none lowercase first-letter:uppercase ${WORD_TONE[sentence.tone] ?? 'text-ink-2'}`}>{sentence.word}</span>
+      <span className="text-[18px] font-semibold text-ink">{sentence.why}</span>
       {sentence.next ? <span className="basis-full text-[14px] text-ink-2 num">{sentence.next}</span> : null}
     </div>
   )
