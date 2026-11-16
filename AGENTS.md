@@ -842,3 +842,18 @@ one gets its reason in the same card instead of a separate note. Range statistic
 Performance card; Capital structure and Ownership live on the Statistics tab; the Trade plan is closed
 unless the verdict is Buy or Add. The audit behind this and the layouts proposed for the other pages are in
 `docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
+
+**Every page answers first (2026-11-16).** The pattern from the Research Overview now holds on
+Overview, Portfolio, Analytics, Discover and Earnings: one sentence or one short card states the
+answer, and detail sits below or behind a click. Portfolio's holdings table shows Instrument, day
+change, Value, Return, P/L, Weight and Action; quantity, prices, fund and Congress columns are behind
+"More columns". Analytics opens with `lib/performanceAnswer.js::performanceSentence` (the longest
+period that has both a portfolio and an index return) and lists only periods with data. Discover
+opens with "Worth a look today", served by `GET /api/verdicts/worth-a-look/`: universe stocks graded
+strong and cheap, furthest under `cheap_below` first, at most 12, with the requesting user's action.
+It reads `StockVerdict` only, like every verdict endpoint. Shelves are shown one at a time
+(`ShelfBrowser`); the shelf page merges share classes by identical name and sorts by action
+(`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
+the 15 largest companies, the rest behind one button. What was built and what is left:
+`docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
+

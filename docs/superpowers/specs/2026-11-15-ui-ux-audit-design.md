@@ -1,8 +1,10 @@
 # UI/UX audit of every page: findings and target layouts
 
 Date: 2026-11-15. Branch: `feat/ui-ux-audit` (from `feat/signals-on-candles`, PR #58).
-Status: Research layout approved by the owner ("looks really good"); the other pages are proposed
-and wait for approval. Nothing structural is built yet.
+Status (2026-11-16): the owner approved building all pages ("go ahead, finish research then do the
+other pages"). Built on this branch: Research, Overview, Portfolio, Analytics, Discover and its shelf
+page, Earnings, the chart page's symbol panel, Investors hub and profile, the not-found page. Not
+built: see "What is left" at the end. Not pushed, no pull request yet.
 
 The four page-group reports, with measured block heights, critique, wireframes and `file:line`
 small fixes, are in `2026-11-15-ui-ux-audit/report-{a,b,c,d}.md` (amounts removed). This file is the
@@ -154,3 +156,36 @@ the light theme, focus ring on earnings badges and textareas, pane activation on
 
 Each step: tests first, screenshots at 1500px and 390px in the default and light themes, one commit
 or PR per step into `develop`.
+
+## What was built (2026-11-16)
+
+| Page | Change | Commit |
+|---|---|---|
+| Research | Answer card, one-line snapshot rows, one ownership card, reference cards on Statistics | `f0a41bc`, `90327eb` |
+| Overview | One "Where you stand" card with a sentence; split, movers and heatmap removed | `e7b09be` |
+| Portfolio | Two tiles; holdings table shows seven columns, six more behind "More columns"; allocation donut and gainers chart removed | `395a239` |
+| Analytics | One sentence against the chosen index; only periods with data; attribution in points; no index bars before the portfolio existed | `e045d04` |
+| Discover | "Worth a look today" (new `GET /api/verdicts/worth-a-look/`), one idea at a time; shelf page with an Action column, one sector select, merged share classes, phone rows without sideways scroll | `453a041` |
+| Earnings | Day strip on every width replaces the market grid; 15 largest per day, the rest behind one button | `2dffc86` |
+| Charts | Symbol panel states the verdict; Performance and volume rows removed | `f4e9685` |
+| Investors | Bought and sold side by side, new bets left to Stocks; "Now 8×" and "under 0.1%" wording; copy result first on the profile | `5ece0e7`, `4286fe6` |
+| Shell | Not-found page inside the app shell | `4286fe6` |
+
+Bugs 1 to 7 and 9 to 10 of the list above are fixed. Bug 8 is half fixed: the overflowing Performance
+tiles are gone, the palette clipping its last row is not checked.
+
+## What is left
+
+- **Screenshots.** Portfolio onwards were verified by tests only: the dev database was not running on
+  2026-11-16. Capture each page at 1500px and 390px before merging (`tmp/page.mjs <path> <prefix>`
+  needs a fresh token in `tokens.json`).
+- **Owner decisions:** rename "Boards" to "Charts" and reorder the navigation; whether the chart page
+  keeps both searches (the page search opens a symbol, the watchlist search adds one).
+- **Money and Settings** are untouched apart from masked account numbers and the wrapped tile.
+  Banking work is paused by the owner.
+- **Congress member page** has paging but not the one-sentence layout.
+- **Investors Stocks page** phone layout, and the profile's top-10 grid and donut.
+- **Primitives:** `DataTable`, one stat tile, `PageHeader` on every page, `ChartFrame`, one menu.
+- **Accessibility backlog** above.
+- Unused component files left in place: `AllocationPanel`, `MoversCard`, `PortfolioHeatmap`,
+  `AnalystRatingCard`, `VerdictCard`, `PerformanceTiles` is still used by Research.
