@@ -47,6 +47,7 @@ function stub(positions = [msft]) {
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
+  queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useOwnershipSummary.mockReturnValue(idle)
   queries.useCongressOwnershipSummary.mockReturnValue(idle)
@@ -204,11 +205,11 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
   })
 
-  it('opens with two tiles and leaves net worth and bank cash to Overview and Money', () => {
+  it('opens on the portfolio value with its history and leaves net worth and bank cash to Overview and Money', () => {
     renderWithProviders(<Portfolio />)
 
-    expect(screen.getByText('Portfolio value')).toBeInTheDocument()
-    expect(screen.getByText('Profit since purchase')).toBeInTheDocument()
+    expect(screen.getByTestId('portfolio-value')).toHaveTextContent('€31,567.81')
+    expect(screen.getByTestId('portfolio-history')).toBeInTheDocument()
     expect(screen.queryByText('Total net worth')).not.toBeInTheDocument()
     expect(screen.queryByText('Bank balance')).not.toBeInTheDocument()
   })
@@ -310,12 +311,12 @@ describe('Portfolio holdings table', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
-  it('folds total cost/P&L into the one stat strip instead of a second Overview card', () => {
+  it('says the result since purchase and what was invested under the value', () => {
     renderWithProviders(<Portfolio />)
+    const hero = screen.getByTestId('portfolio-hero')
     expect(screen.queryByText('Overview')).not.toBeInTheDocument()
-    expect(screen.getByText('Profit since purchase')).toBeInTheDocument()
-    expect(screen.getAllByText('-€5.89')).toHaveLength(2)
-    expect(screen.getByText('€31,573.70 invested')).toBeInTheDocument()
+    expect(within(hero).getByText(/^▼ €6 since purchase/)).toHaveClass('text-down')
+    expect(within(hero).getByText('€31,574 invested')).toBeInTheDocument()
   })
 
   it('charts sector breakdown as a donut, the same pattern as holdings allocation', () => {
@@ -376,16 +377,15 @@ describe('Portfolio total row', () => {
     expect(within(totalRow()).queryByText('20')).toBeNull()
   })
 
-  it('renders a dash, not null or 0.00%, when the percentage is absent', () => {
+  it('leaves the percentage out, never null or 0.00%, when it is absent', () => {
     queries.usePortfolioSummary.mockReturnValue({
       ...idle,
       data: { total_value: '31567.81', total_cost: '31573.70', total_pnl: '-5.89', total_pnl_pct: null, allocation: [] },
     })
     renderWithProviders(<Portfolio />)
 
-    const row = screen.getByText('Portfolio value').closest('div').parentElement
-    expect(within(row).getByText('—')).toBeInTheDocument()
-    expect(within(row).queryByText(/since purchase/)).toBeNull()
+    const hero = screen.getByTestId('portfolio-hero')
+    expect(within(hero).getByText('▼ €6 since purchase')).toBeInTheDocument()
     expect(screen.queryByText(/null|0\.00%/)).toBeNull()
   })
 

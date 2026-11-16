@@ -17,7 +17,7 @@ export default function ActionBadge({ verdict, className = '' }) {
     <span
       title={verdict.reason}
       data-tone={toneName ?? 'neutral'}
-      className={`inline-block max-w-full truncate text-[13px] font-semibold ${tone} ${className}`}
+      className={`inline-block max-w-full truncate align-middle text-[13px] font-semibold ${tone} ${className}`}
     >
       {actionLabel(verdict)}
     </span>

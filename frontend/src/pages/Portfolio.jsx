@@ -2,23 +2,19 @@ import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useCongressOwnershipSummary, useNetWorth, useOwnershipSummary, usePortfolioSummary, usePositionQuotes, usePositions, useVerdictSummary } from '../api/queries'
-import { fmtEur } from '../lib/format'
 import { ownershipTickers } from '../lib/ownership'
 import { positionVerdictTickers } from '../lib/verdicts'
 import { nextSort, sortRows } from '../lib/sort'
-import { useChartColors } from '../theme/useChartColors'
-import { Card, Move, QueryState, Segmented, Tile } from '../components/ui'
+import { QueryState, Segmented } from '../components/ui'
 import InstrumentSearchBar from '../components/InstrumentSearchBar'
-import HistoryAreaChart from '../components/HistoryAreaChart'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
+import PortfolioHero from '../components/portfolio/PortfolioHero'
 import PositionsTable from '../components/portfolio/PositionsTable'
 import TransactionsView from '../components/portfolio/TransactionsView'
 import { ConcentrationPanel, CurrencyPanel, SectorsPanel } from '../components/portfolio/BalancePanels'
 
 const NO_POSITIONS = []
 const SPAN_12 = 'min-[1100px]:col-span-12'
-const SPAN_8 = 'min-[1100px]:col-span-8'
-const SPAN_6 = 'min-[1100px]:col-span-6'
 const SPAN_4 = 'min-[1100px]:col-span-4'
 
 const VIEWS = [
@@ -37,36 +33,7 @@ const HOLDING_ACCESSORS = {
   weight: (p) => finite(p.weight),
 }
 
-const pnlTone = (value) => (value == null ? undefined : Number(value) >= 0 ? 'up' : 'down')
-
-function SummaryTiles({ summary }) {
-  return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-      <Tile
-        label="Portfolio value"
-        value={fmtEur(summary.total_value)}
-        sub={
-          summary.total_pnl_pct == null ? (
-            '—'
-          ) : (
-            <>
-              <Move value={summary.total_pnl_pct} /> since purchase
-            </>
-          )
-        }
-      />
-      <Tile
-        label="Profit since purchase"
-        value={summary.total_pnl == null ? null : fmtEur(summary.total_pnl, { sign: true })}
-        tone={pnlTone(summary.total_pnl)}
-        sub={`${fmtEur(summary.total_cost)} invested`}
-      />
-    </div>
-  )
-}
-
 export default function Portfolio() {
-  const c = useChartColors()
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const netWorthQuery = useNetWorth()
@@ -98,23 +65,27 @@ export default function Portfolio() {
     <>
       <h1 className="sr-only">Portfolio</h1>
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
-        <Card
-          className={SPAN_12}
-          context={`Saxo${holdings ? ` · ${positions.length} position${positions.length === 1 ? '' : 's'}` : ''} · in euros`}
-          dot={failed ? 'warn' : 'ok'}
-          right={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <SaxoConnectionStatus />
+        {ready ? (
+          <div className={`${SPAN_12} min-w-0`}>
+            <PortfolioHero
+              summary={summary}
+              positions={positions}
+              quotes={quotes}
+              holdingsCount={holdings ? positions.length : null}
+              right={
+                <>
+                  <SaxoConnectionStatus />
+                  <Segmented label="Portfolio view" options={VIEWS} value={view} onChange={chooseView} />
+                </>
+              }
+            />
+          </div>
+        ) : (
+          <div className={`${SPAN_12} min-w-0 flex flex-col gap-3`}>
+            <div className="flex justify-end">
               <Segmented label="Portfolio view" options={VIEWS} value={view} onChange={chooseView} />
             </div>
-          }
-        >
-          {ready && <SummaryTiles summary={summary} />}
-        </Card>
-
-        {view === 'positions' && !ready && (
-          <div className={`${SPAN_12} min-w-0`}>
-            <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" />
+            {view === 'positions' ? <QueryState isLoading={!failed} error={failed} onRetry={retryFailed} label="portfolio" /> : null}
           </div>
         )}
 
@@ -137,18 +108,9 @@ export default function Portfolio() {
               sort={sort}
               onSort={onSort}
             />
-            <div className={`${SPAN_8} min-w-0`}>
-              <HistoryAreaChart
-                title="Value over time"
-                subtitle="Your investments, in euros"
-                dataKey="portfolio_value"
-                name="Portfolio"
-                color={c.primary}
-              />
-            </div>
             <SectorsPanel className={SPAN_4} positions={positions} />
-            <ConcentrationPanel className={SPAN_6} positions={positions} />
-            <CurrencyPanel className={SPAN_6} positions={positions} cash={netWorth.broker_cash} />
+            <ConcentrationPanel className={SPAN_4} positions={positions} />
+            <CurrencyPanel className={SPAN_4} positions={positions} cash={netWorth.broker_cash} />
           </>
         )}
       </div>
