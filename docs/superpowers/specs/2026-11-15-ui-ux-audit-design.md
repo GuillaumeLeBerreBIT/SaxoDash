@@ -170,6 +170,8 @@ or PR per step into `develop`.
 | Charts | Symbol panel states the verdict; Performance and volume rows removed | `f4e9685` |
 | Investors | Bought and sold side by side, new bets left to Stocks; "Now 8×" and "under 0.1%" wording; copy result first on the profile | `5ece0e7`, `4286fe6` |
 | Shell | Not-found page inside the app shell | `4286fe6` |
+| Congress member, fund profile | One sentence on what copying returned (`lib/copySentence.js`); method behind a click | `a1f0533` |
+| Investors Stocks | Sorted column marked; phone shows the stock and that column, no sideways scroll | next commit |
 
 Bugs 1 to 7 and 9 to 10 of the list above are fixed. Bug 8 is half fixed: the overflowing Performance
 tiles are gone, the palette clipping its last row is not checked.
@@ -183,9 +185,8 @@ tiles are gone, the palette clipping its last row is not checked.
   keeps both searches (the page search opens a symbol, the watchlist search adds one).
 - **Money and Settings** are untouched apart from masked account numbers and the wrapped tile.
   Banking work is paused by the owner.
-- **Congress member page** has paging but not the one-sentence layout.
-- **Investors Stocks page** phone layout, and the profile's top-10 grid and donut.
+- **Investor profile:** the top-10 grid and donut are still there.
 - **Primitives:** `DataTable`, one stat tile, `PageHeader` on every page, `ChartFrame`, one menu.
 - **Accessibility backlog** above.
-- Unused component files left in place: `AllocationPanel`, `MoversCard`, `PortfolioHeatmap`,
-  `AnalystRatingCard`, `VerdictCard`, `PerformanceTiles` is still used by Research.
+- `MoversCard`, `AnalystRatingCard` and `VerdictCard` were deleted as unused. `AllocationPanel` and
+  `PortfolioHeatmap` stay: board panels still render them.

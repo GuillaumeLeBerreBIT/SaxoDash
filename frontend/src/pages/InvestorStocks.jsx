@@ -14,6 +14,7 @@ const VIEW_KEYS = new Set(STOCK_VIEWS.map(([key]) => key))
 const DEFAULT_VIEW = 'bought'
 const VIEW_OPTIONS = STOCK_VIEWS.map(([value, label]) => ({ value, label }))
 const VIEW_LABELS = Object.fromEntries(STOCK_VIEWS)
+const COUNT_COLUMNS = [['owned', 'Owners', 'owners'], ['bought', 'Bought', 'bought'], ['sold', 'Sold', 'sold'], ['new', 'New', 'new']]
 
 function Stock({ row }) {
   const label = stockLabel(row)
@@ -42,41 +43,54 @@ function Faces({ investors }) {
   )
 }
 
-function Rows({ rows, title }) {
+function Rows({ rows, title, view }) {
   const [shown, setShown] = useState(PAGE_SIZE)
   const visible = useMemo(() => rows.slice(0, shown), [rows, shown])
   const tickers = useMemo(() => visible.map((row) => row.ticker).filter(Boolean), [visible])
   const congress = useCongressOwnershipSummary(tickers).data
   return (
     <>
-      <Card flush context={`${rows.length} stocks · counted by fund`} title={title}>
+      <Card flush context={`${rows.length} stocks · counted by fund · most first`} title={title}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="w-full">
             <thead>
               <tr>
                 <Th edge>Stock</Th>
-                <Th align="right">Owners</Th>
-                <Th align="right">Bought</Th>
-                <Th align="right">Sold</Th>
-                <Th align="right">New</Th>
-                <Th align="right">Held value</Th>
+                {COUNT_COLUMNS.map(([key, label]) => (
+                  <Th
+                    key={key}
+                    align="right"
+                    hideBelow={key === view ? undefined : 'md'}
+                    ariaSort={key === view ? 'descending' : undefined}
+                    className={key === view ? 'text-ink font-semibold' : ''}
+                  >
+                    {label}
+                  </Th>
+                ))}
+                <Th align="right" hideBelow="md">Held value</Th>
                 <Th align="right" hideBelow="md">Congress</Th>
-                <Th edge>Funds</Th>
+                <Th edge hideBelow="md">Funds</Th>
               </tr>
             </thead>
             <tbody>
               {visible.map((row) => (
                 <Tr key={row.cusip}>
-                  <Td edge><Stock row={row} /></Td>
-                  <Td align="right" className="text-ink">{row.owners}</Td>
-                  <Td align="right" className="text-ink">{row.bought}</Td>
-                  <Td align="right" className="text-ink">{row.sold}</Td>
-                  <Td align="right" className="text-ink-2">{row.new}</Td>
-                  <Td align="right" className="text-ink-2">{fmtUsdCompact(row.value)}</Td>
+                  <Td edge className="w-full max-w-0 md:w-auto md:max-w-none"><Stock row={row} /></Td>
+                  {COUNT_COLUMNS.map(([key, , field]) => (
+                    <Td
+                      key={key}
+                      align="right"
+                      hideBelow={key === view ? undefined : 'md'}
+                      className={key === view ? 'text-ink font-semibold' : 'text-ink-2'}
+                    >
+                      {row[field]}
+                    </Td>
+                  ))}
+                  <Td align="right" hideBelow="md" className="text-ink-2">{fmtUsdCompact(row.value)}</Td>
                   <Td align="right" hideBelow="md">
                     <CongressActivity ticker={row.ticker} stock={congress?.stocks?.[row.ticker]} windowDays={congress?.window_days} />
                   </Td>
-                  <Td edge><Faces investors={row.investors} /></Td>
+                  <Td edge hideBelow="md"><Faces investors={row.investors} /></Td>
                 </Tr>
               ))}
             </tbody>
@@ -138,7 +152,7 @@ export default function InvestorStocks() {
       ) : data.rows.length === 0 ? (
         <Card><EmptyState title={`No stocks with that activity in ${quarterLabel(data.quarter)}.`} /></Card>
       ) : (
-        <Rows key={`${view}:${data.quarter}`} rows={data.rows} title={`${VIEW_LABELS[view]} · ${quarterLabel(data.quarter)}`} />
+        <Rows key={`${view}:${data.quarter}`} view={view} rows={data.rows} title={`${VIEW_LABELS[view]} · ${quarterLabel(data.quarter)}`} />
       )}
       <LimitsNote />
     </div>

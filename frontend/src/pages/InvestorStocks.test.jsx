@@ -52,6 +52,18 @@ describe('InvestorStocks', () => {
     expect(within(nvda).getByRole('link', { name: 'NVDA' })).toHaveAttribute('href', '/research?symbol=NVDA')
   })
 
+  it('marks the column the list is sorted by and keeps only it beside the stock on a phone', () => {
+    renderPage('/investors/stocks?view=sold')
+    const sold = screen.getByRole('columnheader', { name: 'Sold' })
+    expect(sold).toHaveAttribute('aria-sort', 'descending')
+    expect(sold).not.toHaveClass('hidden')
+    for (const name of ['Owners', 'Bought', 'New', 'Held value', 'Funds']) {
+      expect(screen.getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
+      expect(screen.getByRole('columnheader', { name })).not.toHaveAttribute('aria-sort')
+    }
+    expect(screen.getByRole('table')).not.toHaveClass('min-w-[720px]')
+  })
+
   it('does not colour bought green or sold red', () => {
     renderPage()
     const nvda = screen.getByRole('row', { name: /NVDA/ })
