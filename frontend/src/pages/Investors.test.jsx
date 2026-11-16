@@ -137,12 +137,12 @@ describe('Investors hub', () => {
 
   it('says which quarter the signals describe', () => {
     renderPage()
-    expect(screen.getByText('3 tracked · signals for Q2 2026 · 3 of 3 filed')).toBeInTheDocument()
+    expect(screen.getByText('Most tracked funds adding in Q2 2026 (3 of 3 filed), with what the rules say today')).toBeInTheDocument()
   })
 
   it('opens on how many funds have filed and where the people you follow stand', () => {
     renderPage()
-    expect(screen.getByTestId('investors-headline')).toHaveTextContent('3 of 3 funds have filed for the second quarter, including the one you follow.')
+    expect(screen.getByTestId('investors-headline')).toHaveTextContent('3 of 3 funds have filed Q2, Buffett included.')
   })
 
   it('shows the people you follow with what they did and how copying them went', () => {

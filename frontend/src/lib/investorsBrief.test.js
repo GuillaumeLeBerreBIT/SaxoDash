@@ -6,19 +6,29 @@ const hub = { quarter: '2026-06-30', filed: 87, tracked: 89, newest_quarter: '20
 const person = (latest, extra = {}) => ({ name: 'X', latest_quarter: latest, new_count: 5, exited_count: 2, top_holdings: [], ...extra })
 
 describe('investorsHeadline', () => {
-  it('counts who has filed the newest quarter and says where the people you follow stand', () => {
-    expect(investorsHeadline(hub, [person('2026-06-30'), person('2026-06-30')])).toBe(
-      '7 of 89 funds have filed for the third quarter. The two you follow have not yet.',
+  const named = (name, latest) => person(latest, { name })
+
+  it('is one short line naming who you follow that has not filed', () => {
+    expect(investorsHeadline(hub, [named('Bill Ackman', '2026-06-30'), named('Warren Buffett', '2026-06-30')])).toBe(
+      '7 of 89 funds have filed Q3; Ackman and Buffett have not yet.',
     )
-    expect(investorsHeadline(hub, [person('2026-09-30'), person('2026-06-30')])).toBe(
-      '7 of 89 funds have filed for the third quarter. One of the two you follow has.',
+    expect(investorsHeadline(hub, [named('Bill Ackman', '2026-09-30'), named('Warren Buffett', '2026-06-30')])).toBe(
+      '7 of 89 funds have filed Q3; Buffett has not yet.',
     )
-    expect(investorsHeadline(hub, [person('2026-09-30')])).toBe('7 of 89 funds have filed for the third quarter, including the one you follow.')
-    expect(investorsHeadline(hub, [])).toBe('7 of 89 funds have filed for the third quarter.')
   })
 
-  it('says when every fund is in', () => {
-    expect(investorsHeadline({ ...hub, newest_quarter: '2026-06-30' }, [])).toBe('87 of 89 funds have filed for the second quarter.')
+  it('counts instead of naming when you follow many', () => {
+    const many = ['A B', 'C D', 'E F'].map((name) => named(name, '2026-06-30'))
+    expect(investorsHeadline(hub, many)).toBe('7 of 89 funds have filed Q3; three you follow have not yet.')
+  })
+
+  it('says when the people you follow are in', () => {
+    expect(investorsHeadline(hub, [named('Bill Ackman', '2026-09-30')])).toBe('7 of 89 funds have filed Q3, Ackman included.')
+    expect(investorsHeadline(hub, [])).toBe('7 of 89 funds have filed Q3.')
+  })
+
+  it('uses the latest quarter when every fund is in', () => {
+    expect(investorsHeadline({ ...hub, newest_quarter: '2026-06-30' }, [])).toBe('87 of 89 funds have filed Q2.')
   })
 
   it('has a quiet line before anything is imported', () => {

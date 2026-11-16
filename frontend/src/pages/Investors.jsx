@@ -37,7 +37,7 @@ function Hub({ hub, held }) {
   return (
     <>
       <Following investors={following} held={held} />
-      <FundFlows bought={shelfItems(hub, 'convergent-buys')} sold={shelfItems(hub, 'most-sold')} held={held} />
+      <FundFlows bought={shelfItems(hub, 'convergent-buys')} sold={shelfItems(hub, 'most-sold')} held={held} hub={hub.data} />
       {rest.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
     </>
   )
@@ -64,14 +64,15 @@ export default function Investors() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       <h1 className="sr-only">Investors</h1>
-      <section aria-label="Investors" className="flex flex-col gap-4 pt-2 md:flex-row md:items-end md:justify-between">
+      <section aria-label="Investors" className="flex flex-col gap-3 pt-1 md:flex-row md:items-center md:justify-between">
         <div className="flex max-w-[820px] flex-col gap-2">
-          <span className="text-[14px] font-medium text-ink-2">{funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}</span>
           {headline ? (
-            <p data-testid="investors-headline" className="text-[24px] font-bold leading-tight tracking-tight text-ink md:text-[32px] [text-wrap:balance]">
+            <p data-testid="investors-headline" className="text-[20px] font-bold leading-snug tracking-tight text-ink md:text-[24px] [text-wrap:balance]">
               {headline}
             </p>
-          ) : null}
+          ) : (
+            <span className="text-[14px] font-medium text-ink-2">{funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}</span>
+          )}
           {signals}
         </div>
         <div className="flex flex-wrap items-center gap-2">

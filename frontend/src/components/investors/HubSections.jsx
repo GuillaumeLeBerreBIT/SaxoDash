@@ -4,7 +4,7 @@ import { useBrowse } from '../../api/queries'
 import { browseQuery } from '../../lib/discoverBrowse'
 import { fmtNum } from '../../lib/format'
 import { copyLine, flowLine, personSentence } from '../../lib/investorsBrief'
-import { fmtUsdCompact } from '../../lib/investors'
+import { fmtUsdCompact, quarterLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 import StockLogo from '../StockLogo'
 import { Card } from '../ui'
@@ -100,19 +100,20 @@ function Flow({ title, sub, items, field, stocks, held }) {
   )
 }
 
-export function FundFlows({ bought, sold, held }) {
+export function FundFlows({ bought, sold, held, hub }) {
   const shown = [...bought.slice(0, FLOW_ROWS), ...sold.slice(0, FLOW_ROWS)].filter((item) => item.ticker)
   const tickers = [...new Set(shown.map((item) => item.ticker))]
   const { data } = useBrowse(browseQuery({}, { tickers, limit: 60 }), { enabled: tickers.length > 0 })
   const stocks = new Map((data?.stocks ?? []).map((stock) => [stock.ticker, stock]))
   if (!bought.length && !sold.length) return null
+  const when = hub?.quarter ? `in ${quarterLabel(hub.quarter)} (${hub.filed} of ${hub.tracked} filed)` : 'last quarter'
   return (
     <div data-testid="bought-and-sold" className="grid grid-cols-1 items-start gap-[var(--sd-gap,12px)] min-[1100px]:grid-cols-2">
       {bought.length ? (
-        <Flow title="What funds bought" sub="Most tracked funds adding last quarter, with what the rules say today" items={bought.slice(0, FLOW_ROWS).filter((item) => item.ticker)} field="bought" stocks={stocks} held={held} />
+        <Flow title="What funds bought" sub={`Most tracked funds adding ${when}, with what the rules say today`} items={bought.slice(0, FLOW_ROWS).filter((item) => item.ticker)} field="bought" stocks={stocks} held={held} />
       ) : null}
       {sold.length ? (
-        <Flow title="What funds sold" sub="Most tracked funds reducing or closing last quarter" items={sold.slice(0, FLOW_ROWS).filter((item) => item.ticker)} field="sold" stocks={stocks} held={held} />
+        <Flow title="What funds sold" sub={`Most tracked funds reducing or closing ${when}`} items={sold.slice(0, FLOW_ROWS).filter((item) => item.ticker)} field="sold" stocks={stocks} held={held} />
       ) : null}
     </div>
   )
