@@ -1,41 +1,30 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  useBudgetProgress,
+  useInvestorHub,
   useOwnershipSummary,
   usePerformance,
   usePortfolioInsights,
   usePortfolioSummary,
   usePositionQuotes,
   usePositions,
-  useSpendingSummary,
   useTransactions,
-  useMe,
+  useVerdictSummary,
 } from '../api/queries'
-import { fmtDate, fmtEur, fmtQty } from '../lib/format'
+import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
-import { CATEGORY_LABELS } from '../lib/categories'
-import { capBreaches } from '../lib/portfolioStats'
 import { ownershipTickers } from '../lib/ownership'
-import { needsYou, standingSentence } from '../lib/standing'
+import { briefHeadline, briefItems } from '../lib/brief'
+import { dayChange } from '../lib/portfolioHero'
+import { positionVerdict, positionVerdictTickers } from '../lib/verdicts'
 import { Alert, Badge, Card, EmptyState, Skeleton, Th, Td, Tr } from '../components/ui'
-import NetWorthChart from '../components/NetWorthChart'
-import HeroValue from '../components/dashboard/HeroValue'
-import ThisWeek from '../components/dashboard/ThisWeek'
-import PositionsPanel from '../components/dashboard/PositionsPanel'
+import { BriefHero, BriefList, HoldingsList } from '../components/dashboard/DailyBrief'
 import VsBenchmark from '../components/dashboard/VsBenchmark'
 import SmartMoney from '../components/dashboard/SmartMoney'
 
 const NO_POSITIONS = []
 const SPAN_8 = 'min-[1100px]:col-span-8'
 const SPAN_4 = 'min-[1100px]:col-span-4'
-
-function currentMonthStart() {
-  // Built from local date parts, not toISOString() - that converts through
-  // UTC and can land on the previous month in the small hours in UTC+ zones.
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-}
 
 const totalTone = (t) => (txSignedTotal(t) > 0 ? 'text-up' : 'text-ink')
 
@@ -95,23 +84,28 @@ function RecentTransactions({ rows, className }) {
   )
 }
 
+const SPAN_12 = 'min-[1100px]:col-span-12'
+
+function signalCounts(hub, key, field) {
+  const items = hub?.shelves?.find((shelf) => shelf.key === key)?.items ?? []
+  return new Map(items.filter((item) => item.ticker).map((item) => [item.ticker, item[field]]))
+}
+
 export default function Dashboard() {
   const insightsQuery = usePortfolioInsights()
   const summaryQuery = usePortfolioSummary()
   const positionsQuery = usePositions()
   const recentTxQuery = useTransactions('?page_size=5')
-  const { data: me } = useMe()
-  const banking = { enabled: me?.is_owner === true }
-  const spendingQuery = useSpendingSummary(`?date_from=${currentMonthStart()}`, banking)
-  const budgetProgressQuery = useBudgetProgress(banking)
   const performanceQuery = usePerformance('sp500')
+  const hub = useInvestorHub().data
   const quotes = usePositionQuotes(positionsQuery.data ?? NO_POSITIONS)
   const holdings = positionsQuery.data
   const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
+  const verdictTickers = useMemo(() => positionVerdictTickers(holdings ?? NO_POSITIONS), [holdings])
+  const verdicts = useVerdictSummary(verdictTickers).data
 
-  const failed =
-    insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error || spendingQuery.error
+  const failed = insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error
 
   if (failed) return <Alert>Failed to load dashboard data</Alert>
   if (!insightsQuery.data || !summaryQuery.data)
@@ -130,51 +124,35 @@ export default function Dashboard() {
   const insights = insightsQuery.data
   const summary = summaryQuery.data
   const recentTx = recentTxQuery.data ?? []
-  const spending = spendingQuery.data
-  const positions = positionsQuery.data ?? []
-  const budgetAttentionItems = (budgetProgressQuery.data ?? [])
-    .filter((row) => row.pct >= 100)
-    .map((row) => ({
-      kind: 'budget_exceeded',
-      severity: 'warn',
-      text: `${CATEGORY_LABELS[row.category] ?? row.category} is over budget (${fmtEur(row.spent)} of ${fmtEur(row.limit)})`,
-    }))
-
-  const breaches = capBreaches(positions)
-  const sentence = standingSentence(summary)
+  const positions = [...(positionsQuery.data ?? [])].sort((a, b) => Number(b.value) - Number(a.value))
+  const verdictOf = (position) => positionVerdict(position, verdicts)
+  const items = briefItems({
+    positions,
+    verdicts: Object.fromEntries(positions.map((position) => [position.ticker, verdictOf(position)])),
+    total: Number(summary.total_value) || 0,
+    fundBuys: signalCounts(hub, 'convergent-buys', 'bought'),
+    fundSells: signalCounts(hub, 'most-sold', 'sold'),
+    earnings: insights.upcoming_earnings,
+  })
+  const notes = (insights.attention ?? []).map((item) => item.text).filter(Boolean)
 
   return (
     <>
       <h1 className="sr-only">Overview</h1>
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
-        <Card
-          className={SPAN_8}
-          context={`Saxo + bank · as of ${fmtDate(insights.as_of)}${insights.stale ? ' · stale' : ''}`}
-          dot={insights.stale ? 'warn' : undefined}
-          title="Where you stand"
-        >
-          <HeroValue
-            value={insights.value}
-            change={insights.change}
-            spendingThisMonth={spending?.total}
-            unrealised={summary.total_pnl}
-          />
-          {sentence ? <p data-testid="standing-sentence" className="mt-3 text-[14px] text-ink num">{sentence}</p> : null}
-          <div className="mt-5">
-            <NetWorthChart />
-          </div>
-          <p className="mt-3 text-[12px] text-ink-3">Change is end-of-day, from the daily net-worth snapshot.</p>
-        </Card>
-        <ThisWeek
-          className={SPAN_4}
-          attention={needsYou([...insights.attention, ...budgetAttentionItems], breaches)}
-          breaches={breaches}
-          upcomingEarnings={insights.upcoming_earnings}
-        />
-        <PositionsPanel className={SPAN_8} summary={summary} positions={positions} quotes={quotes} />
-        <SmartMoney className={SPAN_4} positions={positions} ownership={ownership} />
+        <BriefHero className={SPAN_12} headline={briefHeadline(items.length)} summary={summary} day={dayChange(positions, quotes)} />
+        <BriefList className={SPAN_8} items={items} />
+        <HoldingsList className={SPAN_4} positions={positions} verdictOf={verdictOf} quotes={quotes} upcomingEarnings={insights.upcoming_earnings} />
         <RecentTransactions className={SPAN_8} rows={recentTx} />
-        <VsBenchmark className={SPAN_4} data={performanceQuery.data} />
+        <div className={`${SPAN_4} flex min-w-0 flex-col gap-[var(--sd-gap,12px)]`}>
+          <SmartMoney positions={positions} ownership={ownership} />
+          <VsBenchmark data={performanceQuery.data} />
+        </div>
+        {notes.length ? (
+          <p data-testid="overview-notes" className={`${SPAN_12} text-[12px] text-ink-3`}>
+            {`${notes.join(' ')} As of ${fmtDate(insights.as_of)}. Rules, not advice.`}
+          </p>
+        ) : null}
       </div>
     </>
   )

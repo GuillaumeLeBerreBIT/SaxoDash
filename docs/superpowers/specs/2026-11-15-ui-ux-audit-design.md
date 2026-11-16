@@ -171,7 +171,11 @@ or PR per step into `develop`.
 | Investors | Bought and sold side by side, new bets left to Stocks; "Now 8×" and "under 0.1%" wording; copy result first on the profile | `5ece0e7`, `4286fe6` |
 | Shell | Not-found page inside the app shell | `4286fe6` |
 | Congress member, fund profile | One sentence on what copying returned (`lib/copySentence.js`); method behind a click | `a1f0533` |
-| Investors Stocks | Sorted column marked; phone shows the stock and that column, no sideways scroll | next commit |
+| Investors Stocks | Sorted column marked; phone shows the stock and that column, no sideways scroll | `23fa7f7` |
+| Shared (second pass, mockup https://claude.ai/artifact/B2EvaLBg6PqKjMqMsufrm9) | Opportunity and Review replace Buy and Sell (review); action as coloured text; price bar | `36809ae` |
+| Portfolio (second pass) | Value, today's move and a full-width history chart with buys and sales marked | `a838521` |
+| Discover (second pass) | A shop: search, filters with counts, rows of cards with a year of prices, filtered grid; `GET /api/verdicts/browse/` | `c1eeeaa`, `d628d8e` |
+| Overview (second pass) | Daily summary of what to look at, holdings with action words | next commit |
 
 Bugs 1 to 7 and 9 to 10 of the list above are fixed. Bug 8 is half fixed: the overflowing Performance
 tiles are gone, the palette clipping its last row is not checked.

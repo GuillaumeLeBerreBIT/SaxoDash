@@ -843,8 +843,13 @@ Performance card; Capital structure and Ownership live on the Statistics tab; th
 unless the verdict is Buy or Add. The audit behind this and the layouts proposed for the other pages are in
 `docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
 
-**Every page answers first (2026-11-16).** The pattern from the Research Overview now holds on
-Overview, Portfolio, Analytics, Discover and Earnings: one sentence or one short card states the
+**Every page answers first (2026-11-16).** Overview is a daily summary: "N things to look at in your
+portfolio today", the portfolio value and today's move, then up to five items from `lib/brief.js`
+(a Review, a report within three days, a holding over the 15% cap with what trimming frees, an Add,
+tracked funds buying or selling a holding, later reports), each one sentence and a link to Research,
+beside the holdings with their action word. It is computed from today's state, not from a stored
+history, so it says "to look at today", never "changed since yesterday". The pattern from the Research
+Overview also holds on Portfolio, Analytics, Discover and Earnings: one sentence or one short card states the
 answer, and detail sits below or behind a click. Portfolio's holdings table shows Instrument, day
 change, Value, Return, P/L, Weight and Action; quantity, prices, fund and Congress columns are behind
 "More columns". Analytics opens with `lib/performanceAnswer.js::performanceSentence` (the longest
