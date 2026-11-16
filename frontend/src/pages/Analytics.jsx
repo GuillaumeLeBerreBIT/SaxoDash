@@ -9,6 +9,7 @@ import ReturnsTable from '../components/analytics/ReturnsTable'
 import CalendarYears from '../components/analytics/CalendarYears'
 import Attribution from '../components/analytics/Attribution'
 import { fmtNum, fmtPct } from '../lib/format'
+import { performanceSentence } from '../lib/performanceAnswer'
 import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
 const CONTEXT = 'Daily portfolio value · computed from your own history'
@@ -239,6 +240,11 @@ export default function Analytics() {
         title="Return and risk"
         right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
       >
+        {performance && (
+          <p data-testid="performance-sentence" className="mb-3 text-[15px] font-semibold text-ink [text-wrap:balance]">
+            {performanceSentence(performance.periods, performance.benchmark.name)}
+          </p>
+        )}
         <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
           <Tile
             label="Avg. return (ann.)"

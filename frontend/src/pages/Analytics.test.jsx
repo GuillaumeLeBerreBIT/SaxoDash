@@ -143,6 +143,14 @@ describe('Analytics', () => {
     expect(screen.queryByText('0.0%')).not.toBeInTheDocument()
   })
 
+  it('opens with one sentence comparing the portfolio with the chosen index', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+    expect(screen.getByTestId('performance-sentence')).toHaveTextContent(
+      'Over 1 month your portfolio returned +4.2%, 2.1 points ahead of World Index (+2.1%).',
+    )
+  })
+
   it('shows the top summary row', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)

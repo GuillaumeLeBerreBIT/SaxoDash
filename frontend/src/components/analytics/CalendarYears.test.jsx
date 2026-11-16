@@ -14,4 +14,9 @@ describe('CalendarYears', () => {
 
     expect(screen.getByText(/\* year to date/)).toBeInTheDocument()
   })
+
+  it('leaves out a year the portfolio did not exist in, even when the index has a figure', () => {
+    render(<CalendarYears years={[{ year: 2024, portfolio_pct: null, benchmark_pct: 18.2, partial: false }]} benchmarkName="World" />)
+    expect(screen.getByText('No full calendar year yet')).toBeInTheDocument()
+  })
 })

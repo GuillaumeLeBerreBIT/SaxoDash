@@ -16,8 +16,9 @@ function Swatch({ color, children }) {
   )
 }
 
-export default function CalendarYears({ years, benchmarkName, className = '' }) {
+export default function CalendarYears({ years: allYears, benchmarkName, className = '' }) {
   const c = useChartColors()
+  const years = allYears.filter((y) => y.portfolio_pct != null)
   const partialYears = new Set(years.filter((y) => y.partial).map((y) => y.year))
   if (years.length === 0) {
     return (
