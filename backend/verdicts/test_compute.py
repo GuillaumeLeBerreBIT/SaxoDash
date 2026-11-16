@@ -2,7 +2,7 @@ from datetime import date, datetime, timezone
 
 from django.test import TestCase
 
-from research.models import ScreenerRow
+from research.models import DailyBars, ScreenerRow
 
 from . import compute
 from .models import StockVerdict, VerdictCall
@@ -65,6 +65,24 @@ class ComputeTest(TestCase):
 
         self.assertEqual(StockVerdict.objects.get(ticker='AAPL').uic, 211)
         self.assertIsNone(StockVerdict.objects.get(ticker='NBIS').uic)
+
+    def test_verdict_keeps_a_weekly_price_line_and_the_year_high_from_the_stored_bars(self):
+        row = make_row('AAPL')
+        DailyBars.objects.create(row=row, bars=[[f'd{i}', 1, 1, 1, float(i), 1] for i in range(1, 21)])
+
+        compute.run(today=DAY_ONE)
+
+        verdict = StockVerdict.objects.get(ticker='AAPL')
+        self.assertEqual(verdict.spark, [5.0, 10.0, 15.0, 20.0])
+        self.assertEqual(verdict.high_1y, 20.0)
+
+    def test_a_row_without_stored_bars_has_no_price_line(self):
+        make_row('AAPL')
+
+        compute.run(today=DAY_ONE)
+
+        verdict = StockVerdict.objects.get(ticker='AAPL')
+        self.assertEqual((verdict.spark, verdict.high_1y), ([], None))
 
     def test_skips_rows_never_given_fundamentals(self):
         make_row('AAPL', fundamentals_at=None)

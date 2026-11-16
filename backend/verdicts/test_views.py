@@ -240,3 +240,93 @@ class WorthALookTests(APITestCase):
     def test_requires_login(self):
         self.client.force_authenticate(None)
         self.assertEqual(self.client.get('/api/verdicts/worth-a-look/').status_code, 401)
+
+
+def listed(ticker, sector='Information Technology', dividend_yield=None, **fields):
+    made = verdict(ticker, **fields)
+    ScreenerRow.everything.filter(ticker=ticker).update(sector=sector, dividend_yield=dividend_yield)
+    return made
+
+
+class BrowseTests(APITestCase):
+    def setUp(self):
+        self.alice = make_user('alice')
+        self.client.force_authenticate(self.alice)
+
+    def browse(self, query=''):
+        return self.client.get(f'/api/verdicts/browse/{query}')
+
+    def tickers(self, query=''):
+        return [stock['ticker'] for stock in self.browse(query).json()['stocks']]
+
+    def test_puts_opportunities_first_then_furthest_under_the_cheap_line(self):
+        listed('HLD', valuation='fair', last_close=25.0)
+        listed('OPA', valuation='cheap', last_close=18.0)
+        listed('OPB', valuation='cheap', last_close=10.0)
+        self.assertEqual(self.tickers(), ['OPB', 'OPA', 'HLD'])
+
+    def test_each_stock_carries_what_a_card_needs(self):
+        listed('OPA', valuation='cheap', last_close=15.0, high_1y=30.0, spark=[30.0, 20.0, 15.0], dividend_yield=3.5)
+        stock = self.browse().json()['stocks'][0]
+        self.assertEqual(stock['action'], 'buy')
+        self.assertEqual(stock['sector'], 'Information Technology')
+        self.assertEqual((stock['discount_pct'], stock['below_high_pct']), (25.0, 50.0))
+        self.assertEqual(stock['spark'], [30.0, 20.0, 15.0])
+        self.assertEqual((stock['checks_passed'], stock['checks_answered'], stock['failed_checks']), (6, 6, []))
+        self.assertFalse(stock['held'])
+
+    def test_filters_by_valuation_quality_sector_yield_and_fall(self):
+        listed('AAA', valuation='cheap', last_close=15.0, high_1y=30.0)
+        listed('BBB', valuation='cheap', quality='weak', last_close=15.0)
+        listed('CCC', valuation='fair', sector='Health Care', dividend_yield=4.0)
+        listed('DDD', valuation='cheap', sector='Health Care', last_close=19.0, high_1y=20.0)
+        self.assertEqual(self.tickers('?valuation=cheap&quality=strong'), ['AAA', 'DDD'])
+        self.assertEqual(self.tickers('?sector=Health%20Care'), ['DDD', 'CCC'])
+        self.assertEqual(self.tickers('?min_yield=3'), ['CCC'])
+        self.assertEqual(self.tickers('?min_fall=25'), ['AAA'])
+
+    def test_facet_counts_ignore_their_own_filter_but_keep_the_others(self):
+        listed('AAA', valuation='cheap')
+        listed('BBB', valuation='fair')
+        listed('CCC', valuation='cheap', sector='Health Care')
+        facets = self.browse('?valuation=cheap&sector=Information%20Technology').json()['facets']
+        self.assertEqual(facets['valuation'], {'cheap': 1, 'fair': 1})
+        self.assertEqual(facets['sector'], {'Information Technology': 1, 'Health Care': 1})
+        self.assertEqual(facets['quality'], {'strong': 1})
+
+    def test_can_leave_out_held_stocks_and_tickers_already_shown(self):
+        listed('AAA', valuation='cheap')
+        listed('BBB', valuation='cheap')
+        listed('CCC', valuation='cheap')
+        hold(self.alice, 'AAA', '100')
+        self.assertEqual(self.tickers('?not_held=1&exclude=bbb'), ['CCC'])
+        held = {stock['ticker']: stock['held'] for stock in self.browse().json()['stocks']}
+        self.assertTrue(held['AAA'])
+
+    def test_sorts_by_discount_or_by_fall_from_the_high(self):
+        listed('AAA', valuation='cheap', last_close=18.0, high_1y=100.0)
+        listed('BBB', valuation='cheap', last_close=10.0, high_1y=12.0)
+        self.assertEqual(self.tickers('?sort=discount'), ['BBB', 'AAA'])
+        self.assertEqual(self.tickers('?sort=fall'), ['AAA', 'BBB'])
+
+    def test_pages_with_limit_and_offset_and_reports_the_total(self):
+        for index in range(5):
+            listed(f'T{index}', valuation='cheap', last_close=10.0 + index)
+        body = self.browse('?limit=2&offset=2').json()
+        self.assertEqual(body['total'], 5)
+        self.assertEqual([stock['ticker'] for stock in body['stocks']], ['T2', 'T3'])
+
+    def test_leaves_out_stocks_outside_the_index_universe(self):
+        listed('AAA', valuation='cheap')
+        listed('NBIS', valuation='cheap', universe=False)
+        self.assertEqual(self.tickers(), ['AAA'])
+
+    def test_refuses_unknown_values(self):
+        self.assertEqual(self.browse('?valuation=bargain').status_code, 400)
+        self.assertEqual(self.browse('?sort=random').status_code, 400)
+        self.assertEqual(self.browse('?limit=500').status_code, 400)
+        self.assertEqual(self.browse('?min_fall=abc').status_code, 400)
+
+    def test_requires_login(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.browse().status_code, 401)
