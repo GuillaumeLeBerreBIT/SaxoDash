@@ -849,11 +849,17 @@ answer, and detail sits below or behind a click. Portfolio's holdings table show
 change, Value, Return, P/L, Weight and Action; quantity, prices, fund and Congress columns are behind
 "More columns". Analytics opens with `lib/performanceAnswer.js::performanceSentence` (the longest
 period that has both a portfolio and an index return) and lists only periods with data. Discover
-opens with "Worth a look today", served by `GET /api/verdicts/worth-a-look/`: universe stocks graded
-strong and cheap, furthest under `cheap_below` first, at most 12, with the requesting user's action.
-It reads `StockVerdict` only, like every verdict endpoint. Shelves are shown one at a time
-(`ShelfBrowser`); the shelf page merges share classes by identical name and sorts by action
-(`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
+is a shop (2026-11-16): a search box, a filter column (price against its own history, quality, sector,
+yield, fall from the high, not held) with live counts, and rows of stock cards. The cards come from
+`GET /api/verdicts/browse/` (`verdicts/browse.py`), which filters, sorts and counts the universe's
+`StockVerdict` rows per request; facet counts ignore their own filter and keep the others. Each card
+draws the weekly price line and 1-year high the nightly verdict run stores (`StockVerdict.spark`,
+`high_1y`, from `research.DailyBars`, so no request reads 6,000 bars), the price bar, one sentence on
+the checks, and the action. With no filter the page shows rows (today's opportunities, fell hard but
+still strong, funds are buying) where a later row excludes tickers an earlier one showed; the funds row
+asks the browse endpoint for the hub's convergent-buy tickers. Any filter or search switches to one
+paged grid. Shelves stay below as "Browse by idea"; the shelf page merges share classes by identical
+name and sorts by action (`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
 the 15 largest companies, the rest behind one button. What was built and what is left:
 `docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
 

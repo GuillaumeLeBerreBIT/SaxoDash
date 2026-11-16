@@ -103,6 +103,8 @@ class BrowseView(APIView):
             min_fall=_number(params, 'min_fall', low=0, high=100),
             not_held=params.get('not_held') in ('1', 'true'),
             exclude={ticker.upper() for ticker in _csv(params, 'exclude')},
+            text=(params.get('q') or '').strip()[:60],
+            only={ticker.upper() for ticker in _csv(params, 'tickers')},
             sort=sort,
             limit=_number(params, 'limit', int, 1, browse.MAX_LIMIT) or browse.DEFAULT_LIMIT,
             offset=_number(params, 'offset', int, 0, 10_000) or 0,

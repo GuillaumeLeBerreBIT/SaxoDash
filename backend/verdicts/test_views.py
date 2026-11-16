@@ -316,6 +316,18 @@ class BrowseTests(APITestCase):
         self.assertEqual(body['total'], 5)
         self.assertEqual([stock['ticker'] for stock in body['stocks']], ['T2', 'T3'])
 
+    def test_can_be_limited_to_a_list_of_tickers(self):
+        listed('AAA', valuation='cheap')
+        listed('BBB', valuation='fair')
+        listed('CCC', valuation='cheap')
+        self.assertEqual(self.tickers('?tickers=bbb,ccc'), ['CCC', 'BBB'])
+
+    def test_searches_by_ticker_start_or_name(self):
+        listed('NVDA', valuation='cheap')
+        listed('AVGO', valuation='cheap')
+        self.assertEqual(self.tickers('?q=nv'), ['NVDA'])
+        self.assertEqual(self.tickers('?q=avgo%20corp'), ['AVGO'])
+
     def test_leaves_out_stocks_outside_the_index_universe(self):
         listed('AAA', valuation='cheap')
         listed('NBIS', valuation='cheap', universe=False)

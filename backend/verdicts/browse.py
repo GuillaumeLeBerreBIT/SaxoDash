@@ -23,6 +23,8 @@ class Query:
     min_fall: float | None = None
     not_held: bool = False
     exclude: set = field(default_factory=set)
+    text: str = ''
+    only: set = field(default_factory=set)
     sort: str = 'opportunity'
     limit: int = DEFAULT_LIMIT
     offset: int = 0
@@ -68,7 +70,16 @@ def _matches(stock, query, held, skip=None):
         return False
     if query.not_held and stock['ticker'] in held:
         return False
+    if query.only and stock['ticker'] not in query.only:
+        return False
+    if query.text and not _named(stock, query.text):
+        return False
     return stock['ticker'] not in query.exclude
+
+
+def _named(stock, text):
+    needle = text.casefold()
+    return stock['ticker'].casefold().startswith(needle) or needle in stock['name'].casefold()
 
 
 def _rank(action):

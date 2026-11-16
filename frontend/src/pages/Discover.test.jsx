@@ -6,12 +6,14 @@ import { MemoryRouter } from 'react-router-dom'
 import Discover from './Discover'
 
 const useDiscover = vi.fn()
-const useWorthALook = vi.fn()
+const useBrowse = vi.fn()
+const useInvestorHub = vi.fn()
 const startScan = { mutate: vi.fn(), error: null }
 vi.mock('../api/queries', () => ({
   useDiscover: () => useDiscover(),
   useStartDiscoverScan: () => startScan,
-  useWorthALook: () => useWorthALook(),
+  useBrowse: (query, options) => useBrowse(query, options),
+  useInvestorHub: () => useInvestorHub(),
 }))
 vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [], toggleList: vi.fn() }),
@@ -26,13 +28,23 @@ const card = {
   reasons: [{ field: 'rsi14', label: 'RSI', value: 81, format: 'number' }],
 }
 
-const renderPage = () => render(<MemoryRouter><Discover /></MemoryRouter>)
+const renderPage = (path = '/discover') => render(<MemoryRouter initialEntries={[path]}><Discover /></MemoryRouter>)
+
+const stock = (ticker, extra = {}) => ({
+  ticker, name: `${ticker} Corp`, uic: 1, sector: 'Health Care', quality: 'strong', valuation: 'cheap', action: 'buy',
+  last_close: 50, cheap_below: 100, expensive_above: 150, discount_pct: 50, below_high_pct: 40, spark: [60, 55, 50],
+  checks_passed: 6, checks_answered: 7, failed_checks: ['Debt'], held: false, ...extra,
+})
+const answer = (stocks, total = stocks.length) => ({ data: { total, stocks, facets: { valuation: { cheap: 3, fair: 2 }, quality: { strong: 4 }, sector: { 'Health Care': 5 } } }, isSuccess: true })
+const queries = () => useBrowse.mock.calls.map(([query]) => query)
 
 describe('Discover page', () => {
   beforeEach(() => {
     startScan.mutate.mockClear()
     startScan.error = null
-    useWorthALook.mockReturnValue({ data: { total: 0, stocks: [] } })
+    useBrowse.mockReset()
+    useBrowse.mockReturnValue(answer([]))
+    useInvestorHub.mockReturnValue({ data: { shelves: [] } })
   })
 
   it('has exactly one h1 and no skipped heading level', () => {
@@ -64,33 +76,75 @@ describe('Discover page', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('title', expect.stringMatching(/several minutes/))
   })
 
-  it('leads with the stocks graded strong and cheap, one plain line each', () => {
-    useWorthALook.mockReturnValue({ data: { total: 14, stocks: [
-      { ticker: 'ADBE', name: 'Adobe', action: 'buy', last_close: 320, cheap_below: 400, discount_pct: 20 },
-      { ticker: 'MSFT', name: 'Microsoft', action: 'hold', capped: true, last_close: 380, cheap_below: 400, discount_pct: 5 },
-    ] } })
+  it('opens on rows of stock cards, opportunities first, each saying why it is there', () => {
+    useBrowse.mockImplementation((query) => (query.includes('min_fall') ? answer([stock('LULU', { action: 'wait' })], 39) : answer([stock('ZTS'), stock('ADBE')], 50)))
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings).toEqual(['Worth a look today', 'Browse by idea'])
-    const rows = within(screen.getByRole('list', { name: 'Worth a look today' })).getAllByRole('listitem')
-    expect(rows[0]).toHaveTextContent('ADBE')
-    expect(rows[0]).toHaveTextContent('US$320.00, 20% under the US$400.00 where it stops being cheap')
-    expect(rows[0]).toHaveTextContent('Opportunity')
-    expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/research?symbol=ADBE')
-    expect(rows[1]).toHaveTextContent('Hold · over cap')
-    expect(screen.getByText('Showing 2 of 14, furthest under its cheap price first.')).toBeInTheDocument()
+    expect(headings).toEqual(["Today's opportunities", 'Fell hard, still strong', 'Browse by idea'])
+    const first = within(screen.getByRole('region', { name: "Today's opportunities" })).getAllByTestId('stock-card')[0]
+    expect(first).toHaveTextContent('ZTS Corp')
+    expect(first).toHaveTextContent('50% below its cheap line')
+    expect(first).toHaveTextContent('6 of 7 quality checks pass; debt fails.')
+    expect(first).toHaveTextContent('Opportunity')
+    expect(within(first).getByRole('link', { name: 'ZTS Corp' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
+    expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('valuation=cheap&quality=strong'))
   })
 
-  it('says so when nothing is both strong and cheap', () => {
+  it('never repeats a stock from the first row in the second', () => {
+    useBrowse.mockImplementation(() => answer([stock('ZTS'), stock('ADBE')]))
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
     renderPage()
-    expect(screen.getByText('Nothing is both strong and cheap today')).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Ideas' })).toBeNull()
+    expect(queries().find((query) => query.includes('min_fall'))).toContain('exclude=ZTS%2CADBE')
   })
 
-  it('shows one idea at a time, starting with the first that has stocks', () => {
-    useDiscover.mockReturnValue({ data: {
+  it('adds a row for what tracked funds bought, with the fund count on each card', () => {
+    useInvestorHub.mockReturnValue({ data: { shelves: [{ key: 'convergent-buys', items: [{ ticker: 'AMZN', bought: 19 }] }] } })
+    useBrowse.mockImplementation((query) => (query.includes('tickers=AMZN') ? answer([stock('AMZN', { held: true, action: 'add' })]) : answer([])))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    const row = screen.getByRole('region', { name: 'Funds are buying' })
+    expect(row).toHaveTextContent('19 tracked funds bought it last quarter.')
+    expect(row).toHaveTextContent('You own it')
+  })
+
+  it('leaves a row out when nothing qualifies', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    expect(screen.queryByRole('region', { name: "Today's opportunities" })).toBeNull()
+  })
+
+  it('switches from rows to a filtered grid with a count, and sorts only there', () => {
+    useBrowse.mockImplementation(() => answer([stock('ZTS')], 19))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage('/discover?quality=strong&sector=Health%20Care')
+    expect(screen.getByTestId('browse-count')).toHaveTextContent('19 stocks match')
+    expect(screen.queryByRole('heading', { name: "Today's opportunities" })).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toBeInTheDocument()
+    expect(queries()).toContain('?quality=strong&sector=Health+Care&limit=24')
+  })
+
+  it('filters with checkboxes that carry their counts', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    const filters = screen.getByRole('complementary', { name: 'Filters' })
+    const cheap = within(filters).getByRole('checkbox', { name: /Cheap/ })
+    expect(cheap.closest('label')).toHaveTextContent('Cheap3')
+    fireEvent.click(cheap)
+    expect(queries()).toContain('?valuation=cheap&limit=24')
+  })
+
+  it('offers a clear way out when no stock matches', () => {
+    useBrowse.mockReturnValue(answer([], 0))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage('/discover?quality=weak')
+    expect(screen.getByText('No stock matches every filter.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.queryByText('No stock matches every filter.')).toBeNull()
+    expect(queries()).toContain('?valuation=cheap&quality=strong&limit=4')
+  })
+
+  it('shows one idea at a time, starting with the first that has stocks', () => {    useDiscover.mockReturnValue({ data: {
       as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups,
       shelves: [shelf('oversold', 'Oversold', 0), shelf('overbought', 'Overbought', 7, [card]), shelf('pe-under-15', 'P/E under 15', 3, [card], undefined, 'fundamentals')],
     } })
@@ -101,12 +155,6 @@ describe('Discover page', () => {
     fireEvent.click(within(ideas).getByRole('button', { name: 'P/E under 15 3' }))
     expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['P/E under 15'])
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull()
-  })
-
-  it('loads with shelf-shaped placeholders', () => {
-    useDiscover.mockReturnValue({ data: undefined, isLoading: true })
-    renderPage()
-    expect(screen.getAllByTestId('shelf-skeleton')).toHaveLength(3)
   })
 
   it('renders each shelf with its criteria, count and a See all link', () => {
