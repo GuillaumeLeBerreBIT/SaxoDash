@@ -105,7 +105,7 @@ function AccountMenu() {
         )}
         <MenuItem onSelect={() => navigate('/settings?section=account')}>Account</MenuItem>
         <MenuItem onSelect={() => navigate('/settings')}>Theme and colours</MenuItem>
-        <MenuItem onSelect={() => navigate('/settings?section=sync')}>Sync health</MenuItem>
+        <MenuItem onSelect={() => navigate('/settings?section=connections')}>Connections and sync</MenuItem>
         <MenuItem danger onSelect={signOut}>
           Sign out
         </MenuItem>

@@ -156,10 +156,10 @@ describe('account menu', () => {
     expect(screen.getByText('Settings page')).toBeInTheDocument()
   })
 
-  it('lists sync health and signs out to the login page', async () => {
+  it('lists connections and sync, and signs out to the login page', async () => {
     renderBar()
     const menu = await openAccountMenu()
-    expect(within(menu).getByRole('menuitem', { name: 'Sync health' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Connections and sync' })).toBeInTheDocument()
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
     expect(logout).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Login page')).toBeInTheDocument()
