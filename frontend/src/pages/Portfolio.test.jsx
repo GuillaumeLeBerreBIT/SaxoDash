@@ -235,7 +235,7 @@ describe('Portfolio holdings table', () => {
   it('discloses that the mark is not a live price', () => {
     renderWithProviders(<Portfolio />)
 
-    expect(screen.getByText('Derived')).toBeInTheDocument()
+    expect(screen.getByText('Derived prices')).toBeInTheDocument()
     expect(screen.getAllByTitle(/no live price feed/i).length).toBeGreaterThan(0)
   })
 

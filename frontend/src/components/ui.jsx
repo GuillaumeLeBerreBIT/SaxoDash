@@ -33,21 +33,26 @@ function PanelMenu({ label, items }) {
   return Array.isArray(items) ? <Menu trigger={button} items={items} /> : button
 }
 
+const ALERT_DOTS = new Set(['warn', 'error'])
+
 function PanelHead({ context, dot, title, right, menu, as: Heading = 'h2', className = '' }) {
   const menuLabel = `${title || context || 'Panel'} options`
   return (
     <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-x-2.5 gap-y-2 ${className}`}>
       <div className="min-w-0">
-        {context && (
-          <div className="flex items-center gap-2 min-w-0 text-[13px] font-medium text-ink">
-            {dot && <StatusDot tone={dot} />}
-            <span className="min-w-0 truncate">{context}</span>
-          </div>
-        )}
         {title && (
-          <Heading className={`text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance] ${context ? 'mt-1.5' : ''}`}>
+          <Heading className="text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance]">
             {title}
           </Heading>
+        )}
+        {context && (
+          <div
+            data-testid="panel-context"
+            className={`flex items-center gap-2 min-w-0 text-[13px] ${title ? 'mt-0.5 text-ink-3' : 'font-medium text-ink-2'}`}
+          >
+            {ALERT_DOTS.has(dot) && <StatusDot tone={dot} />}
+            <span className="min-w-0">{context}</span>
+          </div>
         )}
       </div>
       {(right || menu) && (

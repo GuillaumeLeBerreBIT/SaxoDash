@@ -2,7 +2,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { Search } from 'lucide-react'
 import { logout } from '../api/client'
-import { useMe, useNetWorth, usePortfolioSummary, useSaxoStatus } from '../api/queries'
+import { useMe, usePortfolioSummary, useSaxoStatus } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { NAV_ITEMS, pageTitle, visibleTo } from '../lib/navigation'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
@@ -26,11 +26,6 @@ const SAXO_ACTION = {
   not_connected: 'Connect',
   needs_reauth: 'Reconnect',
   reconnecting: 'Reconnect',
-}
-
-function saxoAccountValue(summary, netWorth) {
-  if (summary?.total_value == null || netWorth?.broker_cash == null) return null
-  return Number(summary.total_value) + Number(netWorth.broker_cash)
 }
 
 function Tabs() {
@@ -128,8 +123,6 @@ function AccountMenu() {
 export default function TopBar({ onOpenPalette }) {
   const { pathname } = useLocation()
   const { data: summary } = usePortfolioSummary()
-  const { data: netWorth } = useNetWorth()
-  const accountValue = saxoAccountValue(summary, netWorth)
 
   return (
     <header className="sd-header sd-gutter sticky top-[env(safe-area-inset-top)] z-30 flex items-center gap-x-[26px] gap-y-4 py-3.5 max-[759px]:gap-x-2.5">
@@ -153,17 +146,13 @@ export default function TopBar({ onOpenPalette }) {
           <span>Search</span>
           <kbd className="ml-auto font-mono text-[11px] px-1.5 py-px rounded-[5px] bg-track text-ink-2">⌘K</kbd>
         </button>
-        <Link to="/portfolio" title="Saxo account value" className={`${FIGURE_PILL} inline-flex`}>
-          <span className="sr-only">Saxo account value</span>
-          {fmtEur(accountValue)}
-        </Link>
         <Link
-          to="/money"
-          title="Cash across accounts"
-          className={`${FIGURE_PILL} hidden min-[1420px]:inline-flex`}
+          to="/portfolio"
+          data-testid="portfolio-total"
+          className="flex flex-col items-end rounded-[10px] px-2 py-0.5 leading-tight hover:bg-pill"
         >
-          <span className="sr-only">Cash across accounts</span>
-          {fmtEur(netWorth?.bank_total ?? null)}
+          <span className="text-[11px] font-medium text-ink-3">Portfolio</span>
+          <span className="text-[15px] font-bold text-ink num">{fmtEur(summary?.total_value ?? null, { decimals: 0 })}</span>
         </Link>
         <FilingAlerts side="below" />
         <AccountMenu />
