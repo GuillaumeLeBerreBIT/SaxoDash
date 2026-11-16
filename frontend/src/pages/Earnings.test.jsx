@@ -48,6 +48,7 @@ const stub = (over = {}) =>
 
 beforeEach(() => {
   queries.useEarningsCalendar.mockReset()
+  queries.useSymbolEarnings.mockReturnValue({ data: { history: [] }, isLoading: false })
 })
 
 afterEach(() => {
@@ -67,7 +68,7 @@ describe('Earnings page', () => {
 
     expect(screen.getByText('26 – 30 Oct 2026')).toBeInTheDocument()
     expect(screen.getAllByText('MSFT').length).toBeGreaterThan(0)
-    expect(screen.getByText('Held')).toBeInTheDocument()
+    expect(screen.getByTestId('earnings-headline')).toHaveTextContent('MSFT, which you own, reports')
   })
 
   it('reported rows show the actual + a surprise chip; upcoming rows show the estimate', () => {
@@ -79,9 +80,9 @@ describe('Earnings page', () => {
     })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('2.20')).toBeInTheDocument()
-    expect(screen.getByText(/▲ 10\.0%/)).toBeInTheDocument()
-    expect(screen.getByText('1.50')).toBeInTheDocument()
+    expect(screen.getAllByText('Beat').length).toBeGreaterThan(0)
+    expect(screen.getByText((_, node) => node?.textContent === '2.20 vs 2.00, +10.0%')).toBeInTheDocument()
+    expect(screen.getByText('expected 1.50')).toBeInTheDocument()
   })
 
   it('flags a past-dated unreported row as pending, distinct from a genuinely upcoming one', () => {
@@ -92,7 +93,7 @@ describe('Earnings page', () => {
     })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('pending')).toBeInTheDocument()
+    expect(screen.getAllByText('Waiting').length).toBeGreaterThan(0)
   })
 
   it('opens on today’s weekday column by default, not a fixed Monday', () => {
@@ -114,7 +115,7 @@ describe('Earnings page', () => {
     stub({ events: [ev({ symbol: 'MON', date: MON })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    for (const label of ['Company', 'Mkt cap', 'Qtr', 'EPS · est', 'Revenue', 'Move']) {
+    for (const label of ['Company', 'Mkt cap', 'Qtr', 'Earnings per share', 'Revenue', 'Move']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
@@ -123,7 +124,7 @@ describe('Earnings page', () => {
     stub()
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
 
     expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('mine', 0)
   })
@@ -149,7 +150,7 @@ describe('Earnings page', () => {
     stub({ events: [] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
     expect(screen.getByText(/Nothing on your lists reports this day/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /View all/ }))
@@ -229,7 +230,7 @@ it('labels each day of the strip with its date', () => {
 it('formats a sub-million revenue estimate as <1M and keeps the quarter on one line', () => {
   stub({ events: [ev({ revenue_estimate: 4.2e5 })] })
   renderWithProviders(<Earnings />, { route: '/earnings' })
-  expect(screen.getByText('<1M')).toBeInTheDocument()
+  expect(screen.getByText('expected <1M')).toBeInTheDocument()
   expect(screen.getByText('Q4 2026')).toHaveClass('whitespace-nowrap')
 })
 
@@ -261,7 +262,8 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
   it('opens with the Your week band above the day strip', () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    const band = screen.getByRole('heading', { level: 2, name: 'Your week' })
+    expect(screen.getAllByTestId('your-report')).toHaveLength(1)
+    const band = screen.getByTestId('earnings-headline')
     const grid = screen.getByRole('button', { name: /^Mon 26/ })
     expect(band.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -269,29 +271,29 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
   it('summarises the market week in one line', () => {
     stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('This week: 412 reporting · 61% of reported beat')).toBeInTheDocument()
+    expect(screen.getByText('412 companies report this week; 61% of those already out beat what analysts expected.')).toBeInTheDocument()
   })
 
   it('says nothing about beats before anything has reported', () => {
     stub({ stats: { total: 40, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('This week: 40 reporting')).toBeInTheDocument()
+    expect(screen.getByText('40 companies report this week.')).toBeInTheDocument()
   })
 
   it('keeps the band when the toggle switches the list to Mine', async () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
     expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('mine', 0)
-    expect(screen.getByRole('heading', { level: 2, name: 'Your week' })).toBeInTheDocument()
+    expect(screen.getByTestId('earnings-headline')).toBeInTheDocument()
   })
 
   it('shows no market line in Mine scope', async () => {
     stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText(/412 reporting/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
-    expect(screen.queryByText(/412 reporting/)).not.toBeInTheDocument()
+    expect(screen.getByText(/412 companies report/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
+    expect(screen.queryByText(/412 companies report/)).not.toBeInTheDocument()
   })
 
   it('does not render the old summary tiles', () => {

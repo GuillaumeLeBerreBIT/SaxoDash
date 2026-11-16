@@ -53,7 +53,7 @@ describe('DayList', () => {
 
   it('labels its columns', () => {
     render(<DayList day="mon" events={[ev()]} scope="all" focusSession={null} onOpen={() => {}} onViewAll={() => {}} />)
-    for (const label of ['Company', 'Mkt cap', 'Qtr', 'EPS · est', 'Revenue', 'Move']) {
+    for (const label of ['Company', 'Mkt cap', 'Qtr', 'Earnings per share', 'Revenue', 'Move']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })

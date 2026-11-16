@@ -63,7 +63,7 @@ function ColumnHeader() {
       <span>Company</span>
       <span className={`${PHONE_HIDDEN} text-right`}>Mkt cap</span>
       <span className={`${PHONE_HIDDEN} pl-3`}>Qtr</span>
-      <span className="text-right">EPS · est</span>
+      <span className="text-right">Earnings per share</span>
       <span className={`${PHONE_HIDDEN} text-right`}>Revenue</span>
       <span className="text-right">Move</span>
       <span />

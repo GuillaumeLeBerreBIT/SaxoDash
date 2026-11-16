@@ -1,61 +1,42 @@
 import { InstrumentLogo, LetterAvatar, Move } from '../ui'
-import { surpriseSign } from '../../lib/charts'
-import { fmtRevenue, moveLabel, reportStatus } from '../../lib/earnings'
+import { fmtRevenue, moveLabel } from '../../lib/earnings'
+import { resultWord } from '../../lib/earningsBrief'
 import { fmtNum, fmtPct } from '../../lib/format'
 
 const absPct = (v) => fmtPct(Math.abs(v), { sign: false, decimals: 1 })
 
-export function SurpriseChip({ sign, children }) {
-  const tone = sign > 0 ? 'text-up bg-up-subtle' : sign < 0 ? 'text-down bg-down-subtle' : 'text-ink-2 bg-pill'
+const WORD_TONE = { up: 'text-up', down: 'text-down', flat: 'text-ink-2', warn: 'text-warn-text' }
+const signed = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${absPct(v)}`
+
+function Outcome({ result, children }) {
   return (
-    <span className={`text-[11px] font-semibold num rounded-[4px] px-1 whitespace-nowrap ${tone}`}>
-      {sign > 0 ? '▲' : sign < 0 ? '▼' : '▬'} {children}
+    <span className="flex items-baseline justify-end gap-1.5 whitespace-nowrap">
+      <span className={`text-[13px] font-semibold ${WORD_TONE[result.tone]}`}>{result.word}</span>
+      <span className="text-[12px] num text-ink-2">{children}</span>
     </span>
   )
 }
 
 export function EpsCell({ event }) {
-  if (event.eps_actual == null && event.eps_estimate == null) {
-    return <span className="text-[13px] num text-ink-3">—</span>
-  }
-  if (event.eps_actual == null) {
-    const pending = reportStatus(event) === 'pending'
-    return (
-      <span className={`text-[13px] num ${pending ? 'text-warn' : 'text-ink-2'}`}>
-        {fmtNum(event.eps_estimate, 2)}
-        <span className={pending ? 'text-warn' : 'text-ink-3'}>{pending ? ' pending' : ' est.'}</span>
-      </span>
-    )
-  }
-  const surprise = event.eps_surprise_pct
+  const result = resultWord(event)
+  if (!result) return <span className="text-[13px] num text-ink-3">—</span>
+  if (event.eps_actual == null) return <Outcome result={result}>{`expected ${fmtNum(event.eps_estimate, 2)}`}</Outcome>
+  const versus = event.eps_estimate == null ? '' : ` vs ${fmtNum(event.eps_estimate, 2)}`
+  const surprise = event.eps_surprise_pct == null ? '' : `, ${signed(event.eps_surprise_pct)}`
   return (
-    <span className="flex items-baseline gap-1.5 justify-end">
-      <span className="text-[13px] num text-ink">{fmtNum(event.eps_actual, 2)}</span>
-      {surprise != null && <SurpriseChip sign={surpriseSign(surprise)}>{absPct(surprise)}</SurpriseChip>}
-      {event.eps_estimate != null && (
-        <span className="hidden md:inline text-[12px] num text-ink-3">est {fmtNum(event.eps_estimate, 2)}</span>
-      )}
-    </span>
+    <Outcome result={result}>
+      {fmtNum(event.eps_actual, 2)}
+      <span className="hidden md:inline">{`${versus}${surprise}`}</span>
+    </Outcome>
   )
 }
 
 export function RevenueCell({ event }) {
   const { revenue_estimate: est, revenue_actual: act, revenue_surprise_pct: surprise } = event
   if (est == null && act == null) return <span className="text-[12px] text-ink-3">—</span>
-  if (act == null) {
-    return (
-      <span className="text-[12px] num text-ink-2">
-        {fmtRevenue(est)}
-        <span className="text-ink-3"> est.</span>
-      </span>
-    )
-  }
-  return (
-    <span className="flex items-baseline gap-1.5 justify-end">
-      <span className="text-[12px] num text-ink">{fmtRevenue(act)}</span>
-      {surprise != null && <SurpriseChip sign={surpriseSign(surprise)}>{absPct(surprise)}</SurpriseChip>}
-    </span>
-  )
+  if (act == null) return <Outcome result={{ word: 'Due', tone: 'flat' }}>{`expected ${fmtRevenue(est)}`}</Outcome>
+  const result = resultWord({ eps_actual: act, eps_surprise_pct: surprise })
+  return <Outcome result={result}>{`${fmtRevenue(act)}${surprise == null ? '' : `, ${signed(surprise)}`}`}</Outcome>
 }
 
 export function MoveCell({ event }) {
