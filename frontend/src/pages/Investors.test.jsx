@@ -193,10 +193,10 @@ describe('Investors hub', () => {
     expect(within(directory()).getByRole('button', { name: 'Following' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('shows the style tags and the quarter moves on a card', () => {
+  it('shows the quarter moves on a card and no style tags', () => {
     renderPage()
     const ackmanCard = within(directory()).getAllByTestId('investor-card')[1]
-    expect(within(ackmanCard).getByText('Activist')).toBeInTheDocument()
+    expect(within(ackmanCard).queryByText('Activist')).toBeNull()
     expect(within(ackmanCard).getByText('+1 new · 0 exited')).toBeInTheDocument()
   })
 

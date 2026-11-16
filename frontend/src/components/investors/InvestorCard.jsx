@@ -5,7 +5,6 @@ import StockLogo from '../StockLogo'
 import FollowButton from './FollowButton'
 import ImportProgress from './ImportProgress'
 import InvestorAvatar from './InvestorAvatar'
-import StyleChips from './StyleChips'
 import { UNKNOWN, fmtNum } from '../../lib/format'
 import { fmtCount, fmtFiledDate, fmtUsdCompact, quarterLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
@@ -65,7 +64,6 @@ export default function InvestorCard({ investor, className = '' }) {
           </div>
           <FollowButton investor={investor} />
         </div>
-        <StyleChips styles={investor.styles} />
         <ImportProgress progress={investor.import} />
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[17px] font-bold num text-ink">{fmtUsdCompact(investor.total_value)}</span>

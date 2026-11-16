@@ -71,7 +71,7 @@ describe('Investor profile', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Bill Ackman' })).toBeInTheDocument()
     expect(screen.getByText('Pershing Square')).toBeInTheDocument()
     expect(screen.getByText('Concentrated activist.')).toBeInTheDocument()
-    expect(screen.getByText('Activist')).toBeInTheDocument()
+    expect(screen.queryByText('Activist')).toBeNull()
   })
 
   it('shows the investor\'s photo with its credit', () => {
