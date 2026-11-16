@@ -5,7 +5,7 @@ import { priceZone } from '../../lib/priceBar'
 import { priceBasis } from '../../lib/pricing'
 import PriceBar from '../verdicts/PriceBar'
 import { CHECK_BASIS_NOTE, CHECK_STATUS_LABEL, GRADE_LABEL, checkLine, trendSentence } from '../../lib/verdicts'
-import { Button, Move, Skeleton, Tag } from '../ui'
+import { Button, Move, Skeleton } from '../ui'
 
 const PLAIN = { sign: false, decimals: 1 }
 const WORD_TONE = { up: 'text-up', warn: 'text-warn-text' }
@@ -62,9 +62,9 @@ function CompanyCell({ verdict }) {
       <span className="flex flex-wrap items-center gap-2">
         <span className={CELL_VALUE}>{GRADE_LABEL.quality[verdict.quality] ?? verdict.quality}</span>
         {answered > 0 ? (
-          <Tag tone={allPass ? 'up' : 'down'}>
+          <span className={`text-[13px] font-semibold ${allPass ? 'text-up' : 'text-down'}`}>
             {allPass ? `${answered} of ${answered} checks pass` : `${failed.length} of ${answered} checks fail`}
-          </Tag>
+          </span>
         ) : null}
       </span>
       <CheckBars checks={verdict.checks ?? []} />
