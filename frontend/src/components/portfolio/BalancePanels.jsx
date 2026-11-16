@@ -97,7 +97,7 @@ export function CurrencyPanel({ positions, cash, className = '' }) {
     ...(cashValue > 0 ? [{ key: 'cash', value: cashValue, color: c.flat }] : []),
   ]
   return (
-    <Card className={className} context="What the book is priced in" dot={rows.length ? 'ok' : 'off'} title="Currency">
+    <Card className={className} context="What your portfolio is priced in" dot={rows.length ? 'ok' : 'off'} title="Currency">
       {total > 0 && (
         <div role="img" aria-label="Value by currency" className="flex h-2.5 gap-[2px] rounded-full overflow-hidden bg-track">
           {segments.map((s) => (

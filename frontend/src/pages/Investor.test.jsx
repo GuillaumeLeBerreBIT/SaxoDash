@@ -115,7 +115,7 @@ describe('Investor profile', () => {
     expect(tile('This quarter')).toHaveTextContent('+1 / −1')
     expect(tile('This quarter')).toHaveTextContent('new / exited · turnover 6%')
     expect(tile('You hold today')).toHaveTextContent('2 stocks')
-    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest book')
+    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest portfolio')
     expect(screen.getByText('13F for Q2 2026 · filed 14 Aug 2026')).toBeInTheDocument()
   })
 
@@ -126,7 +126,7 @@ describe('Investor profile', () => {
     const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
     const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
     expect(tile('You hold today')).toHaveTextContent('GOOGL')
-    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest book')
+    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest portfolio')
   })
 
   it('leaves out what you hold today when a past quarter is shown', () => {
