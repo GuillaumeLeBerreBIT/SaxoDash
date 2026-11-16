@@ -23,9 +23,26 @@ function SignalsState({ hub }) {
   return null
 }
 
+const PAIRED = ['convergent-buys', 'most-sold']
+const LEFT_TO_STOCKS = 'new-bets'
+
 function Shelves({ hub }) {
   if (hub.error || !hub.data) return null
-  return hub.data.shelves.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)
+  const shelves = hub.data.shelves.filter((shelf) => shelf.key !== LEFT_TO_STOCKS)
+  const paired = PAIRED.map((key) => shelves.find((shelf) => shelf.key === key)).filter(Boolean)
+  const before = shelves.filter((shelf) => shelf.key === 'following')
+  const after = shelves.filter((shelf) => shelf.key !== 'following' && !PAIRED.includes(shelf.key))
+  return (
+    <>
+      {before.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
+      {paired.length > 0 && (
+        <div data-testid="bought-and-sold" className="grid grid-cols-1 gap-[var(--sd-gap,12px)] min-[1100px]:grid-cols-2 items-start">
+          {paired.map((shelf) => <div key={shelf.key} className="min-w-0"><Shelf shelf={shelf} /></div>)}
+        </div>
+      )}
+      {after.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
+    </>
+  )
 }
 
 export default function Investors() {

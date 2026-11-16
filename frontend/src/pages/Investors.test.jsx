@@ -64,6 +64,24 @@ describe('Investors hub', () => {
     expect(within(card).getByRole('link', { name: 'AAPL' })).toHaveAttribute('href', '/research?symbol=AAPL')
   })
 
+  it('pairs bought and sold side by side and leaves the biggest new bets to the Stocks page', () => {
+    const stocks = hub.shelves[1]
+    hubState = {
+      data: { ...hub, shelves: [
+        hub.shelves[0], stocks,
+        { ...stocks, key: 'most-sold', title: 'Most sold' },
+        { ...stocks, key: 'new-bets', title: 'Biggest new bets' },
+        { key: 'just-filed', title: 'Just filed', kind: 'investors', total: 1, items: [ackman] },
+      ] },
+      isLoading: false, error: null,
+    }
+    renderPage()
+    const pair = screen.getByTestId('bought-and-sold')
+    expect(within(pair).getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual(['Convergent buys', 'Most sold'])
+    expect(screen.queryByRole('region', { name: 'Biggest new bets' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Just filed' })).toBeInTheDocument()
+  })
+
   it('asks for fund data only while the Funds tab is open', () => {
     renderPage('/investors?tab=congress')
     expect(fundOptions.length).toBeGreaterThan(0)
