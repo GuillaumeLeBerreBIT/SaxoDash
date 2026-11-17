@@ -192,8 +192,7 @@ accessibility). The branch is local only: not pushed, no pull request.
 
 - **Ship:** push `feat/ui-ux-audit` and open a pull request into `develop` (owner's call).
 - **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
-  panning and zooming now work from the keyboard); the watchlist row is a `role="button"` with a real
-  remove button inside it.
+  panning and zooming now work from the keyboard).
 - **Owner's next features, in order:** a Compare page for Discover; remove Money from the navigation;
   then CSV, Excel or manual upload of financials.
 - **Primitives not extracted:** `DataTable`, one stat tile, `PageHeader`, `ChartFrame`, one menu.

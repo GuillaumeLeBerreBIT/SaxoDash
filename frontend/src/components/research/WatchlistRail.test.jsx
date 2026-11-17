@@ -202,6 +202,14 @@ describe('WatchlistRail', () => {
     expect(onSelectSymbol).toHaveBeenNthCalledWith(2, 'NVDA', { uic: 211, assetType: 'Stock' })
   })
 
+  it('keeps the remove button beside the row button, not inside it', () => {
+    render()
+
+    const row = screen.getByRole('button', { name: /^NVDA/ })
+    expect(row).not.toContainElement(screen.getByRole('button', { name: 'Remove NVDA' }))
+    expect(row.querySelector('div')).toBeNull()
+  })
+
   it('invites the user to create a list when there are none', () => {
     stub({ watchlists: [] })
     render()

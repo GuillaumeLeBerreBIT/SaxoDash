@@ -17,7 +17,6 @@ import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../../lib/companyData'
 import { fmtDate, fmtEur, fmtMoney, fmtNum } from '../../lib/format'
-import { activatesRow } from '../../lib/keys'
 import { ownershipTickers } from '../../lib/ownership'
 import { trailingReturns } from '../../lib/performance'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, chartHref, researchHref } from '../../lib/research'
@@ -91,23 +90,17 @@ function FixedList({ board, panel, onFollow }) {
       <ul className="-mx-2">
         {list.map((symbol) => (
           <li key={symbol}>
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               aria-current={symbol === board.sym || undefined}
               onClick={() => onFollow(symbol)}
-              onKeyDown={(event) => {
-                if (!activatesRow(event)) return
-                event.preventDefault()
-                onFollow(symbol)
-              }}
-              className={`flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
+              className={`w-full text-left flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
                 symbol === board.sym ? 'bg-selected' : 'hover:bg-hover'
               }`}
             >
               <InstrumentLogo symbol={symbol} size={24} />
               <span className="text-[13.5px] font-semibold text-ink">{symbol}</span>
-            </div>
+            </button>
           </li>
         ))}
       </ul>

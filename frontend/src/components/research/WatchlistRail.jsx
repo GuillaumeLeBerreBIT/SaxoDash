@@ -9,7 +9,6 @@ import {
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum } from '../../lib/format'
-import { activatesRow } from '../../lib/keys'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
@@ -311,34 +310,30 @@ export default function WatchlistRail({
               return (
                 <div
                   key={item.id}
-                  role="button"
-                  tabIndex={0}
                   onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
-                  aria-current={symbol === item.symbol || undefined}
-                  onKeyDown={(e) => {
-                    if (e.target !== e.currentTarget || !activatesRow(e)) return
-                    e.preventDefault()
-                    onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
-                  }}
                   className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3.5 min-h-11 cursor-pointer group ${
                     symbol === item.symbol ? 'bg-selected' : 'hover:bg-hover'
                   }`}
                 >
-                  <div className="min-w-0 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-current={symbol === item.symbol || undefined}
+                    className="min-w-0 flex items-center gap-1.5 text-left"
+                  >
                     <InstrumentLogo symbol={item.symbol} size={24} />
-                    <div className="min-w-0 flex flex-col items-start">
-                      <div className="max-w-full flex items-center gap-1.5 leading-4">
+                    <span className="min-w-0 flex flex-col items-start">
+                      <span className="max-w-full flex items-center gap-1.5 leading-4">
                         <span className="text-[13px] font-semibold text-ink shrink-0">{item.symbol}</span>
                         {heldSymbols.has(item.symbol) ? (
                           <span className="w-1.5 h-1.5 rounded-full bg-held" title="In portfolio" />
                         ) : null}
                         <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
-                      </div>
-                      <div className="h-[18px] max-w-full flex items-center">
+                      </span>
+                      <span className="h-[18px] max-w-full flex items-center">
                         <ActionBadge verdict={watchlistVerdict(item, verdicts)} />
-                      </div>
-                    </div>
-                  </div>
+                      </span>
+                    </span>
+                  </button>
                   <span className="text-[13px] num font-semibold text-ink text-right">
                     {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
                   </span>
