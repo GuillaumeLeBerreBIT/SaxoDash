@@ -15,7 +15,7 @@ hand-entered/Saxo-cash accounts in `accounts`; further banking work is paused.
 
 Research fundamentals (P/E, market cap, dividend yield, growth/valuation
 ratios) come from Finnhub's free tier — see "Company fundamentals come from
-Finnhub" below. Macro series (Buffett indicator and similar) are still
+Finnhub" in `docs/decisions.md`. Macro series (Buffett indicator and similar) are still
 deferred; they need an unrelated data source (FRED) and were deliberately
 kept out of scope.
 
@@ -26,14 +26,6 @@ beat, Django and Vite in one terminal, prefixed and colour-coded per service,
 each gated on a readiness probe so "stack up" means it. Ctrl-C (or SIGHUP)
 stops everything it started; an already-running Postgres or redis is reused
 and left alone.
-
-Services are declared in one table near the top of the script — adding a
-sixth is one `service` line, and `--no-<name>` works for it automatically.
-Flags: `--no-ngrok|postgres|redis|worker|beat|web|ui` (`--no-frontend` aliases `--no-ui`)
-and `--reclaim`, which clears leftovers from a killed run instead of dying
-on a held port. Ports come from `backend/.env` so they can't drift from the
-backend's own config; override per-run with `WEB_PORT` / `UI_PORT` /
-`REDIS_PORT`, and the database with `DATABASE_URL`. Per-service logs land in `.dev/logs/` (gitignored).
 
 Full reference — flags, troubleshooting, adding a service:
 `docs/running-the-stack.md`.
@@ -55,33 +47,12 @@ Keep changes scoped to what was asked and explain what changed in the chat / PR.
 The frontend has a small vitest suite too — `lib/` helpers, the API client,
 and a few components — so add/adjust specs alongside frontend changes.
 
-**A new migration isn't done until `manage.py migrate` has run against the
-dev database, not just the test suite.** `manage.py test` builds its own
-fresh, fully-migrated database every run, so it stays green even when the
-persistent dev Postgres the live dev server reads is missing the column —
-which then 500s on every request touching that model. `scripts/dev.sh`
-guards this on stack restart (`migrate --check`, then `migrate`), but mid-session
-against an already-running server it's a manual step, easy to forget in the
-run-tests-then-move-on rhythm.
-
-**Frontend design/polish**: read `DESIGN.md` (repo root) first — themes,
-colour roles, type scale, panel anatomy and the pages are all there. Colour
-comes only from `frontend/src/lib/theme.js`: semantic utilities (`bg-pane`,
-`text-ink-3`, `text-up`, …) in markup, `useChartColors()` in charts;
-`src/test/noPaletteClasses.test.js` fails on any Tailwind palette class or
-hex literal. The `saxodash-design-system` skill (this repo's own
-`.claude/skills/`) is the compact version plus the screenshot-review
-harness recipe; `ui-ux-pro-max`, `frontend-design` and `dataviz` cover the
-rest.
+Folder rules live in `backend/AGENTS.md` and `frontend/AGENTS.md` (migrations, money,
+theme colours), loaded through each folder's `CLAUDE.md`.
 
 ## Stack
 
-- Backend: Django + DRF, Postgres 17 (dev, CI and production alike), JWT auth
-  (SimpleJWT), many users with one owner.
-- Frontend: Vite + React 19 (JavaScript, not TS), React Router, Recharts,
-  Lucide icons, Tailwind. Components are the mockup's own bespoke
-  primitives ported as-is — no MUI. `shadcn/ui` may be introduced in a
-  later milestone when Research/Banking need dropdowns/modals/comboboxes.
+Many users with one owner; Postgres 17 in dev, CI and production alike.
 
 ## Smallest complete change
 
