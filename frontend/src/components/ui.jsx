@@ -72,9 +72,9 @@ function panelPadding(padding, flush) {
 
 /** The one container primitive for a bounded, self-contained unit of page
  *  content - reach for it when grouping information that's meaningfully
- *  distinct from its neighbors. A single number with a label is a StatRow
- *  or Metric, not its own Card; before adding a new Card, check whether a
- *  table/chart/StatStrip already on the same page shows the same
+ *  distinct from its neighbors. A single number with a label is a Tile,
+ *  not its own Card; before adding a new Card, check whether a
+ *  table/chart/Tile already on the same page shows the same
  *  information in another form (the 2026-09 audit's most common finding
  *  was a Card that turned out to duplicate one already on the page). */
 export function Card({
@@ -385,61 +385,6 @@ export function TabButton({ active, onClick, children, id, controls, className =
   )
 }
 
-/** A row of headline stats as one bordered strip with dividers - the calm
- *  alternative to N separate single-stat cards. `vertical` stacks the rows
- *  regardless of viewport width, for use as a compact side card next to a chart. */
-export function StatStrip({ children, className = '', vertical = false }) {
-  return (
-    <div
-      className={`sd-panel flex flex-col h-full rounded-xl bg-pane divide-y divide-line ${
-        vertical ? '' : 'sm:flex-row sm:divide-y-0 sm:divide-x'
-      } ${className}`}
-    >
-      {children}
-    </div>
-  )
-}
-
-const statTones = {
-  blue: 'bg-accent-subtle text-held',
-  emerald: 'bg-up-subtle text-up',
-  red: 'bg-down-subtle text-down',
-  zinc: 'bg-pill text-ink-2',
-}
-
-/** `tone` (a text-color class, e.g. `text-held`) tints the label to mark
- *  this row as the strip's standout figure among siblings. `lead` steps the
- *  value up to the old single-stat card's size - for a strip's one figure
- *  that deserves top billing regardless of whether it needs a tint. */
-export function StatRow({ label, value, badge, badgeTone = 'zinc', note, tone, lead = false }) {
-  return (
-    <div className="flex-1 px-3.5 py-3 2xl:px-[18px] 2xl:py-3.5">
-      <div className={`text-[12px] font-medium ${tone || 'text-ink-3'}`}>{label}</div>
-      <div
-        className={`mt-1 font-bold text-ink tracking-[-0.01em] num whitespace-nowrap ${
-          lead ? 'text-[26px]' : 'text-[20px]'
-        }`}
-      >
-        {value}
-      </div>
-      {(badge || note) && (
-        <div className="mt-2 flex items-center gap-2 flex-wrap">
-          {badge && (
-            <span
-              className={`inline-flex items-center h-[22px] px-2 rounded-md whitespace-nowrap text-[11px] font-semibold num ${
-                statTones[badgeTone] || statTones.zinc
-              }`}
-            >
-              {badge}
-            </span>
-          )}
-          {note && <span className="text-[12px] text-ink-3">{note}</span>}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export function Skeleton({ className = '', ...props }) {
   return <div className={`animate-pulse bg-tile rounded ${className}`} {...props} />
 }
@@ -591,18 +536,6 @@ export function QueryState({ isLoading, error, onRetry, label, children }) {
   return children
 }
 
-/** A labelled figure with an optional sub-hint. Shared by OverviewTab,
- *  EarningsTab and SnapshotSection so they render metrics identically. */
-export function Metric({ label, value, tone = 'text-ink', hint }) {
-  return (
-    <div>
-      <div className="text-[12px] text-ink-3 font-medium">{label}</div>
-      <div className={`text-[17px] font-semibold num mt-1 ${tone}`}>{value}</div>
-      {hint ? <div className="text-[12px] text-ink-3 mt-0.5 num">{hint}</div> : null}
-    </div>
-  )
-}
-
 const TILE_TONES = {
   up: 'text-up',
   down: 'text-down',
@@ -616,12 +549,12 @@ const TILE_TAGS = {
   listItem: { root: 'li', list: 'dl', term: 'dt', detail: 'dd' },
 }
 
-function TileFrame({ label, right, children, sub, listItem = false }) {
-  const tags = listItem ? TILE_TAGS.listItem : TILE_TAGS.block
-  const Root = tags.root
-  const List = tags.list
-  const Term = tags.term
-  const Detail = tags.detail
+const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
+const TILE_VALUE_WRAP = 'mt-1 text-[15px] font-bold num break-all'
+
+export function Tile({ label, value, sub, tone, right, listItem = false, wrap = false }) {
+  const { root: Root, list: List, term: Term, detail: Detail } = listItem ? TILE_TAGS.listItem : TILE_TAGS.block
+  const absent = value == null
   const title = List ? (
     <Term className="flex items-baseline justify-between gap-2 text-[12px] text-ink-3">
       {label}
@@ -636,39 +569,11 @@ function TileFrame({ label, right, children, sub, listItem = false }) {
   const content = (
     <>
       {title}
-      {children(Detail)}
+      <Detail className={`${wrap ? TILE_VALUE_WRAP : TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
       {sub && <Detail className="mt-0.5 text-[12px] text-ink-2 num">{sub}</Detail>}
     </>
   )
   return <Root className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">{List ? <List>{content}</List> : content}</Root>
-}
-
-const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
-const TILE_VALUE_WRAP = 'mt-1 text-[15px] font-bold num break-all'
-
-export function Tile({ label, value, sub, tone, right, listItem = false, wrap = false }) {
-  const absent = value == null
-  return (
-    <TileFrame label={label} right={right} sub={sub} listItem={listItem}>
-      {(Detail) => (
-        <Detail className={`${wrap ? TILE_VALUE_WRAP : TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
-      )}
-    </TileFrame>
-  )
-}
-
-/** Metric's bordered sibling, for a figure that needs visual separation from
- *  its neighbors - a grid of risk stats, a week's summary tiles. The audit
- *  found this exact box already independently reimplemented as Analytics'
- *  MetricTile, Earnings' SummaryTile, and Research's Ratio; this is that box,
- *  promoted once. Reach for bare `Metric` instead when the tile doesn't need
- *  its own boundary (e.g. already inside a Card with siblings). */
-export function MetricTile({ label, value, hint, tone = 'text-ink', right }) {
-  return (
-    <TileFrame label={label} right={right} sub={hint}>
-      {(Detail) => value != null && <Detail className={`${TILE_VALUE} ${tone}`}>{value}</Detail>}
-    </TileFrame>
-  )
 }
 
 const HIDE_BELOW = { md: 'hidden md:table-cell', wide: 'hidden min-[1440px]:table-cell' }

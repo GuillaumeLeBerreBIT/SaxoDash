@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Card, InfoTip, MetricTile, Segmented } from '../ui'
+import { Card, InfoTip, Segmented, Tile } from '../ui'
 import { monteCarlo } from '../../lib/monteCarlo'
 import { fmtEur, fmtNum } from '../../lib/format'
 import { yearTicks } from '../../lib/portfolioStats'
@@ -56,14 +56,14 @@ export default function Projection({ start, expectedReturnPct, volatilityPct }) 
       }
     >
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <MetricTile label="Invested by then" value={fmtEur(end.invested, { decimals: 0 })} hint={`€${monthly}/mo for ${years} years`} />
-        <MetricTile
+        <Tile label="Invested by then" value={fmtEur(end.invested, { decimals: 0 })} sub={`€${monthly}/mo for ${years} years`} />
+        <Tile
           label="Median outcome"
           value={fmtEur(end.p50, { decimals: 0 })}
-          hint={`${fmtNum((end.p50 / end.invested - 1) * 100, 0)}% above contributions`}
+          sub={`${fmtNum((end.p50 / end.invested - 1) * 100, 0)}% above contributions`}
         />
-        <MetricTile label="Pessimistic (P10)" value={fmtEur(end.p10, { decimals: 0 })} hint="1 in 10 paths below" />
-        <MetricTile label="Optimistic (P90)" value={fmtEur(end.p90, { decimals: 0 })} hint="1 in 10 paths above" />
+        <Tile label="Pessimistic (P10)" value={fmtEur(end.p10, { decimals: 0 })} sub="1 in 10 paths below" />
+        <Tile label="Optimistic (P90)" value={fmtEur(end.p90, { decimals: 0 })} sub="1 in 10 paths above" />
       </div>
 
       <div className="mt-4 h-[var(--chart-h-lg)]">
