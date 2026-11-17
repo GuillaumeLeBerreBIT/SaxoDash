@@ -12,6 +12,7 @@ const draw = (node) => render(<svg>{node}</svg>)
 
 const step = (from, price, extra = {}) => ({ from, price, pe: 24, growth: 24.1, eps_ttm: 4.2, capped: false, ...extra })
 const width = 862
+const lineEnd = (from) => ({ from, price: null, pe: null, growth: null, eps_ttm: null, capped: false })
 
 describe('GrowthLine', () => {
   it('draws one amber stepped line with no fill, clipped to the first visible bar', () => {
@@ -22,6 +23,12 @@ describe('GrowthLine', () => {
     expect(paths[0]).toHaveAttribute('fill', 'none')
     expect(container.querySelector('rect')).toBeNull()
     expect(paths[0].getAttribute('d')).toBe('M 10 170 H 390 V 150 H 790')
+  })
+
+  it('breaks the line where trailing earnings stop being positive and resumes after', () => {
+    const line = [step('2026-06-01', 120), lineEnd('2026-07-11'), step('2026-07-21', 130)]
+    const { container } = draw(<GrowthLine line={line} data={data} geometry={geometry()} colors={colors} />)
+    expect(container.querySelector('path').getAttribute('d')).toBe('M 10 170 H 190 M 410 150 H 790')
   })
 
   it('draws nothing without steps', () => {
@@ -42,6 +49,17 @@ describe('GuideTags', () => {
     expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('x', String(width - 62 + 2))
     expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('fill', 'raised')
     expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'warn')
+  })
+
+  it('shows the P/E as a whole number', () => {
+    draw(<GuideTags line={[step('2026-06-01', 120, { pe: 22.86 })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
+    expect(screen.getByTestId('guide-tag-growth').textContent).toMatch(/Growth-fair · P\/E 23(?!\.)/)
+  })
+
+  it('has no growth tag once the line has ended', () => {
+    const { container } = draw(<GuideTags line={[step('2026-06-01', 120), lineEnd('2026-07-20')]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
+    expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
+    expect(container.querySelector('[data-testid="guide-tags"]')).toBeNull()
   })
 
   it('calls a capped step a floor', () => {

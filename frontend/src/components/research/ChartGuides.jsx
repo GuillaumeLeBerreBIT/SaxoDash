@@ -24,12 +24,16 @@ function stepPath(values, xAt, scaleY, last) {
   let d = ''
   let previous = null
   values.forEach((value, i) => {
-    if (value == null) return
-    if (previous == null) d = `M ${xAt(i)} ${scaleY(value)}`
+    if (value == null) {
+      if (previous != null) d += ` H ${xAt(i - 1)}`
+      previous = null
+      return
+    }
+    if (previous == null) d += `${d ? ' ' : ''}M ${xAt(i)} ${scaleY(value)}`
     else if (value !== previous) d += ` H ${xAt(i)} V ${scaleY(value)}`
     previous = value
   })
-  return d ? `${d} H ${xAt(last)}` : ''
+  return previous != null ? `${d} H ${xAt(last)}` : d
 }
 
 export function GrowthLine({ line, data, geometry, colors }) {
@@ -100,8 +104,9 @@ function guideTagItems({ line, highs, data, colors }) {
   if (!lastBar) return []
   const items = []
   const step = stepAt(line, lastBar.date)
-  if (step) {
-    const words = step.capped ? `Growth floor · P/E ${step.pe}+` : `Growth-fair · P/E ${step.pe}`
+  if (step?.price != null) {
+    const pe = Math.round(step.pe)
+    const words = step.capped ? `Growth floor · P/E ${pe}+` : `Growth-fair · P/E ${pe}`
     items.push({ key: 'growth', price: step.price, words, stroke: colors.warn, text: colors.warnText })
   }
   const high = highs?.[highs.length - 1]

@@ -26,6 +26,13 @@ describe('PeChip', () => {
     expect(screen.getByTestId('pe-chip')).toHaveTextContent('above its usual 45–77')
   })
 
+  it('shows the P/E with one decimal and the usual range in whole numbers', () => {
+    render(<PeChip chip={{ pe: 22.86, low: 42.5, high: 69.46, position: 'below' }} />)
+    const element = screen.getByTestId('pe-chip')
+    expect(element).toHaveTextContent('P/E 22.9')
+    expect(element).toHaveTextContent('below its usual 43–69')
+  })
+
   it('renders nothing without a chip', () => {
     const { container } = render(<PeChip chip={null} />)
     expect(container).toBeEmptyDOMElement()

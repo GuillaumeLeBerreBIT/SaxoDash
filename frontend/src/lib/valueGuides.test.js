@@ -5,6 +5,7 @@ import { entrySentence, FAIR_BAND, growthSentence, guideSeries, peChip, readPric
 
 const step = { from: '2026-08-30', price: 100, pe: 24, growth: 24.1, eps_ttm: 4.17, capped: false }
 const capped = { ...step, pe: 30, growth: 167.4, capped: true }
+const lineEnd = { from: '2026-09-30', price: null, pe: null, growth: null, eps_ttm: null, capped: false }
 const verdict = (extra = {}) => ({ action: 'wait', quality: 'strong', valuation: 'fair', growth_line: [step], ...extra })
 const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size: { shares: 3, lossAtStop: 45 }, currency: 'USD' }
 
@@ -15,6 +16,15 @@ describe('readPrice', () => {
     expect(readPrice(91, step)).toBe('fair')
     expect(readPrice(109, step)).toBe('fair')
     expect(readPrice(111, step)).toBe('expensive')
+  })
+
+  it('counts the band edges as fair', () => {
+    expect(readPrice(90, step)).toBe('fair')
+    expect(readPrice(110, step)).toBe('fair')
+  })
+
+  it('reads nothing once the line has ended', () => {
+    expect(readPrice(100, lineEnd)).toBeNull()
   })
 
   it('never calls a capped line expensive', () => {
@@ -37,6 +47,11 @@ describe('stepAt', () => {
     expect(stepAt([], '2026-05-01')).toBeNull()
     expect(stepAt(null, '2026-05-01')).toBeNull()
   })
+
+  it('returns the line end once a loss has ended the line', () => {
+    const line = [{ ...step, from: '2026-01-10' }, { ...lineEnd, from: '2026-04-10' }]
+    expect(stepAt(line, '2026-05-01').price).toBeNull()
+  })
 })
 
 describe('peChip', () => {
@@ -45,6 +60,8 @@ describe('peChip', () => {
     expect(peChip({ ...base, current_pe: 19.8 })).toEqual({ pe: 19.8, low: 45, high: 77, position: 'below' })
     expect(peChip({ ...base, current_pe: 60 }).position).toBe('inside')
     expect(peChip({ ...base, current_pe: 90 }).position).toBe('above')
+    expect(peChip({ ...base, current_pe: 45 }).position).toBe('below')
+    expect(peChip({ ...base, current_pe: 77 }).position).toBe('above')
   })
 
   it('is nothing when not judged or a figure is missing', () => {
@@ -60,6 +77,29 @@ describe('growthSentence', () => {
     expect(growthSentence(step, 118, 'USD')).toBe('Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00. Price is +18% from that line, so expensive.')
     expect(growthSentence(step, 108, 'USD')).toMatch(/Price is \+8% from that line, so fair\.$/)
     expect(growthSentence(capped, 66, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00; price is 34% below it, so cheap even on that floor.')
+  })
+
+  it('rounds the P/E to a whole number', () => {
+    expect(growthSentence({ ...step, pe: 22.86 }, null, 'USD')).toMatch(/supports a P\/E of 23, about/)
+    expect(growthSentence({ ...capped, pe: 29.6 }, null, 'USD')).toMatch(/more than a P\/E of 30 assumes\. At P\/E 30 that/)
+  })
+
+  it('never prints a percent that contradicts the reading at the band edge', () => {
+    expect(growthSentence(step, 110.4, 'USD')).toMatch(/Price is \+10\.4% from that line, so expensive\.$/)
+    expect(growthSentence(step, 110.04, 'USD')).toMatch(/Price is \+10\.1% from that line, so expensive\.$/)
+    expect(growthSentence(step, 110, 'USD')).toMatch(/Price is \+10\.0% from that line, so fair\.$/)
+    expect(growthSentence(step, 90, 'USD')).toMatch(/Price is −10\.0% from that line, so fair\.$/)
+    expect(growthSentence(step, 89.6, 'USD')).toMatch(/Price is −10\.4% from that line, so cheap\.$/)
+    expect(growthSentence(step, 109.6, 'USD')).toMatch(/Price is \+9\.6% from that line, so fair\.$/)
+    expect(growthSentence(capped, 89.7, 'USD')).toMatch(/price is 10\.3% below it, so cheap even on that floor\.$/)
+    expect(growthSentence(capped, 90.3, 'USD')).toMatch(/price is 9\.7% below it, so its growth is priced in\.$/)
+  })
+
+  it('says plainly when a loss has ended the line', () => {
+    const text = growthSentence(lineEnd, 100, 'USD')
+    expect(text).toBe('No growth line while trailing earnings are not positive.')
+    expect(text).not.toMatch(/buy|sell|cheap|expensive/i)
+    expect(entrySentence({ verdict: verdict({ growth_line: [step, lineEnd] }), price: 100 }).next).toBe(text)
   })
 
   it('says a capped line above the floor is priced in, without an instruction', () => {

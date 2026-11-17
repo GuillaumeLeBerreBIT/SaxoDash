@@ -47,7 +47,7 @@ const gapLegend = (gap) =>
 function guideLegend(valueGuides, gaps, bar, index) {
   const items = []
   const step = stepAt(valueGuides?.line, bar.date)
-  if (step) {
+  if (step?.price != null) {
     if (step.eps_ttm > 0) items.push(['P/E then', fmtNum(bar.close / step.eps_ttm, 1)])
     items.push(['Growth-fair', fmtMoney(step.price, valueGuides.currency)])
     const reading = readPrice(bar.close, step)
