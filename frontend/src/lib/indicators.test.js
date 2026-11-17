@@ -265,7 +265,7 @@ describe('volumeGaps', () => {
 
     expect(gaps).toHaveLength(1)
     expect(gaps[0]).toMatchObject({ index: 25, up: true, from: 10, to: 10.5, end: 39, filled: false })
-    expect(gaps[0].rvol).toBeCloseTo(300 / 110)
+    expect(gaps[0].rvol).toBeCloseTo(3)
   })
 
   it('ends the box at the first later bar trading back to the previous close', () => {
@@ -294,6 +294,13 @@ describe('volumeGaps', () => {
 
   it('needs the close to hold at least 98% of the open for a gap up', () => {
     expect(volumeGaps(withBar(40, 25, { ...gapBar, close: 10.2 }))).toEqual([])
+  })
+
+  it('measures usual volume on the previous 20 bars only', () => {
+    const gaps = volumeGaps(withBar(40, 25, { ...gapBar, volume: 210 }))
+
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0].rvol).toBeCloseTo(2.1)
   })
 
   it('needs heavy volume', () => {

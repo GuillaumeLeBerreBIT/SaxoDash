@@ -182,7 +182,7 @@ export function volumeGaps(bars) {
   const gaps = []
   for (let i = first; i < bars.length; i++) {
     let sum = 0
-    for (let k = i - RVOL_WINDOW + 1; k <= i; k++) sum += bars[k].volume || 0
+    for (let k = i - RVOL_WINDOW; k < i; k++) sum += bars[k].volume || 0
     const usual = sum / RVOL_WINDOW || 1
     const bar = bars[i]
     const previous = bars[i - 1].close
