@@ -159,3 +159,48 @@ export function computeIndicatorsForWindow(bars, { start, end }) {
 export function computeIndicators(bars) {
   return computeIndicatorsForRange(bars, bars.length)
 }
+
+export const HIGH_WINDOW = 252
+
+export function rollingHigh(bars, window = HIGH_WINDOW) {
+  return bars.map((_, i) => {
+    if (i + 1 < window) return null
+    let high = -Infinity
+    for (let k = i + 1 - window; k <= i; k++) high = Math.max(high, bars[k].high)
+    return high
+  })
+}
+
+export const GAP_BOX_SESSIONS = 60
+export const GAP_LOOKBACK = 252
+const GAP_MIN_MOVE = 0.04
+const GAP_HOLD = 0.98
+const GAP_HEAVY = 2
+
+export function volumeGaps(bars) {
+  const first = Math.max(RVOL_WINDOW, bars.length - GAP_LOOKBACK)
+  const gaps = []
+  for (let i = first; i < bars.length; i++) {
+    let sum = 0
+    for (let k = i - RVOL_WINDOW + 1; k <= i; k++) sum += bars[k].volume || 0
+    const usual = sum / RVOL_WINDOW || 1
+    const bar = bars[i]
+    const previous = bars[i - 1].close
+    if (!((bar.volume || 0) > GAP_HEAVY * usual)) continue
+    const up = bar.open > (1 + GAP_MIN_MOVE) * previous && bar.close > GAP_HOLD * bar.open
+    const down = bar.open < (1 - GAP_MIN_MOVE) * previous
+    if (!up && !down) continue
+    const limit = Math.min(i + GAP_BOX_SESSIONS, bars.length - 1)
+    let end = limit
+    let filled = false
+    for (let k = i + 1; k <= limit; k++) {
+      if (up ? bars[k].low <= previous : bars[k].high >= previous) {
+        end = k
+        filled = true
+        break
+      }
+    }
+    gaps.push({ index: i, up, from: previous, to: bar.open, end, filled, rvol: (bar.volume || 0) / usual })
+  }
+  return gaps
+}

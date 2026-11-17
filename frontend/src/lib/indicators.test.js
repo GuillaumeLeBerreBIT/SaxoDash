@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bollinger, computeIndicators, computeIndicatorsForRange, computeIndicatorsForWindow, ema, macd, relativeVolume, rsi, sma, vwapSeries } from './indicators'
+import { bollinger, computeIndicators, computeIndicatorsForRange, computeIndicatorsForWindow, ema, macd, relativeVolume, rollingHigh, rsi, sma, volumeGaps, vwapSeries } from './indicators'
 
 const closes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -227,5 +227,94 @@ describe('computeIndicatorsForWindow', () => {
 
   it('restarts VWAP at the first visible bar', () => {
     expect(computeIndicatorsForWindow(bars, window).vwap).toEqual(computeIndicators(bars.slice(50, 72)).vwap)
+  })
+})
+
+describe('rollingHigh', () => {
+  const series = (count) =>
+    Array.from({ length: count }, (_, i) => ({ high: i === 0 ? 500 : 100 + i }))
+
+  it('is null until a full window of bars exists', () => {
+    expect(rollingHigh(series(251)).every((value) => value === null)).toBe(true)
+  })
+
+  it('takes the highest high of the trailing window, inclusive', () => {
+    const out = rollingHigh(series(253))
+
+    expect(out[250]).toBeNull()
+    expect(out[251]).toBe(500)
+    expect(out[252]).toBe(100 + 252)
+  })
+})
+
+describe('volumeGaps', () => {
+  const quiet = (count) =>
+    Array.from({ length: count }, (_, i) => ({ date: `d${i}`, open: 10, high: 10.1, low: 9.95, close: 10, volume: 100 }))
+  const withBar = (count, index, bar) => {
+    const list = quiet(count)
+    list[index] = { ...list[index], ...bar }
+    for (let i = index + 1; i < count; i++) {
+      list[i] = { ...list[i], open: bar.close, high: bar.close + 0.05, low: bar.close - 0.05, close: bar.close }
+    }
+    return list
+  }
+  const gapBar = { open: 10.5, high: 10.6, low: 10.4, close: 10.4, volume: 300 }
+
+  it('reports a gap up with the previous close, the open and its relative volume', () => {
+    const gaps = volumeGaps(withBar(40, 25, gapBar))
+
+    expect(gaps).toHaveLength(1)
+    expect(gaps[0]).toMatchObject({ index: 25, up: true, from: 10, to: 10.5, end: 39, filled: false })
+    expect(gaps[0].rvol).toBeCloseTo(300 / 110)
+  })
+
+  it('ends the box at the first later bar trading back to the previous close', () => {
+    const bars = withBar(40, 25, gapBar)
+    bars[30] = { ...bars[30], low: 9.9 }
+
+    expect(volumeGaps(bars)[0]).toMatchObject({ end: 30, filled: true })
+  })
+
+  it('caps the box at 60 sessions when it never fills', () => {
+    const gaps = volumeGaps(withBar(120, 25, gapBar))
+
+    expect(gaps[0]).toMatchObject({ end: 85, filled: false })
+  })
+
+  it('ignores a fill later than 60 sessions after the gap', () => {
+    const bars = withBar(120, 25, gapBar)
+    bars[100] = { ...bars[100], low: 9.9 }
+
+    expect(volumeGaps(bars)[0]).toMatchObject({ end: 85, filled: false })
+  })
+
+  it('needs a gap of more than 4%', () => {
+    expect(volumeGaps(withBar(40, 25, { ...gapBar, open: 10.3, close: 10.3 }))).toEqual([])
+  })
+
+  it('needs the close to hold at least 98% of the open for a gap up', () => {
+    expect(volumeGaps(withBar(40, 25, { ...gapBar, close: 10.2 }))).toEqual([])
+  })
+
+  it('needs heavy volume', () => {
+    expect(volumeGaps(withBar(40, 25, { ...gapBar, volume: 150 }))).toEqual([])
+  })
+
+  it('reports a gap down and fills it when the high returns to the previous close', () => {
+    const bars = withBar(40, 25, { open: 9.5, high: 9.6, low: 9.4, close: 9.5, volume: 300 })
+    bars[28] = { ...bars[28], high: 10.2 }
+
+    expect(volumeGaps(bars)[0]).toMatchObject({ index: 25, up: false, from: 10, to: 9.5, end: 28, filled: true })
+  })
+
+  it('does not look for gaps in the first 20 bars', () => {
+    expect(volumeGaps(withBar(40, 10, gapBar))).toEqual([])
+  })
+
+  it('keeps only gaps in the last 252 bars', () => {
+    const bars = withBar(400, 25, gapBar)
+    bars[390] = { ...bars[390], open: 11, high: 11.1, low: 10.9, close: 11, volume: 300 }
+
+    expect(volumeGaps(bars).map((gap) => gap.index)).toEqual([390])
   })
 })
