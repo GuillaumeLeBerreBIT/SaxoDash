@@ -37,16 +37,22 @@ def _ttm_points(quarterly_eps):
     ]
 
 
+def _line_end(known):
+    return {'from': known.isoformat(), 'price': None, 'pe': None, 'growth': None, 'eps_ttm': None, 'capped': False}
+
+
 def steps(quarterly_eps, today):
     points = _ttm_points(quarterly_eps)
     horizon = _years_before(today, KEEP_YEARS)
     result = []
     lookback = GROWTH_YEARS * 4
     for index, (known, ttm) in enumerate(points):
-        if known < horizon or ttm <= 0 or index < lookback:
+        if known < horizon or index < lookback:
             continue
         earlier = points[index - lookback][1]
-        if earlier <= 0:
+        if ttm <= 0 or earlier <= 0:
+            if result and result[-1]['price'] is not None:
+                result.append(_line_end(known))
             continue
         growth = ((ttm / earlier) ** (1 / GROWTH_YEARS) - 1) * 100
         pe = min(FAIR_PE_CAP, max(FAIR_PE_FLOOR, growth))

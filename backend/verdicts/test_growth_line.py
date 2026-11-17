@@ -36,11 +36,16 @@ class GrowthLineTests(SimpleTestCase):
         self.assertEqual(s[-2]['eps_ttm'], 8.0)
         self.assertEqual(s[-1]['eps_ttm'], 8.6)
 
-    def test_fewer_than_four_quarters_or_non_positive_ttm_gives_no_step(self):
+    def test_fewer_than_four_quarters_gives_no_step_and_a_loss_ends_the_line(self):
         self.assertEqual(steps(quarters(date(2024, 3, 31), [1.0, 1.0, 1.0]), today=date(2026, 1, 1)), [])
         loss = quarters(date(2016, 3, 31), [1.0] * 16 + [-3.0] * 4 + [1.0] * 4)
-        froms = [s['from'] for s in steps(loss, today=date(2026, 1, 1))]
-        self.assertNotIn((loss[19][0] + timedelta(days=35)).isoformat(), froms)
+        line = steps(loss, today=date(2026, 1, 1))
+        first_loss = (loss[18][0] + timedelta(days=35)).isoformat()
+        resumed = (loss[23][0] + timedelta(days=35)).isoformat()
+        ends = [s for s in line if s['price'] is None]
+        self.assertEqual(ends, [{'from': first_loss, 'price': None, 'pe': None, 'growth': None, 'eps_ttm': None, 'capped': False}])
+        self.assertFalse([s for s in line if first_loss <= s['from'] < resumed and s['price'] is not None])
+        self.assertIsNotNone(line[-1]['price'])
 
     def test_slow_growth_takes_the_floor_and_fast_growth_is_capped(self):
         flat = steps(quarters(date(2016, 3, 31), [1.0] * 20), today=date(2026, 1, 1))[-1]

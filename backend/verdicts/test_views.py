@@ -134,7 +134,7 @@ class VerdictApiTests(APITestCase):
         self.assertEqual(detail['pct_vs_ma200'], 4.5)
 
     def test_detail_carries_the_growth_line_and_pe_percentiles(self):
-        line = [{'from': '2026-01-01', 'to': '2026-11-01', 'eps_growth': 12.0}]
+        line = [{'from': '2026-01-01', 'price': 180.0, 'pe': 18.0, 'growth': 18.2, 'eps_ttm': 10.0, 'capped': False}]
         verdict('AAA', growth_line=line, pe_p25=20.0, pe_p75=30.0)
         self.client.force_authenticate(self.bob)
         detail = self.client.get('/api/verdicts/aaa/').json()['verdict']
