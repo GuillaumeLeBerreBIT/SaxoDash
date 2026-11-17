@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { computeIndicators } from '../../lib/indicators'
 import { overlayStrokes, priceGeometry } from '../../lib/chartGeometry'
@@ -1214,6 +1214,142 @@ describe('placing a text annotation', () => {
 
     expect(onCreateTextAnnotation).not.toHaveBeenCalled()
     expect(queryByLabelText('Annotation text')).toBeNull()
+  })
+})
+
+describe('drawing and moving from the keyboard', () => {
+  const free = { id: 7, kind: 'free', price: 115 }
+  const target = { id: 'target', kind: 'target', price: 110 }
+  const ray = { id: 1, label: '', earlyField: 'start', x1: 2, y1: 105, x2: 20, y2: 130 }
+  const note = { id: 3, text: 'Earnings gap', index: 5, price: 108 }
+  const press = (element, key, options = {}) => {
+    fireEvent.keyDown(element, { key, ...options })
+    fireEvent.keyUp(element, { key, ...options })
+  }
+  const placer = () => ({ current: null })
+
+  it('places a horizontal line at the close of the session being read', () => {
+    const onCreateLine = vi.fn()
+    const onPlaced = vi.fn()
+    const placerRef = placer()
+    renderChart({ tool: 'hline', onCreateLine, onPlaced, placerRef })
+
+    expect(placerRef.current(10)).toMatch(/^Line placed at/)
+    expect(onCreateLine).toHaveBeenCalledWith(roundPrice(bars[10].close))
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('places a ray with one Enter at its start and one at its end, previewing it between', () => {
+    const onCreateTrendLine = vi.fn()
+    const placerRef = placer()
+    const { rerender, queryByTestId } = renderChart({ tool: 'ray', onCreateTrendLine, placerRef })
+
+    act(() => {
+      placerRef.current(4)
+    })
+    rerender(chart({ tool: 'ray', onCreateTrendLine, placerRef, hover: 12 }))
+    expect(queryByTestId('trend-line-preview')).not.toBeNull()
+    expect(placerRef.current(4)).toBeTruthy()
+    act(() => {
+      placerRef.current(12)
+    })
+
+    expect(onCreateTrendLine).toHaveBeenCalledWith(
+      { barDate: bars[4].date, price: roundPrice(bars[4].close) },
+      { barDate: bars[12].date, price: roundPrice(bars[12].close) },
+    )
+  })
+
+  it('opens the note box at the session being read and saves the typed note', () => {
+    const onCreateTextAnnotation = vi.fn()
+    const placerRef = placer()
+    const { getByLabelText } = renderChart({ tool: 'text', onCreateTextAnnotation, placerRef })
+
+    act(() => {
+      placerRef.current(6)
+    })
+    const input = getByLabelText('Annotation text')
+    fireEvent.change(input, { target: { value: 'Gap' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onCreateTextAnnotation).toHaveBeenCalledWith({ barDate: bars[6].date, price: roundPrice(bars[6].close), text: 'Gap' })
+  })
+
+  it('places nothing with the crosshair', () => {
+    const onCreateLine = vi.fn()
+    const placerRef = placer()
+    renderChart({ onCreateLine, placerRef })
+
+    expect(placerRef.current(10)).toBeNull()
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+
+  it('moves a line with the arrows and saves once when the key is released', () => {
+    const onMoveLine = vi.fn()
+    renderChart({ lines: [target], onMoveLine })
+    const line = screen.getByRole('slider', { name: 'Target' })
+
+    fireEvent.keyDown(line, { key: 'ArrowUp' })
+    fireEvent.keyDown(line, { key: 'ArrowUp', shiftKey: true })
+    expect(onMoveLine).not.toHaveBeenCalled()
+    fireEvent.keyUp(line, { key: 'ArrowUp' })
+
+    expect(onMoveLine).toHaveBeenCalledTimes(1)
+    expect(onMoveLine.mock.calls[0][1]).toBeGreaterThan(target.price)
+  })
+
+  it('edits a free line label on Enter and deletes it with Delete once focused', () => {
+    const onDeleteLine = vi.fn()
+    renderChart({ lines: [free], onDeleteLine })
+    const line = screen.getByRole('slider', { name: 'Line' })
+
+    act(() => line.focus())
+    fireEvent.keyDown(line, { key: 'Enter' })
+    expect(screen.getByLabelText('Line label')).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByLabelText('Line label'), { key: 'Escape' })
+
+    fireEvent.keyDown(line, { key: 'Delete' })
+    expect(onDeleteLine).toHaveBeenCalledWith(free)
+  })
+
+  it('gives focus back to the line after its label is saved from the keyboard', async () => {
+    renderChart({ lines: [free], onEditLineLabel: vi.fn() })
+    const line = screen.getByRole('slider', { name: 'Line' })
+
+    act(() => line.focus())
+    fireEvent.keyDown(line, { key: 'Enter' })
+    const input = screen.getByLabelText('Line label')
+    fireEvent.change(input, { target: { value: 'Support' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => expect(screen.getByRole('slider', { name: 'Line' })).toHaveFocus())
+  })
+
+  it('moves a ray end through time and price from the keyboard', () => {
+    const onMoveTrendLineEndpoint = vi.fn()
+    renderChart({ trendLines: [ray], onMoveTrendLineEndpoint })
+    const end = screen.getByRole('button', { name: /^End of ray/ })
+
+    fireEvent.keyDown(end, { key: 'ArrowLeft' })
+    press(end, 'ArrowDown')
+
+    const [line, endpoint, point] = onMoveTrendLineEndpoint.mock.calls[0]
+    expect(line).toEqual(ray)
+    expect(endpoint).toBe('end')
+    expect(point.barDate).toBe(bars[ray.x2 - 1].date)
+    expect(point.price).toBeLessThan(ray.y2)
+  })
+
+  it('moves a note with the arrows and opens its editor on Enter', () => {
+    const onMoveTextAnnotation = vi.fn()
+    renderChart({ textAnnotations: [note], onMoveTextAnnotation })
+    const hit = screen.getByRole('button', { name: /^Note Earnings gap/ })
+
+    press(hit, 'ArrowRight', { shiftKey: true })
+    expect(onMoveTextAnnotation).toHaveBeenCalledWith(note, { barDate: bars[note.index + 5].date, price: expect.any(Number) })
+
+    fireEvent.keyDown(hit, { key: 'Enter' })
+    expect(screen.getByLabelText('Annotation text')).toHaveValue('Earnings gap')
   })
 })
 
