@@ -1,4 +1,5 @@
 import re
+import secrets
 from pathlib import Path
 
 from django.conf import settings
@@ -420,20 +421,17 @@ class SessionTests(AccountTestCase):
         self.assertIn('new_password', weak.data)
 
     def test_guessing_the_current_password_is_throttled(self):
-        user = make_user('alice')
-        self.bearer(user)
-        for _ in range(10):
-            self.client.post(
-                '/api/auth/password/',
-                {'current_password': 'guess', 'new_password': 'a-Brand-New-4471'},
-                format='json',
-            )
-
-        right = self.client.post(
+        known, replacement = (secrets.token_urlsafe(16) for _ in range(2))
+        self.bearer(make_user('alice', password=known))
+        change = lambda current: self.client.post(
             '/api/auth/password/',
-            {'current_password': 'pw-Strong-123', 'new_password': 'a-Brand-New-4471'},
+            {'current_password': current, 'new_password': replacement},
             format='json',
         )
+        for _ in range(10):
+            change(secrets.token_urlsafe(16))
+
+        right = change(known)
 
         self.assertEqual(right.status_code, 429)
 
