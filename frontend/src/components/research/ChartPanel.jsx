@@ -60,7 +60,7 @@ export default function ChartPanel({
 
         <LineSaveAlert failed={lineSaveFailed} />
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           {controls.guides?.value ? <PeChip chip={guides?.chip} /> : null}
           <PeriodChange bars={bars} />
           {expandHref ? (

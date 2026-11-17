@@ -118,6 +118,14 @@ describe('GapBoxes', () => {
     const labels = [...container.querySelectorAll('text')].map((label) => label.textContent)
     expect(labels).toEqual(['Gap down 2.6x vol', 'Gap up 2.6x vol'])
   })
+
+  it('keeps a label inside the plot when its box starts left of view or runs to the right edge', () => {
+    const open = (index) => ({ index, up: false, from: 120, to: 112, end: 39, filled: false, rvol: 2.6 })
+    const { container } = draw(<GapBoxes gaps={[open(-3), open(38)]} geometry={geometry(400)} colors={colors} />)
+    const [left, right] = [...container.querySelectorAll('text')].map((label) => Number(label.getAttribute('x')))
+    expect(left).toBe(3)
+    expect(right + 'Gap down 2.6x vol'.length * 6).toBeLessThanOrEqual(400)
+  })
 })
 
 it('no longer draws flat price zones', () => {

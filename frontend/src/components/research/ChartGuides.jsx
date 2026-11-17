@@ -48,10 +48,16 @@ export function HighLine({ highs, geometry, colors }) {
 }
 
 const gapWords = (gap) => `Gap ${gap.up ? 'up' : 'down'} ${gap.rvol.toFixed(1)}x vol`
+const GAP_FONT = 10
+
+function gapLabelX(x, words, chartW) {
+  const width = words.length * GAP_FONT * 0.6
+  return Math.max(3, Math.min(x + 3, chartW - width - 3))
+}
 
 export function GapBoxes({ gaps, geometry, colors }) {
   if (!gaps?.length) return null
-  const { xAt, scaleY, candleWidth } = geometry
+  const { xAt, scaleY, candleWidth, chartW } = geometry
   return (
     <g data-testid="gap-boxes" pointerEvents="none">
       {gaps.map((gap) => {
@@ -72,7 +78,7 @@ export function GapBoxes({ gaps, geometry, colors }) {
               strokeDasharray={gap.filled ? undefined : '4 3'}
             />
             {gap.filled ? null : (
-              <text x={x + 3} y={y - 4} fill={color} fontSize="10" fontWeight="600" className="num">
+              <text x={gapLabelX(x, gapWords(gap), chartW)} y={y - 4} fill={color} fontSize={GAP_FONT} fontWeight="600" className="num">
                 {gapWords(gap)}
               </text>
             )}

@@ -7,7 +7,7 @@ export default function PeChip({ chip }) {
     <span
       data-testid="pe-chip"
       title="Today's P/E against the middle half of its own weekly P/E over about the last five years"
-      className="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-[11.5px] text-ink-2"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-2 py-0.5 text-[11.5px] text-ink-2"
     >
       <span data-testid="pe-chip-dot" className={`w-1.5 h-1.5 rounded-full ${DOT[chip.position]}`} />
       <span className="font-semibold text-ink">P/E {chip.pe}</span>
