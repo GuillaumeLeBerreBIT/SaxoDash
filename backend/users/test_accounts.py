@@ -12,6 +12,7 @@ from rest_framework.settings import api_settings
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from users.serializers import GENERIC_REFUSAL
 from users.testing import make_user
 
 User = get_user_model()
@@ -63,7 +64,7 @@ class SignupTests(AccountTestCase):
         )
 
         self.assertEqual(again.status_code, 400)
-        self.assertIn('email', again.data)
+        self.assertEqual(again.data, {'non_field_errors': [GENERIC_REFUSAL]})
 
     def test_signup_refuses_duplicate_username_case_insensitive(self):
         make_user('Alice')
@@ -343,6 +344,17 @@ class MeTests(AccountTestCase):
         self.assertEqual(right.status_code, 200)
         self.assertEqual(right.data['email'], 'new@example.com')
 
+    def test_account_changes_are_throttled_but_reading_me_is_not(self):
+        user = make_user('alice')
+        self.bearer(user)
+        for i in range(10):
+            self.client.patch('/api/auth/me/', {'username': f'alice{i}'}, format='json')
+
+        refused = self.client.patch('/api/auth/me/', {'username': 'alice-x'}, format='json')
+
+        self.assertEqual(refused.status_code, 429)
+        self.assertEqual(self.client.get('/api/auth/me/').status_code, 200)
+
     def test_change_email_to_taken_is_refused(self):
         make_user('bob', email='bob@example.com')
         user = make_user('alice')
@@ -406,6 +418,28 @@ class SessionTests(AccountTestCase):
         self.assertIn('current_password', wrong.data)
         self.assertEqual(weak.status_code, 400)
         self.assertIn('new_password', weak.data)
+
+    def test_guessing_the_current_password_is_throttled(self):
+        user = make_user('alice')
+        self.bearer(user)
+        for _ in range(10):
+            self.client.post(
+                '/api/auth/password/',
+                {'current_password': 'guess', 'new_password': 'a-Brand-New-4471'},
+                format='json',
+            )
+
+        right = self.client.post(
+            '/api/auth/password/',
+            {'current_password': 'pw-Strong-123', 'new_password': 'a-Brand-New-4471'},
+            format='json',
+        )
+
+        self.assertEqual(right.status_code, 429)
+
+    def test_access_tokens_live_fifteen_minutes(self):
+        token = RefreshToken.for_user(make_user('alice')).access_token
+        self.assertEqual(token['exp'] - token['iat'], 15 * 60)
 
     def test_sign_out_everywhere(self):
         user = make_user('alice')

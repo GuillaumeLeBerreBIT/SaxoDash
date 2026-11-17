@@ -48,10 +48,7 @@ class SignupSerializer(serializers.Serializer):
     website = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
     def validate_email(self, value):
-        value = value.strip().lower()
-        if email_taken(value):
-            raise serializers.ValidationError('That email is already registered.')
-        return value
+        return value.strip().lower()
 
     def validate_username(self, value):
         value = value.strip()
@@ -62,7 +59,7 @@ class SignupSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
-        if attrs.get('website'):
+        if attrs.get('website') or email_taken(attrs['email']):
             raise serializers.ValidationError(GENERIC_REFUSAL)
         candidate = User(username=attrs['username'], email=attrs['email'])
         try:

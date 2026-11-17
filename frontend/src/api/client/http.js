@@ -83,11 +83,15 @@ export function isNotConnected(error) {
 
 let refreshPromise = null;
 
-async function refreshAccessToken() {
+const withRefreshLock = (task) =>
+  navigator.locks ? navigator.locks.request("saxodash-token-refresh", task) : task();
+
+async function refreshAccessToken(staleAccess) {
   if (refreshPromise) return refreshPromise;
 
-  refreshPromise = (async () => {
-    const { refresh } = getTokens();
+  refreshPromise = withRefreshLock(async () => {
+    const { access, refresh } = getTokens();
+    if (access && access !== staleAccess) return true;
     if (!refresh) return false;
     const res = await fetch(`${BASE_URL}/api/token/refresh/`, {
       method: "POST",
@@ -98,7 +102,7 @@ async function refreshAccessToken() {
     if (!res.ok) return false;
     setTokens(await res.json());
     return true;
-  })();
+  });
 
   try {
     return await refreshPromise;
@@ -117,10 +121,11 @@ export async function apiFetch(path, options = {}) {
       },
     });
 
-    let res = await doFetch(getTokens().access)
+    const sentAccess = getTokens().access
+    let res = await doFetch(sentAccess)
 
     if (res.status === 401) {
-        if (await refreshAccessToken()) {
+        if (await refreshAccessToken(sentAccess)) {
             res = await doFetch(getTokens().access)
         } else {
             clearTokens()

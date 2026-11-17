@@ -129,6 +129,8 @@ REST_FRAMEWORK = {
         'signup': '5/hour',
         'password_reset': '5/hour',
         'password_reset_confirm': '20/hour',
+        'account_change': '10/hour',
+        'password_change': '10/hour',
     },
     'NUM_PROXIES': int(os.environ.get('NUM_PROXIES') or 0),
 }
@@ -138,7 +140,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     # Without this, rotation issues a new token but the old one stays valid
