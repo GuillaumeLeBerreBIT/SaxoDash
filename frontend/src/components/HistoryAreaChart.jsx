@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { useNetWorthHistory } from '../api/queries'
 import { fmtEur } from '../lib/format'
 import { chartTooltipProps, dateAxisProps, gridProps, moneyAxisProps, seriesAxis, formatAxisDate } from '../lib/charts'
@@ -7,6 +7,7 @@ import { useChartColors } from '../theme/useChartColors'
 import { RangePills } from './RangePills'
 import { Card } from './ui'
 import { chartPlaceholderFor } from '../lib/chartState'
+import ChartFrame from './ChartFrame'
 
 export default function HistoryAreaChart({ title, subtitle, dataKey, name, color, className = '' }) {
   const c = useChartColors()
@@ -25,38 +26,34 @@ export default function HistoryAreaChart({ title, subtitle, dataKey, name, color
       title={title}
       right={<RangePills value={range} onChange={setRange} />}
     >
-      <div className="h-[var(--chart-h-lg)]">
-        {placeholder ?? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid {...gridProps(c)} />
-              <XAxis {...dateAxisProps(c)} />
-              <YAxis {...moneyAxisProps(c)} {...seriesAxis(data ?? [], [dataKey])} />
-              <Tooltip
-                {...chartTooltipProps(c)}
-                labelFormatter={formatAxisDate}
-                formatter={(value) => [fmtEur(value), name]}
-              />
-              <Area
-                type="monotone"
-                dataKey={dataKey}
-                name={name}
-                stroke={color}
-                strokeWidth={2}
-                fill={`url(#${gradientId})`}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      <ChartFrame className="h-[var(--chart-h-lg)]" placeholder={placeholder}>
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...dateAxisProps(c)} />
+          <YAxis {...moneyAxisProps(c)} {...seriesAxis(data ?? [], [dataKey])} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            labelFormatter={formatAxisDate}
+            formatter={(value) => [fmtEur(value), name]}
+          />
+          <Area
+            type="monotone"
+            dataKey={dataKey}
+            name={name}
+            stroke={color}
+            strokeWidth={2}
+            fill={`url(#${gradientId})`}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ChartFrame>
     </Card>
   )
 }
