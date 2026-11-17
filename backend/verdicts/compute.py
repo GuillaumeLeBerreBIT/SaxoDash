@@ -1,4 +1,6 @@
 import logging
+import math
+from datetime import date
 from typing import NamedTuple
 
 from django.db import transaction
@@ -6,7 +8,7 @@ from django.utils import timezone
 
 from research.models import DailyBars, ScreenerRow
 
-from . import price_line, rules
+from . import growth_line, price_line, rules
 from .models import StockVerdict, VerdictCall
 
 logger = logging.getLogger(__name__)
@@ -30,8 +32,34 @@ def _price_line(row):
     return price_line.from_bars(stored)
 
 
-def _store(row, quality, valuation):
+def _quarterly_eps(row):
+    parsed = {}
+    for entry in (row.fundamentals_history or {}).get('quarterly_eps') or []:
+        try:
+            period, value = entry
+            value = float(value)
+            if not math.isfinite(value):
+                continue
+            parsed[date.fromisoformat(period)] = value
+        except (TypeError, ValueError):
+            continue
+    return list(parsed.items())
+
+
+def _growth_line(row, today):
+    return growth_line.steps(_quarterly_eps(row), today)
+
+
+def _pe_percentiles(row):
+    levels = rules._levels(row.pe_history)
+    if levels is None:
+        return None, None
+    return levels['p25'], levels['p75']
+
+
+def _store(row, quality, valuation, today):
     spark, high_1y = _price_line(row)
+    pe_p25, pe_p75 = _pe_percentiles(row)
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
@@ -43,6 +71,9 @@ def _store(row, quality, valuation):
             'current_pe': valuation['current_pe'],
             'cheap_below': valuation['cheap_below'],
             'expensive_above': valuation['expensive_above'],
+            'pe_p25': pe_p25,
+            'pe_p75': pe_p75,
+            'growth_line': _growth_line(row, today),
             'last_close': row.last_close,
             'pct_vs_ma200': row.pct_vs_ma200,
             'spark': spark,
@@ -70,7 +101,7 @@ def _judge(row, today):
     quality = rules.quality(row)
     valuation = rules.valuation(row)
     with transaction.atomic():
-        _store(row, quality, valuation)
+        _store(row, quality, valuation, today)
         _track(row, quality, valuation, today)
 
 

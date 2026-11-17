@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from research.models import DailyBars, ScreenerRow
 
-from . import compute
+from . import compute, growth_line
 from .models import StockVerdict, VerdictCall
 
 STRONG_HISTORY = {'annual': [
@@ -228,3 +228,70 @@ class ComputeTest(TestCase):
         self.assertGreater(StockVerdict.objects.get().computed_at, computed_before)
         self.assertEqual(list(StockVerdict.objects.values(*fields)), before)
         self.assertEqual(list(VerdictCall.objects.values()), calls)
+
+
+def quarters(count=20, last=date(2026, 9, 30)):
+    ends = []
+    year, month = last.year, last.month
+    for _ in range(count):
+        ends.append(date(year, month, 30 if month in (6, 9) else 31))
+        month -= 3
+        if month < 1:
+            month += 12
+            year -= 1
+    ends.reverse()
+    return [(end, 1.0 + index * 0.1) for index, end in enumerate(ends)]
+
+
+class GrowthLineStoredTest(TestCase):
+    def test_stores_the_growth_line_and_pe_percentiles(self):
+        parsed = quarters()
+        history = {'quarterly_eps': [[end.isoformat(), value] for end, value in parsed]}
+        pe = {'p25': 20.0, 'p75': 30.0, 'current': 25.0, 'eps_ttm': 4.0, 'weeks': 200}
+        make_row('AAPL', fundamentals_history=history, pe_history=pe)
+
+        compute.run(today=DAY_ONE)
+
+        verdict = StockVerdict.objects.get(ticker='AAPL')
+        self.assertEqual(verdict.growth_line, growth_line.steps(parsed, DAY_ONE))
+        self.assertTrue(verdict.growth_line)
+        self.assertEqual((verdict.pe_p25, verdict.pe_p75), (20.0, 30.0))
+
+    def test_a_row_without_eps_history_gets_an_empty_line(self):
+        make_row('AAPL')
+
+        result = compute.run(today=DAY_ONE)
+
+        self.assertEqual(result.written, 1)
+        self.assertEqual(StockVerdict.objects.get().growth_line, [])
+
+    def test_a_row_with_empty_history_still_gets_a_verdict(self):
+        make_row('AAPL', fundamentals_history={})
+
+        compute.run(today=DAY_ONE)
+
+        self.assertEqual(StockVerdict.objects.get().growth_line, [])
+
+    def test_not_judged_has_no_percentiles(self):
+        make_row('AAPL', pe_history={})
+
+        compute.run(today=DAY_ONE)
+
+        verdict = StockVerdict.objects.get()
+        self.assertIsNone(verdict.pe_p25)
+        self.assertIsNone(verdict.pe_p75)
+
+    def test_unusable_entries_are_skipped_and_duplicate_period_ends_keep_the_last(self):
+        clean = quarters()
+        entries = [[end.isoformat(), value] for end, value in clean]
+        entries.insert(3, [clean[5][0].isoformat(), 99.0])
+        entries.insert(0, ['2020-03-31', None])
+        entries.insert(0, ['not a date', 1.0])
+        entries.insert(0, ['2020-06-30', 'n/a'])
+        make_row('AAPL', fundamentals_history={'quarterly_eps': entries})
+
+        compute.run(today=DAY_ONE)
+
+        self.assertEqual(
+            StockVerdict.objects.get().growth_line, growth_line.steps(clean, DAY_ONE),
+        )
