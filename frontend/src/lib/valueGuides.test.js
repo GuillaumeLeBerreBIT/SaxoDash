@@ -58,13 +58,27 @@ describe('growthSentence', () => {
   it('words the growth line, capped or not', () => {
     expect(growthSentence(step, 118, 'USD')).toBe('Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00. Price is +18% from that line, so expensive.')
     expect(growthSentence(step, 108, 'USD')).toMatch(/Price is \+8% from that line, so fair\.$/)
-    expect(growthSentence(capped, 66, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00; price is −34% below it, so cheap even on that floor.')
+    expect(growthSentence(capped, 66, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00; price is 34% below it, so cheap even on that floor.')
   })
 
   it('says a capped line above the floor is priced in, without an instruction', () => {
     const text = growthSentence(capped, 150, 'USD')
-    expect(text).toMatch(/price is \+50% above it, so its growth is priced in\.$/)
+    expect(text).toMatch(/price is 50% above it, so its growth is priced in\.$/)
     expect(text).not.toMatch(/buy|sell|opportunity/i)
+  })
+})
+
+describe('growthSentence edge cases', () => {
+  it('words a capped price slightly under the line as below it', () => {
+    expect(growthSentence(capped, 95, 'USD')).toMatch(/price is 5% below it, so its growth is priced in\.$/)
+  })
+
+  it('describes the line without a comparison when there is no price', () => {
+    for (const price of [null, undefined, NaN]) {
+      expect(growthSentence(step, price, 'USD')).toBe('Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00.')
+      expect(growthSentence(capped, price, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00.')
+    }
+    expect(entrySentence({ verdict: verdict(), price: null }).next).not.toMatch(/−100|NaN|null/)
   })
 })
 

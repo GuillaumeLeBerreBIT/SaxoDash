@@ -41,13 +41,18 @@ const signedPercent = (value) => {
 export function growthSentence(step, close, currency) {
   const growth = Math.round(step.growth)
   const level = fmtMoney(step.price, currency)
-  const gap = signedPercent((close / step.price - 1) * 100)
-  const reading = readPrice(close, step)
+  const known = Number.isFinite(close)
+  const change = known ? (close / step.price - 1) * 100 : 0
+  const reading = readPrice(known ? close : null, step)
   if (step.capped) {
-    const ending = reading === 'cheap' ? `price is ${gap} below it, so cheap even on that floor` : `price is ${gap} above it, so its growth is priced in`
-    return `Against its growth: earnings grew ${growth}% a year, more than a P/E of ${step.pe} assumes. At P/E ${step.pe} that is about ${level}; ${ending}.`
+    const lead = `Against its growth: earnings grew ${growth}% a year, more than a P/E of ${step.pe} assumes. At P/E ${step.pe} that is about ${level}`
+    if (!known) return `${lead}.`
+    const side = Math.round(change) < 0 ? 'below' : 'above'
+    const ending = reading === 'cheap' ? 'so cheap even on that floor' : 'so its growth is priced in'
+    return `${lead}; price is ${Math.abs(Math.round(change))}% ${side} it, ${ending}.`
   }
-  return `Against its growth: earnings grew ${growth}% a year over three years, which supports a P/E of ${step.pe}, about ${level}. Price is ${gap} from that line, so ${reading}.`
+  const lead = `Against its growth: earnings grew ${growth}% a year over three years, which supports a P/E of ${step.pe}, about ${level}.`
+  return known ? `${lead} Price is ${signedPercent(change)} from that line, so ${reading}.` : lead
 }
 
 const percent = (value) => `${Math.abs(value).toFixed(1)}%`
