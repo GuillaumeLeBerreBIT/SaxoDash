@@ -690,25 +690,53 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**The chart shows where the price is cheap or expensive for the company, in words, and nothing from the candles.**
+**The chart judges each day's price against the growth known that day, and draws only the two candle tools with evidence (2026-11-17).**
 Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
 on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
-showed the marks win no more often than a random day: 58% against 59%). What is drawn now comes from the
-verdict, not from chart signals. `lib/priceZones.js` reads the verdict's `cheap_below` and `expensive_above`,
-which are already prices (trailing-twelve-month EPS times the 25th and 75th percentile of the stock's own P/E
-history, recomputed nightly): the chart shades green below the first and amber above the second, each labelled
-in words, and points at a zone that is out of view instead of stretching the price scale. The cheap zone is
-called a buy zone only when quality is `strong`, the verdict's own Buy rule. A sentence above the chart
-(`entrySentence`) gives the verdict's action, why, the price at which it changes and what a stop costs; when
-today's close sits in another zone than last night's verdict it says the verdict updates tonight. The
-stop-loss is one red line from the same `planFromPage` as the Trade plan card, off by default because a
-long-term holder sells on a weaker business, not on a price: when switched on, the chart and the sentence say
-how far it is below today's close, how it compares with the average price paid when the stock is held, and
-what buying the planned shares today would risk. The Guides menu holds both switches (`chartPrefs.guides`:
-`zones` on, `plan` off). Chart signals stay in the Setup card
-and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
-valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
-points a year, not reliably different from zero.
+showed the marks win no more often than a random day: 58% against 59%). The flat green and amber zones that
+followed (trailing EPS times the 25th and 75th P/E percentile, from `cheap_below` / `expensive_above`) judged
+last year's candles with this year's earnings: on NVDA every candle of two years sat in the cheap zone. They are
+gone. What is drawn now:
+
+- **Growth line** (`verdicts/growth_line.py`, stored nightly as `StockVerdict.growth_line`). For each quarter,
+  trailing-twelve-month EPS is compared with the trailing EPS exactly 12 quarters earlier, and the yearly rate
+  is the growth. A quarter counts only from 35 days after its period end (`REPORT_LAG_DAYS`), so no candle is
+  judged with a figure published after it. A one-off quarter, more than 2.5 times or less than 0.4 times the
+  median of the four before it, is replaced by that median before summing. Fair P/E is the growth in percent,
+  held between 15 and 30; the line is that P/E times the trailing EPS, one step per report. Within ±10% of it
+  (`lib/valueGuides.js::FAIR_BAND`) reads fair, below cheap, above expensive. Above 30% growth the P/E is capped
+  at 30 and the step is marked `capped`: the line is a floor labelled "P/E 30+", and above it reads "growth
+  priced in", never "expensive", because a company growing faster than that is not overpriced at P/E 30.
+- **P/E chip** beside the price: today's P/E against the verdict's own 25th and 75th percentiles (`pe_p25`,
+  `pe_p75`, now stored on the verdict). It keeps the verdict's method, which counts a quarter from its quarter
+  end with no report lag, so it always matches the verdict badge.
+- **Two views, on purpose.** The verdict's grade, action and track record still judge valuation on the P/E
+  percentiles and are unchanged; the growth line is chart context. The owner chose on 2026-11-17 to show both,
+  and they can disagree (MSFT: badge cheap at P/E 27 against its usual 28-36, growth line fair to expensive).
+  The sentence above the chart keeps the verdict's word and why, then gives the growth reading as "Against its
+  growth: ...". The "verdict updates tonight" clause and the "opportunity zone" wording went with the zones.
+- **52-week high and volume gaps**, the only candle-derived tools drawn, because they are the two the Signal
+  Lab tested with evidence behind them (distance from the 1-year high; drift after a high-volume gap). The
+  gaps use the Signal Lab's own definitions, mirrored in `lib/indicators.js::volumeGaps` and pinned by
+  `gapParity.test.js`: an open more than 4% from the previous close on more than twice the previous 20
+  sessions' average volume, and a gap up must close at or above 98% of its open. Each is a box from the
+  previous close to the open, until the price trades back through the previous close or 60 sessions pass,
+  for gaps in the last 252 sessions. Gap up held up in the Signal Lab; gap down "cannot be judged fairly"
+  (it buys weakness, see above), and the Guide tab says both.
+- Tags on the right axis replace word boxes, with no painted background; a line outside the visible range is
+  tagged at the edge instead of stretching the price scale. The Guides menu (`chartPrefs.guides`) holds `value`
+  (growth line and chip), `high52`, `gaps` and `plan` (stop-loss, off); a saved `zones` switch reads as `value`.
+- The stop-loss is unchanged: one red line from the same `planFromPage` as the Trade plan card, off by default
+  because a long-term holder sells on a weaker business, not on a price; when on, the chart and the sentence say
+  how far it is below today's close, how it compares with the average price paid, and what the planned shares
+  would risk.
+
+Every other chart signal stays in the Setup card and the Guide tab's list with its evidence. Chart patterns
+(double top, head and shoulders, triangles, flags) and trendlines are held back until they are graded on the
+stored 23 years of bars as the Signal Lab was: on NVDA's last two years only 1 of 4 confirmed patterns went the
+pattern's way. `cheap_below` and `expensive_above` stay in the payload for the cards that read them. Neither
+line is a forecast: the earlier test found cheap against expensive worth one to two points a year, not
+reliably different from zero.
 
 **Cards on the Research page must agree, or say why they differ (audit, 2026-11-15).** The verdict's quality
 checks read the median of the last five fiscal years and five-year growth, while the Investment snapshot

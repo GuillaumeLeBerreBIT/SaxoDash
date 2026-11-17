@@ -41,6 +41,22 @@ describe('GuideTab', () => {
     expect(screen.getByRole('region', { name: 'No edge found' })).toHaveTextContent('No edge found in 7,657 cases')
   })
 
+  it('explains the four chart guides and the evidence for the gaps', () => {
+    render(<GuideTab />)
+
+    const section = screen.getByRole('region', { name: 'Chart guides' })
+    for (const name of ['Growth line', 'P/E chip', '52-week high', 'Volume gaps']) {
+      expect(section).toHaveTextContent(name)
+    }
+    expect(section).toHaveTextContent(/gap up held up/i)
+    expect(section).toHaveTextContent(/gap down cannot be judged fairly/i)
+  })
+
+  it('no longer describes the removed cheap and expensive zones', () => {
+    render(<GuideTab />)
+    expect(screen.queryByText('Opportunity and expensive zones')).not.toBeInTheDocument()
+  })
+
   it('leaves the list out before any scores exist', () => {
     render(<GuideTab />)
     expect(screen.queryByText('Signals tested')).not.toBeInTheDocument()
