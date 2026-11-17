@@ -1,0 +1,17 @@
+const DOT = { below: 'bg-up', above: 'bg-warn', inside: 'bg-ink-3' }
+const WORD = { below: 'below', above: 'above', inside: 'within' }
+
+export default function PeChip({ chip }) {
+  if (!chip) return null
+  return (
+    <span
+      data-testid="pe-chip"
+      title="Today's P/E against the middle half of the P/E this company has traded at over the past years"
+      className="inline-flex items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-[11.5px] text-ink-2"
+    >
+      <span data-testid="pe-chip-dot" className={`w-1.5 h-1.5 rounded-full ${DOT[chip.position]}`} />
+      <span className="font-semibold text-ink">P/E {chip.pe}</span>
+      <span className="text-ink-3">{WORD[chip.position]} its usual {chip.low}–{chip.high}</span>
+    </span>
+  )
+}

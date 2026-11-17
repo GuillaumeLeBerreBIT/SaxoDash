@@ -12,7 +12,7 @@ const verdictData = (over = {}) => ({
   cheap_below: 249.55, expensive_above: 316.01, pct_vs_ma200: 12.3, checks: PASSING,
   held: true, weight_pct: 11.1, weight_cap_pct: 15, ...over,
 })
-const sentence = { word: 'HOLD', tone: undefined, why: 'Strong company, expensive price.', next: 'Buy would show below US$249.55.', earnings: null }
+const sentence = { word: 'HOLD', tone: undefined, why: 'Strong company, expensive price.', next: 'Against its growth: earnings grew 18% a year over three years, which supports a P/E of 30, about US$249.55.', earnings: null }
 const position = { qty: 10, value: '3232.00', pnl: '215.00', pnl_pct: 7.1, weight: 11.1, avg_cost: 301.2, currency: 'USD', price_source: 'live' }
 
 const renderCard = (over = {}) =>
@@ -24,7 +24,7 @@ describe('AnswerCard', () => {
     const card = screen.getByTestId('answer-card')
     expect(within(card).getByText('HOLD')).toBeInTheDocument()
     expect(within(card).getByText('Strong company, expensive price.')).toBeInTheDocument()
-    expect(within(card).getByText('Buy would show below US$249.55.')).toBeInTheDocument()
+    expect(within(card).getByText(/^Against its growth: earnings grew 18%/)).toBeInTheDocument()
   })
 
   it('counts the checks and keeps the list closed until asked', () => {

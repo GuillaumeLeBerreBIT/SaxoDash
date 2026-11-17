@@ -169,20 +169,37 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('shades the buy and expensive zones, says what to do in one sentence, and the Guides menu switches them off', async () => {
-    queries.useVerdict.mockReturnValue({ ...idle, data: judged })
+  it('answers with the growth line and a P/E chip instead of flat zones, and the Guides menu switches the value guide off', async () => {
+    const line = [{ from: '2020-01-01', price: 120, growth: 18, pe: 30, capped: false }]
+    queries.useVerdict.mockReturnValue({
+      ...idle,
+      data: { ...judged, growth_line: line, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
+    })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
-    const banner = screen.getByTestId('answer-card')
-    expect(banner).toHaveTextContent('WAIT')
-    expect(banner).toHaveTextContent('Strong company, fair price.')
-    expect(banner).toHaveTextContent(/Becomes cheap below \S*100\.00 \(\d+% lower\)/)
-    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Opportunity and expensive zones/ }))
     expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.zones).toBe(false)
+    const card = screen.getByTestId('answer-card')
+    expect(card).toHaveTextContent('Strong company, fair price.')
+    expect(card).toHaveTextContent(/Against its growth: earnings grew 18% a year/)
+    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
+    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
+    for (const name of [/Value: growth line and P\/E/, /52-week high/, /Volume gaps/]) {
+      expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
+    }
+    await userEvent.click(screen.getByRole('menuitem', { name: /Value: growth line and P\/E/ }))
+    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.value).toBe(false)
+  })
+
+  it('says there is too little history for a growth line when the verdict carries none', () => {
+    queries.useVerdict.mockReturnValue({ ...idle, data: judged })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByTestId('answer-card')).toHaveTextContent('Too little earnings history for a growth line.')
+    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
   })
 
   it('keeps the stop-loss off until it is switched on, then draws it against today\'s close and your average price', async () => {
