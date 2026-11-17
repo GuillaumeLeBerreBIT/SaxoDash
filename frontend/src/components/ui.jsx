@@ -486,7 +486,7 @@ export function Segmented({ options, value, onChange, label, className = '' }) {
   return (
     <div role="group" aria-label={label} className={`inline-flex flex-wrap gap-0.5 p-[3px] rounded-[9px] bg-track ${className}`}>
       {options.map((option) => (
-        <TBtn key={option.value} active={option.value === value} onClick={() => onChange(option.value)}>
+        <TBtn key={option.value} active={option.value === value} onClick={() => onChange(option.value)} title={option.title}>
           {option.label}
         </TBtn>
       ))}

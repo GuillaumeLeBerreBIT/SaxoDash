@@ -5,13 +5,13 @@ import { Search } from 'lucide-react'
 
 import { useInstrumentSearch } from '../api/queries'
 import { ALL_ASSET_TYPES, rankInstrumentResults, researchHref } from '../lib/research'
-import { Tag, TBtn } from './ui'
+import { Segmented, Tag } from './ui'
 import { usePortalMenuRect } from './usePortalMenuRect'
 
 const FILTERS = [
-  [ALL_ASSET_TYPES, 'All'],
-  ['Stock', 'Stocks'],
-  ['Etf', 'ETFs'],
+  { value: ALL_ASSET_TYPES, label: 'All' },
+  { value: 'Stock', label: 'Stocks' },
+  { value: 'Etf', label: 'ETFs' },
 ]
 
 const researchResultHref = (result) =>
@@ -69,13 +69,13 @@ export default function InstrumentSearchBar({ hrefFor = researchResultHref, stac
   }
 
   const filter = (
-    <div className={`flex items-center gap-0.5 rounded-[9px] bg-track p-[3px] shrink-0 ${stacked ? 'self-start' : ''}`}>
-      {FILTERS.map(([value, label]) => (
-        <TBtn key={value} active={assetTypes === value} onClick={() => setAssetTypes(value)}>
-          {label}
-        </TBtn>
-      ))}
-    </div>
+    <Segmented
+      label="Asset type"
+      options={FILTERS}
+      value={assetTypes}
+      onChange={setAssetTypes}
+      className={`shrink-0 ${stacked ? 'self-start' : ''}`}
+    />
   )
 
   return (
