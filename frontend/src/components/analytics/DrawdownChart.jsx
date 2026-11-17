@@ -1,9 +1,10 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 import { Card, EmptyState } from '../ui'
 import { chartTooltipProps, dateAxisProps, gridProps, formatAxisDate, axisProps, seriesAxis } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 import { drawdownDomain } from '../../lib/portfolioStats'
+import ChartFrame from '../ChartFrame'
 
 /** Decline from the running peak of the portfolio's own value - no benchmark. */
 export default function DrawdownChart({ series, maxDrawdown, className = '' }) {
@@ -25,35 +26,33 @@ export default function DrawdownChart({ series, maxDrawdown, className = '' }) {
       {series.length === 0 ? (
         <EmptyState title="No drawdown yet" hint="It appears once the portfolio has a recorded history." />
       ) : (
-      <div className="h-[var(--chart-h-lg)]">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="ddFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={c.down} stopOpacity={0.22} />
-                <stop offset="100%" stopColor={c.down} stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...dateAxisProps(c)} />
-            <YAxis {...axisProps(c)} width={54} {...seriesAxis([...series, { dd: drawdownDomain(series)[0] }], ['dd'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
-            <Tooltip
-              {...chartTooltipProps(c)}
-              labelFormatter={formatAxisDate}
-              formatter={(v) => [fmtPct(v, { decimals: 1 }), 'Drawdown']}
-            />
-            <Area
-              type="monotone"
-              dataKey="dd"
-              stroke={c.down}
-              strokeWidth={1.5}
-              fill="url(#ddFill)"
-              dot={false}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="h-[var(--chart-h-lg)]">
+        <AreaChart data={series} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id="ddFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={c.down} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={c.down} stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...dateAxisProps(c)} />
+          <YAxis {...axisProps(c)} width={54} {...seriesAxis([...series, { dd: drawdownDomain(series)[0] }], ['dd'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            labelFormatter={formatAxisDate}
+            formatter={(v) => [fmtPct(v, { decimals: 1 }), 'Drawdown']}
+          />
+          <Area
+            type="monotone"
+            dataKey="dd"
+            stroke={c.down}
+            strokeWidth={1.5}
+            fill="url(#ddFill)"
+            dot={false}
+            isAnimationActive={false}
+          />
+        </AreaChart>
+      </ChartFrame>
       )}
     </Card>
   )

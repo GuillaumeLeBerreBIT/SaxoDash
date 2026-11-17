@@ -1,9 +1,10 @@
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { axisProps, chartTooltipProps, gridProps, statementSeries } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { CHART_SERIES, chartRows } from '../../lib/statements'
+import ChartFrame from '../ChartFrame'
 
 export default function FinancialsChart({ periods }) {
   const c = useChartColors()
@@ -22,35 +23,33 @@ export default function FinancialsChart({ periods }) {
           </li>
         ))}
       </ul>
-      <div className="mt-3 h-[var(--chart-h-lg)]" role="img" aria-label="Revenue and profit by period">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="label" />
-            <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
-            <ReferenceLine y={0} stroke={c.axis} />
-            <Tooltip
-              {...chartTooltipProps(c)}
-              cursor={{ fill: gridProps(c).stroke }}
-              formatter={(value, name) => [fmtTooltipDollars(value), name]}
-            />
-            {series.map(({ key, label }) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                name={label}
-                fill={colors[key]}
-                radius={[3, 3, 0, 0]}
-                maxBarSize={14}
-                isAnimationActive={false}
-              >
-                {key === 'net_income' &&
-                  rows.map((row) => <Cell key={row.label} fill={row[key] < 0 ? c.down : colors[key]} />)}
-              </Bar>
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="mt-3 h-[var(--chart-h-lg)]" label="Revenue and profit by period">
+        <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="label" />
+          <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
+          <ReferenceLine y={0} stroke={c.axis} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            cursor={{ fill: gridProps(c).stroke }}
+            formatter={(value, name) => [fmtTooltipDollars(value), name]}
+          />
+          {series.map(({ key, label }) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              name={label}
+              fill={colors[key]}
+              radius={[3, 3, 0, 0]}
+              maxBarSize={14}
+              isAnimationActive={false}
+            >
+              {key === 'net_income' &&
+                rows.map((row) => <Cell key={row.label} fill={row[key] < 0 ? c.down : colors[key]} />)}
+            </Bar>
+          ))}
+        </BarChart>
+      </ChartFrame>
     </div>
   )
 }

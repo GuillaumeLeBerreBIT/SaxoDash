@@ -10,7 +10,7 @@ import { bestActionFirst, mergeShareClasses } from '../lib/shelfRows'
 import ActionBadge from '../components/verdicts/ActionBadge'
 import Sparkline from '../components/discover/Sparkline'
 import WatchlistStar from '../components/discover/WatchlistStar'
-import { Alert, Card, DayChange, InstrumentLogo, Select, Skeleton, Td, Th, Tr } from '../components/ui'
+import { Alert, Card, DataTable, DayChange, InstrumentLogo, Select, Skeleton, Td, Th, Tr } from '../components/ui'
 
 const ALL_SECTORS = ''
 const NO_ITEMS = []
@@ -108,25 +108,23 @@ export default function DiscoverShelf() {
           right={<span className="whitespace-nowrap text-[12px] text-ink-3">{updatedLabel(data.as_of)}</span>}
         >
           {sectors.length > 1 ? <SectorSelect sectors={sectors} total={items.length} active={active} onPick={setSector} /> : null}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <Th edge>Stock</Th>
-                  <Th hideBelow="md">Sector</Th>
-                  <Th hideBelow="md">3 months</Th>
-                  <Th align="right" hideBelow="md">Last</Th>
-                  <Th align="right" hideBelow="md">1 day</Th>
-                  <Th hideBelow="md">Why it is here</Th>
-                  <Th align="right">Action</Th>
-                  <Th align="right" edge><span className="sr-only">Actions</span></Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((item) => <ShelfRowItem key={`${item.uic}:${item.asset_type}`} item={item} verdict={verdictOf(item)} />)}
-              </tbody>
-            </table>
-          </div>
+          <DataTable label={data.title}>
+            <thead>
+              <tr>
+                <Th edge>Stock</Th>
+                <Th hideBelow="md">Sector</Th>
+                <Th hideBelow="md">3 months</Th>
+                <Th align="right" hideBelow="md">Last</Th>
+                <Th align="right" hideBelow="md">1 day</Th>
+                <Th hideBelow="md">Why it is here</Th>
+                <Th align="right">Action</Th>
+                <Th align="right" edge><span className="sr-only">Actions</span></Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((item) => <ShelfRowItem key={`${item.uic}:${item.asset_type}`} item={item} verdict={verdictOf(item)} />)}
+            </tbody>
+          </DataTable>
         </Card>
       ) : null}
     </div>

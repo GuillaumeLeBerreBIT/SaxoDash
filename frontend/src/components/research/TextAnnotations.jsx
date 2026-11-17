@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
 
 import { indexFromPointer, svgY } from '../../lib/chartGeometry'
-import { roundPrice } from '../../lib/priceLines'
+import { annotationKeyCommand, NUDGE_KEYS, nudgePoint, showsKeyboardFocus } from '../../lib/chartKeys'
+import { fmtDate } from '../../lib/format'
+import { badgePrice, roundPrice } from '../../lib/priceLines'
 import { useChartColors } from '../../theme/useChartColors'
 
 const HIT_RADIUS = 10
@@ -11,7 +13,10 @@ const stop = (event) => event.stopPropagation()
 function Note({ item, geometry, data, selected, onSelect, onMove, onEdit }) {
   const c = useChartColors()
   const [preview, setPreview] = useState(null)
+  const [focused, setFocused] = useState(false)
   const drag = useRef(null)
+  const keyed = useRef(false)
+  const index = preview?.index ?? item.index
   const x = preview?.x ?? geometry.xAt(item.index)
   const y = preview?.y ?? geometry.scaleY(item.price)
 
@@ -20,25 +25,60 @@ function Note({ item, geometry, data, selected, onSelect, onMove, onEdit }) {
     setPreview(null)
   }
 
+  const save = (moved) => {
+    cancel()
+    if (moved == null) return
+    onMove(item, { barDate: data[moved.index].date, price: roundPrice(geometry.priceAtY(moved.y)) })
+  }
+
+  const saveKeyed = () => {
+    if (!keyed.current) return
+    keyed.current = false
+    save(preview)
+  }
+
   return (
     <g data-testid={`text-annotation-${item.id}`}>
       <text
         x={x + 6}
         y={y}
-        fill={selected ? c.ink : c.axisCategory}
+        fill={selected || focused ? c.ink : c.axisCategory}
         fontSize="11"
         pointerEvents="none"
       >
         {item.text}
       </text>
-      <circle cx={x} cy={y} r={2.5} fill={c.axisCategory} pointerEvents="none" />
+      <circle cx={x} cy={y} r={focused ? 4 : 2.5} fill={c.axisCategory} pointerEvents="none" />
       <circle
         data-testid={`text-annotation-hit-${item.id}`}
         cx={x}
         cy={y}
         r={HIT_RADIUS}
         fill="transparent"
-        style={{ cursor: 'move' }}
+        style={{ cursor: 'move', outline: 'none' }}
+        tabIndex={0}
+        role="button"
+        aria-label={`Note ${item.text}, ${fmtDate(data[Math.min(index, data.length - 1)]?.date)} at ${badgePrice(roundPrice(geometry.priceAtY(y)))}`}
+        onFocus={(e) => {
+          setFocused(showsKeyboardFocus(e.currentTarget))
+          onSelect(item.id)
+        }}
+        onBlur={() => {
+          setFocused(false)
+          saveKeyed()
+        }}
+        onKeyDown={(e) => {
+          const command = annotationKeyCommand(e)
+          if (!command) return
+          e.preventDefault()
+          if (command.edit) return onEdit(item.id)
+          keyed.current = true
+          const next = nudgePoint({ index: Math.min(index, data.length - 1), y }, command, data.length)
+          setPreview({ ...next, x: geometry.xAt(next.index) })
+        }}
+        onKeyUp={(e) => {
+          if (NUDGE_KEYS.has(e.key)) saveKeyed()
+        }}
         onPointerDown={(e) => {
           e.stopPropagation()
           e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -51,10 +91,8 @@ function Note({ item, geometry, data, selected, onSelect, onMove, onEdit }) {
           setPreview({ x: geometry.xAt(index), y: svgY(e), index })
         }}
         onPointerUp={() => {
-          const current = drag.current
-          cancel()
-          if (!current?.moved || preview == null) return
-          onMove(item, { barDate: data[preview.index].date, price: roundPrice(geometry.priceAtY(preview.y)) })
+          const moved = drag.current?.moved
+          save(moved ? preview : null)
         }}
         onPointerCancel={cancel}
         onClick={(e) => {

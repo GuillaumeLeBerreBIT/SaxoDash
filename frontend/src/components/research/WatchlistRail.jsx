@@ -12,13 +12,18 @@ import { fmtNum } from '../../lib/format'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
-import { Card, DayChange, InstrumentLogo, TBtn } from '../ui'
+import { Card, DayChange, InstrumentLogo, Segmented } from '../ui'
 import ActionBadge from '../verdicts/ActionBadge'
 import { Menu, MenuRow, MenuSeparator } from './menu'
 import WatchlistHeatmap from './WatchlistHeatmap'
 
 // Hoisted so a list with no items keeps a stable identity across renders.
 const NO_ITEMS = []
+
+const VIEW_OPTIONS = [
+  { value: 'list', label: <LayoutList size={12} />, title: 'List view' },
+  { value: 'grid', label: <LayoutGrid size={12} />, title: 'Grid view' },
+]
 
 const VIEW_KEY = 'saxodash:watchlist-view'
 const COLLAPSED_KEY = 'saxodash:watchlist-collapsed'
@@ -162,14 +167,7 @@ export default function WatchlistRail({
         </Menu>
         <span className="text-[12px] text-ink-3 num ml-auto">{items.length}</span>
         {gridView ? (
-          <div className="flex items-center gap-0.5 p-[3px] rounded-[9px] bg-track">
-            <TBtn active={!showGrid} onClick={() => chooseView('list')} title="List view">
-              <LayoutList size={12} />
-            </TBtn>
-            <TBtn active={showGrid} onClick={() => chooseView('grid')} title="Grid view">
-              <LayoutGrid size={12} />
-            </TBtn>
-          </div>
+          <Segmented label="Watchlist view" options={VIEW_OPTIONS} value={showGrid ? 'grid' : 'list'} onChange={chooseView} />
         ) : null}
         {collapsible ? (
           <button

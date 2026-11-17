@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { usePerformance, usePortfolioSummary, usePositions, useRiskMetrics } from '../api/queries'
-import { Alert, Card, ChartPlaceholder, MetricTile, Segmented, TabButton, TabList, Tile } from '../components/ui'
+import { Alert, Card, ChartPlaceholder, Segmented, TabButton, TabList, Tile } from '../components/ui'
 import DrawdownChart from '../components/analytics/DrawdownChart'
 import MonthlyReturnsHeatmap from '../components/analytics/MonthlyReturnsHeatmap'
 import Projection from '../components/analytics/Projection'
@@ -131,7 +131,7 @@ function RiskDefinitions() {
   )
 }
 
-/** A labelled cluster of MetricTiles - groups 12 otherwise-equal-weight
+/** A labelled cluster of Tiles - groups 12 otherwise-equal-weight
  *  stats into "how rough was the ride" / "how consistent month to month" /
  *  "vs a benchmark" so the tab reads as three questions, not a flat wall of
  *  numbers. Same "uppercase tag over a row of facts" rhythm as Research's
@@ -169,47 +169,47 @@ function RiskTab({ data }) {
         <RiskDefinitions />
         <div className="mt-4 space-y-4">
           <MetricGroup label="Return & risk">
-            <MetricTile label="Volatility (ann.)" value={pctOrDash(volatility)} hint={hintWhenNull(volatility, 'volatility')} />
-            <MetricTile label="Sharpe ratio" value={fmtNum(sharpe, 2)} hint={hintWhenNull(sharpe, 'sharpe')} />
-            <MetricTile label="Max drawdown" value={pctOrDash(maxDrawdown)} />
-            <MetricTile label="Current drawdown" value={pctOrDash(currentDrawdown)} hint="From all-time high" />
+            <Tile label="Volatility (ann.)" value={pctOrDash(volatility)} sub={hintWhenNull(volatility, 'volatility')} />
+            <Tile label="Sharpe ratio" value={fmtNum(sharpe, 2)} sub={hintWhenNull(sharpe, 'sharpe')} />
+            <Tile label="Max drawdown" value={pctOrDash(maxDrawdown)} />
+            <Tile label="Current drawdown" value={pctOrDash(currentDrawdown)} sub="From all-time high" />
           </MetricGroup>
 
           <MetricGroup label="Consistency">
-            <MetricTile label="Sortino ratio" value={fmtNum(sortino, 2)} hint={sortino == null ? needsDaysNote(needsDays.sortino) : "Downside-adjusted"} />
-            <MetricTile label="Positive months" value={pctOrDash(positiveMonthsPct, 0)} hint={hintWhenNull(positiveMonthsPct, 'monthly_stats')} />
-            <MetricTile
+            <Tile label="Sortino ratio" value={fmtNum(sortino, 2)} sub={sortino == null ? needsDaysNote(needsDays.sortino) : "Downside-adjusted"} />
+            <Tile label="Positive months" value={pctOrDash(positiveMonthsPct, 0)} sub={hintWhenNull(positiveMonthsPct, 'monthly_stats')} />
+            <Tile
               label="Best month"
               value={bestMonth ? fmtPct(bestMonth.pct, { decimals: 1 }) : '—'}
-              hint={bestMonth ? monthLabel(bestMonth) : needsDaysNote(needsDays.monthly_stats)}
+              sub={bestMonth ? monthLabel(bestMonth) : needsDaysNote(needsDays.monthly_stats)}
             />
-            <MetricTile
+            <Tile
               label="Worst month"
               value={worstMonth ? fmtPct(worstMonth.pct, { decimals: 1 }) : '—'}
-              hint={worstMonth ? monthLabel(worstMonth) : needsDaysNote(needsDays.monthly_stats)}
+              sub={worstMonth ? monthLabel(worstMonth) : needsDaysNote(needsDays.monthly_stats)}
             />
           </MetricGroup>
 
           <MetricGroup label={bench.has_data ? `Vs. benchmark (${bench.name})` : 'Vs. benchmark'}>
-            <MetricTile
+            <Tile
               label="Beta"
               value={benchValue(bench.beta) ? fmtNum(bench.beta, 2) : '—'}
-              hint={bench.has_data ? benchHint(bench.beta, 'beta') : bench.reason}
+              sub={bench.has_data ? benchHint(bench.beta, 'beta') : bench.reason}
             />
-            <MetricTile
+            <Tile
               label="Tracking error"
               value={benchValue(bench.tracking_error) ? pctOrDash(bench.tracking_error) : '—'}
-              hint={benchHint(bench.tracking_error, 'tracking_error')}
+              sub={benchHint(bench.tracking_error, 'tracking_error')}
             />
-            <MetricTile
+            <Tile
               label="Information ratio"
               value={benchValue(bench.information_ratio) ? fmtNum(bench.information_ratio, 2) : '—'}
-              hint={benchHint(bench.information_ratio, 'information_ratio')}
+              sub={benchHint(bench.information_ratio, 'information_ratio')}
             />
-            <MetricTile
+            <Tile
               label="Jensen alpha"
               value={benchValue(bench.jensen_alpha) ? fmtPct(bench.jensen_alpha, { decimals: 1 }) : '—'}
-              hint={bench.has_data && bench.jensen_alpha != null ? 'Risk-adjusted excess' : benchHint(bench.jensen_alpha, 'jensen_alpha')}
+              sub={bench.has_data && bench.jensen_alpha != null ? 'Risk-adjusted excess' : benchHint(bench.jensen_alpha, 'jensen_alpha')}
             />
           </MetricGroup>
         </div>
