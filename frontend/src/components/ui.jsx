@@ -22,7 +22,7 @@ export function StatusDot({ tone = 'ok', className = '' }) {
 }
 
 const PANEL_MENU_BUTTON =
-  'w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink'
+  'relative w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink after:absolute after:-inset-2 md:after:hidden'
 
 function PanelMenu({ label, items }) {
   const button = (

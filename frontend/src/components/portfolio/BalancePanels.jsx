@@ -38,7 +38,7 @@ export function SectorsPanel({ positions, className = '' }) {
             {slices.map((s) => (
               <li key={s.name} className="flex items-center gap-2.5 min-h-[30px] text-[13.5px]">
                 <span className="w-2.5 h-2.5 rounded-[3px] shrink-0" style={{ background: s.color }} />
-                <span className="flex-1 min-w-0 truncate text-ink">{s.name}</span>
+                <span title={s.name} className="flex-1 min-w-0 truncate text-ink">{s.name}</span>
                 <span className="num text-ink-2">{fmtEur(s.value)}</span>
                 <span className="w-14 text-right num text-ink-3">{weightText((s.value / total) * 100)}</span>
               </li>

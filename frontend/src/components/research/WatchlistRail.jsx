@@ -250,7 +250,7 @@ export default function WatchlistRail({
                   >
                     <InstrumentLogo symbol={result.symbol} size={20} />
                     <span className="text-[13px] font-semibold text-ink">{result.symbol}</span>
-                    <span className="text-[12px] text-ink-3 truncate">{result.description}</span>
+                    <span title={result.description} className="text-[12px] text-ink-3 truncate">{result.description}</span>
                   </button>
                   <button
                     type="button"
@@ -359,7 +359,7 @@ export default function WatchlistRail({
                         removeItem.mutate({ id: active.id, itemId: item.id })
                       }}
                       aria-label={`Remove ${item.symbol}`}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-ink-3 hover:text-down -mr-1"
+                      className="-my-2 -mr-2 grid size-9 place-items-center text-ink-3 hover:text-down md:size-auto md:my-0 md:-mr-1 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                     >
                       <X size={11} />
                     </button>

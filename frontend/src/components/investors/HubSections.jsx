@@ -26,6 +26,7 @@ function PersonCard({ investor, held }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <Link
             to={`/investors/${investor.slug}`}
+            title={investor.name}
             className="truncate text-[17px] font-bold text-ink after:absolute after:inset-0 after:rounded-[14px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-focus"
           >
             {investor.name}
@@ -74,7 +75,7 @@ function FlowRow({ item, field, stock, held }) {
       >
         <StockLogo ticker={item.ticker} label={item.issuer} size={32} />
         <span className="flex min-w-0 flex-col">
-          <span className="truncate text-[14px] font-bold text-ink">{stock ? displayName(stock.name) : item.ticker}</span>
+          <span title={stock?.name || item.ticker} className="truncate text-[14px] font-bold text-ink">{stock ? displayName(stock.name) : item.ticker}</span>
           <span className="truncate text-[12px] text-ink-3 num">{flowLine(item, field, held.has(item.ticker))}</span>
         </span>
         <span className="hidden md:block">

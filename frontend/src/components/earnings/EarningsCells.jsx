@@ -64,7 +64,7 @@ export function CompanyCell({ event, size = 20 }) {
           <span className={`text-[13.5px] font-semibold ${event.held ? 'text-held' : 'text-ink'}`}>{event.symbol}</span>
           {event.also?.length > 0 && <span className="text-[12px] text-ink-3">+{event.also.join(' +')}</span>}
         </span>
-        {event.name && <span className="text-[12px] text-ink-3 truncate">{event.name}</span>}
+        {event.name && <span title={event.name} className="text-[12px] text-ink-3 truncate">{event.name}</span>}
       </span>
     </span>
   )

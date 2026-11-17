@@ -53,7 +53,7 @@ export default function SymbolBar({
               {isEtf(instrument) ? <Tag tone="warn">ETF</Tag> : null}
               {position ? <span className="text-[12px] font-semibold text-ink-2">You own it</span> : null}
             </div>
-            <div className="text-[12px] text-ink-2 mt-0.5 truncate">{name}</div>
+            <div title={name} className="text-[12px] text-ink-2 mt-0.5 truncate">{name}</div>
           </div>
         </div>
 

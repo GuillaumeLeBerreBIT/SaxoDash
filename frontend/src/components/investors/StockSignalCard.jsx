@@ -33,7 +33,7 @@ export default function StockSignalCard({ shelfKey, item, className = '' }) {
         <StockLogo ticker={item.ticker} label={stockLabel(item)} size={28} />
         <div className="min-w-0">
           <Title item={item} />
-          {item.ticker ? <div className="text-[12px] text-ink-3 truncate">{item.issuer}</div> : null}
+          {item.ticker ? <div title={item.issuer} className="text-[12px] text-ink-3 truncate">{item.issuer}</div> : null}
         </div>
       </div>
       <div className="text-[13px] text-ink-2 num">{signalSentence(shelfKey, item)}</div>

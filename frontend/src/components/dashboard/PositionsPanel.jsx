@@ -20,7 +20,7 @@ function Identity({ position }) {
     <>
       <InstrumentLogo symbol={position.ticker} />
       <span className="min-w-0">
-        <span className="block truncate font-semibold text-ink">{position.name || position.ticker}</span>
+        <span title={position.name || position.ticker} className="block truncate font-semibold text-ink">{position.name || position.ticker}</span>
         <span className="block text-[12px] text-ink-3">{position.ticker}</span>
       </span>
     </>

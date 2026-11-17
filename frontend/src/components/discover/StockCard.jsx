@@ -25,6 +25,7 @@ export default function StockCard({ stock, note, className = '' }) {
         <div className="min-w-0">
           <Link
             to={researchHref(stock.ticker, 'overview', instrument)}
+            title={stock.name}
             className="block truncate text-[15px] font-bold text-ink after:absolute after:inset-0 after:rounded-[14px] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-focus"
           >
             {displayName(stock.name)}

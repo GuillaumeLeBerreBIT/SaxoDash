@@ -1,3 +1,6 @@
+import { useId, useState } from 'react'
+
+import { CHART_KEYS_HELP, chartKeyCommand } from '../../lib/chartKeys'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
@@ -121,6 +124,22 @@ export default function ChartCanvas({
   const bar = bars[hover ?? bars.length - 1]
   const slots = bars.length + futureDates.length
   const [legendRef, legendSize] = useSize()
+  const [keyed, setKeyed] = useState(false)
+  const helpId = useId()
+
+  const onKeyDown = (event) => {
+    if (event.target !== event.currentTarget || event.metaKey || event.ctrlKey || event.altKey) return
+    const command = chartKeyCommand(event, { hover, count: bars.length, slots: shown.slots })
+    if (!command) return
+    event.preventDefault()
+    if ('hover' in command) {
+      setHover?.(command.hover)
+      setKeyed(command.hover != null)
+    }
+    if (command.pan != null) panTime?.((offset) => offset + command.pan)
+    if (command.zoom != null) zoomTime?.(command.zoom)
+    if (command.reset) resetTime?.()
+  }
 
   const layout = { total: fitHeight, legendHeight: legendSize.height, panes, paneHeights }
   const fitted = fitHeight != null && shedToFit ? fitChartPanes(layout) : null
@@ -162,7 +181,21 @@ export default function ChartCanvas({
       </div>
 
       {placeholder ?? (
-        <div className="px-1 pb-1">
+        <div
+          tabIndex={0}
+          role="group"
+          aria-label={`${symbol || 'Price'} chart`}
+          aria-describedby={helpId}
+          onKeyDown={onKeyDown}
+          onBlur={() => setKeyed(false)}
+          className="rounded-lg px-1 pb-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
+        >
+          <span id={helpId} className="sr-only">
+            {CHART_KEYS_HELP}
+          </span>
+          <span className="sr-only" aria-live="polite">
+            {keyed && bar ? `${fmtDate(bar.date)}: open ${fmtNum(bar.open, 2)}, high ${fmtNum(bar.high, 2)}, low ${fmtNum(bar.low, 2)}, close ${fmtNum(bar.close, 2)}` : ''}
+          </span>
           <TVChart
             key={symbol}
             data={bars}

@@ -371,7 +371,7 @@ export function ShelfPanel({ panel, onFollow }) {
               >
                 <InstrumentLogo symbol={item.ticker} size={24} />
                 <span className="w-14 shrink-0 text-[13.5px] font-semibold text-ink">{item.ticker}</span>
-                <span className="flex-1 min-w-0 truncate text-[12px] text-ink-3">{item.name}</span>
+                <span title={item.name} className="flex-1 min-w-0 truncate text-[12px] text-ink-3">{item.name}</span>
                 <span className="text-[13px] num text-ink">{fmtMoney(item.last_close, 'USD')}</span>
                 <Move value={item.change_1d} className="w-[72px] text-right text-[13px]" />
               </button>

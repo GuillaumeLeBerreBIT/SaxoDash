@@ -56,11 +56,12 @@ export default function InvestorCard({ investor, className = '' }) {
               to={`/investors/${investor.slug}`}
               onMouseEnter={warm}
               onFocus={warm}
+              title={investor.name}
               className="block truncate text-[14px] font-bold text-ink after:absolute after:inset-0 after:rounded-[10px] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-focus"
             >
               {investor.name}
             </Link>
-            {investor.firm !== investor.name ? <div className="text-[12px] text-ink-3 truncate">{investor.firm}</div> : null}
+            {investor.firm !== investor.name ? <div title={investor.firm} className="text-[12px] text-ink-3 truncate">{investor.firm}</div> : null}
           </div>
           <FollowButton investor={investor} />
         </div>

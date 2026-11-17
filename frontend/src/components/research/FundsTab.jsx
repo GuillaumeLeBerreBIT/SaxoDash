@@ -37,7 +37,7 @@ function Fund({ fund }) {
             </>
           ) : null}
         </span>
-        <span className="block text-[12px] text-ink-3 truncate max-w-[190px]">{fund.firm}</span>
+        <span title={fund.firm} className="block text-[12px] text-ink-3 truncate max-w-[190px]">{fund.firm}</span>
       </span>
     </span>
   )

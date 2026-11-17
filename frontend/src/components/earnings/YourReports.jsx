@@ -63,7 +63,7 @@ function ReportCard({ event, onOpen }) {
       <div className="flex min-w-0 items-center gap-3.5">
         <InstrumentLogo symbol={event.symbol} size={44} fallback={<LetterAvatar symbol={event.symbol} size={44} chars={2} className="rounded-full" />} />
         <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-[17px] font-bold text-ink">{displayName(event.name) || event.symbol}</span>
+          <span title={event.name || event.symbol} className="truncate text-[17px] font-bold text-ink">{displayName(event.name) || event.symbol}</span>
           <span className="text-[13px] font-semibold text-earn first-letter:uppercase">{whenWords(event)}</span>
         </div>
       </div>
