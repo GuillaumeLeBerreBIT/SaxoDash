@@ -4,7 +4,7 @@ import { fmtEur, fmtNum } from '../../lib/format'
 import { WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { moveLabel } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
-import { Card, InstrumentLogo, Move, Td, Th, Tile, Tr } from '../ui'
+import { Card, DataTable, InstrumentLogo, Move, Td, Th, Tile, Tr } from '../ui'
 
 function PortfolioValueSub({ pnlPct }) {
   if (pnlPct == null) return '—'
@@ -92,29 +92,27 @@ export default function PositionsPanel({ summary, positions, quotes, className =
         <Tile label="Holdings" value={fmtNum(positions.length)} sub="Across all accounts" />
       </div>
       {ranked.length > 0 && (
-        <div className="mt-3 overflow-x-auto">
-          <table aria-label="Positions" className="w-full">
-            <thead>
-              <tr>
-                <Th edge>Instrument</Th>
-                <Th align="right">{dayLabel}</Th>
-                <Th align="right">Value</Th>
-                <Th align="right" hideBelow="md">Return</Th>
-                <Th align="right" hideBelow="md" edge>Weight</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranked.map((position) => (
-                <PositionRow
-                  key={position.ticker}
-                  position={position}
-                  change={quotes.get(position.uic)?.change_pct ?? null}
-                  onSelect={onSelect}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable label="Positions" frameClassName="mt-3">
+          <thead>
+            <tr>
+              <Th edge>Instrument</Th>
+              <Th align="right">{dayLabel}</Th>
+              <Th align="right">Value</Th>
+              <Th align="right" hideBelow="md">Return</Th>
+              <Th align="right" hideBelow="md" edge>Weight</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {ranked.map((position) => (
+              <PositionRow
+                key={position.ticker}
+                position={position}
+                change={quotes.get(position.uic)?.change_pct ?? null}
+                onSelect={onSelect}
+              />
+            ))}
+          </tbody>
+        </DataTable>
       )}
     </Card>
   )

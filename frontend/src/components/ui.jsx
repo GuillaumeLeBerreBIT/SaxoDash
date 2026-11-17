@@ -576,6 +576,16 @@ export function Tile({ label, value, sub, tone, right, listItem = false, wrap = 
   return <Root className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">{List ? <List>{content}</List> : content}</Root>
 }
 
+export function DataTable({ label, className = '', frameClassName = '', frameRef, style, children }) {
+  return (
+    <div ref={frameRef} className={`overflow-x-auto ${frameClassName}`}>
+      <table aria-label={label} className={`w-full ${className}`} style={style}>
+        {children}
+      </table>
+    </div>
+  )
+}
+
 const HIDE_BELOW = { md: 'hidden md:table-cell', wide: 'hidden min-[1440px]:table-cell' }
 
 /** Table header/body cell with the app's shared density scale - edge columns

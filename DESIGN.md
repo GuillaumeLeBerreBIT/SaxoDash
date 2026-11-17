@@ -309,6 +309,8 @@ Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics 
     ↑/↓ with `aria-sort`.
   - Wide tables scroll inside the panel. Lower-priority columns hide below 1440 px (`hidew`) or
     on phone (`hidem`).
+  - In code a table is `DataTable` (named for screen readers by its `label`, scrolling sideways in
+    its frame) built from `Th`, `SortableTh`, `Tr` and `Td`; `hideBelow="wide" | "md"` hides a column.
 - **Moves**: `▲ 1.40%` / `▼ 1.40%` in Up/Down. Money uses a true minus: `−€1,298.03`, with a
   sign on deltas only. Euros are written `€10,756.33`; an instrument's own currency stays in that
   currency (`$279.84`).

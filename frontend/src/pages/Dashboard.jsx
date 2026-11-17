@@ -17,7 +17,7 @@ import { ownershipTickers } from '../lib/ownership'
 import { briefHeadline, briefItems } from '../lib/brief'
 import { dayChange } from '../lib/portfolioHero'
 import { positionVerdict, positionVerdictTickers } from '../lib/verdicts'
-import { Alert, Badge, Card, EmptyState, Skeleton, Th, Td, Tr } from '../components/ui'
+import { Alert, Badge, Card, DataTable, EmptyState, Skeleton, Td, Th, Tr } from '../components/ui'
 import { BriefHero, BriefList, HoldingsList } from '../components/dashboard/DailyBrief'
 import VsBenchmark from '../components/dashboard/VsBenchmark'
 import SmartMoney from '../components/dashboard/SmartMoney'
@@ -45,40 +45,38 @@ function RecentTransactions({ rows, className }) {
       {rows.length === 0 ? (
         <EmptyState title="No recent transactions" className="py-6" />
       ) : (
-        <div className="overflow-x-auto">
-          <table aria-label="Recent transactions" className="w-full">
-            <thead>
-              <tr>
-                <Th edge>Date</Th>
-                <Th hideBelow="md">Type</Th>
-                <Th>Name</Th>
-                <Th align="right" hideBelow="md">Qty</Th>
-                <Th align="right" hideBelow="md">Price</Th>
-                <Th edge align="right">Total</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((t) => (
-                <Tr key={t.id}>
-                  <Td edge className="text-ink-2 num">{fmtDate(t.date)}</Td>
-                  <Td hideBelow="md">
-                    <Badge tone={txTone(t.type)}>{t.type}</Badge>
-                  </Td>
-                  <Td className="w-full max-w-0 md:w-auto md:max-w-none">
-                    <div className="truncate" title={`${t.instrument} (${t.ticker})`}>
-                      <span className="font-medium text-ink">{t.ticker}</span>
-                      <span className="text-ink-3 ml-2">{t.instrument}</span>
-                    </div>
-                    <span className="md:hidden block text-[12px] text-ink-3">{t.type}</span>
-                  </Td>
-                  <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(t.qty)}</Td>
-                  <Td align="right" hideBelow="md" className="text-ink-2">{txPrice(t)}</Td>
-                  <Td edge align="right" className={`font-semibold ${totalTone(t)}`}>{txTotal(t)}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable label="Recent transactions">
+          <thead>
+            <tr>
+              <Th edge>Date</Th>
+              <Th hideBelow="md">Type</Th>
+              <Th>Name</Th>
+              <Th align="right" hideBelow="md">Qty</Th>
+              <Th align="right" hideBelow="md">Price</Th>
+              <Th edge align="right">Total</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((t) => (
+              <Tr key={t.id}>
+                <Td edge className="text-ink-2 num">{fmtDate(t.date)}</Td>
+                <Td hideBelow="md">
+                  <Badge tone={txTone(t.type)}>{t.type}</Badge>
+                </Td>
+                <Td className="w-full max-w-0 md:w-auto md:max-w-none">
+                  <div className="truncate" title={`${t.instrument} (${t.ticker})`}>
+                    <span className="font-medium text-ink">{t.ticker}</span>
+                    <span className="text-ink-3 ml-2">{t.instrument}</span>
+                  </div>
+                  <span className="md:hidden block text-[12px] text-ink-3">{t.type}</span>
+                </Td>
+                <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(t.qty)}</Td>
+                <Td align="right" hideBelow="md" className="text-ink-2">{txPrice(t)}</Td>
+                <Td edge align="right" className={`font-semibold ${totalTone(t)}`}>{txTotal(t)}</Td>
+              </Tr>
+            ))}
+          </tbody>
+        </DataTable>
       )}
     </Card>
   )

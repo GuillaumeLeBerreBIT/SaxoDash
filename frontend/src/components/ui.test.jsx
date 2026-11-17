@@ -6,6 +6,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import {
   Alert,
   Button,
+  DataTable,
   Card,
   CardHeader,
   EmptyState,
@@ -259,6 +260,23 @@ describe('Move', () => {
     const { container } = render(<Move value={null} />)
     expect(container).toHaveTextContent('—')
     expect(container.firstChild.className).toContain('text-ink-3')
+  })
+})
+
+describe('DataTable', () => {
+  it('names the table and lets it scroll sideways inside its frame', () => {
+    render(
+      <DataTable label="Holdings" className="min-w-[720px]" frameClassName="-mx-[18px]">
+        <tbody>
+          <tr>
+            <td>NVDA</td>
+          </tr>
+        </tbody>
+      </DataTable>,
+    )
+    const table = screen.getByRole('table', { name: 'Holdings' })
+    expect(table).toHaveClass('w-full', 'min-w-[720px]')
+    expect(table.parentElement).toHaveClass('overflow-x-auto', '-mx-[18px]')
   })
 })
 

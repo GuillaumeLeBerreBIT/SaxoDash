@@ -8,7 +8,7 @@ import { quadrantPoint } from '../../lib/quadrant'
 import { nextEmptySlot, resolvePeerSlots } from '../../lib/research'
 import { valuationVerdict } from '../../lib/snapshot'
 import { QUADRANT_GUIDE } from '../../lib/guide'
-import { Card, Input, InstrumentLogo, Skeleton } from '../ui'
+import { Card, DataTable, Input, InstrumentLogo, Skeleton } from '../ui'
 import { usePortalMenuRect } from '../usePortalMenuRect'
 import FundamentalsGate from './FundamentalsGate'
 import QualityValuationQuadrant from './QualityValuationQuadrant'
@@ -177,77 +177,75 @@ export default function PeersTab({ symbol, fundamentals }) {
               dot="ok"
               title="Peer comparison"
             >
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr>
-                      <th scope="col" className={`${HEAD} pl-[18px] w-[180px]`} />
-                      <th scope="col" className={`${HEAD} bg-selected rounded-t-lg`}>
-                        <PeerHead symbol={symbol} note="this company" />
+              <DataTable label="Peer comparison">
+                <thead>
+                  <tr>
+                    <th scope="col" className={`${HEAD} pl-[18px] w-[180px]`} />
+                    <th scope="col" className={`${HEAD} bg-selected rounded-t-lg`}>
+                      <PeerHead symbol={symbol} note="this company" />
+                    </th>
+                    {slots.map((s, i) => (
+                      <th key={s.symbol} scope="col" className={HEAD}>
+                        <PeerHead
+                          symbol={s.symbol}
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => setOverride(s.slot, null)}
+                              aria-label={`Remove ${s.symbol}`}
+                              className="grid place-items-center w-5 h-5 rounded text-ink-3 hover:text-down hover:bg-hover"
+                            >
+                              <X size={12} aria-hidden="true" />
+                            </button>
+                          }
+                        />
+                        {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
                       </th>
-                      {slots.map((s, i) => (
-                        <th key={s.symbol} scope="col" className={HEAD}>
-                          <PeerHead
-                            symbol={s.symbol}
-                            action={
-                              <button
-                                type="button"
-                                onClick={() => setOverride(s.slot, null)}
-                                aria-label={`Remove ${s.symbol}`}
-                                className="grid place-items-center w-5 h-5 rounded text-ink-3 hover:text-down hover:bg-hover"
-                              >
-                                <X size={12} aria-hidden="true" />
-                              </button>
-                            }
-                          />
-                          {peerResults[i]?.isLoading ? <Skeleton className="h-3 w-12 ml-auto mt-1" /> : null}
-                        </th>
-                      ))}
-                      {emptySlot !== -1 ? (
-                        <th scope="col" className={`${HEAD} w-40 pr-[18px]`}>
-                          <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
-                        </th>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-line">
-                      <td className={`${LABEL} pl-[18px]`}>Verdict</td>
-                      <td className={`${CELL} bg-selected`}>
-                        <VerdictBadge {...valuationVerdict(currentData)} className="justify-end" />
+                    ))}
+                    {emptySlot !== -1 ? (
+                      <th scope="col" className={`${HEAD} w-40 pr-[18px]`}>
+                        <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
+                      </th>
+                    ) : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-line">
+                    <td className={`${LABEL} pl-[18px]`}>Verdict</td>
+                    <td className={`${CELL} bg-selected`}>
+                      <VerdictBadge {...valuationVerdict(currentData)} className="justify-end" />
+                    </td>
+                    {slots.map((s, i) => {
+                      const peerData = peerResults[i]?.data
+                      const unavailable = !peerData || peerData.available === false
+                      return (
+                        <td key={s.symbol} className={CELL}>
+                          {unavailable ? <span className="text-ink-3">—</span> : <VerdictBadge {...valuationVerdict(peerData)} className="justify-end" />}
+                        </td>
+                      )
+                    })}
+                    {emptySlot !== -1 ? <td /> : null}
+                  </tr>
+                  {METRIC_ROWS.map((row) => (
+                    <tr key={row.key} className="border-t border-line">
+                      <td className={`${LABEL} pl-[18px]`}>{row.label}</td>
+                      <td className={`${CELL} num font-semibold text-ink bg-selected`}>
+                        {row.format(currentData[row.key])}
                       </td>
                       {slots.map((s, i) => {
                         const peerData = peerResults[i]?.data
-                        const unavailable = !peerData || peerData.available === false
+                        const unavailable = peerData && peerData.available === false
                         return (
-                          <td key={s.symbol} className={CELL}>
-                            {unavailable ? <span className="text-ink-3">—</span> : <VerdictBadge {...valuationVerdict(peerData)} className="justify-end" />}
+                          <td key={s.symbol} className={`${CELL} num text-ink-2`}>
+                            {unavailable ? '—' : row.format(peerData?.[row.key])}
                           </td>
                         )
                       })}
                       {emptySlot !== -1 ? <td /> : null}
                     </tr>
-                    {METRIC_ROWS.map((row) => (
-                      <tr key={row.key} className="border-t border-line">
-                        <td className={`${LABEL} pl-[18px]`}>{row.label}</td>
-                        <td className={`${CELL} num font-semibold text-ink bg-selected`}>
-                          {row.format(currentData[row.key])}
-                        </td>
-                        {slots.map((s, i) => {
-                          const peerData = peerResults[i]?.data
-                          const unavailable = peerData && peerData.available === false
-                          return (
-                            <td key={s.symbol} className={`${CELL} num text-ink-2`}>
-                              {unavailable ? '—' : row.format(peerData?.[row.key])}
-                            </td>
-                          )
-                        })}
-                        {emptySlot !== -1 ? <td /> : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </DataTable>
             </Card>
 
             <QualityValuationQuadrant points={quadrantPoints} unscored={unscored} className={SPAN_7} />
