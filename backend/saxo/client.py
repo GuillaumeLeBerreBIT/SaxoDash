@@ -165,7 +165,7 @@ def get_closed_positions(access_token):
 # Market data. Uic alone is ambiguous - every one of these needs the matching
 # AssetType or Saxo answers 404.
 
-def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT):
+def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT, up_to=None):
     """The most recent `count` samples for an instrument.
 
     No Mode and no Time: Mode picks a side of a given Time, so Saxo rejects
@@ -178,6 +178,8 @@ def get_chart(access_token, uic, asset_type, horizon, count=CHART_MAX_COUNT):
         'Horizon': horizon,
         'Count': min(int(count), CHART_MAX_COUNT),
     }
+    if up_to is not None:
+        params.update({'Time': up_to, 'Mode': 'UpTo'})
     return _get(access_token, '/chart/v3/charts', params=params).get('Data', [])
 
 

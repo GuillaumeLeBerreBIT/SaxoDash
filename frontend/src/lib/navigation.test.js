@@ -8,7 +8,7 @@ describe('top-level navigation', () => {
       { to: '/', label: 'Overview', end: true },
       { to: '/portfolio', label: 'Portfolio' },
       { to: '/research', label: 'Research' },
-      { to: '/boards', label: 'Boards' },
+      { to: '/boards', label: 'Charts' },
       { to: '/discover', label: 'Discover' },
       { to: '/earnings', label: 'Earnings' },
       { to: '/investors', label: 'Investors' },

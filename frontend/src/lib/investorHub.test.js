@@ -71,6 +71,9 @@ describe('moveSentence', () => {
 
   it('does not invent a percentage it was not given', () => {
     expect(moveSentence({ kind: 'added', weight: 15, shares_change_pct: null })).toBe('Added shares · now 15.0%')
+    expect(moveSentence({ kind: 'added', weight: 15, shares_change_pct: 658 })).toBe('Raised to 8× the shares · now 15.0%')
+    expect(moveSentence({ kind: 'new', weight: 0.01 })).toBe('Opened a position under 0.1%')
+    expect(moveSentence({ kind: 'trimmed', weight: 0.02, shares_change_pct: -90 })).toBe('Cut shares by 90% · now under 0.1%')
   })
 })
 

@@ -4,7 +4,6 @@ import { Td, Th, Tr } from '../ui'
 import FollowButton from './FollowButton'
 import { LatestLine, TopLogos } from './InvestorCard'
 import InvestorAvatar from './InvestorAvatar'
-import StyleChips from './StyleChips'
 import { UNKNOWN, fmtNum, fmtPct } from '../../lib/format'
 import { fmtCount, fmtUsdCompact } from '../../lib/investors'
 
@@ -15,7 +14,6 @@ export default function InvestorTable({ investors }) {
         <thead>
           <tr>
             <Th edge>Investor</Th>
-            <Th>Style</Th>
             <Th align="right">Value</Th>
             <Th align="right">Positions</Th>
             <Th>Top 3</Th>
@@ -37,7 +35,6 @@ export default function InvestorTable({ investors }) {
                   </span>
                 </Link>
               </Td>
-              <Td><StyleChips styles={c.styles} /></Td>
               <Td align="right" className="text-ink">{fmtUsdCompact(c.total_value)}</Td>
               <Td align="right" className="text-ink-2">{c.positions == null ? UNKNOWN : fmtNum(c.positions)}</Td>
               <Td><TopLogos holdings={c.top_holdings} /></Td>

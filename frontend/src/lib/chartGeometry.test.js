@@ -7,6 +7,7 @@ import {
   SPLIT_MIN_PRICE_HEIGHT,
   fitChartPanes,
   overlayStrokes,
+  timeTickCount,
   MIN_Y_SCALE,
   PAD_R,
   barCountFromDrag,
@@ -355,5 +356,19 @@ describe('overlayStrokes', () => {
     expect(strokes).toHaveLength(6)
     expect(new Set(strokes).size).toBe(6)
     strokes.forEach((stroke) => expect([...c.series, c.axisCategory]).toContain(stroke))
+  })
+})
+
+describe('timeTickCount', () => {
+  it('shows seven dates on a desktop chart', () => {
+    expect(timeTickCount(900, 250)).toBe(7)
+  })
+  it('thins the dates on a phone so the labels never collide', () => {
+    expect(timeTickCount(296, 250)).toBe(4)
+    expect(timeTickCount(120, 250)).toBe(2)
+  })
+  it('never asks for more dates than there are', () => {
+    expect(timeTickCount(900, 3)).toBe(3)
+    expect(timeTickCount(296, 1)).toBe(1)
   })
 })

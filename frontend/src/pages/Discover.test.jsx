@@ -6,8 +6,15 @@ import { MemoryRouter } from 'react-router-dom'
 import Discover from './Discover'
 
 const useDiscover = vi.fn()
+const useBrowse = vi.fn()
+const useInvestorHub = vi.fn()
 const startScan = { mutate: vi.fn(), error: null }
-vi.mock('../api/queries', () => ({ useDiscover: () => useDiscover(), useStartDiscoverScan: () => startScan }))
+vi.mock('../api/queries', () => ({
+  useDiscover: () => useDiscover(),
+  useStartDiscoverScan: () => startScan,
+  useBrowse: (query, options) => useBrowse(query, options),
+  useInvestorHub: () => useInvestorHub(),
+}))
 vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [], toggleList: vi.fn() }),
 }))
@@ -21,13 +28,23 @@ const card = {
   reasons: [{ field: 'rsi14', label: 'RSI', value: 81, format: 'number' }],
 }
 
-const renderPage = () => render(<MemoryRouter><Discover /></MemoryRouter>)
+const renderPage = (path = '/discover') => render(<MemoryRouter initialEntries={[path]}><Discover /></MemoryRouter>)
+
+const stock = (ticker, extra = {}) => ({
+  ticker, name: `${ticker} Corp`, uic: 1, sector: 'Health Care', quality: 'strong', valuation: 'cheap', action: 'buy',
+  last_close: 50, cheap_below: 100, expensive_above: 150, discount_pct: 50, below_high_pct: 40, spark: [60, 55, 50],
+  checks_passed: 6, checks_answered: 7, failed_checks: ['Debt'], held: false, ...extra,
+})
+const answer = (stocks, total = stocks.length) => ({ data: { total, stocks, facets: { valuation: { cheap: 3, fair: 2 }, quality: { strong: 4 }, sector: { 'Health Care': 5 } } }, isSuccess: true })
+const queries = () => useBrowse.mock.calls.map(([query]) => query)
 
 describe('Discover page', () => {
   beforeEach(() => {
     startScan.mutate.mockClear()
     startScan.error = null
-    localStorage.clear()
+    useBrowse.mockReset()
+    useBrowse.mockReturnValue(answer([]))
+    useInvestorHub.mockReturnValue({ data: { shelves: [] } })
   })
 
   it('has exactly one h1 and no skipped heading level', () => {
@@ -59,17 +76,85 @@ describe('Discover page', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toHaveAttribute('title', expect.stringMatching(/several minutes/))
   })
 
-  it('shows no lens chips or view toggle when there are no shelves', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-10-04T08:00:00Z', health: { state: 'ok', progress: null }, groups, shelves: [] } })
+  it('opens on rows of stock cards, opportunities first, each saying why it is there', () => {
+    useBrowse.mockImplementation((query) => (query.includes('min_fall') ? answer([stock('LULU', { action: 'wait' })], 39) : answer([stock('ZTS'), stock('ADBE')], 50)))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()
-    expect(screen.queryByRole('navigation', { name: 'Lenses' })).toBeNull()
-    expect(screen.queryByRole('group', { name: 'View' })).toBeNull()
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
+    expect(headings).toEqual(["Today's opportunities", 'Fell hard, still strong', 'Browse by idea'])
+    const first = within(screen.getByRole('region', { name: "Today's opportunities" })).getAllByTestId('stock-card')[0]
+    expect(first).toHaveTextContent('ZTS')
+    expect(first).toHaveTextContent('50% below its cheap line')
+    expect(first).toHaveTextContent('6 of 7 quality checks pass; debt fails.')
+    expect(first).toHaveTextContent('Opportunity')
+    expect(within(first).getByRole('link', { name: 'ZTS' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
+    expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('valuation=cheap&quality=strong'))
   })
 
-  it('loads with shelf-shaped placeholders', () => {
-    useDiscover.mockReturnValue({ data: undefined, isLoading: true })
+  it('never repeats a stock from the first row in the second', () => {
+    useBrowse.mockImplementation(() => answer([stock('ZTS'), stock('ADBE')]))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
     renderPage()
-    expect(screen.getAllByTestId('shelf-skeleton')).toHaveLength(3)
+    expect(queries().find((query) => query.includes('min_fall'))).toContain('exclude=ZTS%2CADBE')
+  })
+
+  it('adds a row for what tracked funds bought, with the fund count on each card', () => {
+    useInvestorHub.mockReturnValue({ data: { shelves: [{ key: 'convergent-buys', items: [{ ticker: 'AMZN', bought: 19 }] }] } })
+    useBrowse.mockImplementation((query) => (query.includes('tickers=AMZN') ? answer([stock('AMZN', { held: true, action: 'add' })]) : answer([])))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    const row = screen.getByRole('region', { name: 'Funds are buying' })
+    expect(row).toHaveTextContent('19 tracked funds bought it last quarter.')
+    expect(row).toHaveTextContent('You own it')
+  })
+
+  it('leaves a row out when nothing qualifies', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    expect(screen.queryByRole('region', { name: "Today's opportunities" })).toBeNull()
+  })
+
+  it('switches from rows to a filtered grid with a count, and sorts only there', () => {
+    useBrowse.mockImplementation(() => answer([stock('ZTS')], 19))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage('/discover?quality=strong&sector=Health%20Care')
+    expect(screen.getByTestId('browse-count')).toHaveTextContent('19 stocks match')
+    expect(screen.queryByRole('heading', { name: "Today's opportunities" })).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toBeInTheDocument()
+    expect(queries()).toContain('?quality=strong&sector=Health+Care&limit=24')
+  })
+
+  it('filters with checkboxes that carry their counts', () => {
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage()
+    const filters = screen.getByRole('complementary', { name: 'Filters' })
+    const cheap = within(filters).getByRole('checkbox', { name: /Cheap/ })
+    expect(cheap.closest('label')).toHaveTextContent('Cheap3')
+    fireEvent.click(cheap)
+    expect(queries()).toContain('?valuation=cheap&limit=24')
+  })
+
+  it('offers a clear way out when no stock matches', () => {
+    useBrowse.mockReturnValue(answer([], 0))
+    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
+    renderPage('/discover?quality=weak')
+    expect(screen.getByText('No stock matches every filter.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.queryByText('No stock matches every filter.')).toBeNull()
+    expect(queries()).toContain('?valuation=cheap&quality=strong&limit=4')
+  })
+
+  it('shows one idea at a time, starting with the first that has stocks', () => {    useDiscover.mockReturnValue({ data: {
+      as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups,
+      shelves: [shelf('oversold', 'Oversold', 0), shelf('overbought', 'Overbought', 7, [card]), shelf('pe-under-15', 'P/E under 15', 3, [card], undefined, 'fundamentals')],
+    } })
+    renderPage()
+    const ideas = screen.getByRole('group', { name: 'Ideas' })
+    expect(within(ideas).getByRole('button', { name: 'Overbought 7' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Overbought'])
+    fireEvent.click(within(ideas).getByRole('button', { name: 'P/E under 15 3' }))
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['P/E under 15'])
+    expect(screen.queryByRole('group', { name: 'View' })).toBeNull()
   })
 
   it('renders each shelf with its criteria, count and a See all link', () => {
@@ -81,19 +166,7 @@ describe('Discover page', () => {
     expect(screen.getByRole('link', { name: 'See all 7' })).toHaveAttribute('href', '/discover/overbought')
   })
 
-  it('sections the lenses under their group headings', () => {
-    useDiscover.mockReturnValue({ data: {
-      as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' },
-      groups: [{ key: 'price', title: 'Price action' }, { key: 'fundamentals', title: 'Fundamentals' }],
-      shelves: [shelf('overbought', 'Overbought', 1, [card]), shelf('pe-under-15', 'P/E under 15', 1, [card], undefined, 'fundamentals')],
-    } })
-    renderPage()
-    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings).toEqual(['Price action', 'Fundamentals'])
-    expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
-  })
-
-  it('shows an earnings date in the Events group', () => {
+  it('shows an earnings date on a reporting idea', () => {
     const reporting = { ...card, reasons: [{ field: 'next_earnings_date', label: 'Reports', value: '2026-10-08', format: 'date' }] }
     useDiscover.mockReturnValue({ data: {
       as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' },
@@ -101,7 +174,6 @@ describe('Discover page', () => {
       shelves: [shelf('reporting-soon', 'Reporting soon', 1, [reporting], undefined, 'events')],
     } })
     renderPage()
-    expect(screen.getByRole('heading', { level: 2, name: 'Events' })).toBeInTheDocument()
     expect(screen.getByText('Reports')).toBeInTheDocument()
     expect(screen.getByText('08 Oct')).toBeInTheDocument()
   })
@@ -192,51 +264,15 @@ describe('Discover page', () => {
     expect(screen.getByRole('heading', { name: 'Overbought' })).toBeInTheDocument()
   })
 
-  it('offers a jump chip per lens that lands on its heading', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
-    renderPage()
-    const nav = screen.getByRole('navigation', { name: 'Lenses' })
-    expect(within(nav).getByRole('link', { name: 'Overbought 7' })).toHaveAttribute('href', '#shelf-overbought')
-  })
-
-  it('shows cards until compact is chosen, then remembers it', () => {
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
-    const { unmount } = renderPage()
-    expect(screen.getByRole('button', { name: 'Cards' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.queryByRole('list', { name: 'Overbought stocks' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Compact' }))
-    expect(screen.getByRole('list', { name: 'Overbought stocks' })).toBeInTheDocument()
-    unmount()
-    renderPage()
-    expect(screen.getByRole('button', { name: 'Compact' })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('keeps the lens heading a jump target in compact view', () => {
-    localStorage.setItem('saxodash:discover-view', 'compact')
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
-    renderPage()
-    expect(screen.getByRole('heading', { level: 3, name: 'Overbought' })).toHaveAttribute('id', 'shelf-overbought')
-  })
-
-  it('puts the scan status, the stale reason and Refresh in the lens panel', () => {
+  it('puts the scan status, the stale reason and Refresh in one panel', () => {
     useDiscover.mockReturnValue({ data: {
       as_of: '2026-10-20T12:00:00Z',
       health: { state: 'stale', last_ok_at: '2026-10-20T12:00:00Z', issue: 'Saxo needs re-authentication', progress: null },
       groups, shelves: [shelf('overbought', 'Overbought', 7, [card])],
     } })
     renderPage()
-    const panel = screen.getByRole('region', { name: 'Lenses' })
+    const panel = screen.getByRole('region', { name: 'Scan status' })
     expect(within(panel).getByRole('status')).toHaveTextContent('No fresh scan since 20 Oct. Last attempt: Saxo needs re-authentication')
     expect(within(panel).getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
-    expect(within(panel).getByRole('navigation', { name: 'Lenses' })).toBeInTheDocument()
-  })
-
-  it('lists five rows per shelf panel in compact view with See all N', () => {
-    localStorage.setItem('saxodash:discover-view', 'compact')
-    const items = Array.from({ length: 8 }, (_, i) => ({ ...card, ticker: `S${i}`, uic: i + 10 }))
-    useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 8, items)] } })
-    renderPage()
-    expect(within(screen.getByRole('list', { name: 'Overbought stocks' })).getAllByRole('listitem')).toHaveLength(5)
-    expect(screen.getByRole('link', { name: 'See all 8' })).toHaveTextContent('See all 8 →')
   })
 })

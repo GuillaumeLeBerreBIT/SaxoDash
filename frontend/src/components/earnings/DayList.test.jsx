@@ -36,7 +36,7 @@ describe('DayList', () => {
 
   it('shows market cap compactly', () => {
     render(<DayList day="mon" events={[ev({ symbol: 'CAP', market_cap: 3_500_000 })]} scope="all" focusSession={null} onOpen={() => {}} onViewAll={() => {}} />)
-    expect(screen.getByText('3.50T')).toBeInTheDocument()
+    expect(screen.getByText('3.5T')).toBeInTheDocument()
   })
 
   it('an empty day in Mine scope offers View all', async () => {
@@ -53,7 +53,7 @@ describe('DayList', () => {
 
   it('labels its columns', () => {
     render(<DayList day="mon" events={[ev()]} scope="all" focusSession={null} onOpen={() => {}} onViewAll={() => {}} />)
-    for (const label of ['Company', 'Mkt cap', 'Qtr', 'EPS · est', 'Revenue', 'Move']) {
+    for (const label of ['Company', 'Mkt cap', 'Qtr', 'Earnings per share', 'Revenue', 'Move']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })

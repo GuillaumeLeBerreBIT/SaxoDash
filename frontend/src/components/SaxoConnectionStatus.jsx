@@ -75,21 +75,15 @@ export default function SaxoConnectionStatus({ compact = false }) {
     )
   }
 
+  if (derived.kind !== 'sync_degraded') return null
+
+  const synced = status.last_synced_at ? ` Last good sync ${fmtClock(status.last_synced_at)}.` : ''
   return (
-    <span className="flex items-center gap-2">
-      {derived.kind === 'sync_degraded' && (
-        <Tag tone="warn">
-          <span title={SYNC_OUTCOME_NOTE[status.last_sync_outcome]}>
-            Sync {status.last_sync_outcome}
-          </span>
-        </Tag>
-      )}
-      <Tag tone="ok">
-        <span title={status.last_synced_at ? `Last synced ${fmtClock(status.last_synced_at)}` : 'Never synced'}>
-          Saxo connected
-        </span>
-      </Tag>
-    </span>
+    <Tag tone="warn">
+      <span title={`${SYNC_OUTCOME_NOTE[status.last_sync_outcome] ?? ''}${synced}`}>
+        Sync {status.last_sync_outcome}
+      </span>
+    </Tag>
   )
 }
 

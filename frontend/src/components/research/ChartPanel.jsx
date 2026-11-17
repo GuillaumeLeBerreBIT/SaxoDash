@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import { CandlestickChart, Maximize2, Sigma } from 'lucide-react'
+import { CandlestickChart, Crosshair, Maximize2, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card } from '../ui'
 import { Menu } from './menu'
-import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
+import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
+import EntryBanner from './EntryBanner'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
@@ -22,6 +23,7 @@ export default function ChartPanel({
   symbol,
   unresolved,
   earningsMarkers = [],
+  guides,
   futureDates,
   lines,
   onMoveLine,
@@ -49,6 +51,12 @@ export default function ChartPanel({
           <IndicatorMenuItems controls={controls} />
         </Menu>
 
+        {guides?.available.length ? (
+          <Menu label="Guides" icon={Crosshair} width={300}>
+            <GuideMenuItems controls={controls} available={guides.available} />
+          </Menu>
+        ) : null}
+
         <LineSaveAlert failed={lineSaveFailed} />
 
         <div className="ml-auto flex items-center gap-2">
@@ -66,6 +74,8 @@ export default function ChartPanel({
         </div>
       </div>
 
+      <EntryBanner sentence={guides?.sentence} />
+
       <ChartCanvas
         bars={bars}
         ind={ind}
@@ -78,6 +88,9 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
+        priceZones={guides?.zones}
+        zoneCurrency={guides?.currency}
+        tradePlan={guides?.plan}
         futureDates={futureDates}
         lines={lines}
         onMoveLine={onMoveLine}

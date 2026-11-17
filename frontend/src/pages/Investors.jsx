@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
-import { useInvestorHub, useInvestors } from '../api/queries'
-import { Alert, Button, Card, Segmented, Skeleton } from '../components/ui'
+import { useInvestorHub, useInvestors, usePositions } from '../api/queries'
+import { Alert, Button, Segmented, Skeleton } from '../components/ui'
 import CongressDirectory from '../components/congress/CongressDirectory'
 import AddInvestorDialog from '../components/investors/AddInvestorDialog'
 import InvestorDirectory from '../components/investors/InvestorDirectory'
 import LimitsNote from '../components/investors/LimitsNote'
 import Shelf from '../components/investors/Shelf'
+import { FundFlows, Following } from '../components/investors/HubSections'
+import { investorsHeadline } from '../lib/investorsBrief'
 import { hubSubtitle } from '../lib/investorHub'
 
 const TABS = [{ value: 'funds', label: 'Funds' }, { value: 'congress', label: 'Congress' }]
@@ -23,9 +25,22 @@ function SignalsState({ hub }) {
   return null
 }
 
-function Shelves({ hub }) {
+const SHOWN_ELSEWHERE = new Set(['following', 'convergent-buys', 'most-sold', 'new-bets'])
+const NO_POSITIONS = []
+
+const shelfItems = (hub, key) => hub.data?.shelves?.find((shelf) => shelf.key === key)?.items ?? []
+
+function Hub({ hub, held }) {
   if (hub.error || !hub.data) return null
-  return hub.data.shelves.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)
+  const following = shelfItems(hub, 'following')
+  const rest = hub.data.shelves.filter((shelf) => !SHOWN_ELSEWHERE.has(shelf.key))
+  return (
+    <>
+      <Following investors={following} held={held} />
+      <FundFlows bought={shelfItems(hub, 'convergent-buys')} sold={shelfItems(hub, 'most-sold')} held={held} hub={hub.data} />
+      {rest.map((shelf) => <Shelf key={shelf.key} shelf={shelf} />)}
+    </>
+  )
 }
 
 export default function Investors() {
@@ -42,26 +57,32 @@ export default function Investors() {
   const hub = useInvestorHub({ enabled: funds })
   const { data: cards = [], isLoading, error } = useInvestors({ enabled: funds })
   const signals = funds ? <SignalsState hub={hub} /> : null
+  const positions = usePositions().data ?? NO_POSITIONS
+  const held = useMemo(() => new Set(positions.map((position) => position.ticker)), [positions])
+  const headline = funds ? investorsHeadline(hub.data, shelfItems(hub, 'following')) : null
 
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       <h1 className="sr-only">Investors</h1>
-      <Card
-        dot={funds && hub.error ? 'warn' : 'ok'}
-        context={funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}
-        title={funds ? 'Smart money' : 'Congress'}
-        right={(
-          <>
-            <Segmented label="Investor type" options={TABS} value={tab} onChange={pick} />
-            {funds ? <Button size="sm" onClick={() => setAdding(true)}>Add investor</Button> : null}
-          </>
-        )}
-      >
-        {signals}
-      </Card>
+      <section aria-label="Investors" className="flex flex-col gap-3 pt-1 md:flex-row md:items-center md:justify-between">
+        <div className="flex max-w-[820px] flex-col gap-2">
+          {headline ? (
+            <p data-testid="investors-headline" className="text-[20px] font-bold leading-snug tracking-tight text-ink md:text-[24px] [text-wrap:balance]">
+              {headline}
+            </p>
+          ) : (
+            <span className="text-[14px] font-medium text-ink-2">{funds ? hubSubtitle(hub.data) : CONGRESS_SUBTITLE}</span>
+          )}
+          {signals}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented label="Investor type" options={TABS} value={tab} onChange={pick} />
+          {funds ? <Button onClick={() => setAdding(true)}>Add an investor</Button> : null}
+        </div>
+      </section>
       {funds ? (
         <>
-          <Shelves hub={hub} />
+          <Hub hub={hub} held={held} />
           <InvestorDirectory cards={cards} isLoading={isLoading} error={error} />
           <LimitsNote />
         </>

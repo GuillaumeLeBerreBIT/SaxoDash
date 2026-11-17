@@ -24,6 +24,18 @@ class SyncPeriodicTasksTest(TestCase):
         self.assertEqual(task.task, 'verdicts.tasks.compute_verdicts')
         self.assertEqual((task.crontab.minute, task.crontab.hour), ('15', '0'))
 
+    def test_compute_signals_runs_after_the_verdicts(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Compute signals')
+        self.assertEqual(task.task, 'signals.tasks.compute_signals')
+        self.assertEqual((task.crontab.minute, task.crontab.hour), ('45', '0'))
+
+    def test_backfill_daily_bars_runs_between_the_scan_and_the_signals(self):
+        sync_periodic_tasks()
+        task = PeriodicTask.objects.get(name='Backfill daily bars')
+        self.assertEqual(task.task, 'research.tasks.backfill_daily_bars')
+        self.assertEqual((task.crontab.minute, task.crontab.hour), ('30', '23'))
+
     def test_is_idempotent(self):
         sync_periodic_tasks()
         sync_periodic_tasks()

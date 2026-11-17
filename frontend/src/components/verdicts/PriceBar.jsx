@@ -1,0 +1,30 @@
+import { fmtMoney } from '../../lib/format'
+import { priceBarPosition, priceZone } from '../../lib/priceBar'
+
+const ZONE_WORD = { cheap: 'cheap', fair: 'fair', expensive: 'expensive' }
+
+export default function PriceBar({ price, cheapBelow, expensiveAbove, currency = 'USD', labels = true, className = '' }) {
+  const position = priceBarPosition({ price, cheapBelow, expensiveAbove })
+  if (position == null) return null
+  const zone = priceZone({ price, cheapBelow, expensiveAbove })
+  const label = `${fmtMoney(price, currency)} is ${ZONE_WORD[zone]} for this company: cheap below ${fmtMoney(cheapBelow, currency)}, expensive above ${fmtMoney(expensiveAbove, currency)}`
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`} data-testid="price-bar" data-zone={zone}>
+      <div role="img" aria-label={label} className="relative flex h-1.5 gap-px">
+        <span className="flex-1 rounded-l-full bg-up/40" />
+        <span className="flex-1 bg-ink-3/25" />
+        <span className="flex-1 rounded-r-full bg-warn/35" />
+        <span
+          className="absolute -top-1 h-3.5 w-[3px] -translate-x-1/2 rounded-full bg-ink shadow-[0_0_0_2px_var(--sd-pane)]"
+          style={{ left: `${position * 100}%` }}
+        />
+      </div>
+      {labels ? (
+        <div className="flex justify-between gap-2 text-[12px] text-ink-3 num">
+          <span>Cheap below {fmtMoney(cheapBelow, currency)}</span>
+          <span>Expensive above {fmtMoney(expensiveAbove, currency)}</span>
+        </div>
+      ) : null}
+    </div>
+  )
+}

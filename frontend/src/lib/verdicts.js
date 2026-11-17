@@ -1,18 +1,18 @@
 import { ownershipTicker } from './ownership'
 
 export const ACTION_LABEL = {
-  buy: 'Buy',
+  buy: 'Opportunity',
   add: 'Add',
   hold: 'Hold',
   trim: 'Trim',
-  sell_review: 'Sell (review)',
+  sell_review: 'Review',
   wait: 'Wait',
   not_a_fit: 'Not a fit',
   no_verdict: 'No verdict',
 }
 
 export function actionLabel(verdict) {
-  if (verdict.capped) return 'Hold · still cheap'
+  if (verdict.capped) return 'Hold · over cap'
   return ACTION_LABEL[verdict.action] ?? verdict.action
 }
 
@@ -23,7 +23,7 @@ export const GRADE_LABEL = {
 
 export const CHECK_STATUS_LABEL = { pass: 'Pass', fail: 'Fail', unknown: 'Unknown' }
 
-const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth'])
+const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth', 'cash'])
 
 const TONE = { buy: 'up', add: 'up', trim: 'warn', sell_review: 'warn' }
 
@@ -31,10 +31,23 @@ export const actionTone = (action) => TONE[action]
 
 const oneDecimal = (value) => Number(Number(value).toFixed(1))
 
+const CHECK_BASIS = {
+  roe: ' in a typical year',
+  roic: ' in a typical year',
+  margins: ' in a typical year',
+  earnings_growth: ' a year over 5 years',
+  revenue_growth: ' a year over 5 years',
+  debt: ' × equity, latest quarter',
+  cash: ' of profit, in a typical year',
+}
+
+export const CHECK_BASIS_NOTE =
+  'Quality looks at the middle of the last five fiscal years and at five-year growth, so these figures can differ from the last-twelve-month ones in the snapshot.'
+
 export function checkLine({ key, label, value, threshold }) {
   if (value == null) return `${label} · no figure`
   const unit = PERCENT_CHECKS.has(key) ? '%' : ''
-  return `${label} ${oneDecimal(value)}${unit} · needs ${threshold}`
+  return `${label} ${oneDecimal(value)}${unit}${CHECK_BASIS[key] ?? ''} · needs ${threshold}`
 }
 
 export function trendSentence(pctVsMa200) {

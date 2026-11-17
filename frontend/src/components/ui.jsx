@@ -22,7 +22,7 @@ export function StatusDot({ tone = 'ok', className = '' }) {
 }
 
 const PANEL_MENU_BUTTON =
-  'w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink'
+  'relative w-7 h-7 shrink-0 rounded-[7px] grid place-items-center text-ink-3 hover:bg-hover hover:text-ink after:absolute after:-inset-2 md:after:hidden'
 
 function PanelMenu({ label, items }) {
   const button = (
@@ -33,21 +33,26 @@ function PanelMenu({ label, items }) {
   return Array.isArray(items) ? <Menu trigger={button} items={items} /> : button
 }
 
+const ALERT_DOTS = new Set(['warn', 'error'])
+
 function PanelHead({ context, dot, title, right, menu, as: Heading = 'h2', className = '' }) {
   const menuLabel = `${title || context || 'Panel'} options`
   return (
     <div className={`flex flex-wrap md:flex-nowrap items-start justify-between gap-x-2.5 gap-y-2 ${className}`}>
       <div className="min-w-0">
-        {context && (
-          <div className="flex items-center gap-2 min-w-0 text-[13px] font-medium text-ink">
-            {dot && <StatusDot tone={dot} />}
-            <span className="min-w-0 truncate">{context}</span>
-          </div>
-        )}
         {title && (
-          <Heading className={`text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance] ${context ? 'mt-1.5' : ''}`}>
+          <Heading className="text-[17px] font-bold tracking-[-0.005em] text-ink [text-wrap:balance]">
             {title}
           </Heading>
+        )}
+        {context && (
+          <div
+            data-testid="panel-context"
+            className={`flex items-center gap-2 min-w-0 text-[13px] ${title ? 'mt-0.5 text-ink-3' : 'font-medium text-ink-2'}`}
+          >
+            {ALERT_DOTS.has(dot) && <StatusDot tone={dot} />}
+            <span className="min-w-0">{context}</span>
+          </div>
         )}
       </div>
       {(right || menu) && (
@@ -601,7 +606,7 @@ export function Metric({ label, value, tone = 'text-ink', hint }) {
 const TILE_TONES = {
   up: 'text-up',
   down: 'text-down',
-  warn: 'text-warn',
+  warn: 'text-warn-text',
   earn: 'text-earn',
   flat: 'text-flat',
 }
@@ -639,13 +644,14 @@ function TileFrame({ label, right, children, sub, listItem = false }) {
 }
 
 const TILE_VALUE = 'mt-1 text-[20px] font-bold tracking-[-0.01em] num whitespace-nowrap'
+const TILE_VALUE_WRAP = 'mt-1 text-[15px] font-bold num break-all'
 
-export function Tile({ label, value, sub, tone, right, listItem = false }) {
+export function Tile({ label, value, sub, tone, right, listItem = false, wrap = false }) {
   const absent = value == null
   return (
     <TileFrame label={label} right={right} sub={sub} listItem={listItem}>
       {(Detail) => (
-        <Detail className={`${TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
+        <Detail className={`${wrap ? TILE_VALUE_WRAP : TILE_VALUE} ${absent ? 'text-ink-3' : TILE_TONES[tone] || 'text-ink'}`}>{absent ? '—' : value}</Detail>
       )}
     </TileFrame>
   )
@@ -675,6 +681,7 @@ export function Th({ children, align = 'left', edge = false, hideBelow, classNam
   const hideClass = HIDE_BELOW[hideBelow] ?? ''
   return (
     <th
+      scope="col"
       aria-sort={ariaSort}
       className={`h-[30px] text-[12px] font-medium text-ink-3 whitespace-nowrap ${edge ? 'px-[18px]' : 'px-2.5'} ${
         align === 'right' ? 'text-right' : 'text-left'
@@ -739,5 +746,15 @@ export function Tr({ children, selected = false, className = '', ...props }) {
     >
       {children}
     </tr>
+  )
+}
+
+export function ShowMore({ paged, className = '' }) {
+  if (!paged.more) return null
+  return (
+    <div className={`flex items-center justify-between gap-3 text-[12px] text-ink-3 num ${className}`}>
+      <span>{`Showing ${paged.shown} of ${paged.total}`}</span>
+      <Button size="sm" onClick={paged.more}>Show more</Button>
+    </div>
   )
 }

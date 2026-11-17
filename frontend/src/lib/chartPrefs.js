@@ -9,6 +9,7 @@ export const DEFAULT_CHART_PREFS = {
   type: 'candles',
   overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
   panes: { volume: true, rsi: false, macd: false },
+  guides: { zones: true, plan: false },
 }
 
 function sanitizeToggles(raw, defaults) {
@@ -28,6 +29,7 @@ export function sanitizeChartPrefs(raw, defaults = DEFAULT_CHART_PREFS) {
     type: CHART_TYPE_KEYS.has(source.type) ? source.type : defaults.type,
     overlays: sanitizeToggles(source.overlays, defaults.overlays),
     panes: sanitizeToggles(source.panes, defaults.panes),
+    guides: sanitizeToggles(source.guides, defaults.guides),
   }
 }
 
@@ -39,9 +41,9 @@ export function readChartPrefs() {
   }
 }
 
-export function writeChartPrefs({ range, type, overlays, panes }) {
+export function writeChartPrefs({ range, type, overlays, panes, guides }) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ range, type, overlays, panes }))
+    localStorage.setItem(KEY, JSON.stringify({ range, type, overlays, panes, guides }))
     return true
   } catch {
     return false

@@ -27,9 +27,9 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns, className = '' }
         <table className="w-full min-w-[640px] border-separate" style={{ borderSpacing: 4 }}>
           <thead>
             <tr>
-              <th className="w-12" />
+              <th scope="col" className="w-12" />
               {MONTH_NAMES.map((m) => (
-                <th key={m} className="text-[12px] text-ink-3 font-medium pb-0.5">{m}</th>
+                <th key={m} scope="col" className="text-[12px] text-ink-3 font-medium pb-0.5">{m}</th>
               ))}
             </tr>
           </thead>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, fmtShares, pctTone, pctToneClass } from './format'
+import { fmtDate, fmtDayMonth, fmtMonthYear, fmtDateTime, fmtEur, fmtMoney, fmtQty, fmtPct, fmtShares, maskIban, pctTone, pctToneClass } from './format'
 
 describe('fmtMoney', () => {
   it('formats a price in the instrument currency, not the reporting one', () => {
@@ -130,5 +130,13 @@ describe('fmtShares', () => {
   it('shows a dash for a missing or zero count', () => {
     expect(fmtShares(null)).toBe('—')
     expect(fmtShares(0)).toBe('—')
+  })
+})
+
+describe('maskIban', () => {
+  it('keeps only the last four characters', () => {
+    expect(maskIban('BE99 0000 0000 1234')).toBe('•••• 1234')
+    expect(maskIban('BE01')).toBe('BE01')
+    expect(maskIban(null)).toBe('')
   })
 })

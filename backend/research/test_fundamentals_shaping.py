@@ -366,6 +366,13 @@ class ScreenerFundamentalsTest(SimpleTestCase):
             'market_cap': 250000.0, 'revenue_growth_5y': 7.75, 'payout_ratio': 77.24,
         })
 
+    def test_debt_is_the_latest_quarters_balance_sheet_when_there_is_one(self):
+        metric = {'totalDebt/totalEquityAnnual': 2.44, 'totalDebt/totalEquityQuarterly': 1.83}
+        self.assertEqual(finnhub.to_screener_fundamentals({'metric': metric})['debt_to_equity'], 1.83)
+        self.assertEqual(
+            finnhub.to_screener_fundamentals({'metric': {'totalDebt/totalEquityAnnual': 2.44}})['debt_to_equity'], 2.44,
+        )
+
     def test_screener_fundamentals_carry_revenue_growth_and_payout(self):
         shaped = finnhub.to_screener_fundamentals({'metric': {'revenueGrowth5Y': 7.75, 'payoutRatioTTM': 77.24}})
         self.assertEqual(shaped['revenue_growth_5y'], 7.75)
@@ -565,6 +572,7 @@ class ScreenerHistoryTest(SimpleTestCase):
                 'roe': [{'period': f'20{y}-12-31', 'v': 0.1 + y / 100} for y in (16, 17, 18, 19, 20, 21, 22)],
                 'roic': [{'period': '2022-12-31', 'v': 0.2}],
                 'netMargin': [{'period': '2022-12-31', 'v': 0.25}],
+                'fcfMargin': [{'period': '2022-12-31', 'v': 0.2}],
                 'eps': [{'period': '2022-12-31', 'v': 5.5}],
             },
             'quarterly': {'eps': [{'period': '2023-03-31', 'v': 1.4}, {'period': '2022-12-31', 'v': 1.3}]},
@@ -576,7 +584,9 @@ class ScreenerHistoryTest(SimpleTestCase):
         periods = [row['period'] for row in out['annual']]
         self.assertEqual(periods, sorted(periods))
         self.assertEqual(len(periods), 5)
-        self.assertEqual(out['annual'][-1], {'period': '2022-12-31', 'roe': 32.0, 'roic': 20.0, 'net_margin': 25.0, 'eps': 5.5})
+        self.assertEqual(out['annual'][-1], {
+            'period': '2022-12-31', 'roe': 32.0, 'roic': 20.0, 'net_margin': 25.0, 'fcf_margin': 20.0, 'eps': 5.5,
+        })
         self.assertNotIn('roic', out['annual'][0])
 
     def test_quarterly_eps_is_oldest_first(self):

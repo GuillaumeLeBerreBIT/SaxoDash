@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Search, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 
 import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct } from '../../lib/format'
 import { chartHref, isEtf, moveCaption } from '../../lib/research'
-import InstrumentSearchBar from '../InstrumentSearchBar'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
-import { Card, Chip, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
-import ActionBadge from '../verdicts/ActionBadge'
+import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
 import { Menu, MenuRow } from './menu'
 
 const LINK_BUTTON =
@@ -16,11 +14,12 @@ function contextLine(details, currency) {
   return ['Saxo', details?.exchange, currency].filter(Boolean).join(' · ')
 }
 
-function identityLine(symbol, company) {
+function identityLine(symbol, company, held) {
   return [
     symbol,
     company?.industry || null,
     company?.market_cap == null ? null : `${fmtCompact(company.market_cap)} market cap`,
+    held ? 'You own it' : null,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -60,7 +59,7 @@ function Price({ quote, bars, currency }) {
 
   return (
     <div className="ml-auto text-right">
-      <div className="text-[26px] font-bold num text-ink">
+      <div className="text-[30px] md:text-[34px] font-bold tracking-tight num text-ink">
         {price == null ? '—' : currency ? fmtMoney(price, currency) : fmtNum(price, 2)}
       </div>
       <div className="text-[14px] font-semibold">
@@ -105,8 +104,6 @@ export default function ResearchHeader({
   instrument,
   details,
   position,
-  positions = [],
-  verdict,
   quote,
   bars,
   company,
@@ -116,16 +113,10 @@ export default function ResearchHeader({
   tabs,
   activeTab,
   onSelectTab,
-  recentSymbols = [],
-  onSelectSymbol,
-  onOpenPalette,
   showPosition = false,
   className = '',
 }) {
   const name = details?.description ?? position?.name ?? symbol
-  const held = [...new Map(positions.map((p) => [p.ticker, p])).values()]
-  const heldTickers = new Set(held.map((p) => p.ticker))
-  const recent = recentSymbols.filter((s) => !heldTickers.has(s))
 
   return (
     <Card className={className}>
@@ -151,12 +142,10 @@ export default function ResearchHeader({
         />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[22px] font-bold text-ink [text-wrap:balance]">{name}</h1>
+            <h1 className="text-[26px] md:text-[30px] font-bold tracking-tight text-ink [text-wrap:balance]">{name}</h1>
             {isEtf(instrument) ? <Tag tone="warn">ETF</Tag> : null}
-            {position ? <Tag tone="held">Held</Tag> : null}
-            {verdict?.data ? <ActionBadge verdict={verdict.data} /> : null}
           </div>
-          <div className="text-[13px] text-ink-2 num">{identityLine(symbol, company)}</div>
+          <div className="text-[14px] text-ink-2 num">{identityLine(symbol, company, Boolean(position))}</div>
         </div>
         <Price quote={quote} bars={bars} currency={currency} />
       </div>
@@ -186,32 +175,6 @@ export default function ResearchHeader({
           </TabButton>
         ))}
       </TabList>
-
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
-          {held.map((p) => (
-            <Chip
-              key={p.ticker}
-              active={p.ticker === symbol}
-              onClick={() => onSelectSymbol(p.ticker, { uic: p.uic, assetType: p.asset_type })}
-            >
-              {p.ticker}
-            </Chip>
-          ))}
-          {recent.map((s) => (
-            <Chip key={s} onClick={() => onSelectSymbol(s)}>
-              {s}
-            </Chip>
-          ))}
-          <Chip onClick={() => onOpenPalette?.()}>
-            <Search size={14} aria-hidden="true" />
-            Any instrument
-          </Chip>
-        </div>
-        <div className="w-full md:w-[360px]">
-          <InstrumentSearchBar />
-        </div>
-      </div>
 
       {showPosition && position ? <InlinePosition position={position} /> : null}
     </Card>

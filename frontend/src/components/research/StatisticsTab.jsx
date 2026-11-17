@@ -1,11 +1,14 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
 import { valuationVerdict } from '../../lib/snapshot'
 import { Card } from '../ui'
+import CapitalStructureCard from './CapitalStructureCard'
 import FundamentalsGate from './FundamentalsGate'
+import OwnershipCard from './OwnershipCard'
 import RatioHistoryChart from './RatioHistoryChart'
 import RatioHistoryTable from './RatioHistoryTable'
 import VerdictBadge from './VerdictBadge'
 
+const SPAN_6 = 'min-[1100px]:col-span-6 min-w-0'
 const SPAN_5 = 'min-[1100px]:col-span-5'
 const SPAN_7 = 'min-[1100px]:col-span-7'
 const SPAN_12 = 'min-[1100px]:col-span-12'
@@ -86,7 +89,7 @@ export default function StatisticsTab({ fundamentals }) {
         const withHistory = HISTORY_RATIOS.some(([key]) => hasRange(data.valuation_history?.[key]))
         const byYear = data.ratio_history?.length > 0
         return (
-          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
             <Card
               className={SPAN_12}
               context="Computed in-app from Finnhub's raw fundamentals"
@@ -137,6 +140,8 @@ export default function StatisticsTab({ fundamentals }) {
                 </Card>
               </>
             )}
+            <div className={SPAN_6}><CapitalStructureCard fundamentals={data} /></div>
+            <div className={SPAN_6}><OwnershipCard fundamentals={data} /></div>
           </div>
         )
       }}

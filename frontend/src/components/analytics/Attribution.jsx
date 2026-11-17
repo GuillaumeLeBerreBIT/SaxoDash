@@ -22,12 +22,21 @@ export default function Attribution({ positions, className = '' }) {
     .sort((a, b) => b.pnl - a.pnl)
 
   const maxAbs = Math.max(...rows.map((r) => Math.abs(r.contribution)), 1)
+  const gained = totalPnl > 0
   const top = rows[0]
+  const worst = rows[rows.length - 1]
+  const points = (value) => `${value >= 0 ? '+' : '-'}${Math.abs(value).toFixed(1)} pts`
+  const footnote =
+    gained && top?.pnl > 0
+      ? `${top.ticker} alone produced ${fmtNum(top.shareOfGain, 0)}% of the total gain.`
+      : !gained && worst?.pnl < 0
+        ? `${worst.ticker} is the largest loss, taking ${Math.abs(worst.contribution).toFixed(1)} points off the total return.`
+        : null
 
   return (
     <Card
       className={className}
-      context="Contribution of each holding to total portfolio return"
+      context={gained ? 'Points of total return from each holding, and its share of the gain' : 'Points of total return from each holding'}
       dot="ok"
       title="Return attribution"
       right={
@@ -38,7 +47,7 @@ export default function Attribution({ positions, className = '' }) {
     >
       <div className="space-y-2.5">
         {rows.map((r) => (
-          <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: '58px 1fr 74px 62px' }}>
+          <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: gained ? '58px 1fr 74px 48px' : '58px 1fr 74px' }}>
             <Link to={researchHref(r.ticker)} className="text-[13.5px] font-semibold text-ink hover:underline">
               {r.ticker}
             </Link>
@@ -54,17 +63,13 @@ export default function Attribution({ positions, className = '' }) {
               />
             </div>
             <span className={`text-[12px] font-semibold num text-right ${TONE_TEXT[pctTone(r.contribution, 1)]}`}>
-              {fmtPct(r.contribution, { decimals: 1 })} pp
+              {points(r.contribution)}
             </span>
-            <span className="text-[12px] num text-ink-3 text-right">{fmtNum(r.shareOfGain, 0)}%</span>
+            {gained && <span className="text-[12px] num text-ink-3 text-right">{fmtNum(r.shareOfGain, 0)}%</span>}
           </div>
         ))}
       </div>
-      {top && (
-        <p className="mt-3 pt-3 border-t border-line text-[12px] text-ink-3">
-          {top.ticker} alone produced {fmtNum(top.shareOfGain, 0)}% of the total gain — concentration risk sits in one name.
-        </p>
-      )}
+      {footnote && <p className="mt-3 pt-3 border-t border-line text-[12px] text-ink-3">{footnote}</p>}
     </Card>
   )
 }

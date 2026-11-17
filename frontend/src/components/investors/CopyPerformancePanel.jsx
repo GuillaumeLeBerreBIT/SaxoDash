@@ -1,4 +1,5 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { copySentence } from '../../lib/copySentence'
 
 import { Card, Skeleton, Tile } from '../ui'
 import { useInvestorCopy } from '../../api/queries'
@@ -104,6 +105,9 @@ export function CopyPerformanceView({ copy, name, subtitle, figures = true }) {
   return (
     <Card dot="ok" context={`Copy performance · Saxo daily closes to ${fmtDate(copy.until)}`} title={title}>
       <div className="flex flex-col gap-4">
+        {figures ? (
+          <p data-testid="copy-sentence" className="text-[15px] font-semibold text-ink [text-wrap:balance]">{copySentence(copy, name)}</p>
+        ) : null}
         {subtitle ? <p className="text-[13px] text-ink-2 max-w-[80ch]">{subtitle}</p> : null}
         {figures ? <CopyFigures copy={copy} /> : null}
         <div><CopyChart copy={copy} /></div>

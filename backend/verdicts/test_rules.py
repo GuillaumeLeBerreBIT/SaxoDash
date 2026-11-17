@@ -24,7 +24,7 @@ def stub(**overrides):
         'revenue_growth_5y': 8.0,
         'debt_to_equity': 0.5,
         'fundamentals_history': {'annual': annual(
-            roe=[20] * 5, roic=[15] * 5, net_margin=[20] * 5, eps=[1, 2, 3, 4, 5],
+            roe=[20] * 5, roic=[15] * 5, net_margin=[20] * 5, fcf_margin=[22] * 5, eps=[1, 2, 3, 4, 5],
         )},
         'pe_history': {},
     }
@@ -37,14 +37,14 @@ def statuses(result):
 
 
 class QualityTest(SimpleTestCase):
-    def test_six_checks_in_spec_order_with_labels(self):
+    def test_seven_checks_in_spec_order_with_labels(self):
         result = rules.quality(stub())
         self.assertEqual(
             [(c['key'], c['label']) for c in result['checks']],
             [
                 ('roe', 'Return on equity'), ('roic', 'Return on capital'), ('margins', 'Margins'),
                 ('earnings_growth', 'Earnings growth'), ('revenue_growth', 'Revenue growth'),
-                ('debt', 'Debt'),
+                ('debt', 'Debt'), ('cash', 'Cash behind the profit'),
             ],
         )
         self.assertEqual(result['grade'], 'strong')
@@ -55,6 +55,7 @@ class QualityTest(SimpleTestCase):
         self.assertEqual(thresholds, {
             'roe': '15%', 'roic': '10%', 'margins': '10%', 'earnings_growth': 'above 0',
             'revenue_growth': '5% a year', 'debt': 'at most 1.0',
+            'cash': '80% of profit',
         })
 
     def test_median_of_five_years_decides_roe_not_the_latest(self):
@@ -141,6 +142,33 @@ class QualityTest(SimpleTestCase):
     def test_revenue_growth_boundary_passes(self):
         self.assertEqual(statuses(rules.quality(stub(revenue_growth_5y=5.0)))['revenue_growth'], 'pass')
         self.assertEqual(statuses(rules.quality(stub(revenue_growth_5y=4.9)))['revenue_growth'], 'fail')
+
+    def cash(self, **overrides):
+        result = rules.quality(stub(**overrides))
+        return next((c['status'], c['value']) for c in result['checks'] if c['key'] == 'cash')
+
+    def history(self, net_margin, fcf_margin):
+        return {'annual': annual(roe=[20] * 5, roic=[15] * 5, net_margin=net_margin, fcf_margin=fcf_margin, eps=[1] * 5)}
+
+    def test_cash_is_free_cash_flow_as_a_share_of_profit_in_the_typical_year(self):
+        history = self.history([20, 20, 20, 20, 20], [10, 18, 20, 22, 40])
+        self.assertEqual(self.cash(fundamentals_history=history), ('pass', 100.0))
+
+    def test_cash_fails_when_under_eighty_percent_of_profit_and_passes_at_it(self):
+        self.assertEqual(self.cash(fundamentals_history=self.history([20] * 5, [15] * 5)), ('fail', 75.0))
+        self.assertEqual(self.cash(fundamentals_history=self.history([20] * 5, [16] * 5)), ('pass', 80.0))
+
+    def test_cash_ignores_years_without_a_profit_or_without_the_figure(self):
+        history = self.history([-5, 20, 20, None, 20], [30, 20, None, 20, 10])
+        self.assertEqual(self.cash(fundamentals_history=history), ('fail', 75.0))
+
+    def test_cash_is_unknown_without_a_profitable_year_or_the_series(self):
+        self.assertEqual(self.cash(fundamentals_history=self.history([-5] * 5, [3] * 5)), ('unknown', None))
+        self.assertEqual(self.cash(fundamentals_history=self.history([20] * 5, [])), ('unknown', None))
+
+    def test_cash_is_not_judged_for_a_financial_company_or_an_unknown_sector(self):
+        self.assertEqual(self.cash(sector='Banking'), ('unknown', None))
+        self.assertEqual(self.cash(sector=''), ('unknown', None))
 
     def test_grades(self):
         cases = [

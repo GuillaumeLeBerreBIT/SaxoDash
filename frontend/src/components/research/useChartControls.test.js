@@ -10,6 +10,16 @@ const stored = () => JSON.parse(localStorage.getItem('saxodash:chart-prefs'))
 beforeEach(() => localStorage.clear())
 
 describe('useChartControls', () => {
+  it('switches a chart guide off and on and stores the choice', () => {
+    const { result } = renderHook(() => useChartControls())
+    expect(result.current.guides).toEqual({ zones: true, plan: false })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(false)
+    expect(stored().guides).toEqual({ zones: false, plan: false })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(true)
+  })
+
   it('starts from the defaults when nothing is stored', () => {
     const { result } = renderHook(() => useChartControls())
     expect(result.current.range).toBe(DEFAULT_CHART_PREFS.range)

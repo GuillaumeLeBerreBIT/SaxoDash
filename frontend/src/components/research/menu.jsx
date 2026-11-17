@@ -40,14 +40,15 @@ export function Menu({ label, icon: Icon, children, width = 220, align = 'left',
   )
 }
 
-export function MenuRow({ checked, onClick, dot, children, right }) {
+export function MenuRow({ checked, onClick, dot, children, right, tall = false }) {
   return (
     <MenuItem
       onSelect={(event) => {
         event.preventDefault()
         onClick?.()
       }}
-      className="w-full"
+      className={tall ? 'w-full py-1.5' : 'w-full'}
+      style={tall ? { height: 'auto' } : undefined}
     >
       {checked !== undefined ? (
         <span
@@ -59,7 +60,7 @@ export function MenuRow({ checked, onClick, dot, children, right }) {
         </span>
       ) : null}
       {dot ? <span className="w-2 h-0.5 rounded-full shrink-0" style={{ background: dot }} /> : null}
-      <span className="flex-1 text-left truncate">{children}</span>
+      <span className={`flex-1 text-left ${tall ? 'min-w-0' : 'truncate'}`}>{children}</span>
       {right ? <span className="text-[11px] text-ink-3">{right}</span> : null}
     </MenuItem>
   )

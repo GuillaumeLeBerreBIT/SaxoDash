@@ -71,7 +71,7 @@ export default function EarningsDots({ history, next }) {
                 <title>{`${column.label} actual ${column.actual.toFixed(2)}`}</title>
               </circle>
             )}
-            <text x={x} y={LABEL_Y} textAnchor="middle" fill={c.axis} fontSize="10">
+            <text x={x} y={LABEL_Y} textAnchor="middle" fill={c.axis} fontSize="11">
               {column.label}
             </text>
           </g>

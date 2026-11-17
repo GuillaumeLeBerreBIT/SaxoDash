@@ -94,6 +94,12 @@ describe('new routes', () => {
     expect(screen.getByTestId('frame')).toBeInTheDocument()
   })
 
+  it('renders an unknown address as the not-found page inside the frame', async () => {
+    renderAt('/no-such-page')
+    expect(await screen.findByText('NotFound page')).toBeInTheDocument()
+    expect(screen.getByTestId('frame')).toBeInTheDocument()
+  })
+
   it('renders the Settings page inside the frame', async () => {
     renderAt('/settings')
     expect(await screen.findByText('Settings page')).toBeInTheDocument()

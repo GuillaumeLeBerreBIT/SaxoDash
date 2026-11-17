@@ -47,7 +47,7 @@
 }
 
 :root {
-  --fig-2xs: 0.6875rem;
+  --fig-2xs: 0.75rem;
   --fig-xs: 0.75rem;
   --fig-sm: 0.8125rem;
   --fig-md: 0.9375rem;
@@ -123,9 +123,14 @@ body::before {
 button, a, [role="button"], tr, input, select {
   transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, opacity var(--motion-fast) ease;
 }
-button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible, select:focus-visible {
-  outline: none;
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--sd-focus);
+}
+.sd-focus-ring:focus-visible rect {
+  stroke: var(--sd-focus);
+  stroke-width: 2.5;
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

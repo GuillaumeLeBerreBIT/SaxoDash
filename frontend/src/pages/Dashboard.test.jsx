@@ -82,8 +82,9 @@ function stub(over = {}) {
     isLoading: false,
     error: null,
   })
-  queries.usePositionQuotes.mockReturnValue(new Map())
-  queries.useMe.mockReturnValue({ ...idle, data: { username: 'demo', email: 'd@example.com', is_owner: over.owner ?? true } })
+  queries.usePositionQuotes.mockReturnValue(over.quotes ?? new Map())
+  queries.useInvestorHub.mockReturnValue({ ...idle, data: over.hub ?? { shelves: [] } })
+  queries.useVerdictSummary.mockReturnValue({ ...idle, data: over.verdicts ?? {} })
 }
 
 describe('Dashboard', () => {
@@ -92,167 +93,61 @@ describe('Dashboard', () => {
     stub()
   })
 
-  it('asks for banking figures only as the owner', () => {
-    renderWithProviders(<Dashboard />)
-    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: true })
-    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: true })
-    expect(screen.getByText('Spent MTD')).toBeInTheDocument()
-  })
-
-  it('runs the banking hooks disabled and shows no banking figures for a non-owner', () => {
-    stub({ owner: false, spending: undefined })
-    queries.useSpendingSummary.mockReturnValue(idle)
-    renderWithProviders(<Dashboard />)
-    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: false })
-    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: false })
-    expect(screen.queryByText('Spent MTD')).not.toBeInTheDocument()
-    expect(screen.queryByText('Failed to load dashboard data')).not.toBeInTheDocument()
-  })
-
-  it('asks for no banking figures while the user is still loading', () => {
-    queries.useMe.mockReturnValue({ ...idle, isLoading: true })
-    renderWithProviders(<Dashboard />)
-    expect(queries.useSpendingSummary).toHaveBeenLastCalledWith(expect.any(String), { enabled: false })
-    expect(queries.useBudgetProgress).toHaveBeenLastCalledWith({ enabled: false })
-  })
-
   it('has exactly one h1 and no skipped heading level', () => {
-    stub()
     const { container } = renderWithProviders(<Dashboard />)
     expectValidHeadingOutline(container)
   })
 
-  it('leads with the net-worth hero and a delta', () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.getByText('€10,000.00')).toBeInTheDocument()
-    expect(screen.getByText('▲ 0.56%')).toBeInTheDocument()
-  })
-
-  it('shows an attention chip', () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
-  })
-
-  it('shows movers with a linked ticker', () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.getAllByRole('link', { name: /NVDA/ }).length).toBeGreaterThan(0)
-  })
-
-  it("folds this month's spending into the hero figure instead of a standalone card", () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.getByText('Spent MTD')).toBeInTheDocument()
-    expect(screen.getByText('€50.00')).toBeInTheDocument()
-  })
-
-  it('shows a portfolio glance above a compact positions table', () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.getByText('Portfolio value')).toBeInTheDocument()
-    expect(screen.getByText('Top holding')).toBeInTheDocument()
-    expect(screen.getByText('100.0% of portfolio')).toBeInTheDocument()
-    expect(screen.getByText('Holdings')).toBeInTheDocument()
-    const table = screen.getByRole('table', { name: 'Positions' })
-    const row = within(table).getByText('NVIDIA').closest('tr')
-    expect(within(row).getByText('€13,131.00')).toBeInTheDocument()
-    expect(within(row).getByText('▲ 112.3%')).toBeInTheDocument()
-  })
-
-  it('says the percentage beside Portfolio value is since purchase', () => {
-    renderWithProviders(<Dashboard />)
-    const tile = screen.getByText('Portfolio value').closest('div').parentElement
-    expect(within(tile).getByText(/since purchase/)).toBeInTheDocument()
-    expect(within(tile).getByText('▲ 112.30%')).toHaveClass('text-up')
-  })
-
-  it('renders a dash, not null or 0.00%, when the portfolio percentage is absent', () => {
-    queries.usePortfolioSummary.mockReturnValue({
-      ...idle,
-      data: { total_value: '13131.00', total_pnl_pct: null, allocation: [] },
-    })
-    renderWithProviders(<Dashboard />)
-
-    const row = screen.getByText('Portfolio value').closest('div').parentElement
-    expect(within(row).getByText('—')).toBeInTheDocument()
-    expect(screen.queryByText(/since purchase/)).toBeNull()
-    expect(screen.queryByText(/null|0\.00%/)).toBeNull()
-  })
-
-  it('no longer renders a Contributors chart (superseded by Analytics\' Attribution)', () => {
-    renderWithProviders(<Dashboard />)
-    expect(screen.queryByText('Contributors')).not.toBeInTheDocument()
-  })
-
-  it('scopes the spending summary query to the current month', () => {
-    renderWithProviders(<Dashboard />)
-    expect(queries.useSpendingSummary).toHaveBeenCalledWith(
-      expect.stringMatching(/^\?date_from=\d{4}-\d{2}-01$/),
-      expect.anything(),
-    )
-  })
-
   it('renders skeletons while insights load', () => {
-    queries.usePortfolioInsights.mockReturnValue({ ...idle, data: undefined })
-    const { container } = renderWithProviders(<Dashboard />)
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    queries.usePortfolioInsights.mockReturnValue({ ...idle, isLoading: true })
+    renderWithProviders(<Dashboard />)
+    expect(screen.queryByTestId('brief-hero')).toBeNull()
   })
 
-  it('adds an over-budget category to the attention band alongside portfolio items', () => {
-    stub({
-      budgetProgress: [{ category: 'GROCERIES', limit: '100.00', spent: '142.00', pct: 142 }],
-    })
+  it('opens on how many things need a look, the portfolio value and today\'s move', () => {
+    stub({ quotes: new Map([[1, { change_pct: 10 }]]) })
     renderWithProviders(<Dashboard />)
-    expect(screen.getByText(/NVDA alone is 60%/)).toBeInTheDocument()
-    expect(screen.getByText(/Groceries is over budget/)).toBeInTheDocument()
+    const hero = screen.getByTestId('brief-hero')
+    expect(screen.getByTestId('brief-headline')).toHaveTextContent('One thing to look at in your portfolio today.')
+    expect(hero).toHaveTextContent('€13,131.00')
+    expect(within(hero).getByText(/^▲ €1,194 today/)).toHaveClass('text-up')
+    expect(within(hero).getByText(/^▲ €6,950 since purchase/)).toBeInTheDocument()
   })
 
-  it('maps where the capital sits and what is moving it', () => {
+  it('lists what to look at, each with a plain sentence and a way into Research', () => {
+    stub({ verdicts: { NVDA: { action: 'hold', capped: true, uic: 1 } } })
     renderWithProviders(<Dashboard />)
-    expect(screen.getByText('Allocation & movement')).toBeInTheDocument()
+    const list = screen.getByTestId('brief-items')
+    expect(list).toHaveTextContent('NVIDIA is 100.0% of your portfolio')
+    expect(list).toHaveTextContent('Hold · over cap')
+    expect(within(list).getByRole('link', { name: 'NVIDIA is 100.0% of your portfolio' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=NVDA'))
   })
 
-  it('null total_pnl still renders a dash in the hero', () => {
-    stub({ summary: { total_value: '13131.00', total_pnl: null, total_pnl_pct: null, allocation: [] } })
+  it('says nothing needs doing when every holding is fine', () => {
+    stub({ positions: smallPositions, summary: { total_value: '900.00', total_pnl: '15.00', total_pnl_pct: 1.7 } })
     renderWithProviders(<Dashboard />)
-    const hero = panel('Net worth')
-    const unrealised = within(hero).getByText('Unrealised').parentElement
-    expect(unrealised).toHaveTextContent('—')
-    expect(unrealised).not.toHaveTextContent(/0\.00/)
+    expect(screen.getByTestId('brief-headline')).toHaveTextContent('Nothing in your portfolio needs you today.')
+    expect(screen.getByText(/Nothing to do today/)).toBeInTheDocument()
   })
 
-  it('cap breach appears in This week when a weight exceeds 15%', () => {
+  it('adds what tracked funds bought among your holdings', () => {
+    stub({ hub: { shelves: [{ key: 'convergent-buys', items: [{ ticker: 'NVDA', bought: 19 }] }] } })
     renderWithProviders(<Dashboard />)
-    const week = panel('This week')
-    expect(within(week).getByText('Above your 15% cap')).toBeInTheDocument()
-    expect(within(week).getByText('NVDA 100.0%')).toBeInTheDocument()
+    expect(screen.getByTestId('brief-items')).toHaveTextContent('19 tracked funds bought NVIDIA last quarter')
   })
 
-  it('raises no cap breach when every weight is at or under 15%', () => {
-    stub({ positions: smallPositions })
+  it('lists the holdings, largest first, with the action word', () => {
+    stub({ positions: smallPositions, summary: { total_value: '900.00', total_pnl: '15.00', total_pnl_pct: 1.7 }, verdicts: { AAA: { action: 'add', uic: 2 } } })
     renderWithProviders(<Dashboard />)
-    expect(within(panel('This week')).queryByText(/Above your 15% cap/)).toBeNull()
+    const holdings = panel('Your holdings')
+    const tickers = within(holdings).getAllByText(/^(AAA|BBB)$/).map((node) => node.textContent)
+    expect(tickers).toEqual(['AAA', 'BBB'])
+    expect(within(holdings).getByText('Add')).toHaveClass('text-up')
   })
 
-  it('every existing card heading is still present', () => {
+  it('keeps the data notes in one quiet line at the bottom', () => {
     renderWithProviders(<Dashboard />)
-    for (const name of [
-      'Net worth',
-      'Net worth history',
-      'Portfolio',
-      'Allocation & movement',
-      'Movers',
-      'Portfolio currency',
-      'Upcoming earnings',
-      'Recent transactions',
-    ]) {
-      expect(screen.getByRole('heading', { name })).toBeInTheDocument()
-    }
-  })
-
-  it('lays the board out as the Overview panels', () => {
-    renderWithProviders(<Dashboard />)
-    for (const name of ['Overview', 'This week', 'Vs the US 500', 'Smart money', 'Allocation']) {
-      expect(screen.getByRole('heading', { name })).toBeInTheDocument()
-    }
-    expect(screen.queryByText('Overview of your investments and bank accounts')).toBeNull()
+    expect(screen.getByTestId('overview-notes')).toHaveTextContent('NVDA alone is 60% of the portfolio. As of 09 Sep 2026. Rules, not advice.')
   })
 
   it('shows the net share change tracked funds made in each held ticker', () => {
@@ -270,13 +165,6 @@ describe('Dashboard', () => {
     const row = within(panel('Smart money')).getByText('NVDA').closest('a')
     expect(row).toHaveTextContent('—')
     expect(row).not.toHaveTextContent(/\b0\b/)
-  })
-
-  it('renders a dash for the top holding when there are no positions', () => {
-    stub({ positions: [] })
-    renderWithProviders(<Dashboard />)
-    const tile = screen.getByText('Top holding').closest('div').parentElement
-    expect(tile).toHaveTextContent('—')
   })
 
   it('compares the return since inception with the S&P 500', () => {
@@ -300,12 +188,6 @@ describe('Dashboard', () => {
     const vs = panel('Vs the US 500')
     expect(within(vs).getAllByText('—')).toHaveLength(2)
     expect(within(vs).getByText(/Saxo is not connected/)).toBeInTheDocument()
-  })
-
-  it('flags holdings above the cap in the allocation list', () => {
-    renderWithProviders(<Dashboard />)
-    const allocation = panel('Allocation')
-    expect(within(allocation).getByText('100.0%')).toHaveClass('text-warn')
   })
 
   it('shows recent trades with instrument-currency price, signed euro total and fractional qty', () => {

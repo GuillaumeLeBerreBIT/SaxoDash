@@ -137,6 +137,37 @@ class BestWorstMonthTest(TestCase):
         self.assertEqual(metrics.best_worst_month([]), (None, None))
 
 
+class GrowthSeriesTest(TestCase):
+    def test_indexes_both_lines_to_100_from_the_first_portfolio_day(self):
+        port = [(date(2026, 1, 5), 200), (date(2026, 1, 6), 220), (date(2026, 1, 7), 180)]
+        bench = [(date(2026, 1, 2), 40), (date(2026, 1, 5), 50), (date(2026, 1, 7), 55)]
+        self.assertEqual(metrics.growth_series(port, bench), [
+            {'date': '2026-01-05', 'portfolio': 100.0, 'benchmark': 100.0},
+            {'date': '2026-01-06', 'portfolio': 110.0, 'benchmark': 100.0},
+            {'date': '2026-01-07', 'portfolio': 90.0, 'benchmark': 110.0},
+        ])
+
+    def test_the_index_is_blank_until_it_has_a_close(self):
+        port = [(date(2026, 1, 5), 100), (date(2026, 1, 6), 110)]
+        bench = [(date(2026, 1, 6), 10)]
+        series = metrics.growth_series(port, bench)
+        self.assertEqual([row['benchmark'] for row in series], [None, 100.0])
+
+    def test_no_index_gives_the_portfolio_line_alone(self):
+        series = metrics.growth_series([(date(2026, 1, 5), 100), (date(2026, 1, 6), 105)], [])
+        self.assertEqual([row['benchmark'] for row in series], [None, None])
+        self.assertEqual(series[1]['portfolio'], 105.0)
+
+    def test_too_little_history_is_empty(self):
+        self.assertEqual(metrics.growth_series([(date(2026, 1, 5), 100)], []), [])
+
+    def test_the_performance_summary_carries_it(self):
+        port = synthetic_series(8)
+        summary = metrics.performance_summary(port, benchmark_series(8))
+        self.assertEqual(len(summary['growth']), len(port))
+        self.assertEqual(summary['growth'][0]['portfolio'], 100.0)
+
+
 class PositiveMonthsPctTest(TestCase):
     def test_computes_the_share_that_were_positive(self):
         monthly = [{'pct': 5.0}, {'pct': -1.0}, {'pct': 0.0}, {'pct': 3.0}]

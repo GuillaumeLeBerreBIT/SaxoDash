@@ -8,6 +8,7 @@ import {
   linePath,
   paneGeometry,
   timeLabelStyle,
+  timeTickCount,
   useWidth,
 } from '../../lib/chartGeometry'
 import { useChartColors } from '../../theme/useChartColors'
@@ -212,7 +213,7 @@ export function TimeAxis({ data, futureDates = NO_DATES, onBarCountChange, onRes
     onStart: () => (onBarCountChange ? { count: dates.length } : null),
     onDrag: ({ dx, context }) => onBarCountChange(barCountFromDrag(context.count, dx)),
   })
-  const count = Math.min(7, dates.length)
+  const count = timeTickCount(chartW, dates.length)
 
   if (data.length === 0) return null
 

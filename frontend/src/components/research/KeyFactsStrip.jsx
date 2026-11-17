@@ -39,9 +39,7 @@ function referenceFacts(details) {
     ['Exchange', details.exchange_name || details.exchange],
     ['Currency', details.currency],
     ['ISIN', details.isin],
-    ['Uic', details.uic],
     ['Lot size', details.lot_size],
-    ['Asset type', details.asset_type],
   ]
 }
 
@@ -62,7 +60,9 @@ export default function KeyFactsStrip({ fundamentals, details, detailsLoading = 
         {facts.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line first:border-t-0">
             <dt className="text-[13px] text-ink-2 shrink-0">{label}</dt>
-            <dd className="text-[13.5px] font-semibold num text-ink truncate text-right">{value}</dd>
+            <dd title={typeof value === 'string' ? value : undefined} className="text-[13.5px] font-semibold num text-ink truncate text-right">
+              {value}
+            </dd>
           </div>
         ))}
       </dl>

@@ -5,7 +5,6 @@ import { useStopTracking } from '../../api/queries'
 import { Alert, Button, Select } from '../ui'
 import FollowButton from './FollowButton'
 import InvestorAvatar from './InvestorAvatar'
-import StyleChips from './StyleChips'
 import { quarterLabel } from '../../lib/investors'
 
 function StopTracking({ detail }) {
@@ -55,7 +54,6 @@ export default function InvestorHero({ detail }) {
             <p className="text-[12px] font-semibold text-warn-text mt-0.5">{`No 13F since ${quarterLabel(detail.quarters[0])}`}</p>
           ) : null}
         </div>
-        <StyleChips styles={detail.styles} />
       </div>
       {detail.blurb ? <p className="text-[13px] text-ink-2 max-w-[70ch]">{detail.blurb}</p> : null}
       {detail.photo_credit_url ? (

@@ -137,8 +137,8 @@ describe('fmtRevenue', () => {
     [4.2e5, '<1M'],
     [4.2e6, '4.2M'],
     [3.2e7, '32M'],
-    [1.5e9, '1.50B'],
-    [2.5e12, '2.50T'],
+    [1.5e9, '1.5B'],
+    [2.5e12, '2.5T'],
   ])('%s -> %s', (input, expected) => {
     expect(fmtRevenue(input)).toBe(expected)
   })

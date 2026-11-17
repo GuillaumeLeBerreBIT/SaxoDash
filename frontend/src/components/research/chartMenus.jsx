@@ -36,3 +36,17 @@ export function IndicatorMenuItems({ controls }) {
     </>
   )
 }
+
+const GUIDES = {
+  zones: ['Opportunity and expensive zones', 'Where the price is cheap or expensive for this company'],
+  plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
+}
+
+export function GuideMenuItems({ controls, available }) {
+  return available.map((key) => (
+    <MenuRow key={key} tall checked={Boolean(controls.guides?.[key])} onClick={() => controls.toggleGuide(key)}>
+      <span className="block leading-5">{GUIDES[key][0]}</span>
+      <span className="block text-[11px] leading-4 text-ink-3">{GUIDES[key][1]}</span>
+    </MenuRow>
+  ))
+}

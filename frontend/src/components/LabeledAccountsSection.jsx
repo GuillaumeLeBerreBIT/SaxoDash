@@ -8,7 +8,7 @@ import {
   useLabeledAccounts,
 } from '../api/queries'
 import { CATEGORY_LABELS } from '../lib/categories'
-import { fmtEur } from '../lib/format'
+import { fmtEur, maskIban } from '../lib/format'
 import { Button, Card, EmptyState, Input, Modal, Select } from './ui'
 
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS)
@@ -150,7 +150,7 @@ export default function LabeledAccountsSection({ className = '' }) {
                 <div className="min-w-0">
                   <div className="text-[13.5px] font-semibold text-ink truncate">{l.label}</div>
                   <div className="text-[12px] text-ink-3 truncate">
-                    {l.iban || l.counterparty_name} · {CATEGORY_LABELS[l.category]}
+                    {maskIban(l.iban) || l.counterparty_name} · {CATEGORY_LABELS[l.category]}
                   </div>
                 </div>
                 <button

@@ -16,7 +16,7 @@ describe('ActionBadge', () => {
 
   it('renders the action label with the reason as its title', () => {
     render(<ActionBadge verdict={{ action: 'sell_review', reason: 'Weak business.' }} />)
-    expect(screen.getByText('Sell (review)')).toBeInTheDocument()
+    expect(screen.getByText('Review')).toBeInTheDocument()
     expect(screen.getByTitle('Weak business.')).toBeInTheDocument()
   })
 

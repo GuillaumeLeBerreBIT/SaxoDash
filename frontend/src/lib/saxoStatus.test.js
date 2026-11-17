@@ -13,9 +13,9 @@ import { SAXO_DOT_CLASS, deriveSaxoStatus } from './saxoStatus'
 const ok = { connected: true, needs_reauth: false, usable: true, last_sync_outcome: 'ok' }
 
 const STATES = [
-  ['connected ok', ok, 'connected', 'Saxo connected', ['Saxo connected']],
-  ['connected, skipped', { ...ok, last_sync_outcome: 'skipped' }, 'sync_degraded', 'Saxo connected, sync skipped', ['Sync skipped', 'Saxo connected']],
-  ['connected, failed', { ...ok, last_sync_outcome: 'failed' }, 'sync_degraded', 'Saxo connected, sync failed', ['Sync failed', 'Saxo connected']],
+  ['connected ok', ok, 'connected', 'Saxo connected', []],
+  ['connected, skipped', { ...ok, last_sync_outcome: 'skipped' }, 'sync_degraded', 'Saxo connected, sync skipped', ['Sync skipped']],
+  ['connected, failed', { ...ok, last_sync_outcome: 'failed' }, 'sync_degraded', 'Saxo connected, sync failed', ['Sync failed']],
   ['needs reauth', { ...ok, needs_reauth: true, usable: false }, 'needs_reauth', 'Saxo needs re-authentication', ['Reconnect Saxo']],
   ['reconnecting', { ...ok, usable: false }, 'reconnecting', 'Saxo reconnecting…', ['Reconnecting…']],
   ['not connected', { connected: false }, 'not_connected', 'Saxo not connected', ['Connect Saxo']],
@@ -34,6 +34,7 @@ describe('deriveSaxoStatus', () => {
     unmount()
     const full = render(createElement(SaxoConnectionStatus))
     visible.forEach((text) => expect(screen.getByText(text)).toBeInTheDocument())
+    if (visible.length === 0) expect(full.container).toBeEmptyDOMElement()
     full.unmount()
   })
 })

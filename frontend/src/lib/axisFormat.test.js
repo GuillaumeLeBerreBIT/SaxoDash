@@ -31,8 +31,8 @@ describe('fmtAxisDollars', () => {
 
 describe('fmtTooltipDollars', () => {
   it.each([
-    [2_100_000_000, '$2.10B'],
-    [-2_100_000_000, '-$2.10B'],
+    [2_100_000_000, '$2.1B'],
+    [-2_100_000_000, '-$2.1B'],
     [-450_000_000, '-$450M'],
     [null, '—'],
   ])('formats %s as %s', (input, expected) => {

@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react'
-import { useOutletContext, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
-import { useFundamentals, useMarkReviewedMutation, useSymbolNoteMutation, useVerdict } from '../api/queries'
+import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
+import { reportsWithin } from '../lib/earnings'
+import { entrySentence, priceZones } from '../lib/priceZones'
+import { signalsForListing } from '../lib/signals'
+import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
-import { readRecentSymbols } from '../lib/recentSymbols'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import FundsTab from '../components/research/FundsTab'
@@ -23,6 +26,7 @@ import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
+import { useTradeRisk } from '../components/research/useTradeRisk'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 const TABS = [
@@ -51,8 +55,7 @@ const REFUSALS = {
 
 export default function Research() {
   const [params] = useSearchParams()
-  const outlet = useOutletContext()
-  const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
+  const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
   const [hover, setHover] = useState(null)
@@ -66,7 +69,6 @@ export default function Research() {
     controls.resetView()
   }
 
-  const recentSymbols = readRecentSymbols().filter((s) => s !== symbol)
 
   const {
     chart,
@@ -95,6 +97,44 @@ export default function Research() {
   const companySymbol = companyData === COMPANY_DATA.eligible ? symbol : ''
   const fundamentals = useFundamentals(companySymbol)
   const verdict = useVerdict(companySymbol)
+  const signals = useSignals({ enabled: Boolean(companySymbol) }).data
+  const stockSignalsAnswer = useStockSignals(companySymbol).data
+  const stockSignals = useMemo(
+    () => signalsForListing(stockSignalsAnswer, instrument?.uic),
+    [stockSignalsAnswer, instrument?.uic],
+  )
+  const portfolioValue = usePortfolioSummary()?.data?.total_value
+  const tradePlan = useMemo(
+    () => ({ positions, portfolioValue: positionsReady ? portfolioValue : null }),
+    [positions, positionsReady, portfolioValue],
+  )
+  const chartSignals = useMemo(() => ({ stock: stockSignals, catalogue: signals }), [stockSignals, signals])
+  const [riskPct] = useTradeRisk()
+  const judgedVerdict = verdict?.data
+  const listingUic = instrument?.uic
+  const nextReport = earnings?.data?.available ? earnings.data.next : null
+  const guideCurrency = details.data?.currency ?? position?.currency
+  const guides = useMemo(() => {
+    const shown = controls.guides
+    const plan = planFromPage({
+      bars: allBars, currency: guideCurrency, note: note?.data, positions, position,
+      portfolioValue: tradePlan.portfolioValue, riskPct,
+    })
+    const judged = signalsForListing(judgedVerdict, listingUic)
+    const zones = priceZones(judged)
+    const latest = allBars.length ? allBars[allBars.length - 1].close : null
+    return {
+      available: [...(judged ? ['zones'] : []), ...(plan ? ['plan'] : [])],
+      currency: guideCurrency,
+      zones: shown.zones ? zones : null,
+      plan: shown.plan ? plan : null,
+      sentence: entrySentence({ verdict: null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
+      answer: entrySentence({
+        verdict: judged, price: latest, plan: null, held: Boolean(position),
+        earnings: judged ? reportsWithin(nextReport, 10) : null, currency: guideCurrency,
+      }),
+    }
+  }, [controls.guides, allBars, guideCurrency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, judgedVerdict, listingUic, nextReport])
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
@@ -127,7 +167,6 @@ export default function Research() {
       instrument={instrument}
       details={details.data}
       position={position}
-      positions={positions}
       verdict={verdict}
       quote={quote}
       bars={rangeBars}
@@ -138,9 +177,6 @@ export default function Research() {
       tabs={visibleTabs}
       activeTab={tab}
       onSelectTab={setTab}
-      recentSymbols={recentSymbols}
-      onSelectSymbol={selectSymbol}
-      onOpenPalette={outlet?.openPalette}
       showPosition={!onOverview}
     />
   )
@@ -158,6 +194,7 @@ export default function Research() {
       symbol={symbol}
       unresolved={!instrument && !chart.isLoading}
       earningsMarkers={earningsMarkers}
+      guides={guides}
       futureDates={futureDates}
       lines={priceLines.lines}
       onMoveLine={priceLines.move}
@@ -184,6 +221,9 @@ export default function Research() {
           range={controls.range}
           fundamentals={fundamentals}
           verdict={verdict}
+          answer={guides.answer}
+          chartSignals={chartSignals}
+          tradePlan={tradePlan}
           note={note}
           onSaveNote={(patch) => noteMutation.mutate(patch)}
           onMarkReviewed={() => reviewMutation.mutate()}
@@ -193,7 +233,7 @@ export default function Research() {
           onOpenTab={setTab}
           header={header}
           lead={chartPanel}
-          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} onOpenTab={setTab} />}
+          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
           rail={<WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
       </div>
@@ -229,7 +269,7 @@ export default function Research() {
           {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
           {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
           {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
-          {shown('guide') ? <GuideTab /> : null}
+          {shown('guide') ? <GuideTab signals={signals} /> : null}
         </div>
         <div className="min-w-0 min-[1440px]:col-span-3">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />

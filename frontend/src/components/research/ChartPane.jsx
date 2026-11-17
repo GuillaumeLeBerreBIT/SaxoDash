@@ -164,7 +164,8 @@ export default function ChartPane({
     <section
       aria-label={slot ? `${slot.symbol} chart` : emptyPaneName(index)}
       aria-current={active || undefined}
-      onMouseDown={onActivate}
+      onPointerDownCapture={onActivate}
+      onFocusCapture={onActivate}
       style={style}
       className={`flex-col flex-1 min-h-0 min-w-0 ${className}`}
     >

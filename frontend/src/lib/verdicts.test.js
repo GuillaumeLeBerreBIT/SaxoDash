@@ -5,11 +5,11 @@ import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSen
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
     expect(ACTION_LABEL).toEqual({
-      buy: 'Buy',
+      buy: 'Opportunity',
       add: 'Add',
       hold: 'Hold',
       trim: 'Trim',
-      sell_review: 'Sell (review)',
+      sell_review: 'Review',
       wait: 'Wait',
       not_a_fit: 'Not a fit',
       no_verdict: 'No verdict',
@@ -17,9 +17,9 @@ describe('verdict wording', () => {
   })
 
   it('says a hold forced by the weight cap is still cheap', () => {
-    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · still cheap')
+    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · over cap')
     expect(actionLabel({ action: 'hold' })).toBe('Hold')
-    expect(actionLabel({ action: 'sell_review' })).toBe('Sell (review)')
+    expect(actionLabel({ action: 'sell_review' })).toBe('Review')
   })
 
   it('colours buying up and trimming as a warning', () => {
@@ -48,13 +48,25 @@ describe('verdict wording', () => {
 describe('checkLine', () => {
   it('prints a percent figure beside what it needs', () => {
     expect(checkLine({ key: 'roe', label: 'Return on equity', status: 'pass', value: 31.24, threshold: '15%' })).toBe(
-      'Return on equity 31.2% · needs 15%',
+      'Return on equity 31.2% in a typical year · needs 15%',
     )
   })
 
   it('prints debt as a plain ratio', () => {
     expect(checkLine({ key: 'debt', label: 'Debt', status: 'fail', value: 1.46, threshold: 'at most 1.0' })).toBe(
-      'Debt 1.5 · needs at most 1.0',
+      'Debt 1.5 × equity, latest quarter · needs at most 1.0',
+    )
+  })
+
+  it('says growth is a yearly rate over five years', () => {
+    expect(checkLine({ key: 'revenue_growth', label: 'Revenue growth', value: 5.5, threshold: '5% a year' })).toBe(
+      'Revenue growth 5.5% a year over 5 years · needs 5% a year',
+    )
+  })
+
+  it('says how much of the profit arrived as free cash', () => {
+    expect(checkLine({ key: 'cash', label: 'Cash behind the profit', value: 97.52, threshold: '80% of profit' })).toBe(
+      'Cash behind the profit 97.5% of profit, in a typical year · needs 80% of profit',
     )
   })
 
@@ -66,7 +78,7 @@ describe('checkLine', () => {
 
   it('keeps a real zero', () => {
     expect(checkLine({ key: 'margins', label: 'Margins', status: 'fail', value: 0, threshold: '10%' })).toBe(
-      'Margins 0% · needs 10%',
+      'Margins 0% in a typical year · needs 10%',
     )
   })
 })

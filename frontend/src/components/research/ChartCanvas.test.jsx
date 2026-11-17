@@ -222,4 +222,18 @@ describe('ChartCanvas legend height', () => {
     for (const key of ['O', 'H', 'L']) expect(cell(key)).toHaveClass('hidden', 'md:inline')
     expect(cell('C')).not.toHaveClass('hidden')
   })
+
+  it('prints the readout at 13px with the prices in ink, only the change coloured', () => {
+    const { container } = render(canvas())
+
+    const legend = container.querySelector('.num.flex-wrap:not(.invisible)')
+    expect(legend).toHaveClass('text-[13px]')
+    const cell = (key) => [...legend.children].find((el) => el.textContent.startsWith(`${key} `))
+    for (const key of ['O', 'H', 'L', 'C']) {
+      expect(cell(key).querySelector('span')).toHaveClass('text-ink')
+      expect(cell(key).querySelector('span')).not.toHaveClass('text-up')
+      expect(cell(key).querySelector('span')).not.toHaveClass('text-down')
+    }
+    expect(legend.querySelector('.text-up, .text-down')).not.toBeNull()
+  })
 })

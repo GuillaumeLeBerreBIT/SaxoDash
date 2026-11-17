@@ -68,6 +68,10 @@ PERIODIC_TASKS = {
         'task': 'research.tasks.scan_universe',
         'crontab': {'minute': '30', 'hour': '22'},
     },
+    'Backfill daily bars': {
+        'task': 'research.tasks.backfill_daily_bars',
+        'crontab': {'minute': '30', 'hour': '23'},
+    },
     'Refresh copy performance': {
         'task': 'investors.tasks.refresh_copy_performance',
         'crontab': {'minute': '30', 'hour': '1'},
@@ -75,6 +79,10 @@ PERIODIC_TASKS = {
     'Compute verdicts': {
         'task': 'verdicts.tasks.compute_verdicts',
         'crontab': {'minute': '15', 'hour': '0'},
+    },
+    'Compute signals': {
+        'task': 'signals.tasks.compute_signals',
+        'crontab': {'minute': '45', 'hour': '0'},
     },
     'Sync investors (13F deadline months)': {
         'task': 'investors.tasks.sync_investors',

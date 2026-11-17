@@ -26,7 +26,7 @@ function NoteField({ label, value, placeholder, rows = 2, onSave }) {
   }
 
   return (
-    <div>
+    <label className="block">
       <div className={LABEL_CLASS}>{label}</div>
       <textarea
         rows={rows}
@@ -36,7 +36,7 @@ function NoteField({ label, value, placeholder, rows = 2, onSave }) {
         onBlur={() => draft !== (value ?? '') && onSave(draft)}
         className={FIELD_CLASS}
       />
-    </div>
+    </label>
   )
 }
 

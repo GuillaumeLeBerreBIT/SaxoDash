@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'congress',
     'advisor',
     'verdicts',
+    'signals',
     'mcp_server',
     'users',
 ]

@@ -5,24 +5,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useEarningsCalendar } from '../api/queries'
 import DayList from '../components/earnings/DayList'
 import DayStrip from '../components/earnings/DayStrip'
-import WeekGrid from '../components/earnings/WeekGrid'
-import YourWeek from '../components/earnings/YourWeek'
-import { Alert, Card, Segmented } from '../components/ui'
+import YourReports from '../components/earnings/YourReports'
+import { Alert, Segmented, Skeleton } from '../components/ui'
 import { buildWeekGrid, currentWeekLabel, groupByWeekday, weekLabel, weekdayKey } from '../lib/earnings'
+import { earningsHeadline, marketSentence } from '../lib/earningsBrief'
 
 const MIN_WEEK = -8
 const MAX_WEEK = 12
 const NAV_BUTTON =
   'sd-raised w-11 h-11 md:w-7 md:h-7 rounded-[7px] bg-raised text-ink-2 hover:text-ink disabled:opacity-40 flex items-center justify-center'
 const SCOPES = [
-  { value: 'all', label: 'All' },
-  { value: 'mine', label: 'Mine' },
+  { value: 'all', label: 'Everyone' },
+  { value: 'mine', label: 'Only mine' },
 ]
-
-function marketLine({ total, reported, beat }) {
-  const base = `${total} reporting`
-  return reported ? `${base} · ${Math.round((beat / reported) * 100)}% of reported beat` : base
-}
 
 export default function Earnings() {
   const navigate = useNavigate()
@@ -40,6 +35,11 @@ export default function Earnings() {
     () => Object.fromEntries(Object.entries(groups).map(([key, dayEvents]) => [key, dayEvents.length])),
     [groups],
   )
+  const mineCounts = useMemo(
+    () => Object.fromEntries(Object.entries(groups).map(([key, dayEvents]) => [key, dayEvents.filter((event) => event.mine).length])),
+    [groups],
+  )
+  const mineEvents = useMemo(() => events.filter((event) => event.mine), [events])
 
   const autoDay = useMemo(() => {
     const wanted = week === 0 ? weekdayKey() : 'mon'
@@ -87,26 +87,32 @@ export default function Earnings() {
       </div>
 
       {isLoading && (
-        <Card>
-          <p className="text-[12px] text-ink-3">Loading…</p>
-        </Card>
+        <div role="status" aria-label="Loading earnings" className="space-y-3">
+          <Skeleton className="h-20" />
+          <Skeleton className="h-12" />
+          <Skeleton className="h-64" />
+        </div>
       )}
 
       {!isLoading && failed && <Alert>Couldn’t load the earnings calendar.</Alert>}
 
       {!isLoading && !failed && data && (
         <>
-          <div className="md:hidden">
-            <DayStrip days={grid.days} counts={counts} windowFrom={data.window?.from} selectedDay={day} onSelect={select} />
+          <section aria-label="This week" className="mb-5 flex flex-col gap-2.5 pt-2">
+            <p data-testid="earnings-headline" className="max-w-[820px] text-[24px] font-bold leading-tight tracking-tight text-ink md:text-[32px] [text-wrap:balance]">
+              {earningsHeadline(mineEvents, data.next_mine)}
+            </p>
+            {scope === 'all' && marketSentence(data.stats) ? (
+              <p className="text-[15px] text-ink-2">{marketSentence(data.stats)}</p>
+            ) : null}
+          </section>
+          <div className="mb-6">
+            <YourReports events={events} onOpen={openSymbol} />
           </div>
-
-          <YourWeek events={events} nextMine={data.next_mine} onOpen={openSymbol} />
-
-          <Card context={scope === 'all' && data.stats ? marketLine(data.stats) : undefined} title="Market week" className="mb-4 hidden md:block">
-            <WeekGrid grid={grid} windowFrom={data.window?.from} selectedDay={day} onSelect={select} onOpen={openSymbol} />
-          </Card>
+          <DayStrip days={grid.days} counts={counts} mineCounts={mineCounts} windowFrom={data.window?.from} selectedDay={day} onSelect={select} />
 
           <DayList
+            key={`${week}:${day}`}
             day={day}
             events={groups[day] || []}
             scope={scope}

@@ -187,3 +187,14 @@ class ScreenerRow(models.Model):
 
     def __str__(self):
         return self.ticker
+
+
+class DailyBars(models.Model):
+    row = models.OneToOneField(ScreenerRow, on_delete=models.CASCADE, related_name='daily_bars')
+    bars = models.JSONField(default=list)
+    history_complete = models.BooleanField(default=False)
+    backfill_tried_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.row.ticker}: {len(self.bars)} bars'
