@@ -286,6 +286,31 @@ describe('apiFetch (via getPositions)', () => {
     expect(refreshCalls).toBe(1)
   })
 
+  it('retries with the token another tab already refreshed instead of spending the refresh token again', async () => {
+    localStorage.setItem('access', 'expired-access')
+    localStorage.setItem('refresh', 'valid-refresh')
+
+    let refreshCalls = 0
+    window.fetch = vi.fn().mockImplementation((url, options) => {
+      if (url.includes('/api/token/refresh/')) {
+        refreshCalls += 1
+        return Promise.resolve(jsonResponse(null, false, 401))
+      }
+      if (options.headers.Authorization === 'Bearer expired-access') {
+        localStorage.setItem('access', 'other-tab-access')
+        localStorage.setItem('refresh', 'other-tab-refresh')
+        return Promise.resolve(jsonResponse(null, false, 401))
+      }
+      return Promise.resolve(jsonResponse([{ ticker: 'NVDA' }]))
+    })
+
+    const result = await getPositions()
+
+    expect(result).toEqual([{ ticker: 'NVDA' }])
+    expect(refreshCalls).toBe(0)
+    expect(localStorage.getItem('refresh')).toBe('other-tab-refresh')
+  })
+
   it('clears tokens and throws when the refresh token is invalid', async () => {
     localStorage.setItem('access', 'expired-access')
     localStorage.setItem('refresh', 'stale-refresh')

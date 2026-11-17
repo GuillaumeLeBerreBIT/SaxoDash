@@ -47,6 +47,11 @@ class SignupView(APIView):
 
 
 class MeView(APIView):
+    throttle_scope = 'account_change'
+
+    def get_throttles(self):
+        return super().get_throttles() if self.request.method == 'PATCH' else []
+
     def get(self, request):
         return Response(UserSerializer(request.user).data)
 
@@ -63,6 +68,8 @@ class MeView(APIView):
 
 
 class PasswordView(APIView):
+    throttle_scope = 'password_change'
+
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
