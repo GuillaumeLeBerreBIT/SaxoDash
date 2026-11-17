@@ -186,14 +186,11 @@ tiles are gone, the palette clipping its last row is not checked.
 
 ## What is left
 
-Status 2026-11-17: steps 1 to 7 of the owner's polish list are built on `feat/ui-ux-audit` (Research
-lower half, Charts page, investor directory, light theme, Settings merge, names and numbers,
-accessibility). The branch is local only: not pushed, no pull request.
+Status 2026-11-17: steps 1 to 7 of the owner's polish list are built and shipped to `main`
+(PR #59 into `develop`, PR #60 into `main`).
 
-- **Ship:** push `feat/ui-ux-audit` and open a pull request into `develop` (owner's call).
 - **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
   panning and zooming now work from the keyboard).
-- **Owner's next features, in order:** a Compare page for Discover; remove Money from the navigation;
-  then CSV, Excel or manual upload of financials.
+- **Owner's next feature:** CSV, Excel or manual upload of financials.
 - **Primitives not extracted:** `DataTable`, one stat tile, `PageHeader`, `ChartFrame`, one menu.
 - Portfolio shows SIM/live switch data (€971k cash, +2169%): bad data in the dev database, not a bug.
