@@ -42,7 +42,6 @@ chart. Not verified: Tremor v4 beta and Tremor Raw blocks on React 19 / Tailwind
 - One stat tile. `Tile`, `MetricTile`, `Metric` and `StatRow`/`StatStrip` overlap.
 - One choose-one control: `Segmented`. Fold `RangePills`, `PeriodSelector`, `TBtn` and Settings' own
   list into it; keep `TabList` for page-level tabs only.
-- `PageHeader` as the one page title. Today only Settings uses it and most pages have no visible title.
 - `ChartFrame` for Recharts cards (title, loading, empty, colours).
 - One menu on Radix DropdownMenu (`research/menu.jsx` and `chartMenus.jsx` duplicate it).
 
@@ -147,7 +146,7 @@ the light theme, focus ring on earnings badges and textareas, pane activation on
 
 0. Done on this branch: Research small fixes, contrast, focus (commits `8468a38`, `fb471f8`).
 1. Bugs list above (no design decision needed).
-2. Primitives: `DataTable` with paging, one tile, `PageHeader`, number format helper.
+2. Primitives: `DataTable` with paging, one tile, number format helper.
 3. Research answer card (approved).
 4. Overview, Portfolio, Analytics.
 5. Discover, shelf, Earnings, Charts.
@@ -189,11 +188,10 @@ tiles are gone, the palette clipping its last row is not checked.
 Status 2026-11-17: steps 1 to 7 of the owner's polish list are built and shipped to `main`
 (PR #59 into `develop`, PR #60 into `main`).
 
-- **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
-  panning and zooming now work from the keyboard).
+- **Accessibility:** lines, rays and notes on the chart can now be placed, moved, labelled and
+  deleted from the keyboard (PR #61).
 - **Owner's next feature:** CSV, Excel or manual upload of financials.
 - **Primitives:** one stat tile (`Tile`), one choose-one control (`Segmented`), `DataTable` and
-  `ChartFrame` are in place on `refactor/shared-primitives`; menus already shared one Radix base.
-  `PageHeader` waits on the owner: giving every page a visible title changes every page's look, so
-  it needs a mockup first.
+  `ChartFrame` are in place (PR #61); menus already shared one Radix base. No visible page titles:
+  the owner saw a mockup and turned them down, so pages keep their screen-reader-only `h1`.
 - Portfolio shows SIM/live switch data (€971k cash, +2169%): bad data in the dev database, not a bug.
