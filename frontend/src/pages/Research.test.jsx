@@ -174,8 +174,6 @@ describe('Research', () => {
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY · cheap for this company below \S*100\.00/)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*200\.00/)
     expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
     const banner = screen.getByTestId('answer-card')
     expect(banner).toHaveTextContent('WAIT')

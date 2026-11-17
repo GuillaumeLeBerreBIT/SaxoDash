@@ -19,8 +19,9 @@ import {
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
+import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { PriceZones, StopGuide } from './ChartGuides'
+import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -247,7 +248,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
   )
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, zones, zoneCurrency, plan, clipId, colors }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, guides, plan, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -265,7 +266,13 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} />
 
       <g clipPath={`url(#${clipId})`}>
-        <PriceZones zones={zones} currency={zoneCurrency} geometry={geometry} colors={colors} />
+        {guides ? (
+          <g data-testid="value-guides">
+            <GapBoxes gaps={guides.gaps} geometry={geometry} colors={colors} />
+            <HighLine highs={guides.highs} geometry={geometry} colors={colors} />
+            <GrowthLine line={guides.line} data={data} geometry={geometry} colors={colors} />
+          </g>
+        ) : null}
         {type === 'area' ? (
           <g>
             <defs>
@@ -351,6 +358,8 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       {earningsMarkers.length > 0 ? (
         <EarningsLane markers={earningsMarkers} geometry={geometry} colors={colors} onInspect={onInspectEarnings} />
       ) : null}
+
+      {guides ? <GuideTags line={guides.line} highs={guides.highs} data={data} geometry={geometry} width={width} colors={colors} /> : null}
 
       <g>
         <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.primary} />
@@ -465,8 +474,7 @@ export function TVChart({
   hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
-  priceZones = null,
-  zoneCurrency,
+  valueGuides = null,
   tradePlan = null,
   slots,
   yScale = 1,
@@ -528,6 +536,16 @@ export function TVChart({
     setRayStart(null)
     setRayPreview(null)
   }
+
+  const guideBars = valueGuides?.bars ?? data
+  const showHigh = Boolean(valueGuides?.high)
+  const showGaps = Boolean(valueGuides?.gaps)
+  const series = useMemo(() => guideSeries(guideBars, { high: showHigh, gaps: showGaps }), [guideBars, showHigh, showGaps])
+  const guideLine = valueGuides?.line ?? null
+  const guides = useMemo(
+    () => (valueGuides ? { line: guideLine, ...visibleGuides(series, guideBars, data) } : null),
+    [valueGuides, guideLine, series, guideBars, data],
+  )
 
   const geometry = useMemo(
     () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift, slots, lane }),
@@ -724,8 +742,7 @@ export function TVChart({
           width={width}
           earningsMarkers={earningsMarkers}
           onInspectEarnings={setInspected}
-          zones={priceZones}
-          zoneCurrency={zoneCurrency}
+          guides={guides}
           plan={tradePlan}
           clipId={clipId}
           colors={colors}

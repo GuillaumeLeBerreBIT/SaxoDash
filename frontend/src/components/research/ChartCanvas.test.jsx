@@ -258,3 +258,35 @@ describe('ChartCanvas legend height', () => {
     expect(legend.querySelector('.text-up, .text-down')).not.toBeNull()
   })
 })
+
+describe('ChartCanvas value guides', () => {
+  const legend = (container) => container.querySelector('.num.flex-wrap:not(.invisible)')
+  const step = { from: '2026-08-01', price: 100, pe: 24, growth: 24.1, eps_ttm: 4.5, capped: false }
+
+  it('reads the hovered day against the growth line in the legend', () => {
+    const { container } = render(canvas({ hover: 12, valueGuides: { line: [step], high: true, gaps: true, currency: 'USD' } }))
+
+    expect(legend(container)).toHaveTextContent(/P\/E then 25\.3/)
+    expect(legend(container)).toHaveTextContent(/Growth-fair \S*100\.00/)
+    expect([...legend(container).children].map((cell) => cell.textContent)).toContain('expensive')
+  })
+
+  it('leaves the growth reading out before the line starts', () => {
+    const { container } = render(canvas({ hover: 8, valueGuides: { line: [{ ...step, from: '2026-08-20' }], high: true, gaps: true, currency: 'USD' } }))
+
+    expect(legend(container)).not.toHaveTextContent('P/E then')
+  })
+
+  it('describes a gap on the hovered gap day', () => {
+    const gapped = bars.map((bar, i) => (i === 25 ? { ...bar, open: 140, high: 145, low: 139, close: 142, volume: 5_000_000 } : bar))
+    const { container } = render(canvas({ bars: gapped, ind: computeIndicators(gapped), hover: 25, valueGuides: { line: null, high: false, gaps: true, currency: 'USD' } }))
+
+    expect(legend(container)).toHaveTextContent(/Gap up 11\.1% · 5\.0x vol · filled/)
+  })
+
+  it('draws no flat price zones', () => {
+    const { container } = render(canvas({ valueGuides: { line: [step], high: true, gaps: true, currency: 'USD' } }))
+
+    expect(container.querySelector('[data-testid="price-zones"]')).toBeNull()
+  })
+})

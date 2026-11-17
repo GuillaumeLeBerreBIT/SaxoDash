@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { entrySentence, FAIR_BAND, growthSentence, peChip, readPrice, stepAt } from './valueGuides'
+import { rollingHigh } from './indicators'
+import { entrySentence, FAIR_BAND, growthSentence, guideSeries, peChip, readPrice, stepAt, visibleGuides } from './valueGuides'
 
 const step = { from: '2026-08-30', price: 100, pe: 24, growth: 24.1, eps_ttm: 4.17, capped: false }
 const capped = { ...step, pe: 30, growth: 167.4, capped: true }
@@ -138,5 +139,30 @@ describe('entrySentence', () => {
   it('is nothing without a verdict or a plan', () => {
     expect(entrySentence({ verdict: null, price: 356, plan: null })).toBeNull()
     expect(entrySentence({ verdict: null, price: 356, plan }).word).toBeNull()
+  })
+})
+
+describe('visibleGuides', () => {
+  const day = (i) => new Date(Date.UTC(2025, 0, 1 + i)).toISOString().slice(0, 10)
+  const full = Array.from({ length: 300 }, (_, i) => ({ date: day(i), open: 100, high: 100 + (i % 7), low: 99, close: 100, volume: 1_000_000 }))
+  full[280] = { ...full[280], open: 110, high: 112, low: 109, close: 111, volume: 5_000_000 }
+
+  it('measures the high and the gaps on the full history and maps them to the visible bars', () => {
+    const data = full.slice(270, 290)
+    const shown = visibleGuides(guideSeries(full, { high: true, gaps: true }), full, data)
+
+    expect(shown.highs).toHaveLength(20)
+    expect(shown.highs[0]).toBe(rollingHigh(full)[270])
+    expect(shown.gaps).toHaveLength(1)
+    expect(shown.gaps[0]).toMatchObject({ index: 10, up: true, from: 100, to: 110 })
+  })
+
+  it('leaves out what is switched off and what ended before the visible bars', () => {
+    const shown = visibleGuides(guideSeries(full, { high: false, gaps: true }), full, full.slice(281))
+
+    expect(shown.highs).toBeNull()
+    expect(shown.gaps[0]).toMatchObject({ index: -1, end: 0, filled: true, filledOn: full[281].date })
+    expect(visibleGuides(guideSeries(full, { high: false, gaps: true }), full, full.slice(290)).gaps).toEqual([])
+    expect(visibleGuides(guideSeries(full, { high: false, gaps: false }), full, full.slice(290)).gaps).toEqual([])
   })
 })

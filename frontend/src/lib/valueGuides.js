@@ -1,4 +1,5 @@
 import { fmtEur, fmtMoney } from './format'
+import { rollingHigh, volumeGaps } from './indicators'
 import { actionLabel, actionTone } from './verdicts'
 
 export const FAIR_BAND = 0.1
@@ -23,6 +24,24 @@ export function readPrice(close, step) {
   if (ratio < -FAIR_BAND) return 'cheap'
   if (step.capped) return 'priced_in'
   return ratio > FAIR_BAND ? 'expensive' : 'fair'
+}
+
+export function guideSeries(bars, { high, gaps }) {
+  return {
+    highs: high ? rollingHigh(bars) : null,
+    gaps: gaps ? volumeGaps(bars).map((gap) => ({ ...gap, filledOn: gap.filled ? bars[gap.end].date : null })) : [],
+  }
+}
+
+export function visibleGuides(series, bars, data) {
+  const offset = data.length ? bars.findIndex((bar) => bar.date === data[0].date) : -1
+  if (offset < 0) return { highs: null, gaps: [] }
+  return {
+    highs: series.highs ? series.highs.slice(offset, offset + data.length) : null,
+    gaps: series.gaps
+      .map((gap) => ({ ...gap, index: gap.index - offset, end: gap.end - offset }))
+      .filter((gap) => gap.end >= 0 && gap.index < data.length),
+  }
 }
 
 export function peChip(verdict) {
