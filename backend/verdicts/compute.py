@@ -4,9 +4,9 @@ from typing import NamedTuple
 from django.db import transaction
 from django.utils import timezone
 
-from research.models import ScreenerRow
+from research.models import DailyBars, ScreenerRow
 
-from . import rules
+from . import price_line, rules
 from .models import StockVerdict, VerdictCall
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,15 @@ def _is_buy_grade(quality, valuation):
     return quality['grade'] == 'strong' and valuation['grade'] == 'cheap'
 
 
+def _price_line(row):
+    if row.pk is None:
+        return [], None
+    stored =DailyBars.objects.filter(row=row).values_list('bars', flat=True).first()
+    return price_line.from_bars(stored)
+
+
 def _store(row, quality, valuation):
+    spark, high_1y = _price_line(row)
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
@@ -37,6 +45,8 @@ def _store(row, quality, valuation):
             'expensive_above': valuation['expensive_above'],
             'last_close': row.last_close,
             'pct_vs_ma200': row.pct_vs_ma200,
+            'spark': spark,
+            'high_1y': high_1y,
             'as_of': row.fundamentals_at.date(),
         },
     )

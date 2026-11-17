@@ -8,11 +8,14 @@ import Projection from '../components/analytics/Projection'
 import ReturnsTable from '../components/analytics/ReturnsTable'
 import CalendarYears from '../components/analytics/CalendarYears'
 import Attribution from '../components/analytics/Attribution'
+import GrowthChart from '../components/analytics/GrowthChart'
 import { fmtNum, fmtPct } from '../lib/format'
+import { performanceSentence } from '../lib/performanceAnswer'
 import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
 const CONTEXT = 'Daily portfolio value · computed from your own history'
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const RESULT_CONTEXT = 'Your Saxo account, day by day · deposits and withdrawals count as gains and losses'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const SPAN_6 = 'min-[1100px]:col-span-6'
 const SPAN_12 = 'min-[1100px]:col-span-12'
 const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'
@@ -39,7 +42,34 @@ function BenchmarkSelector({ options, value, onChange }) {
   )
 }
 
-function PerformanceTab({ data, positions }) {
+function Bumpiness({ risk, className = '' }) {
+  return (
+    <Card className={className} title="How bumpy it was">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+        <Tile
+          label="Worst fall from a peak"
+          value={risk.max_drawdown == null ? null : pctOrDash(risk.max_drawdown)}
+          tone={risk.max_drawdown < 0 ? 'down' : undefined}
+          sub={`Now ${pctOrDash(risk.current_drawdown)} from the high`}
+        />
+        <Tile
+          label="Yearly swings"
+          value={risk.volatility == null ? null : pctOrDash(risk.volatility)}
+          sub={risk.sharpe == null ? 'Volatility, annualised' : `Sharpe ${fmtNum(risk.sharpe, 2)}`}
+        />
+        <Tile
+          label="Average return a year"
+          value={risk.expected_return == null ? null : fmtPct(risk.expected_return, { decimals: 1 })}
+          sub={risk.expected_return == null ? needsDaysNote(risk.needs_days?.expected_return) ?? AVG_RETURN_NOTE : AVG_RETURN_NOTE}
+        />
+      </div>
+    </Card>
+  )
+}
+
+const yearsWithData = (years) => (years ?? []).filter((year) => year.portfolio_pct != null).length
+
+function PerformanceTab({ data, risk, positions }) {
   if (!data) return <Card><ChartPlaceholder>Loading…</ChartPlaceholder></Card>
 
   return (
@@ -50,8 +80,11 @@ function PerformanceTab({ data, positions }) {
         </p>
       )}
       <ReturnsTable className={SPAN_6} periods={data.periods} benchmarkName={data.benchmark.name} />
-      <CalendarYears className={SPAN_6} years={data.calendar_years} benchmarkName={data.benchmark.name} />
+      <Bumpiness className={SPAN_6} risk={risk} />
       {positions?.length > 0 && <Attribution className={SPAN_12} positions={positions} />}
+      {yearsWithData(data.calendar_years) > 1 ? (
+        <CalendarYears className={SPAN_12} years={data.calendar_years} benchmarkName={data.benchmark.name} />
+      ) : null}
     </div>
   )
 }
@@ -199,11 +232,10 @@ function DataQualityNotice({ dataQuality, sampleSize }) {
   if (dataQuality !== 'low' && dataQuality !== 'medium') return null
   const days = sampleSize === 1 ? '1 day' : `${sampleSize} days`
   return (
-    <Alert tone="info">
-      Based on {days} of your own history — treat these figures as early
-      reads, not stable long-run statistics. They firm up as more history
-      accumulates.
-    </Alert>
+    <p data-testid="data-quality" className="text-[12px] text-ink-3">
+      Based on {days} of your own history, so these are early reads, not stable long-run statistics.
+      They firm up as more history accumulates.
+    </p>
   )
 }
 
@@ -233,37 +265,19 @@ export default function Analytics() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       <h1 className="sr-only">Analytics</h1>
-      <Card
-        context={`${CONTEXT} · vs ${data.benchmark.name}`}
-        dot={data.data_quality === 'low' || data.data_quality === 'medium' ? 'warn' : 'ok'}
-        title="Return and risk"
-        right={<BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />}
-      >
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-          <Tile
-            label="Avg. return (ann.)"
-            value={data.expected_return == null ? null : fmtPct(data.expected_return, { decimals: 1 })}
-            sub={
-              data.expected_return == null
-                ? needsDaysNote(data.needs_days?.expected_return) ?? AVG_RETURN_NOTE
-                : AVG_RETURN_NOTE
-            }
-          />
-          <Tile
-            label="Volatility"
-            value={data.volatility == null ? null : pctOrDash(data.volatility)}
-            sub={data.sharpe == null ? undefined : `Sharpe ${fmtNum(data.sharpe, 2)}`}
-          />
-          <Tile
-            label="Max drawdown"
-            value={data.max_drawdown == null ? null : pctOrDash(data.max_drawdown)}
-            tone={data.max_drawdown < 0 ? 'down' : undefined}
-            sub={`Current ${pctOrDash(data.current_drawdown)}`}
-          />
+      <section aria-label="Your result" className="flex flex-col gap-4 pt-2 md:flex-row md:items-end md:justify-between">
+        <div className="flex max-w-[860px] flex-col gap-2">
+          <span className="text-[14px] font-medium text-ink-2">{RESULT_CONTEXT}</span>
+          {performance && (
+            <p data-testid="performance-sentence" className="text-[24px] font-bold leading-tight tracking-tight text-ink md:text-[32px] [text-wrap:balance]">
+              {performanceSentence(performance.periods, performance.benchmark.name)}
+            </p>
+          )}
         </div>
-      </Card>
+        <BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />
+      </section>
 
-      <DataQualityNotice dataQuality={data.data_quality} sampleSize={data.sample_size} />
+      {performance?.growth ? <GrowthChart growth={performance.growth} benchmarkName={performance.benchmark.name} /> : null}
 
       <TabList label="Analytics sections">
         {TABS.map(([key, label]) => (
@@ -273,7 +287,7 @@ export default function Analytics() {
         ))}
       </TabList>
 
-      {tab === 'performance' && <PerformanceTab data={performance} positions={positions} />}
+      {tab === 'performance' && <PerformanceTab data={performance} risk={data} positions={positions} />}
       {tab === 'risk' && <RiskTab data={data} />}
       {tab === 'projection' && (
         summary?.total_value != null ? (
@@ -296,6 +310,7 @@ export default function Analytics() {
           </Card>
         )
       )}
+      <DataQualityNotice dataQuality={data.data_quality} sampleSize={data.sample_size} />
     </div>
   )
 }

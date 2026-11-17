@@ -56,9 +56,9 @@ function App() {
             {LEGACY_REDIRECTS.map((redirect) => (
               <Route key={redirect.from} path={redirect.from} element={<LegacyRedirect redirect={redirect} />} />
             ))}
+            <Route path='*' element={<NotFound />} />
           </Route>
         </Route>
-        <Route path='*' element={<NotFound />} />
       </Routes>
     </Suspense>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import TradeHistory from './TradeHistory'
@@ -10,6 +10,20 @@ const trade = (over) => ({
 })
 
 describe('TradeHistory', () => {
+  it('shows the newest 25 trades and more on request', () => {
+    const trades = Array.from({ length: 60 }, (_, index) => trade({ ticker: `T${index}` }))
+    renderWithProviders(<TradeHistory trades={trades} />)
+    expect(screen.getAllByRole('row')).toHaveLength(26)
+    expect(screen.getByText('Showing 25 of 60')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show more' }))
+    expect(screen.getAllByRole('row')).toHaveLength(51)
+  })
+
+  it('offers nothing more for a short list', () => {
+    renderWithProviders(<TradeHistory trades={[trade()]} />)
+    expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull()
+  })
+
   it('marks only trades from an amended report', () => {
     renderWithProviders(<TradeHistory trades={[trade({ amended: true }), trade({ ticker: 'AAPL' })]} />)
     expect(screen.getAllByText('Amended')).toHaveLength(1)

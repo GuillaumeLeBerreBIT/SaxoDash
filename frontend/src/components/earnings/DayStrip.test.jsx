@@ -11,8 +11,8 @@ describe('DayStrip', () => {
     render(
       <DayStrip days={WEEKDAYS.slice(0, 5)} counts={{ mon: 4 }} windowFrom="2026-10-26" selectedDay="mon" onSelect={onSelect} />,
     )
-    expect(screen.getByRole('button', { name: '4 reporting on Mon 26' })).toHaveAttribute('aria-pressed', 'true')
-    await userEvent.click(screen.getByRole('button', { name: '0 reporting on Wed 28' }))
+    expect(screen.getByRole('button', { name: 'Mon 26, 4 reporting' })).toHaveAttribute('aria-pressed', 'true')
+    await userEvent.click(screen.getByRole('button', { name: 'Wed 28, 0 reporting' }))
     expect(onSelect).toHaveBeenCalledWith('wed')
   })
 })

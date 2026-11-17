@@ -10,14 +10,14 @@ const stored = () => JSON.parse(localStorage.getItem('saxodash:chart-prefs'))
 beforeEach(() => localStorage.clear())
 
 describe('useChartControls', () => {
-  it('switches a signal on and off and stores the choice', () => {
+  it('switches a chart guide off and on and stores the choice', () => {
     const { result } = renderHook(() => useChartControls())
-    expect(result.current.signals).toEqual({})
-    act(() => result.current.toggleSignal('momentum_top'))
-    expect(result.current.signals).toEqual({ momentum_top: true })
-    expect(stored().signals).toEqual({ momentum_top: true })
-    act(() => result.current.toggleSignal('momentum_top'))
-    expect(result.current.signals).toEqual({})
+    expect(result.current.guides).toEqual({ zones: true, plan: false })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(false)
+    expect(stored().guides).toEqual({ zones: false, plan: false })
+    act(() => result.current.toggleGuide('zones'))
+    expect(result.current.guides.zones).toBe(true)
   })
 
   it('starts from the defaults when nothing is stored', () => {

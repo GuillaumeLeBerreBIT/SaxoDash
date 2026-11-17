@@ -53,6 +53,7 @@ function stubQueries() {
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useVerdict.mockReturnValue(idle)
   queries.useSymbolNote.mockReturnValue({ ...idle, data: null })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })

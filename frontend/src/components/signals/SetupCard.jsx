@@ -34,23 +34,33 @@ function Standing({ context }) {
   )
 }
 
+const MEANINGFUL = new Set(['supported', 'against'])
+
+function othersLine(count) {
+  if (!count) return null
+  const many = count === 1 ? 'One other chart signal is active; it' : `${count} other chart signals are active; they`
+  return `${many} showed no reliable edge in testing and ${count === 1 ? 'is' : 'are'} listed in the Guide.`
+}
+
 export default function SetupCard({ stockSignals, signals }) {
   if (!stockSignals || !signals?.length) return null
   const active = activeSignals(stockSignals, signals)
+  const shown = active.filter((signal) => MEANINGFUL.has(signalGrade(signal)))
+  const others = othersLine(active.length - shown.length)
   return (
     <Card
       context={stockSignals.as_of ? `Chart signals on ${fmtDate(stockSignals.as_of)}` : 'Chart signals'}
-      dot={active.length ? 'ok' : 'off'}
+      dot={shown.length ? 'ok' : 'off'}
       title="Setup"
     >
       <Standing context={stockSignals.context} />
-      {active.length === 0 ? (
-        <p className="text-[13px] text-ink-3">No signals active on the latest session</p>
+      {shown.length === 0 ? (
+        <p className="text-[13px] text-ink-3">No signal that held up in testing is active on the latest session</p>
       ) : (
         <>
           <p className="text-[12px] text-ink-3">Active on the latest session</p>
           <ul className="mt-2 flex flex-col gap-2.5">
-            {active.map((signal) => {
+            {shown.map((signal) => {
               const grade = signalGrade(signal)
               return (
                 <li key={signal.key} className="min-w-0">
@@ -66,6 +76,7 @@ export default function SetupCard({ stockSignals, signals }) {
           </ul>
         </>
       )}
+      {others ? <p data-testid="other-signals" className="mt-2 text-[12px] text-ink-3">{others}</p> : null}
       <p className="mt-3 text-[12px] text-ink-3">{footer(signals)}</p>
     </Card>
   )

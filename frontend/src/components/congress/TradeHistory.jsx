@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import { fmtRange, tradeLabel } from '../../lib/congress'
 import { fmtDate } from '../../lib/format'
 import { researchHref } from '../../lib/research'
+import { usePaged } from '../../lib/usePaged'
 import StockLogo from '../StockLogo'
-import { Card, Tag, Td, Th, Tr } from '../ui'
+import { Card, ShowMore, Tag, Td, Th, Tr } from '../ui'
 
 const OWNERS = { self: 'Member', SP: 'Spouse', JT: 'Joint', DC: 'Child' }
 
@@ -14,6 +15,7 @@ export default function TradeHistory({
   subtitle = 'As filed with the House Clerk. Amounts are the reported range.',
   showAsset = true,
 }) {
+  const paged = usePaged(trades)
   return (
     <Card flush context={subtitle} title={title}>
       <div className="overflow-x-auto">
@@ -29,7 +31,7 @@ export default function TradeHistory({
             </tr>
           </thead>
           <tbody>
-            {trades.map((trade, index) => (
+            {paged.rows.map((trade, index) => (
               <Tr key={`${trade.filed_on}-${trade.traded_on}-${trade.asset}-${index}`}>
                 {showAsset ? (
                   <Td edge>
@@ -59,6 +61,7 @@ export default function TradeHistory({
           </tbody>
         </table>
       </div>
+      <ShowMore paged={paged} className="px-4 py-3" />
     </Card>
   )
 }

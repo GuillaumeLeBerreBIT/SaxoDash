@@ -14,7 +14,6 @@ const SECTIONS = [
   { id: 'account', label: 'Account' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'connections', label: 'Connections' },
-  { id: 'sync', label: 'Sync health' },
 ]
 
 const THEME_CARDS = [
@@ -231,13 +230,24 @@ function SyncHealth() {
   )
 }
 
-const BODIES = { account: AccountSettings, appearance: Appearance, connections: Connections, sync: SyncHealth }
+function ConnectionsAndSync() {
+  return (
+    <div className="flex flex-col gap-[var(--sd-gap,12px)]">
+      <Connections />
+      <SyncHealth />
+    </div>
+  )
+}
+
+const BODIES = { account: AccountSettings, appearance: Appearance, connections: ConnectionsAndSync, sync: ConnectionsAndSync }
+const MENU_SECTION = { sync: 'connections' }
 
 export default function Settings() {
   const [params, setParams] = useSearchParams()
   const requested = params.get('section')
   const section = Object.hasOwn(BODIES, requested) ? requested : 'appearance'
   const Body = BODIES[section]
+  const current = MENU_SECTION[section] ?? section
   return (
     <>
       <PageHeader title="Settings" />
@@ -249,10 +259,10 @@ export default function Settings() {
                 <li key={item.id}>
                   <button
                     type="button"
-                    aria-current={item.id === section ? 'page' : undefined}
+                    aria-current={item.id === current ? 'page' : undefined}
                     onClick={() => setParams({ section: item.id })}
                     className={`w-full text-left px-2 h-10 rounded-lg text-[14px] hover:bg-hover ${
-                      item.id === section ? 'bg-selected font-bold text-ink' : 'font-medium text-ink-2'
+                      item.id === current ? 'bg-selected font-bold text-ink' : 'font-medium text-ink-2'
                     }`}
                   >
                     {item.label}

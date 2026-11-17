@@ -27,7 +27,7 @@ function Badge({ line, price, y, width, selected, colors }) {
         x={width - PAD_R + 6}
         y={y + 3.5}
         fill={selected ? colors.onAccent : color}
-        fontSize="10"
+        fontSize="11"
         className="num"
       >
         {`${TAG[line.kind]} ${badgePrice(price)}`.trim()}
@@ -48,7 +48,7 @@ function EdgeMarker({ line, edge, width, chartH, colors }) {
   return (
     <g data-testid={`price-edge-${line.id}`} pointerEvents="none">
       <polygon points={points} fill={color} />
-      <text x={x + 8} y={y + 3.5} fill={color} fontSize="10" className="num">
+      <text x={x + 8} y={y + 3.5} fill={color} fontSize="11" className="num">
         {badgePrice(line.price)}
       </text>
     </g>
@@ -132,7 +132,7 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
       />
       <Badge line={line} price={price} y={y} width={width} selected={selected} colors={colors} />
       {line.label ? (
-        <text x={4} y={y - 6} fill={stroke} fontSize="10" className="num" pointerEvents="none">
+        <text x={4} y={y - 6} fill={stroke} fontSize="11" className="num" pointerEvents="none">
           {line.label}
         </text>
       ) : null}

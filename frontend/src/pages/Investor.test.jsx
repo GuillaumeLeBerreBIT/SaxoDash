@@ -71,7 +71,7 @@ describe('Investor profile', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Bill Ackman' })).toBeInTheDocument()
     expect(screen.getByText('Pershing Square')).toBeInTheDocument()
     expect(screen.getByText('Concentrated activist.')).toBeInTheDocument()
-    expect(screen.getByText('Activist')).toBeInTheDocument()
+    expect(screen.queryByText('Activist')).toBeNull()
   })
 
   it('shows the investor\'s photo with its credit', () => {
@@ -115,7 +115,7 @@ describe('Investor profile', () => {
     expect(tile('This quarter')).toHaveTextContent('+1 / −1')
     expect(tile('This quarter')).toHaveTextContent('new / exited · turnover 6%')
     expect(tile('You hold today')).toHaveTextContent('2 stocks')
-    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest book')
+    expect(tile('You hold today')).toHaveTextContent('GOOGL largest · 15.0% of their latest portfolio')
     expect(screen.getByText('13F for Q2 2026 · filed 14 Aug 2026')).toBeInTheDocument()
   })
 
@@ -126,7 +126,7 @@ describe('Investor profile', () => {
     const tiles = screen.getByRole('group', { name: 'Portfolio summary' })
     const tile = (label) => within(tiles).getByText(label).closest('div').parentElement
     expect(tile('You hold today')).toHaveTextContent('GOOGL')
-    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest book')
+    expect(tile('You hold today')).toHaveTextContent('15.0% of their latest portfolio')
   })
 
   it('leaves out what you hold today when a past quarter is shown', () => {
@@ -197,12 +197,12 @@ describe('Investor profile', () => {
     expect(screen.getByText('No position changed by 1% or more this quarter.')).toBeInTheDocument()
   })
 
-  it('shows sector weights beside the top holdings', () => {
+  it('shows sector weights and leaves the positions to the one holdings table', () => {
     renderPage()
     const sectors = screen.getByRole('region', { name: 'Sectors' })
     expect(within(sectors).getByText('Consumer')).toBeInTheDocument()
     expect(within(sectors).getByText('55.0%')).toBeInTheDocument()
-    expect(screen.getByTestId('top-holdings')).toBeInTheDocument()
+    expect(screen.queryByTestId('top-holdings')).toBeNull()
     expect(screen.getByTestId('holdings-tab')).toBeInTheDocument()
   })
 

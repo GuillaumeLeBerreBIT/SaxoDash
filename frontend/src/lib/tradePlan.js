@@ -80,3 +80,57 @@ export function tradePlan({
     size: sizeFor({ price: last, riskPerShare, riskPct, portfolioValue, fxRate, heldWeightPct, capPct }),
   }
 }
+
+function heldWeight(position, portfolioValue) {
+  const value = Number(position?.value)
+  const total = Number(portfolioValue)
+  return value > 0 && total > 0 ? (value / total) * 100 : 0
+}
+
+export function planFromPage({ bars, currency, note, positions, position, portfolioValue, riskPct }) {
+  if (!currency || !bars?.length) return null
+  const latest = bars[bars.length - 1]
+  const plan = tradePlan({
+    price: latest.close,
+    atr: averageTrueRange(bars),
+    stopPrice: note?.stop_price,
+    targetPrice: note?.target_price,
+    riskPct,
+    portfolioValue,
+    fxRate: fxRateFor(currency, positions),
+    heldWeightPct: heldWeight(position, portfolioValue),
+  })
+  const avgCost = Number(position?.avg_cost)
+  return plan && { ...plan, currency, asOf: latest.date, riskPct, avgCost: avgCost > 0 ? avgCost : null }
+}
+
+const RISK_KEY = 'saxodash:trade-risk-pct'
+const RISK_EVENT = 'saxodash:trade-risk'
+
+export function readTradeRisk() {
+  try {
+    const value = Number(window.localStorage.getItem(RISK_KEY))
+    return RISK_CHOICES.includes(value) ? value : DEFAULT_RISK_PCT
+  } catch {
+    return DEFAULT_RISK_PCT
+  }
+}
+
+export function writeTradeRisk(value) {
+  try {
+    window.localStorage.setItem(RISK_KEY, String(value))
+  } catch {
+    return
+  } finally {
+    window.dispatchEvent(new Event(RISK_EVENT))
+  }
+}
+
+export function subscribeTradeRisk(notify) {
+  window.addEventListener(RISK_EVENT, notify)
+  window.addEventListener('storage', notify)
+  return () => {
+    window.removeEventListener(RISK_EVENT, notify)
+    window.removeEventListener('storage', notify)
+  }
+}

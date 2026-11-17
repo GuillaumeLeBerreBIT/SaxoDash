@@ -9,7 +9,6 @@ import {
   useWatchlists,
 } from '../../api/queries'
 import { fmtNum } from '../../lib/format'
-import { activatesRow } from '../../lib/keys'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
 import { watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
@@ -69,6 +68,7 @@ export default function WatchlistRail({
   fill = false,
   gridView = false,
   collapsible = false,
+  unbounded = false,
 }) {
   const { data: watchlists = [], isLoading } = useWatchlists()
   const { create, remove, addItem, removeItem } = useWatchlistMutations()
@@ -224,7 +224,7 @@ export default function WatchlistRail({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search symbol to add"
+            placeholder="Search a stock to open or add"
             aria-label="Search symbol to add"
             className="w-full h-8 pl-7 pr-2 bg-track border border-line-input rounded-lg text-[13px] text-ink placeholder:text-ink-3 outline-none"
           />
@@ -249,7 +249,7 @@ export default function WatchlistRail({
                   >
                     <InstrumentLogo symbol={result.symbol} size={20} />
                     <span className="text-[13px] font-semibold text-ink">{result.symbol}</span>
-                    <span className="text-[12px] text-ink-3 truncate">{result.description}</span>
+                    <span title={result.description} className="text-[12px] text-ink-3 truncate">{result.description}</span>
                   </button>
                   <button
                     type="button"
@@ -277,7 +277,7 @@ export default function WatchlistRail({
           </div>
         )}
 
-        <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : 'max-h-[420px] overflow-y-auto'}>
+        <div className={fill ? 'flex-1 min-h-0 overflow-y-auto' : unbounded ? '' : 'max-h-[420px] overflow-y-auto'}>
           {isLoading ? <div className="px-3.5 py-6 text-center text-[13px] text-ink-3">Loading…</div> : null}
 
           {!isLoading && watchlists.length === 0 ? (
@@ -310,34 +310,30 @@ export default function WatchlistRail({
               return (
                 <div
                   key={item.id}
-                  role="button"
-                  tabIndex={0}
                   onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
-                  aria-current={symbol === item.symbol || undefined}
-                  onKeyDown={(e) => {
-                    if (e.target !== e.currentTarget || !activatesRow(e)) return
-                    e.preventDefault()
-                    onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })
-                  }}
                   className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3.5 min-h-11 cursor-pointer group ${
                     symbol === item.symbol ? 'bg-selected' : 'hover:bg-hover'
                   }`}
                 >
-                  <div className="min-w-0 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    aria-current={symbol === item.symbol || undefined}
+                    className="min-w-0 flex items-center gap-1.5 text-left"
+                  >
                     <InstrumentLogo symbol={item.symbol} size={24} />
-                    <div className="min-w-0 flex flex-col items-start">
-                      <div className="max-w-full flex items-center gap-1.5 leading-4">
+                    <span className="min-w-0 flex flex-col items-start">
+                      <span className="max-w-full flex items-center gap-1.5 leading-4">
                         <span className="text-[13px] font-semibold text-ink shrink-0">{item.symbol}</span>
                         {heldSymbols.has(item.symbol) ? (
                           <span className="w-1.5 h-1.5 rounded-full bg-held" title="In portfolio" />
                         ) : null}
                         <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
-                      </div>
-                      <div className="h-[18px] max-w-full flex items-center">
+                      </span>
+                      <span className="h-[18px] max-w-full flex items-center">
                         <ActionBadge verdict={watchlistVerdict(item, verdicts)} />
-                      </div>
-                    </div>
-                  </div>
+                      </span>
+                    </span>
+                  </button>
                   <span className="text-[13px] num font-semibold text-ink text-right">
                     {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
                   </span>
@@ -358,7 +354,7 @@ export default function WatchlistRail({
                         removeItem.mutate({ id: active.id, itemId: item.id })
                       }}
                       aria-label={`Remove ${item.symbol}`}
-                      className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-ink-3 hover:text-down -mr-1"
+                      className="-my-2 -mr-2 grid size-9 place-items-center text-ink-3 hover:text-down md:size-auto md:my-0 md:-mr-1 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
                     >
                       <X size={11} />
                     </button>

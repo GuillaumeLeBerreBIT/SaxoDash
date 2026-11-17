@@ -70,7 +70,7 @@ function AddPeerSearch({ onPick }) {
       {menuRect && isError && createPortal(
         <div
           style={{ position: 'fixed', top: menuRect.top + 4, left: menuRect.left, width: menuRect.width }}
-          className="z-50 bg-raised border border-line rounded-lg shadow-lg px-2.5 py-1.5 text-[12px] text-warn"
+          className="z-50 bg-raised border border-line rounded-lg shadow-lg px-2.5 py-1.5 text-[12px] text-warn-text"
         >
           Search unavailable — reconnect Saxo
         </div>,
@@ -169,7 +169,7 @@ export default function PeersTab({ symbol, fundamentals }) {
         const unscored = scored.filter(({ point }) => !point).map(({ symbol: missing }) => missing)
 
         return (
-          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+          <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
             <Card
               flush
               className={SPAN_12}
@@ -181,12 +181,12 @@ export default function PeersTab({ symbol, fundamentals }) {
                 <table className="w-full">
                   <thead>
                     <tr>
-                      <th className={`${HEAD} pl-[18px] w-[180px]`} />
-                      <th className={`${HEAD} bg-selected rounded-t-lg`}>
+                      <th scope="col" className={`${HEAD} pl-[18px] w-[180px]`} />
+                      <th scope="col" className={`${HEAD} bg-selected rounded-t-lg`}>
                         <PeerHead symbol={symbol} note="this company" />
                       </th>
                       {slots.map((s, i) => (
-                        <th key={s.symbol} className={HEAD}>
+                        <th key={s.symbol} scope="col" className={HEAD}>
                           <PeerHead
                             symbol={s.symbol}
                             action={
@@ -204,7 +204,7 @@ export default function PeersTab({ symbol, fundamentals }) {
                         </th>
                       ))}
                       {emptySlot !== -1 ? (
-                        <th className={`${HEAD} w-40 pr-[18px]`}>
+                        <th scope="col" className={`${HEAD} w-40 pr-[18px]`}>
                           <AddPeerSearch onPick={(sym) => setOverride(emptySlot, sym)} />
                         </th>
                       ) : null}

@@ -13,6 +13,8 @@ class StockVerdict(models.Model):
     expensive_above = models.FloatField(null=True, blank=True)
     last_close = models.FloatField(null=True, blank=True)
     pct_vs_ma200 = models.FloatField(null=True, blank=True)
+    spark = models.JSONField(default=list, blank=True)
+    high_1y = models.FloatField(null=True, blank=True)
     as_of = models.DateField(null=True, blank=True)
     computed_at = models.DateTimeField(auto_now=True)
 

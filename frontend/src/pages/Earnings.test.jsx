@@ -48,6 +48,7 @@ const stub = (over = {}) =>
 
 beforeEach(() => {
   queries.useEarningsCalendar.mockReset()
+  queries.useSymbolEarnings.mockReturnValue({ data: { history: [] }, isLoading: false })
 })
 
 afterEach(() => {
@@ -67,7 +68,7 @@ describe('Earnings page', () => {
 
     expect(screen.getByText('26 – 30 Oct 2026')).toBeInTheDocument()
     expect(screen.getAllByText('MSFT').length).toBeGreaterThan(0)
-    expect(screen.getByText('Held')).toBeInTheDocument()
+    expect(screen.getByTestId('earnings-headline')).toHaveTextContent('MSFT, which you own, reports')
   })
 
   it('reported rows show the actual + a surprise chip; upcoming rows show the estimate', () => {
@@ -79,9 +80,9 @@ describe('Earnings page', () => {
     })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('2.20')).toBeInTheDocument()
-    expect(screen.getByText(/▲ 10\.0%/)).toBeInTheDocument()
-    expect(screen.getByText('1.50')).toBeInTheDocument()
+    expect(screen.getAllByText('Beat').length).toBeGreaterThan(0)
+    expect(screen.getByText((_, node) => node?.textContent === '2.20 vs 2.00, +10.0%')).toBeInTheDocument()
+    expect(screen.getByText('expected 1.50')).toBeInTheDocument()
   })
 
   it('flags a past-dated unreported row as pending, distinct from a genuinely upcoming one', () => {
@@ -92,7 +93,7 @@ describe('Earnings page', () => {
     })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    expect(screen.getByText('pending')).toBeInTheDocument()
+    expect(screen.getAllByText('Waiting').length).toBeGreaterThan(0)
   })
 
   it('opens on today’s weekday column by default, not a fixed Monday', () => {
@@ -114,7 +115,7 @@ describe('Earnings page', () => {
     stub({ events: [ev({ symbol: 'MON', date: MON })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    for (const label of ['Company', 'Mkt cap', 'Qtr', 'EPS · est', 'Revenue', 'Move']) {
+    for (const label of ['Company', 'Mkt cap', 'Qtr', 'Earnings per share', 'Revenue', 'Move']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
@@ -123,7 +124,7 @@ describe('Earnings page', () => {
     stub()
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
 
     expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('mine', 0)
   })
@@ -149,7 +150,7 @@ describe('Earnings page', () => {
     stub({ events: [] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
     expect(screen.getByText(/Nothing on your lists reports this day/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: /View all/ }))
@@ -219,7 +220,7 @@ it('calls the way back Upcoming week on a weekend, since week 0 is then the comi
   expect(screen.queryByRole('button', { name: 'This week' })).not.toBeInTheDocument()
 })
 
-it('labels each grid day with its date', () => {
+it('labels each day of the strip with its date', () => {
   stub()
   renderWithProviders(<Earnings />, { route: '/earnings' })
   expect(screen.getByRole('button', { name: /^Mon 26/ })).toBeInTheDocument()
@@ -229,7 +230,7 @@ it('labels each grid day with its date', () => {
 it('formats a sub-million revenue estimate as <1M and keeps the quarter on one line', () => {
   stub({ events: [ev({ revenue_estimate: 4.2e5 })] })
   renderWithProviders(<Earnings />, { route: '/earnings' })
-  expect(screen.getByText('<1M')).toBeInTheDocument()
+  expect(screen.getByText('expected <1M')).toBeInTheDocument()
   expect(screen.getByText('Q4 2026')).toHaveClass('whitespace-nowrap')
 })
 
@@ -250,48 +251,49 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(hidden).toHaveLength(3)
   })
 
-  it('hides the whole Market week card on a phone, header included', () => {
+  it('offers the day strip on every width and no market grid', () => {
     stub()
     renderWithProviders(<Earnings />, { route: '/earnings' })
 
-    const card = screen.getByRole('heading', { level: 2, name: 'Market week' }).closest('.sd-panel')
-    expect(card).toHaveClass('hidden', 'md:block')
+    expect(screen.getByRole('button', { name: /^Mon 26/ }).parentElement).not.toHaveClass('md:hidden')
+    expect(screen.queryByRole('heading', { name: 'Market week' })).not.toBeInTheDocument()
   })
 
-  it('opens with the Your week band above the market grid', () => {
+  it('opens with the Your week band above the day strip', () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true }), ev({ symbol: 'MKT' })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    const band = screen.getByRole('heading', { level: 2, name: 'Your week' })
-    const grid = screen.getByText('Before open')
+    expect(screen.getAllByTestId('your-report')).toHaveLength(1)
+    const band = screen.getByTestId('earnings-headline')
+    const grid = screen.getByRole('button', { name: /^Mon 26/ })
     expect(band.compareDocumentPosition(grid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('summarises the market week in one line', () => {
     stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('412 reporting · 61% of reported beat')).toBeInTheDocument()
+    expect(screen.getByText('412 companies report this week; 61% of those already out beat what analysts expected.')).toBeInTheDocument()
   })
 
   it('says nothing about beats before anything has reported', () => {
     stub({ stats: { total: 40, reported: 0, beat: 0, missed: 0, inline: 0, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText('40 reporting')).toBeInTheDocument()
+    expect(screen.getByText('40 companies report this week.')).toBeInTheDocument()
   })
 
   it('keeps the band when the toggle switches the list to Mine', async () => {
     stub({ events: [ev({ symbol: 'HLD', held: true, mine: true })] })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
     expect(queries.useEarningsCalendar).toHaveBeenLastCalledWith('mine', 0)
-    expect(screen.getByRole('heading', { level: 2, name: 'Your week' })).toBeInTheDocument()
+    expect(screen.getByTestId('earnings-headline')).toBeInTheDocument()
   })
 
   it('shows no market line in Mine scope', async () => {
     stub({ stats: { total: 412, reported: 100, beat: 61, missed: 30, inline: 9, mine: 0 } })
     renderWithProviders(<Earnings />, { route: '/earnings' })
-    expect(screen.getByText(/412 reporting/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Mine' }))
-    expect(screen.queryByText(/412 reporting/)).not.toBeInTheDocument()
+    expect(screen.getByText(/412 companies report/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Only mine' }))
+    expect(screen.queryByText(/412 companies report/)).not.toBeInTheDocument()
   })
 
   it('does not render the old summary tiles', () => {
@@ -301,7 +303,7 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
     expect(screen.queryByText('Net by day')).not.toBeInTheDocument()
   })
 
-  it('a grid day header switches the day list to that day', async () => {
+  it('a day of the strip switches the day list to that day', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date('2026-10-26T12:00:00'))
     stub({ events: [ev({ symbol: 'MONCO', date: '2026-10-26' }), ev({ symbol: 'THUCO', date: '2026-10-29' })] })
@@ -315,16 +317,16 @@ it('formats a sub-million revenue estimate as <1M and keeps the quarter on one l
   })
 })
 
-it('a picked cell lists that day and session', async () => {
-  stub({
-    events: [
-      ev({ symbol: 'MORN', session: 'bmo' }),
-      ev({ symbol: 'EVEN', session: 'amc' }),
-    ],
-  })
+it('lists the largest companies and keeps the smaller ones behind one button', async () => {
+  const events = Array.from({ length: 20 }, (_, index) => ev({ symbol: `C${String(index).padStart(2, '0')}`, market_cap: 1000 - index }))
+  stub({ events: [...events, ev({ symbol: 'MINE', market_cap: 1, mine: true, held: true })] })
   renderWithProviders(<Earnings />, { route: '/earnings' })
 
-  await userEvent.click(screen.getByRole('button', { name: 'Show Mon after close' }))
-
-  expect(screen.getByRole('heading', { name: 'Monday, after close' })).toBeInTheDocument()
+  const dayCard = screen.getByRole('heading', { level: 2, name: 'Monday' }).closest('.sd-panel')
+  expect(within(dayCard).getByText('C13')).toBeInTheDocument()
+  expect(within(dayCard).queryByText('C14')).not.toBeInTheDocument()
+  expect(within(dayCard).getByText('MINE')).toBeInTheDocument()
+  await userEvent.click(within(dayCard).getByRole('button', { name: 'Show 6 smaller companies' }))
+  expect(within(dayCard).getByText('C19')).toBeInTheDocument()
+  expect(within(dayCard).getByRole('button', { name: 'Show the largest only' })).toHaveAttribute('aria-expanded', 'true')
 })

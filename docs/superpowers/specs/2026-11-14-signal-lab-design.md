@@ -153,6 +153,11 @@ Both need a signed-in user and read only the two tables.
 
 ### Research page
 
+> Superseded on 2026-11-15 for the chart part: the Signals menu and the pill lane below were removed. The
+> chart now shows the verdict's buy and expensive zones, a one-sentence answer and the stop line. See "The
+> chart shows where the price is cheap or expensive" in `AGENTS.md`. The Setup card and the evidence line are
+> unchanged.
+
 - **Signals menu** beside the indicator menu on the chart. Signals are grouped under "Held up
   in testing", "No edge found", "Worked against" and "Too few cases", each row a checkbox with
   its code, label and one evidence line. Choices persist in the chart preferences

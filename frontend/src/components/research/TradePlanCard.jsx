@@ -1,43 +1,14 @@
-import { useState } from 'react'
-
-import { daysUntil } from '../../lib/earnings'
-import { fmtDate, fmtEur, fmtMoney, fmtPct } from '../../lib/format'
-import { ATR_PERIOD, DEFAULT_RISK_PCT, RISK_CHOICES, STOP_ATRS, averageTrueRange, fxRateFor, tradePlan } from '../../lib/tradePlan'
+import { reportsWithin } from '../../lib/earnings'
+import { fmtEur, fmtMoney, fmtPct } from '../../lib/format'
+import { ATR_PERIOD, RISK_CHOICES, STOP_ATRS, planFromPage } from '../../lib/tradePlan'
+import { actionLabel } from '../../lib/verdicts'
 import { Card, Segmented } from '../ui'
+import { useTradeRisk } from './useTradeRisk'
 
-const STORAGE_KEY = 'saxodash:trade-risk-pct'
 const EARNINGS_WARNING_DAYS = 10
+const NOT_A_BUY = new Set(['not_a_fit', 'sell_review', 'trim', 'wait', 'no_verdict'])
 const PLAIN = { sign: false, decimals: 1 }
 const RISK_OPTIONS = RISK_CHOICES.map((value) => ({ value, label: `${value}%` }))
-
-function storedRisk() {
-  try {
-    const value = Number(window.localStorage.getItem(STORAGE_KEY))
-    return RISK_CHOICES.includes(value) ? value : DEFAULT_RISK_PCT
-  } catch {
-    return DEFAULT_RISK_PCT
-  }
-}
-
-function remember(value) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, String(value))
-  } catch {
-    return
-  }
-}
-
-function reportsSoon(next) {
-  if (!next?.date) return null
-  const days = Math.round((new Date(`${next.date}T00:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
-  return days >= 0 && days <= EARNINGS_WARNING_DAYS ? `Reports ${daysUntil(next.date)} (${fmtDate(next.date)}): the price can gap past a stop.` : null
-}
-
-function heldWeight(position, portfolioValue) {
-  const value = Number(position?.value)
-  const total = Number(portfolioValue)
-  return value > 0 && total > 0 ? (value / total) * 100 : 0
-}
 
 function Row({ label, value, note }) {
   return (
@@ -70,7 +41,7 @@ function sizeRows(size, riskPct) {
         note={`${fmtEur(size.value, { decimals: 0 })}, ${fmtPct(size.weightPct, PLAIN)} of your portfolio`}
       />
       <Row
-        label="Loss if the stop is hit"
+        label="Loss if the stop-loss is hit"
         value={fmtEur(size.lossAtStop, { decimals: 0 })}
         note={size.limitedByCap ? 'Size limited by the weight cap' : null}
       />
@@ -78,37 +49,28 @@ function sizeRows(size, riskPct) {
   )
 }
 
-export default function TradePlanCard({ bars, currency, note, positions, position, portfolioValue, nextEarnings }) {
-  const [riskPct, setRiskPct] = useState(storedRisk)
-  const price = bars?.length ? bars[bars.length - 1].close : null
-  const atr = averageTrueRange(bars)
-  const plan = tradePlan({
-    price,
-    atr,
-    stopPrice: note?.stop_price,
-    targetPrice: note?.target_price,
-    riskPct,
-    portfolioValue,
-    fxRate: fxRateFor(currency, positions),
-    heldWeightPct: heldWeight(position, portfolioValue),
-  })
-  if (!plan || !currency) return null
-  const warning = reportsSoon(nextEarnings)
-  const choose = (value) => {
-    setRiskPct(value)
-    remember(value)
-  }
+export default function TradePlanCard({ bars, currency, note, positions, position, portfolioValue, nextEarnings, verdict }) {
+  const [riskPct, choose] = useTradeRisk()
+  const plan = planFromPage({ bars, currency, note, positions, position, portfolioValue, riskPct })
+  if (!plan) return null
+  const warning = reportsWithin(nextEarnings, EARNINGS_WARNING_DAYS)
+  const caution = verdict && NOT_A_BUY.has(verdict.action)
 
   return (
     <Card context="Stop distance and position size from the latest close" dot="off" title="Trade plan">
+      {caution ? (
+        <p data-testid="plan-verdict-note" className="mb-3 text-[13px] text-ink-2">
+          {`The verdict for this stock is ${actionLabel(verdict)}. The figures below are arithmetic for a trade you decide on yourself, not a suggestion to buy.`}
+        </p>
+      ) : null}
       <dl className="flex flex-col gap-1.5">
         <Row
-          label="Stop"
+          label="Stop-loss"
           value={fmtMoney(plan.stop.price, currency)}
-          note={plan.stop.source === 'yours' ? 'Your stop' : `${STOP_ATRS} × the average daily range (${ATR_PERIOD} sessions)`}
+          note={plan.stop.source === 'yours' ? 'Your own stop-loss' : `${STOP_ATRS} × the average daily range (${ATR_PERIOD} sessions)`}
         />
         <Row
-          label="Distance to the stop"
+          label="Distance to the stop-loss"
           value={fmtPct(plan.stopDistancePct, { decimals: 1 })}
           note={plan.stopAtrs == null ? null : `${plan.stopAtrs.toFixed(1)} average daily ranges`}
         />

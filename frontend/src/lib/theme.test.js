@@ -17,7 +17,7 @@ describe('theme tokens', () => {
 
   it("values are DESIGN.md's", () => {
     expect(THEMES.republic.pane).toBe('#12100E')
-    expect(THEMES.republic.ink3).toBe('#7E7B78')
+    expect(THEMES.republic.ink3).toBe('#868380')
     expect(THEMES.republic.up).toBe('#5BC860')
     expect(THEMES.republic.down).toBe('#EB503F')
     expect(THEMES.blue.accent).toBe('#7FB2FF')

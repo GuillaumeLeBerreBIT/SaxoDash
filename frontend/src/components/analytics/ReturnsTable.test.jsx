@@ -17,23 +17,23 @@ describe('ReturnsTable', () => {
     expect(screen.getByText('+1.9%')).toBeInTheDocument()
   })
 
-  it('shows a dash rather than a claim when a period has no data', () => {
+  it('leaves out a period without a return and says more appear with history', () => {
     render(<ReturnsTable periods={periods} benchmarkName="World Index" />)
 
-    const row = screen.getByText('Since inception').closest('tr')
-    expect(row).toHaveTextContent('—')
+    expect(screen.queryByText('Since inception')).not.toBeInTheDocument()
+    expect(screen.getByText('1 longer period appears once there is enough history.')).toBeInTheDocument()
   })
 
-  it('explains why a period is blank', () => {
-    render(<ReturnsTable periods={[{ label: '1 year', portfolio_pct: null, benchmark_pct: null, alpha_pct: null, annualised: false, needs_days: 340 }]} benchmarkName="World" />)
+  it('says so when no period has enough history', () => {
+    render(<ReturnsTable periods={[{ label: '1 year', portfolio_pct: null, benchmark_pct: null, alpha_pct: null, needs_days: 340 }]} benchmarkName="World" />)
 
-    expect(screen.getByText('needs 340 more days')).toBeInTheDocument()
+    expect(screen.getByText('No period has enough history yet.')).toBeInTheDocument()
   })
 
   it('keeps period, portfolio and alpha visible below md and hides the benchmark', () => {
     render(<ReturnsTable periods={periods} benchmarkName="World Index" />)
 
-    for (const name of ['Period', 'Portfolio', 'Alpha']) {
+    for (const name of ['Period', 'Portfolio', 'Ahead / behind']) {
       expect(screen.getByRole('columnheader', { name })).not.toHaveClass('hidden')
     }
     expect(screen.getByRole('columnheader', { name: 'World Index' })).toHaveClass('hidden', 'md:table-cell')

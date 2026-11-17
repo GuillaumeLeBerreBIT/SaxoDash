@@ -17,7 +17,6 @@ import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../../lib/companyData'
 import { fmtDate, fmtEur, fmtMoney, fmtNum } from '../../lib/format'
-import { activatesRow } from '../../lib/keys'
 import { ownershipTickers } from '../../lib/ownership'
 import { trailingReturns } from '../../lib/performance'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, chartHref, researchHref } from '../../lib/research'
@@ -91,23 +90,17 @@ function FixedList({ board, panel, onFollow }) {
       <ul className="-mx-2">
         {list.map((symbol) => (
           <li key={symbol}>
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               aria-current={symbol === board.sym || undefined}
               onClick={() => onFollow(symbol)}
-              onKeyDown={(event) => {
-                if (!activatesRow(event)) return
-                event.preventDefault()
-                onFollow(symbol)
-              }}
-              className={`flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
+              className={`w-full text-left flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
                 symbol === board.sym ? 'bg-selected' : 'hover:bg-hover'
               }`}
             >
               <InstrumentLogo symbol={symbol} size={24} />
               <span className="text-[13.5px] font-semibold text-ink">{symbol}</span>
-            </div>
+            </button>
           </li>
         ))}
       </ul>
@@ -371,7 +364,7 @@ export function ShelfPanel({ panel, onFollow }) {
               >
                 <InstrumentLogo symbol={item.ticker} size={24} />
                 <span className="w-14 shrink-0 text-[13.5px] font-semibold text-ink">{item.ticker}</span>
-                <span className="flex-1 min-w-0 truncate text-[12px] text-ink-3">{item.name}</span>
+                <span title={item.name} className="flex-1 min-w-0 truncate text-[12px] text-ink-3">{item.name}</span>
                 <span className="text-[13px] num text-ink">{fmtMoney(item.last_close, 'USD')}</span>
                 <Move value={item.change_1d} className="w-[72px] text-right text-[13px]" />
               </button>

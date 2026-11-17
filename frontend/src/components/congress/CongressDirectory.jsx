@@ -6,8 +6,9 @@ import { CONGRESS_CHIPS, CONGRESS_SORTS, directoryMembers } from '../../lib/cong
 import { looksLikeTicker } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { DIRECTORY_PAGE, usePaged } from '../../lib/usePaged'
 import StockLogo from '../StockLogo'
-import { Card, Chip, EmptyState, Input, QueryState, Segmented, Select, Skeleton } from '../ui'
+import { Card, Chip, EmptyState, Input, QueryState, Segmented, Select, ShowMore, Skeleton } from '../ui'
 import CongressCards from './CongressCards'
 import CongressTable from './CongressTable'
 
@@ -64,9 +65,19 @@ function Results({ visible, layout, order, onSort, query, waiting }) {
     return <EmptyState title={`No member matches “${query.trim()}”.`} hint="Try a name, a state such as CA, a district such as TX02, or a ticker they traded." />
   }
   if (visible.length === 0) return <EmptyState title="No members in this group." />
-  return layout === 'table'
-    ? <CongressTable members={visible} sort={order} onSort={onSort} />
-    : <CongressCards members={visible} />
+  return <PagedResults key={`${layout}-${query}-${visible.length}`} visible={visible} layout={layout} order={order} onSort={onSort} />
+}
+
+function PagedResults({ visible, layout, order, onSort }) {
+  const paged = usePaged(visible, DIRECTORY_PAGE)
+  return (
+    <>
+      {layout === 'table'
+        ? <CongressTable members={paged.rows} sort={order} onSort={onSort} />
+        : <CongressCards members={paged.rows} />}
+      <ShowMore paged={paged} className="mt-3" />
+    </>
+  )
 }
 
 export default function CongressDirectory() {

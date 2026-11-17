@@ -1,4 +1,5 @@
 import { useCongressOwnership, useOwnership } from '../../api/queries'
+import { analystRating } from '../../lib/analystRating'
 import { COMPANY_DATA } from '../../lib/companyData'
 import { quarterLabel } from '../../lib/investors'
 import { ownershipTicker } from '../../lib/ownership'
@@ -23,6 +24,18 @@ function congressRead(data, symbol) {
   }
 }
 
+function analystsRead(recommendation) {
+  const rating = analystRating(recommendation)
+  if (!rating) return null
+  const total = rating.counts.reduce((sum, row) => sum + row.count, 0)
+  return {
+    line: `${rating.label} · ${total} analysts`,
+    sub: rating.counts.filter((row) => row.count > 0).map((row) => `${row.count} ${row.label.toLowerCase()}`).join(' · '),
+  }
+}
+
+const SETTLED = { isLoading: false, error: null }
+
 function Row({ label, query, read, tab, onOpenTab }) {
   return (
     <li className="flex items-start gap-3 py-2.5 border-t border-line first:border-t-0">
@@ -39,7 +52,7 @@ function Row({ label, query, read, tab, onOpenTab }) {
           </>
         )}
       </div>
-      {onOpenTab && (
+      {onOpenTab && tab && (
         <button
           type="button"
           aria-label={`${tab.label} tab`}
@@ -55,7 +68,7 @@ function Row({ label, query, read, tab, onOpenTab }) {
 
 const ASKABLE = new Set([COMPANY_DATA.eligible, COMPANY_DATA.fund])
 
-export default function OwnershipSignals({ symbol, currency, companyData, onOpenTab }) {
+export default function OwnershipSignals({ symbol, currency, companyData, recommendation, onOpenTab }) {
   const askable = ASKABLE.has(companyData)
   const ticker = askable ? ownershipTicker({ ticker: symbol, currency }) : ''
   const funds = useOwnership(ticker)
@@ -63,7 +76,7 @@ export default function OwnershipSignals({ symbol, currency, companyData, onOpen
 
   if (!ticker) {
     return (
-      <Card context="13F filings and House reports" dot="off" title="Funds and Congress">
+      <Card context="Analysts, 13F filings and House reports" dot="off" title="Who else owns it">
         <p className="text-[13px] text-ink-2">
           {companyData === COMPANY_DATA.pending
             ? 'Looking up this instrument…'
@@ -73,9 +86,12 @@ export default function OwnershipSignals({ symbol, currency, companyData, onOpen
     )
   }
 
+  const analysts = analystsRead(recommendation)
+
   return (
-    <Card context="13F filings and House reports" dot="ok" title="Funds and Congress">
+    <Card context="Analysts, 13F filings and House reports" title="Who else owns it">
       <ul>
+        {analysts ? <Row label="Analysts" query={SETTLED} read={analysts} /> : null}
         <Row
           label="Tracked funds"
           query={funds}

@@ -29,7 +29,7 @@ describe('MobileNav', () => {
     expect(more).toHaveAttribute('aria-expanded', 'true')
     const dialog = screen.getByRole('dialog', { name: 'More' })
     expect(within(dialog).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Boards',
+      'Charts',
       'Earnings',
       'Investors',
       'Analytics',

@@ -29,6 +29,7 @@ export function chartPalette({ theme, moves }) {
     down: pick('down'),
     flat: pick('flat'),
     warn: pick('warn'),
+    warnText: pick('warn-text'),
     earn: pick('earn'),
     earnSubtle: pick('earn-subtle'),
     pane: pick('pane'),

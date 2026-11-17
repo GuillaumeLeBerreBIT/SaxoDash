@@ -131,7 +131,7 @@ describe('ChartPane', () => {
   it('activates on press', () => {
     const onActivate = vi.fn()
     renderPane({ onActivate })
-    fireEvent.mouseDown(screen.getByRole('region', { name: 'NVDA chart' }))
+    fireEvent.pointerDown(screen.getByRole('region', { name: 'NVDA chart' }))
     expect(onActivate).toHaveBeenCalled()
   })
 

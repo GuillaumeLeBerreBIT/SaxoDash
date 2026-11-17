@@ -11,10 +11,10 @@ const ev = (o = {}) => ({
 })
 
 describe('EarningsCells', () => {
-  it('an upcoming EPS shows the estimate marked e', () => {
+  it('an upcoming EPS says due, with what analysts expect', () => {
     render(<EpsCell event={ev()} />)
-    expect(screen.getByText('1.50')).toBeInTheDocument()
-    expect(screen.getByText('e')).toBeInTheDocument()
+    expect(screen.getByText('Due')).toBeInTheDocument()
+    expect(screen.getByText('expected 1.50')).toBeInTheDocument()
   })
 
   it('an empty estimate is a plain dash', () => {
@@ -22,10 +22,18 @@ describe('EarningsCells', () => {
     expect(container).toHaveTextContent(/^—$/)
   })
 
-  it('a reported EPS shows the actual and a surprise chip', () => {
-    render(<EpsCell event={ev({ eps_actual: 1.8, eps_surprise_pct: 20 })} />)
-    expect(screen.getByText('1.80')).toBeInTheDocument()
-    expect(screen.getByText(/▲/)).toHaveTextContent('20.0%')
+  it('a reported EPS says beat or missed in words, with the figures', () => {
+    const { rerender } = render(<EpsCell event={ev({ eps_actual: 1.8, eps_surprise_pct: 20 })} />)
+    expect(screen.getByText('Beat')).toHaveClass('text-up')
+    expect(screen.getByText((_, node) => node?.textContent === '1.80 vs 1.50, +20.0%')).toBeInTheDocument()
+    rerender(<EpsCell event={ev({ eps_actual: 1.2, eps_surprise_pct: -20 })} />)
+    expect(screen.getByText('Missed')).toHaveClass('text-down')
+  })
+
+  it('reported revenue says beat or missed too', () => {
+    render(<RevenueCell event={ev({ revenue_actual: 2.2e9, revenue_surprise_pct: 10 })} />)
+    expect(screen.getByText('Beat')).toBeInTheDocument()
+    expect(screen.getByText('2.2B, +10.0%')).toBeInTheDocument()
   })
 
   it('a move shows its sign and window; no move is a dash', () => {

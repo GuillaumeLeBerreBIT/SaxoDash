@@ -52,7 +52,12 @@ const performance = {
     { label: '1 month', portfolio_pct: 4.2, benchmark_pct: 2.1, alpha_pct: 2.1, annualised: false },
   ],
   calendar_years: [
+    { year: 2025, portfolio_pct: 12.1, benchmark_pct: 8.0, partial: false },
     { year: 2026, portfolio_pct: 9.5, benchmark_pct: 7.2, partial: true },
+  ],
+  growth: [
+    { date: '2026-10-20', portfolio: 100, benchmark: 100 },
+    { date: '2026-11-16', portfolio: 104.2, benchmark: 102.1 },
   ],
   benchmark: { key: 'world', name: 'World Index' },
 }
@@ -143,12 +148,37 @@ describe('Analytics', () => {
     expect(screen.queryByText('0.0%')).not.toBeInTheDocument()
   })
 
-  it('shows the top summary row', () => {
+  it('opens with one sentence comparing the portfolio with the chosen index', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+    expect(screen.getByTestId('performance-sentence')).toHaveTextContent(
+      'Over 1 month your portfolio returned +4.2%, 2.1 points ahead of World Index (+2.1%).',
+    )
+  })
+
+  it('opens on one sentence and a chart of you against the index from the same start', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
 
-    expect(screen.getByText('Avg. return (ann.)')).toBeInTheDocument()
-    expect(screen.getByText(/deposits count as gains/i)).toBeInTheDocument()
+    expect(screen.getByTestId('performance-sentence')).toBeInTheDocument()
+    expect(screen.getByText(/deposits and withdrawals count as gains and losses/i)).toBeInTheDocument()
+    const legend = screen.getByTestId('growth-legend')
+    expect(legend).toHaveTextContent('You+4.2%')
+    expect(legend).toHaveTextContent('World Index+2.1%')
+  })
+
+  it('says how bumpy it was beside the returns', () => {
+    stubHappyPath()
+    renderWithProviders(<Analytics />)
+    expect(screen.getByRole('heading', { name: 'How bumpy it was' })).toBeInTheDocument()
+    expect(screen.getByText('Worst fall from a peak')).toBeInTheDocument()
+  })
+
+  it('leaves calendar years out until there are at least two', () => {
+    stubHappyPath()
+    queries.usePerformance.mockReturnValue({ data: { ...performance, calendar_years: performance.calendar_years.slice(1) }, isLoading: false, error: null })
+    renderWithProviders(<Analytics />)
+    expect(screen.queryByText('Calendar-year returns')).toBeNull()
   })
 
   it('does not show a low-confidence caveat once a full year of history exists', () => {
@@ -218,10 +248,8 @@ describe('Analytics', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: 'Risk' }))
 
-    // The top summary row already shows these headline figures once; the
-    // Risk tab's own tiles repeat them in more detail, so at least 2.
-    expect(screen.getAllByText('12.3%').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('-8.5%').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('12.3%').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('-8.5%').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Sortino ratio')).toBeInTheDocument()
   })
 

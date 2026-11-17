@@ -6,7 +6,6 @@ import { Route, Routes } from 'react-router-dom'
 import TopBar from './TopBar'
 import { renderWithProviders } from '../test/renderWithProviders'
 import { NAV_ITEMS } from '../lib/navigation'
-import { fmtEur } from '../lib/format'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -82,27 +81,19 @@ describe('TopBar', () => {
     expect(onOpenPalette).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the Saxo account value, positions plus Saxo cash, linking to Portfolio', () => {
+  it('shows one labelled portfolio value, linking to Portfolio', () => {
     renderBar()
-    const pill = screen.getByRole('link', { name: /Saxo account value/ })
-    expect(pill).toHaveAttribute('href', '/portfolio')
-    expect(pill).toHaveTextContent(fmtEur(42634.84))
+    const total = screen.getByTestId('portfolio-total')
+    expect(total).toHaveAttribute('href', '/portfolio')
+    expect(total).toHaveTextContent('Portfolio')
+    expect(total.textContent).toMatch(/€\d/)
+    expect(screen.queryByRole('link', { name: /Cash across accounts/ })).toBeNull()
   })
 
-  it('shows a dash rather than a partial value when the cash is unknown', () => {
-    queries.useNetWorth.mockReturnValue({ data: undefined })
+  it('shows a dash while the portfolio value is unknown', () => {
+    queries.usePortfolioSummary.mockReturnValue({ data: undefined })
     renderBar()
-    const pill = screen.getByRole('link', { name: /Saxo account value/ })
-    expect(pill).toHaveTextContent('—')
-    expect(pill).not.toHaveTextContent('€')
-  })
-
-  it('shows cash across accounts, linking to Money and hidden below 1420px', () => {
-    renderBar()
-    const pill = screen.getByRole('link', { name: /Cash across accounts/ })
-    expect(pill).toHaveAttribute('href', '/money')
-    expect(pill).toHaveTextContent(fmtEur(821.54))
-    expect(pill).toHaveClass('hidden', 'min-[1420px]:inline-flex')
+    expect(screen.getByTestId('portfolio-total')).toHaveTextContent('Portfolio—')
   })
 
   it('carries the Saxo status on the account button', () => {
@@ -165,10 +156,10 @@ describe('account menu', () => {
     expect(screen.getByText('Settings page')).toBeInTheDocument()
   })
 
-  it('lists sync health and signs out to the login page', async () => {
+  it('lists connections and sync, and signs out to the login page', async () => {
     renderBar()
     const menu = await openAccountMenu()
-    expect(within(menu).getByRole('menuitem', { name: 'Sync health' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Connections and sync' })).toBeInTheDocument()
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }))
     expect(logout).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Login page')).toBeInTheDocument()

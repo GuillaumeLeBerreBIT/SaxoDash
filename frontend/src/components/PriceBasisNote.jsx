@@ -1,5 +1,4 @@
 import { fmtClock, oldestPricedAt, weakestPriceBasis } from '../lib/pricing'
-import { Badge } from './ui'
 
 /** Says how good the prices in a table are, when they are not live.
  *
@@ -13,9 +12,9 @@ export default function PriceBasisNote({ positions = [] }) {
   const at = fmtClock(oldestPricedAt(positions))
 
   return (
-    <span className="flex items-center gap-2" title={basis.note}>
-      <Badge tone={basis.tone}>{basis.label}</Badge>
-      {at && <span className="text-[12px] text-ink-3 num">{at}</span>}
+    <span className="flex items-center gap-1.5 text-[12px] text-ink-3 num" title={basis.note}>
+      <span>{`${basis.label} prices`}</span>
+      {at && <span>{`· ${at}`}</span>}
     </span>
   )
 }

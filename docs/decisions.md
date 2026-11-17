@@ -563,7 +563,7 @@ page (`findBy…`) before reading the location.
 
 
 **The verdict is rules over stored scan rows, never a provider call.** `verdicts/rules.py` grades
-quality (six entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
+quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
 (today's P/E against its own 25th and 75th percentile, else `not_judged`) from
 `ScreenerRow.fundamentals_history` and `pe_history`, which the nightly scan fills from the Finnhub and
 Saxo data it already fetches. The `verdicts` app imports neither `finnhub`, `market` nor `requests`, so
@@ -586,7 +586,7 @@ night (`lookups_failed`), since an unconfirmed listing is not evidence the user 
 `StockVerdict` holds only what is the same for everyone (grades, checks, P/E levels);
 `payload.for_user` reads that user's `Position` rows, sums same-ticker USD stocks into a weight and hands
 it to `actions.action`, so two users can see Wait and Trim, or Buy and Add, for one stock and no per-user table exists to
-keep fresh. `sell_review` ("Sell (review)") comes only from a `weak` quality grade: no rule reads a price
+keep fresh. `sell_review` (shown as "Review") comes only from a `weak` quality grade: no rule reads a price
 change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) and expensive is
 `trim`, and over it and cheap is `hold`, never `add`, so the badge cannot contradict the cap drawn beside it; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
 watched) is served only to a user who holds or watches it (`verdicts/visibility.py`), and the track record
@@ -635,8 +635,8 @@ one side of zero (the wider of a by-stock and a by-calendar-month bootstrap, see
 both halves of the period on that side; anything else is `no_edge`, and under 300 cases is `too_few`.
 Seventeen signals are tested at once, so the two-halves rule is what keeps a lucky one out. The popular
 signals with no edge (RSI, MACD, crosses, candlestick patterns) are included on purpose so the app can say
-so. Markers are coded dots coloured by grade (accent held up, warning worked against, grey otherwise), never
-arrows and never green or red, and no copy says buy or sell; all are off by default. Support and resistance
+so. No copy says buy or sell. How signals are drawn changed on 2026-11-15 (see "Chart guides" below): the first
+version, a lane of two-letter pills for all seventeen signals, was unreadable and is gone. Support and resistance
 zones were tested first and dropped: zone touches did worse than a same-sized dip on a random day
 (`docs/superpowers/specs/2026-11-14-chart-signals-roadmap.md`). RSI in signals is the simple form, not the
 chart's Wilder form, and its description says so. An extra's signals are served only to a user who holds or
@@ -676,3 +676,80 @@ report within ten days adds a warning, because a stop does not protect against a
 the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache) for the portfolio value, and
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
+
+**The chart shows where the price is cheap or expensive for the company, in words, and nothing from the candles.**
+Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
+on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
+showed the marks win no more often than a random day: 58% against 59%). What is drawn now comes from the
+verdict, not from chart signals. `lib/priceZones.js` reads the verdict's `cheap_below` and `expensive_above`,
+which are already prices (trailing-twelve-month EPS times the 25th and 75th percentile of the stock's own P/E
+history, recomputed nightly): the chart shades green below the first and amber above the second, each labelled
+in words, and points at a zone that is out of view instead of stretching the price scale. The cheap zone is
+called a buy zone only when quality is `strong`, the verdict's own Buy rule. A sentence above the chart
+(`entrySentence`) gives the verdict's action, why, the price at which it changes and what a stop costs; when
+today's close sits in another zone than last night's verdict it says the verdict updates tonight. The
+stop-loss is one red line from the same `planFromPage` as the Trade plan card, off by default because a
+long-term holder sells on a weaker business, not on a price: when switched on, the chart and the sentence say
+how far it is below today's close, how it compares with the average price paid when the stock is held, and
+what buying the planned shares today would risk. The Guides menu holds both switches (`chartPrefs.guides`:
+`zones` on, `plan` off). Chart signals stay in the Setup card
+and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
+valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
+points a year, not reliably different from zero.
+
+**Cards on the Research page must agree, or say why they differ (audit, 2026-11-15).** The verdict's quality
+checks read the median of the last five fiscal years and five-year growth, while the Investment snapshot
+reads the last twelve months, so one page showed Apple's return on equity as 156% and 128%. Each check line
+now names its basis (`lib/verdicts.js::CHECK_BASIS`) and the card says the two can differ. Debt is the one
+check meant to be current: the scan now stores `totalDebt/totalEquityQuarterly` (falling back to the annual
+figure), the same balance sheet the page shows, where it used last fiscal year's. The snapshot's "1 month"
+was Finnhub's month-to-date return; its three price returns now come from the page's own bars
+(`trailingReturns`), the Performance card's source. The Setup card lists only active signals graded
+`supported` or `against` and counts the rest in one line. The Trade plan card says its size is arithmetic,
+not a suggestion, when the verdict is not Buy, Add or Hold, and the sentence above the chart warns when the
+company reports within ten days (`lib/earnings.js::reportsWithin`, shared with the card).
+
+**The seventh quality check asks whether profit arrives as cash.** `rules._cash` takes, for each of the last
+five fiscal years with a profit, free-cash-flow margin over net margin (both from Finnhub's annual series the
+scan already fetches; `fcf_margin` is stored in `fundamentals_history`), and passes when the median is at
+least 80% (`CASH_CONVERSION_FLOOR`). A financial company or an unknown sector is `unknown`, as for Debt,
+because a bank's free cash flow means nothing. The floor is not in `THRESHOLDS`, which stays the snapshot's
+parity table. Rows scanned before this change have no `fcf_margin`, so the check reads "no figure" until the
+next nightly scan and verdict run.
+
+**The Research Overview answers first, and says each thing once (2026-11-15, approved from a mockup).**
+`components/research/AnswerCard.jsx` sits directly under the header: the verdict's action word and reason
+(`entrySentence`), then three cells. Company gives the quality grade and "N of N checks pass" or names the
+failures, with the full list behind "Show the checks". Price gives the valuation grade and both price
+levels. You gives shares, value, result and weight against the cap, or "Not in your portfolio". It replaces
+the header's verdict badge, the Verdict card and the Your position card, and the sentence above the chart
+now carries only the stop-loss and nothing about the verdict. An ETF, a foreign listing or an unconfirmed
+one gets its reason in the same card instead of a separate note. Range statistics are part of the
+Performance card; Capital structure and Ownership live on the Statistics tab; the Trade plan is closed
+unless the verdict is Buy or Add. The audit behind this and the layouts proposed for the other pages are in
+`docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
+
+**Every page answers first (2026-11-16).** Overview is a daily summary: "N things to look at in your
+portfolio today", the portfolio value and today's move, then up to five items from `lib/brief.js`
+(a Review, a report within three days, a holding over the 15% cap with what trimming frees, an Add,
+tracked funds buying or selling a holding, later reports), each one sentence and a link to Research,
+beside the holdings with their action word. It is computed from today's state, not from a stored
+history, so it says "to look at today", never "changed since yesterday". The pattern from the Research
+Overview also holds on Portfolio, Analytics, Discover and Earnings: one sentence or one short card states the
+answer, and detail sits below or behind a click. Portfolio's holdings table shows Instrument, day
+change, Value, Return, P/L, Weight and Action; quantity, prices, fund and Congress columns are behind
+"More columns". Analytics opens with `lib/performanceAnswer.js::performanceSentence` (the longest
+period that has both a portfolio and an index return) and lists only periods with data. Discover
+is a shop (2026-11-16): a search box, a filter column (price against its own history, quality, sector,
+yield, fall from the high, not held) with live counts, and rows of stock cards. The cards come from
+`GET /api/verdicts/browse/` (`verdicts/browse.py`), which filters, sorts and counts the universe's
+`StockVerdict` rows per request; facet counts ignore their own filter and keep the others. Each card
+draws the weekly price line and 1-year high the nightly verdict run stores (`StockVerdict.spark`,
+`high_1y`, from `research.DailyBars`, so no request reads 6,000 bars), the price bar, one sentence on
+the checks, and the action. With no filter the page shows rows (today's opportunities, fell hard but
+still strong, funds are buying) where a later row excludes tickers an earlier one showed; the funds row
+asks the browse endpoint for the hub's convergent-buy tickers. Any filter or search switches to one
+paged grid. Shelves stay below as "Browse by idea"; the shelf page merges share classes by identical
+name and sorts by action (`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
+the 15 largest companies, the rest behind one button. What was built and what is left:
+`docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.

@@ -55,7 +55,7 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
                         <OptionBadge putCall={h.put_call} />
                         <EarlierCusipBadge inherited={h.ticker_inherited} />
                       </div>
-                      {h.ticker && <div className="text-[12px] text-ink-3 truncate max-w-[260px]">{h.issuer}</div>}
+                      {h.ticker && <div title={h.issuer} className="text-[12px] text-ink-3 truncate max-w-[260px]">{h.issuer}</div>}
                     </div>
                   </div>
                 </Td>

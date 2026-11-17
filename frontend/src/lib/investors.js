@@ -1,5 +1,5 @@
 import { colorForRank } from './charts'
-import { UNKNOWN, fmtDate, fmtPct } from './format'
+import { UNKNOWN, fmtDate, fmtPct, threeDigits } from './format'
 
 const VIEW_KEY = 'saxodash:investors-top10-view'
 
@@ -31,7 +31,7 @@ export function fmtUsdCompact(value, { sign = false } = {}) {
   const n = Number(value)
   const abs = Math.abs(n)
   const found = SCALES.findIndex(([size]) => abs >= size)
-  const bodyAt = (i) => (i === SCALES.length ? `${Math.round(abs)}` : (abs / SCALES[i][0]).toFixed(SCALES[i][2]))
+  const bodyAt = (i) => (i === SCALES.length ? `${Math.round(abs)}` : threeDigits(abs / SCALES[i][0]))
   const start = found === -1 ? SCALES.length : found
   const index = Number(bodyAt(start)) >= 1000 && start > 0 ? start - 1 : start
   const body = `${bodyAt(index)}${index === SCALES.length ? '' : SCALES[index][1]}`

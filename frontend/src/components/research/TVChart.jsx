@@ -19,9 +19,8 @@ import {
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
-import { placeSignalMarkers } from '../../lib/signals'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { SIGNAL_LANE, SignalCard, SignalLane } from './SignalLane'
+import { PriceZones, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -54,7 +53,7 @@ function PriceAxis({ ticks, scaleY, width, colors }) {
         x={width - PAD_R + 8}
         y={scaleY(value) + 3.5}
         fill={colors.axis}
-        fontSize="10"
+        fontSize="11"
         className="num"
       >
         {value.toFixed(value > 100 ? 0 : 2)}
@@ -162,7 +161,8 @@ function EarningsLane({ markers, geometry, colors, onInspect }) {
             role="img"
             tabIndex={0}
             aria-label={earningsLabel(marker)}
-            className="cursor-default outline-none"
+            aria-describedby="earnings-card"
+            className="sd-focus-ring cursor-default outline-none"
             onMouseEnter={show}
             onMouseLeave={hide}
             onFocus={show}
@@ -178,7 +178,7 @@ function EarningsLane({ markers, geometry, colors, onInspect }) {
               stroke={color}
               strokeDasharray={marker.upcoming ? '2 2' : undefined}
             />
-            <text x={x} y={top + BADGE_SIZE / 2 + 3.5} fill={color} fontSize="10" fontWeight="700" textAnchor="middle">
+            <text x={x} y={top + BADGE_SIZE / 2 + 3.5} fill={color} fontSize="11" fontWeight="700" textAnchor="middle">
               E
             </text>
           </g>
@@ -215,8 +215,9 @@ export function EarningsCard({ marker, x, bottom, width }) {
   return (
     <div
       data-testid="earnings-card"
+      id="earnings-card"
       role="tooltip"
-      className="absolute z-20 pointer-events-none rounded-lg border border-line bg-raised px-3 py-2 text-[11.5px] leading-5 shadow-lg"
+      className="absolute z-20 pointer-events-none rounded-lg border border-line bg-raised px-3 py-2 text-[12px] leading-5 shadow-lg"
       style={{ left, bottom, width: cardWidth }}
     >
       {marker.upcoming ? (
@@ -246,7 +247,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
   )
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, signalMarkers, signalLaneOffset, onInspectSignal, clipId, colors }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, zones, zoneCurrency, plan, clipId, colors }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -264,6 +265,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} />
 
       <g clipPath={`url(#${clipId})`}>
+        <PriceZones zones={zones} currency={zoneCurrency} geometry={geometry} colors={colors} />
         {type === 'area' ? (
           <g>
             <defs>
@@ -343,20 +345,11 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           strokeDasharray="3 3"
           opacity="0.7"
         />
+        <StopGuide plan={plan} data={data} geometry={geometry} colors={colors} />
       </g>
 
       {earningsMarkers.length > 0 ? (
         <EarningsLane markers={earningsMarkers} geometry={geometry} colors={colors} onInspect={onInspectEarnings} />
-      ) : null}
-
-      {signalMarkers.length > 0 ? (
-        <SignalLane
-          markers={signalMarkers}
-          geometry={geometry}
-          colors={colors}
-          top={PAD_T + chartH + signalLaneOffset}
-          onInspect={onInspectSignal}
-        />
       ) : null}
 
       <g>
@@ -365,7 +358,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           x={width - PAD_R + 6}
           y={scaleY(last) + 3.5}
           fill={colors.onAccent}
-          fontSize="10"
+          fontSize="11"
           className="num"
         >
           {last.toFixed(2)}
@@ -401,7 +394,7 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
         x={width - PAD_R + 6}
         y={scaleY(bar.close) + 3.5}
         fill={colors.tooltip.text}
-        fontSize="10"
+        fontSize="11"
         className="num"
       >
         {bar.close.toFixed(2)}
@@ -411,7 +404,6 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
 }
 
 const NO_LINES = []
-const NO_SIGNALS = []
 const NO_TREND_LINES = []
 const NO_TEXT_ANNOTATIONS = []
 
@@ -473,7 +465,9 @@ export function TVChart({
   hoverDimmed = false,
   height = 360,
   earningsMarkers = [],
-  signalMarkers = NO_SIGNALS,
+  priceZones = null,
+  zoneCurrency,
+  tradePlan = null,
   slots,
   yScale = 1,
   onYScaleChange,
@@ -523,10 +517,7 @@ export function TVChart({
     setTextDraftPoint(null)
   }
   const [inspected, setInspected] = useState(null)
-  const [inspectedSignal, setInspectedSignal] = useState(null)
-  const placedSignals = useMemo(() => placeSignalMarkers(signalMarkers, data), [signalMarkers, data])
-  const earningsLane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
-  const lane = earningsLane + (placedSignals.length > 0 ? SIGNAL_LANE : 0)
+  const lane = earningsMarkers.length > 0 ? EARNINGS_LANE : 0
   const [rayStart, setRayStart] = useState(null)
   const [rayPreview, setRayPreview] = useState(null)
   const [rayTool, setRayTool] = useState(tool)
@@ -681,9 +672,9 @@ export function TVChart({
           width={width}
           earningsMarkers={earningsMarkers}
           onInspectEarnings={setInspected}
-          signalMarkers={placedSignals}
-          signalLaneOffset={earningsLane}
-          onInspectSignal={setInspectedSignal}
+          zones={priceZones}
+          zoneCurrency={zoneCurrency}
+          plan={tradePlan}
           clipId={clipId}
           colors={colors}
         />
@@ -754,14 +745,6 @@ export function TVChart({
         <EarningsCard
           marker={inspected}
           x={geometry.xAt(inspected.index)}
-          bottom={height - PAD_T - geometry.chartH + 4}
-          width={width}
-        />
-      ) : null}
-      {inspectedSignal && placedSignals.includes(inspectedSignal) ? (
-        <SignalCard
-          marker={inspectedSignal}
-          x={geometry.xAt(inspectedSignal.index)}
           bottom={height - PAD_T - geometry.chartH + 4}
           width={width}
         />

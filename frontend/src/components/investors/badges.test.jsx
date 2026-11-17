@@ -21,15 +21,15 @@ describe('ChangeBadge', () => {
 
   it('ChangeBadge caps absurd percentages', () => {
     const { rerender } = render(<ChangeBadge change="added" pct={76194} />)
-    expect(screen.getByText('▲ Added >100×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Now >100×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={1100} />)
-    expect(screen.getByText('▲ Added 12×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Now 12×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={1000} />)
-    expect(screen.getByText('▲ Added 11×')).toBeInTheDocument()
+    expect(screen.getByText('▲ Now 11×')).toBeInTheDocument()
     rerender(<ChangeBadge change="added" pct={9900} />)
-    expect(screen.getByText('▲ Added 100×')).toBeInTheDocument()
-    rerender(<ChangeBadge change="added" pct={999.4} />)
-    expect(screen.getByText('▲ Added 999%')).toBeInTheDocument()
+    expect(screen.getByText('▲ Now 100×')).toBeInTheDocument()
+    rerender(<ChangeBadge change="added" pct={658} />)
+    expect(screen.getByText('▲ Now 8×')).toBeInTheDocument()
   })
 
   it('keeps the arrow beside its word when a narrow tile wraps the badge', () => {

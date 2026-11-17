@@ -106,7 +106,7 @@ function OwnerAccountTransactions() {
           <div className={TILES}>
             <Tile label="Balance" value={fmtEur(account.balance)} sub={account.type} />
             {hasAvailable && <Tile label="Available" value={fmtEur(account.available)} />}
-            <Tile label="IBAN" value={account.iban_masked} />
+            <Tile label="IBAN" value={account.iban_masked} wrap />
           </div>
         )}
       </Card>

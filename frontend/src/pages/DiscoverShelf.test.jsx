@@ -23,7 +23,11 @@ const shelf = {
 }
 
 let served = shelf
-vi.mock('../api/queries', () => ({ useDiscoverShelf: () => ({ data: served, isLoading: false, error: null }) }))
+let verdicts
+vi.mock('../api/queries', () => ({
+  useDiscoverShelf: () => ({ data: served, isLoading: false, error: null }),
+  useVerdictSummary: () => ({ data: verdicts }),
+}))
 const toggleList = vi.fn()
 vi.mock('../components/research/useWatchlistToggle', () => ({
   useWatchlistToggle: () => ({ watchlists: [{ id: 1, name: 'Ideas', items: [] }], toggleList }),
@@ -47,7 +51,7 @@ describe('DiscoverShelf', () => {
 
   it('states the count, the criteria and the order', () => {
     renderPage()
-    expect(screen.getByText('1 stock · ROE ≥ 15% · Net margin ≥ 10% · Ordered by market cap, highest first')).toBeInTheDocument()
+    expect(screen.getByText('1 stock · ROE ≥ 15% · Net margin ≥ 10% · best action first, then ordered by market cap, highest first')).toBeInTheDocument()
   })
 
   it('leads back to Discover above the title', () => {
@@ -73,7 +77,7 @@ describe('DiscoverShelf', () => {
 
   it('shows every reason for each stock', () => {
     renderPage()
-    expect(screen.getByText('ROE 120% · vs 200D -22.0%')).toBeInTheDocument()
+    expect(screen.getAllByText('ROE 120% · vs 200D -22.0%')).toHaveLength(2)
   })
 
   it('opens Research on the overview from the stock', () => {
@@ -100,27 +104,46 @@ describe('DiscoverShelf', () => {
     expect(screen.queryByText('Research page')).not.toBeInTheDocument()
   })
 
-  it('shelf sector chips filter rows', async () => {
+  it('filters rows by sector from one select', async () => {
     const stock = (ticker, sector) => ({ ...shelf.items[0], ticker, name: ticker, uic: ticker.charCodeAt(0), sector })
     served = { ...shelf, total: 3, items: [stock('FICO', 'Technology'), stock('MSFT', 'Technology'), stock('JPM', 'Financials')] }
     try {
       renderPage()
-      expect(screen.getByRole('button', { name: 'All sectors 3' })).toHaveAttribute('aria-pressed', 'true')
-      expect(screen.getByRole('button', { name: 'Technology 2' })).toBeInTheDocument()
-      await userEvent.click(screen.getByRole('button', { name: 'Financials 1' }))
-      expect(screen.getByRole('button', { name: 'Financials 1' })).toHaveAttribute('aria-pressed', 'true')
+      const select = screen.getByRole('combobox', { name: 'Sector' })
+      expect(within(select).getByRole('option', { name: 'All sectors (3)' }).selected).toBe(true)
+      await userEvent.selectOptions(select, 'Financials')
       expect(screen.getByRole('link', { name: /^JPM/ })).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: /^FICO/ })).toBeNull()
-      await userEvent.click(screen.getByRole('button', { name: 'All sectors 3' }))
+      await userEvent.selectOptions(select, '')
       expect(screen.getByRole('link', { name: /^FICO/ })).toBeInTheDocument()
     } finally {
       served = shelf
     }
   })
 
-  it('offers no sector chips when no stock names a sector', () => {
+  it('offers no sector select when no stock names a sector', () => {
     renderPage()
-    expect(screen.queryByRole('button', { name: /All sectors/ })).toBeNull()
+    expect(screen.queryByRole('combobox', { name: 'Sector' })).toBeNull()
+  })
+
+  it('shows the action per stock, best first, and merges share classes', () => {
+    const stock = (ticker, name) => ({ ...shelf.items[0], ticker, name, uic: ticker.charCodeAt(0) + ticker.length })
+    served = { ...shelf, total: 3, items: [stock('FICO', 'Fair Isaac'), stock('GOOGL', 'Alphabet'), stock('GOOG', 'Alphabet')] }
+    verdicts = { FICO: { action: 'wait', reason: 'Not cheap.' }, GOOGL: { action: 'buy', reason: 'Cheap.' } }
+    try {
+      renderPage()
+      const rows = screen.getAllByRole('row').slice(1)
+      expect(rows).toHaveLength(2)
+      expect(rows[0]).toHaveTextContent('GOOGL')
+      expect(rows[0]).toHaveTextContent('also GOOG')
+      expect(within(rows[0]).getByText('Opportunity')).toBeInTheDocument()
+      expect(within(rows[1]).getByText('Wait')).toBeInTheDocument()
+      expect(screen.getByRole('columnheader', { name: 'Action' })).not.toHaveClass('hidden')
+      expect(screen.getByRole('columnheader', { name: 'Why it is here' })).toHaveClass('hidden', 'md:table-cell')
+    } finally {
+      served = shelf
+      verdicts = undefined
+    }
   })
 
   it('titles the page with the shelf name as the one h1', () => {

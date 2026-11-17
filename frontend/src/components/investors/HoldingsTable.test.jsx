@@ -46,7 +46,7 @@ describe('HoldingsTable', () => {
 
   it('opens Research from anywhere on a resolved row', () => {
     renderTable()
-    fireEvent.click(screen.getByText('$66.0B'))
+    fireEvent.click(screen.getByText('$66B'))
     expect(screen.getByText('Research page')).toBeInTheDocument()
   })
 

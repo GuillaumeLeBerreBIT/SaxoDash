@@ -8,6 +8,7 @@ import InvestorAvatar from '../components/investors/InvestorAvatar'
 import WeightBar from '../components/investors/WeightBar'
 import TradeHistory from '../components/congress/TradeHistory'
 import { basisNote, filedLine, partyLabel } from '../lib/congress'
+import { copySentence } from '../lib/copySentence'
 import { fmtNum, fmtPct } from '../lib/format'
 import { researchHref } from '../lib/research'
 
@@ -15,7 +16,8 @@ const SPAN_8 = 'min-[1100px]:col-span-8'
 const SPAN_4 = 'min-[1100px]:col-span-4'
 const SPAN_12 = 'min-[1100px]:col-span-12'
 
-const COPY_SUBTITLE = 'Estimated holdings after each report, bought at the close of the first trading day after it was filed and held until the next. Calls count as the stock, which understates their leverage.'
+const COPY_SUBTITLE = 'Bought after each report was filed'
+const COPY_METHOD = 'Estimated holdings after each report, bought at the close of the first trading day after it was filed and held until the next. Calls count as the stock, which understates their leverage.'
 
 const plural = (count, word) => `${fmtNum(count)} ${word}${count === 1 ? '' : 's'}`
 
@@ -100,11 +102,18 @@ export default function CongressMember() {
               <p className="text-[14px] text-ink-2">{`House · ${partyLabel(member.party, member.state_district)}`}</p>
             </div>
           </header>
+          <p data-testid="copy-sentence" className="text-[15px] font-semibold text-ink [text-wrap:balance]">
+            {copySentence(member.copy, member.name)}
+          </p>
           <Figures member={member} />
-          <p className="text-[12px] text-ink-3 max-w-[80ch]">{basisNote(member.basis)}</p>
+          <details className="text-[12px] text-ink-3 max-w-[80ch]">
+            <summary className="cursor-pointer font-medium text-ink-2 hover:text-ink">How this is estimated</summary>
+            <p className="mt-1.5">{COPY_METHOD}</p>
+            <p className="mt-1.5">{basisNote(member.basis)}</p>
+          </details>
         </div>
       </Card>
-      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
         <div className={`min-w-0 ${SPAN_8}`}>
           <CopyPerformanceView copy={member.copy} name={member.name} subtitle={COPY_SUBTITLE} figures={false} />
         </div>

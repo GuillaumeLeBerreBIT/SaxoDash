@@ -9,6 +9,7 @@ vi.mock('../api/queries')
 import * as queries from '../api/queries'
 
 const idle = { data: undefined, isLoading: false, error: null }
+const showMoreColumns = () => fireEvent.click(screen.getByRole('button', { name: 'More columns' }))
 
 // A USD position in a EUR-reporting account, priced off Saxo's P/L - the exact
 // shape that produced the net worth overstatement.
@@ -46,6 +47,7 @@ function stub(positions = [msft]) {
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
+  queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useInstrumentSearch.mockReturnValue({ ...idle, data: [] })
   queries.useOwnershipSummary.mockReturnValue(idle)
   queries.useCongressOwnershipSummary.mockReturnValue(idle)
@@ -63,7 +65,7 @@ describe('Portfolio holdings table', () => {
     expectValidHeadingOutline(container)
   })
 
-  it('adds a Verdict column after Weight, asked for in one request and dashed for a foreign listing', () => {
+  it('adds an Action column after Weight, asked for in one request and dashed for a foreign listing', () => {
     const asml = { ...msft, ticker: 'ASML', name: 'ASML Holding', currency: 'EUR' }
     stub([msft, asml])
     queries.useVerdictSummary.mockReturnValue({
@@ -75,8 +77,8 @@ describe('Portfolio holdings table', () => {
 
     expect(queries.useVerdictSummary).toHaveBeenCalledWith(['MSFT'])
     const headers = screen.getAllByRole('columnheader').map((header) => header.textContent)
-    expect(headers.indexOf('Verdict')).toBe(headers.indexOf('Weight') + 1)
-    expect(screen.getByRole('columnheader', { name: 'Verdict' })).not.toHaveAttribute('aria-sort')
+    expect(headers.indexOf('Action')).toBe(headers.indexOf('Weight') + 1)
+    expect(screen.getByRole('columnheader', { name: 'Action' })).not.toHaveAttribute('aria-sort')
     expect(screen.getByText('Hold')).toBeInTheDocument()
     expect(screen.getByTitle('Fairly priced.')).toBeInTheDocument()
     const asmlRow = screen.getByText('ASML Holding').closest('tr')
@@ -121,7 +123,7 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByTitle('No verdict for this one')).toBeInTheDocument()
   })
 
-  it('leaves the Verdict cell blank while the summary is loading', () => {
+  it('leaves the Action cell blank while the summary is loading', () => {
     renderWithProviders(<Portfolio />)
 
     const row = screen.getByText('Microsoft Corp.').closest('tr')
@@ -144,6 +146,7 @@ describe('Portfolio holdings table', () => {
     })
 
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
 
     expect(queries.useOwnershipSummary).toHaveBeenCalledWith(['AAPL', 'MSFT'])
     expect(screen.getByRole('columnheader', { name: 'Fund shares' })).toBeInTheDocument()
@@ -164,6 +167,7 @@ describe('Portfolio holdings table', () => {
     })
 
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
 
     expect(queries.useCongressOwnershipSummary).toHaveBeenCalledWith(['MSFT'])
     expect(screen.getByRole('columnheader', { name: 'Congress' })).toBeInTheDocument()
@@ -185,6 +189,7 @@ describe('Portfolio holdings table', () => {
 
   it('prices the instrument in its own currency, not the reporting one', () => {
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
 
     expect(within(row).getByText('US$510.09')).toBeInTheDocument()
@@ -200,12 +205,26 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
   })
 
-  it('shows only external banks as the bank balance and notes the Saxo cash separately', () => {
+  it('opens on the portfolio value with its history and leaves net worth and bank cash to Overview and Money', () => {
     renderWithProviders(<Portfolio />)
 
-    const bank = screen.getByText('Bank balance').closest('div')
-    expect(within(bank.parentElement).getByText('€1,435.55')).toBeInTheDocument()
-    expect(screen.getByText(/\+ €967,000\.00 cash at Saxo, included in net worth/)).toBeInTheDocument()
+    expect(screen.getByTestId('portfolio-value')).toHaveTextContent('€31,567.81')
+    expect(screen.getByTestId('portfolio-history')).toBeInTheDocument()
+    expect(screen.queryByText('Total net worth')).not.toBeInTheDocument()
+    expect(screen.queryByText('Bank balance')).not.toBeInTheDocument()
+  })
+
+  it('keeps quantity, prices, funds and Congress behind More columns', () => {
+    renderWithProviders(<Portfolio />)
+    const headers = () => screen.getAllByRole('columnheader').map((header) => header.textContent)
+
+    expect(headers()).toEqual(['Instrument', 'Today', 'Value', 'Return', 'P/L', 'Weight', 'Action'])
+    showMoreColumns()
+    expect(headers()).toEqual(expect.arrayContaining(['Qty', 'Avg cost', 'Last', 'Fund shares', 'Fund change', 'Congress']))
+    expect(screen.getByText(/^Total \(/).closest('tr').children).toHaveLength(headers().length)
+    fireEvent.click(screen.getByRole('button', { name: 'Fewer columns' }))
+    expect(headers()).toHaveLength(7)
+    expect(screen.getByText(/^Total \(/).closest('tr').children).toHaveLength(7)
   })
 
   it('says the percentage is since purchase', () => {
@@ -216,7 +235,7 @@ describe('Portfolio holdings table', () => {
   it('discloses that the mark is not a live price', () => {
     renderWithProviders(<Portfolio />)
 
-    expect(screen.getByText('Derived')).toBeInTheDocument()
+    expect(screen.getByText('Derived prices')).toBeInTheDocument()
     expect(screen.getAllByTitle(/no live price feed/i).length).toBeGreaterThan(0)
   })
 
@@ -245,6 +264,7 @@ describe('Portfolio holdings table', () => {
   it('keeps a fractional holding from rounding away', () => {
     stub([{ ...msft, qty: '2.5000' }])
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     const row = within(screen.getByRole('table')).getByText('MSFT').closest('tr')
 
     expect(within(row).getByText('2.5')).toBeInTheDocument()
@@ -291,12 +311,12 @@ describe('Portfolio holdings table', () => {
     expect(screen.getByRole('textbox', { name: /search instruments/i })).toBeInTheDocument()
   })
 
-  it('folds total cost/P&L into the one stat strip instead of a second Overview card', () => {
+  it('says the result since purchase and what was invested under the value', () => {
     renderWithProviders(<Portfolio />)
+    const hero = screen.getByTestId('portfolio-hero')
     expect(screen.queryByText('Overview')).not.toBeInTheDocument()
-    expect(screen.getByText('Total P&L')).toBeInTheDocument()
-    expect(screen.getAllByText('-€5.89')).toHaveLength(2)
-    expect(screen.getByText('€31,573.70 invested')).toBeInTheDocument()
+    expect(within(hero).getByText(/^▼ €6 since purchase/)).toHaveClass('text-down')
+    expect(within(hero).getByText('€31,574 invested')).toBeInTheDocument()
   })
 
   it('charts sector breakdown as a donut, the same pattern as holdings allocation', () => {
@@ -333,17 +353,6 @@ describe('Portfolio holdings table', () => {
       expect(within(sectorCard).getByText('No priced holdings yet')).toBeInTheDocument()
       expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
     })
-
-    it('shows an empty state instead of a blank allocation donut', () => {
-      stub([unpriced])
-      renderWithProviders(<Portfolio />)
-      // Both Holdings allocation and Sector breakdown fall back to the same
-      // EmptyState title when there's nothing priced to chart - distinguished
-      // by their hint text.
-      expect(screen.getAllByText('No priced holdings yet')).toHaveLength(2)
-      expect(screen.getByText('Allocation needs a value per holding to chart.')).toBeInTheDocument()
-      expect(screen.getByText('Sector weight needs a value per holding to chart.')).toBeInTheDocument()
-    })
   })
 })
 
@@ -368,16 +377,15 @@ describe('Portfolio total row', () => {
     expect(within(totalRow()).queryByText('20')).toBeNull()
   })
 
-  it('renders a dash, not null or 0.00%, when the percentage is absent', () => {
+  it('leaves the percentage out, never null or 0.00%, when it is absent', () => {
     queries.usePortfolioSummary.mockReturnValue({
       ...idle,
       data: { total_value: '31567.81', total_cost: '31573.70', total_pnl: '-5.89', total_pnl_pct: null, allocation: [] },
     })
     renderWithProviders(<Portfolio />)
 
-    const row = screen.getByText('Investment portfolio').closest('div').parentElement
-    expect(within(row).getByText('—')).toBeInTheDocument()
-    expect(screen.queryByText(/since purchase/)).toBeNull()
+    const hero = screen.getByTestId('portfolio-hero')
+    expect(within(hero).getByText('▼ €6 since purchase')).toBeInTheDocument()
     expect(screen.queryByText(/null|0\.00%/)).toBeNull()
   })
 
@@ -400,6 +408,7 @@ describe('Portfolio holdings on mobile', () => {
 
   it('keeps instrument, value and P/L visible below md and hides the rest', () => {
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     const table = screen.getByRole('table')
     for (const name of ['Instrument', 'Value', 'P/L']) {
       expect(within(table).getByRole('columnheader', { name })).not.toHaveClass('hidden')
@@ -501,6 +510,7 @@ describe('Portfolio sortable holdings', () => {
 
   it('sorts Qty and Weight numerically', () => {
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     click('Qty')
     expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
     click('Weight')
@@ -519,6 +529,7 @@ describe('Portfolio sortable holdings', () => {
 
   it('leaves Avg cost and Last unsortable', () => {
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     expect(within(header('Avg cost')).queryByRole('button')).not.toBeInTheDocument()
     expect(within(header('Last')).queryByRole('button')).not.toBeInTheDocument()
   })
@@ -618,11 +629,12 @@ describe('Portfolio redesign', () => {
     expect(order()).toEqual(['CCC', 'AAA', 'BBB'])
   })
 
-  it('Funds and Congress columns still hidden below 1440px', () => {
+  it('hides the Funds and Congress columns on a phone even when asked for', () => {
     renderWithProviders(<Portfolio />)
+    showMoreColumns()
     const table = screen.getByRole('table', { name: 'Positions' })
     for (const name of ['Fund shares', 'Fund change', 'Congress']) {
-      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'min-[1440px]:table-cell')
+      expect(within(table).getByRole('columnheader', { name })).toHaveClass('hidden', 'md:table-cell')
     }
   })
 
@@ -631,7 +643,7 @@ describe('Portfolio redesign', () => {
     renderWithProviders(<Portfolio />)
     const concentration = screen.getByRole('heading', { name: 'Concentration' }).closest('.sd-panel')
     expect(within(concentration).getByText('MSFT')).toBeInTheDocument()
-    expect(within(concentration).getByText('27.8%')).toHaveClass('text-warn')
+    expect(within(concentration).getByText('27.8%')).toHaveClass('text-warn-text')
     expect(within(concentration).getByText(/1 holding sits above the 15% cap/)).toBeInTheDocument()
     const currency = screen.getByRole('heading', { name: 'Currency' }).closest('.sd-panel')
     expect(within(currency).getByText('USD')).toBeInTheDocument()

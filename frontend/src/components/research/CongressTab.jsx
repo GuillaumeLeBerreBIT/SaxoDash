@@ -10,7 +10,7 @@ import SummaryTiles from './SummaryTiles'
 
 const US_ONLY = 'House disclosures are matched by US ticker, so only US-dollar listings are looked up.'
 
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const SPAN_12 = 'min-[1100px]:col-span-12'
 
 const memberSubtitle = (member) => {

@@ -50,9 +50,9 @@ describe('PanelBodies', () => {
     stub()
   })
 
-  it('marks the chart panel ok while the chart loads its bars', () => {
+  it('draws no status dot while the chart is fine, since a dot only marks a problem', () => {
     const { container } = renderWithProviders(<ChartBoardPanel board={board} panel={panel('chart')} />)
-    expect(dotTone(container)).toContain('bg-ok')
+    expect(container.querySelector('[data-testid="panel-context"] .rounded-full')).toBeNull()
   })
 
   it('marks the chart panel warn when Saxo is not connected', () => {

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import NotFound from './NotFound'
 
 describe('NotFound', () => {
-  it('renders a 404 message with a link back to the dashboard', () => {
+  it('renders a 404 message with a link back to Overview', () => {
     render(
       <MemoryRouter>
         <NotFound />
@@ -12,6 +12,6 @@ describe('NotFound', () => {
     )
 
     expect(screen.getByText('404')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /back to dashboard/i })).toHaveAttribute('href', '/')
+    expect(screen.getByRole('link', { name: /back to overview/i })).toHaveAttribute('href', '/')
   })
 })

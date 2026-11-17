@@ -101,7 +101,7 @@ function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
           x={x1 + 4}
           y={y1 - 6}
           fill={c.axisCategory}
-          fontSize="10"
+          fontSize="11"
           pointerEvents="none"
         >
           {line.label}

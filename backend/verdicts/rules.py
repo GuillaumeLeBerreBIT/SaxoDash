@@ -8,6 +8,7 @@ MIN_ANSWERED = 4
 STRONG_SHARE = 0.8
 WEAK_SHARE = 0.5
 LATEST_MARGIN_FLOOR = 0.5
+CASH_CONVERSION_FLOOR = 80
 
 
 @dataclass(frozen=True)
@@ -78,6 +79,21 @@ def _debt(row):
     return _outcome(row.debt_to_equity, row.debt_to_equity <= THRESHOLDS['debt_to_equity'])
 
 
+def _cash(row):
+    if not row.sector or row.sector in FINANCIAL_SECTORS:
+        return 'unknown', None
+    history = getattr(row, 'fundamentals_history', None) or {}
+    shares = [
+        year['fcf_margin'] / year['net_margin'] * 100
+        for year in history.get('annual') or []
+        if year.get('fcf_margin') is not None and (year.get('net_margin') or 0) > 0
+    ]
+    if not shares:
+        return 'unknown', None
+    middle = round(median(shares), 1)
+    return _outcome(middle, middle >= CASH_CONVERSION_FLOOR)
+
+
 CHECKS = (
     Check('roe', 'Return on equity', '15%', _median_at_least('roe', THRESHOLDS['roe'])),
     Check('roic', 'Return on capital', '10%', _median_at_least('roic', THRESHOLDS['roic'])),
@@ -85,6 +101,7 @@ CHECKS = (
     Check('earnings_growth', 'Earnings growth', 'above 0', _earnings_growth),
     Check('revenue_growth', 'Revenue growth', '5% a year', _revenue_growth),
     Check('debt', 'Debt', 'at most 1.0', _debt),
+    Check('cash', 'Cash behind the profit', '80% of profit', _cash),
 )
 
 

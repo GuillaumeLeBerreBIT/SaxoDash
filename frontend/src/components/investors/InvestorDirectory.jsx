@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { useInvestors } from '../../api/queries'
-import { Alert, Card, Chip, EmptyState, Input, Segmented, Select, Skeleton } from '../ui'
+import { Alert, Card, Chip, EmptyState, Input, Segmented, Select, ShowMore, Skeleton } from '../ui'
 import InvestorCards from './InvestorCards'
 import InvestorTable from './InvestorTable'
 import { directoryChips, directoryInvestors } from '../../lib/investorHub'
 import { INVESTOR_SORTS, looksLikeTicker } from '../../lib/investors'
 import { useDebouncedValue } from '../../lib/useDebouncedValue'
+import { DIRECTORY_PAGE, usePaged } from '../../lib/usePaged'
 
 const DEFAULTS = { chip: 'all', sort: 'value', layout: 'cards' }
 const LAYOUTS = [{ value: 'cards', label: 'Cards' }, { value: 'table', label: 'Table' }]
@@ -37,7 +38,17 @@ function Results({ visible, layout, query, searching, waiting }) {
     return <EmptyState title={`No tracked investor matches “${query}”.`} hint="Try a manager, a firm or a ticker they hold." />
   }
   if (visible.length === 0) return <EmptyState title="No investors in this group." />
-  return layout === 'table' ? <InvestorTable investors={visible} /> : <InvestorCards investors={visible} />
+  return <PagedResults key={`${layout}-${query}-${visible.length}`} visible={visible} layout={layout} />
+}
+
+function PagedResults({ visible, layout }) {
+  const paged = usePaged(visible, DIRECTORY_PAGE)
+  return (
+    <>
+      {layout === 'table' ? <InvestorTable investors={paged.rows} /> : <InvestorCards investors={paged.rows} />}
+      <ShowMore paged={paged} className="mt-3" />
+    </>
+  )
 }
 
 export default function InvestorDirectory({ cards, isLoading, error }) {

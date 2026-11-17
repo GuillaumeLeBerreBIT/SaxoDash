@@ -1,7 +1,8 @@
 import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SIGNALS_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
+import { GRADE_WORDS, evidenceLine, groupedByGrade } from '../../lib/signals'
 import { Card } from '../ui'
 
-const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start'
+const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const COLUMN = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
 const SPAN_5 = `${COLUMN} min-[1100px]:col-span-5`
 const SPAN_7 = `${COLUMN} min-[1100px]:col-span-7`
@@ -107,7 +108,32 @@ function ChartSignals() {
   )
 }
 
-export default function GuideTab() {
+function SignalsTested({ signals }) {
+  const groups = groupedByGrade(signals)
+  if (!groups.length) return null
+  return (
+    <Card context="Every chart signal the app tests each night, and how it did" dot="off" title="Signals tested">
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <section key={group.grade} aria-label={GRADE_WORDS[group.grade]}>
+            <h3 className="text-[12px] font-semibold uppercase tracking-wide text-ink-3">{GRADE_WORDS[group.grade]}</h3>
+            <ul className="mt-1.5 space-y-2">
+              {group.signals.map((signal) => (
+                <li key={signal.key}>
+                  <div className="text-[13.5px] font-semibold text-ink">{signal.label}</div>
+                  <p className="text-[13px] text-ink-2 leading-relaxed">{signal.description}</p>
+                  <p className="text-[12.5px] text-ink-3">{evidenceLine(signal)}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+export default function GuideTab({ signals }) {
   return (
     <div className={BOARD}>
       <div className={SPAN_7}>
@@ -119,6 +145,7 @@ export default function GuideTab() {
         <Quadrant />
         <EarningsSignals />
         <ChartSignals />
+        <SignalsTested signals={signals} />
       </div>
     </div>
   )

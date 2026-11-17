@@ -1,6 +1,5 @@
 import { overlayStrokes } from '../../lib/chartGeometry'
 import { CHART_TYPES, OVERLAY_DEFS, PANE_DEFS } from '../../lib/chartOptions'
-import { GRADE_WORDS, evidenceLine, groupedByGrade } from '../../lib/signals'
 import { MenuLabel, MenuRow, MenuSeparator } from './menu'
 import { useChartColors } from '../../theme/useChartColors'
 
@@ -38,22 +37,16 @@ export function IndicatorMenuItems({ controls }) {
   )
 }
 
-export function SignalMenuItems({ controls, signals }) {
-  return groupedByGrade(signals).map((group, position) => (
-    <div key={group.grade} role="group" aria-label={GRADE_WORDS[group.grade]}>
-      {position > 0 ? <MenuSeparator /> : null}
-      <MenuLabel>{GRADE_WORDS[group.grade]}</MenuLabel>
-      {group.signals.map((signal) => (
-        <MenuRow
-          key={signal.key}
-          tall
-          checked={Boolean(controls.signals?.[signal.key])}
-          onClick={() => controls.toggleSignal(signal.key)}
-        >
-          <span className="block leading-5">{signal.label}</span>
-          <span className="block text-[11px] leading-4 text-ink-3">{evidenceLine(signal)}</span>
-        </MenuRow>
-      ))}
-    </div>
+const GUIDES = {
+  zones: ['Opportunity and expensive zones', 'Where the price is cheap or expensive for this company'],
+  plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
+}
+
+export function GuideMenuItems({ controls, available }) {
+  return available.map((key) => (
+    <MenuRow key={key} tall checked={Boolean(controls.guides?.[key])} onClick={() => controls.toggleGuide(key)}>
+      <span className="block leading-5">{GUIDES[key][0]}</span>
+      <span className="block text-[11px] leading-4 text-ink-3">{GUIDES[key][1]}</span>
+    </MenuRow>
   ))
 }

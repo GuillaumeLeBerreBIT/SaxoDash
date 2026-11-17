@@ -89,14 +89,14 @@ white-on-light-grey does not separate on its own.
 |---|---|---|---|---|---|
 | Ink | `--sd-ink` | Values, titles, cell text | `#FFFFFF` | `#E6E9ED` | `#111827` |
 | Ink 2 | `--sd-ink-2` | Labels, names beside symbols | `#929191` | `#8B95A3` | `#4B5563` |
-| Ink 3 | `--sd-ink-3` | Units, timestamps, column heads, inactive tabs | `#7E7B78` | `#77818F` | `#6B7280` |
+| Ink 3 | `--sd-ink-3` | Units, timestamps, column heads, inactive tabs | `#868380` | `#798391` | `#656C7A` |
 | On accent | `--sd-on-accent` | Text on a primary button | `#12100E` | `#0A0C0F` | `#FFFFFF` |
 | Disabled | `--sd-disabled` | Disabled controls only | `#2C2A2A` | `#3D4550` | `#A3A9B3` |
 | Line | `--sd-line` | Row dividers, Porcelain rings | `#1A1A1A` | `#1C2129` | `#E5E7EB` |
 | Input line | `--sd-line-input` | Inputs and selects (≥ 3:1) | `#6B6865` | `#5E6876` | `#8A919C` |
 | Focus | `--sd-focus` | 2 px keyboard focus ring | `#FFFFFF` | `#7FB2FF` | `#1F5FD1` |
 
-Republic's Ink 3 is lifted from Trade Republic's `#4E4E4E` (2.3:1) to `#7E7B78` (4.5:1 on the
+Republic's Ink 3 is lifted from Trade Republic's `#4E4E4E` (2.3:1) to `#868380` (4.5:1 on the
 pane). Input line is added because Trade Republic draws inputs with no border at all. These two
 are the only deliberate departures from the measured palette, and both are for accessibility.
 
@@ -120,7 +120,7 @@ Porcelain only; in Republic the active tab is just white text), selected chips, 
 | Down | `--sd-down` | `#EB503F` | `#E5534B` | `#C0362C` | `#FF9A3C` | `#C2570C` |
 | Up subtle | `--sd-up-subtle` | `#1E2E1A` | `#12291F` | `#EAF5EE` | `#152238` | `#E3EBFA` |
 | Down subtle | `--sd-down-subtle` | `#2A120F` | `#2D1517` | `#FBECEA` | `#3A220F` | `#FBEADF` |
-| Flat | `--sd-flat` | `#929191` | `#8B95A3` | `#6B7280` | same | same |
+| Flat | `--sd-flat` | `#929191` | `#8B95A3` | `#656C7A` | same | same |
 
 The Republic up/down pair was checked with the palette validator: its colour-blind ΔE is 9.2,
 which passes. A move is **never colour alone**. It always carries ▲ / ▼ and a sign, and
@@ -158,7 +158,7 @@ Axis text uses Ink 3.
 - **Categorical series** `--sd-s1 … s8`, assigned in fixed order and never cycled. A 9th series
   folds into "Other".
   - Dark: `#3987e5 #d95926 #199e70 #c98500 #d55181 #008300 #9085e9 #e66767`
-  - Porcelain: `#2a78d6 #eb6834 #1baf7a #eda100 #e87ba4 #008300 #6250d6 #e34948`
+  - Porcelain: `#2a78d6 #eb6834 #1baf7a #c98500 #e87ba4 #008300 #6250d6 #e34948`
 - **Heat, diverging**: `--sd-heat-d3 d2 d1 0 u1 u2 u3`, used for day-move heatmaps and monthly
   returns. Thresholds are −3 / −1.5 / <0 / 0 / <1.5 / <3 / ≥3 %.
 
@@ -427,16 +427,20 @@ chart sits on Overview only; the watchlist rail sits beside every tab.
 | | Next earnings |
 | | Company facts |
 
-The **Verdict** card sits directly above the Investment snapshot. It names the action as a tag
-(Buy, Add, Hold, Trim, Sell (review), Wait, Not a fit, No verdict), gives the reason and the as-of
-date, lists the quality checks with their figures and thresholds, and shows the "cheap below" and
-"expensive above" price levels. A US-listed stock the app has not scanned yet shows the card with "Not covered by the nightly scan". The
-same action appears as a small tag on watchlist rows and in a **Verdict** column on Portfolio's
-positions table, matched by Saxo uic; where no verdict exists it shows "—".
+The verdict's action is one word: Opportunity, Add, Hold, Wait, Trim, Review, Not a fit or No verdict
+(Research's answer card states it with the reason and the as-of date). Opportunity replaced "Buy" and
+Review replaced "Sell (review)" on 2026-11-16: the app describes, it does not instruct. A held stock above
+the 15% cap that is still cheap reads "Hold · over cap". The same word appears on watchlist rows and in
+Portfolio's Action column, matched by Saxo uic; where no verdict exists it shows "—".
 
-The action tag follows the move rule: it is **words, never colour alone**. Buy and Add use the up
-tone, Trim and Sell (review) use the warning tone, and **Sell (review) is never the down colour**,
-because it asks for a second look at the story, not a sale.
+The action is **coloured text, never a filled pill** (`components/verdicts/ActionBadge.jsx`), and words,
+never colour alone. Opportunity and Add use the up tone, Trim, Review and "over cap" the warning tone, the
+rest Ink 2. **Review is never the down colour**, because it asks for a second look at the story, not a sale.
+
+Wherever a price is judged, the **price bar** (`components/verdicts/PriceBar.jsx`, geometry in
+`lib/priceBar.js`) draws three equal thirds, cheap, fair and expensive, with a marker for the last close.
+The fair third is linear between the two levels; the outer thirds run to half the cheap level and one and a
+half times the expensive one, then clamp. It says the same thing in its accessible name.
 
 **The other tabs** contain:
 

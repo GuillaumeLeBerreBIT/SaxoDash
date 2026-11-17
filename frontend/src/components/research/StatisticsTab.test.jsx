@@ -58,14 +58,14 @@ describe('StatisticsTab', () => {
       />,
     )
 
-    expect(screen.getByText('3.10T')).toBeInTheDocument()
+    expect(screen.getByText('3.1T')).toBeInTheDocument()
     expect(screen.getByText('150.00 – 260.00')).toBeInTheDocument()
   })
 
   it('shows a valuation verdict next to the ratios', () => {
     render(<StatisticsTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
 
-    expect(screen.getByText(/expensive vs. growth/)).toBeInTheDocument()
+    expect(screen.getByText(/Expensive vs. growth/)).toBeInTheDocument()
   })
 
   it('shows an unavailable message instead of ratios when data is missing', () => {

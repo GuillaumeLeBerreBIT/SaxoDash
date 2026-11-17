@@ -6,3 +6,7 @@ export const getVerdictSummary = (tickers) =>
 export const getVerdict = (ticker) => apiFetch(`/api/verdicts/${encodeURIComponent(ticker)}/`)
 
 export const getVerdictTrackRecord = () => apiFetch('/api/verdicts/track-record/')
+
+export const getWorthALook = () => apiFetch('/api/verdicts/worth-a-look/')
+
+export const getBrowse = (query = '') => apiFetch(`/api/verdicts/browse/${query}`)

@@ -56,6 +56,14 @@ export function timeLabelStyle(bars, now = new Date()) {
   return last - first > HALF_YEAR_MS || last.getFullYear() !== now.getFullYear() ? 'month' : 'day'
 }
 
+const TIME_LABEL_ROOM = 72
+const MAX_TIME_TICKS = 7
+
+export function timeTickCount(chartW, total) {
+  const fitting = Math.max(2, Math.floor(chartW / TIME_LABEL_ROOM))
+  return Math.min(MAX_TIME_TICKS, fitting, total)
+}
+
 export function formatTimeLabel(date, style) {
   return style === 'month' ? fmtMonthYear(date) : fmtDayMonth(date)
 }

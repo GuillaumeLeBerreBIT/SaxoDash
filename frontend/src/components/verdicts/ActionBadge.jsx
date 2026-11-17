@@ -1,7 +1,8 @@
 import { actionLabel, actionTone } from '../../lib/verdicts'
-import { Tag } from '../ui'
 
-export default function ActionBadge({ verdict }) {
+const TONE_TEXT = { up: 'text-up', warn: 'text-warn' }
+
+export default function ActionBadge({ verdict, className = '' }) {
   if (verdict === undefined) return null
   if (verdict === null) {
     return (
@@ -10,11 +11,15 @@ export default function ActionBadge({ verdict }) {
       </span>
     )
   }
+  const toneName = verdict.capped ? 'warn' : actionTone(verdict.action)
+  const tone = TONE_TEXT[toneName] ?? 'text-ink-2'
   return (
-    <span title={verdict.reason} className="inline-flex max-w-full">
-      <Tag tone={actionTone(verdict.action)} className="h-[18px] max-w-full overflow-hidden">
-        {actionLabel(verdict)}
-      </Tag>
+    <span
+      title={verdict.reason}
+      data-tone={toneName ?? 'neutral'}
+      className={`inline-block max-w-full truncate align-middle text-[13px] font-semibold ${tone} ${className}`}
+    >
+      {actionLabel(verdict)}
     </span>
   )
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PenLine } from 'lucide-react'
 
@@ -93,6 +94,7 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
   const fundStock = (position) => ownership?.stocks?.[ownershipTicker(position)]
   const dayLabel = moveLabel(quotes.values())
   const basis = weakestPriceBasis(positions)
+  const [more, setMore] = useState(false)
   const sortedBy = sort ? ` · sorted by ${SORT_NAMES[sort.key]}` : ''
   const header = (props) => ({ sort, onSort, className: STICKY, ...props })
 
@@ -103,25 +105,37 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
       context={`Saxo · ${positions.length} position${positions.length === 1 ? '' : 's'}${sortedBy}`}
       dot={!positions.length ? 'off' : basis && basis.label !== 'Live' ? 'warn' : 'ok'}
       title="Positions"
-      right={<PriceBasisNote positions={positions} />}
+      right={
+        <div className="flex items-center gap-2">
+          <PriceBasisNote positions={positions} />
+          <button
+            type="button"
+            aria-expanded={more}
+            onClick={() => setMore((open) => !open)}
+            className="hidden md:inline-flex items-center h-7 px-2.5 rounded-lg bg-raised text-[12px] font-semibold text-ink hover:bg-hover whitespace-nowrap"
+          >
+            {more ? 'Fewer columns' : 'More columns'}
+          </button>
+        </div>
+      }
     >
       <div className="max-h-[720px] overflow-auto">
         <table aria-label="Positions" className="w-full">
           <thead>
             <tr>
               <SortableTh edge {...header({ sortKey: 'name' })}>Instrument</SortableTh>
-              <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'qty' })}>Qty</SortableTh>
-              <Th align="right" hideBelow="md" className={STICKY}>Avg cost</Th>
-              <Th align="right" hideBelow="md" className={STICKY}>Last</Th>
+              {more && <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'qty' })}>Qty</SortableTh>}
+              {more && <Th align="right" hideBelow="md" className={STICKY}>Avg cost</Th>}
+              {more && <Th align="right" hideBelow="md" className={STICKY}>Last</Th>}
               <Th align="right" hideBelow="md" className={STICKY}>{dayLabel}</Th>
               <SortableTh align="right" {...header({ sortKey: 'value' })}>Value</SortableTh>
               <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'pnl_pct' })}>Return</SortableTh>
               <SortableTh align="right" {...header({ sortKey: 'pnl' })}>P/L</SortableTh>
               <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'weight' })}>Weight</SortableTh>
-              <Th align="right" hideBelow="md" className={STICKY}>Verdict</Th>
-              <Th align="right" hideBelow="wide" className={STICKY}>Fund shares</Th>
-              <Th align="right" hideBelow="wide" className={STICKY}>Fund change</Th>
-              <Th edge align="right" hideBelow="wide" className={STICKY}>Congress</Th>
+              <Th edge={!more} align="right" hideBelow="md" className={STICKY}>Action</Th>
+              {more && <Th align="right" hideBelow="md" className={STICKY}>Fund shares</Th>}
+              {more && <Th align="right" hideBelow="md" className={STICKY}>Fund change</Th>}
+              {more && <Th edge align="right" hideBelow="md" className={STICKY}>Congress</Th>}
             </tr>
           </thead>
           <tbody>
@@ -130,16 +144,18 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                 <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
                   <InstrumentCell position={p} />
                 </Td>
-                <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(p.qty)}</Td>
-                <Td align="right" hideBelow="md" className="text-ink-2">{fmtMoney(p.avg_cost, p.currency)}</Td>
-                <Td align="right" hideBelow="md" className="text-ink">
-                  <span
-                    title={priceBasis(p.price_source).note}
-                    className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-ink-3'}
-                  >
-                    {fmtMoney(p.current_price, p.currency)}
-                  </span>
-                </Td>
+                {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(p.qty)}</Td>}
+                {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtMoney(p.avg_cost, p.currency)}</Td>}
+                {more && (
+                  <Td align="right" hideBelow="md" className="text-ink">
+                    <span
+                      title={priceBasis(p.price_source).note}
+                      className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-ink-3'}
+                    >
+                      {fmtMoney(p.current_price, p.currency)}
+                    </span>
+                  </Td>
+                )}
                 <Td align="right" hideBelow="md"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
                 <Td align="right" className="font-semibold text-ink">{fmtEur(p.value)}</Td>
                 <Td align="right" hideBelow="md"><Move value={p.pnl_pct} digits={1} /></Td>
@@ -147,27 +163,33 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                   {fmtEur(p.pnl, { sign: true })}
                 </Td>
                 <Td align="right" hideBelow="md"><WeightBar weight={p.weight} /></Td>
-                <Td align="right" hideBelow="md" className="max-w-[120px]">
+                <Td edge={!more} align="right" hideBelow="md" className="max-w-[120px]">
                   <ActionBadge verdict={positionVerdict(p, verdicts)} />
                 </Td>
-                <Td align="right" hideBelow="wide">
-                  <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                </Td>
-                <Td align="right" hideBelow="wide">
-                  <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                </Td>
-                <Td edge align="right" hideBelow="wide">
-                  <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
-                </Td>
+                {more && (
+                  <Td align="right" hideBelow="md">
+                    <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                  </Td>
+                )}
+                {more && (
+                  <Td align="right" hideBelow="md">
+                    <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                  </Td>
+                )}
+                {more && (
+                  <Td edge align="right" hideBelow="md">
+                    <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
+                  </Td>
+                )}
               </Tr>
             ))}
             <tr className="border-t border-line bg-tile">
               <Td edge className="!whitespace-normal md:!whitespace-nowrap font-semibold text-ink">
                 Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
               </Td>
-              <Td hideBelow="md" />
-              <Td hideBelow="md" />
-              <Td hideBelow="md" />
+              {more && <Td hideBelow="md" />}
+              {more && <Td hideBelow="md" />}
+              {more && <Td hideBelow="md" />}
               <Td hideBelow="md" />
               <Td align="right" className="font-semibold text-ink">{fmtEur(summary.total_value)}</Td>
               <Td hideBelow="md" />
@@ -178,10 +200,10 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
                 {fmtEur(summary.total_pnl, { sign: true })}
               </Td>
               <Td align="right" hideBelow="md" className="text-ink-2">100.0%</Td>
-              <Td hideBelow="md" />
-              <Td hideBelow="wide" />
-              <Td hideBelow="wide" />
-              <Td edge hideBelow="wide" />
+              <Td edge={!more} hideBelow="md" />
+              {more && <Td hideBelow="md" />}
+              {more && <Td hideBelow="md" />}
+              {more && <Td edge hideBelow="md" />}
             </tr>
           </tbody>
         </table>

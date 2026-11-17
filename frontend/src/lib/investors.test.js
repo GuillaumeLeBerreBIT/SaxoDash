@@ -20,7 +20,7 @@ describe('labels and formatting', () => {
   })
 
   it('compacts dollar values', () => {
-    expect(fmtUsdCompact(299253556246)).toBe('$299.3B')
+    expect(fmtUsdCompact(299253556246)).toBe('$299B')
     expect(fmtUsdCompact(1_250_000_000_000)).toBe('$1.25T')
     expect(fmtUsdCompact(920_400_000)).toBe('$920M')
     expect(fmtUsdCompact(450_400)).toBe('$450K')
@@ -29,7 +29,7 @@ describe('labels and formatting', () => {
   })
 
   it('steps up a scale when rounding reaches 1000', () => {
-    expect(fmtUsdCompact(999_950_000)).toBe('$1.0B')
+    expect(fmtUsdCompact(999_950_000)).toBe('$1B')
     expect(fmtUsdCompact(999_600)).toBe('$1M')
     expect(fmtUsdCompact(999.6)).toBe('$1K')
     expect(fmtUsdCompact(999_400)).toBe('$999K')

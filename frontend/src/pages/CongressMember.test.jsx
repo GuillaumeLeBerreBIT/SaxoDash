@@ -56,6 +56,21 @@ describe('CongressMember', () => {
     expect(screen.getByRole('list', { name: 'Chart series' })).toHaveTextContent('S&P 500')
   })
 
+  it('opens with one sentence on what copying returned, and keeps the method behind a click', () => {
+    override = { copy: measured }
+    render()
+    expect(screen.getByTestId('copy-sentence')).toHaveTextContent(
+      'If you had copied Nancy Pelosi since Feb 2021 you would be up 80.0%, 30.0 points ahead of the S&P 500 (+50.0%).',
+    )
+    expect(screen.getByText('How this is estimated').closest('details')).not.toHaveAttribute('open')
+  })
+
+  it('says so when the copy cannot be measured', () => {
+    override = {}
+    render()
+    expect(screen.getByTestId('copy-sentence')).toHaveTextContent('Too few priced trades to say what copying Nancy Pelosi would have returned.')
+  })
+
   it('shows the member, the estimated basis and the holdings', () => {
     render()
     expect(screen.getByRole('heading', { level: 1, name: 'Nancy Pelosi' })).toBeInTheDocument()

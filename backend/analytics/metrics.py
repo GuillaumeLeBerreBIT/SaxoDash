@@ -279,6 +279,29 @@ def calendar_year_returns(port_dated_values, bench_dated_values):
     ]
 
 
+def growth_series(port_dated_values, bench_dated_values):
+    if len(port_dated_values) < MIN_DAILY_POINTS:
+        return []
+    bench = sorted((d, float(v)) for d, v in bench_dated_values)
+    base_port = float(port_dated_values[0][1])
+    base_bench = None
+    index = 0
+    last_bench = None
+    rows = []
+    for day, value in port_dated_values:
+        while index < len(bench) and bench[index][0] <= day:
+            last_bench = bench[index][1]
+            index += 1
+        if base_bench is None and last_bench is not None:
+            base_bench = last_bench
+        rows.append({
+            'date': day.isoformat(),
+            'portfolio': round(float(value) / base_port * 100, 2),
+            'benchmark': None if last_bench is None else round(last_bench / base_bench * 100, 2),
+        })
+    return rows
+
+
 def performance_summary(port_dated_values, bench_dated_values):
     """Portfolio vs. benchmark returns over several trailing windows.
 
@@ -327,6 +350,7 @@ def performance_summary(port_dated_values, bench_dated_values):
         'history_days': days,
         'periods': rows,
         'calendar_years': calendar_year_returns(port_dated_values, bench_dated_values),
+        'growth': growth_series(port_dated_values, bench_dated_values),
     }
 
 

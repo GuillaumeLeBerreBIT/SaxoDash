@@ -74,19 +74,10 @@ describe('SaxoConnectionStatus compact', () => {
 })
 
 describe('SaxoConnectionStatus full badge', () => {
-  it('still shows its text', () => {
+  it('says nothing while the connection is healthy, so the badge only ever means a problem', () => {
     mockStatus(healthy)
-    render(<SaxoConnectionStatus />)
-    expect(screen.getByText('Saxo connected')).toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
-  })
-
-  it('draws Connected in the ok status colour, not a gain colour', () => {
-    mockStatus(healthy)
-    render(<SaxoConnectionStatus />)
-    const tag = screen.getByText('Saxo connected').parentElement
-    expect(tag).toHaveClass('text-ok')
-    expect(tag).not.toHaveClass('text-up')
+    const { container } = render(<SaxoConnectionStatus />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('shows Connection failed when starting the connection throws', async () => {

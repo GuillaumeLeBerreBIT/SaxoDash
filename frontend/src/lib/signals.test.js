@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalMarkers, signalsForListing, spreadSignalMarkers, standingRows,
+  GRADE_ORDER, GRADE_WORDS, activeSignals, evidenceLine, groupedByGrade, signalsForListing, standingRows,
 } from './signals'
 
 const figures = (mean_excess, cases) => ({ 60: { mean_excess, cases }, 20: { mean_excess: mean_excess / 3, cases } })
@@ -72,30 +72,6 @@ describe('groupedByGrade', () => {
   })
 })
 
-describe('signalMarkers', () => {
-  const stock = {
-    uic: 211, active: ['momentum_top'],
-    events: { momentum_top: ['2026-03-02'], macd_cross_up: ['2026-03-02', '2026-01-05'], squeeze_breakout: ['2026-02-01'] },
-  }
-
-  it('lists the chosen signals by date, then in catalogue order', () => {
-    const markers = signalMarkers(stock, { momentum_top: true, macd_cross_up: true }, ALL)
-    expect(markers.map((marker) => [marker.date, marker.code, marker.grade])).toEqual([
-      ['2026-01-05', 'MC', 'no_edge'],
-      ['2026-03-02', 'MO', 'supported'],
-      ['2026-03-02', 'MC', 'no_edge'],
-    ])
-    expect(markers[0].label).toBe('Label macd_cross_up')
-  })
-
-  it('is empty without a stock answer, a catalogue or a choice', () => {
-    expect(signalMarkers(null, { momentum_top: true }, ALL)).toEqual([])
-    expect(signalMarkers(stock, { momentum_top: true }, undefined)).toEqual([])
-    expect(signalMarkers(stock, {}, ALL)).toEqual([])
-    expect(signalMarkers(stock, undefined, ALL)).toEqual([])
-  })
-})
-
 describe('activeSignals', () => {
   it('lists what is active, signals that held up first', () => {
     const stock = { active: ['macd_cross_up', 'squeeze_breakout', 'momentum_top'] }
@@ -113,28 +89,6 @@ describe('signalsForListing', () => {
     expect(signalsForListing(stock, 999)).toBeNull()
     expect(signalsForListing(stock, undefined)).toBe(stock)
     expect(signalsForListing(null, 211)).toBeNull()
-  })
-})
-
-describe('spreadSignalMarkers', () => {
-  const placed = (index, grade, key = `k${index}`, slot = 0, of = 1) => ({ key, grade, index, slot, of })
-  const xAt = (index) => index * 10
-
-  it('keeps every marker when none would touch, left to right', () => {
-    const kept = spreadSignalMarkers([placed(5, 'no_edge'), placed(1, 'supported')], xAt, 19)
-    expect(kept.map((marker) => [marker.key, marker.x])).toEqual([['k1', 10], ['k5', 50]])
-  })
-
-  it('drops the weaker grade when two would overlap, and the older of two equal ones', () => {
-    const kept = spreadSignalMarkers(
-      [placed(1, 'no_edge'), placed(2, 'supported'), placed(10, 'no_edge'), placed(11, 'no_edge')], xAt, 19,
-    )
-    expect(kept.map((marker) => marker.key)).toEqual(['k2', 'k11'])
-  })
-
-  it('keeps two signals of one day side by side', () => {
-    const kept = spreadSignalMarkers([placed(3, 'no_edge', 'a', 0, 2), placed(3, 'no_edge', 'b', 1, 2)], xAt, 19)
-    expect(kept.map((marker) => marker.x)).toEqual([20.5, 39.5])
   })
 })
 

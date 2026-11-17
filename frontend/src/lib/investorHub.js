@@ -6,7 +6,9 @@ export const STOCK_VIEWS = [['bought', 'Most bought'], ['sold', 'Most sold'], ['
 export const MOVE_GROUPS = [['new', 'New'], ['added', 'Added'], ['trimmed', 'Trimmed'], ['sold_out', 'Sold out']]
 export const MOVES_SHOWN = 8
 
-const share = (value) => fmtPct(value, { sign: false, decimals: 1 })
+const SMALLEST_SHARE = 0.05
+const MULTIPLE_FROM_PCT = 100
+const share = (value) => (value != null && Math.abs(value) < SMALLEST_SHARE ? 'under 0.1%' : fmtPct(value, { sign: false, decimals: 1 }))
 const whole = (value) => Math.round(Math.abs(value))
 
 export function directoryChips(cards) {
@@ -35,10 +37,17 @@ export function initials(name) {
   return picked.map((word) => word[0].toUpperCase()).join('')
 }
 
+function added(pct) {
+  if (pct == null) return 'Added shares'
+  if (Math.abs(pct) >= MULTIPLE_FROM_PCT) return `Raised to ${Math.round(Math.abs(pct) / 100 + 1)}× the shares`
+  return `Added ${whole(pct)}% more shares`
+}
+
 const MOVE_SENTENCES = {
-  new: (move) => `Opened a ${share(move.weight)} position`,
+  new: (move) =>
+    move.weight != null && Math.abs(move.weight) < SMALLEST_SHARE ? 'Opened a position under 0.1%' : `Opened a ${share(move.weight)} position`,
   added: (move) =>
-    `${move.shares_change_pct == null ? 'Added shares' : `Added ${whole(move.shares_change_pct)}% more shares`} · now ${share(move.weight)}`,
+    `${added(move.shares_change_pct)} · now ${share(move.weight)}`,
   trimmed: (move) =>
     `${move.shares_change_pct == null ? 'Cut shares' : `Cut shares by ${whole(move.shares_change_pct)}%`} · now ${share(move.weight)}`,
   sold_out: (move) => `Sold out · was ${share(move.previous_weight)}`,

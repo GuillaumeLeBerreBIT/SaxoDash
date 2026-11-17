@@ -2,7 +2,6 @@ import { Children } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderWithProviders } from '../test/renderWithProviders'
 import HistoryAreaChart from './HistoryAreaChart'
-import NetWorthChart from './NetWorthChart'
 
 vi.mock('../api/queries')
 import * as queries from '../api/queries'
@@ -45,11 +44,6 @@ describe('history charts with string-decimal rows', () => {
 
   it('HistoryAreaChart sets a domain that does not start at zero', () => {
     renderWithProviders(<HistoryAreaChart title="Bank" subtitle="s" dataKey="bank_only_total" name="Bank" color="#123456" />)
-    expect(domainOf()[0]).toBeGreaterThan(0)
-  })
-
-  it('NetWorthChart sets a domain that does not start at zero', () => {
-    renderWithProviders(<NetWorthChart />)
     expect(domainOf()[0]).toBeGreaterThan(0)
   })
 })
