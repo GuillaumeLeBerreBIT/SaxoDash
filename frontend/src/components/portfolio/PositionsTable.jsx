@@ -10,7 +10,7 @@ import { moveLabel, priceBasis, weakestPriceBasis } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
 import { positionVerdict } from '../../lib/verdicts'
 import { useChartColors } from '../../theme/useChartColors'
-import { Card, DayChange, InstrumentLogo, Move, SortableTh, Tag, Td, Th, Tr } from '../ui'
+import { Card, DataTable, DayChange, InstrumentLogo, Move, SortableTh, Tag, Td, Th, Tr } from '../ui'
 import PriceBasisNote from '../PriceBasisNote'
 import { FundChange, FundShares } from '../investors/FundHoldings'
 import CongressActivity from '../congress/CongressActivity'
@@ -119,95 +119,93 @@ export default function PositionsTable({ positions, sortedPositions, summary, qu
         </div>
       }
     >
-      <div className="max-h-[720px] overflow-auto">
-        <table aria-label="Positions" className="w-full">
-          <thead>
-            <tr>
-              <SortableTh edge {...header({ sortKey: 'name' })}>Instrument</SortableTh>
-              {more && <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'qty' })}>Qty</SortableTh>}
-              {more && <Th align="right" hideBelow="md" className={STICKY}>Avg cost</Th>}
-              {more && <Th align="right" hideBelow="md" className={STICKY}>Last</Th>}
-              <Th align="right" hideBelow="md" className={STICKY}>{dayLabel}</Th>
-              <SortableTh align="right" {...header({ sortKey: 'value' })}>Value</SortableTh>
-              <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'pnl_pct' })}>Return</SortableTh>
-              <SortableTh align="right" {...header({ sortKey: 'pnl' })}>P/L</SortableTh>
-              <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'weight' })}>Weight</SortableTh>
-              <Th edge={!more} align="right" hideBelow="md" className={STICKY}>Action</Th>
-              {more && <Th align="right" hideBelow="md" className={STICKY}>Fund shares</Th>}
-              {more && <Th align="right" hideBelow="md" className={STICKY}>Fund change</Th>}
-              {more && <Th edge align="right" hideBelow="md" className={STICKY}>Congress</Th>}
-            </tr>
-          </thead>
-          <tbody>
-            {sortedPositions.map((p) => (
-              <Tr key={p.ticker}>
-                <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
-                  <InstrumentCell position={p} />
-                </Td>
-                {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(p.qty)}</Td>}
-                {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtMoney(p.avg_cost, p.currency)}</Td>}
-                {more && (
-                  <Td align="right" hideBelow="md" className="text-ink">
-                    <span
-                      title={priceBasis(p.price_source).note}
-                      className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-ink-3'}
-                    >
-                      {fmtMoney(p.current_price, p.currency)}
-                    </span>
-                  </Td>
-                )}
-                <Td align="right" hideBelow="md"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
-                <Td align="right" className="font-semibold text-ink">{fmtEur(p.value)}</Td>
-                <Td align="right" hideBelow="md"><Move value={p.pnl_pct} digits={1} /></Td>
-                <Td align="right" className={p.pnl == null ? 'text-ink-3' : Number(p.pnl) >= 0 ? 'text-up' : 'text-down'}>
-                  {fmtEur(p.pnl, { sign: true })}
-                </Td>
-                <Td align="right" hideBelow="md"><WeightBar weight={p.weight} /></Td>
-                <Td edge={!more} align="right" hideBelow="md" className="max-w-[120px]">
-                  <ActionBadge verdict={positionVerdict(p, verdicts)} />
-                </Td>
-                {more && (
-                  <Td align="right" hideBelow="md">
-                    <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                  </Td>
-                )}
-                {more && (
-                  <Td align="right" hideBelow="md">
-                    <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
-                  </Td>
-                )}
-                {more && (
-                  <Td edge align="right" hideBelow="md">
-                    <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
-                  </Td>
-                )}
-              </Tr>
-            ))}
-            <tr className="border-t border-line bg-tile">
-              <Td edge className="!whitespace-normal md:!whitespace-nowrap font-semibold text-ink">
-                Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
+      <DataTable label="Positions" frameClassName="max-h-[720px] overflow-auto">
+        <thead>
+          <tr>
+            <SortableTh edge {...header({ sortKey: 'name' })}>Instrument</SortableTh>
+            {more && <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'qty' })}>Qty</SortableTh>}
+            {more && <Th align="right" hideBelow="md" className={STICKY}>Avg cost</Th>}
+            {more && <Th align="right" hideBelow="md" className={STICKY}>Last</Th>}
+            <Th align="right" hideBelow="md" className={STICKY}>{dayLabel}</Th>
+            <SortableTh align="right" {...header({ sortKey: 'value' })}>Value</SortableTh>
+            <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'pnl_pct' })}>Return</SortableTh>
+            <SortableTh align="right" {...header({ sortKey: 'pnl' })}>P/L</SortableTh>
+            <SortableTh align="right" hideBelow="md" {...header({ sortKey: 'weight' })}>Weight</SortableTh>
+            <Th edge={!more} align="right" hideBelow="md" className={STICKY}>Action</Th>
+            {more && <Th align="right" hideBelow="md" className={STICKY}>Fund shares</Th>}
+            {more && <Th align="right" hideBelow="md" className={STICKY}>Fund change</Th>}
+            {more && <Th edge align="right" hideBelow="md" className={STICKY}>Congress</Th>}
+          </tr>
+        </thead>
+        <tbody>
+          {sortedPositions.map((p) => (
+            <Tr key={p.ticker}>
+              <Td edge className="w-full max-w-0 md:w-auto md:max-w-none">
+                <InstrumentCell position={p} />
               </Td>
-              {more && <Td hideBelow="md" />}
-              {more && <Td hideBelow="md" />}
-              {more && <Td hideBelow="md" />}
-              <Td hideBelow="md" />
-              <Td align="right" className="font-semibold text-ink">{fmtEur(summary.total_value)}</Td>
-              <Td hideBelow="md" />
-              <Td
-                align="right"
-                className={`font-semibold ${summary.total_pnl == null ? 'text-ink-3' : Number(summary.total_pnl) >= 0 ? 'text-up' : 'text-down'}`}
-              >
-                {fmtEur(summary.total_pnl, { sign: true })}
+              {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtQty(p.qty)}</Td>}
+              {more && <Td align="right" hideBelow="md" className="text-ink-2">{fmtMoney(p.avg_cost, p.currency)}</Td>}
+              {more && (
+                <Td align="right" hideBelow="md" className="text-ink">
+                  <span
+                    title={priceBasis(p.price_source).note}
+                    className={p.price_source === 'live' ? '' : 'decoration-dotted underline underline-offset-4 decoration-ink-3'}
+                  >
+                    {fmtMoney(p.current_price, p.currency)}
+                  </span>
+                </Td>
+              )}
+              <Td align="right" hideBelow="md"><DayChange value={quotes.get(p.uic)?.change_pct} /></Td>
+              <Td align="right" className="font-semibold text-ink">{fmtEur(p.value)}</Td>
+              <Td align="right" hideBelow="md"><Move value={p.pnl_pct} digits={1} /></Td>
+              <Td align="right" className={p.pnl == null ? 'text-ink-3' : Number(p.pnl) >= 0 ? 'text-up' : 'text-down'}>
+                {fmtEur(p.pnl, { sign: true })}
               </Td>
-              <Td align="right" hideBelow="md" className="text-ink-2">100.0%</Td>
-              <Td edge={!more} hideBelow="md" />
-              {more && <Td hideBelow="md" />}
-              {more && <Td hideBelow="md" />}
-              {more && <Td edge hideBelow="md" />}
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              <Td align="right" hideBelow="md"><WeightBar weight={p.weight} /></Td>
+              <Td edge={!more} align="right" hideBelow="md" className="max-w-[120px]">
+                <ActionBadge verdict={positionVerdict(p, verdicts)} />
+              </Td>
+              {more && (
+                <Td align="right" hideBelow="md">
+                  <FundShares ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                </Td>
+              )}
+              {more && (
+                <Td align="right" hideBelow="md">
+                  <FundChange ticker={p.ticker} stock={fundStock(p)} quarter={ownership?.quarter} />
+                </Td>
+              )}
+              {more && (
+                <Td edge align="right" hideBelow="md">
+                  <CongressActivity ticker={p.ticker} stock={congress?.stocks?.[ownershipTicker(p)]} windowDays={congress?.window_days} />
+                </Td>
+              )}
+            </Tr>
+          ))}
+          <tr className="border-t border-line bg-tile">
+            <Td edge className="!whitespace-normal md:!whitespace-nowrap font-semibold text-ink">
+              Total ({positions.length} {positions.length === 1 ? 'holding' : 'holdings'})
+            </Td>
+            {more && <Td hideBelow="md" />}
+            {more && <Td hideBelow="md" />}
+            {more && <Td hideBelow="md" />}
+            <Td hideBelow="md" />
+            <Td align="right" className="font-semibold text-ink">{fmtEur(summary.total_value)}</Td>
+            <Td hideBelow="md" />
+            <Td
+              align="right"
+              className={`font-semibold ${summary.total_pnl == null ? 'text-ink-3' : Number(summary.total_pnl) >= 0 ? 'text-up' : 'text-down'}`}
+            >
+              {fmtEur(summary.total_pnl, { sign: true })}
+            </Td>
+            <Td align="right" hideBelow="md" className="text-ink-2">100.0%</Td>
+            <Td edge={!more} hideBelow="md" />
+            {more && <Td hideBelow="md" />}
+            {more && <Td hideBelow="md" />}
+            {more && <Td edge hideBelow="md" />}
+          </tr>
+        </tbody>
+      </DataTable>
       <p className="mt-3 px-[18px] text-[12px] text-ink-3">
         The tick on each weight bar is your {WEIGHT_CAP_PCT}% cap.
       </p>

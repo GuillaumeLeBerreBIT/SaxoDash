@@ -1,7 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 
 import { useCongressMember } from '../api/queries'
-import { Card, EmptyState, QueryState, StatusDot, Td, Th, Tile, Tr } from '../components/ui'
+import { Card, DataTable, EmptyState, QueryState, StatusDot, Td, Th, Tile, Tr } from '../components/ui'
 import StockLogo from '../components/StockLogo'
 import { CopyFigures, CopyPerformanceView } from '../components/investors/CopyPerformancePanel'
 import InvestorAvatar from '../components/investors/InvestorAvatar'
@@ -45,7 +45,7 @@ function Holdings({ holdings }) {
       {holdings.length === 0 ? (
         <EmptyState title="No estimated holdings" hint="Nothing priceable has been bought yet." />
       ) : (
-        <table aria-label="Estimated holdings" className="w-full">
+        <DataTable label="Estimated holdings">
           <thead>
             <tr><Th edge>Ticker</Th><Th edge align="right">Weight</Th></tr>
           </thead>
@@ -67,7 +67,7 @@ function Holdings({ holdings }) {
               </Tr>
             ))}
           </tbody>
-        </table>
+        </DataTable>
       )}
     </Card>
   )

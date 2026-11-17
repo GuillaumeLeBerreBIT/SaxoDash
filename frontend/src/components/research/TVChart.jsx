@@ -1,4 +1,4 @@
-import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ChevronsRight } from 'lucide-react'
 
 import {
@@ -18,7 +18,7 @@ import {
 } from '../../lib/chartGeometry'
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
-import { edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
+import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import PriceLines, { PriceEditor } from './PriceLines'
 import { PriceZones, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
@@ -493,8 +493,10 @@ export function TVChart({
   onCreateTextAnnotation,
   tool = 'crosshair',
   onPlaced,
+  placerRef,
 }) {
   const [ref, width] = useWidth()
+  const focusBack = useRef(null)
   const colors = useChartColors()
   const clipId = `tv-plot-${useId().replace(/[^\w-]/g, '')}`
   const placingLine = tool === 'hline'
@@ -572,7 +574,57 @@ export function TVChart({
 
   const editing = lines.find((line) => line.id === editingId) ?? null
 
+  const pointAt = (index) => {
+    const bar = data[index]
+    return { barDate: bar.date, price: roundPrice(bar.close), x: geometry.xAt(index), y: geometry.scaleY(bar.close), keyed: true }
+  }
+
+  const openEditor = (open) => (id) => {
+    focusBack.current = document.activeElement
+    open(id)
+  }
+
+  const refocus = () => {
+    const target = focusBack.current
+    focusBack.current = null
+    if (!target) return
+    setTimeout(() => {
+      const active = document.activeElement
+      if (target.isConnected && (active == null || active === document.body)) target.focus()
+    })
+  }
+
+  useImperativeHandle(placerRef, () => (index) => {
+    if (!data[index]) return null
+    const point = pointAt(index)
+    if (tool === 'hline' && onCreateLine) {
+      onCreateLine(point.price)
+      onPlaced?.()
+      return `Line placed at ${badgePrice(point.price)}.`
+    }
+    if (tool === 'ray' && onCreateTrendLine) {
+      if (!rayStart) {
+        setRayStart(point)
+        return `Ray starts on ${fmtDate(point.barDate)} at ${badgePrice(point.price)}. Move to its end and press Enter.`
+      }
+      if (point.barDate === rayStart.barDate) return 'Move to another session for the end of the ray.'
+      onCreateTrendLine({ barDate: rayStart.barDate, price: rayStart.price }, { barDate: point.barDate, price: point.price })
+      setRayStart(null)
+      setRayPreview(null)
+      onPlaced?.()
+      return `Ray placed, ending on ${fmtDate(point.barDate)} at ${badgePrice(point.price)}.`
+    }
+    if (tool === 'text' && onCreateTextAnnotation) {
+      focusBack.current = document.activeElement
+      setTextDraftPoint(point)
+      return 'Type the note and press Enter.'
+    }
+    return null
+  })
+
   if (data.length === 0) return null
+
+  const rayEnd = rayStart?.keyed && hover != null && data[hover] ? pointAt(hover) : rayPreview
 
   const plotY = (event) => {
     const box = event.currentTarget.getBoundingClientRect()
@@ -697,7 +749,7 @@ export function TVChart({
             textSelection.clear()
             freeSelection.select(id)
           }}
-          onEditLabel={setEditingFreeLineId}
+          onEditLabel={openEditor(setEditingFreeLineId)}
         />
         <TrendLines
           lines={trendLines}
@@ -710,7 +762,7 @@ export function TVChart({
             trendSelection.select(id)
           }}
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
-          onEdit={setEditingTrendLineId}
+          onEdit={openEditor(setEditingTrendLineId)}
         />
         <TextAnnotations
           items={textAnnotations}
@@ -723,15 +775,15 @@ export function TVChart({
             textSelection.select(id)
           }}
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
-          onEdit={setEditingTextId}
+          onEdit={openEditor(setEditingTextId)}
         />
-        {rayStart && rayPreview ? (
+        {rayStart && rayEnd ? (
           <line
             data-testid="trend-line-preview"
             x1={rayStart.x}
             y1={rayStart.y}
-            x2={rayPreview.x}
-            y2={rayPreview.y}
+            x2={rayEnd.x}
+            y2={rayEnd.y}
             stroke={colors.axisCategory}
             strokeDasharray="3 3"
             pointerEvents="none"
@@ -772,8 +824,12 @@ export function TVChart({
           onCommit={(label) => {
             setEditingFreeLineId(null)
             onEditLineLabel?.(editingFreeLine, label)
+            refocus()
           }}
-          onCancel={() => setEditingFreeLineId(null)}
+          onCancel={() => {
+            setEditingFreeLineId(null)
+            refocus()
+          }}
         />
       ) : null}
       {editingTrendLine ? (
@@ -786,8 +842,12 @@ export function TVChart({
           onCommit={(label) => {
             setEditingTrendLineId(null)
             onEditTrendLineLabel?.(editingTrendLine, label)
+            refocus()
           }}
-          onCancel={() => setEditingTrendLineId(null)}
+          onCancel={() => {
+            setEditingTrendLineId(null)
+            refocus()
+          }}
         />
       ) : null}
       {editingText ? (
@@ -799,8 +859,12 @@ export function TVChart({
           onCommit={(text) => {
             setEditingTextId(null)
             onEditTextAnnotationText?.(editingText, text)
+            refocus()
           }}
-          onCancel={() => setEditingTextId(null)}
+          onCancel={() => {
+            setEditingTextId(null)
+            refocus()
+          }}
         />
       ) : null}
       {textDraftPoint ? (
@@ -813,8 +877,12 @@ export function TVChart({
             onCreateTextAnnotation?.({ barDate: textDraftPoint.barDate, price: textDraftPoint.price, text })
             setTextDraftPoint(null)
             onPlaced?.()
+            refocus()
           }}
-          onCancel={() => setTextDraftPoint(null)}
+          onCancel={() => {
+            setTextDraftPoint(null)
+            refocus()
+          }}
         />
       ) : null}
       {timeOffset > 0 && onTimeOffsetChange ? (

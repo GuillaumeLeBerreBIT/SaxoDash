@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -108,6 +109,16 @@ def static_get_paths():
             continue
         paths.append('/' + route)
     return sorted(set(paths))
+
+
+def owner_only_banking_urls():
+    urls = []
+    for route, entry in walk(get_resolver().url_patterns):
+        if not route.startswith('api/enablebanking/') or route.startswith(('api/enablebanking/connect/', 'api/enablebanking/callback')):
+            continue
+        filled = re.sub(r'<int:\w+>', '1', route)
+        urls.append('/' + re.sub(r'<str:\w+>', 'kbc', filled))
+    return sorted(set(urls))
 
 
 def skipped_routes():
@@ -237,6 +248,16 @@ class IsolationSweepTests(APITestCase):
         for url in ('/api/enablebanking/status/', '/api/enablebanking/transactions/', '/api/enablebanking/budgets/'):
             self.assertEqual(self.client.get(url).status_code, 403, url)
         self.assertEqual(self.client.get('/api/accounts/').json(), [])
+
+    def test_non_owner_is_refused_every_banking_action(self):
+        urls = owner_only_banking_urls()
+        self.assertGreater(len(urls), 12)
+        self.client.force_authenticate(self.bob)
+        with self.offline():
+            for url in urls:
+                for method in ('get', 'post', 'put', 'patch', 'delete'):
+                    status = getattr(self.client, method)(url, {}, format='json').status_code
+                    self.assertEqual(status, 403, f'{method.upper()} {url} answered {status}')
 
     def test_other_user_changes_nothing_of_the_owners(self):
         self.client.force_authenticate(self.bob)

@@ -1,4 +1,4 @@
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { copySentence } from '../../lib/copySentence'
 
 import { Card, Skeleton, Tile } from '../ui'
@@ -7,6 +7,7 @@ import { axisProps, chartTooltipProps, gridProps, seriesAxis } from '../../lib/c
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtDate, fmtMonthYear, fmtPct } from '../../lib/format'
 import { copyCaveat, copySeries, copyVerdict, points } from '../../lib/investors'
+import ChartFrame from '../ChartFrame'
 
 const wholePct = (value) => fmtPct(value, { decimals: 0 })
 const onePct = (value) => fmtPct(value, { decimals: 1 })
@@ -48,40 +49,38 @@ function CopyChart({ copy }) {
   const rows = copySeries(copy.series)
   return (
     <>
-      <div className="h-[var(--chart-h-lg)]">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="date" tickFormatter={fmtMonthYear} minTickGap={48} />
-            <YAxis
-              {...axisProps(c)}
-              width={56}
-              tickFormatter={wholePct}
-              {...seriesAxis(rows, ['clone', 'benchmark'], { includeZero: true })}
-            />
-            <Tooltip {...chartTooltipProps(c)} labelFormatter={fmtDate} formatter={(value, label) => [onePct(value), label]} />
-            <Line
-              type="monotone"
-              dataKey="benchmark"
-              name={copy.benchmark}
-              stroke={c.bench}
-              strokeWidth={1.5}
-              strokeDasharray="4 3"
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="clone"
-              name="Copy"
-              stroke={c.primary}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="h-[var(--chart-h-lg)]">
+        <LineChart data={rows}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="date" tickFormatter={fmtMonthYear} minTickGap={48} />
+          <YAxis
+            {...axisProps(c)}
+            width={56}
+            tickFormatter={wholePct}
+            {...seriesAxis(rows, ['clone', 'benchmark'], { includeZero: true })}
+          />
+          <Tooltip {...chartTooltipProps(c)} labelFormatter={fmtDate} formatter={(value, label) => [onePct(value), label]} />
+          <Line
+            type="monotone"
+            dataKey="benchmark"
+            name={copy.benchmark}
+            stroke={c.bench}
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+            dot={false}
+            isAnimationActive={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="clone"
+            name="Copy"
+            stroke={c.primary}
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ChartFrame>
       <Legend benchmark={copy.benchmark} c={c} />
       <p className="mt-3 text-[12px] text-ink-3 max-w-[80ch]">{copyCaveat(copy)}</p>
     </>

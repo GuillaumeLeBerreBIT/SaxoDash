@@ -10,7 +10,9 @@ Run from `backend/`:
 - `python manage.py test --noinput --parallel 4` runs the whole suite, as CI does. Name an app
   (`python manage.py test research`) while working on one.
 - `python manage.py migrate` against the dev database after any new migration. The test suite
-  builds its own database, so a green run does not prove the dev one has the column.
+  builds its own database, so a green run does not prove the dev one has the column, and the
+  live dev server then 500s on every request touching that model. `scripts/dev.sh` migrates
+  on restart; mid-session it is a manual step.
 
 ## Conventions
 

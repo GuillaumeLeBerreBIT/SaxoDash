@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtRatio, periodLabels, ratiosWithHistory } from '../../lib/ratioHistory'
 import { Card, Select } from '../ui'
+import ChartFrame from '../ChartFrame'
 
 const MIN_POINTS = 2
 
@@ -40,17 +41,15 @@ export default function RatioHistoryChart({ history, className = '' }) {
         </label>
       }
     >
-      <div className="h-[var(--chart-h-sm)]" role="img" aria-label={`${ratio.label} by fiscal year`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="year" />
-            <YAxis {...axisProps(c)} width={52} tickFormatter={(value) => fmtRatio(value, ratio.format)} />
-            <Tooltip {...chartTooltipProps(c)} formatter={(value) => [fmtRatio(value, ratio.format), ratio.label]} />
-            <Line dataKey="value" stroke={c.primary} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="h-[var(--chart-h-sm)]" label={`${ratio.label} by fiscal year`}>
+        <LineChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="year" />
+          <YAxis {...axisProps(c)} width={52} tickFormatter={(value) => fmtRatio(value, ratio.format)} />
+          <Tooltip {...chartTooltipProps(c)} formatter={(value) => [fmtRatio(value, ratio.format), ratio.label]} />
+          <Line dataKey="value" stroke={c.primary} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
+        </LineChart>
+      </ChartFrame>
     </Card>
   )
 }

@@ -1,10 +1,11 @@
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { balanceRows } from '../../lib/financialHealth'
 import { Card } from '../ui'
+import ChartFrame from '../ChartFrame'
 
 const SERIES = [
   { key: 'current_assets', label: 'Current assets', stackId: 'assets', slot: 0 },
@@ -28,35 +29,29 @@ export default function AssetsLiabilitiesChart({ annual, className = '' }) {
           </li>
         ))}
       </ul>
-      <div
-        className="mt-3 h-[var(--chart-h-md)]"
-        role="img"
-        aria-label="Short- and long-term assets against liabilities by fiscal year"
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="label" />
-            <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
-            <Tooltip
-              {...chartTooltipProps(c)}
-              cursor={{ fill: gridProps(c).stroke }}
-              formatter={(value, name) => [fmtTooltipDollars(value), name]}
+      <ChartFrame className="mt-3 h-[var(--chart-h-md)]" label="Short- and long-term assets against liabilities by fiscal year">
+        <BarChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="label" />
+          <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            cursor={{ fill: gridProps(c).stroke }}
+            formatter={(value, name) => [fmtTooltipDollars(value), name]}
+          />
+          {SERIES.map(({ key, label, stackId, slot }) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              name={label}
+              stackId={stackId}
+              fill={c.series[slot]}
+              maxBarSize={18}
+              isAnimationActive={false}
             />
-            {SERIES.map(({ key, label, stackId, slot }) => (
-              <Bar
-                key={key}
-                dataKey={key}
-                name={label}
-                stackId={stackId}
-                fill={c.series[slot]}
-                maxBarSize={18}
-                isAnimationActive={false}
-              />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+          ))}
+        </BarChart>
+      </ChartFrame>
     </Card>
   )
 }

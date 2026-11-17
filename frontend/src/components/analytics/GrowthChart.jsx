@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Line, LineChart, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts'
 
+import ChartFrame from '../ChartFrame'
 import { axisProps, chartTooltipProps, dateAxisProps, formatAxisDate, gridProps, seriesAxis } from '../../lib/charts'
 import { fmtPct } from '../../lib/format'
 import { GROWTH_RANGES, growthFor, lastPct } from '../../lib/growth'
@@ -32,27 +33,24 @@ export default function GrowthChart({ growth, benchmarkName, className = '' }) {
         </div>
         <Segmented label="Range" options={options} value={range} onChange={setRange} />
       </div>
-      <div className="h-[240px] md:h-[300px]">
-        {rows.length < 2 ? (
-          <ChartPlaceholder>Not enough history yet to draw the comparison.</ChartPlaceholder>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-              <CartesianGrid {...gridProps(c)} />
-              <XAxis {...dateAxisProps(c)} minTickGap={56} interval="preserveStartEnd" />
-              <YAxis {...axisProps(c)} width={44} {...seriesAxis(rows, ['portfolio', 'benchmark'])} tickFormatter={(value) => Math.round(value)} />
-              <ReferenceLine y={100} stroke={c.axis} />
-              <Tooltip
-                {...chartTooltipProps(c)}
-                labelFormatter={formatAxisDate}
-                formatter={(value, name) => [fmtPct(Number(value) - 100, { decimals: 1 }), name]}
-              />
-              <Line type="monotone" dataKey="benchmark" name={benchmarkName} stroke={c.bench} strokeWidth={2} strokeDasharray="6 5" dot={false} connectNulls isAnimationActive={false} />
-              <Line type="monotone" dataKey="portfolio" name="You" stroke={c.primary} strokeWidth={2.5} dot={false} isAnimationActive={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      <ChartFrame
+        className="h-[240px] md:h-[300px]"
+        placeholder={rows.length < 2 ? <ChartPlaceholder>Not enough history yet to draw the comparison.</ChartPlaceholder> : null}
+      >
+        <LineChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...dateAxisProps(c)} minTickGap={56} interval="preserveStartEnd" />
+          <YAxis {...axisProps(c)} width={44} {...seriesAxis(rows, ['portfolio', 'benchmark'])} tickFormatter={(value) => Math.round(value)} />
+          <ReferenceLine y={100} stroke={c.axis} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            labelFormatter={formatAxisDate}
+            formatter={(value, name) => [fmtPct(Number(value) - 100, { decimals: 1 }), name]}
+          />
+          <Line type="monotone" dataKey="benchmark" name={benchmarkName} stroke={c.bench} strokeWidth={2} strokeDasharray="6 5" dot={false} connectNulls isAnimationActive={false} />
+          <Line type="monotone" dataKey="portfolio" name="You" stroke={c.primary} strokeWidth={2.5} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ChartFrame>
       <p className="mt-2 text-[12px] text-ink-3">Both lines start at 100 on the first day of the range.</p>
     </Card>
   )

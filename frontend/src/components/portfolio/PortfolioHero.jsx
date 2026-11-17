@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, ReferenceDot, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { useNetWorthHistory, useTransactions } from '../../api/queries'
 import { chartTooltipProps, dateAxisProps, formatAxisDate, gridProps, moneyAxisProps, seriesAxis } from '../../lib/charts'
@@ -8,6 +8,7 @@ import { fmtDate, fmtEur, fmtPct } from '../../lib/format'
 import { dayChange, tradeMarkers } from '../../lib/portfolioHero'
 import { useChartColors } from '../../theme/useChartColors'
 import { RangePills } from '../RangePills'
+import ChartFrame from '../ChartFrame'
 
 const KIND_WORD = { buy: 'Bought', sell: 'Sold' }
 
@@ -96,47 +97,43 @@ export default function PortfolioHero({ summary, positions, quotes, holdingsCoun
           <RangePills value={range} onChange={setRange} />
         </div>
       </div>
-      <div className="h-[220px] md:h-[300px]" data-testid="portfolio-history">
-        {placeholder ?? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="portfolioHeroFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={c.primary} stopOpacity={0.18} />
-                  <stop offset="100%" stopColor={c.primary} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid {...gridProps(c)} />
-              <XAxis {...dateAxisProps(c)} tickFormatter={formatAxisDate} minTickGap={56} interval="preserveStartEnd" />
-              <YAxis {...moneyAxisProps(c)} {...seriesAxis(data, ['portfolio_value'])} />
-              <Tooltip cursor={{ stroke: c.crosshair, strokeDasharray: '3 3' }} content={<HeroTooltip markers={markers} c={c} />} />
-              <Area
-                type="monotone"
-                dataKey="portfolio_value"
-                name="Portfolio"
-                stroke={c.primary}
-                strokeWidth={2.5}
-                fill="url(#portfolioHeroFill)"
-                dot={false}
-                activeDot={{ r: 4, fill: c.primary, stroke: c.tooltip.bg, strokeWidth: 2 }}
-                isAnimationActive={false}
-              />
-              {markers.map((marker) => (
-                <ReferenceDot
-                  key={`${marker.date}:${marker.kind}`}
-                  x={marker.date}
-                  y={marker.value}
-                  r={5}
-                  fill={marker.kind === 'buy' ? c.up : c.tooltip.bg}
-                  stroke={marker.kind === 'buy' ? c.tooltip.bg : c.ink}
-                  strokeWidth={2}
-                  ifOverflow="extendDomain"
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        )}
-      </div>
+      <ChartFrame className="h-[220px] md:h-[300px]" data-testid="portfolio-history" placeholder={placeholder}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="portfolioHeroFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={c.primary} stopOpacity={0.18} />
+              <stop offset="100%" stopColor={c.primary} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...dateAxisProps(c)} tickFormatter={formatAxisDate} minTickGap={56} interval="preserveStartEnd" />
+          <YAxis {...moneyAxisProps(c)} {...seriesAxis(data, ['portfolio_value'])} />
+          <Tooltip cursor={{ stroke: c.crosshair, strokeDasharray: '3 3' }} content={<HeroTooltip markers={markers} c={c} />} />
+          <Area
+            type="monotone"
+            dataKey="portfolio_value"
+            name="Portfolio"
+            stroke={c.primary}
+            strokeWidth={2.5}
+            fill="url(#portfolioHeroFill)"
+            dot={false}
+            activeDot={{ r: 4, fill: c.primary, stroke: c.tooltip.bg, strokeWidth: 2 }}
+            isAnimationActive={false}
+          />
+          {markers.map((marker) => (
+            <ReferenceDot
+              key={`${marker.date}:${marker.kind}`}
+              x={marker.date}
+              y={marker.value}
+              r={5}
+              fill={marker.kind === 'buy' ? c.up : c.tooltip.bg}
+              stroke={marker.kind === 'buy' ? c.tooltip.bg : c.ink}
+              strokeWidth={2}
+              ifOverflow="extendDomain"
+            />
+          ))}
+        </AreaChart>
+      </ChartFrame>
       <Legend hasBuy={markers.some((m) => m.kind === 'buy')} hasSell={markers.some((m) => m.kind === 'sell')} />
     </section>
   )

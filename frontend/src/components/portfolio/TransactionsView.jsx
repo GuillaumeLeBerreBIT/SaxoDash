@@ -8,7 +8,7 @@ import { nextSort, sortRows } from '../../lib/sort'
 import { accountsOf, DATE_PRESETS, filterByDateRange, rangeForPreset, readFilters, writeFilters } from '../../lib/transactionFilters'
 import { localToday } from '../../lib/periods'
 import { toCsv, TRANSACTION_COLUMNS } from '../../lib/csv'
-import { Badge, Button, Card, Chip, EmptyState, Input, InstrumentLogo, LetterAvatar, QueryState, Select, Th, SortableTh, Td } from '../ui'
+import { Badge, Button, Card, Chip, DataTable, EmptyState, Input, InstrumentLogo, LetterAvatar, QueryState, Select, SortableTh, Td, Th } from '../ui'
 
 const TRANSACTION_ACCESSORS = {
   date: (t) => t.date,
@@ -257,40 +257,38 @@ export default function TransactionsView() {
         )}
       </div>
 
-      <div className="overflow-x-auto">
-        <table aria-label="Transactions" className="w-full">
-          <thead>
+      <DataTable label="Transactions">
+        <thead>
+          <tr>
+            <SortableTh edge sortKey="date" sort={sort} onSort={onSort}>Date</SortableTh>
+            <Th hideBelow="md">Type</Th>
+            <SortableTh sortKey="instrument" sort={sort} onSort={onSort}>Instrument</SortableTh>
+            <Th hideBelow="md">Ticker</Th>
+            <Th align="right" hideBelow="md">Qty</Th>
+            <Th align="right" hideBelow="md">Price</Th>
+            <SortableTh align="right" sortKey="total" sort={sort} onSort={onSort}>Total</SortableTh>
+            <Th edge hideBelow="md">Account</Th>
+          </tr>
+        </thead>
+        {visible.length === 0 ? (
+          <tbody>
             <tr>
-              <SortableTh edge sortKey="date" sort={sort} onSort={onSort}>Date</SortableTh>
-              <Th hideBelow="md">Type</Th>
-              <SortableTh sortKey="instrument" sort={sort} onSort={onSort}>Instrument</SortableTh>
-              <Th hideBelow="md">Ticker</Th>
-              <Th align="right" hideBelow="md">Qty</Th>
-              <Th align="right" hideBelow="md">Price</Th>
-              <SortableTh align="right" sortKey="total" sort={sort} onSort={onSort}>Total</SortableTh>
-              <Th edge hideBelow="md">Account</Th>
+              <td colSpan={8}>
+                <EmptyState title="No transactions match your filters." />
+                {filtersActive && (
+                  <div className="pb-6 text-center">
+                    <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
+                  </div>
+                )}
+              </td>
             </tr>
-          </thead>
-          {visible.length === 0 ? (
-            <tbody>
-              <tr>
-                <td colSpan={8}>
-                  <EmptyState title="No transactions match your filters." />
-                  {filtersActive && (
-                    <div className="pb-6 text-center">
-                      <Button size="sm" className="h-11 md:h-8" onClick={clearFilters}>Clear filters</Button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          ) : (
-            groups.map((group, index) => (
-              <TradeGroup key={`${group.date}-${index}`} date={group.date} rows={group.rows} summary={daySummaries.get(group.date)} />
-            ))
-          )}
-        </table>
-      </div>
+          </tbody>
+        ) : (
+          groups.map((group, index) => (
+            <TradeGroup key={`${group.date}-${index}`} date={group.date} rows={group.rows} summary={daySummaries.get(group.date)} />
+          ))
+        )}
+      </DataTable>
 
       <div className="px-[18px] pt-3 flex items-center justify-between border-t border-line">
         <div className="text-[12px] text-ink-3 num">

@@ -1,36 +1,85 @@
 import { useRef, useState } from 'react'
 
 import { indexFromPointer, svgY } from '../../lib/chartGeometry'
-import { roundPrice } from '../../lib/priceLines'
+import { annotationKeyCommand, NUDGE_KEYS, nudgePoint, showsKeyboardFocus } from '../../lib/chartKeys'
+import { fmtDate } from '../../lib/format'
+import { badgePrice, roundPrice } from '../../lib/priceLines'
 import { useChartColors } from '../../theme/useChartColors'
 
 const HIT_WIDTH = 10
 const HANDLE_RADIUS = 4
+const FOCUSED_HANDLE_RADIUS = 6
 const HANDLE_HIT_RADIUS = 10
 
 const stop = (event) => event.stopPropagation()
 
-function Handle({ line, endpoint, x, y, geometry, data, onMove }) {
+function Handle({ line, endpoint, index, x, y, geometry, data, onMove, onSelect, onEdit }) {
   const c = useChartColors()
   const [preview, setPreview] = useState(null)
+  const [focused, setFocused] = useState(false)
   const drag = useRef(null)
+  const keyed = useRef(false)
   const point = preview ?? { x, y }
+  const shownIndex = preview?.index ?? index
+  const name = `${endpoint === 'start' ? 'Start' : 'End'} of ${line.label ? `ray ${line.label}` : 'ray'}`
 
   const cancel = () => {
     drag.current = null
     setPreview(null)
   }
 
+  const save = (moved) => {
+    cancel()
+    if (moved == null) return
+    onMove(line, endpoint, { barDate: data[moved.index].date, price: roundPrice(geometry.priceAtY(moved.y)) })
+  }
+
+  const saveKeyed = () => {
+    if (!keyed.current) return
+    keyed.current = false
+    save(preview)
+  }
+
   return (
     <g>
-      <circle cx={point.x} cy={point.y} r={HANDLE_RADIUS} fill={c.axisCategory} pointerEvents="none" />
+      <circle
+        cx={point.x}
+        cy={point.y}
+        r={focused ? FOCUSED_HANDLE_RADIUS : HANDLE_RADIUS}
+        fill={c.axisCategory}
+        stroke={focused ? c.ink : undefined}
+        pointerEvents="none"
+      />
       <circle
         data-testid={`trend-line-handle-${line.id}-${endpoint}`}
         cx={point.x}
         cy={point.y}
         r={HANDLE_HIT_RADIUS}
         fill="transparent"
-        style={{ cursor: 'move' }}
+        style={{ cursor: 'move', outline: 'none' }}
+        tabIndex={0}
+        role="button"
+        aria-label={`${name}, ${fmtDate(data[Math.min(shownIndex, data.length - 1)]?.date)} at ${badgePrice(roundPrice(geometry.priceAtY(point.y)))}`}
+        onFocus={(e) => {
+          setFocused(showsKeyboardFocus(e.currentTarget))
+          onSelect(line.id)
+        }}
+        onBlur={() => {
+          setFocused(false)
+          saveKeyed()
+        }}
+        onKeyDown={(e) => {
+          const command = annotationKeyCommand(e)
+          if (!command) return
+          e.preventDefault()
+          if (command.edit) return onEdit(line.id)
+          keyed.current = true
+          const next = nudgePoint({ index: Math.min(shownIndex, data.length - 1), y: point.y }, command, data.length)
+          setPreview({ ...next, x: geometry.xAt(next.index) })
+        }}
+        onKeyUp={(e) => {
+          if (NUDGE_KEYS.has(e.key)) saveKeyed()
+        }}
         onPointerDown={(e) => {
           e.stopPropagation()
           e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -43,13 +92,8 @@ function Handle({ line, endpoint, x, y, geometry, data, onMove }) {
           setPreview({ x: geometry.xAt(index), y: svgY(e), index })
         }}
         onPointerUp={() => {
-          const current = drag.current
-          cancel()
-          if (!current?.moved || preview == null) return
-          onMove(line, endpoint, {
-            barDate: data[preview.index].date,
-            price: roundPrice(geometry.priceAtY(preview.y)),
-          })
+          const moved = drag.current?.moved
+          save(moved ? preview : null)
         }}
         onPointerCancel={cancel}
         onClick={stop}
@@ -107,15 +151,29 @@ function Ray({ line, geometry, data, selected, onSelect, onMove, onEdit }) {
           {line.label}
         </text>
       ) : null}
-      <Handle line={line} endpoint={line.earlyField} x={x1} y={y1} geometry={geometry} data={data} onMove={onMove} />
+      <Handle
+        line={line}
+        endpoint={line.earlyField}
+        index={line.x1}
+        x={x1}
+        y={y1}
+        geometry={geometry}
+        data={data}
+        onMove={onMove}
+        onSelect={onSelect}
+        onEdit={onEdit}
+      />
       <Handle
         line={line}
         endpoint={line.earlyField === 'start' ? 'end' : 'start'}
+        index={line.x2}
         x={x2}
         y={y2}
         geometry={geometry}
         data={data}
         onMove={onMove}
+        onSelect={onSelect}
+        onEdit={onEdit}
       />
     </g>
   )

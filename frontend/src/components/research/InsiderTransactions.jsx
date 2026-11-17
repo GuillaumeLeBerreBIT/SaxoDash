@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { fmtStatement } from '../../lib/statements'
 import { UNKNOWN, fmtDate, fmtMoney, fmtNum } from '../../lib/format'
 import { filterTransactions, insiderName, transactionLabel } from '../../lib/insiders'
-import { Button, Segmented, Td, Tr } from '../ui'
+import { Button, DataTable, Segmented, Td, Tr } from '../ui'
 
 const VISIBLE = 15
 const SCOPES = [
@@ -41,38 +41,36 @@ export default function InsiderTransactions({ transactions, counts }) {
         </p>
       ) : (
         <>
-          <div className="mt-3 overflow-x-auto">
-            <table aria-label="Insider transactions" className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {HEADERS.map(([label, align], index) => (
-                    <th
-                      key={label}
-                      scope="col"
-                      className={`h-[30px] px-2.5 text-[12px] font-medium text-ink-3 whitespace-nowrap text-${align} ${
-                        index === 0 ? 'pl-0' : index === HEADERS.length - 1 ? 'pr-0' : ''
-                      }`}
-                    >
-                      {label}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((row, index) => (
-                  <Tr key={`${row.date}-${row.name}-${row.code}-${index}`}>
-                    <Td className="pl-0 num text-ink-2">{fmtDate(row.date)}</Td>
-                    <Td className="whitespace-normal font-semibold text-ink">{insiderName(row.name)}</Td>
-                    <Td className="text-ink-2">{transactionLabel(row.code)}</Td>
-                    <Td align="right" className={shareTone(row.shares)}>{signedShares(row.shares)}</Td>
-                    <Td align="right" className="text-ink">{row.price == null ? UNKNOWN : fmtMoney(row.price, 'USD')}</Td>
-                    <Td align="right" className="text-ink">{fmtTradeValue(row.value)}</Td>
-                    <Td align="right" className="pr-0 text-ink-2">{fmtNum(row.holdings)}</Td>
-                  </Tr>
+          <DataTable label="Insider transactions" className="border-collapse" frameClassName="mt-3">
+            <thead>
+              <tr>
+                {HEADERS.map(([label, align], index) => (
+                  <th
+                    key={label}
+                    scope="col"
+                    className={`h-[30px] px-2.5 text-[12px] font-medium text-ink-3 whitespace-nowrap text-${align} ${
+                      index === 0 ? 'pl-0' : index === HEADERS.length - 1 ? 'pr-0' : ''
+                    }`}
+                  >
+                    {label}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row, index) => (
+                <Tr key={`${row.date}-${row.name}-${row.code}-${index}`}>
+                  <Td className="pl-0 num text-ink-2">{fmtDate(row.date)}</Td>
+                  <Td className="whitespace-normal font-semibold text-ink">{insiderName(row.name)}</Td>
+                  <Td className="text-ink-2">{transactionLabel(row.code)}</Td>
+                  <Td align="right" className={shareTone(row.shares)}>{signedShares(row.shares)}</Td>
+                  <Td align="right" className="text-ink">{row.price == null ? UNKNOWN : fmtMoney(row.price, 'USD')}</Td>
+                  <Td align="right" className="text-ink">{fmtTradeValue(row.value)}</Td>
+                  <Td align="right" className="pr-0 text-ink-2">{fmtNum(row.holdings)}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </DataTable>
           {atSource > rows.length && (
             <p className="mt-2 text-[12px] text-ink-3">{`Showing the newest ${rows.length} of ${atSource}.`}</p>
           )}

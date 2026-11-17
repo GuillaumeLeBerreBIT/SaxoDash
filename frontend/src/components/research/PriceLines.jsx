@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
 
 import { DRAG_THRESHOLD, PAD_R, PAD_T, svgY } from '../../lib/chartGeometry'
+import { annotationKeyCommand, NUDGE_KEYS, showsKeyboardFocus } from '../../lib/chartKeys'
 import { badgePrice, edgeOf, lineStrokes, parsePriceInput, roundPrice } from '../../lib/priceLines'
 import { useChartColors } from '../../theme/useChartColors'
 
 const TAG = { target: 'T', stop: 'S', free: '' }
+const KIND_NAMES = { target: 'Target', stop: 'Stop-loss', free: 'Line' }
 const HIT_WIDTH = 10
 
 const stop = (event) => event.stopPropagation()
@@ -58,7 +60,9 @@ function EdgeMarker({ line, edge, width, chartH, colors }) {
 function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEditLabel, colors }) {
   const [preview, setPreview] = useState(null)
   const [heldFrom, setHeldFrom] = useState(null)
+  const [focused, setFocused] = useState(false)
   const drag = useRef(null)
+  const keyed = useRef(false)
   if (heldFrom != null && heldFrom !== line.price) {
     setHeldFrom(null)
     setPreview(null)
@@ -78,6 +82,18 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
     setPreview(null)
   }
 
+  const save = (next) => {
+    if (next == null || next === line.price) return cancel()
+    setHeldFrom(line.price)
+    onMove(line, next)
+  }
+
+  const saveKeyed = () => {
+    if (!keyed.current) return
+    keyed.current = false
+    save(preview)
+  }
+
   return (
     <g data-testid={`price-line-${line.id}`}>
       <line
@@ -86,7 +102,7 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         y1={y}
         y2={y}
         stroke={stroke}
-        strokeWidth={selected ? 2 : 1}
+        strokeWidth={selected || focused ? 2 : 1}
         strokeDasharray={line.kind === 'free' ? undefined : '6 4'}
         pointerEvents="none"
       />
@@ -98,7 +114,37 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         y2={y}
         stroke="transparent"
         strokeWidth={HIT_WIDTH}
-        style={{ cursor: 'ns-resize' }}
+        style={{ cursor: 'ns-resize', outline: 'none' }}
+        tabIndex={0}
+        role="slider"
+        aria-orientation="vertical"
+        aria-label={line.label ? `${KIND_NAMES[line.kind]} ${line.label}` : KIND_NAMES[line.kind]}
+        aria-valuenow={price}
+        aria-valuetext={badgePrice(price)}
+        aria-valuemin={roundPrice(geometry.priceAtY(PAD_T + geometry.chartH))}
+        aria-valuemax={roundPrice(geometry.priceAtY(PAD_T))}
+        onFocus={(e) => {
+          setFocused(showsKeyboardFocus(e.currentTarget))
+          if (line.kind === 'free') onSelect(line.id)
+        }}
+        onBlur={() => {
+          setFocused(false)
+          saveKeyed()
+        }}
+        onKeyDown={(e) => {
+          const command = annotationKeyCommand(e, { movesInTime: false })
+          if (!command) return
+          e.preventDefault()
+          if (command.edit) {
+            if (line.kind === 'free') onEditLabel(line.id)
+            return
+          }
+          keyed.current = true
+          setPreview(roundPrice(geometry.priceAtY(geometry.scaleY(preview ?? line.price) + command.dy)))
+        }}
+        onKeyUp={(e) => {
+          if (NUDGE_KEYS.has(e.key)) saveKeyed()
+        }}
         onPointerDown={(e) => {
           e.stopPropagation()
           e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -115,10 +161,9 @@ function DraggableLine({ line, geometry, width, selected, onMove, onSelect, onEd
         }}
         onPointerUp={() => {
           const { moved, price: dragged } = drag.current ?? {}
-          if (!moved || dragged == null || dragged === line.price) return cancel()
+          if (!moved) return cancel()
           drag.current = null
-          setHeldFrom(line.price)
-          onMove(line, dragged)
+          save(dragged)
         }}
         onPointerCancel={cancel}
         onClick={(e) => {

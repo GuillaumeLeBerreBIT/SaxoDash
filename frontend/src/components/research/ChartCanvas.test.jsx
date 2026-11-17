@@ -38,6 +38,27 @@ const canvas = (props = {}) => (
   />
 )
 
+describe('ChartCanvas drawing from the keyboard', () => {
+  it('places the chosen line at the session being read on Enter and says so', () => {
+    const onCreateLine = vi.fn()
+    render(canvas({ tool: 'hline', onCreateLine, hover: 8 }))
+
+    fireEvent.keyDown(screen.getByRole('group', { name: 'NVDA chart' }), { key: 'Enter' })
+
+    expect(onCreateLine).toHaveBeenCalledWith(bars[8].close)
+    expect(screen.getByRole('status')).toHaveTextContent(/^Line placed at/)
+  })
+
+  it('ignores Enter with the crosshair', () => {
+    const onCreateLine = vi.fn()
+    render(canvas({ onCreateLine, hover: 8 }))
+
+    fireEvent.keyDown(screen.getByRole('group', { name: 'NVDA chart' }), { key: 'Enter' })
+
+    expect(onCreateLine).not.toHaveBeenCalled()
+  })
+})
+
 describe('ChartCanvas legend', () => {
   it('hides the legend and shows the placeholder with one bar of history', () => {
     const oneBar = bars.slice(0, 1)

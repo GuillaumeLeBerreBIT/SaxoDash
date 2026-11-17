@@ -42,7 +42,6 @@ chart. Not verified: Tremor v4 beta and Tremor Raw blocks on React 19 / Tailwind
 - One stat tile. `Tile`, `MetricTile`, `Metric` and `StatRow`/`StatStrip` overlap.
 - One choose-one control: `Segmented`. Fold `RangePills`, `PeriodSelector`, `TBtn` and Settings' own
   list into it; keep `TabList` for page-level tabs only.
-- `PageHeader` as the one page title. Today only Settings uses it and most pages have no visible title.
 - `ChartFrame` for Recharts cards (title, loading, empty, colours).
 - One menu on Radix DropdownMenu (`research/menu.jsx` and `chartMenus.jsx` duplicate it).
 
@@ -147,7 +146,7 @@ the light theme, focus ring on earnings badges and textareas, pane activation on
 
 0. Done on this branch: Research small fixes, contrast, focus (commits `8468a38`, `fb471f8`).
 1. Bugs list above (no design decision needed).
-2. Primitives: `DataTable` with paging, one tile, `PageHeader`, number format helper.
+2. Primitives: `DataTable` with paging, one tile, number format helper.
 3. Research answer card (approved).
 4. Overview, Portfolio, Analytics.
 5. Discover, shelf, Earnings, Charts.
@@ -186,14 +185,13 @@ tiles are gone, the palette clipping its last row is not checked.
 
 ## What is left
 
-Status 2026-11-17: steps 1 to 7 of the owner's polish list are built on `feat/ui-ux-audit` (Research
-lower half, Charts page, investor directory, light theme, Settings merge, names and numbers,
-accessibility). The branch is local only: not pushed, no pull request.
+Status 2026-11-17: steps 1 to 7 of the owner's polish list are built and shipped to `main`
+(PR #59 into `develop`, PR #60 into `main`).
 
-- **Ship:** push `feat/ui-ux-audit` and open a pull request into `develop` (owner's call).
-- **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
-  panning and zooming now work from the keyboard).
-- **Owner's next features, in order:** a Compare page for Discover; remove Money from the navigation;
-  then CSV, Excel or manual upload of financials.
-- **Primitives not extracted:** `DataTable`, one stat tile, `PageHeader`, `ChartFrame`, one menu.
+- **Accessibility:** lines, rays and notes on the chart can now be placed, moved, labelled and
+  deleted from the keyboard (PR #61).
+- **Owner's next feature:** CSV, Excel or manual upload of financials.
+- **Primitives:** one stat tile (`Tile`), one choose-one control (`Segmented`), `DataTable` and
+  `ChartFrame` are in place (PR #61); menus already shared one Radix base. No visible page titles:
+  the owner saw a mockup and turned them down, so pages keep their screen-reader-only `h1`.
 - Portfolio shows SIM/live switch data (€971k cash, +2169%): bad data in the dev database, not a bug.

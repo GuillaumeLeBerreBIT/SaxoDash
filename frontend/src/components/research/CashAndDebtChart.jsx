@@ -1,10 +1,11 @@
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { fmtAxisDollars, fmtTooltipDollars } from '../../lib/axisFormat'
 import { axisProps, chartTooltipProps, gridProps } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { cashAndDebtRows } from '../../lib/financialHealth'
 import { Card, InfoTip } from '../ui'
+import ChartFrame from '../ChartFrame'
 
 const SERIES = [
   { key: 'free_cash_flow', label: 'Free cash flow', kind: 'bar', slot: 2 },
@@ -40,45 +41,43 @@ export default function CashAndDebtChart({ annual, className = '' }) {
           </li>
         ))}
       </ul>
-      <div className="mt-3 h-[var(--chart-h-md)]" role="img" aria-label={title}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="label" />
-            <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
-            <ReferenceLine y={0} stroke={c.axis} />
-            <Tooltip
-              {...chartTooltipProps(c)}
-              cursor={{ fill: gridProps(c).stroke }}
-              formatter={(value, name) => [fmtTooltipDollars(value), name]}
-            />
-            {series.map(({ key, label, kind, slot }) =>
-              kind === 'bar' ? (
-                <Bar
-                  key={key}
-                  dataKey={key}
-                  name={label}
-                  fill={c.series[slot]}
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={14}
-                  isAnimationActive={false}
-                />
-              ) : (
-                <Line
-                  key={key}
-                  dataKey={key}
-                  name={label}
-                  stroke={c.series[slot]}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-              ),
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="mt-3 h-[var(--chart-h-md)]" label={title}>
+        <ComposedChart data={rows} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={2}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="label" />
+          <YAxis {...axisProps(c)} width={56} tickFormatter={fmtAxisDollars} />
+          <ReferenceLine y={0} stroke={c.axis} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            cursor={{ fill: gridProps(c).stroke }}
+            formatter={(value, name) => [fmtTooltipDollars(value), name]}
+          />
+          {series.map(({ key, label, kind, slot }) =>
+            kind === 'bar' ? (
+              <Bar
+                key={key}
+                dataKey={key}
+                name={label}
+                fill={c.series[slot]}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={14}
+                isAnimationActive={false}
+              />
+            ) : (
+              <Line
+                key={key}
+                dataKey={key}
+                name={label}
+                stroke={c.series[slot]}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                connectNulls
+                isAnimationActive={false}
+              />
+            ),
+          )}
+        </ComposedChart>
+      </ChartFrame>
     </Card>
   )
 }

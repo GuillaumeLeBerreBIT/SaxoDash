@@ -1,8 +1,9 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine } from 'recharts'
 import { Card, EmptyState } from '../ui'
 import { chartTooltipProps, gridProps, axisProps, seriesAxis } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
+import ChartFrame from '../ChartFrame'
 
 const SERIES_LABEL = { portfolio_pct: 'Portfolio', benchmark_pct: 'benchmark' }
 const CONTEXT = 'A year appears once it has at least two data points'
@@ -40,22 +41,20 @@ export default function CalendarYears({ years: allYears, benchmarkName, classNam
         </div>
       }
     >
-      <div className="h-[230px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={years} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barGap={2}>
-            <CartesianGrid {...gridProps(c)} />
-            <XAxis {...axisProps(c)} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
-            <YAxis {...axisProps(c)} width={54} {...seriesAxis(years, ['portfolio_pct', 'benchmark_pct'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
-            <ReferenceLine y={0} stroke={c.axis} />
-            <Tooltip
-              {...chartTooltipProps(c)}
-              formatter={(v, key) => [fmtPct(v, { decimals: 1 }), key === 'portfolio_pct' ? 'Portfolio' : benchmarkName]}
-            />
-            <Bar dataKey="portfolio_pct" name={SERIES_LABEL.portfolio_pct} fill={c.primary} radius={[3, 3, 0, 0]} barSize={22} />
-            <Bar dataKey="benchmark_pct" name={SERIES_LABEL.benchmark_pct} fill={c.bench} radius={[3, 3, 0, 0]} barSize={22} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      <ChartFrame className="h-[230px]">
+        <BarChart data={years} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barGap={2}>
+          <CartesianGrid {...gridProps(c)} />
+          <XAxis {...axisProps(c)} dataKey="year" tickFormatter={(year) => (partialYears.has(year) ? `${year}*` : `${year}`)} />
+          <YAxis {...axisProps(c)} width={54} {...seriesAxis(years, ['portfolio_pct', 'benchmark_pct'], { includeZero: true })} tickFormatter={(v) => `${v}%`} />
+          <ReferenceLine y={0} stroke={c.axis} />
+          <Tooltip
+            {...chartTooltipProps(c)}
+            formatter={(v, key) => [fmtPct(v, { decimals: 1 }), key === 'portfolio_pct' ? 'Portfolio' : benchmarkName]}
+          />
+          <Bar dataKey="portfolio_pct" name={SERIES_LABEL.portfolio_pct} fill={c.primary} radius={[3, 3, 0, 0]} barSize={22} />
+          <Bar dataKey="benchmark_pct" name={SERIES_LABEL.benchmark_pct} fill={c.bench} radius={[3, 3, 0, 0]} barSize={22} />
+        </BarChart>
+      </ChartFrame>
     </Card>
   )
 }

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { useCongressOwnershipSummary, useInvestorStocks } from '../api/queries'
-import { Alert, Button, Card, EmptyState, Segmented, Select, Skeleton, Td, Th, Tr } from '../components/ui'
+import { Alert, Button, Card, DataTable, EmptyState, Segmented, Select, Skeleton, Td, Th, Tr } from '../components/ui'
 import StockLogo from '../components/StockLogo'
 import CongressActivity from '../components/congress/CongressActivity'
 import InvestorAvatar from '../components/investors/InvestorAvatar'
@@ -51,51 +51,49 @@ function Rows({ rows, title, view }) {
   return (
     <>
       <Card flush context={`${rows.length} stocks · counted by fund · most first`} title={title}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                <Th edge>Stock</Th>
-                {COUNT_COLUMNS.map(([key, label]) => (
-                  <Th
+        <DataTable label={title}>
+          <thead>
+            <tr>
+              <Th edge>Stock</Th>
+              {COUNT_COLUMNS.map(([key, label]) => (
+                <Th
+                  key={key}
+                  align="right"
+                  hideBelow={key === view ? undefined : 'md'}
+                  ariaSort={key === view ? 'descending' : undefined}
+                  className={key === view ? 'text-ink font-semibold' : ''}
+                >
+                  {label}
+                </Th>
+              ))}
+              <Th align="right" hideBelow="md">Held value</Th>
+              <Th align="right" hideBelow="md">Congress</Th>
+              <Th edge hideBelow="md">Funds</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row) => (
+              <Tr key={row.cusip}>
+                <Td edge className="w-full max-w-0 md:w-auto md:max-w-none"><Stock row={row} /></Td>
+                {COUNT_COLUMNS.map(([key, , field]) => (
+                  <Td
                     key={key}
                     align="right"
                     hideBelow={key === view ? undefined : 'md'}
-                    ariaSort={key === view ? 'descending' : undefined}
-                    className={key === view ? 'text-ink font-semibold' : ''}
+                    className={key === view ? 'text-ink font-semibold' : 'text-ink-2'}
                   >
-                    {label}
-                  </Th>
-                ))}
-                <Th align="right" hideBelow="md">Held value</Th>
-                <Th align="right" hideBelow="md">Congress</Th>
-                <Th edge hideBelow="md">Funds</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((row) => (
-                <Tr key={row.cusip}>
-                  <Td edge className="w-full max-w-0 md:w-auto md:max-w-none"><Stock row={row} /></Td>
-                  {COUNT_COLUMNS.map(([key, , field]) => (
-                    <Td
-                      key={key}
-                      align="right"
-                      hideBelow={key === view ? undefined : 'md'}
-                      className={key === view ? 'text-ink font-semibold' : 'text-ink-2'}
-                    >
-                      {row[field]}
-                    </Td>
-                  ))}
-                  <Td align="right" hideBelow="md" className="text-ink-2">{fmtUsdCompact(row.value)}</Td>
-                  <Td align="right" hideBelow="md">
-                    <CongressActivity ticker={row.ticker} stock={congress?.stocks?.[row.ticker]} windowDays={congress?.window_days} />
+                    {row[field]}
                   </Td>
-                  <Td edge hideBelow="md"><Faces investors={row.investors} /></Td>
-                </Tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                ))}
+                <Td align="right" hideBelow="md" className="text-ink-2">{fmtUsdCompact(row.value)}</Td>
+                <Td align="right" hideBelow="md">
+                  <CongressActivity ticker={row.ticker} stock={congress?.stocks?.[row.ticker]} windowDays={congress?.window_days} />
+                </Td>
+                <Td edge hideBelow="md"><Faces investors={row.investors} /></Td>
+              </Tr>
+            ))}
+          </tbody>
+        </DataTable>
       </Card>
       {shown < rows.length ? (
         <div className="flex items-center justify-between gap-3 text-[12px] text-ink-3 num">

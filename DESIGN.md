@@ -291,7 +291,7 @@ Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics 
 | Component | Spec |
 |---|---|
 | **Button** | 32 px tall (28 px small), radius 8, 13/600 (small 12/600), `--sd-raised`. Primary is `--sd-accent` with On-accent text, at most one per view. Ghost has no fill. Destructive actions are ghost with Error text and confirm in place ("Click again to delete"). |
-| **Segmented** | `--sd-track` track with 3 px padding, radius 9. Segments are 28 px, radius 7, 13/600 Ink 3; the active one is `--sd-selected` with Ink. Used for ranges, views, period and benchmark. |
+| **Segmented** | `--sd-track` track with 3 px padding, radius 9. Segments are 28 px, radius 7, 13/600 Ink 3; the active one is `--sd-selected` with Ink. Used for ranges, views, period and benchmark. Every choose-one strip is `Segmented`; an icon-only option gives a `title`. |
 | **Chip** | 28 px, radius 8, `--sd-raised`, 12/600 Ink 2. Pressed is `--sd-accent-subtle` with Ink and a 1 px Ink 3 ring. A count sits inside in Ink 3 ("Oversold **15**"). Used for lenses, filters and symbol switchers. |
 | **Tag** | 22 px, radius 6, `--sd-pill`, 11/600. Variants: held, earn (E), warn, up, down, Example. |
 | **Input** | 34 px, radius 8, `--sd-track` fill, 1 px `--sd-line-input`. |
@@ -309,6 +309,8 @@ Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics 
     ↑/↓ with `aria-sort`.
   - Wide tables scroll inside the panel. Lower-priority columns hide below 1440 px (`hidew`) or
     on phone (`hidem`).
+  - In code a table is `DataTable` (named for screen readers by its `label`, scrolling sideways in
+    its frame) built from `Th`, `SortableTh`, `Tr` and `Td`; `hideBelow="wide" | "md"` hides a column.
 - **Moves**: `▲ 1.40%` / `▼ 1.40%` in Up/Down. Money uses a true minus: `−€1,298.03`, with a
   sign on deltas only. Euros are written `€10,756.33`; an instrument's own currency stays in that
   currency (`$279.84`).
@@ -322,6 +324,11 @@ Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics 
 ### 5.7 Charts
 
 Follow the dataviz rules: one y-axis, thin marks, a recessive grid, and a hover layer on every chart.
+
+A Recharts chart sits in `ChartFrame` (`components/ChartFrame.jsx`): it takes the height as a class
+(`h-[var(--chart-h-sm|md|lg)]`), a `label` that names the chart for screen readers, and the
+`placeholder` from `chartPlaceholderFor` for loading, error and empty states. The one exception is
+`AllocationDonut`, which measures its own width and lays a centre readout over the ring.
 
 - **Price/area**: a 2 px line in Up or Down by the visible range's move, and an area fill fading
   from 22% to 0.

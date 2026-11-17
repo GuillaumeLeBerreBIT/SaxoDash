@@ -5,7 +5,7 @@ import { useOwnership } from '../../api/queries'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { fmtUsdCompact, quarterLabel } from '../../lib/investors'
 import { ownershipTicker, sharesChange } from '../../lib/ownership'
-import { Card, EmptyState, QueryState, Td, Th, Tr } from '../ui'
+import { Card, DataTable, EmptyState, QueryState, Td, Th, Tr } from '../ui'
 import ChangeBadge from '../investors/ChangeBadge'
 import InvestorAvatar from '../investors/InvestorAvatar'
 import LimitsNote from '../investors/LimitsNote'
@@ -59,30 +59,28 @@ function Weight({ fund, max }) {
 function Funds({ funds }) {
   const max = Math.max(0, ...funds.map((fund) => fund.weight ?? 0))
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[640px]">
-        <thead>
-          <tr>
-            <Th edge>Fund</Th>
-            <Th>Change</Th>
-            <Th align="right">Shares</Th>
-            <Th align="right">% of their portfolio</Th>
-            <Th edge align="right">Value</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {funds.map((fund) => (
-            <Tr key={fund.slug}>
-              <Td edge><Fund fund={fund} /></Td>
-              <Td><ChangeBadge change={fund.kind} pct={fund.kind === SOLD_OUT ? null : fund.change_pct} /></Td>
-              <Td align="right" className="text-ink-2">{fmtNum(fund.shares)}</Td>
-              <Td align="right"><Weight fund={fund} max={max} /></Td>
-              <Td edge align="right" className="text-ink">{fmtUsdCompact(fund.value)}</Td>
-            </Tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable label="Funds holding this stock" className="min-w-[640px]">
+      <thead>
+        <tr>
+          <Th edge>Fund</Th>
+          <Th>Change</Th>
+          <Th align="right">Shares</Th>
+          <Th align="right">% of their portfolio</Th>
+          <Th edge align="right">Value</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {funds.map((fund) => (
+          <Tr key={fund.slug}>
+            <Td edge><Fund fund={fund} /></Td>
+            <Td><ChangeBadge change={fund.kind} pct={fund.kind === SOLD_OUT ? null : fund.change_pct} /></Td>
+            <Td align="right" className="text-ink-2">{fmtNum(fund.shares)}</Td>
+            <Td align="right"><Weight fund={fund} max={max} /></Td>
+            <Td edge align="right" className="text-ink">{fmtUsdCompact(fund.value)}</Td>
+          </Tr>
+        ))}
+      </tbody>
+    </DataTable>
   )
 }
 

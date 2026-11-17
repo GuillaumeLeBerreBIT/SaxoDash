@@ -1,6 +1,6 @@
 import { fmtPct, pctTone } from '../../lib/format'
 import { INTERVALS, periodChange } from '../../lib/research'
-import { TBtn } from '../ui'
+import { Segmented } from '../ui'
 
 const MOVE_TONE = { positive: 'text-up', negative: 'text-down', neutral: 'text-flat' }
 const MOVE_ARROW = { positive: '▲ ', negative: '▼ ', neutral: '' }
@@ -15,16 +15,17 @@ export function MoveCaption({ change, suffix, className = '' }) {
   )
 }
 
+const INTERVAL_OPTIONS = INTERVALS.map((interval) => ({ value: interval, label: interval }))
+
 export function RangeButtons({ controls }) {
   const zoomed = controls.timeView?.barCount != null
   return (
-    <div className="inline-flex items-center gap-0.5 p-[3px] rounded-[9px] bg-track">
-      {INTERVALS.map((interval) => (
-        <TBtn key={interval} active={!zoomed && controls.range === interval} onClick={() => controls.setRange(interval)}>
-          {interval}
-        </TBtn>
-      ))}
-    </div>
+    <Segmented
+      label="Chart range"
+      options={INTERVAL_OPTIONS}
+      value={zoomed ? null : controls.range}
+      onChange={controls.setRange}
+    />
   )
 }
 

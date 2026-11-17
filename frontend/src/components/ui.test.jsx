@@ -6,18 +6,15 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import {
   Alert,
   Button,
+  DataTable,
   Card,
   CardHeader,
   EmptyState,
   InstrumentLogo,
   LetterAvatar,
-  MetricTile,
   InfoTip,
   Modal,
-  StatStrip,
-  StatRow,
   Skeleton,
-  Metric,
   DayChange,
   PageHeader,
   Th,
@@ -36,28 +33,9 @@ import {
 } from './ui'
 
 describe('ui primitives', () => {
-  it('StatStrip renders its StatRow children with label, value, badge and note', () => {
-    render(
-      <StatStrip>
-        <StatRow label="Net worth" value="€1,000" badge="+2.1%" badgeTone="emerald" note="all-time" />
-      </StatStrip>,
-    )
-    expect(screen.getByText('Net worth')).toBeInTheDocument()
-    expect(screen.getByText('€1,000')).toBeInTheDocument()
-    expect(screen.getByText('+2.1%')).toBeInTheDocument()
-    expect(screen.getByText('all-time')).toBeInTheDocument()
-  })
-
   it('Skeleton renders a block', () => {
     const { container } = render(<Skeleton className="h-4 w-20" />)
     expect(container.firstChild).toHaveClass('animate-pulse')
-  })
-
-  it('Metric shows a label, a value and an optional hint', () => {
-    render(<Metric label="P/E" value="32.10" hint="hint text" />)
-    expect(screen.getByText('P/E')).toBeInTheDocument()
-    expect(screen.getByText('32.10')).toBeInTheDocument()
-    expect(screen.getByText('hint text')).toBeInTheDocument()
   })
 
   it('InstrumentLogo renders the elbstream image for a ticker symbol', () => {
@@ -120,13 +98,6 @@ describe('ui primitives', () => {
   it('Button defaults to type="button" so it never accidentally submits a form', () => {
     render(<Button>Cancel</Button>)
     expect(screen.getByRole('button', { name: 'Cancel' })).toHaveAttribute('type', 'button')
-  })
-
-  it('MetricTile shows a label, a value and an optional hint', () => {
-    render(<MetricTile label="Sharpe ratio" value="1.42" hint="Downside-adjusted" />)
-    expect(screen.getByText('Sharpe ratio')).toBeInTheDocument()
-    expect(screen.getByText('1.42')).toBeInTheDocument()
-    expect(screen.getByText('Downside-adjusted')).toBeInTheDocument()
   })
 
   it('Alert renders its message', () => {
@@ -289,6 +260,23 @@ describe('Move', () => {
     const { container } = render(<Move value={null} />)
     expect(container).toHaveTextContent('—')
     expect(container.firstChild.className).toContain('text-ink-3')
+  })
+})
+
+describe('DataTable', () => {
+  it('names the table and lets it scroll sideways inside its frame', () => {
+    render(
+      <DataTable label="Holdings" className="min-w-[720px]" frameClassName="-mx-[18px]">
+        <tbody>
+          <tr>
+            <td>NVDA</td>
+          </tr>
+        </tbody>
+      </DataTable>,
+    )
+    const table = screen.getByRole('table', { name: 'Holdings' })
+    expect(table).toHaveClass('w-full', 'min-w-[720px]')
+    expect(table.parentElement).toHaveClass('overflow-x-auto', '-mx-[18px]')
   })
 })
 
