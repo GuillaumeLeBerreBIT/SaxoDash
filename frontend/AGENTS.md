@@ -18,6 +18,9 @@ Run from `frontend/`:
   charts. `src/test/noPaletteClasses.test.js` fails on any Tailwind palette class or hex
   literal.
 - JavaScript, not TypeScript. Components are bespoke primitives; no MUI.
+- Reuse the shared building blocks rather than copying their markup: `Tile` for a stat,
+  `Segmented` for a choose-one strip, `DataTable` with `Th`/`SortableTh`/`Tr`/`Td` for a table,
+  `ChartFrame` around a Recharts chart, the menus in `components/overlays.jsx`.
 - Add or adjust a vitest spec beside every change to `lib/`, the API client or a component.
 - A price is `fmtMoney(value, currency)`; anything already converted is `fmtEur`. A null
   figure renders as a dash, never zero.

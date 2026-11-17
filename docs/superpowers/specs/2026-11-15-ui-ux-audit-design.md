@@ -192,5 +192,8 @@ Status 2026-11-17: steps 1 to 7 of the owner's polish list are built and shipped
 - **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
   panning and zooming now work from the keyboard).
 - **Owner's next feature:** CSV, Excel or manual upload of financials.
-- **Primitives not extracted:** `DataTable`, one stat tile, `PageHeader`, `ChartFrame`, one menu.
+- **Primitives:** one stat tile (`Tile`), one choose-one control (`Segmented`), `DataTable` and
+  `ChartFrame` are in place on `refactor/shared-primitives`; menus already shared one Radix base.
+  `PageHeader` waits on the owner: giving every page a visible title changes every page's look, so
+  it needs a mockup first.
 - Portfolio shows SIM/live switch data (€971k cash, +2169%): bad data in the dev database, not a bug.
