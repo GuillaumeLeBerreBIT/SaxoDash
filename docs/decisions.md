@@ -715,14 +715,17 @@ gone. What is drawn now:
   and they can disagree (MSFT: badge cheap at P/E 27 against its usual 28-36, growth line fair to expensive).
   The sentence above the chart keeps the verdict's word and why, then gives the growth reading as "Against its
   growth: ...". The "verdict updates tonight" clause and the "opportunity zone" wording went with the zones.
-- **52-week high and volume gaps**, the only candle-derived tools drawn, because they are the two the Signal
-  Lab tested with evidence behind them (distance from the 1-year high; drift after a high-volume gap). The
-  gaps use the Signal Lab's own definitions, mirrored in `lib/indicators.js::volumeGaps` and pinned by
-  `gapParity.test.js`: an open more than 4% from the previous close on more than twice the previous 20
+- **Volume gaps and the 52-week high**, the only candle-derived layers drawn. Gap up on heavy volume is the one
+  candle tool drawn with evidence: in the 2023-2026 test (125 stocks) it beat the average stock by 4.57 points
+  over 60 sessions (95% range +0.46 to +8.72), and on the deeper history back to 2004 (134 stocks) by about
+  half that, +2.6 points. Gap down is drawn too, but it "cannot be judged fairly" (it buys weakness, see
+  above). The gaps use the Signal Lab's own definitions, mirrored in `lib/indicators.js::volumeGaps` and pinned
+  by `gapParity.test.js`: an open more than 4% from the previous close on more than twice the previous 20
   sessions' average volume, and a gap up must close at or above 98% of its open. Each is a box from the
   previous close to the open, until the price trades back through the previous close or 60 sessions pass,
-  for gaps in the last 252 sessions. Gap up held up in the Signal Lab; gap down "cannot be judged fairly"
-  (it buys weakness, see above), and the Guide tab says both.
+  for gaps in the last 252 sessions. The 52-week high is a plain reference line, not a signal: in the same
+  test neither a new 1-year high (95% range -0.29 to +5.18) nor a fall of more than 20% below it (-0.31 to
+  +3.36) could be told apart from chance. The Guide tab says all three.
 - Tags on the right axis replace word boxes, with no painted background; a line outside the visible range is
   tagged at the edge instead of stretching the price scale. The Guides menu (`chartPrefs.guides`) holds `value`
   (growth line and chip), `high52`, `gaps` and `plan` (stop-loss, off); a saved `zones` switch reads as `value`.
