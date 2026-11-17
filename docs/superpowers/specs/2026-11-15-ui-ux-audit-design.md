@@ -186,15 +186,15 @@ tiles are gone, the palette clipping its last row is not checked.
 
 ## What is left
 
-- **Screenshots.** Portfolio onwards were verified by tests only: the dev database was not running on
-  2026-11-16. Capture each page at 1500px and 390px before merging (`tmp/page.mjs <path> <prefix>`
-  needs a fresh token in `tokens.json`).
-- **Owner decisions:** rename "Boards" to "Charts" and reorder the navigation; whether the chart page
-  keeps both searches (the page search opens a symbol, the watchlist search adds one).
-- **Money and Settings** are untouched apart from masked account numbers and the wrapped tile.
-  Banking work is paused by the owner.
-- **Investor profile:** the top-10 grid and donut are still there.
-- **Primitives:** `DataTable`, one stat tile, `PageHeader` on every page, `ChartFrame`, one menu.
-- **Accessibility backlog** above.
-- `MoversCard`, `AnalystRatingCard` and `VerdictCard` were deleted as unused. `AllocationPanel` and
-  `PortfolioHeatmap` stay: board panels still render them.
+Status 2026-11-17: steps 1 to 7 of the owner's polish list are built on `feat/ui-ux-audit` (Research
+lower half, Charts page, investor directory, light theme, Settings merge, names and numbers,
+accessibility). The branch is local only: not pushed, no pull request.
+
+- **Ship:** push `feat/ui-ux-audit` and open a pull request into `develop` (owner's call).
+- **Accessibility still open:** placing and moving lines on the chart is pointer-only (reading,
+  panning and zooming now work from the keyboard); the watchlist row is a `role="button"` with a real
+  remove button inside it.
+- **Owner's next features, in order:** a Compare page for Discover; remove Money from the navigation;
+  then CSV, Excel or manual upload of financials.
+- **Primitives not extracted:** `DataTable`, one stat tile, `PageHeader`, `ChartFrame`, one menu.
+- Portfolio shows SIM/live switch data (€971k cash, +2169%): bad data in the dev database, not a bug.
