@@ -2,7 +2,7 @@ import { useId } from 'react'
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
-import { FAIR_BAND, stepAt, usualPrice } from '../../lib/valueGuides'
+import { FAIR_BAND, stepAt } from '../../lib/valueGuides'
 
 const TAG_HEIGHT = 18
 const COMPACT_BELOW = 520
@@ -103,13 +103,6 @@ export function ValueZones({ line, data, geometry, colors }) {
   )
 }
 
-export function UsualLine({ line, usual, data, geometry, colors }) {
-  if (!usual || !line?.length || !data.length) return null
-  const d = stepPath(data.map((bar) => usualPrice(stepAt(line, bar.date), usual)), geometry.xAt, geometry.scaleY, data.length - 1)
-  if (!d) return null
-  return <path data-testid="usual-line" d={d} fill="none" stroke={colors.accent} strokeWidth="1.2" strokeOpacity="0.8" strokeDasharray="6 3" pointerEvents="none" />
-}
-
 export function HighLine({ highs, geometry, colors }) {
   if (!highs?.length) return null
   const last = highs.findLastIndex((value) => value != null)
@@ -166,7 +159,7 @@ const GUIDE_FONT = 11
 
 const signedPercent = (value) => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}%`
 
-function guideTagItems({ line, usual, highs, data, colors }) {
+function guideTagItems({ line, highs, data, colors }) {
   const lastBar = data[data.length - 1]
   if (!lastBar) return []
   const items = []
@@ -175,9 +168,11 @@ function guideTagItems({ line, usual, highs, data, colors }) {
     const pe = Math.round(step.pe)
     const words = step.capped ? `Growth floor · P/E ${pe}+` : `Growth-fair · P/E ${pe}`
     items.push({ key: 'growth', price: step.price, words, stroke: colors.warn, text: colors.warnText })
+    items.push({ key: 'cheap', price: cheapEdge(step), words: `Cheap · P/E ${Math.round(step.pe * (1 - FAIR_BAND))}`, stroke: colors.up, text: colors.up })
+    if (!step.capped) {
+      items.push({ key: 'expensive', price: expensiveEdge(step), words: `Expensive · P/E ${Math.round(step.pe * (1 + FAIR_BAND))}`, stroke: colors.down, text: colors.down })
+    }
   }
-  const usualAt = usualPrice(step, usual)
-  if (usualAt != null) items.push({ key: 'usual', price: usualAt, words: `Usual P/E ${usual}`, stroke: colors.accent, text: colors.accent })
   const high = highs?.[highs.length - 1]
   if (high != null) {
     const words = `52w high ${signedPercent((lastBar.close / high - 1) * 100)}`
@@ -209,8 +204,8 @@ function EdgeArrow({ x, y, edge, fill }) {
   return <polygon data-edge={edge} points={points} fill={fill} />
 }
 
-export function GuideTags({ line, usual = null, highs, data, geometry, width, colors }) {
-  const tags = placeTags(guideTagItems({ line, usual, highs, data, colors }), geometry)
+export function GuideTags({ line, highs, data, geometry, width, colors }) {
+  const tags = placeTags(guideTagItems({ line, highs, data, colors }), geometry)
   if (!tags.length) return null
   const gutter = width - PAD_R
   return (

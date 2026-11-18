@@ -58,14 +58,6 @@ export function peChip(verdict) {
   return { pe, low, high, position: pe <= low ? 'below' : pe >= high ? 'above' : 'inside' }
 }
 
-export function usualPe(chip) {
-  return chip ? Math.round((chip.low + chip.high) / 2) : null
-}
-
-export function usualPrice(step, pe) {
-  return pe && step?.eps_ttm > 0 ? step.eps_ttm * pe : null
-}
-
 function distance(change, side) {
   const whole = Math.round(Math.abs(change))
   if (whole !== BAND_EDGE) return String(whole)

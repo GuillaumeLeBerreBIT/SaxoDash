@@ -271,17 +271,11 @@ describe('ChartCanvas value guides', () => {
     expect([...legend(container).children].map((cell) => cell.textContent)).toContain('expensive')
   })
 
-  it('gives the usual P/E price for the hovered day', () => {
-    const { container } = render(canvas({ hover: 12, valueGuides: { line: [step], usual: 30, high: false, gaps: false, currency: 'USD' } }))
-
-    expect(legend(container)).toHaveTextContent(/Usual P\/E \S*135\.00/)
-  })
-
-  it('draws the value zones and the usual P/E line with the growth line', () => {
-    const { container } = render(canvas({ valueGuides: { line: [step], usual: 30, high: false, gaps: false, currency: 'USD' } }))
+  it('draws the value zones with the growth line', () => {
+    const { container } = render(canvas({ valueGuides: { line: [step], high: false, gaps: false, currency: 'USD' } }))
 
     expect(container.querySelector('[data-testid="value-zones"]')).not.toBeNull()
-    expect(container.querySelector('[data-testid="usual-line"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="growth-line"]')).not.toBeNull()
   })
 
   it('leaves the growth reading out before the line starts', () => {

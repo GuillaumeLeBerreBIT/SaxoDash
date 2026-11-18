@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import * as ChartGuides from './ChartGuides'
-import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine, ValueZones } from './ChartGuides'
+import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, ValueZones } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
 const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
@@ -87,24 +87,6 @@ describe('ValueZones', () => {
   })
 })
 
-describe('UsualLine', () => {
-  it('steps with trailing earnings at the usual P/E in the accent colour', () => {
-    const line = [step('2026-06-01', 100, { eps_ttm: 4 }), step('2026-07-20', 120, { eps_ttm: 5 })]
-    const { container } = draw(<UsualLine line={line} usual={30} data={data} geometry={geometry()} colors={colors} />)
-    const path = container.querySelector('path')
-    expect(path).toHaveAttribute('data-testid', 'usual-line')
-    expect(path).toHaveAttribute('stroke', 'accent')
-    expect(path).toHaveAttribute('stroke-dasharray', '6 3')
-    expect(path).toHaveAttribute('fill', 'none')
-    expect(path.getAttribute('d')).toBe('M 10 170 H 390 V 110 H 790')
-  })
-
-  it('draws nothing without a usual P/E', () => {
-    const { container } = draw(<UsualLine line={[step('2026-06-01', 100)]} usual={null} data={data} geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('path')).toBeNull()
-  })
-})
-
 describe('GuideTags', () => {
   const tagY = (testId) => Number(screen.getByTestId(testId).querySelector('rect[data-badge]').getAttribute('y'))
 
@@ -154,12 +136,23 @@ describe('GuideTags', () => {
     expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
   })
 
-  it('tags the usual P/E line with its price', () => {
-    draw(<GuideTags line={[step('2026-06-01', 120, { eps_ttm: 4 })]} usual={61} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    const tag = screen.getByTestId('guide-tag-usual')
-    expect(tag).toHaveTextContent('Usual P/E 61')
-    expect(tag).toHaveTextContent('244.00')
-    expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'accent')
+  it('tags where cheap starts in green and where expensive starts in red, with their P/E', () => {
+    draw(<GuideTags line={[step('2026-06-01', 100, { pe: 22.86 })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
+    const cheap = screen.getByTestId('guide-tag-cheap')
+    expect(cheap).toHaveTextContent('Cheap · P/E 21')
+    expect(cheap).toHaveTextContent('90.00')
+    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'up')
+    expect(cheap.querySelector('text')).toHaveAttribute('fill', 'up')
+    const expensive = screen.getByTestId('guide-tag-expensive')
+    expect(expensive).toHaveTextContent('Expensive · P/E 25')
+    expect(expensive).toHaveTextContent('110.00')
+    expect(expensive.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'down')
+  })
+
+  it('has only a cheap tag on a capped step', () => {
+    draw(<GuideTags line={[step('2026-06-01', 100, { pe: 30, capped: true })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
+    expect(screen.getByTestId('guide-tag-cheap')).toHaveTextContent('Cheap · P/E 27')
+    expect(screen.queryByTestId('guide-tag-expensive')).toBeNull()
   })
 
   it('shows no high tag before 252 sessions', () => {

@@ -8,7 +8,7 @@ import { chartPlaceholderFor } from '../../lib/chartState'
 import { fitChartPanes, overlayStrokes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { RVOL_WINDOW } from '../../lib/indicators'
-import { guideSeries, readPrice, stepAt, usualPrice, visibleGuides } from '../../lib/valueGuides'
+import { guideSeries, readPrice, stepAt, visibleGuides } from '../../lib/valueGuides'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
 import { useChartColors } from '../../theme/useChartColors'
@@ -50,8 +50,6 @@ function guideLegend(valueGuides, gaps, bar, index) {
   if (step?.price != null) {
     if (step.eps_ttm > 0) items.push(['P/E then', fmtNum(bar.close / step.eps_ttm, 1)])
     items.push(['Growth-fair', fmtMoney(step.price, valueGuides.currency)])
-    const usual = usualPrice(step, valueGuides.usual)
-    if (usual != null) items.push(['Usual P/E', fmtMoney(usual, valueGuides.currency)])
     const reading = readPrice(bar.close, step)
     if (reading) items.push(['', READING_WORDS[reading]])
   }
@@ -63,9 +61,7 @@ function guideLegend(valueGuides, gaps, bar, index) {
 function widestGuideLegend(valueGuides, gaps) {
   const items = []
   if (valueGuides?.line?.length) {
-    items.push(['P/E then', fmtNum(9999.9, 1)], ['Growth-fair', fmtMoney(WIDEST_VALUE, valueGuides.currency)])
-    if (valueGuides.usual) items.push(['Usual P/E', fmtMoney(WIDEST_VALUE, valueGuides.currency)])
-    items.push(['', READING_WORDS.priced_in])
+    items.push(['P/E then', fmtNum(9999.9, 1)], ['Growth-fair', fmtMoney(WIDEST_VALUE, valueGuides.currency)], ['', READING_WORDS.priced_in])
   }
   if (gaps.length) items.push(gapLegend({ up: false, from: 1, to: 0.001, rvol: WIDEST_RVOL, filled: true, filledOn: '2026-09-30' }))
   return items

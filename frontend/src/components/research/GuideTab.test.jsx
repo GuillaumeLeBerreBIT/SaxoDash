@@ -45,7 +45,7 @@ describe('GuideTab', () => {
     render(<GuideTab />)
 
     const section = screen.getByRole('region', { name: 'Chart guides' })
-    for (const name of ['Growth line', 'Usual P/E line', 'P/E chip', '52-week high', 'Volume gaps']) {
+    for (const name of ['Growth line', 'P/E chip', '52-week high', 'Volume gaps']) {
       expect(section).toHaveTextContent(name)
     }
     expect(section).toHaveTextContent(/gap up held up/i)

@@ -234,3 +234,10 @@ replaced by:
 - on a capped step only the green side, since above a P/E 30+ floor is not expensive.
 
 The fade stops each zone well short of painting the chart, which keeps the anti-goal.
+
+### Revision 2026-11-18: cheap and expensive tags; usual P/E line removed
+
+The owner asked which P/E each colour starts at and chose to remove the usual P/E line. The right axis now tags
+the green line "Cheap · P/E 21" in green and the red line "Expensive · P/E 25" in red (MSFT), each P/E being the
+growth line's P/E x 0.9 and x 1.1, rounded. A capped step has only the cheap tag ("Cheap · P/E 27" for NVDA).
+The P/E chip still shows the stock's usual range.
