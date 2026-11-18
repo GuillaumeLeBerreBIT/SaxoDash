@@ -102,9 +102,7 @@ class GrowthFlagsTest(SimpleTestCase):
 
 
 class SplitSuspectsTest(SimpleTestCase):
-    def test_a_four_for_one_split_in_prices_with_unadjusted_eps_is_counted(self):
+    def test_an_unadjusted_split_in_the_prices_is_counted_and_an_ordinary_fall_is_not(self):
         days = sessions(700)
-        closes = [100.0] * 400 + [25.0] * 300
-        eps = [(day, 1.0) for day in quarter_ends(2008, 2013)]
-        self.assertEqual(yardsticks.split_suspects(series(days, closes), eps), 1)
-        self.assertEqual(yardsticks.split_suspects(series(days, [100.0] * 700), eps), 0)
+        self.assertEqual(yardsticks.split_suspects(series(days, [100.0] * 400 + [25.0] * 300)), 1)
+        self.assertEqual(yardsticks.split_suspects(series(days, [100.0] * 400 + [70.0] * 300)), 0)

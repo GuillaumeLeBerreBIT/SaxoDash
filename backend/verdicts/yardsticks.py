@@ -10,7 +10,7 @@ from .yardsticks_growth import REPORT_LAG_DAYS
 
 GROWTH_CHEAP = 0.9
 GROWTH_EXPENSIVE = 1.1
-SPLIT_JUMP = 3
+SPLIT_JUMP = 1.5
 KEYS = ('pe_cheap', 'pe_expensive', 'growth_cheap', 'growth_expensive')
 
 
@@ -46,7 +46,7 @@ def _growth_step(line, starts, day):
 
 
 def monthly_flags(series, quarterly_eps):
-    flags = {key: [False] * len(series) for key in KEYS}
+    flags = {key: bytearray(len(series)) for key in KEYS}
     daily = _daily_pe(series, quarterly_eps)
     ends = _week_ends(series.dates)
     line = yardsticks_growth.steps(quarterly_eps)
@@ -65,9 +65,9 @@ def monthly_flags(series, quarterly_eps):
     return flags
 
 
-def split_suspects(series, quarterly_eps):
-    daily = _daily_pe(series, quarterly_eps)
+def split_suspects(series):
+    closes = series.closes
     return sum(
-        1 for before, after in zip(daily, daily[1:])
-        if before and after and before > 0 and after > 0 and max(before / after, after / before) > SPLIT_JUMP
+        1 for before, after in zip(closes, closes[1:])
+        if before > 0 and after > 0 and max(before / after, after / before) >= SPLIT_JUMP
     )

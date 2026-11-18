@@ -32,7 +32,7 @@ def _price_line(row):
     return price_line.from_bars(stored)
 
 
-def _quarterly_eps(row):
+def quarterly_eps(row):
     parsed = {}
     for entry in (row.fundamentals_history or {}).get('quarterly_eps') or []:
         try:
@@ -47,7 +47,7 @@ def _quarterly_eps(row):
 
 
 def _eps_line(row, today):
-    return eps_line.steps(_quarterly_eps(row), today)
+    return eps_line.steps(quarterly_eps(row), today)
 
 
 def _pe_percentiles(row):
