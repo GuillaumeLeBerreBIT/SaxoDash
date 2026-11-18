@@ -38,7 +38,8 @@ export function IndicatorMenuItems({ controls }) {
 }
 
 const GUIDES = {
-  zones: ['Opportunity and expensive zones', 'Where the price is cheap or expensive for this company'],
+  high52: ['52-week high', 'The highest price of the past year and how far below it today is'],
+  gaps: ['Volume gaps', 'Big opening gaps on heavy volume, until filled or 60 sessions pass'],
   plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
 }
 

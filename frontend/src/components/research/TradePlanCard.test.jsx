@@ -60,11 +60,11 @@ describe('TradePlanCard', () => {
     expect(screen.getByText(/the price can gap on the news/)).toBeInTheDocument()
   })
 
-  it('says the size is not a suggestion when the verdict is not a buy', () => {
+  it('always says the size is arithmetic for your own decision, whatever the verdict', () => {
     const { rerender } = render(<TradePlanCard {...base} verdict={{ action: 'not_a_fit' }} />)
     expect(screen.getByTestId('plan-verdict-note')).toHaveTextContent('The verdict for this stock is Not a fit.')
     rerender(<TradePlanCard {...base} verdict={{ action: 'buy' }} />)
-    expect(screen.queryByTestId('plan-verdict-note')).not.toBeInTheDocument()
+    expect(screen.getByTestId('plan-verdict-note')).toHaveTextContent('The verdict for this stock is Passes quality screen. The figures below are arithmetic for a trade you decide on yourself, not a suggestion to buy.')
   })
 
   it('draws nothing without enough bars', () => {

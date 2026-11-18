@@ -1,4 +1,4 @@
-const ACTION_ORDER = ['buy', 'add', 'hold', 'wait', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
+const ACTION_ORDER = ['buy', 'add', 'hold', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
 
 export function mergeShareClasses(items) {
   const byName = new Map()

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 SCAN_TASK = 'scan_universe'
 DAILY_HORIZON = 1440
-HISTORY_BARS = 1200
+HISTORY_BARS = valuation.PE_WINDOW_BARS
 TECHNICAL_BARS = 260
 PAUSE_SECONDS = 1.2
 US_EXCHANGES = ('NASDAQ', 'NYSE')

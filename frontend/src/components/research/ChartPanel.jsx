@@ -7,6 +7,7 @@ import { Menu } from './menu'
 import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import EntryBanner from './EntryBanner'
+import PeChip from './PeChip'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
@@ -59,7 +60,8 @@ export default function ChartPanel({
 
         <LineSaveAlert failed={lineSaveFailed} />
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <PeChip chip={guides?.chip} />
           <PeriodChange bars={bars} />
           {expandHref ? (
             <Link
@@ -88,8 +90,7 @@ export default function ChartPanel({
         error={error}
         unresolved={unresolved}
         earningsMarkers={earningsMarkers}
-        priceZones={guides?.zones}
-        zoneCurrency={guides?.currency}
+        valueGuides={guides?.valueGuides}
         tradePlan={guides?.plan}
         futureDates={futureDates}
         lines={lines}

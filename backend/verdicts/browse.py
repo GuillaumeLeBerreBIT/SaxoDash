@@ -5,7 +5,7 @@ from research.models import ScreenerRow
 from . import payload
 from .models import StockVerdict
 
-ACTION_RANK = ['buy', 'add', 'hold', 'wait', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
+ACTION_RANK = ['buy', 'add', 'hold', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
 VALUATIONS = ['cheap', 'fair', 'expensive', 'not_judged']
 QUALITIES = ['strong', 'mixed', 'weak', 'unknown']
 SORTS = ['opportunity', 'discount', 'fall']
@@ -94,7 +94,7 @@ def _sort_key(query):
         return lambda stock: (by(stock['discount_pct']), stock['ticker'])
     if query.sort == 'fall':
         return lambda stock: (by(stock['below_high_pct']), stock['ticker'])
-    return lambda stock: (_rank(stock['action']), by(stock['discount_pct']), stock['ticker'])
+    return lambda stock: (_rank(stock['action']), -stock['checks_passed'], stock['ticker'])
 
 
 def _counts(stocks, query, held, facet):

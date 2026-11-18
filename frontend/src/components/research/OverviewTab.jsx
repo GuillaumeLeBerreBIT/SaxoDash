@@ -73,7 +73,7 @@ function PlanSection({ action, children }) {
   if (!action || PLAN_ACTIONS.has(action) || open) return children
   return (
     <Card context="For a new purchase" dot="off" title="Trade plan">
-      <p className="text-[13px] text-ink-2">Stop-loss, size and risk. Closed because the verdict is not Buy or Add.</p>
+      <p className="text-[13px] text-ink-2">Stop-loss, size and risk. Closed unless the company passes the quality screen and is under your cap.</p>
       <Button size="sm" className="mt-2.5" onClick={() => setOpen(true)}>Show the trade plan</Button>
     </Card>
   )

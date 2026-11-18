@@ -11,6 +11,8 @@ class StockVerdict(models.Model):
     current_pe = models.FloatField(null=True, blank=True)
     cheap_below = models.FloatField(null=True, blank=True)
     expensive_above = models.FloatField(null=True, blank=True)
+    pe_p25 = models.FloatField(null=True, blank=True)
+    pe_p75 = models.FloatField(null=True, blank=True)
     last_close = models.FloatField(null=True, blank=True)
     pct_vs_ma200 = models.FloatField(null=True, blank=True)
     spark = models.JSONField(default=list, blank=True)
@@ -25,6 +27,10 @@ class StockVerdict(models.Model):
         return f'{self.ticker}: {self.quality} / {self.valuation}'
 
 
+QUALITY_RULE = 'quality'
+RETIRED_RULE = 'quality_and_cheap'
+
+
 class VerdictCall(models.Model):
     ticker = models.CharField(max_length=20, db_index=True)
     opened_on = models.DateField()
@@ -33,6 +39,7 @@ class VerdictCall(models.Model):
     valuation = models.CharField(max_length=12)
     checks = models.JSONField(default=list)
     ended_on = models.DateField(null=True, blank=True)
+    rule = models.CharField(max_length=20, default=QUALITY_RULE)
 
     class Meta:
         ordering = ['-opened_on', 'ticker']

@@ -1,13 +1,12 @@
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { getBrowse, getVerdict, getVerdictSummary, getVerdictTrackRecord, getWorthALook } from '../client'
+import { getBrowse, getVerdict, getVerdictSummary, getVerdictTrackRecord } from '../client'
 
 export const verdictKeys = {
   summaries: ['verdicts', 'summary'],
   summary: (tickers) => ['verdicts', 'summary', tickers.join(',')],
   detail: (ticker) => ['verdicts', 'detail', ticker],
   trackRecord: ['verdicts', 'track-record'],
-  worthALook: ['verdicts', 'worth-a-look'],
   browse: (query) => ['verdicts', 'browse', query],
 }
 
@@ -62,10 +61,6 @@ export function useVerdict(ticker) {
 
 export function useVerdictTrackRecord() {
   return useQuery({ queryKey: verdictKeys.trackRecord, queryFn: getVerdictTrackRecord })
-}
-
-export function useWorthALook() {
-  return useQuery({ queryKey: verdictKeys.worthALook, queryFn: getWorthALook })
 }
 
 export function useBrowse(query, { enabled = true } = {}) {

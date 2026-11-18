@@ -280,13 +280,13 @@ describe('OverviewTab on the new design', () => {
     expect(screen.queryByRole('heading', { name: 'Range statistics' })).not.toBeInTheDocument()
   })
 
-  it('keeps the trade plan closed unless the verdict is Buy or Add', () => {
+  it('keeps the trade plan closed unless the company passes the quality screen and is under the cap', () => {
     const data = { action: 'hold', reason: 'x', quality: 'strong', valuation: 'expensive', as_of: '2026-11-10', checks: [], held: false }
     renderOverview({ verdict: { isLoading: false, data }, allBars: risingBars(40), details: { currency: 'USD' } })
 
-    expect(screen.getByText(/Closed because the verdict is not Buy or Add/)).toBeInTheDocument()
+    expect(screen.getByText(/Closed unless the company passes the quality screen and is under your cap/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Show the trade plan' }))
-    expect(screen.queryByText(/Closed because the verdict is not Buy or Add/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Closed unless the company passes the quality screen and is under your cap/)).not.toBeInTheDocument()
   })
 
   it('hands the verdict grade to the snapshot so the page gives one valuation answer', () => {

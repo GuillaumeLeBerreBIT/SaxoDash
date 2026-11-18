@@ -43,13 +43,13 @@ describe('toggled', () => {
 })
 
 describe('card lines', () => {
-  it('leads with how far below the cheap line a stock is', () => {
-    expect(priceLine({ discount_pct: 55.4, below_high_pct: 40 })).toEqual({ text: '55% below its cheap line', tone: 'up' })
+  it('leads with how far below its usual P/E range a stock is, without calling it good', () => {
+    expect(priceLine({ discount_pct: 55.4, below_high_pct: 40 })).toEqual({ text: '55% below its usual P/E range', tone: 'neutral' })
   })
 
   it('falls back to the fall from the high, then to the valuation word', () => {
     expect(priceLine({ discount_pct: -5, below_high_pct: 31.2, valuation: 'fair' })).toEqual({ text: '31% below its 1-year high', tone: 'neutral' })
-    expect(priceLine({ discount_pct: null, below_high_pct: 2, valuation: 'expensive' })).toEqual({ text: 'Expensive for this company', tone: 'neutral' })
+    expect(priceLine({ discount_pct: null, below_high_pct: 2, valuation: 'expensive' })).toEqual({ text: 'Above its usual P/E range', tone: 'neutral' })
     expect(priceLine({ valuation: 'not_judged' })).toBeNull()
   })
 

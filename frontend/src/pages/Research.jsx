@@ -5,7 +5,7 @@ import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSigna
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { reportsWithin } from '../lib/earnings'
-import { entrySentence, priceZones } from '../lib/priceZones'
+import { entrySentence, peChip } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
@@ -121,16 +121,21 @@ export default function Research() {
       portfolioValue: tradePlan.portfolioValue, riskPct,
     })
     const judged = signalsForListing(judgedVerdict, listingUic)
-    const zones = priceZones(judged)
-    const latest = allBars.length ? allBars[allBars.length - 1].close : null
+    const chip = peChip(judged)
     return {
-      available: [...(judged ? ['zones'] : []), ...(plan ? ['plan'] : [])],
+      available: ['high52', 'gaps', ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
-      zones: shown.zones ? zones : null,
+      valueGuides: {
+        high: shown.high52,
+        gaps: shown.gaps,
+        currency: guideCurrency,
+        bars: allBars,
+      },
+      chip,
       plan: shown.plan ? plan : null,
-      sentence: entrySentence({ verdict: null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
+      sentence: entrySentence({ verdict: null, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
       answer: entrySentence({
-        verdict: judged, price: latest, plan: null, held: Boolean(position),
+        verdict: judged, plan: null, held: Boolean(position),
         earnings: judged ? reportsWithin(nextReport, 10) : null, currency: guideCurrency,
       }),
     }

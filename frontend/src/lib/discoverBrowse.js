@@ -1,13 +1,13 @@
 export const SORTS = [
-  { value: 'opportunity', label: 'Best opportunity first' },
-  { value: 'discount', label: 'Furthest below cheap line' },
+  { value: 'opportunity', label: 'Most quality checks passed' },
+  { value: 'discount', label: 'Furthest below its usual P/E' },
   { value: 'fall', label: 'Biggest fall from 1-year high' },
 ]
 
 export const VALUATION_OPTIONS = [
-  { value: 'cheap', label: 'Cheap' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'expensive', label: 'Expensive' },
+  { value: 'cheap', label: 'Below usual P/E' },
+  { value: 'fair', label: 'Within usual P/E' },
+  { value: 'expensive', label: 'Above usual P/E' },
 ]
 
 export const QUALITY_OPTIONS = [
@@ -24,9 +24,9 @@ export const PAGE_SIZE = 24
 export const RAILS = [
   {
     key: 'opportunities',
-    title: "Today's opportunities",
-    sub: 'Strong companies trading below their own cheap line, furthest below first',
-    filters: { valuation: ['cheap'], quality: ['strong'] },
+    title: 'Strong companies',
+    sub: 'Pass the quality checks, most checks passed first. The price is not judged',
+    filters: { quality: ['strong'] },
   },
   {
     key: 'fell',
@@ -92,12 +92,12 @@ const whole = (value) => Math.round(Math.abs(Number(value)))
 
 export function priceLine(stock) {
   if (stock.discount_pct != null && stock.discount_pct > 0) {
-    return { text: `${whole(stock.discount_pct)}% below its cheap line`, tone: 'up' }
+    return { text: `${whole(stock.discount_pct)}% below its usual P/E range`, tone: 'neutral' }
   }
   if (stock.below_high_pct != null && stock.below_high_pct >= 10) {
     return { text: `${whole(stock.below_high_pct)}% below its 1-year high`, tone: 'neutral' }
   }
-  const words = { fair: 'Fairly priced for this company', expensive: 'Expensive for this company' }
+  const words = { fair: 'Within its usual P/E range', expensive: 'Above its usual P/E range' }
   return words[stock.valuation] ? { text: words[stock.valuation], tone: 'neutral' } : null
 }
 

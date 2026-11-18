@@ -5,29 +5,26 @@ import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSen
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
     expect(ACTION_LABEL).toEqual({
-      buy: 'Opportunity',
-      add: 'Add',
+      buy: 'Passes quality screen',
+      add: 'Passes quality screen',
       hold: 'Hold',
       trim: 'Trim',
       sell_review: 'Review',
-      wait: 'Wait',
       not_a_fit: 'Not a fit',
       no_verdict: 'No verdict',
     })
   })
 
-  it('says a hold forced by the weight cap is still cheap', () => {
-    expect(actionLabel({ action: 'hold', capped: true })).toBe('Hold · over cap')
+  it('names an action by its label', () => {
     expect(actionLabel({ action: 'hold' })).toBe('Hold')
     expect(actionLabel({ action: 'sell_review' })).toBe('Review')
   })
 
-  it('colours buying up and trimming as a warning', () => {
-    expect(actionTone('buy')).toBe('up')
-    expect(actionTone('add')).toBe('up')
+  it('never colours passing the quality screen as a buy, and colours trimming as a warning', () => {
+    expect(actionTone('buy')).toBeUndefined()
+    expect(actionTone('add')).toBeUndefined()
     expect(actionTone('trim')).toBe('warn')
     expect(actionTone('hold')).toBeUndefined()
-    expect(actionTone('wait')).toBeUndefined()
   })
 
   it('never colours a sell as down-red: review reads as a warning', () => {
@@ -37,9 +34,9 @@ describe('verdict wording', () => {
   it('names both grades in words', () => {
     expect(GRADE_LABEL.quality).toEqual({ strong: 'Strong', mixed: 'Mixed', weak: 'Weak', unknown: 'Not enough data' })
     expect(GRADE_LABEL.valuation).toEqual({
-      cheap: 'Cheap',
-      fair: 'Fair',
-      expensive: 'Expensive',
+      cheap: 'Below usual P/E',
+      fair: 'Within usual P/E',
+      expensive: 'Above usual P/E',
       not_judged: 'Not judged',
     })
   })

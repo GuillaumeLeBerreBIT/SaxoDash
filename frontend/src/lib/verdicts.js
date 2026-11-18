@@ -1,31 +1,29 @@
 import { ownershipTicker } from './ownership'
 
 export const ACTION_LABEL = {
-  buy: 'Opportunity',
-  add: 'Add',
+  buy: 'Passes quality screen',
+  add: 'Passes quality screen',
   hold: 'Hold',
   trim: 'Trim',
   sell_review: 'Review',
-  wait: 'Wait',
   not_a_fit: 'Not a fit',
   no_verdict: 'No verdict',
 }
 
 export function actionLabel(verdict) {
-  if (verdict.capped) return 'Hold · over cap'
   return ACTION_LABEL[verdict.action] ?? verdict.action
 }
 
 export const GRADE_LABEL = {
   quality: { strong: 'Strong', mixed: 'Mixed', weak: 'Weak', unknown: 'Not enough data' },
-  valuation: { cheap: 'Cheap', fair: 'Fair', expensive: 'Expensive', not_judged: 'Not judged' },
+  valuation: { cheap: 'Below usual P/E', fair: 'Within usual P/E', expensive: 'Above usual P/E', not_judged: 'Not judged' },
 }
 
 export const CHECK_STATUS_LABEL = { pass: 'Pass', fail: 'Fail', unknown: 'Unknown' }
 
 const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth', 'cash'])
 
-const TONE = { buy: 'up', add: 'up', trim: 'warn', sell_review: 'warn' }
+const TONE = { trim: 'warn', sell_review: 'warn' }
 
 export const actionTone = (action) => TONE[action]
 

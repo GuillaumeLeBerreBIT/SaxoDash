@@ -1,4 +1,6 @@
 import logging
+import math
+from datetime import date
 from typing import NamedTuple
 
 from django.db import transaction
@@ -19,8 +21,8 @@ class Result(NamedTuple):
     failed: list
 
 
-def _is_buy_grade(quality, valuation):
-    return quality['grade'] == 'strong' and valuation['grade'] == 'cheap'
+def _is_buy_grade(quality):
+    return quality['grade'] == 'strong'
 
 
 def _price_line(row):
@@ -30,8 +32,30 @@ def _price_line(row):
     return price_line.from_bars(stored)
 
 
-def _store(row, quality, valuation):
+def quarterly_eps(row):
+    parsed = {}
+    for entry in (row.fundamentals_history or {}).get('quarterly_eps') or []:
+        try:
+            period, value = entry
+            value = float(value)
+            if not math.isfinite(value):
+                continue
+            parsed[date.fromisoformat(period)] = value
+        except (TypeError, ValueError):
+            continue
+    return list(parsed.items())
+
+
+def _pe_percentiles(row):
+    levels = rules._levels(row.pe_history)
+    if levels is None:
+        return None, None
+    return levels['p25'], levels['p75']
+
+
+def _store(row, quality, valuation, today):
     spark, high_1y = _price_line(row)
+    pe_p25, pe_p75 = _pe_percentiles(row)
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
@@ -43,6 +67,8 @@ def _store(row, quality, valuation):
             'current_pe': valuation['current_pe'],
             'cheap_below': valuation['cheap_below'],
             'expensive_above': valuation['expensive_above'],
+            'pe_p25': pe_p25,
+            'pe_p75': pe_p75,
             'last_close': row.last_close,
             'pct_vs_ma200': row.pct_vs_ma200,
             'spark': spark,
@@ -54,7 +80,7 @@ def _store(row, quality, valuation):
 
 def _track(row, quality, valuation, today):
     open_call = VerdictCall.objects.filter(ticker=row.ticker, ended_on__isnull=True).first()
-    if not _is_buy_grade(quality, valuation):
+    if not _is_buy_grade(quality):
         if open_call is not None:
             open_call.ended_on = today
             open_call.save(update_fields=['ended_on'])
@@ -70,7 +96,7 @@ def _judge(row, today):
     quality = rules.quality(row)
     valuation = rules.valuation(row)
     with transaction.atomic():
-        _store(row, quality, valuation)
+        _store(row, quality, valuation, today)
         _track(row, quality, valuation, today)
 
 

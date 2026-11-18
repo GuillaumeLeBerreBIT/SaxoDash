@@ -34,7 +34,7 @@ def _failed_labels(verdict):
 
 def _summary(verdict, weight, held):
     weight_pct = float(weight or 0) if held else None
-    decided = action(verdict.quality, verdict.valuation, weight_pct, _failed_labels(verdict))
+    decided = action(verdict.quality, weight_pct, _failed_labels(verdict))
     return {
         **decided,
         'uic': verdict.uic,
@@ -53,6 +53,8 @@ def _detail(verdict, weight, held):
         'current_pe': verdict.current_pe,
         'cheap_below': verdict.cheap_below,
         'expensive_above': verdict.expensive_above,
+        'pe_p25': verdict.pe_p25,
+        'pe_p75': verdict.pe_p75,
         'last_close': verdict.last_close,
         'pct_vs_ma200': verdict.pct_vs_ma200,
         'held': held,

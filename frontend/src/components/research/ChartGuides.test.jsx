@@ -1,62 +1,95 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-import { PriceZones, StopGuide } from './ChartGuides'
+import * as ChartGuides from './ChartGuides'
+import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
-const colors = { up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane' }
+const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
 const data = Array.from({ length: 40 }, (_, i) => ({ date: `2026-07-${String(i + 1).padStart(2, '0')}`, open: 100, high: 104, low: 96, close: 102 }))
 const geometry = (chartW = 800) => ({ xAt: (i) => 10 + i * 20, scaleY: (value) => 410 - value * 2, chartH: 300, chartW, candleWidth: 8 })
 const draw = (node) => render(<svg>{node}</svg>)
 
-describe('PriceZones', () => {
-  it('shades below the buy price and above the expensive price, each named in words', () => {
-    draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: true }} currency="USD" geometry={geometry()} colors={colors} />)
-    expect(screen.getByTestId('buy-zone').querySelector('rect')).toHaveAttribute('fill', 'up')
-    expect(screen.getByTestId('expensive-zone').querySelector('rect')).toHaveAttribute('fill', 'warn')
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY · cheap for this company below \S*80\.00/)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*150\.00/)
+const width = 862
+
+describe('GuideTags', () => {
+  const tagY = (testId) => Number(screen.getByTestId(testId).querySelector('rect[data-badge]').getAttribute('y'))
+  it('pins a high above the visible prices to the top edge with an up marker', () => {
+    draw(<GuideTags highs={data.map(() => 250)} data={data} geometry={geometry()} width={width} colors={colors} />)
+    expect(tagY('guide-tag-high')).toBe(10)
+    expect(screen.getByTestId('guide-tag-high').querySelector('[data-edge="above"]')).not.toBeNull()
   })
 
-  it('points at a zone that is out of view instead of shading it', () => {
-    draw(<PriceZones zones={{ buyBelow: 20, expensiveAbove: 400, buyable: true }} currency="USD" geometry={geometry()} colors={colors} />)
-    expect(screen.queryByTestId('buy-zone')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('expensive-zone')).not.toBeInTheDocument()
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/↓ OPPORTUNITY/)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/↑ EXPENSIVE/)
+  it('says how far the close is below the 52-week high', () => {
+    const closing = data.map((bar, i) => (i === data.length - 1 ? { ...bar, close: 156.38 } : bar))
+    draw(<GuideTags highs={data.map(() => 243.37)} data={closing} geometry={geometry()} width={width} colors={colors} />)
+    expect(screen.getByTestId('guide-tag-high')).toHaveTextContent('52w high −35.7%')
+    expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
   })
 
-  it('does not call a cheap price a buy zone for a company that fails the checks', () => {
-    draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: false }} currency="USD" geometry={geometry()} colors={colors} />)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/CHEAP for this company below/)
-    expect(screen.getByTestId('price-zones')).not.toHaveTextContent('OPPORTUNITY')
-    expect(screen.getByTestId('buy-zone').querySelector('rect')).toHaveAttribute('fill', 'ink2')
-    expect(screen.getByTestId('buy-zone').querySelector('line')).toHaveAttribute('stroke', 'ink2')
+  it('shows no high tag before 252 sessions', () => {
+    draw(<GuideTags highs={data.map(() => null)} data={data} geometry={geometry()} width={width} colors={colors} />)
+    expect(screen.queryByTestId('guide-tag-high')).toBeNull()
+  })
+})
+
+describe('HighLine', () => {
+  it('draws a dotted step line of the rolling high in the secondary ink', () => {
+    const highs = data.map((_, i) => (i < 10 ? null : i < 20 ? 110 : 120))
+    const { container } = draw(<HighLine highs={highs} geometry={geometry()} colors={colors} />)
+    const path = container.querySelector('path')
+    expect(path).toHaveAttribute('stroke', 'ink2')
+    expect(path).toHaveAttribute('stroke-dasharray')
+    expect(path.getAttribute('d')).toBe('M 210 190 H 410 V 170 H 790')
   })
 
-  it('writes the zone labels at 12px, the expensive one in the warn text colour', () => {
-    draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: true }} currency="USD" geometry={geometry()} colors={colors} />)
-    const labels = [...screen.getByTestId('price-zones').querySelectorAll('text')]
-    expect(labels.map((label) => label.getAttribute('font-size'))).toEqual(['12', '12'])
-    expect(labels[1]).toHaveAttribute('fill', 'warnText')
+  it('draws nothing when no visible bar has 252 sessions behind it', () => {
+    const { container } = draw(<HighLine highs={data.map(() => null)} geometry={geometry()} colors={colors} />)
+    expect(container.querySelector('path')).toBeNull()
+  })
+})
+
+describe('GapBoxes', () => {
+  const gaps = [
+    { index: 5, up: true, from: 100, to: 104, end: 12, filled: true, rvol: 3.1 },
+    { index: 20, up: false, from: 120, to: 112, end: 39, filled: false, rvol: 2.6 },
+    { index: 25, up: true, from: 110, to: 115, end: 39, filled: false, rvol: 2.6 },
+  ]
+
+  it('boxes each gap from the gap day to its end, between the previous close and the open', () => {
+    const { container } = draw(<GapBoxes gaps={gaps} geometry={geometry()} colors={colors} />)
+    const rects = container.querySelectorAll('rect')
+    expect(rects).toHaveLength(3)
+    expect(rects[0]).toHaveAttribute('x', '110')
+    expect(rects[0]).toHaveAttribute('width', '140')
+    expect(rects[0]).toHaveAttribute('y', '202')
+    expect(rects[0]).toHaveAttribute('height', '8')
+    expect(rects[0]).toHaveAttribute('fill', 'up')
+    expect(rects[0]).toHaveAttribute('opacity', '0.12')
+    expect(rects[0]).not.toHaveAttribute('stroke-dasharray')
+    expect(rects[1]).toHaveAttribute('fill', 'down')
+    expect(rects[1]).toHaveAttribute('opacity', '0.22')
+    expect(rects[1]).toHaveAttribute('stroke-dasharray')
   })
 
-  it('shortens the labels on a phone-width chart so they are not clipped', () => {
-    draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: true }} currency="USD" geometry={geometry(330)} colors={colors} />)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY below \S*80\.00/)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE above \S*150\.00/)
-    expect(screen.getByTestId('price-zones')).not.toHaveTextContent('for this company')
+  it('labels the gaps that are still open', () => {
+    const { container } = draw(<GapBoxes gaps={gaps} geometry={geometry()} colors={colors} />)
+    const labels = [...container.querySelectorAll('text')].map((label) => label.textContent)
+    expect(labels).toEqual(['Gap down 2.6x vol', 'Gap up 2.6x vol'])
   })
 
-  it('shortens the cheap label too when the company is not a buy', () => {
-    draw(<PriceZones zones={{ buyBelow: 80, expensiveAbove: 150, buyable: false }} currency="USD" geometry={geometry(330)} colors={colors} />)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/CHEAP below \S*80\.00/)
+  it('keeps a label inside the plot when its box starts left of view or runs to the right edge', () => {
+    const open = (index) => ({ index, up: false, from: 120, to: 112, end: 39, filled: false, rvol: 2.6 })
+    const { container } = draw(<GapBoxes gaps={[open(-3), open(38)]} geometry={geometry(400)} colors={colors} />)
+    const [left, right] = [...container.querySelectorAll('text')].map((label) => Number(label.getAttribute('x')))
+    expect(left).toBe(3)
+    expect(right + 'Gap down 2.6x vol'.length * 6).toBeLessThanOrEqual(400)
   })
+})
 
-  it('draws nothing without zones', () => {
-    const { container } = draw(<PriceZones zones={null} currency="USD" geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('[data-testid="price-zones"]')).toBeNull()
-  })
+it('no longer draws flat price zones or a past P/E band', () => {
+  expect(ChartGuides.PriceZones).toBeUndefined()
+  expect(ChartGuides.ValueZones).toBeUndefined()
 })
 
 describe('StopGuide', () => {

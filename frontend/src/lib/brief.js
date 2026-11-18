@@ -35,27 +35,12 @@ function review(position, verdict) {
 function overCap(position, verdict, total) {
   const weight = Number(position.weight)
   const free = Number(position.value) - (total * WEIGHT_CAP_PCT) / 100
-  const why = verdict?.capped
-    ? ' The price is still in its cheap range, so this is about concentration, not the company.'
-    : verdict?.action === 'trim'
-      ? ' It is also expensive against its own history.'
-      : ''
   return {
     kind: 'cap',
     tone: 'warn',
-    word: verdict?.action === 'trim' ? 'Trim' : 'Hold · over cap',
+    word: 'Trim',
     title: `${position.name} is ${weight.toFixed(1)}% of your portfolio`,
-    body: `Your cap is ${WEIGHT_CAP_PCT}%. Trimming back to ${WEIGHT_CAP_PCT}% would free about ${fmtEur(Math.max(0, free), { decimals: 0 })}.${why}`,
-  }
-}
-
-function add(position) {
-  return {
-    kind: 'add',
-    tone: 'up',
-    word: 'Add',
-    title: `${position.name} is below its cheap line`,
-    body: `The quality checks pass and the price is in its cheap range, and it is under your ${WEIGHT_CAP_PCT}% cap.`,
+    body: `Your cap is ${WEIGHT_CAP_PCT}%. Trimming back to ${WEIGHT_CAP_PCT}% would free about ${fmtEur(Math.max(0, free), { decimals: 0 })}. This is about concentration, not the company.`,
   }
 }
 
@@ -79,9 +64,6 @@ export function briefItems({ positions, verdicts, total, fundBuys, fundSells, ea
   reports.filter((report) => report.days_until <= SOON_DAYS).forEach(reportItem)
   for (const position of positions.map(named)) {
     if (Number(position.weight) > WEIGHT_CAP_PCT) push(position, overCap(position, verdicts?.[position.ticker], total))
-  }
-  for (const position of positions.map(named)) {
-    if (verdicts?.[position.ticker]?.action === 'add') push(position, add(position))
   }
   for (const position of positions.map(named)) {
     const count = fundBuys?.get(position.ticker)

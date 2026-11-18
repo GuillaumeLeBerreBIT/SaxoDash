@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from signals import evaluate
+from signals import definitions, evaluate
 from signals.series import Series
 
 BARS = 600
@@ -167,6 +167,22 @@ class ScoreTest(SimpleTestCase):
         scores = evaluate.score(stocks, flags)
         self.assertEqual(found(scores, 'deep_pullback', 60).grade, 'unproven')
         self.assertGreater(found(scores, 'deep_pullback', 60).ci_low, 0)
+
+
+    def test_a_caller_names_its_own_signals_horizons_and_grading_horizon(self):
+        stocks = market()
+        flags = no_flags(stocks)
+        bars = list(range(262, 346, 4))
+        for n in range(20):
+            ticker = f'S{n:02d}'
+            for i in bars:
+                stocks[ticker].closes[i + 250] = 100.0 + 5 + (n % 3)
+            mark(stocks, flags, ticker, 'cheap', bars)
+        cheap = definitions.Signal('cheap', 'C', 'Cheap', 'Cheap.', definitions.STATE)
+        scores = evaluate.score(stocks, flags, signals=(cheap,), horizons=(60, 250), grade_horizon=250)
+        self.assertEqual([(score.key, score.horizon) for score in scores], [('cheap', 60), ('cheap', 250)])
+        self.assertEqual(found(scores, 'cheap', 60).grade, 'supported')
+        self.assertEqual(found(scores, 'cheap', 60).mean_excess, 0)
 
 
 class MomentumLeadersTest(SimpleTestCase):

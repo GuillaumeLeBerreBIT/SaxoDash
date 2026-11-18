@@ -62,9 +62,9 @@ describe('valuationVerdict', () => {
     const f = { pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } }
     expect(valuationVerdict(f, 'not_judged').text).toBe('P/E above its 6-yr range')
   })
-  it('lets an expensive verdict caution and a cheap one stay positive', () => {
-    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'caution', text: 'P/E high for its own history' })
-    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'pos', text: 'P/E low for its own history' })
+  it('describes the verdict P/E against its own history without colouring it good or bad', () => {
+    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'neutral', text: 'P/E high for its own history' })
+    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'neutral', text: 'P/E low for its own history' })
   })
 })
 
