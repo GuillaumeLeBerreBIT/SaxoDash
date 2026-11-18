@@ -651,8 +651,12 @@ The nightly scan no longer overwrites: `history.merged` keeps the older bars and
 Saxo's bars are split-adjusted, so a split restates every past price: when a close the two sides share
 differs by more than 0.5%, the stored history is dropped, the fresh bars kept and the row backfilled again;
 an older page that disagrees with what is stored is not stored at all. Saxo also sends a placeholder bar on
-some market holidays, every price 1e-09 and no volume (FISV, 1 September 2014). `scan.stored_bars` drops any
-bar priced under `LOWEST_TRADED_PRICE`, and migration `research.0020` removed the ones already stored: that one
+some market holidays, every price 1e-09 and no volume (FISV, 1 September 2014). `market.to_candle` drops any
+bar priced under `LOWEST_TRADED_PRICE`, so neither the stored history nor the live chart sees it, and migration
+`research.0020` removed the ones already stored. A bad tick can also leave a penny low on an ordinary day
+(VST on 31 March 2017, MAA on 6 June 2008); exchanges cancel such trades, so `to_candle` lifts a low under
+`LOWEST_PLAUSIBLE_LOW` (a fifth of the lower of open and close) to that price and `research.0021` fixed the
+two stored ones. The placeholder
 bar gave a 60-session return of about 3.5e10 and turned every signal's mean and interval into nonsense, so
 the grades before 2026-11-18 cannot be trusted. Not every past split is adjusted either: about twenty stocks
 keep a one-day jump of more than 2.5 times from an unadjusted split, spin-off or special dividend (LRCX and COO

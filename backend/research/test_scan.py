@@ -178,14 +178,6 @@ class ScanUniverseTest(TestCase):
             ['2026-01-03', 3, 4, 2, 3.5, 0],
         ])
 
-    def test_stored_bars_drops_the_holiday_placeholder_saxo_sends(self, search, chart, financials):
-        bars = [
-            {'date': '2014-08-29', 'open': 32.34, 'high': 32.34, 'low': 31.99, 'close': 32.235, 'volume': 1630680},
-            {'date': '2014-09-01', 'open': 1e-09, 'high': 1e-09, 'low': 1e-09, 'close': 1e-09, 'volume': 0},
-            {'date': '2014-09-02', 'open': 32.285, 'high': 32.4, 'low': 32.105, 'close': 32.325, 'volume': 2124936},
-        ]
-        self.assertEqual([bar[0] for bar in scan.stored_bars(bars)], ['2014-08-29', '2014-09-02'])
-
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.assertEqual(self.run_scan(), 2)
