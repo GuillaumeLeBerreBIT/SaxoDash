@@ -275,7 +275,7 @@ describe('WatchlistRail', () => {
 
     expect(queries.useVerdictSummary).toHaveBeenCalledTimes(1)
     expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'ASML', 'NVDA'])
-    expect(screen.getByText('Strong quality')).toBeInTheDocument()
+    expect(screen.getByText('Passes quality screen')).toBeInTheDocument()
     expect(screen.queryByText('Hold')).not.toBeInTheDocument()
     expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(3)
   })
@@ -292,7 +292,7 @@ describe('WatchlistRail', () => {
   it('shows no verdict badge until the summary has answered', () => {
     render()
 
-    expect(screen.queryByText('Strong quality')).not.toBeInTheDocument()
+    expect(screen.queryByText('Passes quality screen')).not.toBeInTheDocument()
   })
 
   it('folds the list away and back from the chevron', async () => {

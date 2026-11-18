@@ -8,7 +8,7 @@ import { chartPlaceholderFor } from '../../lib/chartState'
 import { fitChartPanes, overlayStrokes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { RVOL_WINDOW } from '../../lib/indicators'
-import { bandAt, guideSeries, readPrice, stepAt, visibleGuides } from '../../lib/valueGuides'
+import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
 import { useChartColors } from '../../theme/useChartColors'
@@ -36,32 +36,21 @@ const WIDEST_VALUES = {
   overlays: Object.fromEntries(OVERLAY_DEFS.map(({ key }) => [key, WIDEST_VALUE])),
 }
 
-const READING_WORDS = { cheap: 'below its usual range', fair: 'within its usual range', expensive: 'above its usual range' }
-
 const gapLegend = (gap) =>
   [
     `Gap ${gap.up ? 'up' : 'down'}`,
     `${fmtNum(Math.abs(gap.to / gap.from - 1) * 100, 1)}% · ${fmtNum(gap.rvol, 1)}x vol · ${gap.filled ? `filled ${fmtDate(gap.filledOn)}` : 'open'}`,
   ]
 
-function guideLegend(valueGuides, gaps, bar, index) {
+function guideLegend(gaps, index) {
   const items = []
-  const step = stepAt(valueGuides?.line, bar.date)
-  const levels = bandAt(step, valueGuides?.band)
-  if (levels) {
-    items.push(['P/E then', fmtNum(bar.close / step.eps_ttm, 1)])
-    items.push(['', READING_WORDS[readPrice(bar.close, levels)]])
-  }
   const gap = gaps.find((candidate) => candidate.index === index)
   if (gap) items.push(gapLegend(gap))
   return items
 }
 
-function widestGuideLegend(valueGuides, gaps) {
+function widestGuideLegend(gaps) {
   const items = []
-  if (valueGuides?.line?.length && valueGuides.band) {
-    items.push(['P/E then', fmtNum(9999.9, 1)], ['', READING_WORDS.expensive])
-  }
   if (gaps.length) items.push(gapLegend({ up: false, from: 1, to: 0.001, rvol: WIDEST_RVOL, filled: true, filledOn: '2026-09-30' }))
   return items
 }
@@ -220,7 +209,7 @@ export default function ChartCanvas({
               change={WIDEST_CHANGE}
               overlays={overlays}
               values={WIDEST_VALUES}
-              guides={widestGuideLegend(valueGuides, shownGaps)}
+              guides={widestGuideLegend(shownGaps)}
               className="invisible"
               aria-hidden="true"
             />
@@ -229,7 +218,7 @@ export default function ChartCanvas({
               change={barChange(bars, hover)}
               overlays={overlays}
               values={legendValues(ind, hover)}
-              guides={guideLegend(valueGuides, shownGaps, bar, hover ?? bars.length - 1)}
+              guides={guideLegend(shownGaps, hover ?? bars.length - 1)}
               className="absolute inset-x-0 top-0"
             />
           </>

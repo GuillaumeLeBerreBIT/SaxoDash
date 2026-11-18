@@ -593,16 +593,21 @@ watched) is served only to a user who holds or watches it (`verdicts/visibility.
 lists only universe calls plus the user's own, otherwise any signed-in user could learn what another holds
 by asking for its ticker; for anyone else the answer is `null`, as for an unknown ticker.
 
-**The buy grade is quality alone; the price is described, not judged (2026-11-18).** The yardstick test
+**Passing the quality screen is described, not recommended; the price is described, not judged (2026-11-18).** The yardstick test
 (`docs/research/2026-11-valuation-yardsticks.md`, `manage.py grade_valuation`) graded the stock's own P/E
 range on 23 years of stored history, point in time: stocks at or below their 25th-percentile P/E did worse
 than the average stock over the next year (-2.6%, 95% range -3.7% to -1.3%, both halves; -7.4% since 2023),
 and survivorship flatters that figure. So the buy grade (`compute._is_buy_grade`, `actions.action`) needs
 only `strong` quality, the price no longer opens, blocks or labels a call, and `action` no longer takes the
-valuation. `VerdictCall.rule` separates the two track records: migration 0005 marks every earlier call
+valuation. Nothing showed that quality alone earns a buy either, so the `buy` and `add` actions (internal
+names, kept for the API) are shown as "Passes quality screen" in neutral colours, the daily brief no longer raises
+them, and the Trade plan always says its figures are arithmetic for the user's own decision. `VerdictCall.rule` separates the two track records: migration 0005 marks every earlier call
 `quality_and_cheap` and ends the open ones, and `track_record.report` reads only `quality` calls. The
-valuation grade stays as a description ("Below / Within / Above usual P/E") in neutral colours, the chart's
-usual-P/E range is off by default, and the "Worth a look" endpoint, which ranked strong-and-cheap stocks by
+valuation grade stays as a description ("Below / Within / Above usual P/E") in neutral colours, with today's range
+in the Price card, the sentence and the P/E chip. The chart draws no past P/E band and `StockVerdict` stores no EPS
+line: a band on past candles stepped earnings on the fiscal period end, before they were published, and applied
+today's quartiles to earlier days, so it showed a range nobody could have seen then. It comes back only with real
+earnings release dates and the P/E range as it stood on each candle. The "Worth a look" endpoint, which ranked strong-and-cheap stocks by
 their distance under the cheap line and had no caller, is gone. The growth line's "expensive" reading did
 show evidence as a warning (-2.5% a year); it was not the hypothesis under test, so it needs its own
 pre-registered test before it is shown. The PEG wording in the Investment snapshot and the quality-valuation
@@ -705,7 +710,7 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).** Superseded in part the same day: after the yardstick test the range is off by default, grey, and labelled low end and high end, not cheap and expensive (see "The buy grade is quality alone").
+**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).** Superseded the same day: the chart no longer draws the P/E range on past candles at all, because the band used earnings before their release and today's quartiles on earlier days (see "Passing the quality screen is described, not recommended").
 Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
 on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
 showed the marks win no more often than a random day: 58% against 59%). The flat green and amber zones that

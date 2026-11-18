@@ -12,11 +12,6 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='stockverdict',
-            name='eps_line',
-            field=models.JSONField(blank=True, db_default=[], default=list),
-        ),
-        migrations.AddField(
-            model_name='stockverdict',
             name='pe_p25',
             field=models.FloatField(blank=True, null=True),
         ),

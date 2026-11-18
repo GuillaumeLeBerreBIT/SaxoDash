@@ -44,16 +44,6 @@ function overCap(position, verdict, total) {
   }
 }
 
-function add(position) {
-  return {
-    kind: 'add',
-    tone: 'up',
-    word: 'Add',
-    title: `${position.name} passes the quality checks`,
-    body: `The quality checks pass and it is under your ${WEIGHT_CAP_PCT}% cap.`,
-  }
-}
-
 const whenText = (days) => (days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`)
 
 export function briefItems({ positions, verdicts, total, fundBuys, fundSells, earnings }) {
@@ -74,9 +64,6 @@ export function briefItems({ positions, verdicts, total, fundBuys, fundSells, ea
   reports.filter((report) => report.days_until <= SOON_DAYS).forEach(reportItem)
   for (const position of positions.map(named)) {
     if (Number(position.weight) > WEIGHT_CAP_PCT) push(position, overCap(position, verdicts?.[position.ticker], total))
-  }
-  for (const position of positions.map(named)) {
-    if (verdicts?.[position.ticker]?.action === 'add') push(position, add(position))
   }
   for (const position of positions.map(named)) {
     const count = fundBuys?.get(position.ticker)

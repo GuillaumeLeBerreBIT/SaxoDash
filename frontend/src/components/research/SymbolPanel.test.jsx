@@ -97,7 +97,7 @@ describe('SymbolPanel', () => {
     queries.useVerdict.mockReturnValue({ data: { action: 'buy', reason: 'Quality passes' } })
     renderWithProviders(panel())
 
-    expect(screen.getByTestId('panel-verdict')).toHaveTextContent('Strong quality. Quality passes.')
+    expect(screen.getByTestId('panel-verdict')).toHaveTextContent('Passes quality screen. Quality passes.')
     expect(queries.useVerdict).toHaveBeenCalledWith('NOW')
     expect(screen.queryByRole('heading', { name: 'Performance' })).not.toBeInTheDocument()
     expect(screen.queryByText('Volume')).not.toBeInTheDocument()

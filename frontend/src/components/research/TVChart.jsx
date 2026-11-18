@@ -21,7 +21,7 @@ import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { GapBoxes, GuideTags, HighLine, StopGuide, ValueZones } from './ChartGuides'
+import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -268,7 +268,6 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       <g clipPath={`url(#${clipId})`}>
         {guides ? (
           <g data-testid="value-guides">
-            <ValueZones line={guides.line} band={guides.band} data={data} geometry={geometry} colors={colors} />
             <GapBoxes gaps={guides.gaps} geometry={geometry} colors={colors} />
             <HighLine highs={guides.highs} geometry={geometry} colors={colors} />
           </g>
@@ -359,7 +358,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         <EarningsLane markers={earningsMarkers} geometry={geometry} colors={colors} onInspect={onInspectEarnings} />
       ) : null}
 
-      {guides ? <GuideTags line={guides.line} band={guides.band} highs={guides.highs} data={data} geometry={geometry} width={width} colors={colors} /> : null}
+      {guides ? <GuideTags highs={guides.highs} data={data} geometry={geometry} width={width} colors={colors} /> : null}
 
       <g>
         <rect x={width - PAD_R + 2} y={scaleY(last) - 8} width={PAD_R - 4} height={16} rx={2} fill={colors.primary} />
@@ -541,11 +540,9 @@ export function TVChart({
   const showHigh = Boolean(valueGuides?.high)
   const showGaps = Boolean(valueGuides?.gaps)
   const series = useMemo(() => guideSeries(guideBars, { high: showHigh, gaps: showGaps }), [guideBars, showHigh, showGaps])
-  const guideLine = valueGuides?.line ?? null
-  const guideBand = valueGuides?.band ?? null
   const guides = useMemo(
-    () => (valueGuides ? { line: guideLine, band: guideBand, ...visibleGuides(series, guideBars, data) } : null),
-    [valueGuides, guideLine, guideBand, series, guideBars, data],
+    () => (valueGuides ? visibleGuides(series, guideBars, data) : null),
+    [valueGuides, series, guideBars, data],
   )
 
   const geometry = useMemo(

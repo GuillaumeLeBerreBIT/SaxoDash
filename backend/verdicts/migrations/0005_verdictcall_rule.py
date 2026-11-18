@@ -11,7 +11,7 @@ def retire_cheap_calls(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('verdicts', '0004_stockverdict_eps_line'),
+        ('verdicts', '0004_stockverdict_pe_percentiles'),
     ]
 
     operations = [

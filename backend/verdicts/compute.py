@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from research.models import DailyBars, ScreenerRow
 
-from . import eps_line, price_line, rules
+from . import price_line, rules
 from .models import StockVerdict, VerdictCall
 
 logger = logging.getLogger(__name__)
@@ -46,10 +46,6 @@ def quarterly_eps(row):
     return list(parsed.items())
 
 
-def _eps_line(row, today):
-    return eps_line.steps(quarterly_eps(row), today)
-
-
 def _pe_percentiles(row):
     levels = rules._levels(row.pe_history)
     if levels is None:
@@ -73,7 +69,6 @@ def _store(row, quality, valuation, today):
             'expensive_above': valuation['expensive_above'],
             'pe_p25': pe_p25,
             'pe_p75': pe_p75,
-            'eps_line': _eps_line(row, today),
             'last_close': row.last_close,
             'pct_vs_ma200': row.pct_vs_ma200,
             'spark': spark,

@@ -14,9 +14,9 @@ describe('PeChip', () => {
     expect(element.title).toBe("Today's P/E against the middle half of its own weekly P/E over about the last five years")
   })
 
-  it.each([['below', 'bg-up'], ['above', 'bg-warn'], ['inside', 'bg-ink-3']])('colours the dot for %s', (position, cls) => {
+  it.each(['below', 'above', 'inside'])('keeps the dot neutral when the P/E is %s its range', (position) => {
     render(<PeChip chip={chip(position)} />)
-    expect(screen.getByTestId('pe-chip-dot')).toHaveClass(cls)
+    expect(screen.getByTestId('pe-chip-dot')).toHaveClass('bg-ink-3')
   })
 
   it('words the inside and above readings', () => {

@@ -41,11 +41,11 @@ describe('GuideTab', () => {
     expect(screen.getByRole('region', { name: 'No edge found' })).toHaveTextContent('No edge found in 7,657 cases')
   })
 
-  it('explains the four chart guides and the evidence for the gaps', () => {
+  it('explains the three chart guides and the evidence for the gaps', () => {
     render(<GuideTab />)
 
     const section = screen.getByRole('region', { name: 'Chart guides' })
-    for (const name of ['Usual P/E range', 'P/E chip', '52-week high', 'Volume gaps']) {
+    for (const name of ['P/E chip', '52-week high', 'Volume gaps']) {
       expect(section).toHaveTextContent(name)
     }
     expect(section).toHaveTextContent(/gap up held up/i)

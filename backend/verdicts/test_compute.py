@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from research.models import DailyBars, ScreenerRow
 
-from . import compute, eps_line
+from . import compute
 from .models import StockVerdict, VerdictCall
 
 STRONG_HISTORY = {'annual': [
@@ -266,34 +266,20 @@ def quarters(count=20, last=date(2026, 9, 30)):
     return [(end, 1.0 + index * 0.1) for index, end in enumerate(ends)]
 
 
-class EpsLineStoredTest(TestCase):
-    def test_stores_the_eps_line_and_pe_percentiles(self):
-        parsed = quarters()
-        history = {'quarterly_eps': [[end.isoformat(), value] for end, value in parsed]}
+class PercentilesStoredTest(TestCase):
+    def test_stores_the_pe_percentiles(self):
         pe = {'p25': 20.0, 'p75': 30.0, 'current': 25.0, 'eps_ttm': 4.0, 'weeks': 200}
-        make_row('AAPL', fundamentals_history=history, pe_history=pe)
+        make_row('AAPL', pe_history=pe)
 
         compute.run(today=DAY_ONE)
 
         verdict = StockVerdict.objects.get(ticker='AAPL')
-        self.assertEqual(verdict.eps_line, eps_line.steps(parsed, DAY_ONE))
-        self.assertTrue(verdict.eps_line)
         self.assertEqual((verdict.pe_p25, verdict.pe_p75), (20.0, 30.0))
-
-    def test_a_row_without_eps_history_gets_an_empty_line(self):
-        make_row('AAPL')
-
-        result = compute.run(today=DAY_ONE)
-
-        self.assertEqual(result.written, 1)
-        self.assertEqual(StockVerdict.objects.get().eps_line, [])
 
     def test_a_row_with_empty_history_still_gets_a_verdict(self):
         make_row('AAPL', fundamentals_history={})
 
-        compute.run(today=DAY_ONE)
-
-        self.assertEqual(StockVerdict.objects.get().eps_line, [])
+        self.assertEqual(compute.run(today=DAY_ONE).written, 1)
 
     def test_not_judged_has_no_percentiles(self):
         make_row('AAPL', pe_history={})
@@ -304,6 +290,8 @@ class EpsLineStoredTest(TestCase):
         self.assertIsNone(verdict.pe_p25)
         self.assertIsNone(verdict.pe_p75)
 
+
+class QuarterlyEpsTest(TestCase):
     def test_unusable_entries_are_skipped_and_duplicate_period_ends_keep_the_last(self):
         clean = quarters()
         entries = [[end.isoformat(), value] for end, value in clean]
@@ -311,10 +299,6 @@ class EpsLineStoredTest(TestCase):
         entries.insert(0, ['2020-03-31', None])
         entries.insert(0, ['not a date', 1.0])
         entries.insert(0, ['2020-06-30', 'n/a'])
-        make_row('AAPL', fundamentals_history={'quarterly_eps': entries})
+        row = make_row('AAPL', fundamentals_history={'quarterly_eps': entries})
 
-        compute.run(today=DAY_ONE)
-
-        self.assertEqual(
-            StockVerdict.objects.get().eps_line, eps_line.steps(clean, DAY_ONE),
-        )
+        self.assertEqual(sorted(compute.quarterly_eps(row)), clean)

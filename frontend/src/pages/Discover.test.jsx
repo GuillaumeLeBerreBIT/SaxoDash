@@ -86,7 +86,7 @@ describe('Discover page', () => {
     expect(first).toHaveTextContent('ZTS')
     expect(first).toHaveTextContent('50% below its usual P/E range')
     expect(first).toHaveTextContent('6 of 7 quality checks pass; debt fails.')
-    expect(first).toHaveTextContent('Strong quality')
+    expect(first).toHaveTextContent('Passes quality screen')
     expect(within(first).getByRole('link', { name: 'ZTS' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
     expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('quality=strong'))
   })

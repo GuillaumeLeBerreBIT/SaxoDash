@@ -1,8 +1,6 @@
-import { useId } from 'react'
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
-import { bandAt, stepAt } from '../../lib/valueGuides'
 
 const TAG_HEIGHT = 18
 const COMPACT_BELOW = 520
@@ -35,64 +33,6 @@ function stepPath(values, xAt, scaleY, last) {
     previous = value
   })
   return previous != null ? `${d} H ${xAt(last)}` : d
-}
-
-const ZONE_DEPTH = 0.1
-const ZONE_OPACITY = 0.3
-const EDGE_OPACITY = 0.8
-
-function stepRuns(data, line, band) {
-  const runs = []
-  data.forEach((bar, i) => {
-    const step = stepAt(line, bar.date)
-    const open = runs[runs.length - 1]
-    if (open && open.step === step) open.end = i
-    else runs.push({ step, start: i, end: i })
-  })
-  return runs
-    .map((run, i) => ({ ...run, levels: bandAt(run.step, band), right: i + 1 < runs.length && bandAt(runs[i + 1].step, band) ? run.end + 1 : run.end }))
-    .filter((run) => run.levels)
-}
-
-function Fade({ id, color, from }) {
-  return (
-    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stopColor={color} stopOpacity={from} />
-      <stop offset="1" stopColor={color} stopOpacity={ZONE_OPACITY - from} />
-    </linearGradient>
-  )
-}
-
-export function ValueZones({ line, band, data, geometry, colors }) {
-  const id = useId()
-  if (!band || !line?.length || !data.length) return null
-  const runs = stepRuns(data, line, band)
-  if (!runs.length) return null
-  const { xAt, scaleY } = geometry
-  const last = data.length - 1
-  const levels = data.map((bar) => bandAt(stepAt(line, bar.date), band))
-  const cheapPath = stepPath(levels.map((level) => level?.cheap ?? null), xAt, scaleY, last)
-  const expensivePath = stepPath(levels.map((level) => level?.expensive ?? null), xAt, scaleY, last)
-  const zone = (kind, edge, far, start, right) => {
-    const top = scaleY(Math.max(edge, far))
-    return (
-      <rect key={`${kind}-${start}`} data-zone={kind} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={scaleY(Math.min(edge, far)) - top} fill={`url(#${id}${kind})`} />
-    )
-  }
-  return (
-    <g data-testid="value-zones" pointerEvents="none">
-      <defs>
-        <Fade id={`${id}cheap`} color={colors.axisCategory} from={ZONE_OPACITY} />
-        <Fade id={`${id}expensive`} color={colors.axisCategory} from={0} />
-      </defs>
-      {runs.map(({ levels: { cheap, expensive }, start, right }) => [
-        zone('cheap', cheap, cheap * (1 - ZONE_DEPTH), start, right),
-        zone('expensive', expensive, expensive * (1 + ZONE_DEPTH), start, right),
-      ])}
-      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.axisCategory} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
-      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.axisCategory} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
-    </g>
-  )
 }
 
 export function HighLine({ highs, geometry, colors }) {
@@ -151,15 +91,10 @@ const GUIDE_FONT = 11
 
 const signedPercent = (value) => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}%`
 
-function guideTagItems({ line, band, highs, data, colors }) {
+function guideTagItems({ highs, data, colors }) {
   const lastBar = data[data.length - 1]
   if (!lastBar) return []
   const items = []
-  const levels = bandAt(stepAt(line, lastBar.date), band)
-  if (levels) {
-    items.push({ key: 'expensive', price: levels.expensive, words: `High end · P/E ${Math.round(band.high)}`, stroke: colors.axisCategory, text: colors.axisCategory })
-    items.push({ key: 'cheap', price: levels.cheap, words: `Low end · P/E ${Math.round(band.low)}`, stroke: colors.axisCategory, text: colors.axisCategory })
-  }
   const high = highs?.[highs.length - 1]
   if (high != null) {
     const words = `52w high ${signedPercent((lastBar.close / high - 1) * 100)}`
@@ -191,8 +126,8 @@ function EdgeArrow({ x, y, edge, fill }) {
   return <polygon data-edge={edge} points={points} fill={fill} />
 }
 
-export function GuideTags({ line, band = null, highs, data, geometry, width, colors }) {
-  const tags = placeTags(guideTagItems({ line, band, highs, data, colors }), geometry)
+export function GuideTags({ highs, data, geometry, width, colors }) {
+  const tags = placeTags(guideTagItems({ highs, data, colors }), geometry)
   if (!tags.length) return null
   const gutter = width - PAD_R
   return (

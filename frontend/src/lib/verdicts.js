@@ -1,8 +1,8 @@
 import { ownershipTicker } from './ownership'
 
 export const ACTION_LABEL = {
-  buy: 'Strong quality',
-  add: 'Add',
+  buy: 'Passes quality screen',
+  add: 'Passes quality screen',
   hold: 'Hold',
   trim: 'Trim',
   sell_review: 'Review',
@@ -23,7 +23,7 @@ export const CHECK_STATUS_LABEL = { pass: 'Pass', fail: 'Fail', unknown: 'Unknow
 
 const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth', 'cash'])
 
-const TONE = { buy: 'up', add: 'up', trim: 'warn', sell_review: 'warn' }
+const TONE = { trim: 'warn', sell_review: 'warn' }
 
 export const actionTone = (action) => TONE[action]
 

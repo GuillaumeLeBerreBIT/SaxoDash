@@ -123,11 +123,9 @@ export default function Research() {
     const judged = signalsForListing(judgedVerdict, listingUic)
     const chip = peChip(judged)
     return {
-      available: [...(judged ? ['value'] : []), 'high52', 'gaps', ...(plan ? ['plan'] : [])],
+      available: ['high52', 'gaps', ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
       valueGuides: {
-        line: shown.value && chip ? judged.eps_line ?? null : null,
-        band: shown.value && chip ? { low: chip.low, high: chip.high } : null,
         high: shown.high52,
         gaps: shown.gaps,
         currency: guideCurrency,

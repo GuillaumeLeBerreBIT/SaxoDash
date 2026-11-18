@@ -5,8 +5,8 @@ import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSen
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
     expect(ACTION_LABEL).toEqual({
-      buy: 'Strong quality',
-      add: 'Add',
+      buy: 'Passes quality screen',
+      add: 'Passes quality screen',
       hold: 'Hold',
       trim: 'Trim',
       sell_review: 'Review',
@@ -20,9 +20,9 @@ describe('verdict wording', () => {
     expect(actionLabel({ action: 'sell_review' })).toBe('Review')
   })
 
-  it('colours buying up and trimming as a warning', () => {
-    expect(actionTone('buy')).toBe('up')
-    expect(actionTone('add')).toBe('up')
+  it('never colours passing the quality screen as a buy, and colours trimming as a warning', () => {
+    expect(actionTone('buy')).toBeUndefined()
+    expect(actionTone('add')).toBeUndefined()
     expect(actionTone('trim')).toBe('warn')
     expect(actionTone('hold')).toBeUndefined()
   })

@@ -22,9 +22,8 @@ describe('briefItems', () => {
     expect(items[0].body).toBe('Your cap is 15%. Trimming back to 15% would free about €1,470. This is about concentration, not the company.')
   })
 
-  it('says when a holding can be added to', () => {
-    const items = briefItems({ ...base, positions: [position('NVDA', 11)], verdicts: { NVDA: { action: 'add' } } })
-    expect(items[0]).toMatchObject({ ticker: 'NVDA', word: 'Add', tone: 'up', title: 'NVDA passes the quality checks' })
+  it('never raises passing the quality screen as something to act on', () => {
+    expect(briefItems({ ...base, positions: [position('NVDA', 11)], verdicts: { NVDA: { action: 'add' } } })).toEqual([])
   })
 
   it('reports fund buying and selling of what you hold, and reports coming up', () => {

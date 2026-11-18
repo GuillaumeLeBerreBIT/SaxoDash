@@ -1,55 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { rollingHigh } from './indicators'
-import { bandAt, entrySentence, guideSeries, peChip, readPrice, stepAt, visibleGuides } from './valueGuides'
+import { entrySentence, guideSeries, peChip, visibleGuides } from './valueGuides'
 
-const step = { from: '2026-08-30', eps_ttm: 4 }
-const lineEnd = { from: '2026-09-30', eps_ttm: null }
-const band = { low: 20, high: 30 }
 const verdict = (extra = {}) => ({
-  action: 'buy', quality: 'strong', valuation: 'fair', eps_line: [step],
+  action: 'buy', quality: 'strong', valuation: 'fair',
   pe_p25: 20, pe_p75: 30, cheap_below: 80, expensive_above: 120, ...extra,
 })
 const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size: { shares: 3, lossAtStop: 45 }, currency: 'USD' }
-
-describe('bandAt', () => {
-  it('is the earnings known that day at the usual low and high P/E', () => {
-    expect(bandAt(step, band)).toEqual({ cheap: 80, expensive: 120 })
-  })
-
-  it('is nothing without positive earnings or a band', () => {
-    expect(bandAt(lineEnd, band)).toBeNull()
-    expect(bandAt(null, band)).toBeNull()
-    expect(bandAt(step, null)).toBeNull()
-  })
-})
-
-describe('readPrice', () => {
-  it('reads cheap at or below the low line and expensive at or above the high line, as the verdict does', () => {
-    const levels = bandAt(step, band)
-    expect(readPrice(79, levels)).toBe('cheap')
-    expect(readPrice(80, levels)).toBe('cheap')
-    expect(readPrice(81, levels)).toBe('fair')
-    expect(readPrice(119, levels)).toBe('fair')
-    expect(readPrice(120, levels)).toBe('expensive')
-  })
-
-  it('reads nothing without a price or levels', () => {
-    expect(readPrice(null, bandAt(step, band))).toBeNull()
-    expect(readPrice(100, null)).toBeNull()
-  })
-})
-
-describe('stepAt', () => {
-  it('finds the step covering a date and nothing before the first', () => {
-    const line = [{ ...step, from: '2026-01-10' }, { from: '2026-04-10', eps_ttm: 5 }]
-    expect(stepAt(line, '2026-01-09')).toBeNull()
-    expect(stepAt(line, '2026-04-09').eps_ttm).toBe(4)
-    expect(stepAt(line, '2026-05-01').eps_ttm).toBe(5)
-    expect(stepAt([], '2026-05-01')).toBeNull()
-    expect(stepAt(null, '2026-05-01')).toBeNull()
-  })
-})
 
 describe('peChip', () => {
   it('places the P/E against its usual range', () => {
@@ -90,8 +48,8 @@ describe('entrySentence', () => {
 
   it('shapes the result as word, tone, why, next, risk and earnings', () => {
     expect(entrySentence({ verdict: verdict(), price: 100, plan, currency: 'USD' })).toEqual({
-      word: 'STRONG QUALITY',
-      tone: 'up',
+      word: 'PASSES QUALITY SCREEN',
+      tone: undefined,
       why: 'Strong company, P/E within its usual range.',
       next: 'Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy signal.',
       risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",

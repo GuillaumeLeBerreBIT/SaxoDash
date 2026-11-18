@@ -169,11 +169,10 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('describes the usual P/E range as a rule of thumb, with the range and its P/E chip off until switched on', async () => {
-    const line = [{ from: '2020-01-01', eps_ttm: 4 }]
+  it('describes today\'s usual P/E range as a rule of thumb, shows the P/E chip, and offers no past P/E band', async () => {
     queries.useVerdict.mockReturnValue({
       ...idle,
-      data: { ...judged, eps_line: line, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
+      data: { ...judged, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
     })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
@@ -183,14 +182,13 @@ describe('Research', () => {
     const card = screen.getByTestId('answer-card')
     expect(card).toHaveTextContent('Strong company, P/E within its usual range.')
     expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
-    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
+    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
+    expect(screen.queryByTestId('value-zones')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    for (const name of [/Value: usual P\/E range/, /52-week high/, /Volume gaps/]) {
+    for (const name of [/52-week high/, /Volume gaps/]) {
       expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
     }
-    await userEvent.click(screen.getByRole('menuitem', { name: /Value: usual P\/E range/ }))
-    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.value).toBe(true)
+    expect(screen.queryByRole('menuitem', { name: /P\/E/ })).not.toBeInTheDocument()
   })
 
   it('says the price cannot be judged without a usual P/E range', () => {

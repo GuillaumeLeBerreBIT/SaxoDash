@@ -13,7 +13,6 @@ class StockVerdict(models.Model):
     expensive_above = models.FloatField(null=True, blank=True)
     pe_p25 = models.FloatField(null=True, blank=True)
     pe_p75 = models.FloatField(null=True, blank=True)
-    eps_line = models.JSONField(default=list, blank=True, db_default=[])
     last_close = models.FloatField(null=True, blank=True)
     pct_vs_ma200 = models.FloatField(null=True, blank=True)
     spark = models.JSONField(default=list, blank=True)

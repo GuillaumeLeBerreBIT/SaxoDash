@@ -6,27 +6,6 @@ const QUALITY_WORDS = { strong: 'Strong company', mixed: 'Mixed company', weak: 
 const ZONE_WORDS = { cheap: 'P/E below its usual range', fair: 'P/E within its usual range', expensive: 'P/E above its usual range' }
 const NOT_JUDGED = 'Too little P/E history to judge the price.'
 
-export function stepAt(line, date) {
-  if (!line?.length) return null
-  let found = null
-  for (const step of line) {
-    if (step.from <= date) found = step
-    else break
-  }
-  return found
-}
-
-export function bandAt(step, band) {
-  if (!band || !(step?.eps_ttm > 0)) return null
-  return { cheap: step.eps_ttm * band.low, expensive: step.eps_ttm * band.high }
-}
-
-export function readPrice(close, levels) {
-  if (close == null || !levels) return null
-  if (close <= levels.cheap) return 'cheap'
-  return close >= levels.expensive ? 'expensive' : 'fair'
-}
-
 export function guideSeries(bars, { high, gaps }) {
   return {
     highs: high ? rollingHigh(bars) : null,

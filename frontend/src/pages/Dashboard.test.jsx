@@ -142,7 +142,7 @@ describe('Dashboard', () => {
     const holdings = panel('Your holdings')
     const tickers = within(holdings).getAllByText(/^(AAA|BBB)$/).map((node) => node.textContent)
     expect(tickers).toEqual(['AAA', 'BBB'])
-    expect(within(holdings).getByText('Add')).toHaveClass('text-up')
+    expect(within(holdings).getByText('Passes quality screen')).toHaveClass('text-ink-3')
   })
 
   it('keeps the data notes in one quiet line at the bottom', () => {

@@ -85,7 +85,7 @@ export function HoldingsList({ positions, verdictOf, quotes, upcomingEarnings, c
             <li key={position.uic ?? position.ticker} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-line py-2.5 first:border-t-0 num">
               <span className="flex min-w-0 flex-col">
                 <span className="text-[14px] font-bold text-ink">{position.ticker}</span>
-                {verdict ? <span className={`truncate text-[12px] font-semibold ${verdict.action === 'sell_review' || verdict.action === 'trim' ? 'text-warn' : verdict.action === 'add' ? 'text-up' : 'text-ink-3'}`}>{actionLabel(verdict)}</span> : null}
+                {verdict ? <span className={`truncate text-[12px] font-semibold ${verdict.action === 'sell_review' || verdict.action === 'trim' ? 'text-warn' : 'text-ink-3'}`}>{actionLabel(verdict)}</span> : null}
               </span>
               <span className="text-[14px] text-ink">{fmtEur(position.value, { decimals: 0 })}</span>
               <span className={`w-16 text-right text-[13px] ${change == null ? 'text-ink-3' : change >= 0 ? 'text-up' : 'text-down'}`}>

@@ -55,7 +55,6 @@ def _detail(verdict, weight, held):
         'expensive_above': verdict.expensive_above,
         'pe_p25': verdict.pe_p25,
         'pe_p75': verdict.pe_p75,
-        'eps_line': verdict.eps_line,
         'last_close': verdict.last_close,
         'pct_vs_ma200': verdict.pct_vs_ma200,
         'held': held,
