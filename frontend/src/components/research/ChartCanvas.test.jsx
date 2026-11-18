@@ -268,10 +268,10 @@ describe('ChartCanvas value guides', () => {
     const { container } = render(canvas({ hover: 12, valueGuides: { line: [step], band, high: true, gaps: true, currency: 'USD' } }))
 
     expect(legend(container)).toHaveTextContent(/P\/E then 25\.3/)
-    expect([...legend(container).children].map((cell) => cell.textContent)).toContain('expensive')
+    expect([...legend(container).children].map((cell) => cell.textContent)).toContain('above its usual range')
   })
 
-  it('draws the cheap and expensive zones and no growth line', () => {
+  it('draws the usual P/E range and no growth line', () => {
     const { container } = render(canvas({ valueGuides: { line: [step], band, high: false, gaps: false, currency: 'USD' } }))
 
     expect(container.querySelector('[data-testid="value-zones"]')).not.toBeNull()

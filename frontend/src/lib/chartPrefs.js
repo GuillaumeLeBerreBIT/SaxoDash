@@ -9,7 +9,7 @@ export const DEFAULT_CHART_PREFS = {
   type: 'candles',
   overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
   panes: { volume: true, rsi: false, macd: false },
-  guides: { value: true, high52: true, gaps: true, plan: false },
+  guides: { value: false, high52: true, gaps: true, plan: false },
 }
 
 function sanitizeToggles(raw, defaults) {
@@ -22,12 +22,6 @@ function sanitizeToggles(raw, defaults) {
   )
 }
 
-function sanitizeGuides(raw, defaults) {
-  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
-  const migrated = source.value === undefined && source.zones !== undefined ? { ...source, value: source.zones } : source
-  return sanitizeToggles(migrated, defaults)
-}
-
 export function sanitizeChartPrefs(raw, defaults = DEFAULT_CHART_PREFS) {
   const source = raw && typeof raw === 'object' ? raw : {}
   return {
@@ -35,7 +29,7 @@ export function sanitizeChartPrefs(raw, defaults = DEFAULT_CHART_PREFS) {
     type: CHART_TYPE_KEYS.has(source.type) ? source.type : defaults.type,
     overlays: sanitizeToggles(source.overlays, defaults.overlays),
     panes: sanitizeToggles(source.panes, defaults.panes),
-    guides: sanitizeGuides(source.guides, defaults.guides),
+    guides: sanitizeToggles(source.guides, defaults.guides),
   }
 }
 

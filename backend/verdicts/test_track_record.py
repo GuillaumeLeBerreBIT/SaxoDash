@@ -29,10 +29,10 @@ def store(ticker, *points):
     )
 
 
-def call(ticker='AAA', opened_on=OPENED, ended_on=None):
+def call(ticker='AAA', opened_on=OPENED, ended_on=None, rule='quality'):
     return VerdictCall.objects.create(
         ticker=ticker, opened_on=opened_on, entry_close=100.0,
-        quality='Strong', valuation='Cheap', ended_on=ended_on,
+        quality='Strong', valuation='Cheap', ended_on=ended_on, rule=rule,
     )
 
 
@@ -90,6 +90,11 @@ class ReportTest(TestCase):
         latest = track_record.report(today=at(120))['calls'][0]['latest']
 
         self.assertEqual(latest['day'], at(91).isoformat())
+
+    def test_calls_under_the_retired_cheap_rule_are_left_out(self):
+        call('OLD', ended_on=OPENED, rule='quality_and_cheap')
+
+        self.assertEqual(track_record.report(today=OPENED)['calls'], [])
 
     def test_no_calls_gives_an_empty_report_not_zeros(self):
         result = track_record.report(today=LATE)

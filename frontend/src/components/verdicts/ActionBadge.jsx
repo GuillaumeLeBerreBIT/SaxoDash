@@ -11,7 +11,7 @@ export default function ActionBadge({ verdict, className = '' }) {
       </span>
     )
   }
-  const toneName = verdict.capped ? 'warn' : actionTone(verdict.action)
+  const toneName = actionTone(verdict.action)
   const tone = TONE_TEXT[toneName] ?? 'text-ink-2'
   return (
     <span

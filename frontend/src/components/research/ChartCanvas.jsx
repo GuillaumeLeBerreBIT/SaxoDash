@@ -36,7 +36,7 @@ const WIDEST_VALUES = {
   overlays: Object.fromEntries(OVERLAY_DEFS.map(({ key }) => [key, WIDEST_VALUE])),
 }
 
-const READING_WORDS = { cheap: 'cheap', fair: 'fair', expensive: 'expensive' }
+const READING_WORDS = { cheap: 'below its usual range', fair: 'within its usual range', expensive: 'above its usual range' }
 
 const gapLegend = (gap) =>
   [

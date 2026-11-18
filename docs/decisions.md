@@ -585,13 +585,28 @@ night (`lookups_failed`), since an unconfirmed listing is not evidence the user 
 **The action is computed per request, from the shared verdict row plus the signed-in user's own weight.**
 `StockVerdict` holds only what is the same for everyone (grades, checks, P/E levels);
 `payload.for_user` reads that user's `Position` rows, sums same-ticker USD stocks into a weight and hands
-it to `actions.action`, so two users can see Wait and Trim, or Buy and Add, for one stock and no per-user table exists to
+it to `actions.action`, so two users can see Buy and Trim, or Buy and Add, for one stock and no per-user table exists to
 keep fresh. `sell_review` (shown as "Review") comes only from a `weak` quality grade: no rule reads a price
-change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) and expensive is
-`trim`, and over it and cheap is `hold`, never `add`, so the badge cannot contradict the cap drawn beside it; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
+change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) is `trim`, whatever
+the price, since the cap is the user's own concentration rule; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
 watched) is served only to a user who holds or watches it (`verdicts/visibility.py`), and the track record
 lists only universe calls plus the user's own, otherwise any signed-in user could learn what another holds
 by asking for its ticker; for anyone else the answer is `null`, as for an unknown ticker.
+
+**The buy grade is quality alone; the price is described, not judged (2026-11-18).** The yardstick test
+(`docs/research/2026-11-valuation-yardsticks.md`, `manage.py grade_valuation`) graded the stock's own P/E
+range on 23 years of stored history, point in time: stocks at or below their 25th-percentile P/E did worse
+than the average stock over the next year (-2.6%, 95% range -3.7% to -1.3%, both halves; -7.4% since 2023),
+and survivorship flatters that figure. So the buy grade (`compute._is_buy_grade`, `actions.action`) needs
+only `strong` quality, the price no longer opens, blocks or labels a call, and `action` no longer takes the
+valuation. `VerdictCall.rule` separates the two track records: migration 0005 marks every earlier call
+`quality_and_cheap` and ends the open ones, and `track_record.report` reads only `quality` calls. The
+valuation grade stays as a description ("Below / Within / Above usual P/E") in neutral colours, the chart's
+usual-P/E range is off by default, and the "Worth a look" endpoint, which ranked strong-and-cheap stocks by
+their distance under the cheap line and had no caller, is gone. The growth line's "expensive" reading did
+show evidence as a warning (-2.5% a year); it was not the hypothesis under test, so it needs its own
+pre-registered test before it is shown. The PEG wording in the Investment snapshot and the quality-valuation
+quadrant are another, untested yardstick and were left as they are.
 
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the
@@ -690,7 +705,7 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).**
+**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).** Superseded in part the same day: after the yardstick test the range is off by default, grey, and labelled low end and high end, not cheap and expensive (see "The buy grade is quality alone").
 Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
 on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
 showed the marks win no more often than a random day: 58% against 59%). The flat green and amber zones that

@@ -45,16 +45,17 @@ describe('GuideTab', () => {
     render(<GuideTab />)
 
     const section = screen.getByRole('region', { name: 'Chart guides' })
-    for (const name of ['Cheap and expensive zones', 'P/E chip', '52-week high', 'Volume gaps']) {
+    for (const name of ['Usual P/E range', 'P/E chip', '52-week high', 'Volume gaps']) {
       expect(section).toHaveTextContent(name)
     }
     expect(section).toHaveTextContent(/gap up held up/i)
     expect(section).toHaveTextContent(/gap down cannot be judged fairly/i)
   })
 
-  it('no longer describes the removed cheap and expensive zones', () => {
+  it('no longer describes cheap and expensive zones, and says the range gave no edge', () => {
     render(<GuideTab />)
-    expect(screen.queryByText('Opportunity and expensive zones')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cheap and expensive zones')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Chart guides' })).toHaveTextContent(/did worse than the average stock/)
   })
 
   it('leaves the list out before any scores exist', () => {

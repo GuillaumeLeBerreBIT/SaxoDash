@@ -3,7 +3,7 @@ import { rollingHigh, volumeGaps } from './indicators'
 import { actionLabel, actionTone } from './verdicts'
 
 const QUALITY_WORDS = { strong: 'Strong company', mixed: 'Mixed company', weak: 'Weak company', unknown: 'Not enough figures on the company' }
-const ZONE_WORDS = { cheap: 'cheap price', fair: 'fair price', expensive: 'expensive price' }
+const ZONE_WORDS = { cheap: 'P/E below its usual range', fair: 'P/E within its usual range', expensive: 'P/E above its usual range' }
 const NOT_JUDGED = 'Too little P/E history to judge the price.'
 
 export function stepAt(line, date) {
@@ -55,7 +55,7 @@ export function peChip(verdict) {
 function priceSentence(verdict, currency) {
   const { cheap_below: cheap, expensive_above: expensive, pe_p25: low, pe_p75: high } = verdict
   if (verdict.valuation === 'not_judged' || cheap == null || expensive == null || low == null || high == null) return NOT_JUDGED
-  return `Cheap below ${fmtMoney(cheap, currency)} (P/E ${Math.round(low)}), expensive above ${fmtMoney(expensive, currency)} (P/E ${Math.round(high)}).`
+  return `Its usual P/E of ${Math.round(low)} to ${Math.round(high)} spans ${fmtMoney(cheap, currency)} to ${fmtMoney(expensive, currency)}. A rule of thumb, not a buy signal.`
 }
 
 const percent = (value) => `${Math.abs(value).toFixed(1)}%`

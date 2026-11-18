@@ -6,7 +6,7 @@ import { Card, Segmented } from '../ui'
 import { useTradeRisk } from './useTradeRisk'
 
 const EARNINGS_WARNING_DAYS = 10
-const NOT_A_BUY = new Set(['not_a_fit', 'sell_review', 'trim', 'wait', 'no_verdict'])
+const NOT_A_BUY = new Set(['not_a_fit', 'sell_review', 'trim', 'no_verdict'])
 const PLAIN = { sign: false, decimals: 1 }
 const RISK_OPTIONS = RISK_CHOICES.map((value) => ({ value, label: `${value}%` }))
 

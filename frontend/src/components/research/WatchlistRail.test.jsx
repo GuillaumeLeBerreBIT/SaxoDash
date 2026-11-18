@@ -264,7 +264,7 @@ describe('WatchlistRail', () => {
     stub({ watchlists: [mixed] })
     queries.useVerdictSummary.mockReturnValue({
       data: {
-        NVDA: { action: 'buy', reason: 'Strong and cheap.', uic: 1249 },
+        NVDA: { action: 'buy', reason: 'Quality passes', uic: 1249 },
         ASML: { action: 'hold', reason: 'Other listing.', uic: 111 },
         AMD: { action: 'hold', reason: 'No uic.', uic: null },
       },
@@ -275,7 +275,7 @@ describe('WatchlistRail', () => {
 
     expect(queries.useVerdictSummary).toHaveBeenCalledTimes(1)
     expect(queries.useVerdictSummary).toHaveBeenCalledWith(['AMD', 'ASML', 'NVDA'])
-    expect(screen.getByText('Opportunity')).toBeInTheDocument()
+    expect(screen.getByText('Strong quality')).toBeInTheDocument()
     expect(screen.queryByText('Hold')).not.toBeInTheDocument()
     expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(3)
   })
@@ -292,7 +292,7 @@ describe('WatchlistRail', () => {
   it('shows no verdict badge until the summary has answered', () => {
     render()
 
-    expect(screen.queryByText('Opportunity')).not.toBeInTheDocument()
+    expect(screen.queryByText('Strong quality')).not.toBeInTheDocument()
   })
 
   it('folds the list away and back from the chevron', async () => {

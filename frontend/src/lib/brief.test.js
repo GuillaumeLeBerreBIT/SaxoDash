@@ -17,14 +17,14 @@ describe('briefItems', () => {
   })
 
   it('names a holding over the cap with what trimming back would free', () => {
-    const items = briefItems({ ...base, positions: [position('MSFT', 29.7, { value: '2970' })], verdicts: { MSFT: { action: 'hold', capped: true } } })
-    expect(items[0]).toMatchObject({ ticker: 'MSFT', title: 'MSFT is 29.7% of your portfolio', word: 'Hold · over cap' })
-    expect(items[0].body).toBe('Your cap is 15%. Trimming back to 15% would free about €1,470. The price is still in its cheap range, so this is about concentration, not the company.')
+    const items = briefItems({ ...base, positions: [position('MSFT', 29.7, { value: '2970' })], verdicts: { MSFT: { action: 'trim' } } })
+    expect(items[0]).toMatchObject({ ticker: 'MSFT', title: 'MSFT is 29.7% of your portfolio', word: 'Trim' })
+    expect(items[0].body).toBe('Your cap is 15%. Trimming back to 15% would free about €1,470. This is about concentration, not the company.')
   })
 
   it('says when a holding can be added to', () => {
     const items = briefItems({ ...base, positions: [position('NVDA', 11)], verdicts: { NVDA: { action: 'add' } } })
-    expect(items[0]).toMatchObject({ ticker: 'NVDA', word: 'Add', tone: 'up', title: 'NVDA is below its cheap line' })
+    expect(items[0]).toMatchObject({ ticker: 'NVDA', word: 'Add', tone: 'up', title: 'NVDA passes the quality checks' })
   })
 
   it('reports fund buying and selling of what you hold, and reports coming up', () => {

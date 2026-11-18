@@ -94,10 +94,10 @@ describe('SymbolPanel', () => {
   })
 
   it('says what the verdict is in words, and leaves performance and volume to the chart', () => {
-    queries.useVerdict.mockReturnValue({ data: { action: 'wait', reason: 'Quality passes; price is not in its cheap range' } })
+    queries.useVerdict.mockReturnValue({ data: { action: 'buy', reason: 'Quality passes' } })
     renderWithProviders(panel())
 
-    expect(screen.getByTestId('panel-verdict')).toHaveTextContent('Wait. Quality passes; price is not in its cheap range.')
+    expect(screen.getByTestId('panel-verdict')).toHaveTextContent('Strong quality. Quality passes.')
     expect(queries.useVerdict).toHaveBeenCalledWith('NOW')
     expect(screen.queryByRole('heading', { name: 'Performance' })).not.toBeInTheDocument()
     expect(screen.queryByText('Volume')).not.toBeInTheDocument()

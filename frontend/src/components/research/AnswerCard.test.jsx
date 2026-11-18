@@ -47,17 +47,16 @@ describe('AnswerCard', () => {
   it('gives both price levels and where the price stands against them', () => {
     renderCard()
     const cell = screen.getByTestId('answer-price')
-    expect(within(cell).getByText('Expensive')).toBeInTheDocument()
-    expect(within(cell).getByText('Cheap for this company below US$249.55')).toBeInTheDocument()
-    expect(within(cell).getByText('Expensive above US$316.01')).toBeInTheDocument()
+    expect(within(cell).getByText('Above usual P/E')).toBeInTheDocument()
+    expect(within(cell).getByText('Usual P/E low US$249.55')).toBeInTheDocument()
+    expect(within(cell).getByText('Usual P/E high US$316.01')).toBeInTheDocument()
   })
 
   it('draws the price bar instead of the two lines when the last close is known', () => {
     renderCard({ verdict: { isLoading: false, data: verdictData({ last_close: 353.06 }) } })
     const cell = screen.getByTestId('answer-price')
     expect(within(cell).getByTestId('price-bar')).toHaveAttribute('data-zone', 'expensive')
-    expect(within(cell).getByText('Cheap below US$249.55')).toBeInTheDocument()
-    expect(within(cell).queryByText('Cheap for this company below US$249.55')).not.toBeInTheDocument()
+    expect(within(cell).getAllByText('Usual P/E low US$249.55')).toHaveLength(1)
   })
 
   it('shows what you hold, the result and the weight against the cap', () => {

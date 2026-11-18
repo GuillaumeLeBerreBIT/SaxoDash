@@ -82,15 +82,15 @@ export function ValueZones({ line, band, data, geometry, colors }) {
   return (
     <g data-testid="value-zones" pointerEvents="none">
       <defs>
-        <Fade id={`${id}cheap`} color={colors.up} from={ZONE_OPACITY} />
-        <Fade id={`${id}expensive`} color={colors.down} from={0} />
+        <Fade id={`${id}cheap`} color={colors.axisCategory} from={ZONE_OPACITY} />
+        <Fade id={`${id}expensive`} color={colors.axisCategory} from={0} />
       </defs>
       {runs.map(({ levels: { cheap, expensive }, start, right }) => [
         zone('cheap', cheap, cheap * (1 - ZONE_DEPTH), start, right),
         zone('expensive', expensive, expensive * (1 + ZONE_DEPTH), start, right),
       ])}
-      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.up} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
-      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.down} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
+      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.axisCategory} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
+      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.axisCategory} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
     </g>
   )
 }
@@ -157,8 +157,8 @@ function guideTagItems({ line, band, highs, data, colors }) {
   const items = []
   const levels = bandAt(stepAt(line, lastBar.date), band)
   if (levels) {
-    items.push({ key: 'expensive', price: levels.expensive, words: `Expensive · P/E ${Math.round(band.high)}`, stroke: colors.down, text: colors.down })
-    items.push({ key: 'cheap', price: levels.cheap, words: `Cheap · P/E ${Math.round(band.low)}`, stroke: colors.up, text: colors.up })
+    items.push({ key: 'expensive', price: levels.expensive, words: `High end · P/E ${Math.round(band.high)}`, stroke: colors.axisCategory, text: colors.axisCategory })
+    items.push({ key: 'cheap', price: levels.cheap, words: `Low end · P/E ${Math.round(band.low)}`, stroke: colors.axisCategory, text: colors.axisCategory })
   }
   const high = highs?.[highs.length - 1]
   if (high != null) {

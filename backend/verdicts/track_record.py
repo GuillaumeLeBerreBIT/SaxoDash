@@ -10,7 +10,7 @@ from investors.prices import Series
 from research.models import ScreenerRow
 
 from . import visibility
-from .models import VerdictCall
+from .models import QUALITY_RULE, VerdictCall
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ def _row(call, result):
 
 
 def _visible_calls(user):
-    calls = VerdictCall.objects.order_by('opened_on', 'ticker')
+    calls = VerdictCall.objects.filter(rule=QUALITY_RULE).order_by('opened_on', 'ticker')
     if user is None:
         return list(calls)
     allowed = set(ScreenerRow.objects.values_list('ticker', flat=True)) | visibility.own_tickers(user)

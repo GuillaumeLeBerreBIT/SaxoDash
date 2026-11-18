@@ -77,18 +77,18 @@ describe('Discover page', () => {
   })
 
   it('opens on rows of stock cards, opportunities first, each saying why it is there', () => {
-    useBrowse.mockImplementation((query) => (query.includes('min_fall') ? answer([stock('LULU', { action: 'wait' })], 39) : answer([stock('ZTS'), stock('ADBE')], 50)))
+    useBrowse.mockImplementation((query) => (query.includes('min_fall') ? answer([stock('LULU', { action: 'hold' })], 39) : answer([stock('ZTS'), stock('ADBE')], 50)))
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [shelf('overbought', 'Overbought', 7, [card])] } })
     renderPage()
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-    expect(headings).toEqual(["Today's opportunities", 'Fell hard, still strong', 'Browse by idea'])
-    const first = within(screen.getByRole('region', { name: "Today's opportunities" })).getAllByTestId('stock-card')[0]
+    expect(headings).toEqual(['Strong companies', 'Fell hard, still strong', 'Browse by idea'])
+    const first = within(screen.getByRole('region', { name: 'Strong companies' })).getAllByTestId('stock-card')[0]
     expect(first).toHaveTextContent('ZTS')
-    expect(first).toHaveTextContent('50% below its cheap line')
+    expect(first).toHaveTextContent('50% below its usual P/E range')
     expect(first).toHaveTextContent('6 of 7 quality checks pass; debt fails.')
-    expect(first).toHaveTextContent('Opportunity')
+    expect(first).toHaveTextContent('Strong quality')
     expect(within(first).getByRole('link', { name: 'ZTS' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=ZTS'))
-    expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('valuation=cheap&quality=strong'))
+    expect(screen.getByRole('link', { name: 'See all 50 →' })).toHaveAttribute('href', expect.stringContaining('quality=strong'))
   })
 
   it('never repeats a stock from the first row in the second', () => {
@@ -128,8 +128,8 @@ describe('Discover page', () => {
     useDiscover.mockReturnValue({ data: { as_of: '2026-09-30T22:40:00Z', health: { state: 'ok' }, groups, shelves: [] } })
     renderPage()
     const filters = screen.getByRole('complementary', { name: 'Filters' })
-    const cheap = within(filters).getByRole('checkbox', { name: /Cheap/ })
-    expect(cheap.closest('label')).toHaveTextContent('Cheap3')
+    const cheap = within(filters).getByRole('checkbox', { name: /Below usual P\/E/ })
+    expect(cheap.closest('label')).toHaveTextContent('Below usual P/E3')
     fireEvent.click(cheap)
     expect(queries()).toContain('?valuation=cheap&limit=24')
   })
@@ -141,7 +141,7 @@ describe('Discover page', () => {
     expect(screen.getByText('No stock matches every filter.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
     expect(screen.queryByText('No stock matches every filter.')).toBeNull()
-    expect(queries()).toContain('?valuation=cheap&quality=strong&limit=4')
+    expect(queries()).toContain('?quality=strong&limit=4')
   })
 
   it('shows one idea at a time, starting with the first that has stocks', () => {    useDiscover.mockReturnValue({ data: {

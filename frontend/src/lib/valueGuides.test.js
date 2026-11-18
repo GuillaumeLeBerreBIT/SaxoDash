@@ -7,7 +7,7 @@ const step = { from: '2026-08-30', eps_ttm: 4 }
 const lineEnd = { from: '2026-09-30', eps_ttm: null }
 const band = { low: 20, high: 30 }
 const verdict = (extra = {}) => ({
-  action: 'wait', quality: 'strong', valuation: 'fair', eps_line: [step],
+  action: 'buy', quality: 'strong', valuation: 'fair', eps_line: [step],
   pe_p25: 20, pe_p75: 30, cheap_below: 80, expensive_above: 120, ...extra,
 })
 const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size: { shares: 3, lossAtStop: 45 }, currency: 'USD' }
@@ -70,15 +70,16 @@ describe('peChip', () => {
 })
 
 describe('entrySentence', () => {
-  it('keeps the verdict word and why, and gives the prices where cheap and expensive start', () => {
+  it('keeps the verdict word and why, and describes the usual P/E range as a rule of thumb', () => {
     const s = entrySentence({ verdict: verdict({ action: 'buy', valuation: 'cheap' }), price: 78, currency: 'USD' })
-    expect(s.why).toBe('Strong company, cheap price.')
-    expect(s.next).toBe('Cheap below US$80.00 (P/E 20), expensive above US$120.00 (P/E 30).')
+    expect(s.why).toBe('Strong company, P/E below its usual range.')
+    expect(s.next).toBe('Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy signal.')
+    expect(JSON.stringify(s)).not.toMatch(/cheap|expensive/i)
     expect(JSON.stringify(s)).not.toMatch(/growth|opportunity zone|updates tonight/i)
   })
 
   it('rounds the P/E to whole numbers', () => {
-    expect(entrySentence({ verdict: verdict({ pe_p25: 27.59, pe_p75: 35.91 }), price: 100 }).next).toMatch(/\(P\/E 28\), expensive above US\$120\.00 \(P\/E 36\)/)
+    expect(entrySentence({ verdict: verdict({ pe_p25: 27.59, pe_p75: 35.91 }), price: 100 }).next).toMatch(/usual P\/E of 28 to 36 spans/)
   })
 
   it('says when the price cannot be judged', () => {
@@ -89,10 +90,10 @@ describe('entrySentence', () => {
 
   it('shapes the result as word, tone, why, next, risk and earnings', () => {
     expect(entrySentence({ verdict: verdict(), price: 100, plan, currency: 'USD' })).toEqual({
-      word: 'WAIT',
-      tone: undefined,
-      why: 'Strong company, fair price.',
-      next: 'Cheap below US$80.00 (P/E 20), expensive above US$120.00 (P/E 30).',
+      word: 'STRONG QUALITY',
+      tone: 'up',
+      why: 'Strong company, P/E within its usual range.',
+      next: 'Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy signal.',
       risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",
       earnings: null,
     })

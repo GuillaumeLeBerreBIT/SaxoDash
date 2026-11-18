@@ -21,8 +21,8 @@ class Result(NamedTuple):
     failed: list
 
 
-def _is_buy_grade(quality, valuation):
-    return quality['grade'] == 'strong' and valuation['grade'] == 'cheap'
+def _is_buy_grade(quality):
+    return quality['grade'] == 'strong'
 
 
 def _price_line(row):
@@ -85,7 +85,7 @@ def _store(row, quality, valuation, today):
 
 def _track(row, quality, valuation, today):
     open_call = VerdictCall.objects.filter(ticker=row.ticker, ended_on__isnull=True).first()
-    if not _is_buy_grade(quality, valuation):
+    if not _is_buy_grade(quality):
         if open_call is not None:
             open_call.ended_on = today
             open_call.save(update_fields=['ended_on'])

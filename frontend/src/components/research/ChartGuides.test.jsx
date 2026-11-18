@@ -21,19 +21,19 @@ describe('ValueZones', () => {
   const zones = (container, kind) => [...container.querySelectorAll(`rect[data-zone="${kind}"]`)]
   const drawZones = (line, extra = {}) => draw(<ValueZones line={line} band={band} data={data} geometry={geometry()} colors={colors} {...extra} />)
 
-  it('draws a green line where cheap starts, earnings that day at the usual low P/E, with a zone fading below it', () => {
+  it('draws a grey low-end line, earnings that day at the usual low P/E, with a zone fading below it', () => {
     const { container } = drawZones([step('2026-06-01', 5), step('2026-07-20', 6)])
     const edge = container.querySelector('path[data-edge="cheap"]')
-    expect(edge).toHaveAttribute('stroke', 'up')
+    expect(edge).toHaveAttribute('stroke', 'ink2')
     expect(rounded(edge.getAttribute('d'))).toBe('M 10 210 H 390 V 170 H 790')
     expect(zones(container, 'cheap').map(box)).toEqual([[10, 210, 380, 20], [390, 170, 400, 24]])
     expect(zones(container, 'cheap')[0].getAttribute('fill')).toMatch(/^url\(#.*cheap\)$/)
   })
 
-  it('draws a red line where expensive starts, at the usual high P/E, with a zone fading above it', () => {
+  it('draws a grey high-end line at the usual high P/E, with a zone fading above it', () => {
     const { container } = drawZones([step('2026-06-01', 5)])
     const edge = container.querySelector('path[data-edge="expensive"]')
-    expect(edge).toHaveAttribute('stroke', 'down')
+    expect(edge).toHaveAttribute('stroke', 'ink2')
     expect(rounded(edge.getAttribute('d'))).toBe('M 10 110 H 790')
     expect(zones(container, 'expensive').map(box)).toEqual([[10, 80, 780, 30]])
   })
@@ -61,24 +61,24 @@ describe('GuideTags', () => {
   const tagY = (testId) => Number(screen.getByTestId(testId).querySelector('rect[data-badge]').getAttribute('y'))
   const drawTags = (line, extra = {}) => draw(<GuideTags line={line} band={band} highs={null} data={data} geometry={geometry()} width={width} colors={colors} {...extra} />)
 
-  it('tags where cheap starts in green and where expensive starts in red, with their P/E and price', () => {
+  it('tags the low and high end of the usual P/E range in grey, with their P/E and price', () => {
     drawTags([step('2026-06-01', 4), step('2026-07-20', 5)])
     const cheap = screen.getByTestId('guide-tag-cheap')
-    expect(cheap).toHaveTextContent('Cheap · P/E 20')
+    expect(cheap).toHaveTextContent('Low end · P/E 20')
     expect(cheap).toHaveTextContent('100.00')
-    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'up')
+    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'ink2')
     expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('x', String(width - 62 + 2))
     expect(tagY('guide-tag-cheap')).toBe(210 - 8)
     const expensive = screen.getByTestId('guide-tag-expensive')
-    expect(expensive).toHaveTextContent('Expensive · P/E 30')
+    expect(expensive).toHaveTextContent('High end · P/E 30')
     expect(expensive).toHaveTextContent('150.00')
-    expect(expensive.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'down')
+    expect(expensive.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'ink2')
   })
 
   it('shows the P/E as a whole number', () => {
     drawTags([step('2026-06-01', 5)], { band: { low: 27.59, high: 35.91 } })
-    expect(screen.getByTestId('guide-tag-cheap').textContent).toMatch(/Cheap · P\/E 28(?!\.)/)
-    expect(screen.getByTestId('guide-tag-expensive').textContent).toMatch(/Expensive · P\/E 36(?!\.)/)
+    expect(screen.getByTestId('guide-tag-cheap').textContent).toMatch(/Low end · P\/E 28(?!\.)/)
+    expect(screen.getByTestId('guide-tag-expensive').textContent).toMatch(/High end · P\/E 36(?!\.)/)
   })
 
   it('has no value tags while trailing earnings are not positive', () => {

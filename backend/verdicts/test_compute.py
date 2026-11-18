@@ -13,6 +13,10 @@ STRONG_HISTORY = {'annual': [
 ]}
 CHEAP = {'current': 18, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200}
 FAIR = {'current': 25, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200}
+MIXED_HISTORY = {'annual': [
+    {'period': f'{2020 + index}-12-31', 'roe': 2, 'roic': 2, 'net_margin': 2, 'eps': index + 1}
+    for index in range(5)
+]}
 FUNDAMENTALS_AT = datetime(2026, 11, 10, 22, 45, tzinfo=timezone.utc)
 DAY_ONE = date(2026, 11, 11)
 DAY_TWO = date(2026, 11, 12)
@@ -90,7 +94,7 @@ class ComputeTest(TestCase):
         self.assertEqual(compute.run(today=DAY_ONE).written, 0)
         self.assertFalse(StockVerdict.objects.exists())
 
-    def test_becoming_strong_and_cheap_opens_one_call_at_the_close(self):
+    def test_becoming_strong_opens_one_call_at_the_close_under_the_quality_rule(self):
         make_row('AAPL')
 
         compute.run(today=DAY_ONE)
@@ -100,6 +104,7 @@ class ComputeTest(TestCase):
             (call.ticker, call.opened_on, call.entry_close, call.quality, call.valuation, call.ended_on),
             ('AAPL', DAY_ONE, 100.0, 'strong', 'cheap', None),
         )
+        self.assertEqual(call.rule, 'quality')
         self.assertEqual(len(call.checks), 7)
 
     def test_no_call_opens_without_a_close(self):
@@ -109,14 +114,32 @@ class ComputeTest(TestCase):
 
         self.assertFalse(VerdictCall.objects.exists())
 
-    def test_fair_valuation_opens_no_call(self):
+    def test_a_fair_or_expensive_price_still_opens_a_call(self):
         make_row('AAPL', pe_history=FAIR)
+
+        compute.run(today=DAY_ONE)
+
+        self.assertEqual(VerdictCall.objects.get().valuation, 'fair')
+
+    def test_mixed_quality_opens_no_call(self):
+        make_row('AAPL', fundamentals_history=MIXED_HISTORY)
 
         compute.run(today=DAY_ONE)
 
         self.assertFalse(VerdictCall.objects.exists())
 
-    def test_staying_strong_and_cheap_does_not_open_a_second(self):
+    def test_an_open_call_from_the_retired_rule_is_left_alone(self):
+        make_row('AAPL')
+        VerdictCall.objects.create(
+            ticker='AAPL', opened_on=DAY_ONE, entry_close=90.0, quality='strong', valuation='cheap',
+            rule='quality_and_cheap', ended_on=DAY_ONE,
+        )
+
+        compute.run(today=DAY_TWO)
+
+        self.assertEqual(VerdictCall.objects.get(rule='quality').opened_on, DAY_TWO)
+
+    def test_staying_strong_does_not_open_a_second(self):
         make_row('AAPL')
 
         compute.run(today=DAY_ONE)
@@ -125,23 +148,23 @@ class ComputeTest(TestCase):
         self.assertEqual(VerdictCall.objects.count(), 1)
         self.assertIsNone(VerdictCall.objects.get().ended_on)
 
-    def test_leaving_strong_and_cheap_ends_the_call(self):
+    def test_leaving_strong_ends_the_call(self):
         row = make_row('AAPL')
         compute.run(today=DAY_ONE)
-        row.pe_history = FAIR
+        row.fundamentals_history = MIXED_HISTORY
         row.save()
 
         compute.run(today=DAY_TWO)
 
         self.assertEqual(VerdictCall.objects.get().ended_on, DAY_TWO)
 
-    def test_returning_to_strong_and_cheap_opens_a_new_call(self):
+    def test_returning_to_strong_opens_a_new_call(self):
         row = make_row('AAPL')
         compute.run(today=DAY_ONE)
-        row.pe_history = FAIR
+        row.fundamentals_history = MIXED_HISTORY
         row.save()
         compute.run(today=DAY_TWO)
-        row.pe_history = CHEAP
+        row.fundamentals_history = STRONG_HISTORY
         row.last_close = 90.0
         row.save()
 

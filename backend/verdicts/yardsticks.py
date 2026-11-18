@@ -2,8 +2,7 @@ import statistics
 from bisect import bisect_left, bisect_right
 from datetime import date, timedelta
 
-from research.valuation import MIN_PE_WEEKS, trailing_pe
-from research.scan import HISTORY_BARS
+from research.valuation import MIN_PE_WEEKS, PE_WINDOW_BARS, trailing_pe
 
 from . import yardsticks_growth
 from .yardsticks_growth import REPORT_LAG_DAYS
@@ -30,7 +29,7 @@ def _week_ends(dates):
 
 
 def _pe_range(daily, ends, index):
-    lowest = max(0, index - HISTORY_BARS + 1)
+    lowest = max(0, index - PE_WINDOW_BARS + 1)
     window = ends[bisect_left(ends, lowest):bisect_left(ends, index)]
     values = [daily[i] for i in window] + [daily[index]]
     values = [pe for pe in values if pe is not None and pe > 0]

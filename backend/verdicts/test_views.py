@@ -75,7 +75,7 @@ class VerdictApiTests(APITestCase):
         self.client.force_authenticate(self.bob)
         bob = self.client.get('/api/verdicts/?tickers=AAA').json()['verdicts']['AAA']
         self.assertEqual(alice['action'], 'trim')
-        self.assertEqual(bob['action'], 'wait')
+        self.assertEqual(bob['action'], 'buy')
 
     def test_a_holding_in_an_unpriced_book_is_still_held_with_no_weight(self):
         verdict('AAA', quality='strong', valuation='cheap')
@@ -207,49 +207,6 @@ class NonUniverseVisibilityTests(APITestCase):
         self.assertIsNone(self.summary(self.bob)['NBIS'])
 
 
-class WorthALookTests(APITestCase):
-    def setUp(self):
-        self.alice = make_user('alice')
-        self.client.force_authenticate(self.alice)
-
-    def rows(self):
-        return self.client.get('/api/verdicts/worth-a-look/').json()['stocks']
-
-    def test_lists_only_strong_and_cheap_universe_stocks_deepest_discount_first(self):
-        verdict('AAA', valuation='cheap', last_close=18.0)
-        verdict('BBB', valuation='cheap', last_close=10.0)
-        verdict('CCC', valuation='expensive')
-        verdict('DDD', quality='weak', valuation='cheap')
-        verdict('NBIS', valuation='cheap', universe=False)
-        rows = self.rows()
-        self.assertEqual([row['ticker'] for row in rows], ['BBB', 'AAA'])
-        self.assertEqual(rows[0]['discount_pct'], 50.0)
-        self.assertEqual(rows[0]['cheap_below'], 20.0)
-        self.assertEqual(rows[0]['name'], 'BBB Corp')
-        self.assertEqual(rows[0]['action'], 'buy')
-
-    def test_a_held_stock_is_an_add(self):
-        verdict('AAA', valuation='cheap', last_close=18.0)
-        hold(self.alice, 'AAA', '100')
-        hold(self.alice, 'ZZZ', '1900')
-        self.assertEqual(self.rows()[0]['action'], 'add')
-
-    def test_stops_at_the_limit_and_reports_the_total(self):
-        for index in range(14):
-            verdict(f'T{index:02d}', valuation='cheap', last_close=10.0 + index / 10)
-        body = self.client.get('/api/verdicts/worth-a-look/').json()
-        self.assertEqual(len(body['stocks']), 12)
-        self.assertEqual(body['total'], 14)
-
-    def test_a_stock_without_a_price_level_is_left_out(self):
-        verdict('AAA', valuation='cheap', last_close=None)
-        self.assertEqual(self.rows(), [])
-
-    def test_requires_login(self):
-        self.client.force_authenticate(None)
-        self.assertEqual(self.client.get('/api/verdicts/worth-a-look/').status_code, 401)
-
-
 def listed(ticker, sector='Information Technology', dividend_yield=None, **fields):
     made = verdict(ticker, **fields)
     ScreenerRow.everything.filter(ticker=ticker).update(sector=sector, dividend_yield=dividend_yield)
@@ -267,11 +224,12 @@ class BrowseTests(APITestCase):
     def tickers(self, query=''):
         return [stock['ticker'] for stock in self.browse(query).json()['stocks']]
 
-    def test_puts_opportunities_first_then_furthest_under_the_cheap_line(self):
-        listed('HLD', valuation='fair', last_close=25.0)
-        listed('OPA', valuation='cheap', last_close=18.0)
-        listed('OPB', valuation='cheap', last_close=10.0)
-        self.assertEqual(self.tickers(), ['OPB', 'OPA', 'HLD'])
+    def test_puts_strong_quality_first_then_most_checks_passed_whatever_the_price(self):
+        some_fail = [*CHECKS[:5], {**CHECKS[5], 'status': 'fail'}]
+        listed('MIX', quality='mixed', valuation='cheap', last_close=10.0)
+        listed('FIV', valuation='cheap', last_close=10.0, checks=some_fail)
+        listed('SIX', valuation='expensive', last_close=40.0)
+        self.assertEqual(self.tickers(), ['SIX', 'FIV', 'MIX'])
 
     def test_each_stock_carries_what_a_card_needs(self):
         listed('OPA', valuation='cheap', last_close=15.0, high_1y=30.0, spark=[30.0, 20.0, 15.0], dividend_yield=3.5)
@@ -289,7 +247,7 @@ class BrowseTests(APITestCase):
         listed('CCC', valuation='fair', sector='Health Care', dividend_yield=4.0)
         listed('DDD', valuation='cheap', sector='Health Care', last_close=19.0, high_1y=20.0)
         self.assertEqual(self.tickers('?valuation=cheap&quality=strong'), ['AAA', 'DDD'])
-        self.assertEqual(self.tickers('?sector=Health%20Care'), ['DDD', 'CCC'])
+        self.assertEqual(self.tickers('?sector=Health%20Care'), ['CCC', 'DDD'])
         self.assertEqual(self.tickers('?min_yield=3'), ['CCC'])
         self.assertEqual(self.tickers('?min_fall=25'), ['AAA'])
 
@@ -328,7 +286,7 @@ class BrowseTests(APITestCase):
         listed('AAA', valuation='cheap')
         listed('BBB', valuation='fair')
         listed('CCC', valuation='cheap')
-        self.assertEqual(self.tickers('?tickers=bbb,ccc'), ['CCC', 'BBB'])
+        self.assertEqual(self.tickers('?tickers=bbb,ccc'), ['BBB', 'CCC'])
 
     def test_searches_by_ticker_start_or_name(self):
         listed('NVDA', valuation='cheap')

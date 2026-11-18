@@ -21,6 +21,7 @@ def trailing_pe(closes, quarterly_eps):
 
 
 MIN_PE_WEEKS = 104
+PE_WINDOW_BARS = 1200
 
 
 def _latest_eps_ttm(ordered, last_day):

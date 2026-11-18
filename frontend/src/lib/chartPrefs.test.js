@@ -23,16 +23,15 @@ describe('sanitizeChartPrefs', () => {
     expect(sanitizeChartPrefs(stored)).toEqual(stored)
   })
 
-  it('loads a blob saved before the guides existed with every guide on, and ignores the old signal choices', () => {
+  it('loads a blob saved before the guides existed with the value range off, and ignores the old signal choices', () => {
     const old = { range: '1Y', type: 'line', overlays: DEFAULT_CHART_PREFS.overlays, panes: DEFAULT_CHART_PREFS.panes, signals: { hammer: true } }
     const prefs = sanitizeChartPrefs(old)
-    expect(prefs.guides).toEqual({ value: true, high52: true, gaps: true, plan: false })
+    expect(prefs.guides).toEqual({ value: false, high52: true, gaps: true, plan: false })
     expect(prefs.signals).toBeUndefined()
   })
 
-  it('carries a saved zones choice over to the value guide', () => {
-    expect(sanitizeChartPrefs({ guides: { zones: false, plan: true } }).guides).toEqual({ value: false, high52: true, gaps: true, plan: true })
-    expect(sanitizeChartPrefs({ guides: { zones: false, value: true } }).guides.value).toBe(true)
+  it('starts the value range off even when the old flat zones were saved on', () => {
+    expect(sanitizeChartPrefs({ guides: { zones: true, plan: true } }).guides).toEqual({ value: false, high52: true, gaps: true, plan: true })
   })
 
   it('keeps only real on or off choices for the guides', () => {

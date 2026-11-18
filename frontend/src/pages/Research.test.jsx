@@ -169,7 +169,7 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('answers with the cheap and expensive prices and a P/E chip, and the Guides menu switches the value guide off', async () => {
+  it('describes the usual P/E range as a rule of thumb, with the range and its P/E chip off until switched on', async () => {
     const line = [{ from: '2020-01-01', eps_ttm: 4 }]
     queries.useVerdict.mockReturnValue({
       ...idle,
@@ -181,16 +181,16 @@ describe('Research', () => {
     expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
     const card = screen.getByTestId('answer-card')
-    expect(card).toHaveTextContent('Strong company, fair price.')
-    expect(card).toHaveTextContent('Cheap below US$100.00 (P/E 45), expensive above US$200.00 (P/E 77).')
-    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
+    expect(card).toHaveTextContent('Strong company, P/E within its usual range.')
+    expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
+    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    for (const name of [/Value: cheap and expensive zones/, /52-week high/, /Volume gaps/]) {
+    for (const name of [/Value: usual P\/E range/, /52-week high/, /Volume gaps/]) {
       expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
     }
-    await userEvent.click(screen.getByRole('menuitem', { name: /Value: cheap and expensive zones/ }))
-    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.value).toBe(false)
+    await userEvent.click(screen.getByRole('menuitem', { name: /Value: usual P\/E range/ }))
+    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.value).toBe(true)
   })
 
   it('says the price cannot be judged without a usual P/E range', () => {
