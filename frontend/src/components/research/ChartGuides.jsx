@@ -1,7 +1,7 @@
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
-import { stepAt } from '../../lib/valueGuides'
+import { FAIR_BAND, stepAt, usualPrice } from '../../lib/valueGuides'
 
 const TAG_HEIGHT = 18
 const COMPACT_BELOW = 520
@@ -41,6 +41,44 @@ export function GrowthLine({ line, data, geometry, colors }) {
   const d = stepPath(data.map((bar) => stepAt(line, bar.date)?.price ?? null), geometry.xAt, geometry.scaleY, data.length - 1)
   if (!d) return null
   return <path data-testid="growth-line" d={d} fill="none" stroke={colors.warn} strokeWidth="1.5" pointerEvents="none" />
+}
+
+const CORRIDOR_OPACITY = 0.1
+
+function stepRuns(data, line) {
+  const runs = []
+  data.forEach((bar, i) => {
+    const step = stepAt(line, bar.date)
+    const open = runs[runs.length - 1]
+    if (open && open.step === step) open.end = i
+    else runs.push({ step, start: i, end: i })
+  })
+  return runs
+    .map((run, i) => ({ ...run, right: i + 1 < runs.length && runs[i + 1].step?.price != null ? run.end + 1 : run.end }))
+    .filter((run) => run.step?.price != null)
+}
+
+export function FairCorridor({ line, data, geometry, colors }) {
+  if (!line?.length || !data.length) return null
+  const runs = stepRuns(data, line)
+  if (!runs.length) return null
+  const { xAt, scaleY } = geometry
+  return (
+    <g data-testid="fair-corridor" pointerEvents="none">
+      {runs.map(({ step, start, right }) => {
+        const top = scaleY(step.capped ? step.price : step.price * (1 + FAIR_BAND))
+        const bottom = scaleY(step.price * (1 - FAIR_BAND))
+        return <rect key={start} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={bottom - top} fill={colors.warn} opacity={CORRIDOR_OPACITY} />
+      })}
+    </g>
+  )
+}
+
+export function UsualLine({ line, usual, data, geometry, colors }) {
+  if (!usual || !line?.length || !data.length) return null
+  const d = stepPath(data.map((bar) => usualPrice(stepAt(line, bar.date), usual)), geometry.xAt, geometry.scaleY, data.length - 1)
+  if (!d) return null
+  return <path data-testid="usual-line" d={d} fill="none" stroke={colors.accent} strokeWidth="1.2" strokeOpacity="0.8" strokeDasharray="6 3" pointerEvents="none" />
 }
 
 export function HighLine({ highs, geometry, colors }) {
@@ -99,7 +137,7 @@ const GUIDE_FONT = 11
 
 const signedPercent = (value) => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}%`
 
-function guideTagItems({ line, highs, data, colors }) {
+function guideTagItems({ line, usual, highs, data, colors }) {
   const lastBar = data[data.length - 1]
   if (!lastBar) return []
   const items = []
@@ -109,6 +147,8 @@ function guideTagItems({ line, highs, data, colors }) {
     const words = step.capped ? `Growth floor · P/E ${pe}+` : `Growth-fair · P/E ${pe}`
     items.push({ key: 'growth', price: step.price, words, stroke: colors.warn, text: colors.warnText })
   }
+  const usualAt = usualPrice(step, usual)
+  if (usualAt != null) items.push({ key: 'usual', price: usualAt, words: `Usual P/E ${usual}`, stroke: colors.accent, text: colors.accent })
   const high = highs?.[highs.length - 1]
   if (high != null) {
     const words = `52w high ${signedPercent((lastBar.close / high - 1) * 100)}`
@@ -140,8 +180,8 @@ function EdgeArrow({ x, y, edge, fill }) {
   return <polygon data-edge={edge} points={points} fill={fill} />
 }
 
-export function GuideTags({ line, highs, data, geometry, width, colors }) {
-  const tags = placeTags(guideTagItems({ line, highs, data, colors }), geometry)
+export function GuideTags({ line, usual = null, highs, data, geometry, width, colors }) {
+  const tags = placeTags(guideTagItems({ line, usual, highs, data, colors }), geometry)
   if (!tags.length) return null
   const gutter = width - PAD_R
   return (

@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import * as ChartGuides from './ChartGuides'
-import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide } from './ChartGuides'
+import { FairCorridor, GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
-const colors = { up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
+const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
 const data = Array.from({ length: 40 }, (_, i) => ({ date: `2026-07-${String(i + 1).padStart(2, '0')}`, open: 100, high: 104, low: 96, close: 102 }))
 const geometry = (chartW = 800) => ({ xAt: (i) => 10 + i * 20, scaleY: (value) => 410 - value * 2, chartH: 300, chartW, candleWidth: 8 })
 const draw = (node) => render(<svg>{node}</svg>)
@@ -33,6 +33,55 @@ describe('GrowthLine', () => {
 
   it('draws nothing without steps', () => {
     const { container } = draw(<GrowthLine line={[]} data={data} geometry={geometry()} colors={colors} />)
+    expect(container.querySelector('path')).toBeNull()
+  })
+})
+
+describe('FairCorridor', () => {
+  const band = (rect) => ['x', 'y', 'width', 'height'].map((key) => Math.round(Number(rect.getAttribute(key)) * 100) / 100)
+
+  it('fills 10% either side of each step in faint amber', () => {
+    const { container } = draw(<FairCorridor line={[step('2026-06-01', 100), step('2026-07-20', 120)]} data={data} geometry={geometry()} colors={colors} />)
+    const rects = container.querySelectorAll('[data-testid="fair-corridor"] rect')
+    expect(rects).toHaveLength(2)
+    expect(rects[0]).toHaveAttribute('fill', 'warn')
+    expect(Number(rects[0].getAttribute('opacity'))).toBeLessThan(0.15)
+    expect(band(rects[0])).toEqual([10, 410 - 220, 380, 40])
+    expect(band(rects[1])).toEqual([390, 410 - 264, 400, 48])
+  })
+
+  it('fills only below a capped step, since above the floor is not expensive', () => {
+    const { container } = draw(<FairCorridor line={[step('2026-06-01', 100, { pe: 30, capped: true })]} data={data} geometry={geometry()} colors={colors} />)
+    expect(band(container.querySelector('rect'))).toEqual([10, 410 - 200, 780, 20])
+  })
+
+  it('leaves a gap where the line has ended', () => {
+    const line = [step('2026-06-01', 100), lineEnd('2026-07-11'), step('2026-07-21', 100)]
+    const { container } = draw(<FairCorridor line={line} data={data} geometry={geometry()} colors={colors} />)
+    const rects = [...container.querySelectorAll('rect')].map(band)
+    expect(rects.map(([x, , w]) => [x, x + w])).toEqual([[10, 190], [410, 790]])
+  })
+
+  it('draws nothing without steps', () => {
+    const { container } = draw(<FairCorridor line={[]} data={data} geometry={geometry()} colors={colors} />)
+    expect(container.querySelector('g')).toBeNull()
+  })
+})
+
+describe('UsualLine', () => {
+  it('steps with trailing earnings at the usual P/E in the accent colour', () => {
+    const line = [step('2026-06-01', 100, { eps_ttm: 4 }), step('2026-07-20', 120, { eps_ttm: 5 })]
+    const { container } = draw(<UsualLine line={line} usual={30} data={data} geometry={geometry()} colors={colors} />)
+    const path = container.querySelector('path')
+    expect(path).toHaveAttribute('data-testid', 'usual-line')
+    expect(path).toHaveAttribute('stroke', 'accent')
+    expect(path).toHaveAttribute('stroke-dasharray', '6 3')
+    expect(path).toHaveAttribute('fill', 'none')
+    expect(path.getAttribute('d')).toBe('M 10 170 H 390 V 110 H 790')
+  })
+
+  it('draws nothing without a usual P/E', () => {
+    const { container } = draw(<UsualLine line={[step('2026-06-01', 100)]} usual={null} data={data} geometry={geometry()} colors={colors} />)
     expect(container.querySelector('path')).toBeNull()
   })
 })
@@ -84,6 +133,14 @@ describe('GuideTags', () => {
     draw(<GuideTags line={null} highs={data.map(() => 243.37)} data={closing} geometry={geometry()} width={width} colors={colors} />)
     expect(screen.getByTestId('guide-tag-high')).toHaveTextContent('52w high −35.7%')
     expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
+  })
+
+  it('tags the usual P/E line with its price', () => {
+    draw(<GuideTags line={[step('2026-06-01', 120, { eps_ttm: 4 })]} usual={61} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
+    const tag = screen.getByTestId('guide-tag-usual')
+    expect(tag).toHaveTextContent('Usual P/E 61')
+    expect(tag).toHaveTextContent('244.00')
+    expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'accent')
   })
 
   it('shows no high tag before 252 sessions', () => {

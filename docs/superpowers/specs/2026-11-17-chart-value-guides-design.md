@@ -198,3 +198,25 @@ run; run it once by hand on the dev database before the screenshot review.
 
 Component and function names beyond those named here, tag collision handling, exact label copy within the
 rules above, and how `TVChart` passes the new layers through.
+
+## Addendum 2026-11-18: usual P/E line and fair corridor
+
+The owner previewed the branch and chose "A plus B" after comparing FAST Graphs, GuruFocus GF Value, P/E band
+charts and Morningstar's fair-value bands.
+
+- **Approaches considered.** A: a second line at the stock's usual P/E (FAST Graphs' blue "normal P/E" line).
+  B: a faint ±10% corridor around the growth line, so "fair" is visible (GuruFocus' colourless band, without
+  their red and green shading). C: a P/E ladder (earnings x 15/20/25/30) with no fair word. The owner chose A and B
+  together.
+- **Usual P/E line.** For each candle: the covering growth step's `eps_ttm` x the middle of the stock's usual
+  range, `(pe_p25 + pe_p75) / 2`. A thin dashed line in `colors.accent`, stepped like the growth line (dashed because the light theme's accent is the MA 50 blue). Right-axis tag:
+  "Usual P/E 61". Hidden when the chip is hidden. Claude's call: the midpoint of the range the chip already
+  prints, rather than a stored median, so the line, the chip and the badge read from the same two numbers and no
+  migration or nightly scan is needed. Like FAST Graphs' normal P/E, it applies today's five-year range to past
+  earnings; the earnings stay point-in-time.
+- **Fair corridor.** A fill in `colors.warn` at low opacity between 0.9x and 1.1x the growth line, built from
+  `FAIR_BAND`. On a capped step only the part below the line is drawn, since above a P/E 30+ floor reads "growth
+  priced in", not "expensive". No other shading; the anti-goal on painting the chart stands.
+- **Hover card** adds "Usual P/E" with its price for the hovered day.
+- **Switch.** Both sit under the existing `value` guide.
+- Frontend only: `lib/valueGuides.js`, `ChartGuides.jsx`, the hover legend, Guide tab copy, tests.

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { rollingHigh } from './indicators'
-import { entrySentence, FAIR_BAND, growthSentence, guideSeries, peChip, readPrice, stepAt, visibleGuides } from './valueGuides'
+import { entrySentence, FAIR_BAND, growthSentence, guideSeries, peChip, readPrice, stepAt, usualPe, usualPrice, visibleGuides } from './valueGuides'
 
 const step = { from: '2026-08-30', price: 100, pe: 24, growth: 24.1, eps_ttm: 4.17, capped: false }
 const capped = { ...step, pe: 30, growth: 167.4, capped: true }
@@ -204,5 +204,28 @@ describe('visibleGuides', () => {
     expect(shown.gaps[0]).toMatchObject({ index: -1, end: 0, filled: true, filledOn: full[281].date })
     expect(visibleGuides(guideSeries(full, { high: false, gaps: true }), full, full.slice(290)).gaps).toEqual([])
     expect(visibleGuides(guideSeries(full, { high: false, gaps: false }), full, full.slice(290)).gaps).toEqual([])
+  })
+})
+
+describe('usualPe', () => {
+  it('is the middle of the usual range as a whole number', () => {
+    expect(usualPe({ pe: 19.8, low: 45, high: 77, position: 'below' })).toBe(61)
+    expect(usualPe({ pe: 27, low: 28.4, high: 36.1, position: 'below' })).toBe(32)
+  })
+
+  it('is nothing without a chip', () => {
+    expect(usualPe(null)).toBeNull()
+  })
+})
+
+describe('usualPrice', () => {
+  it('is the step\'s trailing earnings at the usual P/E', () => {
+    expect(usualPrice(step, 32)).toBeCloseTo(133.44)
+  })
+
+  it('is nothing once the line has ended or without a usual P/E', () => {
+    expect(usualPrice(lineEnd, 32)).toBeNull()
+    expect(usualPrice(step, null)).toBeNull()
+    expect(usualPrice(null, 32)).toBeNull()
   })
 })

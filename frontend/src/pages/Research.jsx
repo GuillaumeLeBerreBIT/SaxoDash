@@ -5,7 +5,7 @@ import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSigna
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { reportsWithin } from '../lib/earnings'
-import { entrySentence, peChip } from '../lib/valueGuides'
+import { entrySentence, peChip, usualPe } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
@@ -122,17 +122,19 @@ export default function Research() {
     })
     const judged = signalsForListing(judgedVerdict, listingUic)
     const latest = allBars.length ? allBars[allBars.length - 1].close : null
+    const chip = peChip(judged)
     return {
       available: [...(judged ? ['value'] : []), 'high52', 'gaps', ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
       valueGuides: {
         line: shown.value && judged ? judged.growth_line ?? null : null,
+        usual: shown.value ? usualPe(chip) : null,
         high: shown.high52,
         gaps: shown.gaps,
         currency: guideCurrency,
         bars: allBars,
       },
-      chip: peChip(judged),
+      chip,
       plan: shown.plan ? plan : null,
       sentence: entrySentence({ verdict: null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
       answer: entrySentence({
