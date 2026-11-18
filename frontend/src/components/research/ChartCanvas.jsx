@@ -1,14 +1,14 @@
 import { useId, useMemo, useRef, useState } from 'react'
 
 import { CHART_KEYS_HELP, chartKeyCommand } from '../../lib/chartKeys'
-import { fmtDate, fmtMoney, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
+import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { barChange } from '../../lib/research'
 import { LATEST_TIME_VIEW, panTimeView, resolveTimeWindow, zoomTimeView } from '../../lib/timeWindow'
 import { chartPlaceholderFor } from '../../lib/chartState'
 import { fitChartPanes, overlayStrokes, pricePaneHeight, useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS, OVERLAY_DEFS } from '../../lib/chartOptions'
 import { RVOL_WINDOW } from '../../lib/indicators'
-import { guideSeries, readPrice, stepAt, visibleGuides } from '../../lib/valueGuides'
+import { bandAt, guideSeries, readPrice, stepAt, visibleGuides } from '../../lib/valueGuides'
 import { MacdPane, RsiPane, TimeAxis, VolumePane } from './panes'
 import { SubPane, TVChart } from './TVChart'
 import { useChartColors } from '../../theme/useChartColors'
@@ -36,7 +36,7 @@ const WIDEST_VALUES = {
   overlays: Object.fromEntries(OVERLAY_DEFS.map(({ key }) => [key, WIDEST_VALUE])),
 }
 
-const READING_WORDS = { cheap: 'cheap', fair: 'fair', expensive: 'expensive', priced_in: 'growth priced in' }
+const READING_WORDS = { cheap: 'cheap', fair: 'fair', expensive: 'expensive' }
 
 const gapLegend = (gap) =>
   [
@@ -47,11 +47,10 @@ const gapLegend = (gap) =>
 function guideLegend(valueGuides, gaps, bar, index) {
   const items = []
   const step = stepAt(valueGuides?.line, bar.date)
-  if (step?.price != null) {
-    if (step.eps_ttm > 0) items.push(['P/E then', fmtNum(bar.close / step.eps_ttm, 1)])
-    items.push(['Growth-fair', fmtMoney(step.price, valueGuides.currency)])
-    const reading = readPrice(bar.close, step)
-    if (reading) items.push(['', READING_WORDS[reading]])
+  const levels = bandAt(step, valueGuides?.band)
+  if (levels) {
+    items.push(['P/E then', fmtNum(bar.close / step.eps_ttm, 1)])
+    items.push(['', READING_WORDS[readPrice(bar.close, levels)]])
   }
   const gap = gaps.find((candidate) => candidate.index === index)
   if (gap) items.push(gapLegend(gap))
@@ -60,8 +59,8 @@ function guideLegend(valueGuides, gaps, bar, index) {
 
 function widestGuideLegend(valueGuides, gaps) {
   const items = []
-  if (valueGuides?.line?.length) {
-    items.push(['P/E then', fmtNum(9999.9, 1)], ['Growth-fair', fmtMoney(WIDEST_VALUE, valueGuides.currency)], ['', READING_WORDS.priced_in])
+  if (valueGuides?.line?.length && valueGuides.band) {
+    items.push(['P/E then', fmtNum(9999.9, 1)], ['', READING_WORDS.expensive])
   }
   if (gaps.length) items.push(gapLegend({ up: false, from: 1, to: 0.001, rvol: WIDEST_RVOL, filled: true, filledOn: '2026-09-30' }))
   return items

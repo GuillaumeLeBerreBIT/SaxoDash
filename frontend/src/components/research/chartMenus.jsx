@@ -38,7 +38,7 @@ export function IndicatorMenuItems({ controls }) {
 }
 
 const GUIDES = {
-  value: ['Value: growth line and P/E', 'The price its earnings growth supports, and P/E against its usual range'],
+  value: ['Value: cheap and expensive zones', 'Where its usual P/E range puts cheap and expensive, and P/E against that range'],
   high52: ['52-week high', 'The highest price of the past year and how far below it today is'],
   gaps: ['Volume gaps', 'Big opening gaps on heavy volume, until filled or 60 sessions pass'],
   plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],

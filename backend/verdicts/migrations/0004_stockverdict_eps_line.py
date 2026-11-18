@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='stockverdict',
-            name='growth_line',
+            name='eps_line',
             field=models.JSONField(blank=True, db_default=[], default=list),
         ),
         migrations.AddField(

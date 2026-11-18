@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import * as ChartGuides from './ChartGuides'
-import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, ValueZones } from './ChartGuides'
+import { GapBoxes, GuideTags, HighLine, StopGuide, ValueZones } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
 const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
@@ -10,123 +10,92 @@ const data = Array.from({ length: 40 }, (_, i) => ({ date: `2026-07-${String(i +
 const geometry = (chartW = 800) => ({ xAt: (i) => 10 + i * 20, scaleY: (value) => 410 - value * 2, chartH: 300, chartW, candleWidth: 8 })
 const draw = (node) => render(<svg>{node}</svg>)
 
-const step = (from, price, extra = {}) => ({ from, price, pe: 24, growth: 24.1, eps_ttm: 4.2, capped: false, ...extra })
+const step = (from, eps) => ({ from, eps_ttm: eps })
+const band = { low: 20, high: 30 }
 const width = 862
-const lineEnd = (from) => ({ from, price: null, pe: null, growth: null, eps_ttm: null, capped: false })
-
-describe('GrowthLine', () => {
-  it('draws one amber stepped line with no fill, clipped to the first visible bar', () => {
-    const { container } = draw(<GrowthLine line={[step('2026-06-01', 120), step('2026-07-20', 130)]} data={data} geometry={geometry()} colors={colors} />)
-    const paths = container.querySelectorAll('path')
-    expect(paths).toHaveLength(1)
-    expect(paths[0]).toHaveAttribute('stroke', 'warn')
-    expect(paths[0]).toHaveAttribute('fill', 'none')
-    expect(container.querySelector('rect')).toBeNull()
-    expect(paths[0].getAttribute('d')).toBe('M 10 170 H 390 V 150 H 790')
-  })
-
-  it('breaks the line where trailing earnings stop being positive and resumes after', () => {
-    const line = [step('2026-06-01', 120), lineEnd('2026-07-11'), step('2026-07-21', 130)]
-    const { container } = draw(<GrowthLine line={line} data={data} geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('path').getAttribute('d')).toBe('M 10 170 H 190 M 410 150 H 790')
-  })
-
-  it('draws nothing without steps', () => {
-    const { container } = draw(<GrowthLine line={[]} data={data} geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('path')).toBeNull()
-  })
-})
+const lineEnd = (from) => ({ from, eps_ttm: null })
 
 describe('ValueZones', () => {
   const box = (rect) => ['x', 'y', 'width', 'height'].map((key) => Math.round(Number(rect.getAttribute(key)) * 100) / 100)
   const rounded = (d) => d.replace(/\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100))
   const zones = (container, kind) => [...container.querySelectorAll(`rect[data-zone="${kind}"]`)]
+  const drawZones = (line, extra = {}) => draw(<ValueZones line={line} band={band} data={data} geometry={geometry()} colors={colors} {...extra} />)
 
-  it('marks where cheap starts with a green line and a green zone fading below it', () => {
-    const { container } = draw(<ValueZones line={[step('2026-06-01', 100), step('2026-07-20', 120)]} data={data} geometry={geometry()} colors={colors} />)
+  it('draws a green line where cheap starts, earnings that day at the usual low P/E, with a zone fading below it', () => {
+    const { container } = drawZones([step('2026-06-01', 5), step('2026-07-20', 6)])
     const edge = container.querySelector('path[data-edge="cheap"]')
     expect(edge).toHaveAttribute('stroke', 'up')
-    expect(rounded(edge.getAttribute('d'))).toBe('M 10 230 H 390 V 194 H 790')
-    const cheap = zones(container, 'cheap')
-    expect(cheap.map(box)).toEqual([[10, 230, 380, 20], [390, 194, 400, 24]])
-    expect(cheap[0].getAttribute('fill')).toMatch(/^url\(#.*cheap\)$/)
+    expect(rounded(edge.getAttribute('d'))).toBe('M 10 210 H 390 V 170 H 790')
+    expect(zones(container, 'cheap').map(box)).toEqual([[10, 210, 380, 20], [390, 170, 400, 24]])
+    expect(zones(container, 'cheap')[0].getAttribute('fill')).toMatch(/^url\(#.*cheap\)$/)
   })
 
-  it('marks where expensive starts with a red line and a red zone fading above it', () => {
-    const { container } = draw(<ValueZones line={[step('2026-06-01', 100)]} data={data} geometry={geometry()} colors={colors} />)
+  it('draws a red line where expensive starts, at the usual high P/E, with a zone fading above it', () => {
+    const { container } = drawZones([step('2026-06-01', 5)])
     const edge = container.querySelector('path[data-edge="expensive"]')
     expect(edge).toHaveAttribute('stroke', 'down')
-    expect(rounded(edge.getAttribute('d'))).toBe('M 10 190 H 790')
-    expect(zones(container, 'expensive').map(box)).toEqual([[10, 170, 780, 20]])
+    expect(rounded(edge.getAttribute('d'))).toBe('M 10 110 H 790')
+    expect(zones(container, 'expensive').map(box)).toEqual([[10, 80, 780, 30]])
   })
 
   it('leaves the fair stretch between the two lines clear', () => {
-    const { container } = draw(<ValueZones line={[step('2026-06-01', 100)]} data={data} geometry={geometry()} colors={colors} />)
+    const { container } = drawZones([step('2026-06-01', 5)])
     for (const rect of container.querySelectorAll('rect')) {
       const [, y, , height] = box(rect)
-      expect(y + height <= 190 || y >= 230).toBe(true)
+      expect(y >= 210 || y + height <= 110).toBe(true)
     }
   })
 
-  it('has no expensive side on a capped step, since above the floor is not expensive', () => {
-    const { container } = draw(<ValueZones line={[step('2026-06-01', 100, { pe: 30, capped: true })]} data={data} geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('path[data-edge="expensive"]')).toBeNull()
-    expect(zones(container, 'expensive')).toHaveLength(0)
-    expect(zones(container, 'cheap')).toHaveLength(1)
-  })
-
-  it('leaves a gap where the line has ended', () => {
-    const line = [step('2026-06-01', 100), lineEnd('2026-07-11'), step('2026-07-21', 100)]
-    const { container } = draw(<ValueZones line={line} data={data} geometry={geometry()} colors={colors} />)
+  it('leaves a gap while trailing earnings are not positive', () => {
+    const { container } = drawZones([step('2026-06-01', 5), lineEnd('2026-07-11'), step('2026-07-21', 5)])
     expect(zones(container, 'cheap').map(box).map(([x, , w]) => [x, x + w])).toEqual([[10, 190], [410, 790]])
   })
 
-  it('draws nothing without steps', () => {
-    const { container } = draw(<ValueZones line={[]} data={data} geometry={geometry()} colors={colors} />)
-    expect(container.querySelector('g')).toBeNull()
+  it('draws nothing without steps or without a usual range', () => {
+    expect(drawZones([]).container.querySelector('g')).toBeNull()
+    expect(drawZones([step('2026-06-01', 5)], { band: null }).container.querySelector('g')).toBeNull()
   })
 })
 
 describe('GuideTags', () => {
   const tagY = (testId) => Number(screen.getByTestId(testId).querySelector('rect[data-badge]').getAttribute('y'))
+  const drawTags = (line, extra = {}) => draw(<GuideTags line={line} band={band} highs={null} data={data} geometry={geometry()} width={width} colors={colors} {...extra} />)
 
-  it('names the latest step in words with its price on the right axis', () => {
-    draw(<GuideTags line={[step('2026-06-01', 90), step('2026-07-20', 120)]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    const tag = screen.getByTestId('guide-tag-growth')
-    expect(tag).toHaveTextContent('Growth-fair · P/E 24')
-    expect(tag).toHaveTextContent('120.00')
-    expect(tagY('guide-tag-growth')).toBe(170 - 8)
-    expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('x', String(width - 62 + 2))
-    expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('fill', 'raised')
-    expect(tag.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'warn')
+  it('tags where cheap starts in green and where expensive starts in red, with their P/E and price', () => {
+    drawTags([step('2026-06-01', 4), step('2026-07-20', 5)])
+    const cheap = screen.getByTestId('guide-tag-cheap')
+    expect(cheap).toHaveTextContent('Cheap · P/E 20')
+    expect(cheap).toHaveTextContent('100.00')
+    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'up')
+    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('x', String(width - 62 + 2))
+    expect(tagY('guide-tag-cheap')).toBe(210 - 8)
+    const expensive = screen.getByTestId('guide-tag-expensive')
+    expect(expensive).toHaveTextContent('Expensive · P/E 30')
+    expect(expensive).toHaveTextContent('150.00')
+    expect(expensive.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'down')
   })
 
   it('shows the P/E as a whole number', () => {
-    draw(<GuideTags line={[step('2026-06-01', 120, { pe: 22.86 })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(screen.getByTestId('guide-tag-growth').textContent).toMatch(/Growth-fair · P\/E 23(?!\.)/)
+    drawTags([step('2026-06-01', 5)], { band: { low: 27.59, high: 35.91 } })
+    expect(screen.getByTestId('guide-tag-cheap').textContent).toMatch(/Cheap · P\/E 28(?!\.)/)
+    expect(screen.getByTestId('guide-tag-expensive').textContent).toMatch(/Expensive · P\/E 36(?!\.)/)
   })
 
-  it('has no growth tag once the line has ended', () => {
-    const { container } = draw(<GuideTags line={[step('2026-06-01', 120), lineEnd('2026-07-20')]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
+  it('has no value tags while trailing earnings are not positive', () => {
+    const { container } = drawTags([step('2026-06-01', 5), lineEnd('2026-07-20')])
+    expect(screen.queryByTestId('guide-tag-cheap')).toBeNull()
     expect(container.querySelector('[data-testid="guide-tags"]')).toBeNull()
   })
 
-  it('calls a capped step a floor', () => {
-    draw(<GuideTags line={[step('2026-06-01', 120, { pe: 30, capped: true })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(screen.getByTestId('guide-tag-growth')).toHaveTextContent('Growth floor · P/E 30+')
-  })
-
   it('pins a tag above the visible prices to the top edge with an up marker', () => {
-    draw(<GuideTags line={[step('2026-06-01', 400)]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(tagY('guide-tag-growth')).toBe(10)
-    expect(screen.getByTestId('guide-tag-growth').querySelector('[data-edge="above"]')).not.toBeNull()
+    drawTags([step('2026-06-01', 20)])
+    expect(tagY('guide-tag-expensive')).toBe(10)
+    expect(screen.getByTestId('guide-tag-expensive').querySelector('[data-edge="above"]')).not.toBeNull()
   })
 
   it('pushes tags that would overlap apart', () => {
-    const highs = data.map(() => 122.5)
-    draw(<GuideTags line={[step('2026-06-01', 120)]} highs={highs} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(Math.abs(tagY('guide-tag-growth') - tagY('guide-tag-high'))).toBeGreaterThanOrEqual(16)
+    drawTags([step('2026-06-01', 5)], { highs: data.map(() => 101) })
+    expect(Math.abs(tagY('guide-tag-cheap') - tagY('guide-tag-high'))).toBeGreaterThanOrEqual(16)
   })
 
   it('says how far the close is below the 52-week high', () => {
@@ -134,25 +103,6 @@ describe('GuideTags', () => {
     draw(<GuideTags line={null} highs={data.map(() => 243.37)} data={closing} geometry={geometry()} width={width} colors={colors} />)
     expect(screen.getByTestId('guide-tag-high')).toHaveTextContent('52w high −35.7%')
     expect(screen.queryByTestId('guide-tag-growth')).toBeNull()
-  })
-
-  it('tags where cheap starts in green and where expensive starts in red, with their P/E', () => {
-    draw(<GuideTags line={[step('2026-06-01', 100, { pe: 22.86 })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    const cheap = screen.getByTestId('guide-tag-cheap')
-    expect(cheap).toHaveTextContent('Cheap · P/E 21')
-    expect(cheap).toHaveTextContent('90.00')
-    expect(cheap.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'up')
-    expect(cheap.querySelector('text')).toHaveAttribute('fill', 'up')
-    const expensive = screen.getByTestId('guide-tag-expensive')
-    expect(expensive).toHaveTextContent('Expensive · P/E 25')
-    expect(expensive).toHaveTextContent('110.00')
-    expect(expensive.querySelector('rect[data-badge]')).toHaveAttribute('stroke', 'down')
-  })
-
-  it('has only a cheap tag on a capped step', () => {
-    draw(<GuideTags line={[step('2026-06-01', 100, { pe: 30, capped: true })]} highs={null} data={data} geometry={geometry()} width={width} colors={colors} />)
-    expect(screen.getByTestId('guide-tag-cheap')).toHaveTextContent('Cheap · P/E 27')
-    expect(screen.queryByTestId('guide-tag-expensive')).toBeNull()
   })
 
   it('shows no high tag before 252 sessions', () => {

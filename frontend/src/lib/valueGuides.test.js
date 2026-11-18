@@ -1,56 +1,53 @@
 import { describe, expect, it } from 'vitest'
 
 import { rollingHigh } from './indicators'
-import { entrySentence, FAIR_BAND, growthSentence, guideSeries, peChip, readPrice, stepAt, visibleGuides } from './valueGuides'
+import { bandAt, entrySentence, guideSeries, peChip, readPrice, stepAt, visibleGuides } from './valueGuides'
 
-const step = { from: '2026-08-30', price: 100, pe: 24, growth: 24.1, eps_ttm: 4.17, capped: false }
-const capped = { ...step, pe: 30, growth: 167.4, capped: true }
-const lineEnd = { from: '2026-09-30', price: null, pe: null, growth: null, eps_ttm: null, capped: false }
-const verdict = (extra = {}) => ({ action: 'wait', quality: 'strong', valuation: 'fair', growth_line: [step], ...extra })
+const step = { from: '2026-08-30', eps_ttm: 4 }
+const lineEnd = { from: '2026-09-30', eps_ttm: null }
+const band = { low: 20, high: 30 }
+const verdict = (extra = {}) => ({
+  action: 'wait', quality: 'strong', valuation: 'fair', eps_line: [step],
+  pe_p25: 20, pe_p75: 30, cheap_below: 80, expensive_above: 120, ...extra,
+})
 const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size: { shares: 3, lossAtStop: 45 }, currency: 'USD' }
 
+describe('bandAt', () => {
+  it('is the earnings known that day at the usual low and high P/E', () => {
+    expect(bandAt(step, band)).toEqual({ cheap: 80, expensive: 120 })
+  })
+
+  it('is nothing without positive earnings or a band', () => {
+    expect(bandAt(lineEnd, band)).toBeNull()
+    expect(bandAt(null, band)).toBeNull()
+    expect(bandAt(step, null)).toBeNull()
+  })
+})
+
 describe('readPrice', () => {
-  it('reads cheap, fair and expensive around a 10% band', () => {
-    expect(FAIR_BAND).toBe(0.1)
-    expect(readPrice(89, step)).toBe('cheap')
-    expect(readPrice(91, step)).toBe('fair')
-    expect(readPrice(109, step)).toBe('fair')
-    expect(readPrice(111, step)).toBe('expensive')
+  it('reads cheap at or below the low line and expensive at or above the high line, as the verdict does', () => {
+    const levels = bandAt(step, band)
+    expect(readPrice(79, levels)).toBe('cheap')
+    expect(readPrice(80, levels)).toBe('cheap')
+    expect(readPrice(81, levels)).toBe('fair')
+    expect(readPrice(119, levels)).toBe('fair')
+    expect(readPrice(120, levels)).toBe('expensive')
   })
 
-  it('counts the band edges as fair', () => {
-    expect(readPrice(90, step)).toBe('fair')
-    expect(readPrice(110, step)).toBe('fair')
-  })
-
-  it('reads nothing once the line has ended', () => {
-    expect(readPrice(100, lineEnd)).toBeNull()
-  })
-
-  it('never calls a capped line expensive', () => {
-    expect(readPrice(89, capped)).toBe('cheap')
-    expect(readPrice(150, capped)).toBe('priced_in')
-  })
-
-  it('reads nothing without a price or a step', () => {
-    expect(readPrice(null, step)).toBeNull()
+  it('reads nothing without a price or levels', () => {
+    expect(readPrice(null, bandAt(step, band))).toBeNull()
     expect(readPrice(100, null)).toBeNull()
   })
 })
 
 describe('stepAt', () => {
   it('finds the step covering a date and nothing before the first', () => {
-    const line = [{ ...step, from: '2026-01-10' }, { ...step, from: '2026-04-10', price: 120 }]
+    const line = [{ ...step, from: '2026-01-10' }, { from: '2026-04-10', eps_ttm: 5 }]
     expect(stepAt(line, '2026-01-09')).toBeNull()
-    expect(stepAt(line, '2026-04-09').price).toBe(100)
-    expect(stepAt(line, '2026-05-01').price).toBe(120)
+    expect(stepAt(line, '2026-04-09').eps_ttm).toBe(4)
+    expect(stepAt(line, '2026-05-01').eps_ttm).toBe(5)
     expect(stepAt([], '2026-05-01')).toBeNull()
     expect(stepAt(null, '2026-05-01')).toBeNull()
-  })
-
-  it('returns the line end once a loss has ended the line', () => {
-    const line = [{ ...step, from: '2026-01-10' }, { ...lineEnd, from: '2026-04-10' }]
-    expect(stepAt(line, '2026-05-01').price).toBeNull()
   })
 })
 
@@ -72,76 +69,22 @@ describe('peChip', () => {
   })
 })
 
-describe('growthSentence', () => {
-  it('words the growth line, capped or not', () => {
-    expect(growthSentence(step, 118, 'USD')).toBe('Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00. Price is +18% from that line, so expensive.')
-    expect(growthSentence(step, 108, 'USD')).toMatch(/Price is \+8% from that line, so fair\.$/)
-    expect(growthSentence(capped, 66, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00; price is 34% below it, so cheap even on that floor.')
-  })
-
-  it('rounds the P/E to a whole number', () => {
-    expect(growthSentence({ ...step, pe: 22.86 }, null, 'USD')).toMatch(/supports a P\/E of 23, about/)
-    expect(growthSentence({ ...capped, pe: 29.6 }, null, 'USD')).toMatch(/more than a P\/E of 30 assumes\. At P\/E 30 that/)
-  })
-
-  it('never prints a percent that contradicts the reading at the band edge', () => {
-    expect(growthSentence(step, 110.4, 'USD')).toMatch(/Price is \+10\.4% from that line, so expensive\.$/)
-    expect(growthSentence(step, 110.04, 'USD')).toMatch(/Price is \+10\.1% from that line, so expensive\.$/)
-    expect(growthSentence(step, 110, 'USD')).toMatch(/Price is \+10\.0% from that line, so fair\.$/)
-    expect(growthSentence(step, 90, 'USD')).toMatch(/Price is −10\.0% from that line, so fair\.$/)
-    expect(growthSentence(step, 89.6, 'USD')).toMatch(/Price is −10\.4% from that line, so cheap\.$/)
-    expect(growthSentence(step, 109.6, 'USD')).toMatch(/Price is \+9\.6% from that line, so fair\.$/)
-    expect(growthSentence(capped, 89.7, 'USD')).toMatch(/price is 10\.3% below it, so cheap even on that floor\.$/)
-    expect(growthSentence(capped, 90.3, 'USD')).toMatch(/price is 9\.7% below it, so its growth is priced in\.$/)
-  })
-
-  it('says plainly when a loss has ended the line', () => {
-    const text = growthSentence(lineEnd, 100, 'USD')
-    expect(text).toBe('No growth line while trailing earnings are not positive.')
-    expect(text).not.toMatch(/buy|sell|cheap|expensive/i)
-    expect(entrySentence({ verdict: verdict({ growth_line: [step, lineEnd] }), price: 100 }).next).toBe(text)
-  })
-
-  it('says a capped line above the floor is priced in, without an instruction', () => {
-    const text = growthSentence(capped, 150, 'USD')
-    expect(text).toMatch(/price is 50% above it, so its growth is priced in\.$/)
-    expect(text).not.toMatch(/buy|sell|opportunity/i)
-  })
-})
-
-describe('growthSentence edge cases', () => {
-  it('words a capped price slightly under the line as below it', () => {
-    expect(growthSentence(capped, 95, 'USD')).toMatch(/price is 5% below it, so its growth is priced in\.$/)
-  })
-
-  it('describes the line without a comparison when there is no price', () => {
-    for (const price of [null, undefined, NaN]) {
-      expect(growthSentence(step, price, 'USD')).toBe('Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00.')
-      expect(growthSentence(capped, price, 'USD')).toBe('Against its growth: earnings grew 167% a year, more than a P/E of 30 assumes. At P/E 30 that is about US$100.00.')
-    }
-    expect(entrySentence({ verdict: verdict(), price: null }).next).not.toMatch(/−100|NaN|null/)
-  })
-})
-
 describe('entrySentence', () => {
-  it('keeps the verdict word and why, and puts the growth view in next', () => {
-    const s = entrySentence({ verdict: verdict({ action: 'buy', valuation: 'cheap' }), price: 118, currency: 'USD' })
+  it('keeps the verdict word and why, and gives the prices where cheap and expensive start', () => {
+    const s = entrySentence({ verdict: verdict({ action: 'buy', valuation: 'cheap' }), price: 78, currency: 'USD' })
     expect(s.why).toBe('Strong company, cheap price.')
-    expect(s.next).toMatch(/^Against its growth/)
-    expect(JSON.stringify(s)).not.toMatch(/opportunity zone|updates tonight/i)
+    expect(s.next).toBe('Cheap below US$80.00 (P/E 20), expensive above US$120.00 (P/E 30).')
+    expect(JSON.stringify(s)).not.toMatch(/growth|opportunity zone|updates tonight/i)
   })
 
-  it('says when there is no growth line', () => {
-    expect(entrySentence({ verdict: verdict({ quality: 'mixed', growth_line: [] }), price: 50 }).next)
-      .toBe('Too little earnings history for a growth line.')
-    expect(entrySentence({ verdict: verdict({ growth_line: null }), price: 50 }).next)
-      .toBe('Too little earnings history for a growth line.')
+  it('rounds the P/E to whole numbers', () => {
+    expect(entrySentence({ verdict: verdict({ pe_p25: 27.59, pe_p75: 35.91 }), price: 100 }).next).toMatch(/\(P\/E 28\), expensive above US\$120\.00 \(P\/E 36\)/)
   })
 
-  it('has no growth view when the line starts in the future', () => {
-    const future = { ...step, from: '2999-01-01' }
-    expect(entrySentence({ verdict: verdict({ growth_line: [future] }), price: 50 }).next)
-      .toBe('Too little earnings history for a growth line.')
+  it('says when the price cannot be judged', () => {
+    const none = 'Too little P/E history to judge the price.'
+    expect(entrySentence({ verdict: verdict({ valuation: 'not_judged', cheap_below: null, expensive_above: null }), price: 50 }).next).toBe(none)
+    expect(entrySentence({ verdict: verdict({ cheap_below: null }), price: 50 }).next).toBe(none)
   })
 
   it('shapes the result as word, tone, why, next, risk and earnings', () => {
@@ -149,7 +92,7 @@ describe('entrySentence', () => {
       word: 'WAIT',
       tone: undefined,
       why: 'Strong company, fair price.',
-      next: 'Against its growth: earnings grew 24% a year over three years, which supports a P/E of 24, about US$100.00. Price is +0% from that line, so fair.',
+      next: 'Cheap below US$80.00 (P/E 20), expensive above US$120.00 (P/E 30).',
       risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",
       earnings: null,
     })

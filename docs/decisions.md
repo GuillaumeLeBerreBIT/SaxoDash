@@ -690,31 +690,30 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**The chart judges each day's price against the growth known that day, and draws only the two candle tools with evidence (2026-11-17).**
+**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).**
 Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
 on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
 showed the marks win no more often than a random day: 58% against 59%). The flat green and amber zones that
-followed (trailing EPS times the 25th and 75th P/E percentile, from `cheap_below` / `expensive_above`) judged
-last year's candles with this year's earnings: on NVDA every candle of two years sat in the cheap zone. They are
-gone. What is drawn now:
+followed (today's trailing EPS times the 25th and 75th P/E percentile) judged last year's candles with this
+year's earnings: on NVDA every candle of two years sat in the cheap zone. What is drawn now:
 
-- **Growth line** (`verdicts/growth_line.py`, stored nightly as `StockVerdict.growth_line`). For each quarter,
-  trailing-twelve-month EPS is compared with the trailing EPS exactly 12 quarters earlier, and the yearly rate
-  is the growth. A quarter counts only from 35 days after its period end (`REPORT_LAG_DAYS`), so no candle is
-  judged with a figure published after it. A one-off quarter, more than 2.5 times or less than 0.4 times the
-  median of the four before it, is replaced by that median before summing. Fair P/E is the growth in percent,
-  held between 15 and 30; the line is that P/E times the trailing EPS, one step per report. Within ±10% of it
-  (`lib/valueGuides.js::FAIR_BAND`) reads fair, below cheap, above expensive. Above 30% growth the P/E is capped
-  at 30 and the step is marked `capped`: the line is a floor labelled "P/E 30+", and above it reads "growth
-  priced in", never "expensive", because a company growing faster than that is not overpriced at P/E 30.
-- **P/E chip** beside the price: today's P/E against the verdict's own 25th and 75th percentiles (`pe_p25`,
-  `pe_p75`, now stored on the verdict). It keeps the verdict's method, which counts a quarter from its quarter
-  end with no report lag, so it always matches the verdict badge.
-- **Two views, on purpose.** The verdict's grade, action and track record still judge valuation on the P/E
-  percentiles and are unchanged; the growth line is chart context. The owner chose on 2026-11-17 to show both,
-  and they can disagree (MSFT: badge cheap at P/E 27 against its usual 28-36, growth line fair to expensive).
-  The sentence above the chart keeps the verdict's word and why, then gives the growth reading as "Against its
-  growth: ...". The "verdict updates tonight" clause and the "opportunity zone" wording went with the zones.
+- **Cheap and expensive zones** (a P/E band). `verdicts/eps_line.py` stores, nightly as `StockVerdict.eps_line`,
+  the trailing-twelve-month EPS at each quarter end with the verdict's own method (`research/valuation.py`: a
+  quarter counts from its period end, the last four summed, a non-positive sum ends the line). The chart draws a
+  green line at that EPS times `pe_p25` (where cheap starts) with a green zone fading below it, and a red line at
+  that EPS times `pe_p75` (where expensive starts) with a red zone fading above it; fair is the clear stretch
+  between. Today's step is exactly `cheap_below` and `expensive_above`, so the chart, the badge, the Price card,
+  the P/E chip and the sentence above the chart always agree. The percentiles are today's five-year range applied
+  to past earnings, as P/E band charts and FAST Graphs' normal P/E do; the earnings are point in time.
+- **Why not the growth line.** For one day (2026-11-17/18) the chart drew a growth line instead (fair P/E =
+  growth, held between 15 and 30, after FAST Graphs and Peter Lynch), shown beside the verdict as a second view.
+  The owner rejected two yardsticks that disagree (MSFT: badge cheap, growth line expensive) and asked for one.
+  Neither is proven: our earlier test found cheap against expensive on the P/E range worth one to two points a
+  year, not reliably different from zero, and the growth line was never tested. The P/E range won because the
+  verdict and its track record already use it. Both are to be graded on history before either is trusted
+  (`docs/superpowers/plans/2026-11-18-valuation-yardstick-test.md`); the growth line's code is in git at
+  9609ccc (`backend/verdicts/growth_line.py`).
+- **P/E chip** beside the price: today's P/E against `pe_p25` and `pe_p75`, now stored on the verdict.
 - **Volume gaps and the 52-week high**, the only candle-derived layers drawn. Gap up on heavy volume is the one
   candle tool drawn with evidence: in the 2023-2026 test (125 stocks) it beat the average stock by 4.57 points
   over 60 sessions (95% range +0.46 to +8.72), and on the deeper history back to 2004 (134 stocks) by about
@@ -728,7 +727,7 @@ gone. What is drawn now:
   +3.36) could be told apart from chance. The Guide tab says all three.
 - Tags on the right axis replace word boxes, with no painted background; a line outside the visible range is
   tagged at the edge instead of stretching the price scale. The Guides menu (`chartPrefs.guides`) holds `value`
-  (growth line and chip), `high52`, `gaps` and `plan` (stop-loss, off); a saved `zones` switch reads as `value`.
+  (cheap and expensive zones and chip), `high52`, `gaps` and `plan` (stop-loss, off); a saved `zones` switch reads as `value`.
 - The stop-loss is unchanged: one red line from the same `planFromPage` as the Trade plan card, off by default
   because a long-term holder sells on a weaker business, not on a price; when on, the chart and the sentence say
   how far it is below today's close, how it compares with the average price paid, and what the planned shares

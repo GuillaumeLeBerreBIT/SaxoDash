@@ -241,3 +241,15 @@ The owner asked which P/E each colour starts at and chose to remove the usual P/
 the green line "Cheap · P/E 21" in green and the red line "Expensive · P/E 25" in red (MSFT), each P/E being the
 growth line's P/E x 0.9 and x 1.1, rounded. A capped step has only the cheap tag ("Cheap · P/E 27" for NVDA).
 The P/E chip still shows the stock's usual range.
+
+### Revision 2026-11-18: one yardstick, the verdict's own P/E range
+
+The owner asked for what is financially correct and rejected two views that disagree. Neither yardstick is
+proven (the P/E range test found 1-2 points a year, not reliably different from zero; the growth line was never
+tested), so the chart now uses the one the verdict and its track record already use, drawn point in time:
+`StockVerdict.eps_line` (trailing EPS at each quarter end, the verdict's method) times `pe_p25` (green line,
+"Cheap · P/E 28") and `pe_p75` (red line, "Expensive · P/E 36"), with zones fading outward and fair clear between.
+The growth line, its 35-day lag, one-off rule, cap and the "Against its growth" sentence are removed; the sentence
+now reads "Cheap below US$528.35 (P/E 28), expensive above US$687.68 (P/E 36)." Migration 0004 (unpushed) now
+adds `eps_line` instead of `growth_line`. Grading both yardsticks on history is planned in
+`docs/superpowers/plans/2026-11-18-valuation-yardstick-test.md`.

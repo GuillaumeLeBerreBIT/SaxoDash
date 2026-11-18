@@ -169,11 +169,11 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('answers with the growth line and a P/E chip instead of flat zones, and the Guides menu switches the value guide off', async () => {
-    const line = [{ from: '2020-01-01', price: 120, growth: 18, pe: 30, capped: false }]
+  it('answers with the cheap and expensive prices and a P/E chip, and the Guides menu switches the value guide off', async () => {
+    const line = [{ from: '2020-01-01', eps_ttm: 4 }]
     queries.useVerdict.mockReturnValue({
       ...idle,
-      data: { ...judged, growth_line: line, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
+      data: { ...judged, eps_line: line, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
     })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
@@ -182,23 +182,23 @@ describe('Research', () => {
     expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
     const card = screen.getByTestId('answer-card')
     expect(card).toHaveTextContent('Strong company, fair price.')
-    expect(card).toHaveTextContent(/Against its growth: earnings grew 18% a year/)
+    expect(card).toHaveTextContent('Cheap below US$100.00 (P/E 45), expensive above US$200.00 (P/E 77).')
     expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    for (const name of [/Value: growth line and P\/E/, /52-week high/, /Volume gaps/]) {
+    for (const name of [/Value: cheap and expensive zones/, /52-week high/, /Volume gaps/]) {
       expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
     }
-    await userEvent.click(screen.getByRole('menuitem', { name: /Value: growth line and P\/E/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Value: cheap and expensive zones/ }))
     expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.value).toBe(false)
   })
 
-  it('says there is too little history for a growth line when the verdict carries none', () => {
+  it('says the price cannot be judged without a usual P/E range', () => {
     queries.useVerdict.mockReturnValue({ ...idle, data: judged })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('answer-card')).toHaveTextContent('Too little earnings history for a growth line.')
+    expect(screen.getByTestId('answer-card')).toHaveTextContent('Too little P/E history to judge the price.')
     expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
   })
 

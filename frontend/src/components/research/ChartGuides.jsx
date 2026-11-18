@@ -2,7 +2,7 @@ import { useId } from 'react'
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
-import { FAIR_BAND, stepAt } from '../../lib/valueGuides'
+import { bandAt, stepAt } from '../../lib/valueGuides'
 
 const TAG_HEIGHT = 18
 const COMPACT_BELOW = 520
@@ -37,18 +37,11 @@ function stepPath(values, xAt, scaleY, last) {
   return previous != null ? `${d} H ${xAt(last)}` : d
 }
 
-export function GrowthLine({ line, data, geometry, colors }) {
-  if (!line?.length || !data.length) return null
-  const d = stepPath(data.map((bar) => stepAt(line, bar.date)?.price ?? null), geometry.xAt, geometry.scaleY, data.length - 1)
-  if (!d) return null
-  return <path data-testid="growth-line" d={d} fill="none" stroke={colors.warn} strokeWidth="1.5" pointerEvents="none" />
-}
-
 const ZONE_DEPTH = 0.1
 const ZONE_OPACITY = 0.3
 const EDGE_OPACITY = 0.8
 
-function stepRuns(data, line) {
+function stepRuns(data, line, band) {
   const runs = []
   data.forEach((bar, i) => {
     const step = stepAt(line, bar.date)
@@ -57,12 +50,9 @@ function stepRuns(data, line) {
     else runs.push({ step, start: i, end: i })
   })
   return runs
-    .map((run, i) => ({ ...run, right: i + 1 < runs.length && runs[i + 1].step?.price != null ? run.end + 1 : run.end }))
-    .filter((run) => run.step?.price != null)
+    .map((run, i) => ({ ...run, levels: bandAt(run.step, band), right: i + 1 < runs.length && bandAt(runs[i + 1].step, band) ? run.end + 1 : run.end }))
+    .filter((run) => run.levels)
 }
-
-const cheapEdge = (step) => (step?.price != null ? step.price * (1 - FAIR_BAND) : null)
-const expensiveEdge = (step) => (step?.price != null && !step.capped ? step.price * (1 + FAIR_BAND) : null)
 
 function Fade({ id, color, from }) {
   return (
@@ -73,19 +63,21 @@ function Fade({ id, color, from }) {
   )
 }
 
-export function ValueZones({ line, data, geometry, colors }) {
+export function ValueZones({ line, band, data, geometry, colors }) {
   const id = useId()
-  if (!line?.length || !data.length) return null
-  const runs = stepRuns(data, line)
+  if (!band || !line?.length || !data.length) return null
+  const runs = stepRuns(data, line, band)
   if (!runs.length) return null
   const { xAt, scaleY } = geometry
   const last = data.length - 1
-  const steps = data.map((bar) => stepAt(line, bar.date))
-  const cheapPath = stepPath(steps.map(cheapEdge), xAt, scaleY, last)
-  const expensivePath = stepPath(steps.map(expensiveEdge), xAt, scaleY, last)
-  const zone = (key, edge, far, fill, start, right) => {
+  const levels = data.map((bar) => bandAt(stepAt(line, bar.date), band))
+  const cheapPath = stepPath(levels.map((level) => level?.cheap ?? null), xAt, scaleY, last)
+  const expensivePath = stepPath(levels.map((level) => level?.expensive ?? null), xAt, scaleY, last)
+  const zone = (kind, edge, far, start, right) => {
     const top = scaleY(Math.max(edge, far))
-    return <rect key={key} data-zone={key.split('-')[0]} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={scaleY(Math.min(edge, far)) - top} fill={fill} />
+    return (
+      <rect key={`${kind}-${start}`} data-zone={kind} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={scaleY(Math.min(edge, far)) - top} fill={`url(#${id}${kind})`} />
+    )
   }
   return (
     <g data-testid="value-zones" pointerEvents="none">
@@ -93,12 +85,12 @@ export function ValueZones({ line, data, geometry, colors }) {
         <Fade id={`${id}cheap`} color={colors.up} from={ZONE_OPACITY} />
         <Fade id={`${id}expensive`} color={colors.down} from={0} />
       </defs>
-      {runs.map(({ step, start, right }) => [
-        zone(`cheap-${start}`, cheapEdge(step), step.price * (1 - FAIR_BAND - ZONE_DEPTH), `url(#${id}cheap)`, start, right),
-        step.capped ? null : zone(`expensive-${start}`, expensiveEdge(step), step.price * (1 + FAIR_BAND + ZONE_DEPTH), `url(#${id}expensive)`, start, right),
+      {runs.map(({ levels: { cheap, expensive }, start, right }) => [
+        zone('cheap', cheap, cheap * (1 - ZONE_DEPTH), start, right),
+        zone('expensive', expensive, expensive * (1 + ZONE_DEPTH), start, right),
       ])}
-      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.up} strokeOpacity={EDGE_OPACITY} strokeWidth="1" /> : null}
-      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.down} strokeOpacity={EDGE_OPACITY} strokeWidth="1" /> : null}
+      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.up} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
+      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.down} strokeOpacity={EDGE_OPACITY} strokeWidth="1.2" /> : null}
     </g>
   )
 }
@@ -159,19 +151,14 @@ const GUIDE_FONT = 11
 
 const signedPercent = (value) => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(1)}%`
 
-function guideTagItems({ line, highs, data, colors }) {
+function guideTagItems({ line, band, highs, data, colors }) {
   const lastBar = data[data.length - 1]
   if (!lastBar) return []
   const items = []
-  const step = stepAt(line, lastBar.date)
-  if (step?.price != null) {
-    const pe = Math.round(step.pe)
-    const words = step.capped ? `Growth floor · P/E ${pe}+` : `Growth-fair · P/E ${pe}`
-    items.push({ key: 'growth', price: step.price, words, stroke: colors.warn, text: colors.warnText })
-    items.push({ key: 'cheap', price: cheapEdge(step), words: `Cheap · P/E ${Math.round(step.pe * (1 - FAIR_BAND))}`, stroke: colors.up, text: colors.up })
-    if (!step.capped) {
-      items.push({ key: 'expensive', price: expensiveEdge(step), words: `Expensive · P/E ${Math.round(step.pe * (1 + FAIR_BAND))}`, stroke: colors.down, text: colors.down })
-    }
+  const levels = bandAt(stepAt(line, lastBar.date), band)
+  if (levels) {
+    items.push({ key: 'expensive', price: levels.expensive, words: `Expensive · P/E ${Math.round(band.high)}`, stroke: colors.down, text: colors.down })
+    items.push({ key: 'cheap', price: levels.cheap, words: `Cheap · P/E ${Math.round(band.low)}`, stroke: colors.up, text: colors.up })
   }
   const high = highs?.[highs.length - 1]
   if (high != null) {
@@ -204,8 +191,8 @@ function EdgeArrow({ x, y, edge, fill }) {
   return <polygon data-edge={edge} points={points} fill={fill} />
 }
 
-export function GuideTags({ line, highs, data, geometry, width, colors }) {
-  const tags = placeTags(guideTagItems({ line, highs, data, colors }), geometry)
+export function GuideTags({ line, band = null, highs, data, geometry, width, colors }) {
+  const tags = placeTags(guideTagItems({ line, band, highs, data, colors }), geometry)
   if (!tags.length) return null
   const gutter = width - PAD_R
   return (

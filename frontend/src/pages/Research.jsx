@@ -121,22 +121,23 @@ export default function Research() {
       portfolioValue: tradePlan.portfolioValue, riskPct,
     })
     const judged = signalsForListing(judgedVerdict, listingUic)
-    const latest = allBars.length ? allBars[allBars.length - 1].close : null
+    const chip = peChip(judged)
     return {
       available: [...(judged ? ['value'] : []), 'high52', 'gaps', ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
       valueGuides: {
-        line: shown.value && judged ? judged.growth_line ?? null : null,
+        line: shown.value && chip ? judged.eps_line ?? null : null,
+        band: shown.value && chip ? { low: chip.low, high: chip.high } : null,
         high: shown.high52,
         gaps: shown.gaps,
         currency: guideCurrency,
         bars: allBars,
       },
-      chip: peChip(judged),
+      chip,
       plan: shown.plan ? plan : null,
-      sentence: entrySentence({ verdict: null, price: latest, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
+      sentence: entrySentence({ verdict: null, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
       answer: entrySentence({
-        verdict: judged, price: latest, plan: null, held: Boolean(position),
+        verdict: judged, plan: null, held: Boolean(position),
         earnings: judged ? reportsWithin(nextReport, 10) : null, currency: guideCurrency,
       }),
     }

@@ -133,12 +133,12 @@ class VerdictApiTests(APITestCase):
         self.assertEqual(detail['last_close'], 100.0)
         self.assertEqual(detail['pct_vs_ma200'], 4.5)
 
-    def test_detail_carries_the_growth_line_and_pe_percentiles(self):
-        line = [{'from': '2026-01-01', 'price': 180.0, 'pe': 18.0, 'growth': 18.2, 'eps_ttm': 10.0, 'capped': False}]
-        verdict('AAA', growth_line=line, pe_p25=20.0, pe_p75=30.0)
+    def test_detail_carries_the_eps_line_and_pe_percentiles(self):
+        line = [{'from': '2026-01-01', 'eps_ttm': 10.0}]
+        verdict('AAA', eps_line=line, pe_p25=20.0, pe_p75=30.0)
         self.client.force_authenticate(self.bob)
         detail = self.client.get('/api/verdicts/aaa/').json()['verdict']
-        self.assertEqual(detail['growth_line'], line)
+        self.assertEqual(detail['eps_line'], line)
         self.assertEqual((detail['pe_p25'], detail['pe_p75']), (20.0, 30.0))
 
     def test_detail_reads_a_saxo_symbol_as_its_bare_ticker(self):
