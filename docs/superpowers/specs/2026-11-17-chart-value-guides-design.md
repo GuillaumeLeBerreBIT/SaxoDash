@@ -220,3 +220,17 @@ charts and Morningstar's fair-value bands.
 - **Hover card** adds "Usual P/E" with its price for the hovered day.
 - **Switch.** Both sit under the existing `value` guide.
 - Frontend only: `lib/valueGuides.js`, `ChartGuides.jsx`, the hover legend, Guide tab copy, tests.
+
+### Revision 2026-11-18: green and red zones instead of the amber corridor
+
+After seeing the amber corridor the owner asked where cheap and expensive show, and asked for green and red back,
+but not as full zones: "from where it starts down" for cheap and the reverse for expensive. The corridor is
+replaced by:
+
+- a thin green line at 0.9x the growth line (where cheap starts) with a green zone below it that fades out over
+  another 10% of the line's price;
+- a thin red line at 1.1x (where expensive starts) with a red zone above it that fades out over another 10%;
+- nothing between the two lines (fair is clear, as on GuruFocus);
+- on a capped step only the green side, since above a P/E 30+ floor is not expensive.
+
+The fade stops each zone well short of painting the chart, which keeps the anti-goal.

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import * as ChartGuides from './ChartGuides'
-import { FairCorridor, GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine } from './ChartGuides'
+import { GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine, ValueZones } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
 const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
@@ -37,33 +37,52 @@ describe('GrowthLine', () => {
   })
 })
 
-describe('FairCorridor', () => {
-  const band = (rect) => ['x', 'y', 'width', 'height'].map((key) => Math.round(Number(rect.getAttribute(key)) * 100) / 100)
+describe('ValueZones', () => {
+  const box = (rect) => ['x', 'y', 'width', 'height'].map((key) => Math.round(Number(rect.getAttribute(key)) * 100) / 100)
+  const rounded = (d) => d.replace(/\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100))
+  const zones = (container, kind) => [...container.querySelectorAll(`rect[data-zone="${kind}"]`)]
 
-  it('fills 10% either side of each step in faint amber', () => {
-    const { container } = draw(<FairCorridor line={[step('2026-06-01', 100), step('2026-07-20', 120)]} data={data} geometry={geometry()} colors={colors} />)
-    const rects = container.querySelectorAll('[data-testid="fair-corridor"] rect')
-    expect(rects).toHaveLength(2)
-    expect(rects[0]).toHaveAttribute('fill', 'warn')
-    expect(Number(rects[0].getAttribute('opacity'))).toBeLessThan(0.15)
-    expect(band(rects[0])).toEqual([10, 410 - 220, 380, 40])
-    expect(band(rects[1])).toEqual([390, 410 - 264, 400, 48])
+  it('marks where cheap starts with a green line and a green zone fading below it', () => {
+    const { container } = draw(<ValueZones line={[step('2026-06-01', 100), step('2026-07-20', 120)]} data={data} geometry={geometry()} colors={colors} />)
+    const edge = container.querySelector('path[data-edge="cheap"]')
+    expect(edge).toHaveAttribute('stroke', 'up')
+    expect(rounded(edge.getAttribute('d'))).toBe('M 10 230 H 390 V 194 H 790')
+    const cheap = zones(container, 'cheap')
+    expect(cheap.map(box)).toEqual([[10, 230, 380, 20], [390, 194, 400, 24]])
+    expect(cheap[0].getAttribute('fill')).toMatch(/^url\(#.*cheap\)$/)
   })
 
-  it('fills only below a capped step, since above the floor is not expensive', () => {
-    const { container } = draw(<FairCorridor line={[step('2026-06-01', 100, { pe: 30, capped: true })]} data={data} geometry={geometry()} colors={colors} />)
-    expect(band(container.querySelector('rect'))).toEqual([10, 410 - 200, 780, 20])
+  it('marks where expensive starts with a red line and a red zone fading above it', () => {
+    const { container } = draw(<ValueZones line={[step('2026-06-01', 100)]} data={data} geometry={geometry()} colors={colors} />)
+    const edge = container.querySelector('path[data-edge="expensive"]')
+    expect(edge).toHaveAttribute('stroke', 'down')
+    expect(rounded(edge.getAttribute('d'))).toBe('M 10 190 H 790')
+    expect(zones(container, 'expensive').map(box)).toEqual([[10, 170, 780, 20]])
+  })
+
+  it('leaves the fair stretch between the two lines clear', () => {
+    const { container } = draw(<ValueZones line={[step('2026-06-01', 100)]} data={data} geometry={geometry()} colors={colors} />)
+    for (const rect of container.querySelectorAll('rect')) {
+      const [, y, , height] = box(rect)
+      expect(y + height <= 190 || y >= 230).toBe(true)
+    }
+  })
+
+  it('has no expensive side on a capped step, since above the floor is not expensive', () => {
+    const { container } = draw(<ValueZones line={[step('2026-06-01', 100, { pe: 30, capped: true })]} data={data} geometry={geometry()} colors={colors} />)
+    expect(container.querySelector('path[data-edge="expensive"]')).toBeNull()
+    expect(zones(container, 'expensive')).toHaveLength(0)
+    expect(zones(container, 'cheap')).toHaveLength(1)
   })
 
   it('leaves a gap where the line has ended', () => {
     const line = [step('2026-06-01', 100), lineEnd('2026-07-11'), step('2026-07-21', 100)]
-    const { container } = draw(<FairCorridor line={line} data={data} geometry={geometry()} colors={colors} />)
-    const rects = [...container.querySelectorAll('rect')].map(band)
-    expect(rects.map(([x, , w]) => [x, x + w])).toEqual([[10, 190], [410, 790]])
+    const { container } = draw(<ValueZones line={line} data={data} geometry={geometry()} colors={colors} />)
+    expect(zones(container, 'cheap').map(box).map(([x, , w]) => [x, x + w])).toEqual([[10, 190], [410, 790]])
   })
 
   it('draws nothing without steps', () => {
-    const { container } = draw(<FairCorridor line={[]} data={data} geometry={geometry()} colors={colors} />)
+    const { container } = draw(<ValueZones line={[]} data={data} geometry={geometry()} colors={colors} />)
     expect(container.querySelector('g')).toBeNull()
   })
 })

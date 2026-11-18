@@ -21,7 +21,7 @@ import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
 import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { FairCorridor, GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine } from './ChartGuides'
+import { ValueZones, GapBoxes, GrowthLine, GuideTags, HighLine, StopGuide, UsualLine } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import { useAnnotationSelection } from './useAnnotationSelection'
@@ -268,7 +268,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
       <g clipPath={`url(#${clipId})`}>
         {guides ? (
           <g data-testid="value-guides">
-            <FairCorridor line={guides.line} data={data} geometry={geometry} colors={colors} />
+            <ValueZones line={guides.line} data={data} geometry={geometry} colors={colors} />
             <GapBoxes gaps={guides.gaps} geometry={geometry} colors={colors} />
             <HighLine highs={guides.highs} geometry={geometry} colors={colors} />
             <UsualLine line={guides.line} usual={guides.usual} data={data} geometry={geometry} colors={colors} />

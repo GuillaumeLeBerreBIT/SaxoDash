@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
@@ -43,7 +44,9 @@ export function GrowthLine({ line, data, geometry, colors }) {
   return <path data-testid="growth-line" d={d} fill="none" stroke={colors.warn} strokeWidth="1.5" pointerEvents="none" />
 }
 
-const CORRIDOR_OPACITY = 0.1
+const ZONE_DEPTH = 0.1
+const ZONE_OPACITY = 0.3
+const EDGE_OPACITY = 0.8
 
 function stepRuns(data, line) {
   const runs = []
@@ -58,18 +61,44 @@ function stepRuns(data, line) {
     .filter((run) => run.step?.price != null)
 }
 
-export function FairCorridor({ line, data, geometry, colors }) {
+const cheapEdge = (step) => (step?.price != null ? step.price * (1 - FAIR_BAND) : null)
+const expensiveEdge = (step) => (step?.price != null && !step.capped ? step.price * (1 + FAIR_BAND) : null)
+
+function Fade({ id, color, from }) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stopColor={color} stopOpacity={from} />
+      <stop offset="1" stopColor={color} stopOpacity={ZONE_OPACITY - from} />
+    </linearGradient>
+  )
+}
+
+export function ValueZones({ line, data, geometry, colors }) {
+  const id = useId()
   if (!line?.length || !data.length) return null
   const runs = stepRuns(data, line)
   if (!runs.length) return null
   const { xAt, scaleY } = geometry
+  const last = data.length - 1
+  const steps = data.map((bar) => stepAt(line, bar.date))
+  const cheapPath = stepPath(steps.map(cheapEdge), xAt, scaleY, last)
+  const expensivePath = stepPath(steps.map(expensiveEdge), xAt, scaleY, last)
+  const zone = (key, edge, far, fill, start, right) => {
+    const top = scaleY(Math.max(edge, far))
+    return <rect key={key} data-zone={key.split('-')[0]} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={scaleY(Math.min(edge, far)) - top} fill={fill} />
+  }
   return (
-    <g data-testid="fair-corridor" pointerEvents="none">
-      {runs.map(({ step, start, right }) => {
-        const top = scaleY(step.capped ? step.price : step.price * (1 + FAIR_BAND))
-        const bottom = scaleY(step.price * (1 - FAIR_BAND))
-        return <rect key={start} x={xAt(start)} y={top} width={xAt(right) - xAt(start)} height={bottom - top} fill={colors.warn} opacity={CORRIDOR_OPACITY} />
-      })}
+    <g data-testid="value-zones" pointerEvents="none">
+      <defs>
+        <Fade id={`${id}cheap`} color={colors.up} from={ZONE_OPACITY} />
+        <Fade id={`${id}expensive`} color={colors.down} from={0} />
+      </defs>
+      {runs.map(({ step, start, right }) => [
+        zone(`cheap-${start}`, cheapEdge(step), step.price * (1 - FAIR_BAND - ZONE_DEPTH), `url(#${id}cheap)`, start, right),
+        step.capped ? null : zone(`expensive-${start}`, expensiveEdge(step), step.price * (1 + FAIR_BAND + ZONE_DEPTH), `url(#${id}expensive)`, start, right),
+      ])}
+      {cheapPath ? <path data-edge="cheap" d={cheapPath} fill="none" stroke={colors.up} strokeOpacity={EDGE_OPACITY} strokeWidth="1" /> : null}
+      {expensivePath ? <path data-edge="expensive" d={expensivePath} fill="none" stroke={colors.down} strokeOpacity={EDGE_OPACITY} strokeWidth="1" /> : null}
     </g>
   )
 }

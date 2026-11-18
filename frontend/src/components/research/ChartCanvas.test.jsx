@@ -277,10 +277,10 @@ describe('ChartCanvas value guides', () => {
     expect(legend(container)).toHaveTextContent(/Usual P\/E \S*135\.00/)
   })
 
-  it('draws the fair corridor and the usual P/E line with the growth line', () => {
+  it('draws the value zones and the usual P/E line with the growth line', () => {
     const { container } = render(canvas({ valueGuides: { line: [step], usual: 30, high: false, gaps: false, currency: 'USD' } }))
 
-    expect(container.querySelector('[data-testid="fair-corridor"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="value-zones"]')).not.toBeNull()
     expect(container.querySelector('[data-testid="usual-line"]')).not.toBeNull()
   })
 
