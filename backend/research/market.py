@@ -25,6 +25,8 @@ SEARCH_TTL = 3600
 DETAILS_TTL = 86400
 
 CANDLE_PRICES = ('open', 'high', 'low', 'close')
+LOWEST_TRADED_PRICE = 0.0001
+LOWEST_PLAUSIBLE_LOW = 0.2
 
 
 def _cache_key(name, **params):
@@ -67,8 +69,11 @@ def to_candle(sample):
         return None
 
     prices = {name: price(name.capitalize()) for name in CANDLE_PRICES}
-    if any(value is None for value in prices.values()):
+    if any(value is None or value < LOWEST_TRADED_PRICE for value in prices.values()):
         return None
+    body_bottom = min(prices['open'], prices['close'])
+    if prices['low'] < LOWEST_PLAUSIBLE_LOW * body_bottom:
+        prices['low'] = body_bottom
 
     return {
         'date': time[:10],

@@ -71,6 +71,17 @@ class ScoreTest(SimpleTestCase):
         self.assertEqual(result.positive_share, 1.0)
         self.assertEqual((result.from_date, result.to_date), (day(300), day(300)))
 
+    def test_an_unadjusted_split_counts_as_at_most_a_capped_return(self):
+        stocks = market()
+        stocks['S00'].closes[305] = 1000.0
+        stocks['S01'].closes[325] = 1.0
+        flags = no_flags(stocks)
+        mark(stocks, flags, 'S00', 'volume_thrust', [300])
+        mark(stocks, flags, 'S01', 'hammer', [320])
+        scores = evaluate.score(stocks, flags)
+        self.assertAlmostEqual(found(scores, 'volume_thrust', 5).mean_excess, 3.0 - 3.0 / 60)
+        self.assertAlmostEqual(found(scores, 'hammer', 5).mean_excess, -0.9 + 0.9 / 60)
+
     def test_every_signal_and_horizon_is_answered_even_without_cases(self):
         stocks = market()
         scores = evaluate.score(stocks, no_flags(stocks))

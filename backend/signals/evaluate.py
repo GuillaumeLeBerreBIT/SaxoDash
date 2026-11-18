@@ -15,6 +15,8 @@ MIN_CASES = 300
 MIN_RANKED_STOCKS = 8
 BOOTSTRAP_ROUNDS = 400
 BOOTSTRAP_SEED = 7
+WORST_RETURN = -0.9
+BEST_RETURN = 3.0
 SUPPORTED, NO_EDGE, AGAINST, TOO_FEW = 'supported', 'no_edge', 'against', 'too_few'
 UNPROVEN = 'unproven'
 
@@ -90,7 +92,7 @@ def _forward_returns(series, horizon):
     returns = array('d', [math.nan]) * count
     for i in range(FIRST_BAR, count - horizon):
         if opens[i + 1]:
-            returns[i] = closes[i + horizon] / opens[i + 1] - 1
+            returns[i] = min(max(closes[i + horizon] / opens[i + 1] - 1, WORST_RETURN), BEST_RETURN)
     return returns
 
 
