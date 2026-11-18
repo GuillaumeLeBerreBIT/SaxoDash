@@ -121,7 +121,7 @@ def _mean(total, count):
     return total / count if count else None
 
 
-def _score_horizon(eligible, flags, horizon):
+def _score_horizon(eligible, flags, horizon, signals):
     returns = {ticker: _forward_returns(series, horizon) for ticker, series in eligible.items()}
     date_totals = defaultdict(lambda: [0.0, 0])
     for ticker, series in eligible.items():
@@ -136,7 +136,7 @@ def _score_horizon(eligible, flags, horizon):
     middle = ordered[len(ordered) // 2] if ordered else None
 
     scores = {}
-    for signal in definitions.SIGNALS:
+    for signal in signals:
         by_stock = defaultdict(lambda: [0.0, 0])
         by_month = defaultdict(lambda: [0.0, 0])
         halves = [[0.0, 0], [0.0, 0]]
@@ -175,16 +175,16 @@ def _score_horizon(eligible, flags, horizon):
     return scores
 
 
-def score(series_by_ticker, flags):
+def score(series_by_ticker, flags, signals=definitions.SIGNALS, horizons=HORIZONS, grade_horizon=GRADE_HORIZON):
     eligible = {ticker: series for ticker, series in series_by_ticker.items() if len(series) >= MIN_BARS}
-    by_horizon = {horizon: _score_horizon(eligible, flags, horizon) for horizon in HORIZONS}
+    by_horizon = {horizon: _score_horizon(eligible, flags, horizon, signals) for horizon in horizons}
     out = []
-    for signal in definitions.SIGNALS:
-        decider = by_horizon[GRADE_HORIZON][signal.key]
+    for signal in signals:
+        decider = by_horizon[grade_horizon][signal.key]
         decided = grade(decider.cases, decider.ci_low, decider.ci_high, decider.first_half, decider.second_half)
         if decided == SUPPORTED and signal.buys_weakness:
             decided = UNPROVEN
-        for horizon in HORIZONS:
+        for horizon in horizons:
             found = by_horizon[horizon][signal.key]
             out.append(Score(**{**found.__dict__, 'grade': decided}))
     return out
