@@ -55,12 +55,18 @@ def _refresh_fundamentals(row, bars):
 
 
 PRICE_FIELDS = ('open', 'high', 'low', 'close')
+LOWEST_TRADED_PRICE = 0.0001
+
+
+def _traded(bar):
+    prices = [bar.get(field) for field in PRICE_FIELDS]
+    return None not in prices and min(prices) >= LOWEST_TRADED_PRICE
 
 
 def stored_bars(bars):
     by_date = {}
     for bar in bars:
-        if bar.get('date') is None or any(bar.get(field) is None for field in PRICE_FIELDS):
+        if bar.get('date') is None or not _traded(bar):
             continue
         by_date[bar['date']] = [bar['date'], *(bar[field] for field in PRICE_FIELDS), bar.get('volume') or 0]
     return [by_date[day] for day in sorted(by_date)]

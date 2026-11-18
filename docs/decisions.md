@@ -650,7 +650,13 @@ row back until it holds `history.TARGET_BARS` (5,900) or the listing begins, the
 The nightly scan no longer overwrites: `history.merged` keeps the older bars and takes the fresh 1,200.
 Saxo's bars are split-adjusted, so a split restates every past price: when a close the two sides share
 differs by more than 0.5%, the stored history is dropped, the fresh bars kept and the row backfilled again;
-an older page that disagrees with what is stored is not stored at all. Signal scores therefore include 2008,
+an older page that disagrees with what is stored is not stored at all. Saxo also sends a placeholder bar on
+some market holidays, every price 1e-09 and no volume (FISV, 1 September 2014). `scan.stored_bars` drops any
+bar priced under `LOWEST_TRADED_PRICE`, and migration `research.0020` removed the ones already stored: that one
+bar gave a 60-session return of about 3.5e10 and turned every signal's mean and interval into nonsense, so
+the grades before 2026-11-18 cannot be trusted. Not every past split is adjusted either: about twenty stocks
+keep a one-day jump of more than 2.5 times from an unadjusted split, spin-off or special dividend (LRCX and COO
+in 2024, CIEN in 2006, KDP in 2018, CTVA in 2026), which still distorts their forward returns. Signal scores therefore include 2008,
 2020 and 2022, but still only today's index members: companies that failed or were dropped are absent, which
 flatters any signal that buys weakness (deep pullback, oversold) more than it flatters momentum. `signals`
 holds the series as `array('d')` and its flags as `bytearray`, because 520 stocks of Python floats and
