@@ -49,7 +49,20 @@ describe('QualityValuationQuadrant', () => {
       )
       expect(container.querySelectorAll('.recharts-label')).toHaveLength(0)
       expect(screen.getByText('Quality →')).toBeInTheDocument()
-      expect(screen.getByText('Pricier →')).toBeInTheDocument()
+      expect(screen.getByText('Higher valuation →')).toBeInTheDocument()
+    })
+
+    it('paints no corner as good or bad, because the valuation score was never tested', () => {
+      const { container } = render(
+        <QualityValuationQuadrant
+          points={[
+            { symbol: 'SELF', quality: 80, valuation: 20, isSelf: true },
+            { symbol: 'PEER', quality: 30, valuation: 80, isSelf: false },
+          ]}
+        />,
+      )
+      expect(container.querySelectorAll('.recharts-reference-area')).toHaveLength(0)
+      expect(screen.getByText('Lower valuation')).toBeInTheDocument()
     })
 
     it('gives a max-score dot headroom instead of pinning it to the plot edge', () => {

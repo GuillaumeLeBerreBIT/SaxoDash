@@ -1,7 +1,6 @@
 import {
   CartesianGrid,
   LabelList,
-  ReferenceArea,
   ReferenceLine,
   Scatter,
   ScatterChart,
@@ -62,13 +61,14 @@ export default function QualityValuationQuadrant({ points, unscored = [], classN
         <InfoTip>
           Quality averages ROE, net margin and leverage against the same thresholds the
           Investment Snapshot uses. Valuation reads PEG and P/E vs. its own history. Both are
-          0-100 reads, not fundamentals themselves - a quick placement, not a verdict.
+          0-100 reads, not fundamentals themselves - a quick placement, not a verdict. No corner is a
+          buy: the valuation score was never tested as a signal.
         </InfoTip>
       }
     >
       <div className="flex items-center justify-between px-1 text-[12px] text-ink-3">
-        <span>Cheaper</span>
-        <span>Pricier →</span>
+        <span>Lower valuation</span>
+        <span>Higher valuation →</span>
       </div>
       <div className="flex gap-2 mt-1">
         <span className="text-[12px] text-ink-3 [writing-mode:vertical-rl] rotate-180 shrink-0">
@@ -77,9 +77,6 @@ export default function QualityValuationQuadrant({ points, unscored = [], classN
         <ChartFrame className="h-[var(--chart-h-md)] flex-1 min-w-0">
           <ScatterChart margin={{ top: 14, right: 20, left: 4, bottom: 4 }}>
             <CartesianGrid {...gridProps(c)} />
-            <ReferenceArea x1={50} x2={100 + PAD} y1={50} y2={100 + PAD} fill={c.down} fillOpacity={0.05} />
-            <ReferenceArea x1={-PAD} x2={50} y1={-PAD} y2={50} fill={c.down} fillOpacity={0.05} />
-            <ReferenceArea x1={-PAD} x2={50} y1={50} y2={100 + PAD} fill={c.up} fillOpacity={0.06} />
             <XAxis
               {...axisProps(c)}
               type="number"

@@ -26,8 +26,9 @@ describe('GuideTab', () => {
   it('renders the quadrant corners', () => {
     render(<GuideTab />)
 
-    expect(screen.getByText(/High quality, cheap/)).toBeInTheDocument()
-    expect(screen.getByText(/Low quality, expensive/)).toBeInTheDocument()
+    expect(screen.getByText(/Higher quality, lower valuation/)).toBeInTheDocument()
+    expect(screen.getByText(/Lower quality, higher valuation/)).toBeInTheDocument()
+    expect(screen.queryByText(/worth digging into|value-trap|avoid by default/i)).not.toBeInTheDocument()
   })
 
   it('lists every tested signal under its grade when the scores are in', () => {

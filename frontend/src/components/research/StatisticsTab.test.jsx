@@ -65,7 +65,7 @@ describe('StatisticsTab', () => {
   it('shows a valuation verdict next to the ratios', () => {
     render(<StatisticsTab fundamentals={{ data: AVAILABLE, isLoading: false }} />)
 
-    expect(screen.getByText(/Expensive vs. growth/)).toBeInTheDocument()
+    expect(screen.getByText(/PEG above 2/)).toBeInTheDocument()
   })
 
   it('shows an unavailable message instead of ratios when data is missing', () => {
