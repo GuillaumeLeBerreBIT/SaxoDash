@@ -97,8 +97,8 @@ describe('PeersTab', () => {
     render(<PeersTab symbol="AAPL" fundamentals={{ data: CURRENT, isLoading: false }} />)
 
     const verdictRow = screen.getAllByRole('row').find((r) => within(r).queryByText('Verdict'))
-    expect(within(verdictRow).getByText(/Expensive vs. growth/)).toBeInTheDocument() // AAPL: peg 2.1
-    expect(within(verdictRow).getByText(/Fairly priced vs. growth/)).toBeInTheDocument() // MSFT: peg 1.8
+    expect(within(verdictRow).getByText(/PEG above 2/)).toBeInTheDocument() // AAPL: peg 2.1
+    expect(within(verdictRow).getByText(/PEG between 1 and 2/)).toBeInTheDocument() // MSFT: peg 1.8
   })
 
   it('quadrant leaves out a peer that cannot be scored', () => {
