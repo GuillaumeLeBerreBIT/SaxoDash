@@ -355,7 +355,7 @@ trap cleanup EXIT
 run_service() {
   local name="$1" color="$2" dir="$3" cmd="$4"
   : > "$LOG_DIR/$name.log"
-  { ( cd "$dir" && eval "exec $cmd" 2>&1 ) \
+  { ( cd "$dir" && eval "exec $cmd" 2>&1 ) </dev/null \
       | while IFS= read -r line; do
           printf '%s[%s]%s %s\n' "$color" "$name" "$C_RESET" "$line"
           printf '%s\n' "$line" >> "$LOG_DIR/$name.log"
