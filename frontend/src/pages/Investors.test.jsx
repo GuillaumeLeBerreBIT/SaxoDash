@@ -157,7 +157,7 @@ describe('Investors hub', () => {
     const flows = screen.getByTestId('bought-and-sold')
     expect(within(flows).getByText('NVIDIA')).toBeInTheDocument()
     expect(within(flows).getByText('7 funds bought · 2 new')).toBeInTheDocument()
-    expect(within(flows).getByText('Opportunity')).toBeInTheDocument()
+    expect(within(flows).getByText('Passes quality screen')).toBeInTheDocument()
     expect(browseCalls.at(-1)).toContain('tickers=NVDA')
   })
 

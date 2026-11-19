@@ -169,22 +169,35 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('shades the buy and expensive zones, says what to do in one sentence, and the Guides menu switches them off', async () => {
+  it('describes today\'s usual P/E range as a rule of thumb, shows the P/E chip, and offers no past P/E band', async () => {
+    queries.useVerdict.mockReturnValue({
+      ...idle,
+      data: { ...judged, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
+    })
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
+    const card = screen.getByTestId('answer-card')
+    expect(card).toHaveTextContent('Strong company, P/E within its usual range.')
+    expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
+    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
+    expect(screen.queryByTestId('value-zones')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
+    for (const name of [/52-week high/, /Volume gaps/]) {
+      expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
+    }
+    expect(screen.queryByRole('menuitem', { name: /P\/E/ })).not.toBeInTheDocument()
+  })
+
+  it('says the price cannot be judged without a usual P/E range', () => {
     queries.useVerdict.mockReturnValue({ ...idle, data: judged })
 
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/OPPORTUNITY · cheap for this company below \S*100\.00/)
-    expect(screen.getByTestId('price-zones')).toHaveTextContent(/EXPENSIVE for this company above \S*200\.00/)
-    expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
-    const banner = screen.getByTestId('answer-card')
-    expect(banner).toHaveTextContent('WAIT')
-    expect(banner).toHaveTextContent('Strong company, fair price.')
-    expect(banner).toHaveTextContent(/Becomes cheap below \S*100\.00 \(\d+% lower\)/)
-    await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: /Opportunity and expensive zones/ }))
-    expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
-    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).guides.zones).toBe(false)
+    expect(screen.getByTestId('answer-card')).toHaveTextContent('Too little P/E history to judge the price.')
+    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
   })
 
   it('keeps the stop-loss off until it is switched on, then draws it against today\'s close and your average price', async () => {

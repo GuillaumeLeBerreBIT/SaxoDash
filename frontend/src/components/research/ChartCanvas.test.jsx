@@ -258,3 +258,26 @@ describe('ChartCanvas legend height', () => {
     expect(legend.querySelector('.text-up, .text-down')).not.toBeNull()
   })
 })
+
+describe('ChartCanvas value guides', () => {
+  const legend = (container) => container.querySelector('.num.flex-wrap:not(.invisible)')
+  it('draws no past P/E band and gives no P/E reading in the legend, even if a band is passed', () => {
+    const { container } = render(canvas({ hover: 12, valueGuides: { line: [{ from: '2026-08-01', eps_ttm: 4.5 }], band: { low: 15, high: 25 }, high: true, gaps: true, currency: 'USD' } }))
+
+    expect(container.querySelector('[data-testid="value-zones"]')).toBeNull()
+    expect(legend(container)).not.toHaveTextContent('P/E then')
+  })
+
+  it('describes a gap on the hovered gap day', () => {
+    const gapped = bars.map((bar, i) => (i === 25 ? { ...bar, open: 140, high: 145, low: 139, close: 142, volume: 5_000_000 } : bar))
+    const { container } = render(canvas({ bars: gapped, ind: computeIndicators(gapped), hover: 25, valueGuides: { high: false, gaps: true, currency: 'USD' } }))
+
+    expect(legend(container)).toHaveTextContent(/Gap up 11\.1% · 5\.0x vol · filled/)
+  })
+
+  it('draws no flat price zones', () => {
+    const { container } = render(canvas({ valueGuides: { high: true, gaps: true, currency: 'USD' } }))
+
+    expect(container.querySelector('[data-testid="price-zones"]')).toBeNull()
+  })
+})

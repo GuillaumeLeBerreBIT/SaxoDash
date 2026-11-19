@@ -6,7 +6,6 @@ import { Card, Segmented } from '../ui'
 import { useTradeRisk } from './useTradeRisk'
 
 const EARNINGS_WARNING_DAYS = 10
-const NOT_A_BUY = new Set(['not_a_fit', 'sell_review', 'trim', 'wait', 'no_verdict'])
 const PLAIN = { sign: false, decimals: 1 }
 const RISK_OPTIONS = RISK_CHOICES.map((value) => ({ value, label: `${value}%` }))
 
@@ -54,11 +53,10 @@ export default function TradePlanCard({ bars, currency, note, positions, positio
   const plan = planFromPage({ bars, currency, note, positions, position, portfolioValue, riskPct })
   if (!plan) return null
   const warning = reportsWithin(nextEarnings, EARNINGS_WARNING_DAYS)
-  const caution = verdict && NOT_A_BUY.has(verdict.action)
 
   return (
     <Card context="Stop distance and position size from the latest close" dot="off" title="Trade plan">
-      {caution ? (
+      {verdict ? (
         <p data-testid="plan-verdict-note" className="mb-3 text-[13px] text-ink-2">
           {`The verdict for this stock is ${actionLabel(verdict)}. The figures below are arithmetic for a trade you decide on yourself, not a suggestion to buy.`}
         </p>

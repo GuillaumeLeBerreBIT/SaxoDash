@@ -19,7 +19,7 @@ describe('mergeShareClasses', () => {
 
 describe('bestActionFirst', () => {
   it('puts buy and add first, a failed company last, and keeps the shelf order within one action', () => {
-    const verdicts = { A: { action: 'wait' }, B: { action: 'buy' }, C: { action: 'not_a_fit' }, D: { action: 'buy' }, E: null }
+    const verdicts = { A: { action: 'hold' }, B: { action: 'buy' }, C: { action: 'not_a_fit' }, D: { action: 'buy' }, E: null }
     const sorted = bestActionFirst(['A', 'B', 'C', 'D', 'E'].map((ticker) => row(ticker)), verdicts)
     expect(sorted.map((item) => item.ticker)).toEqual(['B', 'D', 'A', 'C', 'E'])
   })

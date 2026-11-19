@@ -1,4 +1,4 @@
-import { EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SIGNALS_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
+import { CHART_GUIDES, EARNINGS_GUIDE, PLAYBOOKS, QUADRANT_GUIDE, RATIO_GUIDE, SIGNALS_GUIDE, SNAPSHOT_GUIDE } from '../../lib/guide'
 import { GRADE_WORDS, evidenceLine, groupedByGrade } from '../../lib/signals'
 import { Card } from '../ui'
 
@@ -108,6 +108,18 @@ function ChartSignals() {
   )
 }
 
+function ChartGuides() {
+  return (
+    <Card context="What each line and box on the price chart shows, and the evidence for it" dot="off" title="Chart guides">
+      <section aria-label="Chart guides" className="space-y-3">
+        {CHART_GUIDES.map((e) => (
+          <GuideMetric key={e.name} name={e.name} text={e.text} />
+        ))}
+      </section>
+    </Card>
+  )
+}
+
 function SignalsTested({ signals }) {
   const groups = groupedByGrade(signals)
   if (!groups.length) return null
@@ -144,6 +156,7 @@ export default function GuideTab({ signals }) {
         <Playbooks />
         <Quadrant />
         <EarningsSignals />
+        <ChartGuides />
         <ChartSignals />
         <SignalsTested signals={signals} />
       </div>

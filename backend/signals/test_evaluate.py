@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase
 
-from signals import evaluate
+from signals import definitions, evaluate
 from signals.series import Series
 
 BARS = 600
@@ -70,6 +70,17 @@ class ScoreTest(SimpleTestCase):
         self.assertAlmostEqual(result.mean_excess, 0.10 - 0.10 / 60)
         self.assertEqual(result.positive_share, 1.0)
         self.assertEqual((result.from_date, result.to_date), (day(300), day(300)))
+
+    def test_an_unadjusted_split_counts_as_at_most_a_capped_return(self):
+        stocks = market()
+        stocks['S00'].closes[305] = 1000.0
+        stocks['S01'].closes[325] = 1.0
+        flags = no_flags(stocks)
+        mark(stocks, flags, 'S00', 'volume_thrust', [300])
+        mark(stocks, flags, 'S01', 'hammer', [320])
+        scores = evaluate.score(stocks, flags)
+        self.assertAlmostEqual(found(scores, 'volume_thrust', 5).mean_excess, 3.0 - 3.0 / 60)
+        self.assertAlmostEqual(found(scores, 'hammer', 5).mean_excess, -0.9 + 0.9 / 60)
 
     def test_every_signal_and_horizon_is_answered_even_without_cases(self):
         stocks = market()
@@ -156,6 +167,22 @@ class ScoreTest(SimpleTestCase):
         scores = evaluate.score(stocks, flags)
         self.assertEqual(found(scores, 'deep_pullback', 60).grade, 'unproven')
         self.assertGreater(found(scores, 'deep_pullback', 60).ci_low, 0)
+
+
+    def test_a_caller_names_its_own_signals_horizons_and_grading_horizon(self):
+        stocks = market()
+        flags = no_flags(stocks)
+        bars = list(range(262, 346, 4))
+        for n in range(20):
+            ticker = f'S{n:02d}'
+            for i in bars:
+                stocks[ticker].closes[i + 250] = 100.0 + 5 + (n % 3)
+            mark(stocks, flags, ticker, 'cheap', bars)
+        cheap = definitions.Signal('cheap', 'C', 'Cheap', 'Cheap.', definitions.STATE)
+        scores = evaluate.score(stocks, flags, signals=(cheap,), horizons=(60, 250), grade_horizon=250)
+        self.assertEqual([(score.key, score.horizon) for score in scores], [('cheap', 60), ('cheap', 250)])
+        self.assertEqual(found(scores, 'cheap', 60).grade, 'supported')
+        self.assertEqual(found(scores, 'cheap', 60).mean_excess, 0)
 
 
 class MomentumLeadersTest(SimpleTestCase):

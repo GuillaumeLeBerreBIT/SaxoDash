@@ -72,6 +72,17 @@ class ShapingTest(TestCase):
         self.assertEqual(candle['close'], 1.2)
         self.assertEqual(candle['volume'], 0)
 
+    def test_the_holiday_placeholder_saxo_sends_is_dropped(self):
+        placeholder = {'Time': '2014-09-01T00:00:00Z', 'Open': 1e-09, 'High': 1e-09, 'Low': 1e-09, 'Close': 1e-09, 'Volume': 0}
+        self.assertIsNone(market.to_candle(placeholder))
+
+    def test_a_penny_low_on_a_normal_day_is_lifted_to_the_body(self):
+        bad_tick = {'Time': '2017-03-31T00:00:00Z', 'Open': 16.28, 'High': 16.48, 'Low': 0.00818, 'Close': 16.3, 'Volume': 1458036}
+        self.assertEqual(market.to_candle(bad_tick)['low'], 16.28)
+
+    def test_a_real_wide_range_day_keeps_its_low(self):
+        self.assertEqual(market.to_candle({**SAMPLE_CANDLE, 'Low': 90.0})['low'], 90.0)
+
     def test_candle_with_a_missing_price_is_dropped_rather_than_nulled(self):
         # `sma` adds with `+=`, so a null close would read as a zero and pull a
         # flat average onto the chart with nothing raised.

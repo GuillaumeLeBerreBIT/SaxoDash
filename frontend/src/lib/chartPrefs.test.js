@@ -18,21 +18,25 @@ describe('sanitizeChartPrefs', () => {
       type: 'line',
       overlays: { ...DEFAULT_CHART_PREFS.overlays, bb: true },
       panes: { ...DEFAULT_CHART_PREFS.panes, macd: true },
-      guides: { zones: false, plan: true },
+      guides: { high52: true, gaps: false, plan: true },
     }
     expect(sanitizeChartPrefs(stored)).toEqual(stored)
   })
 
-  it('loads a blob saved before the guides existed with every guide on, and ignores the old signal choices', () => {
+  it('loads a blob saved before the guides existed with the default guides, and ignores the old signal choices', () => {
     const old = { range: '1Y', type: 'line', overlays: DEFAULT_CHART_PREFS.overlays, panes: DEFAULT_CHART_PREFS.panes, signals: { hammer: true } }
     const prefs = sanitizeChartPrefs(old)
-    expect(prefs.guides).toEqual({ zones: true, plan: false })
+    expect(prefs.guides).toEqual({ high52: true, gaps: true, plan: false })
     expect(prefs.signals).toBeUndefined()
   })
 
+  it('drops a saved value range or zones choice, since the chart no longer draws a past P/E band', () => {
+    expect(sanitizeChartPrefs({ guides: { zones: true, value: true, plan: true } }).guides).toEqual({ high52: true, gaps: true, plan: true })
+  })
+
   it('keeps only real on or off choices for the guides', () => {
-    const prefs = sanitizeChartPrefs({ guides: { zones: false, plan: 'yes', marks: true } })
-    expect(prefs.guides).toEqual({ zones: false, plan: false })
+    const prefs = sanitizeChartPrefs({ guides: { gaps: false, plan: 'yes', marks: true } })
+    expect(prefs.guides).toEqual({ high52: true, gaps: false, plan: false })
   })
 
   it('falls back to the default range and type for values the chart does not know', () => {

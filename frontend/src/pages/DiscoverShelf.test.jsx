@@ -129,15 +129,15 @@ describe('DiscoverShelf', () => {
   it('shows the action per stock, best first, and merges share classes', () => {
     const stock = (ticker, name) => ({ ...shelf.items[0], ticker, name, uic: ticker.charCodeAt(0) + ticker.length })
     served = { ...shelf, total: 3, items: [stock('FICO', 'Fair Isaac'), stock('GOOGL', 'Alphabet'), stock('GOOG', 'Alphabet')] }
-    verdicts = { FICO: { action: 'wait', reason: 'Not cheap.' }, GOOGL: { action: 'buy', reason: 'Cheap.' } }
+    verdicts = { FICO: { action: 'hold', reason: 'Nothing in your plan says to act' }, GOOGL: { action: 'buy', reason: 'Quality passes' } }
     try {
       renderPage()
       const rows = screen.getAllByRole('row').slice(1)
       expect(rows).toHaveLength(2)
       expect(rows[0]).toHaveTextContent('GOOGL')
       expect(rows[0]).toHaveTextContent('also GOOG')
-      expect(within(rows[0]).getByText('Opportunity')).toBeInTheDocument()
-      expect(within(rows[1]).getByText('Wait')).toBeInTheDocument()
+      expect(within(rows[0]).getByText('Passes quality screen')).toBeInTheDocument()
+      expect(within(rows[1]).getByText('Hold')).toBeInTheDocument()
       expect(screen.getByRole('columnheader', { name: 'Action' })).not.toHaveClass('hidden')
       expect(screen.getByRole('columnheader', { name: 'Why it is here' })).toHaveClass('hidden', 'md:table-cell')
     } finally {

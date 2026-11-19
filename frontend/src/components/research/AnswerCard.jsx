@@ -110,11 +110,11 @@ function PriceCell({ verdict }) {
         <PriceBar price={verdict.last_close} cheapBelow={verdict.cheap_below} expensiveAbove={verdict.expensive_above} className="mt-1.5" />
       ) : (
         <>
-          {verdict.cheap_below != null ? <span className={CELL_LINE}>{`Cheap for this company below ${fmtMoney(verdict.cheap_below, 'USD')}`}</span> : null}
-          {verdict.expensive_above != null ? <span className={CELL_LINE}>{`Expensive above ${fmtMoney(verdict.expensive_above, 'USD')}`}</span> : null}
+          {verdict.cheap_below != null ? <span className={CELL_LINE}>{`Usual P/E low ${fmtMoney(verdict.cheap_below, 'USD')}`}</span> : null}
+          {verdict.expensive_above != null ? <span className={CELL_LINE}>{`Usual P/E high ${fmtMoney(verdict.expensive_above, 'USD')}`}</span> : null}
         </>
       )}
-      {judged ? null : <span className="text-[13px] text-ink-3">Too little earnings history to say what is cheap for this company.</span>}
+      {judged ? null : <span className="text-[13px] text-ink-3">Too little earnings history for a usual P/E range.</span>}
       {trend ? <span className="text-[13px] text-ink-3 num">{trend}</span> : null}
     </div>
   )

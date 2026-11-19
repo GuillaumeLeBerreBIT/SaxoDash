@@ -21,10 +21,10 @@ export default function PriceSpark({ values, cheapBelow, expensiveAbove, label }
   return (
     <svg role="img" aria-label={label} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width="100%" height={HEIGHT} preserveAspectRatio="none">
       {cheapTop != null && cheapTop < HEIGHT ? (
-        <rect data-zone="cheap" x="0" y={cheapTop} width={WIDTH} height={HEIGHT - cheapTop} fill={withAlpha(c.up, 0.1)} />
+        <rect data-zone="cheap" x="0" y={cheapTop} width={WIDTH} height={HEIGHT - cheapTop} fill={withAlpha(c.axisCategory, 0.1)} />
       ) : null}
       {dearBottom != null && dearBottom > 0 ? (
-        <rect data-zone="expensive" x="0" y="0" width={WIDTH} height={dearBottom} fill={withAlpha(c.warn, 0.08)} />
+        <rect data-zone="expensive" x="0" y="0" width={WIDTH} height={dearBottom} fill={withAlpha(c.axisCategory, 0.08)} />
       ) : null}
       <polyline points={points} fill="none" stroke={c.ink} strokeWidth="1.6" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       <circle cx={WIDTH} cy={y(last)} r="2.5" fill={c.ink} />

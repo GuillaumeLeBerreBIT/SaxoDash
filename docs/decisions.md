@@ -585,13 +585,33 @@ night (`lookups_failed`), since an unconfirmed listing is not evidence the user 
 **The action is computed per request, from the shared verdict row plus the signed-in user's own weight.**
 `StockVerdict` holds only what is the same for everyone (grades, checks, P/E levels);
 `payload.for_user` reads that user's `Position` rows, sums same-ticker USD stocks into a weight and hands
-it to `actions.action`, so two users can see Wait and Trim, or Buy and Add, for one stock and no per-user table exists to
+it to `actions.action`, so two users can see Buy and Trim, or Buy and Add, for one stock and no per-user table exists to
 keep fresh. `sell_review` (shown as "Review") comes only from a `weak` quality grade: no rule reads a price
-change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) and expensive is
-`trim`, and over it and cheap is `hold`, never `add`, so the badge cannot contradict the cap drawn beside it; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
+change, because a falling price is not a broken business. Over `WEIGHT_CAP_PCT` (15) is `trim`, whatever
+the price, since the cap is the user's own concentration rule; a stock not held has a weight of `None`, never zero, and a holding in a book whose total is zero (nothing priced yet) is still held, with no weight shown. A non-universe verdict (a ticker only held or
 watched) is served only to a user who holds or watches it (`verdicts/visibility.py`), and the track record
 lists only universe calls plus the user's own, otherwise any signed-in user could learn what another holds
 by asking for its ticker; for anyone else the answer is `null`, as for an unknown ticker.
+
+**Passing the quality screen is described, not recommended; the price is described, not judged (2026-11-18).** The yardstick test
+(`docs/research/2026-11-valuation-yardsticks.md`, `manage.py grade_valuation`) graded the stock's own P/E
+range on 23 years of stored history, point in time: stocks at or below their 25th-percentile P/E did worse
+than the average stock over the next year (-2.6%, 95% range -3.7% to -1.3%, both halves; -7.4% since 2023),
+and survivorship flatters that figure. So the buy grade (`compute._is_buy_grade`, `actions.action`) needs
+only `strong` quality, the price no longer opens, blocks or labels a call, and `action` no longer takes the
+valuation. Nothing showed that quality alone earns a buy either, so the `buy` and `add` actions (internal
+names, kept for the API) are shown as "Passes quality screen" in neutral colours, the daily brief no longer raises
+them, and the Trade plan always says its figures are arithmetic for the user's own decision. `VerdictCall.rule` separates the two track records: migration 0005 marks every earlier call
+`quality_and_cheap` and ends the open ones, and `track_record.report` reads only `quality` calls. The
+valuation grade stays as a description ("Below / Within / Above usual P/E") in neutral colours, with today's range
+in the Price card, the sentence and the P/E chip. The chart draws no past P/E band and `StockVerdict` stores no EPS
+line: a band on past candles stepped earnings on the fiscal period end, before they were published, and applied
+today's quartiles to earlier days, so it showed a range nobody could have seen then. It comes back only with real
+earnings release dates and the P/E range as it stood on each candle. The "Worth a look" endpoint, which ranked strong-and-cheap stocks by
+their distance under the cheap line and had no caller, is gone. The growth line's "expensive" reading did
+show evidence as a warning (-2.5% a year); it was not the hypothesis under test, so it needs its own
+pre-registered test before it is shown. The PEG wording in the Investment snapshot and the quality-valuation
+quadrant are another, untested yardstick and were left as they are.
 
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the
@@ -650,7 +670,20 @@ row back until it holds `history.TARGET_BARS` (5,900) or the listing begins, the
 The nightly scan no longer overwrites: `history.merged` keeps the older bars and takes the fresh 1,200.
 Saxo's bars are split-adjusted, so a split restates every past price: when a close the two sides share
 differs by more than 0.5%, the stored history is dropped, the fresh bars kept and the row backfilled again;
-an older page that disagrees with what is stored is not stored at all. Signal scores therefore include 2008,
+an older page that disagrees with what is stored is not stored at all. Saxo also sends a placeholder bar on
+some market holidays, every price 1e-09 and no volume (FISV, 1 September 2014). `market.to_candle` drops any
+bar priced under `LOWEST_TRADED_PRICE`, so neither the stored history nor the live chart sees it, and migration
+`research.0020` removed the ones already stored. A bad tick can also leave a penny low on an ordinary day
+(VST on 31 March 2017, MAA on 6 June 2008); exchanges cancel such trades, so `to_candle` lifts a low under
+`LOWEST_PLAUSIBLE_LOW` (a fifth of the lower of open and close) to that price and `research.0021` fixed the
+two stored ones. The placeholder
+bar gave a 60-session return of about 3.5e10 and turned every signal's mean and interval into nonsense, so
+the grades before 2026-11-18 cannot be trusted. Not every past split is adjusted either: about twenty stocks
+keep a one-day jump of more than 2.5 times from an unadjusted split, spin-off or special dividend (LRCX and COO
+in 2024, CIEN in 2006, KDP in 2018, CTVA in 2026). A real crash looks the same (AIG fell from $243 to $95 on
+15 September 2008), so those jumps are not removed: instead `evaluate._forward_returns` caps every forward
+return at -90% and +300% (`WORST_RETURN`, `BEST_RETURN`), and no single bar can outweigh thousands of cases.
+On 2026-11-18 the cap moved no 60-session mean by more than 0.07 points and changed no grade. Signal scores therefore include 2008,
 2020 and 2022, but still only today's index members: companies that failed or were dropped are absent, which
 flatters any signal that buys weakness (deep pullback, oversold) more than it flatters momentum. `signals`
 holds the series as `array('d')` and its flags as `bytearray`, because 520 stocks of Python floats and
@@ -677,25 +710,55 @@ the portfolio summary (`usePortfolioSummary`, shared with the Dashboard's cache)
 the size waits until positions have loaded so a held stock is never sized as if it were not held. The
 frontend assumes EUR is the reporting currency, as `fmtEur` does everywhere.
 
-**The chart shows where the price is cheap or expensive for the company, in words, and nothing from the candles.**
+**The chart draws the verdict's own cheap and expensive levels, point in time, and only the two candle tools with evidence (2026-11-17, revised 2026-11-18).** Superseded the same day: the chart no longer draws the P/E range on past candles at all, because the band used earnings before their release and today's quartiles on earlier days (see "Passing the quality screen is described, not recommended").
 Two earlier versions were rejected by the owner: a lane of two-letter signal pills (unreadable), then triangles
 on the candles with a momentum shade and a risk box (still needed explaining, and a check on 20 random stocks
-showed the marks win no more often than a random day: 58% against 59%). What is drawn now comes from the
-verdict, not from chart signals. `lib/priceZones.js` reads the verdict's `cheap_below` and `expensive_above`,
-which are already prices (trailing-twelve-month EPS times the 25th and 75th percentile of the stock's own P/E
-history, recomputed nightly): the chart shades green below the first and amber above the second, each labelled
-in words, and points at a zone that is out of view instead of stretching the price scale. The cheap zone is
-called a buy zone only when quality is `strong`, the verdict's own Buy rule. A sentence above the chart
-(`entrySentence`) gives the verdict's action, why, the price at which it changes and what a stop costs; when
-today's close sits in another zone than last night's verdict it says the verdict updates tonight. The
-stop-loss is one red line from the same `planFromPage` as the Trade plan card, off by default because a
-long-term holder sells on a weaker business, not on a price: when switched on, the chart and the sentence say
-how far it is below today's close, how it compares with the average price paid when the stock is held, and
-what buying the planned shares today would risk. The Guides menu holds both switches (`chartPrefs.guides`:
-`zones` on, `plan` off). Chart signals stay in the Setup card
-and the Guide tab's list of all seventeen with their evidence; none is drawn on the chart. The zones are a
-valuation context, not a forecast: the earlier test found cheap against expensive worth only one to two
-points a year, not reliably different from zero.
+showed the marks win no more often than a random day: 58% against 59%). The flat green and amber zones that
+followed (today's trailing EPS times the 25th and 75th P/E percentile) judged last year's candles with this
+year's earnings: on NVDA every candle of two years sat in the cheap zone. What is drawn now:
+
+- **Cheap and expensive zones** (a P/E band). `verdicts/eps_line.py` stores, nightly as `StockVerdict.eps_line`,
+  the trailing-twelve-month EPS at each quarter end with the verdict's own method (`research/valuation.py`: a
+  quarter counts from its period end, the last four summed, a non-positive sum ends the line). The chart draws a
+  green line at that EPS times `pe_p25` (where cheap starts) with a green zone fading below it, and a red line at
+  that EPS times `pe_p75` (where expensive starts) with a red zone fading above it; fair is the clear stretch
+  between. Today's step is exactly `cheap_below` and `expensive_above`, so the chart, the badge, the Price card,
+  the P/E chip and the sentence above the chart always agree. The percentiles are today's five-year range applied
+  to past earnings, as P/E band charts and FAST Graphs' normal P/E do; the earnings are point in time.
+- **Why not the growth line.** For one day (2026-11-17/18) the chart drew a growth line instead (fair P/E =
+  growth, held between 15 and 30, after FAST Graphs and Peter Lynch), shown beside the verdict as a second view.
+  The owner rejected two yardsticks that disagree (MSFT: badge cheap, growth line expensive) and asked for one.
+  Neither is proven: our earlier test found cheap against expensive on the P/E range worth one to two points a
+  year, not reliably different from zero, and the growth line was never tested. The P/E range won because the
+  verdict and its track record already use it. Both are to be graded on history before either is trusted
+  (`docs/superpowers/plans/2026-11-18-valuation-yardstick-test.md`); the growth line's code is in git at
+  9609ccc (`backend/verdicts/growth_line.py`).
+- **P/E chip** beside the price: today's P/E against `pe_p25` and `pe_p75`, now stored on the verdict.
+- **Volume gaps and the 52-week high**, the only candle-derived layers drawn. Gap up on heavy volume is the one
+  candle tool drawn with evidence: in the 2023-2026 test (125 stocks) it beat the average stock by 4.57 points
+  over 60 sessions (95% range +0.46 to +8.72), and on the deeper history back to 2004 (134 stocks) by about
+  half that, +2.6 points. Gap down is drawn too, but it "cannot be judged fairly" (it buys weakness, see
+  above). The gaps use the Signal Lab's own definitions, mirrored in `lib/indicators.js::volumeGaps` and pinned
+  by `gapParity.test.js`: an open more than 4% from the previous close on more than twice the previous 20
+  sessions' average volume, and a gap up must close at or above 98% of its open. Each is a box from the
+  previous close to the open, until the price trades back through the previous close or 60 sessions pass,
+  for gaps in the last 252 sessions. The 52-week high is a plain reference line, not a signal: in the same
+  test neither a new 1-year high (95% range -0.29 to +5.18) nor a fall of more than 20% below it (-0.31 to
+  +3.36) could be told apart from chance. The Guide tab says all three.
+- Tags on the right axis replace word boxes, with no painted background; a line outside the visible range is
+  tagged at the edge instead of stretching the price scale. The Guides menu (`chartPrefs.guides`) holds `value`
+  (cheap and expensive zones and chip), `high52`, `gaps` and `plan` (stop-loss, off); a saved `zones` switch reads as `value`.
+- The stop-loss is unchanged: one red line from the same `planFromPage` as the Trade plan card, off by default
+  because a long-term holder sells on a weaker business, not on a price; when on, the chart and the sentence say
+  how far it is below today's close, how it compares with the average price paid, and what the planned shares
+  would risk.
+
+Every other chart signal stays in the Setup card and the Guide tab's list with its evidence. Chart patterns
+(double top, head and shoulders, triangles, flags) and trendlines are held back until they are graded on the
+stored 23 years of bars as the Signal Lab was: on NVDA's last two years only 1 of 4 confirmed patterns went the
+pattern's way. `cheap_below` and `expensive_above` stay in the payload for the cards that read them. Neither
+line is a forecast: the earlier test found cheap against expensive worth one to two points a year, not
+reliably different from zero.
 
 **Cards on the Research page must agree, or say why they differ (audit, 2026-11-15).** The verdict's quality
 checks read the median of the last five fiscal years and five-year growth, while the Investment snapshot

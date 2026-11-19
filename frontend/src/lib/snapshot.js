@@ -99,8 +99,6 @@ export function valuationVerdict(f, verdictGrade) {
     }
   }
   if (fromVerdict) {
-    if (verdictGrade === 'expensive') tone = 'caution'
-    else if (verdictGrade === 'cheap' && tone !== 'caution') tone = 'pos'
     parts.push(fromVerdict)
   } else if (hist && pe != null) {
     if (pe > hist.median * (1 + T.histBand)) {

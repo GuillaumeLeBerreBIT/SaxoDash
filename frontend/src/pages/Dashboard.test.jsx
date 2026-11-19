@@ -115,11 +115,11 @@ describe('Dashboard', () => {
   })
 
   it('lists what to look at, each with a plain sentence and a way into Research', () => {
-    stub({ verdicts: { NVDA: { action: 'hold', capped: true, uic: 1 } } })
+    stub({ verdicts: { NVDA: { action: 'trim', uic: 1 } } })
     renderWithProviders(<Dashboard />)
     const list = screen.getByTestId('brief-items')
     expect(list).toHaveTextContent('NVIDIA is 100.0% of your portfolio')
-    expect(list).toHaveTextContent('Hold · over cap')
+    expect(list).toHaveTextContent('Trim')
     expect(within(list).getByRole('link', { name: 'NVIDIA is 100.0% of your portfolio' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=NVDA'))
   })
 
@@ -142,7 +142,7 @@ describe('Dashboard', () => {
     const holdings = panel('Your holdings')
     const tickers = within(holdings).getAllByText(/^(AAA|BBB)$/).map((node) => node.textContent)
     expect(tickers).toEqual(['AAA', 'BBB'])
-    expect(within(holdings).getByText('Add')).toHaveClass('text-up')
+    expect(within(holdings).getByText('Passes quality screen')).toHaveClass('text-ink-3')
   })
 
   it('keeps the data notes in one quiet line at the bottom', () => {
