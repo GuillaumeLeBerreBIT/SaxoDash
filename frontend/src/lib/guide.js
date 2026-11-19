@@ -29,7 +29,7 @@ export const SNAPSHOT_GUIDE = [
     key: 'valuation',
     label: 'Valuation',
     meaning: "PEG (P/E relative to growth) and P/E measured against the stock's own multi-year range.",
-    read: `PEG below ${T.pegCheap} looks cheap relative to earnings growth, above ${T.pegRich} looks expensive, and in between is fairly priced. A P/E more than ${Math.round(T.histBand * 100)}% above its own historical median reads as rich versus its own history; that much below reads as cheap versus its own history.`,
+    read: `PEG below ${T.pegCheap} means the P/E is low next to earnings growth, above ${T.pegRich} high. A P/E more than ${Math.round(T.histBand * 100)}% above its own historical median is above its own history; that much below is below it. These describe the price and are not buy or sell signals: PEG was never tested, and when the stock's own P/E range was tested on 23 years of history, stocks below it did worse than the average stock.`,
   },
   {
     key: 'momentum',
@@ -72,12 +72,12 @@ export const RATIO_GUIDE = [
 ]
 
 export const QUADRANT_GUIDE = {
-  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is primarily PEG, nudged by P/E versus its own history. Same thresholds as Snapshot and Ratios, just combined into one picture.',
+  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is primarily PEG, nudged by P/E versus its own history. Same thresholds as Snapshot and Ratios, just combined into one picture. It places companies; no corner is a buy or a sell, because the valuation score was never tested as a signal.',
   corners: [
-    { label: 'High quality, cheap (top-left)', text: 'A good business at a reasonable price - the rare combination worth digging into further.' },
-    { label: 'High quality, expensive (top-right)', text: 'The market already knows it’s good. It has to keep delivering to justify the price; a stumble is expensive here.' },
-    { label: 'Low quality, cheap (bottom-left)', text: "Classic value-trap territory - it's cheap for a reason. Confirm the reason before buying, don't assume it away." },
-    { label: 'Low quality, expensive (bottom-right)', text: 'Paying up for a weak business - avoid by default unless something else in the story overrides it.' },
+    { label: 'Higher quality, lower valuation (top-left)', text: 'Stronger figures, and a lower PEG or P/E than the others or its own history.' },
+    { label: 'Higher quality, higher valuation (top-right)', text: 'Stronger figures, priced higher against growth or its own history.' },
+    { label: 'Lower quality, lower valuation (bottom-left)', text: 'Weaker figures and a lower valuation.' },
+    { label: 'Lower quality, higher valuation (bottom-right)', text: 'Weaker figures and a higher valuation.' },
   ],
 }
 
@@ -107,10 +107,6 @@ export const CHART_GUIDES = [
 ]
 
 export const PLAYBOOKS = [
-  'Fast revenue growth, EPS outpacing revenue, a cheap PEG, and a conservative balance sheet together are a strong candidate worth a closer look.',
-  'A rich PEG paired with decelerating revenue growth means the stock is priced for perfection - a single soft quarter can hurt it.',
-  "A cheap valuation next to weak profitability or financial health can be a value trap - find out why it's cheap before buying, not after.",
-  'Top-right of the quadrant, high quality and high valuation, is a good business you’d already have to pay up for - fine to own, but with less margin of safety.',
   'Consistent EPS beats alongside accelerating revenue growth is momentum backed by fundamentals, not just price action.',
   'Strong 1-year price momentum without matching strength in Snapshot or Ratios means the price may be ahead of the fundamentals - worth double-checking before chasing it.',
 ]

@@ -610,8 +610,11 @@ today's quartiles to earlier days, so it showed a range nobody could have seen t
 earnings release dates and the P/E range as it stood on each candle. The "Worth a look" endpoint, which ranked strong-and-cheap stocks by
 their distance under the cheap line and had no caller, is gone. The growth line's "expensive" reading did
 show evidence as a warning (-2.5% a year); it was not the hypothesis under test, so it needs its own
-pre-registered test before it is shown. The PEG wording in the Investment snapshot and the quality-valuation
-quadrant are another, untested yardstick and were left as they are.
+pre-registered test before it is shown. The Investment snapshot's PEG reading and the quality-valuation quadrant
+use another yardstick that was never tested, so they describe too (2026-11-19): the snapshot says "PEG below 1 /
+between 1 and 2 / above 2" and "P/E above / below / in line with its range" in neutral tone, the quadrant has no
+coloured corners and its axis reads lower and higher valuation, and the Guide's corner notes and the playbook lines
+built on a cheap or rich PEG no longer give advice.
 
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the

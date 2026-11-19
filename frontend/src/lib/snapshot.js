@@ -85,33 +85,20 @@ export function valuationVerdict(f, verdictGrade) {
   const fromVerdict = VERDICT_PE_PHRASE[verdictGrade]
   if (!has(peg, pe) && !hist && !fromVerdict) return limited
 
-  let tone = 'neutral'
   const parts = []
   if (peg != null) {
-    if (peg < T.pegCheap) {
-      tone = 'pos'
-      parts.push('growth looks cheap vs. earnings growth')
-    } else if (peg > T.pegRich) {
-      tone = 'caution'
-      parts.push('expensive vs. growth')
-    } else {
-      parts.push('fairly priced vs. growth')
-    }
+    if (peg < T.pegCheap) parts.push(`PEG below ${T.pegCheap}`)
+    else if (peg > T.pegRich) parts.push(`PEG above ${T.pegRich}`)
+    else parts.push(`PEG between ${T.pegCheap} and ${T.pegRich}`)
   }
   if (fromVerdict) {
     parts.push(fromVerdict)
   } else if (hist && pe != null) {
-    if (pe > hist.median * (1 + T.histBand)) {
-      tone = 'caution'
-      parts.push(`P/E above its ${hist.n}-yr range`)
-    } else if (pe < hist.median * (1 - T.histBand)) {
-      if (tone !== 'caution') tone = 'pos'
-      parts.push(`P/E below its ${hist.n}-yr range`)
-    } else {
-      parts.push(`P/E in line with its ${hist.n}-yr range`)
-    }
+    if (pe > hist.median * (1 + T.histBand)) parts.push(`P/E above its ${hist.n}-yr range`)
+    else if (pe < hist.median * (1 - T.histBand)) parts.push(`P/E below its ${hist.n}-yr range`)
+    else parts.push(`P/E in line with its ${hist.n}-yr range`)
   }
-  return { tone, text: capitalised(parts.join('; ')) || 'Limited data' }
+  return { tone: 'neutral', text: capitalised(parts.join('; ')) || 'Limited data' }
 }
 
 export function momentumVerdict(f) {
