@@ -4,7 +4,8 @@ export const NAV_ITEMS = [
   { to: '/', label: 'Overview', end: true },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/research', label: 'Research' },
-  { to: '/boards', label: 'Charts' },
+  { to: '/charts', label: 'Charts' },
+  { to: '/boards', label: 'Boards' },
   { to: '/discover', label: 'Discover' },
   { to: '/earnings', label: 'Earnings' },
   { to: '/investors', label: 'Investors' },
@@ -35,7 +36,7 @@ export function pageTitle(pathname) {
 }
 
 export const LEGACY_REDIRECTS = [
-  { from: 'research/chart', to: '/boards' },
+  { from: 'research/chart', to: '/charts' },
   { from: 'transactions', to: '/portfolio', set: { view: 'transactions' } },
   { from: 'accounts', to: '/money', set: { section: 'accounts' } },
   { from: 'accounts/:accountId', to: '/money/accounts/:accountId' },

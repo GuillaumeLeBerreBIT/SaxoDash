@@ -387,8 +387,8 @@ Overview · Portfolio · Research · **Boards** · Discover · Earnings · Inves
 | `/` | Overview | |
 | `/portfolio` | Portfolio | Views: Positions · Transactions (`?view=`); Closed and Tax year join once they have endpoints |
 | `/research` | Research | `?symbol=&tab=`, 10 tabs (§6.2) |
-| `/boards` | Boards → Chart | The Chart workspace (was `/research/chart`) |
-| `/boards/:id` | A custom board | |
+| `/charts` | Charts | The Chart workspace (was `/research/chart`, then `/boards`) |
+| `/boards`, `/boards/:id` | Boards | Custom boards; `/boards` opens the first saved board, and `/boards?symbol=` forwards to `/charts` |
 | `/discover`, `/discover/:key` | Discover, shelf | Views: Cards (default) · Compact (the prototype's panels) |
 | `/earnings` | Earnings | |
 | `/investors`, `/investors/:slug`, `/investors/stocks`, `/investors/congress/:slug` | Investors | Funds / Congress switch |
@@ -400,7 +400,7 @@ Old routes redirect and keep their query strings:
 
 | Old route | Redirects to |
 |---|---|
-| `/research/chart` | `/boards` |
+| `/research/chart` | `/charts` |
 | `/transactions` | `/portfolio?view=transactions` |
 | `/accounts` | `/money?section=accounts` |
 | `/accounts/:id` | `/money/accounts/:id` |

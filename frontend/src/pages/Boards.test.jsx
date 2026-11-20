@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Route, Routes, useLocation } from 'react-router-dom'
 
 import { renderWithProviders } from '../test/renderWithProviders'
 import { expectValidHeadingOutline } from '../test/headingOutline'
@@ -73,6 +73,11 @@ function stubQueries() {
   queries.usePerformance.mockReturnValue({ ...idle, data: undefined })
 }
 
+function LocationProbe() {
+  const { pathname, search } = useLocation()
+  return <output data-testid="charts-page">{pathname + search}</output>
+}
+
 const renderBoards = (route) =>
   renderWithProviders(
     <>
@@ -80,6 +85,7 @@ const renderBoards = (route) =>
       <Routes>
         <Route path="/boards" element={<Boards />} />
         <Route path="/boards/:id" element={<Boards />} />
+        <Route path="/charts" element={<LocationProbe />} />
       </Routes>
     </>,
     { route },
@@ -104,23 +110,26 @@ describe('Boards', () => {
     stubQueries()
   })
 
-  it('Boards shows Chart first and the saved boards', () => {
+  it('/boards opens the first saved board and lists every saved board', () => {
     renderBoards('/boards')
 
-    expect(tabs().getAllByRole('link').map((link) => link.textContent)).toEqual(['Chart', 'Morning check', 'Semiconductors'])
-    expect(tabs().getByRole('link', { name: 'Chart' })).toHaveAttribute('aria-current', 'page')
+    expect(tabs().getAllByRole('link').map((link) => link.textContent)).toEqual(['Morning check', 'Semiconductors'])
+    expect(tabs().getByRole('link', { name: 'Morning check' })).toHaveAttribute('aria-current', 'page')
     expect(tabs().getByRole('button', { name: /New board/ })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Edit board' })).not.toBeInTheDocument()
   })
 
-  it('/boards?symbol=NVDA opens NVDA in the active pane', () => {
-    renderBoards('/boards?symbol=NVDA')
+  it('/boards?symbol=NVDA, an old chart link, forwards to the Charts page with its query', () => {
+    renderBoards('/boards?symbol=NVDA&uic=211&assetType=Stock')
 
-    expect(screen.getByRole('region', { name: 'NVDA chart' })).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByRole('link', { name: 'Back to Research' })).toHaveAttribute(
-      'href',
-      '/research?symbol=NVDA&uic=211&assetType=Stock',
-    )
+    expect(screen.getByTestId('charts-page')).toHaveTextContent('/charts?symbol=NVDA&uic=211&assetType=Stock')
+  })
+
+  it('says there are no boards, and offers a new one, when none are saved', () => {
+    localStorage.setItem('saxodash:boards', '[]')
+    renderBoards('/boards')
+
+    expect(screen.getByRole('heading', { name: 'No boards yet' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /New board/ }).length).toBeGreaterThan(0)
   })
 
   it('shows a custom board with its panels and one valid heading outline', () => {
@@ -216,7 +225,7 @@ describe('Boards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
     expect(tabs().queryByText('Untitled board')).not.toBeInTheDocument()
-    expect(tabs().getByRole('link', { name: 'Chart' })).toHaveAttribute('aria-current', 'page')
+    expect(tabs().getByRole('link', { name: 'Morning check' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('saves a new board under its typed name with a unique id', async () => {
@@ -252,7 +261,7 @@ describe('Boards', () => {
     renderBoards('/boards/nope')
 
     expect(screen.getByRole('heading', { name: 'No such board' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Back to the Chart board/ })).toHaveAttribute('href', '/boards')
+    expect(screen.getByRole('link', { name: /Back to your boards/ })).toHaveAttribute('href', '/boards')
   })
 
   it('keeps editing off below 760 px by hiding Edit board and New board behind a note', () => {

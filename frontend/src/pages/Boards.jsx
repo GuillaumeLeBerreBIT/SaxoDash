@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 
 import {
@@ -13,7 +13,6 @@ import {
 import BoardGrid from '../components/boards/BoardGrid'
 import PanelLibrary from '../components/boards/PanelLibrary'
 import { Button, Card, Input } from '../components/ui'
-import ResearchChart from './ResearchChart'
 
 const TAB =
   'inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[15px] font-bold whitespace-nowrap transition-colors'
@@ -40,9 +39,6 @@ function BoardTabs({ boards, currentId, editing, onNew, onEdit, canEdit }) {
   return (
     <div className="flex items-center gap-2 mb-3 min-w-0">
       <nav aria-label="Boards" className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none]">
-        <BoardTab to="/boards" editing={editing}>
-          Chart
-        </BoardTab>
         {boards.map((board) => (
           <BoardTab key={board.id} to={`/boards/${board.id}`} editing={editing} current={board.id === currentId}>
             {board.name}
@@ -122,13 +118,31 @@ function EmptyBoard({ onStart }) {
   )
 }
 
+function NoBoards({ onStart, canStart }) {
+  return (
+    <Card className="grid place-items-center text-center min-h-64">
+      <div>
+        <h2 className="text-[17px] font-bold text-ink">No boards yet</h2>
+        <p className="mt-1 mb-3 text-[14px] text-ink-2">A board keeps the panels you check every day in one place.</p>
+        {canStart ? (
+          <Button variant="primary" onClick={onStart}>
+            <Plus size={14} aria-hidden="true" /> New board
+          </Button>
+        ) : (
+          <p className="text-[12px] text-ink-3">Creating a board needs a wider screen</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function MissingBoard() {
   return (
     <Card title="No such board">
       <p className="text-[14px] text-ink-2">
         This board is not saved in this browser.{' '}
         <Link to="/boards" className="font-semibold text-ink hover:underline">
-          Back to the Chart board
+          Back to your boards
         </Link>
       </p>
     </Card>
@@ -138,6 +152,7 @@ function MissingBoard() {
 export default function Boards() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { search } = useLocation()
   const [boards, setBoards] = useState(loadBoards)
   const [edit, setEdit] = useState(null)
   const [saveFailed, setSaveFailed] = useState(false)
@@ -248,11 +263,14 @@ export default function Boards() {
   ) : null
 
   if (!id) {
+    if (new URLSearchParams(search).has('symbol')) return <Navigate to={`/charts${search}`} replace />
+    if (boards[0]) return <Navigate to={`/boards/${boards[0].id}`} replace />
     return (
       <>
+        <h1 className="sr-only">Boards</h1>
         {tabs}
         {saveNote}
-        <ResearchChart />
+        <NoBoards onStart={newBoard} canStart={canEditHere()} />
       </>
     )
   }
@@ -260,7 +278,7 @@ export default function Boards() {
   if (!board) {
     return (
       <>
-        <h1 className="sr-only">Charts</h1>
+        <h1 className="sr-only">Boards</h1>
         {tabs}
         {saveNote}
         <MissingBoard />

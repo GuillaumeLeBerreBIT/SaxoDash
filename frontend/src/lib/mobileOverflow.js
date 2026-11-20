@@ -3,6 +3,7 @@ export const ROUTES = [
   '/portfolio',
   '/analytics',
   '/research',
+  '/charts',
   '/boards',
   '/boards/morning',
   '/discover',

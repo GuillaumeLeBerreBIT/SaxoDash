@@ -671,7 +671,7 @@ describe('Research', () => {
 
     expect(screen.getByRole('link', { name: 'Open advanced chart' })).toHaveAttribute(
       'href',
-      '/boards?symbol=NVDA&uic=211&assetType=Stock',
+      '/charts?symbol=NVDA&uic=211&assetType=Stock',
     )
   })
 })
@@ -758,7 +758,7 @@ describe('Research header and Overview on the new design', () => {
     expect(screen.getByText('NVDA · Semiconductors · 4.2T market cap · You own it')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
       'href',
-      '/boards?symbol=NVDA&uic=211&assetType=Stock',
+      '/charts?symbol=NVDA&uic=211&assetType=Stock',
     )
   })
 

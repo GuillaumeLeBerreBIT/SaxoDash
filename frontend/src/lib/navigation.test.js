@@ -3,12 +3,13 @@ import { PAGE_COMMANDS } from './commands'
 import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle, visibleTo } from './navigation'
 
 describe('top-level navigation', () => {
-  it('lists the nine tabs in order', () => {
+  it('lists the ten tabs in order', () => {
     expect(NAV_ITEMS).toEqual([
       { to: '/', label: 'Overview', end: true },
       { to: '/portfolio', label: 'Portfolio' },
       { to: '/research', label: 'Research' },
-      { to: '/boards', label: 'Charts' },
+      { to: '/charts', label: 'Charts' },
+      { to: '/boards', label: 'Boards' },
       { to: '/discover', label: 'Discover' },
       { to: '/earnings', label: 'Earnings' },
       { to: '/investors', label: 'Investors' },
@@ -25,6 +26,7 @@ describe('mobile navigation split', () => {
 
   it('puts every other destination plus Settings in More, each exactly once', () => {
     expect(mobileOverflow().map((item) => item.to)).toEqual([
+      '/charts',
       '/boards',
       '/earnings',
       '/investors',
@@ -76,7 +78,7 @@ describe('legacy redirects', () => {
   })
 
   it('keeps the query and puts the new section first', () => {
-    expect(target('research/chart', {}, '?symbol=NVDA')).toBe('/boards?symbol=NVDA')
+    expect(target('research/chart', {}, '?symbol=NVDA')).toBe('/charts?symbol=NVDA')
     expect(target('transactions', {}, '?type=BUY')).toBe('/portfolio?view=transactions&type=BUY')
     expect(target('accounts')).toBe('/money?section=accounts')
     expect(target('accounts/:accountId', { accountId: '7' }, '?x=1')).toBe('/money/accounts/7?x=1')

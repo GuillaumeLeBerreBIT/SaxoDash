@@ -288,7 +288,7 @@ the wrong candle, so a foreign filer (6-Ks carry no item numbers; NBIS) shows no
 move is `lib/reaction.js::earningsMove` over every fetched bar, the twin of
 `research/reaction.py`, pinned to it by the shared `lib/fixtures/reaction-parity.json`.
 
-**The active chart pane is the URL.** `/boards` (the Chart workspace; `/research/chart` redirects to it) shows up to four panes
+**The active chart pane is the URL.** `/charts` (the Chart workspace; `/research/chart` and the old `/boards?symbol=` redirect to it) shows up to four panes
 (`lib/chartLayouts.js`), saved per browser under `saxodash:chart-workspace`. The
 active pane is whatever `?symbol=` names: the watchlist, search and ⌘K reach it by
 navigating, unchanged. `useChartWorkspace` copies each navigation into the active
@@ -386,7 +386,7 @@ positions), knows Saxo's share-class spellings (`BRK.B` is `BRKb`, `LEN.B` is `L
 nothing (`ETN` does, `Eaton` does not) — always requiring the symbol itself to match.
 
 **The chart page's symbol panel computes from what the page already fetched.**
-`SymbolPanel` sits under the watchlist on `/boards` and follows the URL's
+`SymbolPanel` sits under the watchlist on `/charts` and follows the URL's
 symbol. Performance, seasonals and the technicals gauge are arithmetic over the one
 1,200-bar fetch (`lib/performance.js::trailingReturns`, `lib/seasonals.js`,
 `lib/technicalRating.js`); earnings dots reuse the page's `useSymbolEarnings`; only

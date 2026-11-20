@@ -11,6 +11,7 @@ const Portfolio = lazy(() => import('./pages/Portfolio'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 const AccountTransactions = lazy(() => import('./pages/AccountTransactions'))
 const Research = lazy(() => import('./pages/Research'))
+const Charts = lazy(() => import('./pages/Charts'))
 const Boards = lazy(() => import('./pages/Boards'))
 const Discover = lazy(() => import('./pages/Discover'))
 const DiscoverShelf = lazy(() => import('./pages/DiscoverShelf'))
@@ -44,6 +45,7 @@ function App() {
             <Route path='money/accounts/:accountId' element={<AccountTransactions />} />
             <Route path='settings' element={<Settings />} />
             <Route path='research' element={<Research />} />
+            <Route path='charts' element={<Charts />} />
             <Route path='boards' element={<Boards />} />
             <Route path='boards/:id' element={<Boards />} />
             <Route path='discover' element={<Discover />} />

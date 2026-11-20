@@ -30,6 +30,7 @@ describe('MobileNav', () => {
     const dialog = screen.getByRole('dialog', { name: 'More' })
     expect(within(dialog).getAllByRole('link').map((link) => link.textContent)).toEqual([
       'Charts',
+      'Boards',
       'Earnings',
       'Investors',
       'Analytics',
