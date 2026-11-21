@@ -1,31 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import { rollingHigh } from './indicators'
-import { entrySentence, guideSeries, peChip, visibleGuides } from './valueGuides'
+import { entrySentence, guideSeries, visibleGuides } from './valueGuides'
 
 const verdict = (extra = {}) => ({
   action: 'buy', quality: 'strong', valuation: 'fair',
   pe_p25: 20, pe_p75: 30, cheap_below: 80, expensive_above: 120, ...extra,
 })
 const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size: { shares: 3, lossAtStop: 45 }, currency: 'USD' }
-
-describe('peChip', () => {
-  it('places the P/E against its usual range', () => {
-    const base = { valuation: 'cheap', pe_p25: 45, pe_p75: 77 }
-    expect(peChip({ ...base, current_pe: 19.8 })).toEqual({ pe: 19.8, low: 45, high: 77, position: 'below' })
-    expect(peChip({ ...base, current_pe: 60 }).position).toBe('inside')
-    expect(peChip({ ...base, current_pe: 90 }).position).toBe('above')
-    expect(peChip({ ...base, current_pe: 45 }).position).toBe('below')
-    expect(peChip({ ...base, current_pe: 77 }).position).toBe('above')
-  })
-
-  it('is nothing when not judged or a figure is missing', () => {
-    expect(peChip({ valuation: 'not_judged', current_pe: 19.8, pe_p25: 45, pe_p75: 77 })).toBeNull()
-    expect(peChip({ valuation: 'fair', current_pe: null, pe_p25: 45, pe_p75: 77 })).toBeNull()
-    expect(peChip({ valuation: 'fair', current_pe: 20, pe_p25: null, pe_p75: 77 })).toBeNull()
-    expect(peChip(null)).toBeNull()
-  })
-})
 
 describe('entrySentence', () => {
   it('keeps the verdict word and why, and describes the usual P/E range as a rule of thumb', () => {

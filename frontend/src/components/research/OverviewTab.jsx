@@ -1,30 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { fmtCompact, fmtDate, fmtNum, fmtShares } from '../../lib/format'
 import { COMPANY_DATA } from '../../lib/companyData'
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
-import { Button, Card } from '../ui'
+import { Card } from '../ui'
 import SetupCard from '../signals/SetupCard'
-import TradePlanCard from './TradePlanCard'
-import AnswerCard from './AnswerCard'
 import KeyFactsStrip from './KeyFactsStrip'
 import PerformanceTiles from './PerformanceTiles'
 import SnapshotSection from './SnapshotSection'
-import ThesisAndRisksCard, { BusinessSummaryCard } from './SymbolNotesCard'
 
 const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const COL = 'flex flex-col gap-[var(--sd-gap,12px)] min-w-0'
-const PLAN_ACTIONS = new Set(['buy', 'add'])
-const ANSWER_NOTES = {
-  [COMPANY_DATA.fund]: 'This is an ETF, so there is no company to judge: no earnings, margins or valuation ratios.',
-  [COMPANY_DATA.foreign]:
-    'No verdict: this is listed outside the US. Company data is looked up by ticker alone, and that ticker belongs to a US-listed company that may not be this one.',
-  [COMPANY_DATA.unverified]:
-    'No verdict: Saxo could not confirm where this instrument is listed, so company data is held back until it can.',
-}
-
 function Fact({ label, value }) {
   return (
     <div className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">
@@ -68,17 +56,6 @@ function RangeFacts({ bars, range }) {
   )
 }
 
-function PlanSection({ action, children }) {
-  const [open, setOpen] = useState(false)
-  if (!action || PLAN_ACTIONS.has(action) || open) return children
-  return (
-    <Card context="For a new purchase" dot="off" title="Trade plan">
-      <p className="text-[13px] text-ink-2">Stop-loss, size and risk. Closed unless the company passes the quality screen and is under your cap.</p>
-      <Button size="sm" className="mt-2.5" onClick={() => setOpen(true)}>Show the trade plan</Button>
-    </Card>
-  )
-}
-
 function NextEarningsCard({ earnings, onOpenTab }) {
   const data = earnings?.data
   if (!data?.available) return null
@@ -116,7 +93,6 @@ function NextEarningsCard({ earnings, onOpenTab }) {
 }
 
 export default function OverviewTab({
-  position,
   details,
   detailsLoading,
   bars,
@@ -124,83 +100,37 @@ export default function OverviewTab({
   range,
   fundamentals,
   verdict,
-  answer,
   chartSignals,
-  tradePlan,
-  note,
-  onSaveNote,
-  onMarkReviewed,
-  reviewing = false,
   companyData = COMPANY_DATA.eligible,
   earnings,
-  header,
-  lead,
   signals,
-  rail,
   onOpenTab,
 }) {
   const eligible = companyData === COMPANY_DATA.eligible
   const company = eligible && fundamentals?.data?.available ? fundamentals.data : null
   const returns = useMemo(() => trailingReturns(allBars), [allBars])
   const hasReturns = returns.some((row) => row.pct != null)
-  const pending = companyData === COMPANY_DATA.pending
 
   return (
-    <div className={COL}>
-      <div data-testid="overview-top" className={COL}>
-        {header}
-        {pending ? null : (
-          <AnswerCard
-            verdict={eligible ? verdict : undefined}
-            sentence={eligible ? answer : null}
-            position={position}
-            note={ANSWER_NOTES[companyData]}
-          />
-        )}
+    <div className={BOARD}>
+      <div data-testid="overview-col-main" className={`min-[1100px]:col-span-8 ${COL}`}>
+        {hasReturns || bars?.length ? (
+          <Card context="Change in price up to the latest close" title="Performance">
+            {hasReturns ? (
+              <div className="sm:[&>ul]:grid-cols-6">
+                <PerformanceTiles returns={returns} />
+              </div>
+            ) : null}
+            <RangeFacts bars={bars} range={range} />
+          </Card>
+        ) : null}
+        <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
       </div>
-      <div className={BOARD}>
-        <div data-testid="overview-col-main" className={`min-[1100px]:col-span-8 ${COL}`}>
-          {lead}
-          {hasReturns || bars?.length ? (
-            <Card context="Change in price up to the latest close" title="Performance">
-              {hasReturns ? (
-                <div className="sm:[&>ul]:grid-cols-6">
-                  <PerformanceTiles returns={returns} />
-                </div>
-              ) : null}
-              <RangeFacts bars={bars} range={range} />
-            </Card>
-          ) : null}
-          <CompanyReads companyData={companyData} fundamentals={fundamentals} verdict={verdict} chartSignals={chartSignals} returns={returns} />
-          <BusinessSummaryCard note={note?.data} onSave={onSaveNote} />
-          <ThesisAndRisksCard
-            note={note?.data}
-            onSave={onSaveNote}
-            onMarkReviewed={onMarkReviewed}
-            reviewing={reviewing}
-            fundamentals={fundamentals}
-            currency={details?.currency}
-          />
-        </div>
 
-        <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
-          {rail}
-          <NextEarningsCard earnings={earnings} onOpenTab={onOpenTab} />
-          <PlanSection action={eligible ? verdict?.data?.action : null}>
-            <TradePlanCard
-              bars={allBars}
-              currency={details?.currency ?? position?.currency}
-              note={note?.data}
-              position={position}
-              positions={tradePlan?.positions}
-              portfolioValue={tradePlan?.portfolioValue}
-              nextEarnings={earnings?.data?.available ? earnings.data.next : null}
-              verdict={eligible ? verdict?.data : null}
-            />
-          </PlanSection>
-          {signals}
-          <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
-        </div>
+      <div data-testid="overview-col-side" className={`min-[1100px]:col-span-4 ${COL}`}>
+        <NextEarningsCard earnings={earnings} onOpenTab={onOpenTab} />
+        {signals}
+        <KeyFactsStrip fundamentals={company} details={details} detailsLoading={detailsLoading} />
       </div>
     </div>
   )

@@ -2,15 +2,18 @@ import { Link } from 'react-router-dom'
 import { CandlestickChart, Crosshair, Maximize2, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
-import { Card } from '../ui'
+import { Card, Segmented } from '../ui'
 import { Menu } from './menu'
 import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import EntryBanner from './EntryBanner'
-import PeChip from './PeChip'
 import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
+const CHART_STYLE_OPTIONS = [
+  { value: 'line', label: 'Line' },
+  { value: 'candles', label: 'Candles' },
+]
 
 export default function ChartPanel({
   bars,
@@ -33,6 +36,7 @@ export default function ChartPanel({
   onEditLineLabel,
   lineSaveFailed = false,
   expandHref,
+  typeSwitch,
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
@@ -44,9 +48,11 @@ export default function ChartPanel({
 
         <span className="w-px h-5 bg-line mx-1" />
 
-        <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
-          <ChartTypeMenuItems controls={controls} />
-        </Menu>
+        {typeSwitch ? null : (
+          <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
+            <ChartTypeMenuItems controls={controls} />
+          </Menu>
+        )}
 
         <Menu label={`Indicators${activeCount ? ` · ${activeCount}` : ''}`} icon={Sigma} width={230}>
           <IndicatorMenuItems controls={controls} />
@@ -61,7 +67,14 @@ export default function ChartPanel({
         <LineSaveAlert failed={lineSaveFailed} />
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <PeChip chip={guides?.chip} />
+          {typeSwitch ? (
+            <Segmented
+              label="Chart style"
+              value={typeSwitch.value}
+              onChange={typeSwitch.onChange}
+              options={CHART_STYLE_OPTIONS}
+            />
+          ) : null}
           <PeriodChange bars={bars} />
           {expandHref ? (
             <Link

@@ -5,16 +5,18 @@ import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSigna
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
 import { chartHref } from '../lib/research'
 import { reportsWithin } from '../lib/earnings'
-import { entrySentence, peChip } from '../lib/valueGuides'
+import { entrySentence } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
 import { Card } from '../components/ui'
+import AnswerCard from '../components/research/AnswerCard'
 import ChartPanel from '../components/research/ChartPanel'
 import EarningsTab from '../components/research/EarningsTab'
 import FundsTab from '../components/research/FundsTab'
 import CongressTab from '../components/research/CongressTab'
 import GuideTab from '../components/research/GuideTab'
 import NewsTab from '../components/research/NewsTab'
+import NotesTab from '../components/research/NotesTab'
 import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
@@ -25,6 +27,7 @@ import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
+import { useResearchChartType } from '../components/research/useResearchChartType'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useTradeRisk } from '../components/research/useTradeRisk'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
@@ -39,12 +42,29 @@ const TABS = [
   ['congress', 'Congress'],
   ['filings', 'Filings', 'company'],
   ['news', 'News', 'ticker'],
+  ['notes', 'Notes'],
   ['guide', 'Guide'],
 ]
+
+const GROUPS = [
+  ['overview', 'Chart', ['overview']],
+  ['fundamentals', 'Fundamentals', ['financials', 'statistics', 'peers', 'earnings']],
+  ['activity', 'Activity', ['funds', 'congress', 'filings', 'news']],
+  ['notes', 'Notes and plan', ['notes', 'guide']],
+]
+const GROUP_OF = Object.fromEntries(GROUPS.flatMap(([group, , keys]) => keys.map((key) => [key, group])))
 
 const TAB_ALIASES = { valuation: 'statistics' }
 const TAB_NEEDS = Object.fromEntries(TABS.map(([key, , needs]) => [key, needs]))
 const TAB_KEYS = new Set(Object.keys(TAB_NEEDS))
+
+const ANSWER_NOTES = {
+  [COMPANY_DATA.fund]: 'This is an ETF, so there is no company to judge: no earnings, margins or valuation ratios.',
+  [COMPANY_DATA.foreign]:
+    'No verdict: this is listed outside the US. Company data is looked up by ticker alone, and that ticker belongs to a US-listed company that may not be this one.',
+  [COMPANY_DATA.unverified]:
+    'No verdict: Saxo could not confirm where this instrument is listed, so company data is held back until it can.',
+}
 
 const REFUSALS = {
   [COMPANY_DATA.foreign]:
@@ -58,6 +78,7 @@ export default function Research() {
   const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
+  const [chartType, setChartType] = useResearchChartType()
   const [hover, setHover] = useState(null)
   const rawTab = params.get('tab')
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
@@ -121,7 +142,6 @@ export default function Research() {
       portfolioValue: tradePlan.portfolioValue, riskPct,
     })
     const judged = signalsForListing(judgedVerdict, listingUic)
-    const chip = peChip(judged)
     return {
       available: ['high52', 'gaps', ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
@@ -131,7 +151,6 @@ export default function Research() {
         currency: guideCurrency,
         bars: allBars,
       },
-      chip,
       plan: shown.plan ? plan : null,
       sentence: entrySentence({ verdict: null, plan: shown.plan ? plan : null, held: Boolean(position), currency: guideCurrency }),
       answer: entrySentence({
@@ -142,12 +161,19 @@ export default function Research() {
   }, [controls.guides, allBars, guideCurrency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, judgedVerdict, listingUic, nextReport])
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
-  const visibleTabs = TABS.filter(([key]) => gateOf(key) !== TAB_GATE.hidden)
+  const visibleGroups = GROUPS.map(([key, label, children]) => [
+    key,
+    label,
+    children.filter((child) => gateOf(child) !== TAB_GATE.hidden),
+  ]).filter(([, , children]) => children.length)
   const gate = gateOf(tab)
   if (gate === TAB_GATE.hidden) {
     setTab('overview')
   }
   const shown = (key) => tab === key && gate === TAB_GATE.show
+  const activeGroup = GROUP_OF[tab]
+  const activeSubTabs = visibleGroups.find(([key]) => key === activeGroup)?.[2] ?? []
+  const selectGroup = (group) => setTab(visibleGroups.find(([key]) => key === group)?.[2][0] ?? 'overview')
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -164,7 +190,10 @@ export default function Research() {
   const safeHover = hover != null && hover < bars.length ? hover : null
 
   const company = companyData === COMPANY_DATA.eligible && fundamentals.data?.available ? fundamentals.data : null
-  const onOverview = shown('overview')
+  const eligible = companyData === COMPANY_DATA.eligible
+
+  const panelLabel = activeSubTabs.length > 1 ? `research-tab-${tab}` : `research-group-${activeGroup}`
+  const panelProps = { role: 'tabpanel', id: `research-panel-${tab}`, 'aria-labelledby': panelLabel }
 
   const header = (
     <ResearchHeader
@@ -179,10 +208,12 @@ export default function Research() {
       currency={currency}
       watchlists={watchlists}
       onToggleList={toggleList}
-      tabs={visibleTabs}
+      groups={visibleGroups}
+      activeGroup={activeGroup}
+      onSelectGroup={selectGroup}
+      subTabs={activeSubTabs.map((key) => TABS.find(([tabKey]) => tabKey === key))}
       activeTab={tab}
       onSelectTab={setTab}
-      showPosition={!onOverview}
     />
   )
 
@@ -193,7 +224,8 @@ export default function Research() {
       timeWindow={timeWindow}
       isLoading={chart.isLoading}
       error={chart.error}
-      controls={controls}
+      controls={{ ...controls, type: chartType }}
+      typeSwitch={{ value: chartType, onChange: setChartType }}
       hover={safeHover}
       setHover={setHover}
       symbol={symbol}
@@ -211,14 +243,33 @@ export default function Research() {
     />
   )
 
-  const panelProps = { role: 'tabpanel', id: `research-panel-${tab}`, 'aria-labelledby': `research-tab-${tab}` }
+  const answer = (
+    <AnswerCard
+      verdict={eligible ? verdict : undefined}
+      sentence={eligible ? guides.answer : null}
+      position={position}
+      note={ANSWER_NOTES[companyData]}
+    />
+  )
 
-  if (onOverview) {
-    return (
-      <div {...panelProps}>
+  const body = (
+    <>
+      {gate === TAB_GATE.pending ? (
+        <Card>
+          <p data-testid="tab-pending" className="text-[13px] text-ink-3">
+            Looking up this instrument…
+          </p>
+        </Card>
+      ) : null}
+      {gate === TAB_GATE.refused ? (
+        <Card>
+          <p data-testid="tab-refused" className="text-[13px] text-ink-3">
+            {REFUSALS[companyData]}
+          </p>
+        </Card>
+      ) : null}
+      {shown('overview') ? (
         <OverviewTab
-          symbol={symbol}
-          position={position}
           details={details.data}
           detailsLoading={details.isLoading}
           bars={rangeBars}
@@ -226,55 +277,51 @@ export default function Research() {
           range={controls.range}
           fundamentals={fundamentals}
           verdict={verdict}
-          answer={guides.answer}
           chartSignals={chartSignals}
-          tradePlan={tradePlan}
+          companyData={companyData}
+          earnings={earnings}
+          onOpenTab={setTab}
+          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
+        />
+      ) : null}
+      {shown('notes') ? (
+        <NotesTab
           note={note}
           onSaveNote={(patch) => noteMutation.mutate(patch)}
           onMarkReviewed={() => reviewMutation.mutate()}
           reviewing={reviewMutation.isPending}
-          companyData={companyData}
+          fundamentals={fundamentals}
+          details={details.data}
+          position={position}
+          bars={allBars}
+          tradePlan={tradePlan}
+          verdict={verdict}
+          eligible={eligible}
           earnings={earnings}
-          onOpenTab={setTab}
-          header={header}
-          lead={chartPanel}
-          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
-          rail={<WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />}
         />
-      </div>
-    )
-  }
+      ) : null}
+      {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
+      {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
+      {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
+      {shown('earnings') ? (
+        <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
+      ) : null}
+      {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
+      {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
+      {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
+      {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
+      {shown('guide') ? <GuideTab signals={signals} /> : null}
+    </>
+  )
 
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       {header}
+      {chartPanel}
+      {answer}
       <div className="grid grid-cols-1 min-[1440px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
         <div {...panelProps} className="min-w-0 min-[1440px]:col-span-9">
-          {gate === TAB_GATE.pending ? (
-            <Card>
-              <p data-testid="tab-pending" className="text-[13px] text-ink-3">
-                Looking up this instrument…
-              </p>
-            </Card>
-          ) : null}
-          {gate === TAB_GATE.refused ? (
-            <Card>
-              <p data-testid="tab-refused" className="text-[13px] text-ink-3">
-                {REFUSALS[companyData]}
-              </p>
-            </Card>
-          ) : null}
-          {shown('financials') ? <FinancialsTab symbol={symbol} fundamentals={fundamentals} /> : null}
-          {shown('statistics') ? <StatisticsTab fundamentals={fundamentals} /> : null}
-          {shown('peers') ? <PeersTab symbol={symbol} fundamentals={fundamentals} /> : null}
-          {shown('earnings') ? (
-            <EarningsTab key={symbol} symbol={symbol} earnings={earnings} fundamentals={fundamentals} />
-          ) : null}
-          {shown('funds') ? <FundsTab symbol={symbol} currency={currency} /> : null}
-          {shown('congress') ? <CongressTab symbol={symbol} currency={currency} /> : null}
-          {shown('filings') ? <FilingsTab key={symbol} symbol={symbol} /> : null}
-          {shown('news') ? <NewsTab key={symbol} symbol={symbol} /> : null}
-          {shown('guide') ? <GuideTab signals={signals} /> : null}
+          {body}
         </div>
         <div className="min-w-0 min-[1440px]:col-span-3">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
