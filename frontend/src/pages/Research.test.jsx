@@ -169,7 +169,7 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('describes today\'s usual P/E range as a rule of thumb, shows the P/E chip, and offers no past P/E band', async () => {
+  it('describes today\'s usual P/E range as a rule of thumb once, in the answer, and offers no past P/E band', async () => {
     queries.useVerdict.mockReturnValue({
       ...idle,
       data: { ...judged, current_pe: 19.8, pe_p25: 45, pe_p75: 77 },
@@ -182,7 +182,6 @@ describe('Research', () => {
     const card = screen.getByTestId('answer-card')
     expect(card).toHaveTextContent('Strong company, P/E within its usual range.')
     expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
-    expect(screen.getByTestId('pe-chip')).toHaveTextContent('P/E 19.8')
     expect(screen.queryByTestId('value-zones')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
     for (const name of [/52-week high/, /Volume gaps/]) {
@@ -197,7 +196,6 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.getByTestId('answer-card')).toHaveTextContent('Too little P/E history to judge the price.')
-    expect(screen.queryByTestId('pe-chip')).not.toBeInTheDocument()
   })
 
   it('keeps the stop-loss off until it is switched on, then draws it against today\'s close and your average price', async () => {
@@ -225,17 +223,18 @@ describe('Research', () => {
     expect(screen.getByText('+2.7% against the average stock over 60 sessions, 1,295 cases')).toBeInTheDocument()
   })
 
-  it('sizes a trade only once your positions have loaded', () => {
+  it('sizes a trade only once your positions have loaded', async () => {
     const held = { ...position, currency: 'USD', fx_rate: '1', value: '1000' }
     queries.usePortfolioSummary.mockReturnValue({ ...idle, data: { total_value: '100000' } })
     queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: true })
     const { unmount } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Notes and plan' }))
     expect(screen.getByRole('heading', { name: 'Trade plan' })).toBeInTheDocument()
     expect(screen.getByText(/Size at 1% risk/)).toBeInTheDocument()
     unmount()
 
     queries.usePositions.mockReturnValue({ ...idle, data: [held], isSuccess: false, isLoading: true })
-    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=notes' })
     expect(screen.getByRole('heading', { name: 'Trade plan' })).toBeInTheDocument()
     expect(screen.queryByText(/Size at/)).not.toBeInTheDocument()
   })
@@ -313,6 +312,7 @@ describe('Research', () => {
   it('shows the statistics tab, using the fundamentals already fetched for overview', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Fundamentals' }))
     await userEvent.click(screen.getByRole('tab', { name: 'Statistics' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
@@ -321,6 +321,7 @@ describe('Research', () => {
   it('shows the peers tab, gated the same way as valuation on unconfigured fundamentals', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Fundamentals' }))
     await userEvent.click(screen.getByRole('tab', { name: 'Peers' }))
 
     expect(screen.getByText(/not configured/)).toBeInTheDocument()
@@ -341,41 +342,37 @@ describe('Research', () => {
     expect(screen.getByRole('tab', { name: 'Earnings' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('hides the Financials, Statistics, Peers and Earnings tabs for an ETF', () => {
+  it('hides the Fundamentals group and the company-only Filings tab for an ETF', async () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
 
-    expect(screen.queryByRole('tab', { name: 'Financials' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Statistics' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Peers' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Earnings' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Fundamentals' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Chart' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Notes and plan' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: 'Activity' }))
     expect(screen.queryByRole('tab', { name: 'Filings' })).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Guide' })).toBeInTheDocument()
   })
 
-  it('lists the tabs in reading order', () => {
+  it('groups the tabs in reading order, with each group\'s sections under it', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual([
-      'Overview',
-      'Financials',
-      'Statistics',
-      'Peers',
-      'Earnings',
-      'Funds',
-      'Congress',
-      'Filings',
-      'News',
-      'Guide',
-    ])
+    const groups = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
+    expect(groups.map((tab) => tab.textContent)).toEqual(['Chart', 'Fundamentals', 'Activity', 'Notes and plan'])
+    const sectionsOf = async (group) => {
+      await userEvent.click(screen.getByRole('tab', { name: group }))
+      const sections = screen.getByRole('tablist', { name: `${group} sections` })
+      return within(sections).getAllByRole('tab').map((tab) => tab.textContent)
+    }
+    expect(await sectionsOf('Fundamentals')).toEqual(['Financials', 'Statistics', 'Peers', 'Earnings'])
+    expect(await sectionsOf('Activity')).toEqual(['Funds', 'Congress', 'Filings', 'News'])
+    expect(await sectionsOf('Notes and plan')).toEqual(['Notes', 'Guide'])
   })
 
   it('opens Statistics for the old ?tab=valuation link', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=valuation' })
 
+    expect(screen.getByRole('tab', { name: 'Fundamentals' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Statistics' })).toHaveAttribute('aria-selected', 'true')
   })
 
@@ -412,7 +409,7 @@ describe('Research', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=filings' })
 
-    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
     expect(queries.useFilings).not.toHaveBeenCalledWith('SPY')
   })
 
@@ -420,14 +417,14 @@ describe('Research', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=financials' })
 
-    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('falls back to Overview when a stale ?tab does not apply to an ETF', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=valuation' })
 
-    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('badges an ETF instrument in the symbol bar', () => {
@@ -532,7 +529,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=filings' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Activity', 'Notes and plan'])
     expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     for (const hook of [queries.useFundamentals, queries.useStatements, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
       expect(hook).not.toHaveBeenCalledWith('NVDA')
@@ -578,14 +575,16 @@ describe('Research', () => {
     expect(screen.getByText(/Could not resolve WHAT/)).toBeInTheDocument()
   })
 
-  it('offers a News tab, not a Market context tab', () => {
+  it('offers a News tab, not a Market context tab', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Activity' }))
     expect(screen.getByRole('tab', { name: 'News' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Market context' })).not.toBeInTheDocument()
   })
 
   it('shows the news feed on the News tab', async () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    await userEvent.click(screen.getByRole('tab', { name: 'Activity' }))
     await userEvent.click(screen.getByRole('tab', { name: 'News' }))
     expect(screen.getByText(/No recent news for NVDA/)).toBeInTheDocument()
   })
@@ -700,21 +699,19 @@ describe('Research panning', () => {
   it('keeps the tab row inside its own scroller instead of widening the page', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const row = screen.getByRole('tab', { name: 'Overview' }).parentElement
+    const row = screen.getByRole('tab', { name: 'Chart' }).parentElement
     expect(row).toHaveClass('overflow-x-auto', 'whitespace-nowrap')
-    expect(screen.getByRole('tab', { name: 'Guide' })).toHaveClass('shrink-0')
+    expect(screen.getByRole('tab', { name: 'Notes and plan' })).toHaveClass('shrink-0')
   })
 
   it('exposes the tabs as a tablist whose active tab owns a labelled tabpanel', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.getByRole('tablist')).toBeInTheDocument()
-    const statistics = screen.getByRole('tab', { name: 'Statistics' })
-    expect(statistics).toHaveAttribute('aria-selected', 'false')
-    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
-    const panel = screen.getByRole('tabpanel')
-    expect(panel).toHaveAttribute('aria-labelledby', screen.getByRole('tab', { name: 'Overview' }).id)
-    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-controls', panel.id)
+    expect(screen.getByRole('tablist', { name: 'Instrument sections' })).toBeInTheDocument()
+    const chart = screen.getByRole('tab', { name: 'Chart' })
+    expect(screen.getByRole('tab', { name: 'Fundamentals' })).toHaveAttribute('aria-selected', 'false')
+    expect(chart).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', chart.id)
   })
 
   it.each(['', '&tab=financials', '&tab=news'])('keeps the watchlist rail on every tab (%s)', (tab) => {
@@ -748,12 +745,12 @@ describe('Research header and Overview on the new design', () => {
     stubQueries()
   })
 
-  it('all ten tabs render for an eligible US stock', () => {
+  it('all four groups render for an eligible US stock', () => {
     queries.useFundamentals.mockReturnValue({ ...idle, data: company })
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs).toHaveLength(10)
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Fundamentals', 'Activity', 'Notes and plan'])
     expect(screen.getByRole('heading', { level: 1, name: 'NVIDIA Corporation' })).toBeInTheDocument()
     expect(screen.getByText('NVDA · Semiconductors · 4.2T market cap · You own it')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
@@ -762,20 +759,16 @@ describe('Research header and Overview on the new design', () => {
     )
   })
 
-  it('?tab=valuation opens Statistics', () => {
+  it('?tab=valuation opens Statistics inside the Fundamentals group', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=valuation' })
 
+    expect(screen.getByRole('tab', { name: 'Fundamentals' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Statistics' })).toHaveAttribute('aria-selected', 'true')
-    const inline = screen.getByTestId('header-position')
-    expect(inline).toHaveTextContent('Your value')
-    expect(inline).toHaveTextContent('€13,131')
-    expect(inline).toHaveTextContent('▲ 112.35%')
   })
 
-  it('keeps the position out of the header on the Overview, where the answer card holds it', () => {
+  it('shows the position in the answer card on the Overview', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    expect(screen.queryByTestId('header-position')).not.toBeInTheDocument()
     expect(screen.getByTestId('answer-you')).toBeInTheDocument()
   })
 
@@ -787,21 +780,22 @@ describe('Research header and Overview on the new design', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Funds', 'Congress', 'News', 'Guide'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Activity', 'Notes and plan'])
     expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Investment snapshot' })).not.toBeInTheDocument()
   })
 
-  it('Overview keeps Thesis and risks, Performance and one ownership card, and leaves reference cards to Statistics', async () => {
+  it('the Chart group keeps Performance and one ownership card, and leaves Thesis to Notes and reference cards to Statistics', async () => {
     queries.useFundamentals.mockReturnValue({ ...idle, data: company })
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    for (const name of ['Thesis and risks', 'Performance', 'Who else owns it']) {
+    for (const name of ['Performance', 'Who else owns it']) {
       expect(screen.getAllByRole('heading', { name })).toHaveLength(1)
     }
-    for (const name of ['Range statistics', 'Capital structure', 'Ownership']) {
+    for (const name of ['Thesis and risks', 'Range statistics', 'Capital structure', 'Ownership']) {
       expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument()
     }
+    await userEvent.click(screen.getByRole('tab', { name: 'Fundamentals' }))
     await userEvent.click(screen.getByRole('tab', { name: 'Statistics' }))
     expect(await screen.findByRole('heading', { name: 'Capital structure' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Ownership' })).toBeInTheDocument()
@@ -823,6 +817,7 @@ describe('Research header and Overview on the new design', () => {
     expect(screen.getByText('3 bought · 1 sold · 5 holding')).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole('button', { name: 'Funds tab' }))
+    expect(screen.getByRole('tab', { name: 'Activity' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tab', { name: 'Funds' })).toHaveAttribute('aria-selected', 'true')
   })
 
@@ -851,5 +846,52 @@ describe('Research header and Overview on the new design', () => {
 
     const line = screen.getByText(/Vol —/)
     expect(line).not.toHaveTextContent(/NaN|0\.0M/)
+  })
+})
+
+describe('Research chart first', () => {
+  const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+  })
+
+  it('puts the chart above the verdict line and the section tabs', () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    const chart = screen.getByRole('group', { name: 'Chart style' })
+    const verdict = screen.getByTestId('answer-card')
+    const tabs = screen.getByRole('tablist', { name: 'Instrument sections' })
+    expect(tabs.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(chart.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('opens on a line chart, and a choice of Candles is remembered for the next visit', async () => {
+    const { unmount } = renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(screen.getByRole('button', { name: 'Line' })).toHaveAttribute('aria-pressed', 'true')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Candles' }))
+    expect(screen.getByRole('button', { name: 'Candles' })).toHaveAttribute('aria-pressed', 'true')
+    unmount()
+
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+    expect(screen.getByRole('button', { name: 'Candles' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('leaves the Charts page chart style alone when Research switches', async () => {
+    localStorage.setItem('saxodash:chart-prefs', JSON.stringify({ type: 'bars' }))
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Candles' }))
+    expect(JSON.parse(localStorage.getItem('saxodash:chart-prefs')).type).toBe('bars')
+  })
+
+  it('shows the P/E ratio once, in the verdict and not on the chart', () => {
+    queries.useVerdict.mockReturnValue({ ...idle, data: { ...judged, current_pe: 19.8, pe_p25: 45, pe_p75: 77 } })
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    expect(screen.getByTestId('answer-price')).toHaveTextContent('Usual P/E low')
   })
 })

@@ -24,13 +24,6 @@ export function visibleGuides(series, bars, data) {
   }
 }
 
-export function peChip(verdict) {
-  if (!verdict || verdict.valuation === 'not_judged') return null
-  const { current_pe: pe, pe_p25: low, pe_p75: high } = verdict
-  if (pe == null || low == null || high == null) return null
-  return { pe, low, high, position: pe <= low ? 'below' : pe >= high ? 'above' : 'inside' }
-}
-
 function priceSentence(verdict, currency) {
   const { cheap_below: cheap, expensive_above: expensive, pe_p25: low, pe_p75: high } = verdict
   if (verdict.valuation === 'not_judged' || cheap == null || expensive == null || low == null || high == null) return NOT_JUDGED
