@@ -10,7 +10,7 @@ import { useCommandPalette } from './useCommandPalette'
 export default function Layout() {
   const palette = useCommandPalette()
   const openPalette = () => palette.setOpen(true)
-  const onChartBoard = useLocation().pathname.replace(/\/+$/, '') === '/boards'
+  const onChartBoard = useLocation().pathname.replace(/\/+$/, '') === '/charts'
 
   return (
     <div className="min-h-screen text-ink">

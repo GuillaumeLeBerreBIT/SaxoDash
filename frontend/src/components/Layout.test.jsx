@@ -47,12 +47,12 @@ describe('Layout shell', () => {
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
   })
 
-  it('sends palette picks to the Chart board while it is open, and to Research elsewhere', () => {
-    renderWithProviders(<Layout />, { route: '/boards' })
-    expect(palette.props.hrefFor('TSLA', { uic: 9, assetType: 'Stock' })).toBe('/boards?symbol=TSLA&uic=9&assetType=Stock')
+  it('sends palette picks to Charts while it is open, and to Research elsewhere', () => {
+    renderWithProviders(<Layout />, { route: '/charts' })
+    expect(palette.props.hrefFor('TSLA', { uic: 9, assetType: 'Stock' })).toBe('/charts?symbol=TSLA&uic=9&assetType=Stock')
 
-    renderWithProviders(<Layout />, { route: '/boards/' })
-    expect(palette.props.hrefFor('TSLA')).toBe('/boards?symbol=TSLA')
+    renderWithProviders(<Layout />, { route: '/charts/' })
+    expect(palette.props.hrefFor('TSLA')).toBe('/charts?symbol=TSLA')
 
     renderWithProviders(<Layout />, { route: '/boards/morning' })
     expect(palette.props.hrefFor).toBeUndefined()

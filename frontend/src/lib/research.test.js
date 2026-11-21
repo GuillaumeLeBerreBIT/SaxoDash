@@ -311,15 +311,15 @@ describe('researchHref', () => {
 
 describe('chartHref', () => {
   it('opens the Chart board on the symbol alone', () => {
-    expect(chartHref('NVDA')).toBe('/boards?symbol=NVDA')
+    expect(chartHref('NVDA')).toBe('/charts?symbol=NVDA')
   })
 
   it('pins the exact instrument, like researchHref', () => {
-    expect(chartHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe('/boards?symbol=NOW&uic=204300&assetType=Stock')
+    expect(chartHref('NOW', { uic: 204300, assetType: 'Stock' })).toBe('/charts?symbol=NOW&uic=204300&assetType=Stock')
   })
 
   it('leaves out an asset type without a uic', () => {
-    expect(chartHref('NOW', { assetType: 'Stock' })).toBe('/boards?symbol=NOW')
+    expect(chartHref('NOW', { assetType: 'Stock' })).toBe('/charts?symbol=NOW')
   })
 })
 
