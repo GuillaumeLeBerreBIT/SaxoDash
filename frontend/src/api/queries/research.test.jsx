@@ -20,6 +20,7 @@ import {
   useSymbolNote,
   useTextAnnotationMutations,
   useTextAnnotations,
+  useChartZoneMutations,
 } from './research'
 
 function setup(useHook, initialProps) {
@@ -399,3 +400,33 @@ describe('filings and insiders keys', () => {
     expect(researchKeys.filings('NVDA')).not.toEqual(researchKeys.insiders('NVDA'))
   })
 })
+
+describe('chart zone mutations', () => {
+  it('creates a zone for the instrument from its bounds', async () => {
+    client.createChartZone.mockResolvedValue({ id: 5 })
+    const { result } = setup(() => useChartZoneMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.create.mutateAsync({
+        startBarDate: '2026-08-01', endBarDate: '2026-08-10', lowPrice: '168.00', highPrice: '175.50',
+      })
+    })
+
+    expect(client.createChartZone).toHaveBeenCalledWith({
+      uic: 211, assetType: 'Stock',
+      startBarDate: '2026-08-01', endBarDate: '2026-08-10', lowPrice: '168.00', highPrice: '175.50',
+    })
+  })
+
+  it('removes a zone by its id', async () => {
+    client.deleteChartZone.mockResolvedValue(undefined)
+    const { result } = setup(() => useChartZoneMutations(211, 'Stock'))
+
+    await act(async () => {
+      await result.current.remove.mutateAsync(5)
+    })
+
+    expect(client.deleteChartZone).toHaveBeenCalledWith(5)
+  })
+})
+

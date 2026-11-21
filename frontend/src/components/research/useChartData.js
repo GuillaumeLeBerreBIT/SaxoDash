@@ -14,9 +14,11 @@ import { DAILY_HORIZON, WIDEST_RANGE_COUNT, barsForRange, earningsMarkersForBars
 import { LATEST_TIME_VIEW, futureSessionDates, resolveTimeWindow, timeViewForDates } from '../../lib/timeWindow'
 import { resolveTextAnnotations } from '../../lib/textAnnotations'
 import { resolveTrendLines } from '../../lib/trendLines'
+import { resolveZones } from '../../lib/chartZones'
 import { useChartLines } from './useChartLines'
 import { useChartTextAnnotations } from './useChartTextAnnotations'
 import { useChartTrendLines } from './useChartTrendLines'
+import { useSavedChartZones } from './useSavedChartZones'
 
 // Hoisted so an empty result keeps a stable identity and the memos below do
 // not recompute on every render.
@@ -72,6 +74,11 @@ export function useChartData({
     () => resolveTrendLines(savedTrendLines.lines, { allBars, windowStart: start, windowLength: bars.length }),
     [savedTrendLines.lines, allBars, start, bars.length],
   )
+  const savedZones = useSavedChartZones({ symbol, uic, assetType })
+  const zones = useMemo(
+    () => resolveZones(savedZones.zones, { allBars, windowStart: start, windowLength: bars.length }),
+    [savedZones.zones, allBars, start, bars.length],
+  )
   const savedTextAnnotations = useChartTextAnnotations({ symbol, uic, assetType })
   const textAnnotations = useMemo(
     () => resolveTextAnnotations(savedTextAnnotations.items, { allBars, windowStart: start, windowLength: bars.length }),
@@ -111,6 +118,8 @@ export function useChartData({
     priceLines,
     trendLines,
     trendLineActions: savedTrendLines,
+    zones,
+    zoneActions: savedZones,
     textAnnotations,
     textAnnotationActions: savedTextAnnotations,
     quote: liveQuotes.data?.[0],

@@ -49,6 +49,8 @@ function stub() {
     remove: { mutate: vi.fn() },
   })
   queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useChartZones.mockReturnValue({ data: [] })
+  queries.useChartZoneMutations.mockReturnValue({ create: { mutate: vi.fn() }, remove: { mutate: vi.fn() } })
   queries.useTrendLineMutations.mockReturnValue({
     create: { mutate: vi.fn() },
     update: { mutate: vi.fn() },

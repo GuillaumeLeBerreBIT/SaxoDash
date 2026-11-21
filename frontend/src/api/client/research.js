@@ -53,6 +53,17 @@ export const updateTrendLine = (id, patch) =>
   jsonRequest(`/api/research/trend-lines/${id}/`, 'PATCH', patch)
 export const deleteTrendLine = (id) =>
   apiFetch(`/api/research/trend-lines/${id}/`, { method: 'DELETE' })
+export const getChartZones = ({ uic, assetType }) =>
+  apiFetch(`/api/research/zones/${uic}/${assetType}/`)
+export const createChartZone = ({ uic, assetType, startBarDate, endBarDate, lowPrice, highPrice }) =>
+  jsonRequest(`/api/research/zones/${uic}/${assetType}/`, 'POST', {
+    start_bar_date: startBarDate,
+    end_bar_date: endBarDate,
+    low_price: lowPrice,
+    high_price: highPrice,
+  })
+export const deleteChartZone = (id) =>
+  apiFetch(`/api/research/zones/${id}/`, { method: 'DELETE' })
 
 export const getTextAnnotations = ({ uic, assetType }) =>
   apiFetch(`/api/research/text-annotations/${uic}/${assetType}/`)

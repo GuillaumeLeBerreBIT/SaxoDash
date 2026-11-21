@@ -1027,7 +1027,7 @@ describe('cross-kind selection', () => {
 })
 
 describe('double-clicking with a drawing tool armed', () => {
-  it.each(['ray', 'text'])('does not create a stray horizontal line while the %s tool is armed', (tool) => {
+  it.each(['ray', 'zone', 'text'])('does not create a stray horizontal line while the %s tool is armed', (tool) => {
     const onCreateLine = vi.fn()
     const { container } = renderChart({ lines: [], onCreateLine, tool })
 
@@ -1361,3 +1361,76 @@ describe('SubPane', () => {
     expect(title.parentElement).toHaveClass('relative')
   })
 })
+
+describe('placing a zone', () => {
+  const geometry = () => priceGeometry({ data: bars, ind: computeIndicators(bars), width: 760, height: 360, withBands: false, yScale: 1 })
+
+  it('commits both corners on the second click', () => {
+    const onCreateZone = vi.fn()
+    const onPlaced = vi.fn()
+    const { container } = renderChart({ tool: 'zone', onCreateZone, onPlaced })
+    const plot = container.firstChild
+    const g = geometry()
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(9), clientY: 150 })
+
+    expect(onCreateZone).toHaveBeenCalledTimes(1)
+    const [start, end] = onCreateZone.mock.calls[0]
+    expect(start.barDate).toBe(bars[3].date)
+    expect(end.barDate).toBe(bars[9].date)
+    expect(onPlaced).toHaveBeenCalledTimes(1)
+  })
+
+  it('previews a rectangle from the first click to the current pointer position', () => {
+    const { container, getByTestId } = renderChart({ tool: 'zone', onCreateZone: vi.fn() })
+    const plot = container.firstChild
+
+    fireEvent.click(plot, { detail: 1, clientX: 100, clientY: 200 })
+    fireEvent.mouseMove(plot, { clientX: 300, clientY: 150 })
+
+    const preview = getByTestId('zone-preview')
+    expect(Number(preview.getAttribute('width'))).toBeGreaterThan(0)
+    expect(preview).toHaveAttribute('height', '50')
+  })
+
+  it('a same-bar second click does not commit and stays armed', () => {
+    const onCreateZone = vi.fn()
+    const { container, getByTestId } = renderChart({ tool: 'zone', onCreateZone })
+    const plot = container.firstChild
+    const g = geometry()
+
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 200 })
+    fireEvent.click(plot, { detail: 1, clientX: g.xAt(3), clientY: 150 })
+
+    expect(onCreateZone).not.toHaveBeenCalled()
+    expect(getByTestId('zone-preview')).toBeInTheDocument()
+  })
+})
+
+describe('chart zones', () => {
+  const zone = { id: 4, label: '', x1: 2, x2: 9, low: 110, high: 120 }
+
+  it('draws each zone as a rectangle that names its role against the last close', () => {
+    const { getByTestId } = renderChart({ zones: [zone] })
+
+    expect(getByTestId('chart-zone-4')).toHaveTextContent('Support')
+  })
+
+  it('names a zone above the last close as resistance', () => {
+    const { getByTestId } = renderChart({ zones: [{ ...zone, low: 140, high: 150 }] })
+
+    expect(getByTestId('chart-zone-4')).toHaveTextContent('Resistance')
+  })
+
+  it('deletes the selected zone with the Delete key', () => {
+    const onDeleteZone = vi.fn()
+    const { getByTestId } = renderChart({ zones: [zone], onDeleteZone })
+
+    fireEvent.click(getByTestId('chart-zone-4').querySelector('rect'))
+    fireEvent.keyDown(window, { key: 'Delete' })
+
+    expect(onDeleteZone).toHaveBeenCalledWith(zone)
+  })
+})
+

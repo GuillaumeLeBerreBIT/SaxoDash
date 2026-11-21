@@ -126,6 +126,9 @@ export default function ChartCanvas({
   onCreateTrendLine,
   onDeleteTrendLine,
   onEditTrendLineLabel,
+  zones,
+  onCreateZone,
+  onDeleteZone,
   textAnnotations,
   onMoveTextAnnotation,
   onCreateTextAnnotation,
@@ -275,6 +278,9 @@ export default function ChartCanvas({
             onCreateTrendLine={onCreateTrendLine}
             onDeleteTrendLine={onDeleteTrendLine}
             onEditTrendLineLabel={onEditTrendLineLabel}
+            zones={zones}
+            onCreateZone={onCreateZone}
+            onDeleteZone={onDeleteZone}
             textAnnotations={textAnnotations}
             onMoveTextAnnotation={onMoveTextAnnotation}
             onCreateTextAnnotation={onCreateTextAnnotation}
