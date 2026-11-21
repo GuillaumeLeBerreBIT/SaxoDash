@@ -127,6 +127,17 @@ def _stocks(quarter_end):
     return stocks
 
 
+def reported_buyers():
+    signal = signal_quarter()
+    if not signal:
+        return {}
+    return {
+        stock['ticker']: {'fund_count': len(stock['bought']), 'fund_quarter': signal['quarter']}
+        for stock in _stocks(signal['quarter']).values()
+        if stock['ticker'] and len(stock['bought']) >= MIN_FUNDS
+    }
+
+
 def _face(investor):
     return {'slug': investor.slug, 'name': investor.name, 'photo_url': photo_url(investor), 'logo_url': logo_url(investor)}
 

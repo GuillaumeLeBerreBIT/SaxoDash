@@ -14,7 +14,7 @@ describe('filters and the URL', () => {
   })
 
   it('ignores a sort it does not know', () => {
-    expect(filtersFromParams(new URLSearchParams('sort=random')).sort).toBe('opportunity')
+    expect(filtersFromParams(new URLSearchParams('sort=random')).sort).toBe('checks')
   })
 
   it('counts sorting alone as no filter, so the shelves stay', () => {

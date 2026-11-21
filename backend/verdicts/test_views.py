@@ -298,6 +298,33 @@ class BrowseTests(APITestCase):
         listed('NBIS', valuation='cheap', universe=False)
         self.assertEqual(self.tickers(), ['AAA'])
 
+    def test_checks_sort_and_pullback_membership(self):
+        listed('AAA', quality='mixed', checks=CHECKS)
+        listed('BBB', quality='strong', checks=CHECKS[:4], high_1y=200)
+        self.assertEqual(self.tickers('?sort=checks'), ['AAA', 'BBB'])
+        self.assertEqual(self.tickers('?screen=pullbacks'), ['BBB'])
+        self.assertEqual(self.browse('?screen=typo').status_code, 400)
+
+    def test_searches_beyond_the_shelf_preview(self):
+        for i in range(25):
+            ticker = f'T{i:02d}'
+            listed(ticker)
+            ScreenerRow.objects.filter(ticker=ticker).update(status=ScreenerRow.OK, rsi14=75 + i)
+        body = self.browse('?screen=overbought&q=T00').json()
+        self.assertEqual(body['total'], 1)
+        self.assertEqual(body['stocks'][0]['reasons'][0]['value'], 75)
+
+    def test_saved_screen_only_includes_my_matching_instruments_once(self):
+        listed('AAA', uic=11)
+        listed('BBB', uic=22)
+        other = Watchlist.objects.create(user=make_user('other'), name='Other')
+        WatchlistItem.objects.create(watchlist=other, symbol='BBB', uic=22)
+        self.assertEqual(self.tickers('?screen=saved'), [])
+        for name in ['Ideas', 'Read']:
+            mine = Watchlist.objects.create(user=self.alice, name=name)
+            WatchlistItem.objects.create(watchlist=mine, symbol='AAA', uic=11)
+        self.assertEqual(self.tickers('?screen=saved'), ['AAA'])
+
     def test_refuses_unknown_values(self):
         self.assertEqual(self.browse('?valuation=bargain').status_code, 400)
         self.assertEqual(self.browse('?sort=random').status_code, 400)

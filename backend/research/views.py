@@ -317,11 +317,15 @@ class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
 
 class DiscoverView(APIView):
     def get(self, request):
+        if request.query_params.get('view') == 'screens':
+            choices = [{'key': shelf.key, 'title': shelf.title, 'group': shelf.group} for shelf in shelves.SHELVES]
+        else:
+            choices = [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES]
         return Response({
             'as_of': discover.as_of(),
             'health': discover.health(),
             'groups': [{'key': key, 'title': title} for key, title in shelves.GROUPS],
-            'shelves': [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
+            'shelves': choices,
         })
 
 

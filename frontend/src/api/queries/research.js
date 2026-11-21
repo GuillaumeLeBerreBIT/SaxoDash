@@ -461,7 +461,10 @@ export function useWatchlists() {
  */
 export function useWatchlistMutations() {
   const queryClient = useQueryClient()
-  const onSuccess = () => queryClient.invalidateQueries({ queryKey: researchKeys.watchlists })
+  const onSuccess = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: researchKeys.watchlists }),
+    queryClient.invalidateQueries({ queryKey: ['discover-explorer', 'saved'] }),
+  ])
 
   return {
     create: useMutation({ mutationFn: createWatchlist, onSuccess }),

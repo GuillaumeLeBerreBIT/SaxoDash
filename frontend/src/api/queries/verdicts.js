@@ -71,3 +71,13 @@ export function useBrowse(query, { enabled = true } = {}) {
     placeholderData: keepPreviousData,
   })
 }
+
+export function useExplorerPages(queries, screen) {
+  return useQueries({
+    queries: queries.map((query) => ({
+      queryKey: ['discover-explorer', screen, query],
+      queryFn: ({ signal }) => getBrowse(query, signal),
+      staleTime: 60_000,
+    })),
+  })
+}

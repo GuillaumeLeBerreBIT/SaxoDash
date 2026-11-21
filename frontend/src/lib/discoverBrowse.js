@@ -1,5 +1,7 @@
 export const SORTS = [
-  { value: 'opportunity', label: 'Most quality checks passed' },
+  { value: 'checks', label: 'Most quality checks passed' },
+  { value: 'opportunity', label: 'Portfolio action' },
+  { value: 'funds', label: 'Most tracked buyers' },
   { value: 'discount', label: 'Furthest below its usual P/E' },
   { value: 'fall', label: 'Biggest fall from 1-year high' },
 ]
@@ -38,7 +40,13 @@ export const RAILS = [
 
 const LIST_KEYS = ['valuation', 'quality', 'sector']
 
-export const EMPTY_FILTERS = { valuation: [], quality: [], sector: [], minYield: null, minFall: null, notHeld: false, q: '', sort: 'opportunity' }
+export const EMPTY_FILTERS = { valuation: [], quality: [], sector: [], minYield: null, minFall: null, notHeld: false, q: '', sort: 'checks' }
+
+export function defaultSort(screen) {
+  if (screen === 'pullbacks') return 'fall'
+  if (screen === 'fund-buying') return 'funds'
+  return 'checks'
+}
 
 export function filtersFromParams(params) {
   const list = (key) => (params.get(key) ? params.get(key).split(',').filter(Boolean) : [])
@@ -55,7 +63,7 @@ export function filtersFromParams(params) {
     minFall: number('min_fall'),
     notHeld: params.get('not_held') === '1',
     q: params.get('q') ?? '',
-    sort: SORTS.some((option) => option.value === sort) ? sort : 'opportunity',
+    sort: SORTS.some((option) => option.value === sort) ? sort : defaultSort(params.get('screen')),
   }
 }
 
@@ -66,7 +74,7 @@ export function paramsFromFilters(filters) {
   if (filters.minFall != null) out.min_fall = String(filters.minFall)
   if (filters.notHeld) out.not_held = '1'
   if (filters.q?.trim()) out.q = filters.q
-  if (filters.sort && filters.sort !== 'opportunity') out.sort = filters.sort
+  if (filters.sort && filters.sort !== 'checks') out.sort = filters.sort
   return out
 }
 
@@ -81,7 +89,7 @@ export function browseQuery(filters, { exclude = [], tickers = [], limit, offset
 }
 
 export function filtersActive(filters) {
-  return Object.keys(paramsFromFilters({ ...filters, sort: 'opportunity' })).length > 0
+  return Object.keys(paramsFromFilters({ ...filters, sort: 'checks' })).length > 0
 }
 
 export function toggled(list, value) {

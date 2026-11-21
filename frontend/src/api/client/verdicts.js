@@ -8,4 +8,4 @@ export const getVerdict = (ticker) => apiFetch(`/api/verdicts/${encodeURICompone
 export const getVerdictTrackRecord = () => apiFetch('/api/verdicts/track-record/')
 
 
-export const getBrowse = (query = '') => apiFetch(`/api/verdicts/browse/${query}`)
+export const getBrowse = (query = '', signal) => apiFetch(`/api/verdicts/browse/${query}`, { signal })

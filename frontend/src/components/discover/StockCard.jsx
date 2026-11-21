@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { checksLine, priceLine } from '../../lib/discoverBrowse'
-import { fmtMoney } from '../../lib/format'
+import { fmtDate, fmtMoney } from '../../lib/format'
 import { displayName } from '../../lib/names'
 import { researchHref } from '../../lib/research'
 import { InstrumentLogo } from '../ui'
@@ -18,7 +18,8 @@ export default function StockCard({ stock, note, className = '' }) {
   return (
     <article
       data-testid="stock-card"
-      className={`group relative flex min-w-0 flex-col gap-3 rounded-[14px] bg-pane p-4 transition-colors hover:bg-hover ${className}`}
+      data-listing={stock.ticker}
+      className={`sd-panel group relative flex min-w-0 flex-col gap-3 rounded-[14px] bg-pane p-4 transition-colors hover:bg-hover ${className}`}
     >
       <div className="flex items-center gap-2.5 pr-9">
         <InstrumentLogo symbol={stock.ticker} size={34} />
@@ -43,6 +44,7 @@ export default function StockCard({ stock, note, className = '' }) {
         <span className="text-[20px] font-bold text-ink num">{fmtMoney(stock.last_close, 'USD')}</span>
         {stock.held ? <span className="text-[12px] font-semibold text-held">You own it</span> : null}
       </div>
+      <span className="text-[12px] text-ink-3">{stock.close_date ? `Close · ${fmtDate(stock.close_date)}` : 'Close date unavailable'}</span>
       <div className="flex flex-col gap-1.5">
         <PriceBar price={stock.last_close} cheapBelow={stock.cheap_below} expensiveAbove={stock.expensive_above} labels={false} />
         {line ? <span className={`text-[12px] font-semibold num ${LINE_TONE[line.tone]}`}>{line.text}</span> : null}

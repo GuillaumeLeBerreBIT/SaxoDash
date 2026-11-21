@@ -61,6 +61,15 @@ class ComputeTest(TestCase):
         self.assertEqual(len(verdict.checks), 7)
         self.assertEqual(verdict.name, 'AAPL Inc')
 
+    def test_close_date_only_comes_from_the_matching_bar(self):
+        row = make_row(recent_closes=[{'date': '2026-11-06', 'close': 100}])
+        compute.run(today=DAY_ONE)
+        self.assertEqual(StockVerdict.objects.get().close_date, date(2026, 11, 6))
+        row.last_close = 95
+        row.save()
+        compute.run(today=DAY_TWO)
+        self.assertIsNone(StockVerdict.objects.get().close_date)
+
     def test_verdict_stores_the_uic_the_scan_resolved(self):
         make_row('AAPL', uic=211)
         make_row('NBIS', uic=None, in_universe=False)
