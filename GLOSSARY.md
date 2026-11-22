@@ -84,7 +84,7 @@ The days a chart shows right now: picked by the Range, then moved by panning and
 _Avoid_: Range, viewport
 
 **Compare**:
-A Pane mode that shows how the stock moved against up to five other lines (the S&P 500, its Sector and stocks the user adds), each as the % change from the first day of the Time Window.
+A Pane mode that shows how the stock moved against up to five other lines (the S&P 500, its Sector Fund and stocks the user adds), each as the % change from the first day of the Time Window.
 _Avoid_: Overlay, benchmark view, Compare page (the old idea of a separate page)
 
 **Guide**:
@@ -152,8 +152,12 @@ One of the 11 standard sectors a stock in the Universe belongs to, such as Infor
 _Avoid_: Industry (the narrower label from the data provider)
 
 **Sector Move**:
-The equal-weight average move of a Sector's stocks over a day, a month, or day by day across a Time Window in Compare. It always uses the Sector's members of today, each counted from the day its history starts.
+The equal-weight average move of a Sector's stocks in the Universe over a day or a month, using the Sector's members of today.
 _Avoid_: Sector performance, money flow (fine as the Panel's name)
+
+**Sector Fund**:
+The SPDR fund that tracks one Sector, such as XLK for Information Technology. It is weighted by company size, so it can move differently from the Sector Move, and it is always named by its ticker, never as "the Sector".
+_Avoid_: Sector (on its own, for the fund), sector index, sector ETF (fine in conversation)
 
 ### Investors and Congress
 

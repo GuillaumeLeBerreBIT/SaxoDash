@@ -1,6 +1,7 @@
 # Compare on Charts
 
-Settled in a grilling session on 2026-11-22 (twenty questions, all agreed). Mockup:
+Settled in a grilling session on 2026-11-22 (twenty questions, all agreed); the Sector line was
+changed afterwards to the stock's Sector Fund (see Implementation Decisions). Mockup:
 https://claude.ai/artifact/5WixUZvoXsqoJdBNSSn5oS (private to the owner).
 
 ## Problem Statement
@@ -16,7 +17,8 @@ A **Compare** toggle on each Charts Pane. When it is on, the Pane shows the stoc
 other lines, each as the % change from the first day of the Time Window, so every line starts at
 0% on the left edge and their ends can be read side by side.
 
-The S&P 500 and the stock's own Sector are one click away; any other symbol Charts can open can
+The S&P 500 and the fund that tracks the stock's Sector (its Sector Fund, such as XLK) are one
+click away; any other symbol Charts can open can
 be added with "Add symbol" (up to three). A legend shows each line's % on the hovered day, and
 one plain sentence under the chart states where each line ended. The stock itself can be shown
 as candles (the default) or a line; on candles my Zones, Drawings and Guides stay where they
@@ -28,16 +30,16 @@ belong. Everything about Compare is remembered per Pane in this browser.
 2. As an investor, I want every line to start at 0% on the first visible day, so that lines with very different prices can be compared fairly.
 3. As an investor, I want the lines to restart at 0% whenever I change the Range, pan or zoom, so that the numbers always describe exactly the days I am looking at.
 4. As an investor, I want the S&P 500 as a one-click line, so that I can see at once whether the stock beat the market.
-5. As an investor, I want the stock's own Sector as a one-click line, so that I can tell a stock-specific move from a sector-wide one.
-6. As an investor, I want the S&P 500 and Sector buttons to start off, so that turning Compare on does not clutter the chart before I choose.
-7. As an investor, I want the Sector line to follow the same equal-weight rule as Sector Move on Boards, so that the app never shows two disagreeing numbers for "the Sector".
-8. As an investor, I want the Sector line's tooltip to say it is the equal-weight average of today's members, so that I know companies that left the Sector are not in it.
+5. As an investor, I want the stock's Sector Fund (such as XLK for Information Technology) as a one-click line, so that I can tell a stock-specific move from a sector-wide one.
+6. As an investor, I want the S&P 500 and Sector Fund buttons to start off, so that turning Compare on does not clutter the chart before I choose.
+7. As an investor, I want the Sector Fund line named by its ticker, never "the Sector", so that it is never confused with the equal-weight Sector Move on Boards.
+8. As an investor, I want the Sector Fund button's tooltip to say the fund is weighted by company size, so that I know its largest holdings count most (and that a large stock is partly compared with itself).
 9. As an investor, I want to add up to three more symbols with "Add symbol", so that I can compare a stock with its direct peers.
 10. As an investor, I want "Add symbol" to find anything Charts can open, stocks and ETFs alike, so that I can compare with a peer outside the Universe or with a sector fund.
 11. As an investor, I want "Add symbol" to show how many slots are left, so that I know when I have reached the limit.
 12. As an investor, I want "Add symbol" to refuse a symbol already on the chart, so that I never end up with two identical lines.
 13. As an investor, I want the S&P 500 button hidden when the stock is SPY itself, so that I am not offered a comparison with itself.
-14. As an investor, I want the Sector button hidden for a stock or ETF that has no Sector, so that I am never offered an empty line.
+14. As an investor, I want the Sector Fund button hidden for a stock or ETF that has no Sector, and for a Sector Fund itself, so that I am never offered an empty line.
 15. As an investor, I want a line whose history starts inside my Time Window to begin on its first trading day at its own 0%, labelled "from <date>", so that a recent listing is still visible and its shorter span is obvious.
 16. As an investor, I want to switch the main stock between Candles and Line while comparing, so that I can keep the candle detail or get a cleaner picture as I prefer.
 17. As an investor, I want Candles to be the default in Compare, so that the chart keeps looking like Charts when I turn Compare on.
@@ -73,19 +75,27 @@ belong. Everything about Compare is remembered per Pane in this browser.
   days; a missing day is a gap, not a zero), marking a late start with its first date, reading
   each line's value at a hovered date, and composing the fact sentence. The Pane and legend only
   render what it returns.
-- **S&P 500 and added symbols** load through the existing chart data path for an instrument (the
-  same request Charts already makes per Pane), so they share its caching and throttling. The
-  S&P 500 is the SPY instrument already used by the analytics benchmarks.
-- **Sector line, new backend endpoint:** a read-only research endpoint returns one Sector's
-  day-by-day Sector Move as a series of dates and index values, built from the stored daily
-  history of the Sector's current Universe members. Each day's move is the equal-weight average
-  of the daily returns of members that have a close on that day and the day before; the series
-  chains those moves into an index. A member counts from the day its history starts. The endpoint
-  takes the Sector name and how many days of history to return, reads stored rows only (no
-  provider call), and returns 404 for an unknown Sector. Its cost (up to about seventy members'
-  history per request) is measured during the build; caching is added only if the measurement
-  calls for it.
-- **Which Sector:** the stock's Sector comes from its Universe row. No row, no Sector button.
+- **Every compared line is an instrument:** the S&P 500, the Sector Fund and added symbols all
+  load through the existing chart data path for an instrument (the same request Charts already
+  makes per Pane), so they share its caching and throttling. No new endpoint. The S&P 500 is the
+  SPY instrument already used by the analytics benchmarks.
+- **Sector Fund instead of a computed Sector line:** the one-click sector line is the SPDR fund
+  that tracks the stock's Sector, not a day-by-day equal-weight average of the Universe members.
+  The fund is weighted by company size, so it can disagree with Sector Move on Boards; it is
+  therefore always named by its ticker (XLK, never "Information Technology" or "Sector") with a
+  tooltip naming the fund and saying it is weighted by company size. Chosen over the computed
+  line because it needs no new endpoint, carries its past members, and has no unadjusted-split
+  jumps.
+- **Sector to fund map:** a fixed table of the 11 Sectors to their funds (ticker and uic),
+  checked on Saxo on 2026-11-22, all with daily bars back to at least February 2022:
+  Information Technology XLK 35417, Financials XLF 35416, Health Care XLV 35420, Consumer
+  Discretionary XLY 35443, Consumer Staples XLP 35418, Energy XLE 35415, Industrials XLI 35442,
+  Materials XLB 35414, Utilities XLU 35419, Real Estate XLRE 5008102, Communication Services XLC
+  10457306. All are asset type Etf. The table lives on the backend beside the S&P 500 benchmark.
+- **Which Sector Fund:** each Sector in the existing Sectors overview response gains its fund
+  (ticker, uic, asset type). The Pane finds the stock's Sector there by its ticker, as Boards
+  already does; a stock not in any Sector gets no button. A Sector Fund opened as the main
+  stock gets no Sector Fund button.
 - **Persistence:** the existing per-browser chart workspace record gains, per Pane slot, the
   Compare on/off flag, the chosen suggestions (S&P 500, Sector), the added symbols (symbol, uic,
   asset type) and the Line/Candles choice. Reading an older record without these fields yields
@@ -96,26 +106,25 @@ belong. Everything about Compare is remembered per Pane in this browser.
   leave Compare to draw. Existing drawings are shown read-only on candles and hidden on line.
 - **Colours:** compared lines use chart colours from the theme, distinct in lightness as well as
   hue, in both themes; no new palette literals.
-- **Glossary:** `GLOSSARY.md` gains **Compare**; **Sector Move** now covers the day-by-day line
-  and the "today's members" rule.
+- **Glossary:** `GLOSSARY.md` gains **Compare** and **Sector Fund**; **Sector Move** says it is
+  equal-weight over today's members, to set it apart from the Sector Fund.
 
 ## Testing Decisions
 
 - A good test checks what a user or API caller sees: the numbers on the legend and sentence, the
   buttons offered, the response body. It never asserts on internal state, hook calls or markup
   structure that a refactor could change without changing behaviour.
-- **Backend, the Sector endpoint:** an `APITestCase` next to the existing Sectors view tests.
-  Cases: equal-weight chaining over two members with different prices; a member whose history
-  starts later only counts from its first day; a day where a member has no bar is skipped for
-  that member; an unknown Sector answers 404; the endpoint needs authentication.
+- **Backend, the Sector Fund:** extend the existing Sectors view tests: each Sector in the
+  response carries its fund's ticker, uic and asset type, and all 11 Sectors have one.
 - **Frontend, the Compare helper:** vitest unit tests beside it, in the style of the existing
   growth helper's benchmark rebasing tests. Cases: every line is 0% on the first visible day;
   moving the first visible day rebases; a late-starting line begins at its own 0% with its first
   date; a missing day is a gap; the hovered value falls back to the last visible day; the
   sentence lists only visible lines and states rises and falls without judgement.
 - **Frontend, the Charts page:** extend the existing Charts page tests with the API stubbed.
-  Cases: turning Compare on offers S&P 500 and Sector, both off; SPY hides the S&P 500 button; a
-  stock without a Sector hides the Sector button; adding a fourth symbol is refused and a
+  Cases: turning Compare on offers the S&P 500 and the stock's Sector Fund by ticker, both off;
+  SPY hides the S&P 500 button; a stock without a Sector, or a Sector Fund itself, hides the
+  Sector Fund button; adding a fourth symbol is refused and a
   duplicate is refused; removing an added symbol frees its slot; Line hides drawings, Candles
   shows them; drawing tools are disabled while comparing; Compare state survives a remount
   through the stored workspace; linked Panes keep separate Compare states.
@@ -128,10 +137,11 @@ belong. Everything about Compare is remembered per Pane in this browser.
 - A separate Compare page.
 - Indexes other than the S&P 500 as one-click suggestions (Nasdaq 100 and the world index can be
   added through "Add symbol" via their ETFs).
-- Sector ETFs as the Sector line.
+- A computed equal-weight Sector line (the Sector Fund replaces it; Sector Move stays a day and
+  a month on Boards).
+- Sector Funds other than the SPDR ones.
 - Drawing new Zones or Drawings while Compare is on.
 - Saving Compare setups to the database or sharing them across devices.
-- Survivorship-free Sector history (past members of a Sector are not stored).
 - Alerts on compared lines.
 
 ## Further Notes
@@ -139,6 +149,8 @@ belong. Everything about Compare is remembered per Pane in this browser.
 - Saxo serves the compared symbols' daily bars with 15-minute delayed prices, like the rest of
   Charts.
 - Daily bars are mostly split-adjusted; a few stored unadjusted splits (noted in the chart value
-  guides work) would show as a jump in a Sector line or a compared stock.
+  guides work) could show as a jump in a compared stock.
+- A Sector Fund holds its own index's members, weighted by size, so its stocks and the Sector's
+  stocks on Boards need not be the same set.
 - The owner's standing rule for chart features applies: visual, on the candles, simple, and
   never two readings that disagree.
