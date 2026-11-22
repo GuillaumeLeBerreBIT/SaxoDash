@@ -5,6 +5,7 @@ import { WEIGHT_CAP_PCT } from '../../lib/portfolioStats'
 import { moveLabel } from '../../lib/pricing'
 import { researchHref } from '../../lib/research'
 import { Card, DataTable, InstrumentLogo, Move, Td, Th, Tile, Tr } from '../ui'
+import ChartLink from '../ChartLink'
 
 function PortfolioValueSub({ pnlPct }) {
   if (pnlPct == null) return '—'
@@ -33,6 +34,7 @@ function PositionRow({ position, change, onSelect }) {
   return (
     <Tr>
       <Td edge className="w-full max-w-0 md:max-w-none">
+        <div className="flex items-center gap-1 min-w-0">
         {onSelect ? (
           <button
             type="button"
@@ -46,6 +48,8 @@ function PositionRow({ position, change, onSelect }) {
             <Identity position={position} />
           </Link>
         )}
+        <ChartLink symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
+        </div>
       </Td>
       <Td align="right">
         <Move value={change} />

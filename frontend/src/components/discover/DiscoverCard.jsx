@@ -6,6 +6,7 @@ import { researchHref } from '../../lib/research'
 import { DayChange, InstrumentLogo } from '../ui'
 import Sparkline from './Sparkline'
 import WatchlistStar from './WatchlistStar'
+import ChartLink from '../ChartLink'
 
 export default function DiscoverCard({ item, className = '' }) {
   return (
@@ -14,7 +15,7 @@ export default function DiscoverCard({ item, className = '' }) {
         to={researchHref(item.ticker, 'overview', { uic: item.uic, assetType: item.asset_type })}
         className="block h-full rounded-[10px] p-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
       >
-        <div className="flex items-center gap-2 pr-11 sm:pr-7">
+        <div className="flex items-center gap-2 pr-[88px] sm:pr-14">
           <InstrumentLogo symbol={item.ticker} size={24} />
           <div className="min-w-0">
             <div className="text-[13px] font-semibold text-ink">{item.ticker}</div>
@@ -42,7 +43,8 @@ export default function DiscoverCard({ item, className = '' }) {
           <span className="text-[11px] text-ink-3">{SPARKLINE_PERIOD}</span>
         </div>
       </Link>
-      <div className="absolute top-2 right-2">
+      <div className="absolute top-2 right-2 flex items-center gap-1">
+        <ChartLink symbol={item.ticker} instrument={{ uic: item.uic, assetType: item.asset_type }} />
         <WatchlistStar ticker={item.ticker} name={item.name} uic={item.uic} assetType={item.asset_type} />
       </div>
     </div>

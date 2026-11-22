@@ -20,9 +20,10 @@ describe('UpcomingEarnings', () => {
         items={[{ ticker: 'MSFT', date: '2026-09-13', days_until: 3, session: 'amc', eps_estimate: 3.1 }]}
       />,
     )
-    expect(screen.getByRole('link', { name: /MSFT/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^(?!Open ).*MSFT/ })).toHaveAttribute(
       'href', '/research?symbol=MSFT&tab=earnings',
     )
+    expect(screen.getByRole('link', { name: 'Open MSFT chart' })).toHaveAttribute('href', '/charts?symbol=MSFT')
     expect(screen.getByText(/in 3 days/)).toBeInTheDocument()
     expect(screen.getByText('13 Sep 2026')).toBeInTheDocument()
   })

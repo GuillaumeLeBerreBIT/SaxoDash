@@ -9,6 +9,7 @@ import { InstrumentLogo } from '../ui'
 import ActionBadge from '../verdicts/ActionBadge'
 import PriceSpark from './PriceSpark'
 import WatchlistStar from './WatchlistStar'
+import ChartLink from '../ChartLink'
 
 export default function StockCard({ stock, note, qualitySummary, className = '' }) {
   const line = priceLine(stock)
@@ -19,7 +20,7 @@ export default function StockCard({ stock, note, qualitySummary, className = '' 
       data-listing={stock.ticker}
       className={`sd-panel group relative flex min-w-0 flex-col gap-3 rounded-[14px] bg-pane p-4 transition-colors hover:bg-hover ${className}`}
     >
-      <div className="flex items-center gap-2.5 pr-9">
+      <div className="flex items-center gap-2.5 pr-[88px] sm:pr-16">
         <InstrumentLogo symbol={stock.ticker} size={34} />
         <div className="min-w-0">
           <Link
@@ -61,7 +62,8 @@ export default function StockCard({ stock, note, qualitySummary, className = '' 
         </div>
         <span className="text-[12px] text-ink-3 transition-colors group-hover:text-ink-2">Open in Research →</span>
       </div>
-      <div className="absolute right-2.5 top-3 z-10">
+      <div className="absolute right-2.5 top-3 z-10 flex items-center gap-1">
+        <ChartLink symbol={stock.ticker} instrument={instrument} />
         <WatchlistStar ticker={stock.ticker} name={stock.name} uic={stock.uic} assetType="Stock" />
       </div>
     </article>

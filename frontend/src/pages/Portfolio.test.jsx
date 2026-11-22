@@ -290,8 +290,9 @@ describe('Portfolio holdings table', () => {
 
   it('links each holding name to its research page', () => {
     renderWithProviders(<Portfolio />)
-    const link = screen.getByRole('link', { name: /MSFT/ })
+    const link = screen.getByRole('link', { name: /^(?!Open ).*MSFT/ })
     expect(link).toHaveAttribute('href', '/research?symbol=MSFT')
+    expect(screen.getByRole('link', { name: 'Open MSFT chart' }).getAttribute('href')).toMatch(/^\/charts\?symbol=MSFT/)
   })
 
   it('flags a holding with no thesis written yet', () => {

@@ -11,6 +11,7 @@ import { Popover } from '../overlays'
 import { Alert, Button, DataTable, EmptyState, Skeleton, Td, Th, Tr } from '../ui'
 import StockCard from './StockCard'
 import WatchlistStar from './WatchlistStar'
+import ChartLink from '../ChartLink'
 
 const GRID = 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
 
@@ -66,7 +67,12 @@ function ResultsTable({ stocks, screen }) {
             {screen === 'strong' && <div className="num font-semibold">{qualityCount(stock)}</div>}
             {reason(stock, screen)}
           </Td>
-          <Td><WatchlistStar ticker={stock.ticker} name={stock.name} uic={stock.uic} assetType="Stock" /></Td>
+          <Td>
+            <div className="flex items-center gap-1">
+              <ChartLink symbol={stock.ticker} instrument={{ uic: stock.uic, assetType: 'Stock' }} />
+              <WatchlistStar ticker={stock.ticker} name={stock.name} uic={stock.uic} assetType="Stock" />
+            </div>
+          </Td>
         </Tr>
       ))}</tbody>
     </DataTable>

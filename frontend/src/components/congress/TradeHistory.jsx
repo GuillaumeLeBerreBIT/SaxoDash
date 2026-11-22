@@ -6,6 +6,7 @@ import { researchHref } from '../../lib/research'
 import { usePaged } from '../../lib/usePaged'
 import StockLogo from '../StockLogo'
 import { Card, DataTable, ShowMore, Tag, Td, Th, Tr } from '../ui'
+import ChartLink from '../ChartLink'
 
 const OWNERS = { self: 'Member', SP: 'Spouse', JT: 'Joint', DC: 'Child' }
 
@@ -35,10 +36,13 @@ export default function TradeHistory({
               {showAsset ? (
                 <Td edge>
                   {trade.ticker && trade.priceable ? (
-                    <Link to={researchHref(trade.ticker, 'congress')} className="inline-flex items-center gap-2.5 font-bold text-ink hover:underline">
-                      <StockLogo ticker={trade.ticker} size={28} />
-                      {trade.ticker}
-                    </Link>
+                    <span className="flex items-center gap-1">
+                      <Link to={researchHref(trade.ticker, 'congress')} className="inline-flex items-center gap-2.5 font-bold text-ink hover:underline">
+                        <StockLogo ticker={trade.ticker} size={28} />
+                        {trade.ticker}
+                      </Link>
+                      <ChartLink symbol={trade.ticker} />
+                    </span>
                   ) : (
                     <span className="flex items-center gap-2.5 min-w-0">
                       <StockLogo label={trade.asset} size={28} />

@@ -84,7 +84,8 @@ describe('Discover page', () => {
     expect(screen.getByTestId('stock-card')).toHaveTextContent(evidence)
     expect(screen.getByRole('button', { name: 'All stocks' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Table' }))
-    expect(within(screen.getByRole('table')).getByRole('link', { name: /ZTS/ })).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByRole('link', { name: /^(?!Open ).*ZTS/ })).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getByRole('link', { name: 'Open ZTS chart' })).toHaveAttribute('href', expect.stringMatching(/^\/charts\?symbol=ZTS/))
     expect(screen.getByRole('table')).toHaveTextContent(evidence)
     expect(new Set(queries()).size).toBe(1)
   })
@@ -141,7 +142,7 @@ describe('Discover page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Show .*more/ }))
     fireEvent.click(screen.getByRole('button', { name: /Show .*more/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Table' }))
-    expect(screen.getByRole('link', { name: /T64/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^(?!Open ).*T64/ })).toBeInTheDocument()
     expect(queries().every((query) => new URLSearchParams(query).get('q') === 'T')).toBe(true)
   })
 

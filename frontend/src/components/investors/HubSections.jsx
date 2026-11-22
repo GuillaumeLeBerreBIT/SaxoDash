@@ -14,6 +14,7 @@ import PriceBar from '../verdicts/PriceBar'
 import FollowButton from './FollowButton'
 import { LatestLine, TopLogos } from './InvestorCard'
 import InvestorAvatar from './InvestorAvatar'
+import ChartLink from '../ChartLink'
 
 const FLOW_ROWS = 5
 
@@ -68,10 +69,10 @@ export function Following({ investors, held }) {
 
 function FlowRow({ item, field, stock, held }) {
   return (
-    <li className="border-t border-line first:border-t-0">
+    <li className="flex items-center gap-1 border-t border-line first:border-t-0">
       <Link
         to={researchHref(item.ticker, 'overview')}
-        className="grid grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 py-3 hover:bg-hover md:grid-cols-[32px_minmax(0,1fr)_120px_120px]"
+        className="grid flex-1 min-w-0 grid-cols-[32px_minmax(0,1fr)_auto] items-center gap-3 py-3 hover:bg-hover md:grid-cols-[32px_minmax(0,1fr)_120px_120px]"
       >
         <StockLogo ticker={item.ticker} label={item.issuer} size={32} />
         <span className="flex min-w-0 flex-col">
@@ -85,6 +86,7 @@ function FlowRow({ item, field, stock, held }) {
           <ActionBadge verdict={stock ?? null} />
         </span>
       </Link>
+      <ChartLink symbol={item.ticker} />
     </li>
   )
 }

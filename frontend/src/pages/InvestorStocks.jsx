@@ -9,6 +9,7 @@ import InvestorAvatar from '../components/investors/InvestorAvatar'
 import LimitsNote from '../components/investors/LimitsNote'
 import { STOCK_VIEWS, stockLabel } from '../lib/investorHub'
 import { PAGE_SIZE, PAGE_STEP, fmtUsdCompact, quarterLabel } from '../lib/investors'
+import ChartLink from '../components/ChartLink'
 
 const VIEW_KEYS = new Set(STOCK_VIEWS.map(([key]) => key))
 const DEFAULT_VIEW = 'bought'
@@ -23,7 +24,12 @@ function Stock({ row }) {
       <StockLogo ticker={row.ticker} label={label} size={28} />
       <span className="min-w-0">
         {row.ticker
-          ? <Link to={`/research?symbol=${encodeURIComponent(row.ticker)}`} className="font-bold text-ink hover:underline">{label}</Link>
+          ? (
+            <span className="flex items-center gap-1">
+              <Link to={`/research?symbol=${encodeURIComponent(row.ticker)}`} className="font-bold text-ink hover:underline">{label}</Link>
+              <ChartLink symbol={row.ticker} />
+            </span>
+          )
           : <span className="font-semibold text-ink">{label}</span>}
         {row.ticker ? <span className="block text-[12px] text-ink-3 truncate">{row.issuer}</span> : null}
       </span>
