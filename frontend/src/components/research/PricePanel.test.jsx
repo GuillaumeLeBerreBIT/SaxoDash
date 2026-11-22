@@ -98,6 +98,23 @@ describe('PricePanel', () => {
     expect(within(screen.getByTestId('price-facts')).getByText('52-week range').nextSibling).toHaveTextContent('US$90.00 – US$120.00')
   })
 
+  it('opens the Earnings tab from the next earnings date', async () => {
+    const onOpenEarnings = vi.fn()
+    renderPanel({ onOpenEarnings })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Earnings tab' }))
+    expect(onOpenEarnings).toHaveBeenCalled()
+  })
+
+  it('leaves out P/E and next earnings for an instrument with no company data', () => {
+    renderPanel({ showCompany: false })
+
+    const facts = screen.getByTestId('price-facts')
+    expect(within(facts).queryByText('P/E')).not.toBeInTheDocument()
+    expect(within(facts).queryByText('Next earnings')).not.toBeInTheDocument()
+    expect(within(facts).getByText('52-week range')).toBeInTheDocument()
+  })
+
   it('shows a dash for a fact it does not have', () => {
     renderPanel({ pe: null, nextEarnings: null })
 

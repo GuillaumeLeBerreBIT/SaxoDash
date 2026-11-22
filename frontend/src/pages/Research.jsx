@@ -235,6 +235,7 @@ export default function Research() {
     />
   )
 
+  const showCompanyFacts = companyData === COMPANY_DATA.eligible || companyData === COMPANY_DATA.pending
   const viewSwitch = { value: chartView, onChange: setChartView }
 
   const priceView = (
@@ -249,6 +250,8 @@ export default function Research() {
       currency={currency}
       pe={company?.pe_ratio}
       nextEarnings={nextReport}
+      showCompany={showCompanyFacts}
+      onOpenEarnings={() => openTab('earnings')}
       viewSwitch={viewSwitch}
     />
   )
@@ -275,7 +278,7 @@ export default function Research() {
       onDeleteLine={priceLines.remove}
       onEditLineLabel={priceLines.setLabel}
       lineSaveFailed={priceLines.saveFailed}
-      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} currency={currency} className="mt-1" />}
+      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} currency={currency} showCompany={showCompanyFacts} onOpenEarnings={() => openTab('earnings')} className="mt-1" />}
     />
   )
 

@@ -17,15 +17,23 @@ function Toggle({ label, checked, onChange }) {
   )
 }
 
-export function ChartFacts({ allBars, pe, nextEarnings, currency, className = '' }) {
+export function ChartFacts({ allBars, pe, nextEarnings, currency, showCompany = true, onOpenEarnings, className = '' }) {
   const year = yearRange(allBars)
+  const earningsValue =
+    nextEarnings && onOpenEarnings ? (
+      <button type="button" aria-label="Earnings tab" onClick={onOpenEarnings} className="font-semibold hover:underline">
+        {fmtDate(nextEarnings.date)} →
+      </button>
+    ) : nextEarnings ? (
+      fmtDate(nextEarnings.date)
+    ) : null
   const price = (value) => (currency ? fmtMoney(value, currency) : fmtNum(value, 2))
 
   return (
     <div data-testid="price-facts" className={`pt-3 border-t border-line flex flex-wrap gap-x-10 gap-y-3 ${className}`}>
-      <Fact label="P/E" value={pe == null ? null : fmtNum(pe, 2)} />
+      {showCompany ? <Fact label="P/E" value={pe == null ? null : fmtNum(pe, 2)} /> : null}
       <Fact label="52-week range" value={year ? `${price(year.low)} – ${price(year.high)}` : null} />
-      <Fact label="Next earnings" value={nextEarnings ? fmtDate(nextEarnings.date) : null} />
+      {showCompany ? <Fact label="Next earnings" value={earningsValue} /> : null}
     </div>
   )
 }
@@ -41,6 +49,8 @@ export default function PricePanel({
   currency,
   pe,
   nextEarnings,
+  showCompany,
+  onOpenEarnings,
   viewSwitch,
 }) {
   const { showPrevious, showVolume, setShowPrevious, setShowVolume } = usePriceChartOptions()
@@ -79,7 +89,7 @@ export default function PricePanel({
         <Toggle label="Volume" checked={showVolume} onChange={setShowVolume} />
       </div>
 
-      <ChartFacts allBars={allBars} pe={pe} nextEarnings={nextEarnings} currency={currency} className="mt-3.5" />
+      <ChartFacts allBars={allBars} pe={pe} nextEarnings={nextEarnings} currency={currency} showCompany={showCompany} onOpenEarnings={onOpenEarnings} className="mt-3.5" />
     </Card>
   )
 }
