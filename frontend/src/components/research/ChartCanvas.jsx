@@ -141,6 +141,8 @@ export default function ChartCanvas({
   onPlaced,
   timeWindow,
   shedToFit = false,
+  compare = null,
+  compareLegend = null,
 }) {
   const { type, overlays, panes, range, yScale, setYScale, yShift, setYShift, setTimeView } = controls
   const shown = timeWindow ?? resolveTimeWindow(LATEST_TIME_VIEW, { total: bars.length, range })
@@ -205,7 +207,8 @@ export default function ChartCanvas({
   return (
     <>
       <div ref={legendRef} className="relative">
-        {bar && !placeholder ? (
+        {bar && !placeholder && compareLegend ? compareLegend(hover, bar.date) : null}
+        {bar && !placeholder && !compareLegend ? (
           <>
             <OhlcLegend
               bar={WIDEST_BAR}
@@ -289,6 +292,7 @@ export default function ChartCanvas({
             tool={tool}
             onPlaced={onPlaced}
             placerRef={placerRef}
+            compare={compare}
           />
           {shownPanes.volume ? (
             <SubPane title="Volume" height={paneHeights.volume}>

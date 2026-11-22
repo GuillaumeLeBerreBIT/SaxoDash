@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { TrendingUp } from 'lucide-react'
 
 import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions'
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
@@ -6,6 +7,7 @@ import { isTypingTarget } from '../lib/priceLines'
 import { RAIL_WIDTH } from '../lib/railLayout'
 import { researchHref } from '../lib/research'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
+import { Chip } from '../components/ui'
 import ChartPane from '../components/research/ChartPane'
 import ChartToolRail from '../components/research/ChartToolRail'
 import { LinkedHoverProvider } from '../components/research/LinkedHover'
@@ -77,6 +79,11 @@ export default function Charts() {
 
   const split = layout.panes > 1
   const activeSlot = workspace.slots[workspace.active]
+  const activeComparing = Boolean(activeSlot) && workspace.compares[workspace.active].on
+  const toggleCompare = () => {
+    if (!activeComparing) setTool('crosshair')
+    workspace.setCompare(workspace.active, { on: !activeComparing })
+  }
   const paneHeights = split ? DEFAULT_PANE_HEIGHTS : ADVANCED_PANE_HEIGHTS
 
   return (
@@ -90,7 +97,8 @@ export default function Charts() {
         controls={rangeControls}
         tool={tool}
         onToolChange={setTool}
-        canAnnotate={Boolean(activeSlot && priceLines.create)}
+        canAnnotate={Boolean(activeSlot && priceLines.create) && !activeComparing}
+        annotateHint={activeComparing ? 'Leave Compare to draw' : null}
         backHref={researchHref(symbol, undefined, instrument)}
         layout={workspace.layout}
         onLayoutChange={workspace.setLayout}
@@ -114,6 +122,10 @@ export default function Charts() {
 
         <div className="flex flex-wrap items-center gap-2">
           <RangeButtons controls={rangeControls} />
+          <Chip active={activeComparing} onClick={activeSlot ? toggleCompare : undefined} className={activeSlot ? '' : 'opacity-50 pointer-events-none'}>
+            <TrendingUp size={14} aria-hidden="true" />
+            Compare
+          </Chip>
           <IndicatorChips controls={controls} />
           <div className="ml-auto">
             <SaxoConnectionStatus />
@@ -140,6 +152,8 @@ export default function Charts() {
                   style={paneStyle(layout, index)}
                   className={active ? 'flex' : 'hidden lg:flex'}
                   split={split}
+                  compare={workspace.compares[index]}
+                  onCompareChange={(change) => workspace.setCompare(index, change)}
                 />
               )
             })}

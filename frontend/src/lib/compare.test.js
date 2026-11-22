@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { compareLines, compareTicks, factSentence, pricesFor, valueAt } from './compare'
+import { SP500, compareLines, compareSuggestions, compareTicks, factSentence, pricesFor, valueAt } from './compare'
 
 const bar = (date, close) => ({ date, open: close, high: close, low: close, close })
 
@@ -103,5 +103,33 @@ describe('factSentence', () => {
 
   it('is empty without any value', () => {
     expect(factSentence([{ key: 'main', label: 'NVDA', values: [] }])).toBe('')
+  })
+})
+
+describe('compareSuggestions', () => {
+  const sectors = [
+    { sector: 'Information Technology', fund: { ticker: 'XLK', uic: 35417, asset_type: 'Etf' }, stocks: [{ ticker: 'NVDA' }] },
+    { sector: 'Energy', fund: { ticker: 'XLE', uic: 35415, asset_type: 'Etf' }, stocks: [{ ticker: 'XOM' }] },
+  ]
+  const nvda = { symbol: 'NVDA', uic: 1, assetType: 'Stock' }
+
+  it('offers the S&P 500 and the stock Sector Fund named by its ticker', () => {
+    const offered = compareSuggestions(nvda, sectors)
+    expect(offered.map((entry) => [entry.key, entry.label])).toEqual([['sp500', 'S&P 500'], ['sector', 'XLK']])
+    expect(offered[1].instrument).toEqual({ symbol: 'XLK', uic: 35417, assetType: 'Etf' })
+    expect(offered[1].title).toMatch(/weighted by company size/)
+  })
+
+  it('does not offer the S&P 500 for SPY itself', () => {
+    expect(compareSuggestions({ symbol: 'SPY', uic: SP500.uic, assetType: 'Etf' }, sectors).map((entry) => entry.key)).toEqual([])
+  })
+
+  it('does not offer a Sector Fund for a stock without a Sector or for a fund', () => {
+    expect(compareSuggestions({ symbol: 'ASML', uic: 9, assetType: 'Stock' }, sectors).map((entry) => entry.key)).toEqual(['sp500'])
+    expect(compareSuggestions({ symbol: 'XLK', uic: 35417, assetType: 'Etf' }, sectors).map((entry) => entry.key)).toEqual(['sp500'])
+  })
+
+  it('offers only the S&P 500 while the Sectors are unknown', () => {
+    expect(compareSuggestions(nvda, undefined).map((entry) => entry.key)).toEqual(['sp500'])
   })
 })

@@ -34,6 +34,8 @@ function stubQueries() {
   lineMutations = { create: { mutate: vi.fn() }, update: { mutate: vi.fn() }, remove: { mutate: vi.fn() } }
   queries.usePositions.mockReturnValue({ ...idle, data: [position] })
   queries.useChart.mockReturnValue({ data: bars, isLoading: false, error: null })
+  queries.useSectors.mockReturnValue(idle)
+  queries.useCharts.mockImplementation((instruments) => ({ data: instruments.map(() => undefined), status: instruments.map(() => 'loading') }))
   queries.useInstrumentDetails.mockReturnValue({
     ...idle,
     data: { symbol: 'NVDA', description: 'NVIDIA Corporation', exchange: 'NASDAQ', currency: 'USD', uic: 211 },
@@ -506,5 +508,166 @@ describe('Charts time-axis zoom', () => {
     renderWithProviders(<Charts />, { route: '/charts?symbol=NVDA' })
 
     expect(backLink()).toBeVisible()
+  })
+})
+
+describe('Charts Compare', () => {
+  const sectors = [
+    {
+      sector: 'Information Technology',
+      fund: { ticker: 'XLK', uic: 35417, asset_type: 'Etf' },
+      stocks: [{ ticker: 'NVDA' }],
+    },
+  ]
+  const series = (start) => bars.map((bar, i) => ({ ...bar, close: start + i }))
+  const byUic = { 36590: series(500), 35417: series(200), 9: series(300) }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    stubQueries()
+    queries.useSectors.mockReturnValue({ ...idle, data: { sectors } })
+    queries.useCharts.mockImplementation((instruments) => ({
+      data: instruments.map((instrument) => byUic[instrument.uic]),
+      status: instruments.map(() => 'ok'),
+    }))
+    queries.usePriceLines.mockReturnValue({ ...idle, data: [{ id: 7, uic: 211, asset_type: 'Stock', price: '120.00' }] })
+  })
+
+  const storeWorkspace = (workspace) => localStorage.setItem('saxodash:chart-workspace', JSON.stringify(workspace))
+  const stored = () => JSON.parse(localStorage.getItem('saxodash:chart-workspace'))
+  const compareToggle = () => screen.getByRole('button', { name: 'Compare' })
+  const legend = () => screen.getByTestId('compare-legend')
+  const searchDialog = () => screen.getByRole('dialog', { name: 'Add symbol to compare' })
+
+  it('offers the S&P 500 and the Sector Fund by ticker, both off, when Compare is turned on', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(compareToggle())
+
+    expect(compareToggle()).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'S&P 500' })).toHaveAttribute('aria-pressed', 'false')
+    const fund = screen.getByRole('button', { name: 'XLK' })
+    expect(fund).toHaveAttribute('aria-pressed', 'false')
+    expect(fund.parentElement).toHaveAttribute('title', expect.stringMatching(/weighted by company size/))
+    expect(screen.queryByRole('button', { name: /Information Technology/ })).toBeNull()
+  })
+
+  it('draws a chosen line and states where each line ended', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(compareToggle())
+    await user.click(screen.getByRole('button', { name: 'S&P 500' }))
+
+    expect(screen.getAllByTestId('compare-line')).toHaveLength(1)
+    expect(within(legend()).getByText('+38.2%')).toBeInTheDocument()
+    expect(screen.getByTestId('compare-sentence')).toHaveTextContent(
+      'Over this window NVDA rose 38.2% and the S&P 500 rose 7.8%.',
+    )
+  })
+
+  it('hides a line from the chart and the sentence when its name is clicked in the legend', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(compareToggle())
+    await user.click(screen.getByRole('button', { name: 'S&P 500' }))
+    await user.click(within(legend()).getByRole('button', { name: 'Hide S&P 500' }))
+
+    expect(screen.queryAllByTestId('compare-line')).toHaveLength(0)
+    expect(screen.getByTestId('compare-sentence')).toHaveTextContent('Over this window NVDA rose 38.2%.')
+  })
+
+  it('hides the S&P 500 button for SPY', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<Charts />, { route: '/charts?symbol=SPY&uic=36590&assetType=Etf' })
+    await user.click(compareToggle())
+    expect(screen.queryByRole('button', { name: 'S&P 500' })).toBeNull()
+  })
+
+  it('hides the Sector Fund button for a stock without a Sector', async () => {
+    const user = userEvent.setup()
+    queries.useSectors.mockReturnValue({ ...idle, data: { sectors: [] } })
+    renderPage()
+    await user.click(compareToggle())
+    expect(screen.queryByRole('button', { name: 'XLK' })).toBeNull()
+  })
+
+  it('adds a symbol, refuses a duplicate and frees the slot on removal', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(compareToggle())
+    await user.click(screen.getByRole('button', { name: /Add symbol/ }))
+    await user.type(screen.getByRole('textbox', { name: 'Search a symbol to compare' }), 'ts')
+    await user.click(await within(searchDialog()).findByRole('button', { name: /TSLA/ }))
+
+    expect(within(legend()).getByText('TSLA')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Add symbol/ })).toHaveTextContent('2 of 3 left')
+
+    await user.click(screen.getByRole('button', { name: /Add symbol/ }))
+    await user.type(screen.getByRole('textbox', { name: 'Search a symbol to compare' }), 'ts')
+    expect(await within(searchDialog()).findByRole('button', { name: /TSLA/ })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+
+    await user.click(within(legend()).getByRole('button', { name: 'Remove TSLA' }))
+    expect(screen.getByRole('button', { name: /Add symbol/ })).toHaveTextContent('3 of 3 left')
+  })
+
+  it('refuses a fourth added symbol', async () => {
+    const user = userEvent.setup()
+    const added = [1, 2, 3].map((uic) => ({ symbol: `S${uic}`, uic, assetType: 'Stock' }))
+    storeWorkspace({ layout: '1', slots: [nvdaSlot], active: 0, compares: [{ on: true, added }] })
+    renderPage()
+    const add = screen.getByRole('button', { name: /Add symbol/ })
+    expect(add).toBeDisabled()
+    expect(add).toHaveTextContent('none left')
+    await user.click(add)
+    expect(screen.queryByRole('dialog', { name: 'Add symbol to compare' })).toBeNull()
+  })
+
+  it('shows drawings read-only on candles and hides them on line', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(compareToggle())
+    expect(screen.getAllByTestId(/^price-line-/).length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: 'Line' }))
+    expect(screen.queryAllByTestId(/^price-line-/)).toHaveLength(0)
+    expect(stored().compares[0].mainAs).toBe('line')
+
+    await user.click(screen.getByRole('button', { name: 'Candles' }))
+    expect(screen.getAllByTestId(/^price-line-/).length).toBeGreaterThan(0)
+  })
+
+  it('greys out the drawing tools while comparing, with a hint to leave Compare', async () => {
+    const user = userEvent.setup()
+    renderPage()
+    expect(screen.getByRole('button', { name: 'Horizontal line' })).toBeEnabled()
+    await user.click(compareToggle())
+    const tool = screen.getByRole('button', { name: 'Horizontal line' })
+    expect(tool).toBeDisabled()
+    expect(tool).toHaveAttribute('title', 'Leave Compare to draw')
+  })
+
+  it('keeps Compare after a remount through the stored workspace', async () => {
+    const user = userEvent.setup()
+    const first = renderPage()
+    await user.click(compareToggle())
+    await user.click(screen.getByRole('button', { name: 'XLK' }))
+    first.unmount()
+
+    renderPage()
+    expect(compareToggle()).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'XLK' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps separate Compare states for linked panes', async () => {
+    const user = userEvent.setup()
+    storeWorkspace({ layout: '2h', slots: [nvdaSlot, nvdaSlot], active: 0, linked: true })
+    renderPage()
+    await user.click(compareToggle())
+
+    expect(screen.getAllByRole('region', { name: 'NVDA chart in Compare' })).toHaveLength(1)
+    expect(screen.getAllByRole('region', { name: 'NVDA chart' })).toHaveLength(1)
+    expect(stored().compares.map((compare) => compare.on)).toEqual([true, false])
   })
 })

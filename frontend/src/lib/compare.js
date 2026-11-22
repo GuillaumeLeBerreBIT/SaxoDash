@@ -69,3 +69,23 @@ export function factSentence(lines, hidden = new Set()) {
   const listed = phrases.length === 1 ? phrases[0] : `${phrases.slice(0, -1).join(', ')} and ${phrases[phrases.length - 1]}`
   return `Over this window ${listed}.`
 }
+
+export const SP500 = { symbol: 'SPY', uic: 36590, assetType: 'Etf' }
+
+export function compareSuggestions(slot, sectors) {
+  const offered = []
+  if (slot.symbol !== SP500.symbol && slot.uic !== SP500.uic) {
+    offered.push({ key: 'sp500', label: 'S&P 500', instrument: SP500, title: 'S&P 500, through SPY' })
+  }
+  const sector = sectors?.find((entry) => entry.fund && entry.stocks.some((stock) => stock.ticker === slot.symbol))
+  if (sector && sector.fund.uic !== slot.uic) {
+    const { ticker, uic, asset_type: assetType } = sector.fund
+    offered.push({
+      key: 'sector',
+      label: ticker,
+      instrument: { symbol: ticker, uic, assetType },
+      title: `${ticker}, the fund that tracks ${sector.sector}, weighted by company size`,
+    })
+  }
+  return offered
+}

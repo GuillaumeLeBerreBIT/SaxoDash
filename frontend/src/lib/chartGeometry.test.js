@@ -37,6 +37,18 @@ const geometry = (overrides = {}) =>
   priceGeometry({ data: bars, ind: null, width: 462, height: 200, ...overrides })
 
 describe('priceGeometry', () => {
+  it('widens the scale to fit compared lines', () => {
+    const { top, bottom } = geometry({ extra: [[null, 150, 60]] })
+    expect(top).toBeGreaterThan(150)
+    expect(bottom).toBeLessThan(60)
+  })
+
+  it('puts round percentages on the axis when comparing', () => {
+    const { ticks, percentBase } = geometry({ percentBase: 100 })
+    expect(percentBase).toBe(100)
+    expect(ticks.map((tick) => Math.round(tick - 100))).toEqual([-10, 0, 10, 20])
+  })
+
   it('reserves the right-hand gutter for the price axis', () => {
     expect(geometry().chartW).toBe(462 - PAD_R)
   })
