@@ -33,7 +33,7 @@ export default function UpcomingEarnings({ items }) {
                 </span>
                 <span className="text-[12px] text-ink-2 num whitespace-nowrap">est {fmtNum(e.eps_estimate, 2)}</span>
               </Link>
-              <ChartLink symbol={e.ticker} />
+              <ChartLink size="lg" symbol={e.ticker} />
             </li>
           ))}
         </ul>

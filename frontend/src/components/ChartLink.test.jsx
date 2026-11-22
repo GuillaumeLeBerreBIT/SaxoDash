@@ -15,4 +15,13 @@ describe('ChartLink', () => {
     expect(link.getAttribute('href')).toMatch(/^\/charts\?symbol=NOW/)
     expect(link.getAttribute('href')).toContain('42')
   })
+
+  it('draws a bigger button when asked for the large size', () => {
+    render(
+      <MemoryRouter>
+        <ChartLink symbol="NOW" size="lg" />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Open NOW chart' }).className).toContain('sm:w-8')
+  })
 })

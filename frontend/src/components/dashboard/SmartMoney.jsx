@@ -57,7 +57,7 @@ export default function SmartMoney({ positions, ownership, className = '' }) {
                 </span>
                 <NetChange change={change} quarter={quarter} />
               </Link>
-              <ChartLink symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
+              <ChartLink size="lg" symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
             </li>
           ))}
         </ul>

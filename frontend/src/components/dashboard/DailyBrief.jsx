@@ -5,6 +5,7 @@ import { researchHref } from '../../lib/research'
 import { actionLabel } from '../../lib/verdicts'
 import { Card, InstrumentLogo } from '../ui'
 import UpcomingEarnings from './UpcomingEarnings'
+import ChartLink from '../ChartLink'
 
 const WORD_TONE = { warn: 'text-warn', up: 'text-up' }
 const hrefFor = (item) => researchHref(item.ticker, item.kind === 'earnings' ? 'earnings' : 'overview', { uic: item.uic, assetType: 'Stock' })
@@ -54,14 +55,17 @@ export function BriefList({ items, className = '' }) {
                 </div>
                 <p className="max-w-[640px] text-[14px] leading-relaxed text-ink-2">{item.body}</p>
               </div>
-              <Link
-                to={hrefFor(item)}
-                aria-hidden="true"
-                tabIndex={-1}
-                className="sd-raised hidden self-center whitespace-nowrap md:inline-block rounded-lg bg-raised px-3 py-2 text-[13px] font-semibold text-ink hover:bg-hover"
-              >
-                {`Open ${item.ticker}`}
-              </Link>
+              <div className="flex items-center gap-1 self-center">
+                <ChartLink size="lg" symbol={item.ticker} instrument={{ uic: item.uic, assetType: 'Stock' }} />
+                <Link
+                  to={hrefFor(item)}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  className="sd-raised hidden whitespace-nowrap md:inline-block rounded-lg bg-raised px-3 py-2 text-[13px] font-semibold text-ink hover:bg-hover"
+                >
+                  {`Open ${item.ticker}`}
+                </Link>
+              </div>
             </li>
           ))}
         </ul>
@@ -82,7 +86,7 @@ export function HoldingsList({ positions, verdictOf, quotes, upcomingEarnings, c
           const verdict = verdictOf(position)
           const change = quotes.get(position.uic)?.change_pct
           return (
-            <li key={position.uic ?? position.ticker} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-t border-line py-2.5 first:border-t-0 num">
+            <li key={position.uic ?? position.ticker} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 border-t border-line py-2.5 first:border-t-0 num">
               <span className="flex min-w-0 flex-col">
                 <span className="text-[14px] font-bold text-ink">{position.ticker}</span>
                 {verdict ? <span className={`truncate text-[12px] font-semibold ${verdict.action === 'sell_review' || verdict.action === 'trim' ? 'text-warn' : 'text-ink-3'}`}>{actionLabel(verdict)}</span> : null}
@@ -91,6 +95,7 @@ export function HoldingsList({ positions, verdictOf, quotes, upcomingEarnings, c
               <span className={`w-16 text-right text-[13px] ${change == null ? 'text-ink-3' : change >= 0 ? 'text-up' : 'text-down'}`}>
                 {change == null ? '—' : `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}%`}
               </span>
+              <ChartLink size="lg" symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
             </li>
           )
         })}
