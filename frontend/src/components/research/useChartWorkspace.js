@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 
 import { activeAfterResize, layoutById, resizeSlots } from '../../lib/chartLayouts'
-import { readWorkspace, sameSlot, withActiveSlot, writeWorkspace } from '../../lib/chartWorkspace'
+import { COMPARE_OFF, readWorkspace, sameSlot, withActiveSlot, writeWorkspace } from '../../lib/chartWorkspace'
 
 function sameView(a, b) {
   return Boolean(a) && a.key === b.key && sameSlot(a.slot, b.slot)
@@ -53,16 +53,26 @@ export function useChartWorkspace({ symbol, instrument, selectSymbol }) {
   const setLayout = (id) => {
     const preset = layoutById(id)
     const slots = resizeSlots(workspace.slots, preset.panes)
+    const compares = resizeSlots(workspace.compares, preset.panes).map((compare) => compare ?? COMPARE_OFF)
     const active = activeAfterResize(workspace.active, workspace.slots.length, slots)
-    setState((previous) => ({ ...previous, workspace: { ...previous.workspace, layout: preset.id, slots, active } }))
+    setState((previous) => ({ ...previous, workspace: { ...previous.workspace, layout: preset.id, slots, compares, active } }))
     if (active !== workspace.active) show(slots[active])
   }
 
   const setLinked = (next) =>
     setState((previous) => ({ ...previous, workspace: { ...previous.workspace, linked: next } }))
 
+  const setCompare = (index, change) =>
+    setState((previous) => {
+      const compares = previous.workspace.compares.slice()
+      compares[index] = { ...compares[index], ...change }
+      return { ...previous, workspace: { ...previous.workspace, compares } }
+    })
+
   return {
     layout: workspace.layout,
+    compares: workspace.compares,
+    setCompare,
     slots: workspace.slots,
     active: workspace.active,
     linked: workspace.linked,
