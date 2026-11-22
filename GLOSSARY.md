@@ -83,6 +83,10 @@ _Avoid_: Time Window (that is what is actually visible after panning and zooming
 The days a chart shows right now: picked by the Range, then moved by panning and zooming. It always lies inside the history the chart has loaded.
 _Avoid_: Range, viewport
 
+**Compare**:
+A Pane mode that shows how the stock moved against up to five other lines (the S&P 500, its Sector and stocks the user adds), each as the % change from the first day of the Time Window.
+_Avoid_: Overlay, benchmark view, Compare page (the old idea of a separate page)
+
 **Guide**:
 A layer the app draws on the candles from its own data: the Cheap and Expensive Zones, the 52-week high, Volume Gaps and the Stop-loss. Each can be switched on or off.
 _Avoid_: Indicator (RSI, MACD and moving averages), overlay
@@ -148,7 +152,7 @@ One of the 11 standard sectors a stock in the Universe belongs to, such as Infor
 _Avoid_: Industry (the narrower label from the data provider)
 
 **Sector Move**:
-The equal-weight average move of a Sector's stocks over a day or a month.
+The equal-weight average move of a Sector's stocks over a day, a month, or day by day across a Time Window in Compare. It always uses the Sector's members of today, each counted from the day its history starts.
 _Avoid_: Sector performance, money flow (fine as the Panel's name)
 
 ### Investors and Congress
