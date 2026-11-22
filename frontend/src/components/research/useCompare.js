@@ -5,7 +5,7 @@ import { ADDED_LIMIT, compareLines, compareSuggestions, factSentence, pricesFor 
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, instrumentKey } from '../../lib/research'
 import { useChartColors } from '../../theme/useChartColors'
 
-const SUGGESTION_COLORS = { sp500: 0, sector: 1 }
+const SECTOR_COLOR = 1
 const ADDED_COLORS = [6, 3, 4]
 const NO_BARS = []
 
@@ -24,10 +24,12 @@ export function useCompare({ slot, compare, bars, hidden }) {
         key: suggestion.key,
         label: suggestion.label,
         instrument: suggestion.instrument,
-        color: colors.series[SUGGESTION_COLORS[suggestion.key]],
+        color: suggestion.key === 'sp500' ? colors.bench : colors.series[SECTOR_COLOR],
+        dashed: suggestion.key === 'sp500',
       }))
+    const chosenKeys = new Set([mainKey, ...chosen.map((entry) => keyOf(entry.instrument))])
     const added = compare.added
-      .filter((instrument) => keyOf(instrument) !== mainKey)
+      .filter((instrument) => !chosenKeys.has(keyOf(instrument)))
       .map((instrument, index) => ({
         key: `added:${keyOf(instrument)}`,
         label: instrument.symbol,
@@ -61,13 +63,17 @@ export function useCompare({ slot, compare, bars, hidden }) {
             lines: lines
               .slice(1)
               .filter((line) => !hidden.has(line.key))
-              .map((line) => ({ key: line.key, color: line.color, prices: pricesFor(line.values, base) })),
+              .map((line) => ({ key: line.key, color: line.color, dashed: line.dashed, prices: pricesFor(line.values, base) })),
           }
         : null,
     [base, lines, hidden],
   )
 
-  const onChart = new Set([mainKey, ...entries.map((entry) => keyOf(entry.instrument))])
+  const takenKeys = new Set([
+    mainKey,
+    ...suggestions.map((suggestion) => keyOf(suggestion.instrument)),
+    ...compare.added.map(keyOf),
+  ])
 
   return {
     suggestions,
@@ -75,6 +81,6 @@ export function useCompare({ slot, compare, bars, hidden }) {
     chartCompare,
     sentence: factSentence(lines, hidden),
     addedLeft: ADDED_LIMIT - compare.added.length,
-    onChart,
+    takenKeys,
   }
 }

@@ -26,8 +26,8 @@ export function compareLines(main, others) {
 }
 
 export function valueAt(line, index) {
-  const start = Math.min(index ?? line.values.length - 1, line.values.length - 1)
-  for (let i = start; i >= 0; i -= 1) {
+  if (index != null) return line.values[index] ?? null
+  for (let i = line.values.length - 1; i >= 0; i -= 1) {
     if (line.values[i] != null) return line.values[i]
   }
   return null

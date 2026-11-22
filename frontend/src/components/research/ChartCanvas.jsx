@@ -208,7 +208,7 @@ export default function ChartCanvas({
     <>
       <div ref={legendRef} className="relative">
         {bar && !placeholder && compareLegend ? compareLegend(hover, bar.date) : null}
-        {bar && !placeholder && !compareLegend ? (
+        {bar && !placeholder && compareLegend == null ? (
           <>
             <OhlcLegend
               bar={WIDEST_BAR}

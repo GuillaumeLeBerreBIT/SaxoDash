@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { COMPARE_OFF } from '../../lib/chartWorkspace'
+import { COMPARE_OFF, sameSlot } from '../../lib/chartWorkspace'
 
 import { useSize } from '../../lib/chartGeometry'
 import { fmtNum } from '../../lib/format'
@@ -50,7 +50,7 @@ function EmptyPaneHeader() {
   )
 }
 
-const NO_ITEMS = []
+const NO_DRAWINGS = []
 
 function toggled(set, key) {
   const next = new Set(set)
@@ -114,7 +114,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split, 
   const comparison = useCompare({ slot, compare, bars, hidden })
   const asLine = comparing && compare.mainAs === 'line'
   const editable = !comparing
-  const shownItems = (items) => (asLine ? NO_ITEMS : items)
+  const shownDrawings = (items) => (asLine ? NO_DRAWINGS : items)
   const canvasControls = {
     ...controls,
     ...paneView,
@@ -129,7 +129,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split, 
           hidden={hidden}
           onToggle={(key) => setHidden((current) => toggled(current, key))}
           onRemove={(instrument) =>
-            onCompareChange({ added: compare.added.filter((entry) => !(entry.uic === instrument.uic && entry.assetType === instrument.assetType)) })
+            onCompareChange({ added: compare.added.filter((entry) => !sameSlot(entry, instrument)) })
           }
         />
       )
@@ -151,7 +151,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split, 
           compare={compare}
           suggestions={comparison.suggestions}
           addedLeft={comparison.addedLeft}
-          onChart={comparison.onChart}
+          takenKeys={comparison.takenKeys}
           onChange={onCompareChange}
         />
       ) : null}
@@ -170,20 +170,20 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split, 
           unresolved={!instrument && !chart.isLoading}
           earningsMarkers={earningsMarkers}
           futureDates={futureDates}
-          lines={shownItems(priceLines.lines)}
+          lines={shownDrawings(priceLines.lines)}
           onMoveLine={editable ? priceLines.move : undefined}
           onCreateLine={editable ? priceLines.create : undefined}
           onDeleteLine={editable ? priceLines.remove : undefined}
           onEditLineLabel={editable ? priceLines.setLabel : undefined}
-          trendLines={shownItems(trendLines)}
+          trendLines={shownDrawings(trendLines)}
           onMoveTrendLineEndpoint={editable ? trendLineActions.moveEndpoint : undefined}
           onCreateTrendLine={editable ? trendLineActions.create : undefined}
           onDeleteTrendLine={editable ? trendLineActions.remove : undefined}
           onEditTrendLineLabel={editable ? trendLineActions.setLabel : undefined}
-          zones={shownItems(zones)}
+          zones={shownDrawings(zones)}
           onCreateZone={editable ? zoneActions.create : undefined}
           onDeleteZone={editable ? zoneActions.remove : undefined}
-          textAnnotations={shownItems(textAnnotations)}
+          textAnnotations={shownDrawings(textAnnotations)}
           onMoveTextAnnotation={editable ? textAnnotationActions.move : undefined}
           onCreateTextAnnotation={editable ? textAnnotationActions.create : undefined}
           onDeleteTextAnnotation={editable ? textAnnotationActions.remove : undefined}

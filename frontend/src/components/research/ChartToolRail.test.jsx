@@ -31,6 +31,15 @@ const renderRail = (props = {}) => {
 }
 
 describe('ChartToolRail', () => {
+  it('names why the drawing tools are off when a hint is given', () => {
+    renderRail({ canAnnotate: false, annotateHint: 'Leave Compare to draw' })
+    for (const name of ['Horizontal line', 'Ray', 'Zone', 'Text']) {
+      const tool = screen.getByRole('button', { name })
+      expect(tool).toBeDisabled()
+      expect(tool).toHaveAttribute('title', 'Leave Compare to draw')
+    }
+  })
+
   it('shows the crosshair as the active tool by default', () => {
     renderRail()
     expect(screen.getByRole('button', { name: 'Crosshair' })).toHaveAttribute('aria-pressed', 'true')

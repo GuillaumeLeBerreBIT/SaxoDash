@@ -122,7 +122,7 @@ export default function Charts() {
 
         <div className="flex flex-wrap items-center gap-2">
           <RangeButtons controls={rangeControls} />
-          <Chip active={activeComparing} onClick={activeSlot ? toggleCompare : undefined} className={activeSlot ? '' : 'opacity-50 pointer-events-none'}>
+          <Chip active={activeComparing} onClick={toggleCompare} disabled={!activeSlot}>
             <TrendingUp size={14} aria-hidden="true" />
             Compare
           </Chip>

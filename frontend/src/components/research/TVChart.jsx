@@ -301,7 +301,8 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
             d={linePath(line.prices, xAt, scaleY)}
             fill="none"
             stroke={line.color}
-            strokeWidth="1.6"
+            strokeWidth={line.dashed ? 1.5 : 1.6}
+            strokeDasharray={line.dashed ? '4 3' : undefined}
           />
         ))}
         {type === 'bars' ? <Bars data={data} geometry={geometry} colors={colors} /> : null}

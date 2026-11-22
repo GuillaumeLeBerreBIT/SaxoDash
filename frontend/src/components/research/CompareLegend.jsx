@@ -5,7 +5,7 @@ function reading(line, hover) {
   if (line.status === 'loading') return 'Loading'
   if (line.status === 'error') return 'Unavailable'
   const value = valueAt(line, hover)
-  return value == null ? 'No data' : fmtPct(value, { decimals: 1 })
+  return value == null ? '—' : fmtPct(value, { decimals: 1 })
 }
 
 export default function CompareLegend({ lines, date, hover, hidden, onToggle, onRemove }) {
@@ -14,19 +14,28 @@ export default function CompareLegend({ lines, date, hover, hidden, onToggle, on
       <span className="w-full min-[760px]:w-auto text-ink-2">{fmtDate(date)}</span>
       {lines.map((line) => {
         const shown = !hidden.has(line.key)
+        const name = (
+          <>
+            <span aria-hidden="true" className="w-2.5 h-[3px] rounded-sm" style={{ backgroundColor: line.color }} />
+            <span className="font-semibold text-ink">{line.label}</span>
+            {line.from ? <span className="text-ink-3">from {fmtDayMonth(line.from)}</span> : null}
+          </>
+        )
         return (
           <span key={line.key} className={`inline-flex items-center gap-1.5 ${shown ? '' : 'opacity-45'}`}>
-            <button
-              type="button"
-              aria-pressed={shown}
-              aria-label={`${shown ? 'Hide' : 'Show'} ${line.label}`}
-              onClick={() => onToggle(line.key)}
-              className="inline-flex items-center gap-1.5 rounded hover:text-ink"
-            >
-              <span aria-hidden="true" className="w-2.5 h-[3px] rounded-sm" style={{ backgroundColor: line.color }} />
-              <span className="font-semibold text-ink">{line.label}</span>
-              {line.from ? <span className="text-ink-3">from {fmtDayMonth(line.from)}</span> : null}
-            </button>
+            {line.key === 'main' ? (
+              <span className="inline-flex items-center gap-1.5">{name}</span>
+            ) : (
+              <button
+                type="button"
+                aria-pressed={shown}
+                aria-label={`${shown ? 'Hide' : 'Show'} ${line.label}`}
+                onClick={() => onToggle(line.key)}
+                className="inline-flex items-center gap-1.5 rounded hover:text-ink"
+              >
+                {name}
+              </button>
+            )}
             <span className={line.status === 'ok' ? 'text-ink' : 'text-ink-3'}>{reading(line, hover)}</span>
             {line.removable ? (
               <button

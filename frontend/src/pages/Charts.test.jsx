@@ -592,6 +592,29 @@ describe('Charts Compare', () => {
     expect(screen.queryByRole('button', { name: 'XLK' })).toBeNull()
   })
 
+  it('hides the Sector Fund button when the chart shows the fund itself', async () => {
+    const user = userEvent.setup()
+    queries.useSectors.mockReturnValue({
+      ...idle,
+      data: { sectors: [{ ...sectors[0], stocks: [{ ticker: 'XLK' }] }] },
+    })
+    renderWithProviders(<Charts />, { route: '/charts?symbol=XLK&uic=35417&assetType=Etf' })
+    await user.click(compareToggle())
+    expect(screen.queryByRole('button', { name: 'XLK' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'S&P 500' })).toBeInTheDocument()
+  })
+
+  it('refuses to add a suggested line through the search', async () => {
+    const user = userEvent.setup()
+    const spy = { symbol: 'SPY', description: 'SPDR S&P 500', exchange: 'NYSE', uic: 36590, asset_type: 'Etf' }
+    queries.useInstrumentSearch.mockImplementation(() => ({ ...idle, data: [spy], isError: false }))
+    renderPage()
+    await user.click(compareToggle())
+    await user.click(screen.getByRole('button', { name: /Add symbol/ }))
+    await user.type(screen.getByRole('textbox', { name: 'Search a symbol to compare' }), 'spy')
+    expect(await within(searchDialog()).findByRole('button', { name: /SPY/ })).toBeDisabled()
+  })
+
   it('adds a symbol, refuses a duplicate and frees the slot on removal', async () => {
     const user = userEvent.setup()
     renderPage()

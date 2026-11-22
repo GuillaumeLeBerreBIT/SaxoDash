@@ -61,8 +61,8 @@ describe('valueAt', () => {
     expect(valueAt(line, null)).toBe(8)
   })
 
-  it('reads the latest earlier value across a gap', () => {
-    expect(valueAt(line, 2)).toBe(5)
+  it('reads nothing on a hovered day the line did not trade', () => {
+    expect(valueAt(line, 2)).toBeNull()
   })
 })
 

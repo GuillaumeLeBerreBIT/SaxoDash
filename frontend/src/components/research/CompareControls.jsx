@@ -1,9 +1,10 @@
-import { useDeferredValue, useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { useDeferredValue, useState } from 'react'
+import { Plus } from 'lucide-react'
 
 import { useInstrumentSearch } from '../../api/queries'
 import { ADDED_LIMIT } from '../../lib/compare'
 import { instrumentKey, rankInstrumentResults } from '../../lib/research'
+import { Dialog } from '../overlays'
 import { Chip, Input, Segmented } from '../ui'
 
 const MAIN_AS = [
@@ -11,43 +12,25 @@ const MAIN_AS = [
   { value: 'line', label: 'Line' },
 ]
 
-function SymbolSearch({ onChart, onPick, onClose }) {
+function SymbolSearch({ takenKeys, onPick }) {
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
   const { data: results = [], isError } = useInstrumentSearch(deferredQuery)
   const ranked = rankInstrumentResults(results, deferredQuery)
 
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
   return (
-    <div
-      role="dialog"
-      aria-label="Add symbol to compare"
-      className="fixed inset-0 z-50 flex flex-col gap-2 bg-pane p-4 min-[760px]:absolute min-[760px]:inset-auto min-[760px]:top-full min-[760px]:left-0 min-[760px]:mt-1 min-[760px]:w-80 min-[760px]:rounded-lg min-[760px]:border min-[760px]:border-line min-[760px]:bg-raised min-[760px]:p-2 min-[760px]:shadow-lg"
-    >
-      <div className="flex items-center gap-2">
-        <Input
-          autoFocus
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search a stock or ETF"
-          aria-label="Search a symbol to compare"
-          className="flex-1"
-        />
-        <button type="button" aria-label="Close" onClick={onClose} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-ink-3 hover:text-ink hover:bg-hover">
-          <X size={16} />
-        </button>
-      </div>
+    <div className="flex flex-col gap-2">
+      <Input
+        autoFocus
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search a stock or ETF"
+        aria-label="Search a symbol to compare"
+      />
       {isError ? <p className="px-1 text-[12px] text-warn-text">Search unavailable — reconnect Saxo</p> : null}
-      <div className="flex-1 min-h-0 overflow-y-auto min-[760px]:max-h-64">
+      <div className="max-h-[60vh] overflow-y-auto">
         {ranked.map((result) => {
-          const taken = onChart.has(instrumentKey(result.uic, result.asset_type))
+          const taken = takenKeys.has(instrumentKey(result.uic, result.asset_type))
           return (
             <button
               key={`${result.uic}-${result.asset_type}`}
@@ -67,9 +50,8 @@ function SymbolSearch({ onChart, onPick, onClose }) {
   )
 }
 
-export default function CompareControls({ symbol, compare, suggestions, addedLeft, onChart, onChange }) {
+export default function CompareControls({ symbol, compare, suggestions, addedLeft, takenKeys, onChange }) {
   const [searching, setSearching] = useState(false)
-  const close = () => setSearching(false)
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-line">
@@ -82,28 +64,20 @@ export default function CompareControls({ symbol, compare, suggestions, addedLef
           </Chip>
         </span>
       ))}
-      <div className="relative">
-        <button
-          type="button"
-          disabled={addedLeft <= 0}
-          onClick={() => setSearching(true)}
-          className="inline-flex items-center gap-1.5 h-11 md:h-7 px-[11px] rounded-full border border-dashed border-ink-3 text-[12px] font-semibold text-ink-2 hover:text-ink disabled:opacity-50"
-        >
-          <Plus size={12} />
-          Add symbol
-          <span className="font-normal text-ink-3">{addedLeft > 0 ? `${addedLeft} of ${ADDED_LIMIT} left` : 'none left'}</span>
-        </button>
-        {searching ? (
-          <SymbolSearch
-            onChart={onChart}
-            onClose={close}
-            onPick={(instrument) => {
-              onChange({ added: [...compare.added, instrument] })
-              close()
-            }}
-          />
-        ) : null}
-      </div>
+      <Chip disabled={addedLeft <= 0} onClick={() => setSearching(true)} className="rounded-full! border border-dashed border-ink-3">
+        <Plus size={12} aria-hidden="true" />
+        Add symbol
+        <span className="font-normal text-ink-3">{addedLeft > 0 ? `${addedLeft} of ${ADDED_LIMIT} left` : 'none left'}</span>
+      </Chip>
+      <Dialog open={searching} onOpenChange={setSearching} title="Add symbol to compare" placement="top">
+        <SymbolSearch
+          takenKeys={takenKeys}
+          onPick={(instrument) => {
+            onChange({ added: [...compare.added, instrument] })
+            setSearching(false)
+          }}
+        />
+      </Dialog>
     </div>
   )
 }
