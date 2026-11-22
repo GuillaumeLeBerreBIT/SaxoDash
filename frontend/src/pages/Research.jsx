@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
-import { chartHref } from '../lib/research'
 import { reportsWithin } from '../lib/earnings'
 import { entrySentence } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
@@ -20,14 +19,16 @@ import NotesTab from '../components/research/NotesTab'
 import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
+import PricePanel, { ChartFacts } from '../components/research/PricePanel'
 import PeersTab from '../components/research/PeersTab'
 import OwnershipSignals from '../components/research/OwnershipSignals'
 import ResearchHeader from '../components/research/ResearchHeader'
+import ResearchTabs from '../components/research/ResearchTabs'
 import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
-import { useResearchChartType } from '../components/research/useResearchChartType'
+import { useResearchChartView } from '../components/research/useResearchChartView'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useTradeRisk } from '../components/research/useTradeRisk'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
@@ -47,7 +48,7 @@ const TABS = [
 ]
 
 const GROUPS = [
-  ['overview', 'Chart', ['overview']],
+  ['overview', 'Overview', ['overview']],
   ['fundamentals', 'Fundamentals', ['financials', 'statistics', 'peers', 'earnings']],
   ['activity', 'Activity', ['funds', 'congress', 'filings', 'news']],
   ['notes', 'Notes and plan', ['notes', 'guide']],
@@ -78,8 +79,15 @@ export default function Research() {
   const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
-  const [chartType, setChartType] = useResearchChartType()
+  const [chartView, setChartView] = useResearchChartView()
   const [hover, setHover] = useState(null)
+  const panelRef = useRef(null)
+  const [panelFloor, setPanelFloor] = useState(0)
+  useEffect(() => {
+    const release = () => setPanelFloor(0)
+    window.addEventListener('resize', release)
+    return () => window.removeEventListener('resize', release)
+  }, [])
   const rawTab = params.get('tab')
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
@@ -87,6 +95,7 @@ export default function Research() {
   const [scaledSymbol, setScaledSymbol] = useState(symbol)
   if (scaledSymbol !== symbol) {
     setScaledSymbol(symbol)
+    setPanelFloor(0)
     controls.resetView()
   }
 
@@ -173,7 +182,11 @@ export default function Research() {
   const shown = (key) => tab === key && gate === TAB_GATE.show
   const activeGroup = GROUP_OF[tab]
   const activeSubTabs = visibleGroups.find(([key]) => key === activeGroup)?.[2] ?? []
-  const selectGroup = (group) => setTab(visibleGroups.find(([key]) => key === group)?.[2][0] ?? 'overview')
+  const openTab = (next) => {
+    setPanelFloor(panelRef.current?.offsetHeight ?? 0)
+    setTab(next)
+  }
+  const selectGroup = (group) => openTab(visibleGroups.find(([key]) => key === group)?.[2][0] ?? 'overview')
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -208,24 +221,50 @@ export default function Research() {
       currency={currency}
       watchlists={watchlists}
       onToggleList={toggleList}
+    />
+  )
+
+  const tabs = (
+    <ResearchTabs
       groups={visibleGroups}
       activeGroup={activeGroup}
       onSelectGroup={selectGroup}
       subTabs={activeSubTabs.map((key) => TABS.find(([tabKey]) => tabKey === key))}
       activeTab={tab}
-      onSelectTab={setTab}
+      onSelectTab={openTab}
     />
   )
 
-  const chartPanel = (
+  const showCompanyFacts = companyData === COMPANY_DATA.eligible || companyData === COMPANY_DATA.pending
+  const viewSwitch = { value: chartView, onChange: setChartView }
+
+  const priceView = (
+    <PricePanel
+      bars={bars}
+      allBars={allBars}
+      controls={controls}
+      isLoading={chart.isLoading}
+      error={chart.error}
+      symbol={symbol}
+      unresolved={!instrument && !chart.isLoading}
+      currency={currency}
+      pe={company?.pe_ratio}
+      nextEarnings={nextReport}
+      showCompany={showCompanyFacts}
+      onOpenEarnings={() => openTab('earnings')}
+      viewSwitch={viewSwitch}
+    />
+  )
+
+  const advancedView = (
     <ChartPanel
       bars={bars}
       ind={ind}
       timeWindow={timeWindow}
       isLoading={chart.isLoading}
       error={chart.error}
-      controls={{ ...controls, type: chartType }}
-      typeSwitch={{ value: chartType, onChange: setChartType }}
+      controls={controls}
+      viewSwitch={viewSwitch}
       hover={safeHover}
       setHover={setHover}
       symbol={symbol}
@@ -239,7 +278,7 @@ export default function Research() {
       onDeleteLine={priceLines.remove}
       onEditLineLabel={priceLines.setLabel}
       lineSaveFailed={priceLines.saveFailed}
-      expandHref={chartHref(symbol, instrument)}
+      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} currency={currency} showCompany={showCompanyFacts} onOpenEarnings={() => openTab('earnings')} className="mt-1" />}
     />
   )
 
@@ -279,9 +318,6 @@ export default function Research() {
           verdict={verdict}
           chartSignals={chartSignals}
           companyData={companyData}
-          earnings={earnings}
-          onOpenTab={setTab}
-          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
         />
       ) : null}
       {shown('notes') ? (
@@ -317,14 +353,28 @@ export default function Research() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       {header}
-      {chartPanel}
-      {answer}
-      <div className="grid grid-cols-1 min-[1440px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
-        <div {...panelProps} className="min-w-0 min-[1440px]:col-span-9">
-          {body}
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <div className="min-w-0 order-1 min-[1100px]:order-none min-[1100px]:col-span-8 flex flex-col gap-[var(--sd-gap,12px)]">
+          {chartView === 'price' ? priceView : advancedView}
+          {answer}
         </div>
-        <div className="min-w-0 min-[1440px]:col-span-3">
+        <div className="min-w-0 order-3 min-[1100px]:order-none min-[1100px]:col-span-4 flex flex-col gap-[var(--sd-gap,12px)]">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+          <OwnershipSignals
+            symbol={symbol}
+            currency={currency}
+            companyData={companyData}
+            recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null}
+            onOpenTab={openTab}
+          />
+        </div>
+        <div className="min-w-0 order-2 min-[1100px]:order-none min-[1100px]:col-span-12 flex flex-col gap-[var(--sd-gap,12px)]">
+          {tabs}
+          <div {...panelProps} style={{ minHeight: panelFloor }} className="min-w-0">
+            <div ref={panelRef} className="flow-root">
+              {body}
+            </div>
+          </div>
         </div>
       </div>
     </div>

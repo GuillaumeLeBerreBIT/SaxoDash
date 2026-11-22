@@ -15,6 +15,15 @@ export function MoveCaption({ change, suffix, className = '' }) {
   )
 }
 
+const VIEW_OPTIONS = [
+  { value: 'price', label: 'Price' },
+  { value: 'advanced', label: 'Advanced chart' },
+]
+
+export function ChartViewSwitch({ value, onChange }) {
+  return <Segmented label="Chart view" value={value} onChange={onChange} options={VIEW_OPTIONS} />
+}
+
 const INTERVAL_OPTIONS = INTERVALS.map((interval) => ({ value: interval, label: interval }))
 
 export function RangeButtons({ controls }) {

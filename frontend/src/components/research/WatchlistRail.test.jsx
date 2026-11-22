@@ -246,6 +246,26 @@ describe('WatchlistRail', () => {
     expect(screen.getByText(/by move/)).toBeInTheDocument()
   })
 
+  it('offers detailed and compact views everywhere, and the grid only when asked', () => {
+    render()
+    expect(screen.getByRole('button', { name: 'Detailed view' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Compact view' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Grid view' })).not.toBeInTheDocument()
+  })
+
+  it('switches to compact rows without the exchange or verdict text, and remembers the choice', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render()
+
+    await user.click(screen.getByRole('button', { name: 'Compact view' }))
+    expect(localStorage.getItem('saxodash:watchlist-view')).toBe('compact')
+    expect(screen.getByRole('button', { name: 'Compact view' })).toHaveAttribute('aria-pressed', 'true')
+
+    unmount()
+    render()
+    expect(screen.getByRole('button', { name: 'Compact view' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('offers no collapse control unless asked to', () => {
     render()
     expect(screen.queryByRole('button', { name: /watchlist/i })).not.toBeInTheDocument()
@@ -278,6 +298,26 @@ describe('WatchlistRail', () => {
     expect(screen.getByText('Passes quality screen')).toBeInTheDocument()
     expect(screen.queryByText('Hold')).not.toBeInTheDocument()
     expect(screen.getAllByTitle('No verdict for this one')).toHaveLength(3)
+  })
+
+  it('flags only a stock that needs a look with a dot in the compact view', async () => {
+    const user = userEvent.setup()
+    queries.useVerdictSummary.mockReturnValue({
+      data: { NVDA: { action: 'sell_review', reason: 'Thesis checks fail.', uic: 211 } },
+      isLoading: false,
+    })
+    const { unmount } = render()
+    await user.click(screen.getByRole('button', { name: 'Compact view' }))
+
+    expect(screen.getByTestId('needs-look')).toHaveAttribute('title', expect.stringContaining('Thesis checks fail.'))
+    unmount()
+
+    queries.useVerdictSummary.mockReturnValue({
+      data: { NVDA: { action: 'buy', reason: 'Quality passes', uic: 211 } },
+      isLoading: false,
+    })
+    render()
+    expect(screen.queryByTestId('needs-look')).not.toBeInTheDocument()
   })
 
   it('asks for nothing when no row is a stock', () => {

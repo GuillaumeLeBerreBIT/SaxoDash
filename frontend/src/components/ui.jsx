@@ -128,6 +128,22 @@ export function Card({
   )
 }
 
+export function Panel({ bare = false, className = '', children, titleAs = 'h2', ...head }) {
+  if (!bare) {
+    return (
+      <Card className={className} titleAs={titleAs} {...head}>
+        {children}
+      </Card>
+    )
+  }
+  return (
+    <section className={`min-w-0 ${className}`}>
+      <PanelHead {...head} as={titleAs} className="mb-3.5" />
+      {children}
+    </section>
+  )
+}
+
 /** `as` defaults to h2: PageHeader's h1 is the only page-level heading, so a
  *  CardHeader is that page's first section level for screen-reader
  *  navigation, not a third-level heading with nothing at h2 in between. Pass
