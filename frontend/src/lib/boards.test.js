@@ -83,7 +83,7 @@ describe('defaultBoards', () => {
       ['semis', 'Semiconductors', 'NVDA'],
     ])
     expect(byId(boards[0], 'p3')).toEqual({ id: 'p3', type: 'heatmap', x: 9, y: 0, w: 3, h: 6 })
-    expect(byId(boards[1], 'p2').cfg).toEqual({ list: ['NVDA', 'AMD', 'TSM', 'AVGO', 'ASML'], title: 'Chips' })
+    expect(byId(boards[1], 'p2').cfg).toBeUndefined()
     expect(byId(boards[1], 'p3').cfg).toEqual({ shelf: 'above-moving-averages' })
     boards.forEach((b) => {
       expectNoOverlap(b.panels)

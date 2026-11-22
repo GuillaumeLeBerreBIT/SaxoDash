@@ -7,7 +7,7 @@ export const NEW_BOARD_NAME = 'Untitled board'
 const STORAGE_KEY = 'saxodash:boards'
 
 export const PANEL_TYPES = {
-  watchlist: { name: 'Watchlist', blurb: 'Your list with sparklines; drives linked panels', w: 3, h: 6 },
+  watchlist: { name: 'Watchlist', blurb: 'Your watchlists, shared with Charts; drives linked panels', w: 3, h: 6 },
   chart: { name: 'Price chart', blurb: 'Follows the watchlist, or a fixed symbol', w: 6, h: 6 },
   heatmap: { name: 'Today heatmap', blurb: 'Your positions sized by value, coloured by move', w: 3, h: 6 },
   earnings: { name: 'Your earnings', blurb: 'Reports from holdings and watchlist', w: 4, h: 4 },
@@ -20,8 +20,6 @@ export const PANEL_TYPES = {
   performance: { name: 'Vs the US 500', blurb: 'Time-weighted return against the index', w: 4, h: 4 },
   networth: { name: 'Net worth', blurb: 'Headline number with today’s move', w: 3, h: 3 },
 }
-
-const SEMICONDUCTORS = ['NVDA', 'AMD', 'TSM', 'AVGO', 'ASML']
 
 export function defaultBoards() {
   return [
@@ -44,7 +42,7 @@ export function defaultBoards() {
       sym: 'NVDA',
       panels: [
         { id: 'p1', type: 'chart', x: 0, y: 0, w: 8, h: 6 },
-        { id: 'p2', type: 'watchlist', x: 8, y: 0, w: 4, h: 6, cfg: { list: [...SEMICONDUCTORS], title: 'Chips' } },
+        { id: 'p2', type: 'watchlist', x: 8, y: 0, w: 4, h: 6 },
         { id: 'p3', type: 'shelf', x: 0, y: 6, w: 7, h: 5, cfg: { shelf: 'above-moving-averages' } },
         { id: 'p4', type: 'symbol', x: 7, y: 6, w: 5, h: 5 },
       ],
