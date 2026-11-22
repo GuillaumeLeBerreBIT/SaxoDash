@@ -79,14 +79,30 @@ export const researchKeys = {
   sectors: ['sectors'],
 }
 
-export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
-  return useQuery({
-    queryKey: researchKeys.chart(uic, assetType, horizon, count),
-    queryFn: () => getChart({ uic, assetType, horizon, count }),
-    // A daily candle cannot change until tomorrow, and Saxo rate-limits per
-    // app, so this deliberately has no refetch interval.
-    enabled: Boolean(uic && assetType),
-    staleTime: 15 * 60_000,
+const chartQuery = ({ uic, assetType, horizon = 1440, count = 252 }) => ({
+  queryKey: researchKeys.chart(uic, assetType, horizon, count),
+  queryFn: () => getChart({ uic, assetType, horizon, count }),
+  // A daily candle cannot change until tomorrow, and Saxo rate-limits per
+  // app, so this deliberately has no refetch interval.
+  enabled: Boolean(uic && assetType),
+  staleTime: 15 * 60_000,
+})
+
+export function useChart(instrument) {
+  return useQuery(chartQuery(instrument))
+}
+
+const chartStatus = (result) => (result.error ? 'error' : result.isLoading ? 'loading' : 'ok')
+
+const combineCharts = (results) => ({
+  data: results.map((result) => result.data),
+  status: results.map(chartStatus),
+})
+
+export function useCharts(instruments, { horizon, count }) {
+  return useQueries({
+    queries: instruments.map((instrument) => chartQuery({ ...instrument, horizon, count })),
+    combine: combineCharts,
   })
 }
 
@@ -535,10 +551,11 @@ export function useDiscoverShelf(key) {
   })
 }
 
-export function useSectors() {
+export function useSectors({ enabled = true } = {}) {
   return useQuery({
     queryKey: researchKeys.sectors,
     queryFn: getSectors,
     staleTime: 5 * 60_000,
+    enabled,
   })
 }

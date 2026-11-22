@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 
+import { compareTicks } from './compare'
 import { fmtDayMonth, fmtMonthYear } from './format'
 
 /** Geometry and colours for the hand-drawn Research chart.
@@ -154,7 +155,7 @@ export function fitChartPanes({ total, legendHeight, panes, paneHeights }) {
  *  Computed once per dataset and handed to both the chart body and the
  *  crosshair, so hovering does not recompute the scale for every frame.
  */
-export function priceGeometry({ data, ind, width, height, withBands, yScale = 1, yShift = 0, slots = data.length, lane = 0 }) {
+export function priceGeometry({ data, ind, width, height, withBands, yScale = 1, yShift = 0, slots = data.length, lane = 0, extra = [], percentBase = null }) {
   const chartH = height - PAD_T - PAD_B - lane
   const chartW = Math.max(80, width - PAD_R)
   const slot = chartW / Math.max(1, slots, data.length)
@@ -175,6 +176,7 @@ export function priceGeometry({ data, ind, width, height, withBands, yScale = 1,
     ind.bb.up.forEach(consider)
     ind.bb.lo.forEach(consider)
   }
+  for (const series of extra) series.forEach(consider)
 
   const pad = (max - min) * 0.07 || 1
   const mid = (max + min) / 2
@@ -193,7 +195,8 @@ export function priceGeometry({ data, ind, width, height, withBands, yScale = 1,
     priceAtY: (y) => top - ((y - PAD_T) / chartH) * (top - bottom),
     top,
     bottom,
-    ticks: Array.from({ length: 6 }, (_, i) => bottom + ((top - bottom) * i) / 5),
+    ticks: percentBase ? compareTicks(bottom, top, percentBase) : Array.from({ length: 6 }, (_, i) => bottom + ((top - bottom) * i) / 5),
+    percentBase,
   }
 }
 

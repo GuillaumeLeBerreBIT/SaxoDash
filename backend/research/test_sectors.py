@@ -59,3 +59,25 @@ class SectorsViewTest(APITestCase):
         self.stock('BIG', 'Energy', market_cap=500)
         self.stock('NOCAP', 'Energy')
         self.assertEqual([s['ticker'] for s in self.sectors()[0]['stocks']], ['BIG', 'SMALL', 'NOCAP'])
+
+    def test_each_sector_carries_its_fund(self):
+        self.stock('XOM', 'Energy')
+        self.stock('MSFT', 'Information Technology')
+        funds = {s['sector']: s['fund'] for s in self.sectors()}
+        self.assertEqual(funds['Energy'], {'ticker': 'XLE', 'uic': 35415, 'asset_type': 'Etf'})
+        self.assertEqual(funds['Information Technology'], {'ticker': 'XLK', 'uic': 35417, 'asset_type': 'Etf'})
+
+    def test_all_eleven_sectors_have_a_fund(self):
+        names = [
+            'Communication Services', 'Consumer Discretionary', 'Consumer Staples', 'Energy', 'Financials',
+            'Health Care', 'Industrials', 'Information Technology', 'Materials', 'Real Estate', 'Utilities',
+        ]
+        for number, name in enumerate(names):
+            self.stock(f'S{number}', name)
+        sectors = self.sectors()
+        self.assertEqual(len(sectors), 11)
+        self.assertTrue(all(s['fund'] and s['fund']['uic'] for s in sectors))
+
+    def test_a_sector_outside_the_standard_eleven_has_no_fund(self):
+        self.stock('ODD', 'Something Else')
+        self.assertIsNone(self.sectors()[0]['fund'])

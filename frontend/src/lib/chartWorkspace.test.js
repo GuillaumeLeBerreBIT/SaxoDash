@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { readWorkspace, sameSlot, sanitizeWorkspace, withActiveSlot, writeWorkspace } from './chartWorkspace'
+import { COMPARE_OFF, readWorkspace, sameSlot, sanitizeWorkspace, withActiveSlot, writeWorkspace } from './chartWorkspace'
 
 const nvda = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
 const amd = { symbol: 'AMD', uic: 7, assetType: 'Stock' }
-const DEFAULTS = { layout: '1', slots: [null], active: 0, linked: false }
+const DEFAULTS = { layout: '1', slots: [null], active: 0, linked: false, compares: [COMPARE_OFF] }
 
 describe('sanitizeWorkspace', () => {
   it('defaults to one empty pane', () => {
@@ -17,6 +17,7 @@ describe('sanitizeWorkspace', () => {
       slots: [nvda],
       active: 0,
       linked: false,
+      compares: [COMPARE_OFF],
     })
   })
 
@@ -52,12 +53,48 @@ describe('sanitizeWorkspace', () => {
   })
 })
 
+describe('Compare in the workspace', () => {
+  const comparing = { on: true, sp500: true, sector: false, added: [{ ...amd, colorSlot: 0 }], mainAs: 'line' }
+
+  it('reads an older record without Compare as Compare off in every pane', () => {
+    expect(sanitizeWorkspace({ layout: '2h', slots: [nvda, amd], active: 0 }).compares).toEqual([COMPARE_OFF, COMPARE_OFF])
+  })
+
+  it('keeps each pane its own Compare state', () => {
+    const { compares } = sanitizeWorkspace({ layout: '2h', slots: [nvda, nvda], active: 0, compares: [comparing, null] })
+    expect(compares).toEqual([comparing, COMPARE_OFF])
+  })
+
+  it('keeps at most three added symbols and drops ones without an instrument', () => {
+    const added = [amd, { symbol: 'X' }, { ...nvda, symbol: 'A' }, { ...nvda, symbol: 'B' }, { ...nvda, symbol: 'C' }]
+    const [compare] = sanitizeWorkspace({ layout: '1', slots: [nvda], compares: [{ on: true, added }] }).compares
+    expect(compare.added.map((entry) => entry.symbol)).toEqual(['AMD', 'A', 'B'])
+  })
+
+  it('keeps the colour each added symbol was given', () => {
+    const added = [{ ...amd, colorSlot: 2 }, { ...nvda, colorSlot: 0 }]
+    const [compare] = sanitizeWorkspace({ layout: '1', slots: [nvda], compares: [{ on: true, added }] }).compares
+    expect(compare.added.map((entry) => entry.colorSlot)).toEqual([2, 0])
+  })
+
+  it('falls back to candles for an unknown way of showing the stock', () => {
+    const [compare] = sanitizeWorkspace({ layout: '1', slots: [nvda], compares: [{ on: true, mainAs: 'bars' }] }).compares
+    expect(compare).toEqual({ ...COMPARE_OFF, on: true })
+  })
+
+  it('round-trips through storage', () => {
+    localStorage.clear()
+    writeWorkspace({ layout: '1', slots: [nvda], active: 0, linked: false, compares: [comparing] })
+    expect(readWorkspace().compares).toEqual([comparing])
+  })
+})
+
 describe('readWorkspace and writeWorkspace', () => {
   beforeEach(() => localStorage.clear())
   afterEach(() => vi.restoreAllMocks())
 
   it('round-trips a workspace', () => {
-    const workspace = { layout: '2v', slots: [nvda, amd], active: 1, linked: false }
+    const workspace = { layout: '2v', slots: [nvda, amd], active: 1, linked: false, compares: [COMPARE_OFF, COMPARE_OFF] }
     expect(writeWorkspace(workspace)).toBe(true)
     expect(readWorkspace()).toEqual(workspace)
   })

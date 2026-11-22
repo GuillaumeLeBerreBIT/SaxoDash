@@ -510,17 +510,18 @@ export function Segmented({ options, value, onChange, label, className = '' }) {
   )
 }
 
-export function Chip({ active, onClick, children, className = '' }) {
+export function Chip({ active, onClick, children, className = '', disabled = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-pressed={!!active}
       className={`inline-flex items-center gap-1.5 h-11 md:h-7 px-[11px] rounded-lg text-[12px] font-semibold whitespace-nowrap transition-colors ${
         active
           ? 'bg-accent-subtle text-ink shadow-[inset_0_0_0_1px_var(--sd-ink-3)]'
           : 'sd-raised bg-raised text-ink-2 hover:text-ink'
-      } ${className}`}
+      } disabled:opacity-50 disabled:pointer-events-none ${className}`}
     >
       {children}
     </button>
