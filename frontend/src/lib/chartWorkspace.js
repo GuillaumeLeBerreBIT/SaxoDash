@@ -1,5 +1,5 @@
 import { layoutById, resizeSlots } from './chartLayouts'
-import { ADDED_LIMIT } from './compare'
+import { ADDED_LIMIT, withColorSlots } from './compare'
 
 const KEY = 'saxodash:chart-workspace'
 
@@ -16,10 +16,15 @@ export const COMPARE_OFF = { on: false, sp500: false, sector: false, added: [], 
 
 function sanitizeCompare(raw) {
   if (!raw || typeof raw !== 'object') return COMPARE_OFF
-  const added = (Array.isArray(raw.added) ? raw.added : [])
-    .map(sanitizeSlot)
-    .filter((entry) => entry && entry.uic != null && entry.assetType)
-    .slice(0, ADDED_LIMIT)
+  const added = withColorSlots(
+    (Array.isArray(raw.added) ? raw.added : [])
+      .map((entry) => {
+        const slot = sanitizeSlot(entry)
+        return slot && { ...slot, colorSlot: entry.colorSlot }
+      })
+      .filter((entry) => entry && entry.uic != null && entry.assetType)
+      .slice(0, ADDED_LIMIT),
+  )
   return {
     on: raw.on === true,
     sp500: raw.sp500 === true,

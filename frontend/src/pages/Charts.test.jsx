@@ -635,6 +635,18 @@ describe('Charts Compare', () => {
     expect(screen.getByRole('button', { name: /Add symbol/ })).toHaveTextContent('3 of 3 left')
   })
 
+  it('keeps the colour of an added symbol when another one is removed', async () => {
+    const user = userEvent.setup()
+    const added = [{ symbol: 'S1', uic: 1, assetType: 'Stock' }, { symbol: 'TSLA', uic: 9, assetType: 'Stock' }]
+    storeWorkspace({ layout: '1', slots: [nvdaSlot], active: 0, compares: [{ on: true, added }] })
+    renderPage()
+    const swatch = () => within(legend()).getByText('TSLA').previousSibling.style.backgroundColor
+    const before = swatch()
+
+    await user.click(within(legend()).getByRole('button', { name: 'Remove S1' }))
+    expect(swatch()).toBe(before)
+  })
+
   it('refuses a fourth added symbol', async () => {
     const user = userEvent.setup()
     const added = [1, 2, 3].map((uic) => ({ symbol: `S${uic}`, uic, assetType: 'Stock' }))

@@ -47,13 +47,13 @@ describe('CompareControls', () => {
     expect(onChange).toHaveBeenCalledWith({ sp500: true })
   })
 
-  it('adds a picked symbol after the ones already added', async () => {
+  it('adds a picked symbol after the ones already added, in the first free colour', async () => {
     const user = userEvent.setup()
-    const tsla = { symbol: 'TSLA', uic: 9, assetType: 'Stock' }
+    const tsla = { symbol: 'TSLA', uic: 9, assetType: 'Stock', colorSlot: 1 }
     const onChange = renderControls({ compare: { ...COMPARE_OFF, on: true, added: [tsla] }, addedLeft: 2 })
     await user.click(screen.getByRole('button', { name: /Add symbol/ }))
     await user.click(await screen.findByRole('button', { name: /AMD/ }))
-    expect(onChange).toHaveBeenCalledWith({ added: [tsla, { symbol: 'AMD', uic: 7, assetType: 'Stock' }] })
+    expect(onChange).toHaveBeenCalledWith({ added: [tsla, { symbol: 'AMD', uic: 7, assetType: 'Stock', colorSlot: 0 }] })
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 

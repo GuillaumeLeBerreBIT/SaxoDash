@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { SP500, compareLines, compareSuggestions, compareTicks, factSentence, pricesFor, valueAt } from './compare'
+import { SP500, compareLines, compareSuggestions, compareTicks, factSentence, pricesFor, valueAt, withColorSlots } from './compare'
 
 const bar = (date, close) => ({ date, open: close, high: close, low: close, close })
 
@@ -131,5 +131,25 @@ describe('compareSuggestions', () => {
 
   it('offers only the S&P 500 while the Sectors are unknown', () => {
     expect(compareSuggestions(nvda, undefined).map((entry) => entry.key)).toEqual(['sp500'])
+  })
+})
+
+describe('withColorSlots', () => {
+  const amd = { symbol: 'AMD', uic: 7, assetType: 'Stock' }
+  const tsla = { symbol: 'TSLA', uic: 9, assetType: 'Stock' }
+  const intc = { symbol: 'INTC', uic: 11, assetType: 'Stock' }
+
+  it('gives each added symbol the first free colour', () => {
+    expect(withColorSlots([amd, tsla]).map((entry) => entry.colorSlot)).toEqual([0, 1])
+  })
+
+  it('keeps the colours of the others when one is removed and refills the gap', () => {
+    const [, second, third] = withColorSlots([amd, tsla, intc])
+    expect(withColorSlots([second, third, amd]).map((entry) => entry.colorSlot)).toEqual([1, 2, 0])
+  })
+
+  it('reassigns a colour that is missing, out of range or taken twice', () => {
+    const slots = withColorSlots([{ ...amd, colorSlot: 2 }, { ...tsla, colorSlot: 2 }, { ...intc, colorSlot: 9 }])
+    expect(slots.map((entry) => entry.colorSlot)).toEqual([2, 0, 1])
   })
 })

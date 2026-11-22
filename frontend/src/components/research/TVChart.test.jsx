@@ -577,7 +577,7 @@ describe('price lines', () => {
 
   it('treats a press with a tiny wobble on a badge as a click', () => {
     const onYScaleChange = vi.fn()
-    const { getByTestId, getByLabelText } = renderChart({ lines: [stop], onYScaleChange, yScale: 1 })
+    const { getByTestId, getByLabelText } = renderChart({ lines: [stop], onYScaleChange, yScale: 1, onMoveLine: vi.fn() })
 
     const handle = getByTestId('price-scale')
     const y = yOf(stop.price)
@@ -602,7 +602,7 @@ describe('price lines', () => {
   })
 
   it('opens a badge editor even when the scale cannot change', () => {
-    const utils = renderChart({ lines: [stop] })
+    const utils = renderChart({ lines: [stop], onMoveLine: vi.fn() })
     const { getByLabelText } = utils
 
     clickGutter(utils, yOf(stop.price))
@@ -611,7 +611,7 @@ describe('price lines', () => {
   })
 
   it('ignores a right-click on the axis', () => {
-    const utils = renderChart({ lines: [stop] })
+    const utils = renderChart({ lines: [stop], onMoveLine: vi.fn() })
     const { getByTestId, queryByLabelText } = utils
 
     const handle = getByTestId('price-scale')
@@ -638,7 +638,7 @@ describe('price lines', () => {
     const price = roundPrice(
       priceGeometry({ data: bars, ind, width: 760, height: 360, withBands: false }).priceAtY(9),
     )
-    const utils = renderChart({ lines: [{ ...target, price }] })
+    const utils = renderChart({ lines: [{ ...target, price }], onMoveLine: vi.fn() })
     const { getByTestId, queryByLabelText } = utils
 
     expect(getByTestId('price-edge-target')).toBeInTheDocument()
@@ -649,7 +649,7 @@ describe('price lines', () => {
   })
 
   it('picks the nearest badge when two overlap', () => {
-    const utils = renderChart({ lines: [target, { ...stop, price: target.price - 0.5 }] })
+    const utils = renderChart({ lines: [target, { ...stop, price: target.price - 0.5 }], onMoveLine: vi.fn() })
     const { getByLabelText } = utils
 
     clickGutter(utils, yOf(109.5))
@@ -672,13 +672,20 @@ describe('price lines', () => {
   })
 
   it('opens a label editor on a double-click of a freeform line, but not target or stop', () => {
-    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [target, free] })
+    const { getByTestId, getByLabelText, queryByLabelText } = renderChart({ lines: [target, free], onEditLineLabel: vi.fn() })
 
     fireEvent.doubleClick(getByTestId('price-hit-target'))
     expect(queryByLabelText('Line label')).toBeNull()
 
     fireEvent.doubleClick(getByTestId('price-hit-7'))
     expect(getByLabelText('Line label')).toHaveValue('')
+  })
+
+  it('opens no label editor on a drawing that cannot be edited', () => {
+    const { getByTestId, queryByLabelText } = renderChart({ lines: [free] })
+
+    fireEvent.doubleClick(getByTestId('price-hit-7'))
+    expect(queryByLabelText('Line label')).toBeNull()
   })
 
   it('saves an edited line label on Enter', () => {
@@ -979,7 +986,7 @@ describe('trend lines', () => {
   })
 
   it('opens a label editor on a double-click of the line body', () => {
-    const { getByTestId, getByLabelText } = renderChart({ trendLines: [{ ...ray, label: 'Support' }] })
+    const { getByTestId, getByLabelText } = renderChart({ trendLines: [{ ...ray, label: 'Support' }], onEditTrendLineLabel: vi.fn() })
 
     fireEvent.doubleClick(getByTestId('trend-line-hit-1'))
 
@@ -1150,7 +1157,7 @@ describe('text annotations', () => {
   })
 
   it('opens a text editor on a double-click', () => {
-    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note] })
+    const { getByTestId, getByLabelText } = renderChart({ textAnnotations: [note], onEditTextAnnotationText: vi.fn() })
 
     fireEvent.doubleClick(getByTestId('text-annotation-hit-1'))
 
@@ -1300,7 +1307,7 @@ describe('drawing and moving from the keyboard', () => {
 
   it('edits a free line label on Enter and deletes it with Delete once focused', () => {
     const onDeleteLine = vi.fn()
-    renderChart({ lines: [free], onDeleteLine })
+    renderChart({ lines: [free], onDeleteLine, onEditLineLabel: vi.fn() })
     const line = screen.getByRole('slider', { name: 'Line' })
 
     act(() => line.focus())
@@ -1342,7 +1349,7 @@ describe('drawing and moving from the keyboard', () => {
 
   it('moves a note with the arrows and opens its editor on Enter', () => {
     const onMoveTextAnnotation = vi.fn()
-    renderChart({ textAnnotations: [note], onMoveTextAnnotation })
+    renderChart({ textAnnotations: [note], onMoveTextAnnotation, onEditTextAnnotationText: vi.fn() })
     const hit = screen.getByRole('button', { name: /^Note Earnings gap/ })
 
     press(hit, 'ArrowRight', { shiftKey: true })

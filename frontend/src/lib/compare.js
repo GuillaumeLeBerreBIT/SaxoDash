@@ -2,6 +2,18 @@ import { fmtDayMonth, fmtPct } from './format'
 
 export const ADDED_LIMIT = 3
 
+export function withColorSlots(added) {
+  const valid = (slot, index) =>
+    Number.isInteger(slot) && slot >= 0 && slot < ADDED_LIMIT && added.findIndex((entry) => entry.colorSlot === slot) === index
+  const taken = new Set(added.map((entry) => entry.colorSlot).filter(valid))
+  return added.map((entry, index) => {
+    if (valid(entry.colorSlot, index)) return entry
+    const free = [...Array(ADDED_LIMIT).keys()].find((slot) => !taken.has(slot))
+    taken.add(free)
+    return { ...entry, colorSlot: free }
+  })
+}
+
 const TICK_STEPS = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000]
 const MAX_TICK_GAPS = 6
 const EPSILON = 1e-9

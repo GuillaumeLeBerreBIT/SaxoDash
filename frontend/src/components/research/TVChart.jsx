@@ -631,7 +631,8 @@ export function TVChart({
     return { barDate: bar.date, price: roundPrice(bar.close), x: geometry.xAt(index), y: geometry.scaleY(bar.close), keyed: true }
   }
 
-  const openEditor = (open) => (id) => {
+  const openEditor = (open, save) => (id) => {
+    if (!save) return
     focusBack.current = document.activeElement
     open(id)
   }
@@ -816,7 +817,7 @@ export function TVChart({
           height={height}
           yScale={yScale}
           onChange={onYScaleChange}
-          onClickAt={lines.length > 0 ? editAt : undefined}
+          onClickAt={lines.length > 0 && onMoveLine ? editAt : undefined}
           onReset={onPriceScaleReset}
         />
         <PriceLines
@@ -830,7 +831,7 @@ export function TVChart({
             textSelection.clear()
             freeSelection.select(id)
           }}
-          onEditLabel={openEditor(setEditingFreeLineId)}
+          onEditLabel={openEditor(setEditingFreeLineId, onEditLineLabel)}
         />
         <ChartZones
           zones={zones}
@@ -855,7 +856,7 @@ export function TVChart({
             trendSelection.select(id)
           }}
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
-          onEdit={openEditor(setEditingTrendLineId)}
+          onEdit={openEditor(setEditingTrendLineId, onEditTrendLineLabel)}
         />
         <TextAnnotations
           items={textAnnotations}
@@ -868,7 +869,7 @@ export function TVChart({
             textSelection.select(id)
           }}
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
-          onEdit={openEditor(setEditingTextId)}
+          onEdit={openEditor(setEditingTextId, onEditTextAnnotationText)}
         />
         {rayStart && rayEnd && tool === 'zone' ? (
           <rect

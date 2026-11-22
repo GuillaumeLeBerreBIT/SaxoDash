@@ -30,11 +30,11 @@ export function useCompare({ slot, compare, bars, hidden }) {
     const chosenKeys = new Set([mainKey, ...chosen.map((entry) => keyOf(entry.instrument))])
     const added = compare.added
       .filter((instrument) => !chosenKeys.has(keyOf(instrument)))
-      .map((instrument, index) => ({
+      .map((instrument) => ({
         key: `added:${keyOf(instrument)}`,
         label: instrument.symbol,
         instrument,
-        color: colors.series[ADDED_COLORS[index]],
+        color: colors.series[ADDED_COLORS[instrument.colorSlot]],
         removable: true,
       }))
     return [...chosen, ...added]

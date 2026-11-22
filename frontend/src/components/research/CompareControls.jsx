@@ -2,7 +2,7 @@ import { useDeferredValue, useState } from 'react'
 import { Plus } from 'lucide-react'
 
 import { useInstrumentSearch } from '../../api/queries'
-import { ADDED_LIMIT } from '../../lib/compare'
+import { ADDED_LIMIT, withColorSlots } from '../../lib/compare'
 import { instrumentKey, rankInstrumentResults } from '../../lib/research'
 import { Dialog } from '../overlays'
 import { Chip, Input, Segmented } from '../ui'
@@ -69,11 +69,11 @@ export default function CompareControls({ symbol, compare, suggestions, addedLef
         Add symbol
         <span className="font-normal text-ink-3">{addedLeft > 0 ? `${addedLeft} of ${ADDED_LIMIT} left` : 'none left'}</span>
       </Chip>
-      <Dialog open={searching} onOpenChange={setSearching} title="Add symbol to compare" placement="top">
+      <Dialog open={searching} onOpenChange={setSearching} title="Add symbol to compare" placement="top" fullScreenOnPhone>
         <SymbolSearch
           takenKeys={takenKeys}
           onPick={(instrument) => {
-            onChange({ added: [...compare.added, instrument] })
+            onChange({ added: withColorSlots([...compare.added, instrument]) })
             setSearching(false)
           }}
         />

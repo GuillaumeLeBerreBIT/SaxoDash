@@ -54,7 +54,7 @@ describe('sanitizeWorkspace', () => {
 })
 
 describe('Compare in the workspace', () => {
-  const comparing = { on: true, sp500: true, sector: false, added: [amd], mainAs: 'line' }
+  const comparing = { on: true, sp500: true, sector: false, added: [{ ...amd, colorSlot: 0 }], mainAs: 'line' }
 
   it('reads an older record without Compare as Compare off in every pane', () => {
     expect(sanitizeWorkspace({ layout: '2h', slots: [nvda, amd], active: 0 }).compares).toEqual([COMPARE_OFF, COMPARE_OFF])
@@ -69,6 +69,12 @@ describe('Compare in the workspace', () => {
     const added = [amd, { symbol: 'X' }, { ...nvda, symbol: 'A' }, { ...nvda, symbol: 'B' }, { ...nvda, symbol: 'C' }]
     const [compare] = sanitizeWorkspace({ layout: '1', slots: [nvda], compares: [{ on: true, added }] }).compares
     expect(compare.added.map((entry) => entry.symbol)).toEqual(['AMD', 'A', 'B'])
+  })
+
+  it('keeps the colour each added symbol was given', () => {
+    const added = [{ ...amd, colorSlot: 2 }, { ...nvda, colorSlot: 0 }]
+    const [compare] = sanitizeWorkspace({ layout: '1', slots: [nvda], compares: [{ on: true, added }] }).compares
+    expect(compare.added.map((entry) => entry.colorSlot)).toEqual([2, 0])
   })
 
   it('falls back to candles for an unknown way of showing the stock', () => {

@@ -9,8 +9,11 @@ const ITEM =
   'flex items-center gap-2 h-8 px-2 rounded-[7px] text-[13px] outline-none cursor-pointer select-none ' +
   'data-[highlighted]:bg-selected data-[highlighted]:text-ink data-[disabled]:opacity-50 data-[disabled]:pointer-events-none'
 
-export function Dialog({ open, onOpenChange, title, children, width = 'min(420px,92vw)', placement = 'center', bare = false }) {
-  const position = placement === 'top' ? 'top-[12vh]' : 'top-1/2 -translate-y-1/2'
+const PHONE_FULL_SCREEN =
+  'max-[759px]:inset-0 max-[759px]:translate-x-0 max-[759px]:translate-y-0 max-[759px]:w-screen! max-[759px]:max-w-none max-[759px]:h-dvh max-[759px]:rounded-none'
+
+export function Dialog({ open, onOpenChange, title, children, width = 'min(420px,92vw)', placement = 'center', bare = false, fullScreenOnPhone = false }) {
+  const position = `${placement === 'top' ? 'top-[12vh]' : 'top-1/2 -translate-y-1/2'} ${fullScreenOnPhone ? PHONE_FULL_SCREEN : ''}`
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
