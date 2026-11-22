@@ -8,6 +8,8 @@ import {
   NewsPanel,
   PerformancePanel,
   PositionsBoardPanel,
+  SectorFlowPanel,
+  SectorStocksPanel,
   ShelfPanel,
   SymbolStatsPanel,
   WatchlistPanel,
@@ -26,4 +28,6 @@ export const PANELS = {
   funds: FundsPanel,
   performance: PerformancePanel,
   networth: NetWorthPanel,
+  sectors: SectorFlowPanel,
+  sectorStocks: SectorStocksPanel,
 }

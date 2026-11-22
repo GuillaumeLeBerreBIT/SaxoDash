@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
-import { ChartBoardPanel, SymbolStatsPanel, WatchlistPanel } from './PanelBodies'
+import { ChartBoardPanel, SectorFlowPanel, SectorStocksPanel, SymbolStatsPanel, WatchlistPanel } from './PanelBodies'
 
 vi.mock('../../api/queries')
 import * as queries from '../../api/queries'
@@ -18,6 +19,22 @@ const bars = Array.from({ length: 40 }, (_, i) => ({
 }))
 const position = { ticker: 'NVDA', uic: 211, asset_type: 'Stock', currency: 'USD', value: '1000', pnl_pct: 2 }
 const board = { id: 'b', name: 'B', sym: 'NVDA', panels: [] }
+const sectors = {
+  as_of: '2026-11-20T21:00:00Z',
+  sectors: [
+    { sector: 'Energy', count: 1, change_1d: 1.5, change_1m: 4.2, stocks: [{ ticker: 'XOM', name: 'Exxon Mobil', last_close: 110, change_1d: 1.5 }] },
+    {
+      sector: 'Information Technology',
+      count: 2,
+      change_1d: -0.4,
+      change_1m: 2.1,
+      stocks: [
+        { ticker: 'NVDA', name: 'NVIDIA', last_close: 140, change_1d: -1 },
+        { ticker: 'AMD', name: 'AMD', last_close: 160, change_1d: 0.2 },
+      ],
+    },
+  ],
+}
 const mutations = () => ({ create: { mutate: vi.fn() }, update: { mutate: vi.fn() }, remove: { mutate: vi.fn() } })
 
 function stub() {
@@ -98,5 +115,46 @@ describe('PanelBodies', () => {
     renderWithProviders(<WatchlistPanel board={board} panel={panel('watchlist', { list: ['AMD'], title: 'Chips' })} onFollow={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: 'Grid view' })).toBeInTheDocument()
+  })
+
+  it('lists the sectors with today and one month moves and marks the one that holds the followed symbol', () => {
+    queries.useSectors.mockReturnValue({ data: sectors, isLoading: false, error: null })
+    renderWithProviders(<SectorFlowPanel board={board} panel={panel('sectors')} />)
+
+    expect(screen.getByRole('button', { name: /Energy/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Information Technology/ })).toHaveAttribute('aria-current', 'true')
+  })
+
+  it('picking a sector in the money flow changes the sector shown in the stock list', async () => {
+    queries.useSectors.mockReturnValue({ data: sectors, isLoading: false, error: null })
+    renderWithProviders(
+      <>
+        <SectorFlowPanel board={board} panel={panel('sectors')} />
+        <SectorStocksPanel board={board} panel={panel('sectorStocks')} onFollow={vi.fn()} />
+      </>,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Information Technology' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Energy/ }))
+    expect(screen.getByRole('heading', { name: 'Energy' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /XOM/ })).toBeInTheDocument()
+  })
+
+  it('marks held stocks in the sector list and follows a clicked one', async () => {
+    queries.useSectors.mockReturnValue({ data: sectors, isLoading: false, error: null })
+    const onFollow = vi.fn()
+    renderWithProviders(<SectorStocksPanel board={board} panel={panel('sectorStocks')} onFollow={onFollow} />)
+
+    expect(screen.getByRole('button', { name: /NVDA/ })).toHaveTextContent('Held')
+    expect(screen.getByRole('button', { name: /AMD/ })).not.toHaveTextContent('Held')
+    await userEvent.click(screen.getByRole('button', { name: /AMD/ }))
+    expect(onFollow).toHaveBeenCalledWith('AMD')
+  })
+
+  it('says the sectors are not available when they fail to load', () => {
+    queries.useSectors.mockReturnValue({ data: undefined, isLoading: false, error: { status: 500 } })
+    renderWithProviders(<SectorFlowPanel board={board} panel={panel('sectors')} />)
+
+    expect(screen.getByText('Could not load the sectors.')).toBeInTheDocument()
   })
 })

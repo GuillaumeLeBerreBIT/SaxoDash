@@ -31,6 +31,7 @@ const watchlist = {
 const mutations = () => ({ create: { mutate: vi.fn() }, update: { mutate: vi.fn() }, remove: { mutate: vi.fn() } })
 
 function stubQueries() {
+  queries.useSectors.mockReturnValue(idle)
   queries.usePositions.mockReturnValue({ ...idle, data: [position] })
   queries.usePositionQuotes.mockReturnValue(new Map())
   queries.useChart.mockReturnValue({ data: bars, isLoading: false, error: null })
@@ -108,6 +109,7 @@ describe('Boards', () => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
     localStorage.clear()
+    localStorage.setItem('saxodash:boards-seeded', JSON.stringify(['sectors']))
     window.innerWidth = 1440
     stubQueries()
   })
@@ -115,7 +117,7 @@ describe('Boards', () => {
   it('/boards opens the first saved board and lists every saved board', () => {
     renderBoards('/boards')
 
-    expect(tabs().getAllByRole('link').map((link) => link.textContent)).toEqual(['Morning check', 'Semiconductors'])
+    expect(tabs().getAllByRole('link').map((link) => link.textContent)).toEqual(['Morning check', 'Semiconductors', 'Sectors'])
     expect(tabs().getByRole('link', { name: 'Morning check' })).toHaveAttribute('aria-current', 'page')
     expect(tabs().getByRole('button', { name: /New board/ })).toBeInTheDocument()
   })
@@ -241,8 +243,8 @@ describe('Boards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const boards = stored()
-    expect(boards.map((b) => b.name)).toEqual(['Morning check', 'Semiconductors', 'Energy'])
-    expect(new Set(boards.map((b) => b.id)).size).toBe(3)
+    expect(boards.map((b) => b.name)).toEqual(['Morning check', 'Semiconductors', 'Sectors', 'Energy'])
+    expect(new Set(boards.map((b) => b.id)).size).toBe(4)
     expect(tabs().getByRole('link', { name: 'Energy' })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -256,7 +258,7 @@ describe('Boards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Click again to delete' }))
 
     expect(tabs().queryByText('Semiconductors')).not.toBeInTheDocument()
-    expect(stored().map((b) => b.id)).toEqual(['morning'])
+    expect(stored().map((b) => b.id)).toEqual(['morning', 'sectors'])
   })
 
   it('says so when a board id is not saved in this browser', () => {
@@ -342,7 +344,7 @@ describe('Boards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Edit board' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(stored().map((b) => b.name)).toEqual(['Morning check', 'Semiconductors'])
+    expect(stored().map((b) => b.name)).toEqual(['Morning check', 'Semiconductors', 'Sectors'])
   })
 
   it('shows the honest not-connected state in a chart panel when Saxo is down', () => {

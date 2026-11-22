@@ -89,3 +89,4 @@ export const removeWatchlistItem = (id, itemId) =>
 export const getDiscover = () => apiFetch('/api/research/discover/?view=screens')
 export const startDiscoverScan = () => jsonRequest('/api/research/discover/scan/', 'POST', {})
 export const getDiscoverShelf = (key) => apiFetch(`/api/research/discover/${key}/`)
+export const getSectors = () => apiFetch('/api/research/sectors/')
