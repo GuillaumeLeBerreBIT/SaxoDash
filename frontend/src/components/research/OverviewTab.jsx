@@ -11,7 +11,7 @@ import KeyFactsStrip from './KeyFactsStrip'
 import PerformanceRows from './PerformanceRows'
 import SnapshotSection from './SnapshotSection'
 
-const COLUMN = 'empty:hidden min-w-0 flex-1 basis-0 min-[1100px]:px-6 min-[1100px]:first:pl-0 min-[1100px]:last:pr-0 min-[1100px]:border-l min-[1100px]:border-line min-[1100px]:first:border-l-0'
+const COLUMN = 'empty:hidden min-w-0 flex-1 basis-0 min-[1100px]:[&:not(:empty)~&:not(:empty)]:border-l min-[1100px]:[&:not(:empty)~&:not(:empty)]:border-line min-[1100px]:[&:not(:empty)~&:not(:empty)]:pl-6'
 
 function RangeFacts({ bars, range }) {
   const stats = rangeStats(bars)
@@ -55,7 +55,7 @@ export default function OverviewTab({
 
   return (
     <Card>
-      <div className="flex flex-col gap-6 min-[1100px]:flex-row min-[1100px]:gap-0">
+      <div className="flex flex-col gap-6 min-[1100px]:flex-row min-[1100px]:gap-6">
         {hasReturns || bars?.length ? (
           <div data-testid="overview-performance" className={COLUMN}>
             <Panel bare context="Change in price up to the latest close" title="Performance">

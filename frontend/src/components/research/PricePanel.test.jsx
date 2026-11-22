@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -34,6 +34,8 @@ function renderPanel(props = {}) {
 }
 
 describe('PricePanel', () => {
+  beforeEach(() => localStorage.clear())
+
   it('draws the previous close as the close before the latest bar, and drops it when unticked', async () => {
     renderPanel()
 
@@ -63,6 +65,37 @@ describe('PricePanel', () => {
     expect(facts).toHaveTextContent('52.40')
     expect(facts).toHaveTextContent('29 Nov 2026')
     expect(within(facts).getByText('52-week range').nextSibling).toHaveTextContent('—')
+  })
+
+  it('keeps the Volume and Previous close choices across a remount', async () => {
+    const first = renderPanel()
+    await userEvent.click(screen.getByLabelText('Volume'))
+    await userEvent.click(screen.getByLabelText('Previous close'))
+    first.unmount()
+
+    renderPanel()
+    expect(screen.getByLabelText('Volume')).toBeChecked()
+    expect(screen.getByLabelText('Previous close')).not.toBeChecked()
+  })
+
+  it('keeps the tooltip after a finger lifts but drops it when a mouse leaves', () => {
+    renderPanel()
+    const chart = screen.getByRole('img', { name: 'NVDA price chart' })
+    chart.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 300 })
+
+    fireEvent.pointerMove(chart, { clientX: 0 })
+    fireEvent.pointerLeave(chart, { pointerType: 'touch' })
+    expect(screen.getByTestId('price-hover')).toBeInTheDocument()
+
+    fireEvent.pointerLeave(chart, { pointerType: 'mouse' })
+    expect(screen.queryByTestId('price-hover')).not.toBeInTheDocument()
+  })
+
+  it('writes the 52-week range with its currency', () => {
+    const year = Array.from({ length: 260 }, (_, i) => ({ date: `2026-01-01`, open: 100, high: 120, low: 90, close: 100 + (i % 5), volume: 1 }))
+    renderPanel({ allBars: year })
+
+    expect(within(screen.getByTestId('price-facts')).getByText('52-week range').nextSibling).toHaveTextContent('US$90.00 – US$120.00')
   })
 
   it('shows a dash for a fact it does not have', () => {

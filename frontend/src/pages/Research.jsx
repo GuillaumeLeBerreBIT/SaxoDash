@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
@@ -83,6 +83,11 @@ export default function Research() {
   const [hover, setHover] = useState(null)
   const panelRef = useRef(null)
   const [panelFloor, setPanelFloor] = useState(0)
+  useEffect(() => {
+    const release = () => setPanelFloor(0)
+    window.addEventListener('resize', release)
+    return () => window.removeEventListener('resize', release)
+  }, [])
   const rawTab = params.get('tab')
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
@@ -270,7 +275,7 @@ export default function Research() {
       onDeleteLine={priceLines.remove}
       onEditLineLabel={priceLines.setLabel}
       lineSaveFailed={priceLines.saveFailed}
-      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} className="mt-1" />}
+      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} currency={currency} className="mt-1" />}
     />
   )
 

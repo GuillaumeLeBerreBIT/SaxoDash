@@ -9,6 +9,16 @@ const Y_TICK_TARGET = 4
 
 export const PRICE_PAD = PAD
 
+const HEIGHTS = [
+  [700, 380],
+  [520, 300],
+  [0, 220],
+]
+
+export function priceChartHeight(width) {
+  return HEIGHTS.find(([minWidth]) => width >= minWidth)[1]
+}
+
 export function previousClose(bars = []) {
   return bars.length >= 2 ? bars[bars.length - 2].close : null
 }

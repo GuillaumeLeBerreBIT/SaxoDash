@@ -1,15 +1,10 @@
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 
 import { useSize } from '../../lib/chartGeometry'
 import { fmtDate, fmtMoney, fmtNum } from '../../lib/format'
-import { indexAtPointer, priceChartGeometry } from '../../lib/priceChart'
+import { indexAtPointer, priceChartGeometry, priceChartHeight } from '../../lib/priceChart'
 import { useChartColors } from '../../theme/useChartColors'
 
-const HEIGHTS = [
-  [700, 380],
-  [520, 300],
-  [0, 220],
-]
 const TIP_WIDTH = 150
 
 export default function PriceChart({ bars, previous, showVolume, currency, symbol }) {
@@ -18,8 +13,11 @@ export default function PriceChart({ bars, previous, showVolume, currency, symbo
   const gradientId = useId()
   const [hover, setHover] = useState(null)
 
-  const height = HEIGHTS.find(([minWidth]) => size.width >= minWidth)[1]
-  const geometry = priceChartGeometry(bars, { width: size.width, height, showVolume, previous })
+  const height = priceChartHeight(size.width)
+  const geometry = useMemo(
+    () => priceChartGeometry(bars, { width: size.width, height, showVolume, previous }),
+    [bars, size.width, height, showVolume, previous],
+  )
   const hovered = geometry && hover != null && hover < bars.length ? hover : null
   const price = (value) => (currency ? fmtMoney(value, currency) : fmtNum(value, 2))
 
@@ -41,7 +39,9 @@ export default function PriceChart({ bars, previous, showVolume, currency, symbo
             aria-label={`${symbol || 'Price'} price chart`}
             className="block touch-pan-y"
             onPointerMove={onPointerMove}
-            onPointerLeave={() => setHover(null)}
+            onPointerLeave={(event) => {
+              if (event.pointerType !== 'touch') setHover(null)
+            }}
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
