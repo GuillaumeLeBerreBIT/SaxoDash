@@ -16,7 +16,7 @@ transcript, 2026-09-19) found:
    shown.
 2. `spending_summary()` (`services.py:12-17`) filters `amount__lt=0` before
    grouping, so **every credit is dropped** before aggregation — refunds are
-   not netted against their category as `CONTEXT.md` and `categorization.py`
+   not netted against their category as `GLOSSARY.md` and `categorization.py`
    document, they simply vanish.
 3. `BudgetSection.jsx:9-14` merges current-month `budget_progress()` rows
    with fallback rows built from the page's (all-time) `spending_summary`
@@ -39,7 +39,7 @@ transcript, 2026-09-19) found:
 
 ## Decisions
 
-- **Spending definition (updated in `CONTEXT.md`):** net outflow per
+- **Spending definition (updated in `GLOSSARY.md`):** net outflow per
   Category for an explicit period = debits minus any Refund/Credit that
   nets against the same Category, excluding Transfer and Savings entirely.
   An unscoped Spending figure is now explicitly a bug.
