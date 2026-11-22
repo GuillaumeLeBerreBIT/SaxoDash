@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import StockLogo from '../StockLogo'
 import InvestorAvatar from './InvestorAvatar'
 import { signalSentence, stockLabel } from '../../lib/investorHub'
+import ChartLink from '../ChartLink'
 
 function Faces({ investors }) {
   return (
@@ -29,7 +30,12 @@ function Title({ item }) {
 export default function StockSignalCard({ shelfKey, item, className = '' }) {
   return (
     <div className={`relative h-full flex flex-col gap-2 bg-tile rounded-[10px] px-3.5 py-3 ${item.ticker ? 'hover:bg-hover transition-colors' : ''} ${className}`}>
-      <div className="flex items-center gap-2.5 min-w-0">
+      {item.ticker ? (
+        <div className="absolute right-2 top-2 z-10">
+          <ChartLink symbol={item.ticker} />
+        </div>
+      ) : null}
+      <div className={`flex items-center gap-2.5 min-w-0 ${item.ticker ? 'pr-11 sm:pr-7' : ''}`}>
         <StockLogo ticker={item.ticker} label={stockLabel(item)} size={28} />
         <div className="min-w-0">
           <Title item={item} />

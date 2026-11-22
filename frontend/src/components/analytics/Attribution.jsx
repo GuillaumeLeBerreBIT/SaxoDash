@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '../ui'
 import { fmtNum, fmtPct, pctTone } from '../../lib/format'
 import { researchHref } from '../../lib/research'
+import ChartLink from '../ChartLink'
 
 const TONE_TEXT = { positive: 'text-up', negative: 'text-down', neutral: 'text-ink-2' }
 
@@ -47,10 +48,13 @@ export default function Attribution({ positions, className = '' }) {
     >
       <div className="space-y-2.5">
         {rows.map((r) => (
-          <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: gained ? '58px 1fr 74px 48px' : '58px 1fr 74px' }}>
-            <Link to={researchHref(r.ticker)} className="text-[13.5px] font-semibold text-ink hover:underline">
-              {r.ticker}
-            </Link>
+          <div key={r.ticker} className="grid items-center gap-3" style={{ gridTemplateColumns: gained ? '88px 1fr 74px 48px' : '88px 1fr 74px' }}>
+            <span className="flex items-center gap-1 min-w-0">
+              <Link to={researchHref(r.ticker)} className="text-[13.5px] font-semibold text-ink hover:underline">
+                {r.ticker}
+              </Link>
+              <ChartLink symbol={r.ticker} />
+            </span>
             <div className="h-5 relative bg-track rounded">
               <div className="absolute inset-y-0 left-1/2 w-px bg-line" />
               <div

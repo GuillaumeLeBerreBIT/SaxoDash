@@ -38,10 +38,11 @@ describe('DiscoverCard', () => {
 
   it('opens Research on the overview for the exact instrument', () => {
     renderCard()
-    expect(screen.getByRole('link', { name: /AAPL/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^(?!Open ).*AAPL/ })).toHaveAttribute(
       'href',
       '/research?symbol=AAPL&tab=overview&uic=211&assetType=Stock',
     )
+    expect(screen.getByRole('link', { name: 'Open AAPL chart' })).toHaveAttribute('href', '/charts?symbol=AAPL&uic=211&assetType=Stock')
   })
 
   it('styles the reasons as data, not as links', () => {

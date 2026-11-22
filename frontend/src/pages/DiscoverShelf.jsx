@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { CandlestickChart } from 'lucide-react'
 
 import { useDiscoverShelf, useVerdictSummary } from '../api/queries'
 import { reasonsLine, stockCount, updatedLabel } from '../lib/discover'
 import { fmtMoney } from '../lib/format'
-import { chartHref, researchHref } from '../lib/research'
+import { researchHref } from '../lib/research'
 import { bestActionFirst, mergeShareClasses } from '../lib/shelfRows'
 import ActionBadge from '../components/verdicts/ActionBadge'
 import Sparkline from '../components/discover/Sparkline'
 import WatchlistStar from '../components/discover/WatchlistStar'
 import { Alert, Card, DataTable, DayChange, InstrumentLogo, Select, Skeleton, Td, Th, Tr } from '../components/ui'
+import ChartLink from '../components/ChartLink'
 
 const ALL_SECTORS = ''
 const NO_ITEMS = []
@@ -66,14 +66,7 @@ function ShelfRowItem({ item, verdict }) {
       <Td align="right"><ActionBadge verdict={verdict} /></Td>
       <Td align="right" edge>
         <div className="flex items-center justify-end gap-1">
-          <Link
-            to={chartHref(item.ticker, instrument)}
-            aria-label={`Open ${item.ticker} chart`}
-            title="Open chart"
-            className="w-10 h-10 sm:w-6 sm:h-6 flex items-center justify-center rounded text-ink-3 hover:text-ink hover:bg-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
-          >
-            <CandlestickChart size={14} />
-          </Link>
+          <ChartLink symbol={item.ticker} instrument={instrument} />
           <WatchlistStar ticker={item.ticker} name={item.name} uic={item.uic} assetType={item.asset_type} />
         </div>
       </Td>
