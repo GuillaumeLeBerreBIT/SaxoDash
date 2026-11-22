@@ -55,17 +55,7 @@ export function BriefList({ items, className = '' }) {
                 </div>
                 <p className="max-w-[640px] text-[14px] leading-relaxed text-ink-2">{item.body}</p>
               </div>
-              <div className="flex items-center gap-1 self-center">
-                <ChartLink size="lg" symbol={item.ticker} instrument={{ uic: item.uic, assetType: 'Stock' }} />
-                <Link
-                  to={hrefFor(item)}
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  className="sd-raised hidden whitespace-nowrap md:inline-block rounded-lg bg-raised px-3 py-2 text-[13px] font-semibold text-ink hover:bg-hover"
-                >
-                  {`Open ${item.ticker}`}
-                </Link>
-              </div>
+              <ChartLink size="lg" symbol={item.ticker} instrument={{ uic: item.uic, assetType: 'Stock' }} className="self-center" />
             </li>
           ))}
         </ul>
