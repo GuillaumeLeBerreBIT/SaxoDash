@@ -1,6 +1,6 @@
 import { fmtDate } from '../../lib/format'
 import { GRADE_WORDS, activeSignals, evidenceLine, signalGrade, standingRows } from '../../lib/signals'
-import { Card } from '../ui'
+import { Panel } from '../ui'
 
 const GRADE_TONE = {
   supported: 'text-accent',
@@ -42,42 +42,46 @@ function othersLine(count) {
   return `${many} showed no reliable edge in testing and ${count === 1 ? 'is' : 'are'} listed in the Guide.`
 }
 
-export default function SetupCard({ stockSignals, signals }) {
+export default function SetupCard({ stockSignals, signals, bare = false, className = '' }) {
   if (!stockSignals || !signals?.length) return null
   const active = activeSignals(stockSignals, signals)
   const shown = active.filter((signal) => MEANINGFUL.has(signalGrade(signal)))
   const others = othersLine(active.length - shown.length)
   return (
-    <Card
+    <Panel
+      bare={bare}
+      className={className}
       context={stockSignals.as_of ? `Chart signals on ${fmtDate(stockSignals.as_of)}` : 'Chart signals'}
       dot={shown.length ? 'ok' : 'off'}
       title="Setup"
     >
-      <Standing context={stockSignals.context} />
-      {shown.length === 0 ? (
-        <p className="text-[13px] text-ink-3">No signal that held up in testing is active on the latest session</p>
-      ) : (
-        <>
-          <p className="text-[12px] text-ink-3">Active on the latest session</p>
-          <ul className="mt-2 flex flex-col gap-2.5">
-            {shown.map((signal) => {
-              const grade = signalGrade(signal)
-              return (
-                <li key={signal.key} className="min-w-0">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-[13px] font-semibold text-ink">{signal.label}</span>
-                    <span className={`text-[12px] font-medium shrink-0 ${GRADE_TONE[grade]}`}>{GRADE_WORDS[grade]}</span>
-                  </div>
-                  <p className="text-[12px] text-ink-2">{signal.description}</p>
-                  <p className="text-[12px] text-ink-3">{evidenceLine(signal)}</p>
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
-      {others ? <p data-testid="other-signals" className="mt-2 text-[12px] text-ink-3">{others}</p> : null}
-      <p className="mt-3 text-[12px] text-ink-3">{footer(signals)}</p>
-    </Card>
+      <div className={bare ? 'max-w-[760px]' : ''}>
+        <Standing context={stockSignals.context} />
+        {shown.length === 0 ? (
+          <p className="text-[13px] text-ink-3">No signal that held up in testing is active on the latest session</p>
+        ) : (
+          <>
+            <p className="text-[12px] text-ink-3">Active on the latest session</p>
+            <ul className="mt-2 flex flex-col gap-2.5">
+              {shown.map((signal) => {
+                const grade = signalGrade(signal)
+                return (
+                  <li key={signal.key} className="min-w-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[13px] font-semibold text-ink">{signal.label}</span>
+                      <span className={`text-[12px] font-medium shrink-0 ${GRADE_TONE[grade]}`}>{GRADE_WORDS[grade]}</span>
+                    </div>
+                    <p className="text-[12px] text-ink-2">{signal.description}</p>
+                    <p className="text-[12px] text-ink-3">{evidenceLine(signal)}</p>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
+        {others ? <p data-testid="other-signals" className="mt-2 text-[12px] text-ink-3">{others}</p> : null}
+        <p className="mt-3 text-[12px] text-ink-3">{footer(signals)}</p>
+      </div>
+    </Panel>
   )
 }

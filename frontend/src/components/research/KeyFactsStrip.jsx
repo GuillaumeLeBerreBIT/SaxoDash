@@ -1,5 +1,5 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
-import { Card, Skeleton } from '../ui'
+import { Panel, Skeleton } from '../ui'
 
 function websiteLink(website) {
   try {
@@ -42,22 +42,23 @@ function referenceFacts(details) {
   ]
 }
 
-export default function KeyFactsStrip({ fundamentals, details, detailsLoading = false, className = '' }) {
+export default function KeyFactsStrip({ fundamentals, details, detailsLoading = false, className = '', bare = false }) {
   const facts = [...companyFacts(fundamentals), ...referenceFacts(details)].filter(
     ([, value]) => value != null && value !== '',
   )
   if (!facts.length && !detailsLoading) return null
 
   return (
-    <Card
+    <Panel
+      bare={bare}
       className={className}
       context={fundamentals ? 'Finnhub profile · Saxo reference data' : 'Saxo reference data'}
       dot="off"
       title="Company facts"
     >
-      <dl className="grid grid-cols-1 sm:grid-cols-2 min-[1100px]:grid-cols-4 gap-x-8">
+      <dl>
         {facts.map(([label, value]) => (
-          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line">
+          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line first:border-t-0">
             <dt className="text-[13px] text-ink-2 shrink-0">{label}</dt>
             <dd title={typeof value === 'string' ? value : undefined} className="text-[13.5px] font-semibold num text-ink truncate text-right">
               {value}
@@ -66,6 +67,6 @@ export default function KeyFactsStrip({ fundamentals, details, detailsLoading = 
         ))}
       </dl>
       {detailsLoading && <Skeleton className="mt-2 h-4 w-2/3" />}
-    </Card>
+    </Panel>
   )
 }

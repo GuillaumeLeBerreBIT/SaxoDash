@@ -1,5 +1,5 @@
 import { useDeferredValue, useId, useMemo, useState } from 'react'
-import { Check, ChevronDown, Eye, LayoutGrid, LayoutList, List, Plus, Search, X } from 'lucide-react'
+import { AlignJustify, Check, ChevronDown, Eye, LayoutGrid, LayoutList, List, Plus, Search, X } from 'lucide-react'
 
 import {
   useInstrumentSearch,
@@ -11,7 +11,7 @@ import {
 import { fmtNum } from '../../lib/format'
 import { changeSinceLastLook } from '../../lib/lastLook'
 import { quotesByUic, rankInstrumentResults, uicsByAssetType } from '../../lib/research'
-import { watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
+import { actionLabel, actionTone, watchlistVerdict, watchlistVerdictTicker } from '../../lib/verdicts'
 import { Card, DayChange, InstrumentLogo, Segmented } from '../ui'
 import ActionBadge from '../verdicts/ActionBadge'
 import { Menu, MenuRow, MenuSeparator } from './menu'
@@ -20,10 +20,12 @@ import WatchlistHeatmap from './WatchlistHeatmap'
 // Hoisted so a list with no items keeps a stable identity across renders.
 const NO_ITEMS = []
 
-const VIEW_OPTIONS = [
-  { value: 'list', label: <LayoutList size={12} />, title: 'List view' },
-  { value: 'grid', label: <LayoutGrid size={12} />, title: 'Grid view' },
+const LIST_VIEW_OPTIONS = [
+  { value: 'list', label: <LayoutList size={12} />, title: 'Detailed view' },
+  { value: 'compact', label: <AlignJustify size={12} />, title: 'Compact view' },
 ]
+const GRID_VIEW_OPTIONS = [...LIST_VIEW_OPTIONS, { value: 'grid', label: <LayoutGrid size={12} />, title: 'Grid view' }]
+const VIEWS = ['list', 'compact', 'grid']
 
 const VIEW_KEY = 'saxodash:watchlist-view'
 const COLLAPSED_KEY = 'saxodash:watchlist-collapsed'
@@ -46,7 +48,8 @@ function writeCollapsed(collapsed) {
 
 function readView() {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list'
+    const saved = localStorage.getItem(VIEW_KEY)
+    return VIEWS.includes(saved) ? saved : 'list'
   } catch {
     return 'list'
   }
@@ -84,6 +87,8 @@ export default function WatchlistRail({
   const [query, setQuery] = useState('')
   const [view, setView] = useState(readView)
   const showGrid = gridView && view === 'grid'
+  const compact = view === 'compact'
+  const shownView = showGrid ? 'grid' : compact ? 'compact' : 'list'
   const bodyId = useId()
   const [collapsedChoice, setCollapsedChoice] = useState(readCollapsed)
   const collapsed = collapsible && collapsedChoice
@@ -166,9 +171,12 @@ export default function WatchlistRail({
           ) : null}
         </Menu>
         <span className="text-[12px] text-ink-3 num ml-auto">{items.length}</span>
-        {gridView ? (
-          <Segmented label="Watchlist view" options={VIEW_OPTIONS} value={showGrid ? 'grid' : 'list'} onChange={chooseView} />
-        ) : null}
+        <Segmented
+          label="Watchlist view"
+          options={gridView ? GRID_VIEW_OPTIONS : LIST_VIEW_OPTIONS}
+          value={shownView}
+          onChange={chooseView}
+        />
         {collapsible ? (
           <button
             type="button"
@@ -305,6 +313,55 @@ export default function WatchlistRail({
               const quote = quotes.get(item.uic)
               const change = quote?.change_pct
               const sinceLastLook = changeSinceLastLook(item.symbol, quote?.price)
+              const verdict = watchlistVerdict(item, verdicts)
+              const needsLook = verdict ? actionTone(verdict.action) === 'warn' : false
+              if (compact) {
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => onSelectSymbol(item.symbol, { uic: item.uic, assetType: item.asset_type })}
+                    className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 px-3.5 min-h-8 cursor-pointer group ${
+                      symbol === item.symbol ? 'bg-selected' : 'hover:bg-hover'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      aria-current={symbol === item.symbol || undefined}
+                      className="min-w-0 flex items-center gap-1.5 text-left"
+                    >
+                      <InstrumentLogo symbol={item.symbol} size={18} />
+                      <span className="text-[13px] font-semibold text-ink truncate">{item.symbol}</span>
+                      {heldSymbols.has(item.symbol) ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-held shrink-0" title="In portfolio" />
+                      ) : null}
+                      {needsLook ? (
+                        <span
+                          data-testid="needs-look"
+                          className="w-1.5 h-1.5 rounded-full bg-warn shrink-0"
+                          title={`${actionLabel(verdict)}: ${verdict.reason}`}
+                        />
+                      ) : null}
+                    </button>
+                    <span className="text-[13px] num font-semibold text-ink text-right">
+                      {quote?.price == null ? '—' : fmtNum(quote.price, 2)}
+                    </span>
+                    <span className="flex items-center justify-end gap-1">
+                      <DayChange value={change} className="text-[12px] font-semibold" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeItem.mutate({ id: active.id, itemId: item.id })
+                        }}
+                        aria-label={`Remove ${item.symbol}`}
+                        className="-my-2 -mr-2 grid size-9 place-items-center text-ink-3 hover:text-down md:size-auto md:my-0 md:-mr-1 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  </div>
+                )
+              }
               return (
                 <div
                   key={item.id}
@@ -328,7 +385,7 @@ export default function WatchlistRail({
                         <span className="text-[12px] text-ink-3 min-w-0 truncate">{item.exchange}</span>
                       </span>
                       <span className="h-[18px] max-w-full flex items-center">
-                        <ActionBadge verdict={watchlistVerdict(item, verdicts)} />
+                        <ActionBadge verdict={verdict} />
                       </span>
                     </span>
                   </button>

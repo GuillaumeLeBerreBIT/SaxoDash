@@ -21,7 +21,6 @@ import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PricePanel from '../components/research/PricePanel'
 import PeersTab from '../components/research/PeersTab'
-import NextEarningsCard from '../components/research/NextEarningsCard'
 import OwnershipSignals from '../components/research/OwnershipSignals'
 import ResearchHeader from '../components/research/ResearchHeader'
 import ResearchTabs from '../components/research/ResearchTabs'
@@ -345,7 +344,6 @@ export default function Research() {
         </div>
         <div className="min-w-0 order-3 min-[1100px]:order-none min-[1100px]:col-span-4 flex flex-col gap-[var(--sd-gap,12px)]">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
-          <NextEarningsCard earnings={earnings} onOpenTab={setTab} />
           <OwnershipSignals
             symbol={symbol}
             currency={currency}

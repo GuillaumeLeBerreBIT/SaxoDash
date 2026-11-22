@@ -719,19 +719,11 @@ describe('Research panning', () => {
     expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
   })
 
-  it('keeps next earnings and who else owns it beside the chart on every tab', () => {
-    queries.useSymbolEarnings.mockReturnValue({
-      ...idle,
-      data: { available: true, next: { date: '2026-11-19', session: 'amc', eps_estimate: 1.25, revenue_estimate: 54_000_000_000 }, history: [] },
-    })
+  it('keeps who else owns it beside the chart on every tab', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
 
-    const panel = screen.getByRole('tabpanel')
-    for (const name of ['Next earnings', 'Who else owns it']) {
-      const heading = screen.getByRole('heading', { name })
-      expect(heading).toBeInTheDocument()
-      expect(panel).not.toContainElement(heading)
-    }
+    const heading = screen.getByRole('heading', { name: 'Who else owns it' })
+    expect(screen.getByRole('tabpanel')).not.toContainElement(heading)
   })
 })
 
