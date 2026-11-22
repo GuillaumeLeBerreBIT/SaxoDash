@@ -1,10 +1,13 @@
+import { Info } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { reasonsLine } from '../../lib/discover'
-import { PAGE_SIZE, checksLine, priceLine } from '../../lib/discoverBrowse'
+import { PAGE_SIZE, checksLine, priceLine, qualityCount } from '../../lib/discoverBrowse'
 import { fmtDate, fmtMoney } from '../../lib/format'
 import { displayName } from '../../lib/names'
+import { hasPriceRange } from '../../lib/priceBar'
 import { researchHref } from '../../lib/research'
+import { Popover } from '../overlays'
 import { Alert, Button, DataTable, EmptyState, Skeleton, Td, Th, Tr } from '../ui'
 import StockCard from './StockCard'
 import WatchlistStar from './WatchlistStar'
@@ -16,6 +19,32 @@ function reason(stock, screen) {
   if (stock.fund_count) return `${stock.fund_count} tracked funds opened or added to positions in the quarter ending ${fmtDate(stock.fund_quarter)}.`
   if (screen === 'pullbacks') return `${Math.round(stock.below_high_pct)}% below its 1-year high. ${checksLine(stock)}`
   return checksLine(stock)
+}
+
+function RangeGuide() {
+  return (
+    <Popover label="How to read the price range" align="end" width="min(290px, calc(100vw - 24px))"
+      className="space-y-2 p-3.5 text-[13px] leading-snug text-ink-2"
+      trigger={
+        <button type="button" className="inline-flex min-h-8 items-center gap-1.5 rounded text-ink-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-focus">
+          <Info size={14} aria-hidden="true" /> About P/E ranges
+        </button>
+      }>
+      <p className="font-semibold text-ink">How to read the price range</p>
+      <p>P/E is the price paid per dollar of earnings. We apply the middle half of the company’s past P/E ratios to its latest 12 months of earnings per share.</p>
+      <p>When a range is available, the chart compares each weekly close with it. Prices inside the range are unshaded.</p>
+      <div className="flex gap-4">
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-sm bg-up" />Below range</span>
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="size-2 rounded-sm bg-down" />Above range</span>
+      </div>
+    </Popover>
+  )
+}
+
+function TablePriceContext({ stock }) {
+  const line = priceLine(stock)
+  if (hasPriceRange(stock.cheap_below, stock.expensive_above)) return line ?? '—'
+  return <>{line}<div className="text-ink-3">P/E range unavailable</div></>
 }
 
 function ResultsTable({ stocks, screen }) {
@@ -32,8 +61,11 @@ function ResultsTable({ stocks, screen }) {
             <div className="text-ink-3">{[stock.ticker, stock.sector].filter(Boolean).join(' · ')}</div>
           </Td>
           <Td align="right" className="num">{fmtMoney(stock.last_close, 'USD')}<div className="text-ink-3">{stock.close_date ? fmtDate(stock.close_date) : 'Close date unavailable'}</div></Td>
-          <Td>{priceLine(stock)?.text ?? '—'}</Td>
-          <Td className="min-w-40 whitespace-normal">{reason(stock, screen)}</Td>
+          <Td><TablePriceContext stock={stock} /></Td>
+          <Td className="min-w-40 whitespace-normal">
+            {screen === 'strong' && <div className="num font-semibold">{qualityCount(stock)}</div>}
+            {reason(stock, screen)}
+          </Td>
           <Td><WatchlistStar ticker={stock.ticker} name={stock.name} uic={stock.uic} assetType="Stock" /></Td>
         </Tr>
       ))}</tbody>
@@ -49,11 +81,16 @@ export default function BrowseResults({ pages, screen, layout, health, onClear, 
   const pendingScan = ['never', 'scanning', 'failed'].includes(health?.state)
   return (
     <section tabIndex={-1} aria-label="Matching stocks" className="flex min-w-0 flex-col gap-4">
-      {pages[0].data && (total > 0 || !pendingScan) ? <p role="status" className="text-[14px] text-ink-2 num">{stocks.length} of {total} stocks</p> : null}
+      {pages[0].data && (total > 0 || !pendingScan) ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-3">
+          <p role="status" className="text-[14px] text-ink-2 num">{stocks.length} of {total} stocks</p>
+          {stocks.some(stock => hasPriceRange(stock.cheap_below, stock.expensive_above)) && <RangeGuide />}
+        </div>
+      ) : null}
       {stocks.length > 0 && (layout === 'table' ? <ResultsTable stocks={stocks} screen={screen} /> : (
         <div className={GRID}>
           {stocks.map((stock) => (
-            <StockCard key={stock.ticker} stock={stock} note={reason(stock, screen)}
+            <StockCard key={stock.ticker} stock={stock} note={reason(stock, screen)} qualitySummary={screen === 'strong' ? qualityCount(stock) : null}
               className="[content-visibility:auto] [contain-intrinsic-size:auto_320px]" />
           ))}
         </div>

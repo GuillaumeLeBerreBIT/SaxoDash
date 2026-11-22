@@ -78,13 +78,57 @@ describe('Discover page', () => {
 
   it('opens on all stocks and switches presentation with the same data', () => {
     useDiscover.mockReturnValue({ data: { health: { state: 'ok' }, shelves: [], groups } })
-    mockBrowse.mockReturnValue(answer([stock('ZTS')]))
+    mockBrowse.mockReturnValue(answer([stock('ZTS', { revenue_growth_5y: 8.24 })]))
     renderPage()
-    expect(screen.getByTestId('stock-card')).toHaveTextContent('ZTS')
+    const evidence = 'Five-year revenue growth was 8.2% a year. Misses the debt check.'
+    expect(screen.getByTestId('stock-card')).toHaveTextContent(evidence)
     expect(screen.getByRole('button', { name: 'All stocks' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: 'Table' }))
     expect(within(screen.getByRole('table')).getByRole('link', { name: /ZTS/ })).toBeInTheDocument()
+    expect(screen.getByRole('table')).toHaveTextContent(evidence)
     expect(new Set(queries()).size).toBe(1)
+  })
+
+  it('shares one range guide across results and keeps each card’s dollar range visible', () => {
+    useDiscover.mockReturnValue({ data: { health: { state: 'ok' }, shelves: [], groups } })
+    mockBrowse.mockReturnValue(answer([stock('AMZN', { cheap_below: 408.21, expensive_above: 949.03 }), stock('ZTS')]))
+    renderPage()
+    const guide = () => screen.getByRole('button', { name: 'About P/E ranges' })
+    const cards = screen.getAllByTestId('stock-card')
+    expect(cards.every(card => !card.contains(guide()))).toBe(true)
+    expect(within(cards[0]).getByText(/408\.21.*949\.03/)).toBeVisible()
+    expect(within(cards[1]).getByText(/100\.00.*150\.00/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }))
+    fireEvent.click(guide())
+    expect(screen.getByRole('dialog')).toHaveTextContent(/middle half/)
+    expect(screen.getByRole('dialog')).toHaveTextContent(/each weekly close/)
+  })
+
+  it('omits the range guide when no listed stock has a usable range', () => {
+    useDiscover.mockReturnValue({ data: { health: { state: 'ok' }, shelves: [], groups } })
+    mockBrowse.mockReturnValue(answer([stock('ZTS', { expensive_above: null, valuation: 'not_judged' })]))
+    renderPage()
+    expect(screen.queryByRole('button', { name: 'About P/E ranges' })).toBeNull()
+    expect(screen.getByText('P/E range unavailable')).toBeVisible()
+    expect(screen.getByText('40% below its 1-year high')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }))
+    expect(within(screen.getByRole('table')).getByText('P/E range unavailable')).toBeVisible()
+  })
+
+  it('shows the assessed quality counts on Strong companies and preserves a held-stock action', () => {
+    useDiscover.mockReturnValue({ data: { health: { state: 'ok' }, shelves: [], groups } })
+    mockBrowse.mockReturnValue(answer([stock('AAA'), stock('BBB', { held: true, action: 'trim', checks_answered: 5, checks_passed: 4 })]))
+    renderPage('/discover?screen=strong')
+    const [first, held] = screen.getAllByTestId('stock-card')
+    expect(first).toHaveTextContent('6 of 7 quality checks passed')
+    expect(first).not.toHaveTextContent('Passes quality screen')
+    expect(held).toHaveTextContent('4 of 5 quality checks passed')
+    expect(held).toHaveTextContent('Trim')
+    fireEvent.click(screen.getByRole('button', { name: 'Table' }))
+    expect(screen.getByRole('table')).toHaveTextContent('6 of 7 quality checks passed')
+    fireEvent.click(screen.getByRole('button', { name: 'All stocks' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cards' }))
+    expect(screen.getAllByTestId('stock-card')[0]).toHaveTextContent('Passes quality screen')
   })
 
   it('loads past row 60 and retains the query when switching layouts', () => {

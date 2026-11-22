@@ -238,7 +238,38 @@ class BrowseTests(APITestCase):
         self.assertEqual((stock['discount_pct'], stock['below_high_pct']), (25.0, 50.0))
         self.assertEqual(stock['spark'], [30.0, 20.0, 15.0])
         self.assertEqual((stock['checks_passed'], stock['checks_answered'], stock['failed_checks']), (6, 6, []))
+        self.assertEqual(stock['passed_checks'], [check['label'] for check in CHECKS])
+        self.assertIsNone(stock['revenue_growth_5y'])
         self.assertFalse(stock['held'])
+
+    def test_browse_evidence_only_uses_answered_checks_from_the_verdict(self):
+        growth = {'key': 'revenue_growth', 'label': 'Revenue growth', 'status': 'pass', 'value': 8.24}
+        listed('AAA', checks=[growth, {'label': 'Debt', 'status': 'fail'}, {'label': 'Cash', 'status': 'unknown'}])
+        listed('BBB', checks=[{**growth, 'status': 'unknown'}])
+        first, second = self.browse().json()['stocks']
+        self.assertEqual((first['revenue_growth_5y'], first['passed_checks'], first['failed_checks']), (8.24, ['Revenue growth'], ['Debt']))
+        self.assertIsNone(second['revenue_growth_5y'])
+        self.assertEqual(second['checks_answered'], 0)
+
+    def test_browse_uses_the_displayed_range_for_labels_filters_and_facets(self):
+        for ticker, close in [('LOW', 19.99), ('LEFT', 20), ('RIGHT', 28), ('SUB', 28.001), ('HIGH', 28.01)]:
+            listed(ticker, valuation='cheap', last_close=close)
+        listed('MISSING', valuation='cheap', last_close=None)
+        listed('HALF', valuation='cheap', expensive_above=None)
+        listed('INVERTED', valuation='cheap', expensive_above=10)
+        listed('FLAT', valuation='cheap', expensive_above=20)
+        groups = {
+            'cheap': ['LOW'], 'fair': ['LEFT', 'RIGHT', 'SUB'], 'expensive': ['HIGH'],
+            'not_judged': ['FLAT', 'HALF', 'INVERTED', 'MISSING'],
+        }
+        for grade, tickers in groups.items():
+            with self.subTest(grade=grade):
+                body = self.browse(f'?valuation={grade}').json()
+                self.assertEqual([stock['ticker'] for stock in body['stocks']], tickers)
+                self.assertTrue(all(stock['valuation'] == grade for stock in body['stocks']))
+                self.assertEqual(body['facets']['valuation'], {key: len(group) for key, group in groups.items()})
+                if grade == 'not_judged':
+                    self.assertTrue(all(stock['discount_pct'] is None for stock in body['stocks']))
 
     def test_filters_by_valuation_quality_sector_yield_and_fall(self):
         listed('AAA', valuation='cheap', last_close=15.0, high_1y=30.0)
@@ -251,9 +282,9 @@ class BrowseTests(APITestCase):
         self.assertEqual(self.tickers('?min_fall=25'), ['AAA'])
 
     def test_facet_counts_ignore_their_own_filter_but_keep_the_others(self):
-        listed('AAA', valuation='cheap')
-        listed('BBB', valuation='fair')
-        listed('CCC', valuation='cheap', sector='Health Care')
+        listed('AAA', last_close=15)
+        listed('BBB', last_close=24)
+        listed('CCC', last_close=15, sector='Health Care')
         facets = self.browse('?valuation=cheap&sector=Information%20Technology').json()['facets']
         self.assertEqual(facets['valuation'], {'cheap': 1, 'fair': 1})
         self.assertEqual(facets['sector'], {'Information Technology': 1, 'Health Care': 1})

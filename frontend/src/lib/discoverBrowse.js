@@ -1,3 +1,5 @@
+import { fmtPct } from './format'
+
 export const SORTS = [
   { value: 'checks', label: 'Most quality checks passed' },
   { value: 'opportunity', label: 'Portfolio action' },
@@ -96,23 +98,45 @@ export function toggled(list, value) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
 }
 
-const whole = (value) => Math.round(Math.abs(Number(value)))
+const PRICE_CONTEXT = {
+  cheap: 'Below its usual P/E range',
+  fair: 'Within its usual P/E range',
+  expensive: 'Above its usual P/E range',
+}
 
 export function priceLine(stock) {
-  if (stock.discount_pct != null && stock.discount_pct > 0) {
-    return { text: `${whole(stock.discount_pct)}% below its usual P/E range`, tone: 'neutral' }
-  }
-  if (stock.below_high_pct != null && stock.below_high_pct >= 10) {
-    return { text: `${whole(stock.below_high_pct)}% below its 1-year high`, tone: 'neutral' }
-  }
-  const words = { fair: 'Within its usual P/E range', expensive: 'Above its usual P/E range' }
-  return words[stock.valuation] ? { text: words[stock.valuation], tone: 'neutral' } : null
+  const discount = Math.round(stock.discount_pct)
+  if (stock.valuation === 'cheap' && discount > 0) return `${discount}% below its usual P/E range`
+  if (PRICE_CONTEXT[stock.valuation]) return PRICE_CONTEXT[stock.valuation]
+  if (stock.below_high_pct >= 10) return `${Math.round(stock.below_high_pct)}% below its 1-year high`
+  return null
+}
+
+const pairs = new Intl.ListFormat('en', { type: 'conjunction' })
+
+function checkNames(labels = []) {
+  return pairs.format(labels.slice(0, 2).map(label => label.toLowerCase()))
+}
+
+export function qualityCount(stock) {
+  if (!stock.checks_answered || stock.checks_passed == null) return null
+  return `${stock.checks_passed} of ${stock.checks_answered} quality checks passed`
 }
 
 export function checksLine(stock) {
-  if (!stock.checks_answered) return 'Too few figures to judge the business.'
-  const failed = stock.failed_checks ?? []
-  const passed = `${stock.checks_passed} of ${stock.checks_answered} quality checks pass`
-  if (failed.length === 0) return `${passed}.`
-  return `${passed}; ${failed.join(', ').toLowerCase()} ${failed.length === 1 ? 'fails' : 'fail'}.`
+  const passed = checkNames(stock.passed_checks)
+  const failures = stock.failed_checks ?? []
+  const failed = checkNames(failures)
+  const evidence = []
+  if (Number.isFinite(stock.revenue_growth_5y)) {
+    const rate = fmtPct(stock.revenue_growth_5y, { sign: false, decimals: 1 })
+    evidence.push(`Five-year revenue growth was ${rate} a year.`)
+  } else if (passed) {
+    evidence.push(`Passes on ${passed}.`)
+  }
+  if (failures.length === 1) evidence.push(`Misses the ${failed} check.`)
+  else if (failures.length === 2) evidence.push(`Misses checks for ${failed}.`)
+  else if (failures.length > 2) evidence.push(`Misses ${failures.length} checks, including ${failed}.`)
+  if (evidence.length) return evidence.join(' ')
+  return stock.checks_answered ? `${stock.checks_passed} of ${stock.checks_answered} quality checks pass.` : 'Too few figures to judge the business.'
 }

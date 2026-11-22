@@ -1,12 +1,15 @@
 const THIRD = 1 / 3
 
-function levelsOf({ price, cheapBelow, expensiveAbove }) {
-  if (price == null || cheapBelow == null || expensiveAbove == null) return null
-  const p = Number(price)
+export function hasPriceRange(cheapBelow, expensiveAbove) {
   const low = Number(cheapBelow)
   const high = Number(expensiveAbove)
-  if (![p, low, high].every(Number.isFinite) || low <= 0 || high <= low) return null
-  return { p, low, high }
+  return Number.isFinite(low) && Number.isFinite(high) && low > 0 && high > low
+}
+
+function levelsOf({ price, cheapBelow, expensiveAbove }) {
+  const p = Number(price)
+  if (price == null || !Number.isFinite(p) || !hasPriceRange(cheapBelow, expensiveAbove)) return null
+  return { p, low: Number(cheapBelow), high: Number(expensiveAbove) }
 }
 
 const clamp = (value) => Math.min(1, Math.max(0, value))
