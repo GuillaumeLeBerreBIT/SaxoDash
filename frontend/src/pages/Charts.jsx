@@ -89,7 +89,7 @@ export default function Charts() {
   return (
     <>
     <div
-      className="relative h-[calc(100dvh-12rem)] min-[760px]:h-[calc(100dvh-8.5rem)] min-h-[480px] text-ink flex flex-col gap-3 lg:grid lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]"
+      className={`relative h-[calc(100dvh-12rem)] min-[760px]:h-[calc(100dvh-8.5rem)] ${activeComparing ? 'min-h-[1120px] lg:min-h-[480px]' : 'min-h-[480px]'} text-ink flex flex-col gap-3 lg:grid lg:grid-cols-[48px_minmax(0,1fr)_var(--rail-width)]`}
       style={{ '--rail-width': `${railWidth}px` }}
     >
       <h1 className="sr-only">Chart workspace</h1>

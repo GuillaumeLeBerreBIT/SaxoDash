@@ -292,7 +292,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
             <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" />
           </g>
         ) : null}
-        {type === 'line' ? <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" /> : null}
+        {type === 'line' ? <path d={pricePath} fill="none" stroke={geometry.percentBase ? colors.ink : colors.primary} strokeWidth={geometry.percentBase ? 2 : 1.5} /> : null}
         {type === 'candles' ? <Candles data={data} geometry={geometry} colors={colors} /> : null}
         {compareLines.map((line) => (
           <path

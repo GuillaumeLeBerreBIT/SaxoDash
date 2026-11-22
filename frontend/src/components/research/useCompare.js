@@ -47,7 +47,7 @@ export function useCompare({ slot, compare, bars, hidden }) {
     const rebased = compareLines({ key: 'main', label: slot.symbol, bars }, others)
     return rebased.map((line, index) =>
       index === 0
-        ? { ...line, color: colors.primary, status: 'ok' }
+        ? { ...line, color: colors.ink, status: 'ok' }
         : { ...entries[index - 1], ...line, status: charts.status[index - 1] ?? 'loading' },
     )
   }, [entries, bars, slot.symbol, colors, charts])
