@@ -4,6 +4,7 @@ import { quarterLabel } from '../../lib/investors'
 import { changeLabel, fmtSharesCompact, ownershipTicker, sharesChange } from '../../lib/ownership'
 import { researchHref } from '../../lib/research'
 import { Card, InstrumentLogo } from '../ui'
+import ChartLink from '../ChartLink'
 
 const SHOWN = 5
 
@@ -44,10 +45,10 @@ export default function SmartMoney({ positions, ownership, className = '' }) {
       ) : (
         <ul>
           {rows.map(({ position, change }) => (
-            <li key={position.ticker} className="border-t border-line first:border-t-0">
+            <li key={position.ticker} className="flex items-center gap-1 border-t border-line first:border-t-0">
               <Link
                 to={researchHref(position.ticker, 'funds')}
-                className="flex items-center gap-3 min-h-11 py-1.5 -mx-2 px-2 rounded-lg hover:bg-hover"
+                className="flex flex-1 min-w-0 items-center gap-3 min-h-11 py-1.5 -ml-2 pl-2 pr-1 rounded-lg hover:bg-hover"
               >
                 <InstrumentLogo symbol={position.ticker} />
                 <span className="min-w-0 flex-1 truncate">
@@ -56,6 +57,7 @@ export default function SmartMoney({ positions, ownership, className = '' }) {
                 </span>
                 <NetChange change={change} quarter={quarter} />
               </Link>
+              <ChartLink size="lg" symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
             </li>
           ))}
         </ul>

@@ -73,7 +73,7 @@ Follow-ups out of scope:
 - Hovering a line badge shows the resize cursor rather than a text cursor.
 - Manual browser checks of the annotation features are worth a pass after any chart
   change.
-- At `/boards` (the Chart workspace) with Volume + RSI + MACD all on, `MIN_PRICE_HEIGHT`'s
+- At `/charts` (the Chart workspace) with Volume + RSI + MACD all on, `MIN_PRICE_HEIGHT`'s
   240px floor can still push the canvas a little past the container at narrow
   widths, since the legend height is now measured rather than assumed — a
   pre-existing, accepted trade-off (see `chartGeometry.test.js`'s "never

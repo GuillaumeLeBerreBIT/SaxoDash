@@ -24,6 +24,7 @@ import PriceLines, { PriceEditor } from './PriceLines'
 import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
+import ChartZones from './ChartZones'
 import { useAnnotationSelection } from './useAnnotationSelection'
 import { usePointerDrag } from './usePointerDrag'
 import { useChartColors } from '../../theme/useChartColors'
@@ -414,6 +415,7 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
 const NO_LINES = []
 const NO_TREND_LINES = []
 const NO_TEXT_ANNOTATIONS = []
+const NO_ZONES = []
 
 function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
@@ -493,6 +495,9 @@ export function TVChart({
   onDeleteTrendLine,
   onEditTrendLineLabel,
   onCreateTrendLine,
+  zones = NO_ZONES,
+  onCreateZone,
+  onDeleteZone,
   textAnnotations = NO_TEXT_ANNOTATIONS,
   onMoveTextAnnotation,
   onDeleteTextAnnotation,
@@ -516,6 +521,7 @@ export function TVChart({
   const trendSelection = useAnnotationSelection({ containerRef: ref, items: trendLines, onDelete: onDeleteTrendLine })
   const [editingTrendLineId, setEditingTrendLineId] = useState(null)
   const editingTrendLine = trendLines.find((line) => line.id === editingTrendLineId) ?? null
+  const zoneSelection = useAnnotationSelection({ containerRef: ref, items: zones, onDelete: onDeleteZone })
   const textSelection = useAnnotationSelection({ containerRef: ref, items: textAnnotations, onDelete: onDeleteTextAnnotation })
   const [editingTextId, setEditingTextId] = useState(null)
   const editingText = textAnnotations.find((item) => item.id === editingTextId) ?? null
@@ -630,6 +636,18 @@ export function TVChart({
       onPlaced?.()
       return `Ray placed, ending on ${fmtDate(point.barDate)} at ${badgePrice(point.price)}.`
     }
+    if (tool === 'zone' && onCreateZone) {
+      if (!rayStart) {
+        setRayStart(point)
+        return `Zone starts on ${fmtDate(point.barDate)} at ${badgePrice(point.price)}. Move to its opposite corner and press Enter.`
+      }
+      if (point.barDate === rayStart.barDate || point.price === rayStart.price) return 'Move to another session and price for the opposite corner.'
+      onCreateZone({ barDate: rayStart.barDate, price: rayStart.price }, { barDate: point.barDate, price: point.price })
+      setRayStart(null)
+      setRayPreview(null)
+      onPlaced?.()
+      return `Zone placed from ${badgePrice(rayStart.price)} to ${badgePrice(point.price)}.`
+    }
     if (tool === 'text' && onCreateTextAnnotation) {
       focusBack.current = document.activeElement
       setTextDraftPoint(point)
@@ -674,7 +692,7 @@ export function TVChart({
       {...pan.handlers}
       onMouseMove={(e) => {
         setHover(indexFromPointer(e, geometry.slot, data.length))
-        if (tool === 'ray' && rayStart) {
+        if ((tool === 'ray' || tool === 'zone') && rayStart) {
           const point = barAt(e)
           if (point) setRayPreview(point)
         }
@@ -687,6 +705,7 @@ export function TVChart({
         if (pan.consumeMoved()) return
         freeSelection.clear()
         trendSelection.clear()
+        zoneSelection.clear()
         textSelection.clear()
         if (tool === 'ray' && onCreateTrendLine && e.detail === 1) {
           const point = barAt(e)
@@ -698,6 +717,22 @@ export function TVChart({
                 { barDate: rayStart.barDate, price: rayStart.price },
                 { barDate: point.barDate, price: point.price },
               )
+              setRayStart(null)
+              setRayPreview(null)
+              onPlaced?.()
+            } else {
+              setRayPreview(point)
+            }
+          }
+          return
+        }
+        if (tool === 'zone' && onCreateZone && e.detail === 1) {
+          const point = barAt(e)
+          if (point) {
+            if (!rayStart) {
+              setRayStart(point)
+            } else if (point.barDate !== rayStart.barDate && point.price !== rayStart.price) {
+              onCreateZone({ barDate: rayStart.barDate, price: rayStart.price }, { barDate: point.barDate, price: point.price })
               setRayStart(null)
               setRayPreview(null)
               onPlaced?.()
@@ -720,7 +755,7 @@ export function TVChart({
         onPlaced?.()
       }}
       onDoubleClick={(e) => {
-        if (tool === 'ray' || tool === 'text') return
+        if (tool === 'ray' || tool === 'zone' || tool === 'text') return
         if (placedRef.current) {
           placedRef.current = false
           return
@@ -766,6 +801,18 @@ export function TVChart({
           }}
           onEditLabel={openEditor(setEditingFreeLineId)}
         />
+        <ChartZones
+          zones={zones}
+          geometry={geometry}
+          lastPrice={data[data.length - 1]?.close ?? null}
+          selectedId={zoneSelection.selected?.id ?? null}
+          onSelect={(id) => {
+            freeSelection.clear()
+            trendSelection.clear()
+            textSelection.clear()
+            zoneSelection.select(id)
+          }}
+        />
         <TrendLines
           lines={trendLines}
           geometry={geometry}
@@ -792,7 +839,21 @@ export function TVChart({
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
           onEdit={openEditor(setEditingTextId)}
         />
-        {rayStart && rayEnd ? (
+        {rayStart && rayEnd && tool === 'zone' ? (
+          <rect
+            data-testid="zone-preview"
+            x={Math.min(rayStart.x, rayEnd.x)}
+            y={Math.min(rayStart.y, rayEnd.y)}
+            width={Math.abs(rayEnd.x - rayStart.x)}
+            height={Math.abs(rayEnd.y - rayStart.y)}
+            fill={colors.axisCategory}
+            fillOpacity={0.12}
+            stroke={colors.axisCategory}
+            strokeDasharray="3 3"
+            pointerEvents="none"
+          />
+        ) : null}
+        {rayStart && rayEnd && tool === 'ray' ? (
           <line
             data-testid="trend-line-preview"
             x1={rayStart.x}

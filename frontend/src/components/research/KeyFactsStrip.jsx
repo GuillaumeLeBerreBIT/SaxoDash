@@ -1,5 +1,5 @@
 import { fmtCompact, fmtNum, fmtPct } from '../../lib/format'
-import { Card, Skeleton } from '../ui'
+import { Panel, Skeleton } from '../ui'
 
 function websiteLink(website) {
   try {
@@ -16,7 +16,6 @@ function companyFacts(fundamentals) {
   const site = websiteLink(fundamentals.website)
   return [
     ['Market cap', fundamentals.market_cap == null ? null : fmtCompact(fundamentals.market_cap)],
-    ['P/E', fundamentals.pe_ratio == null ? null : fmtNum(fundamentals.pe_ratio, 2)],
     ['EPS (TTM)', fundamentals.eps_ttm == null ? null : fmtNum(fundamentals.eps_ttm, 2)],
     ['Dividend yield', fundamentals.dividend_yield == null ? null : fmtPct(fundamentals.dividend_yield, { sign: false })],
     ['Listed since', fundamentals.ipo_date ? fundamentals.ipo_date.slice(0, 4) : null],
@@ -43,14 +42,15 @@ function referenceFacts(details) {
   ]
 }
 
-export default function KeyFactsStrip({ fundamentals, details, detailsLoading = false, className = '' }) {
+export default function KeyFactsStrip({ fundamentals, details, detailsLoading = false, className = '', bare = false }) {
   const facts = [...companyFacts(fundamentals), ...referenceFacts(details)].filter(
     ([, value]) => value != null && value !== '',
   )
   if (!facts.length && !detailsLoading) return null
 
   return (
-    <Card
+    <Panel
+      bare={bare}
       className={className}
       context={fundamentals ? 'Finnhub profile · Saxo reference data' : 'Saxo reference data'}
       dot="off"
@@ -67,6 +67,6 @@ export default function KeyFactsStrip({ fundamentals, details, detailsLoading = 
         ))}
       </dl>
       {detailsLoading && <Skeleton className="mt-2 h-4 w-2/3" />}
-    </Card>
+    </Panel>
   )
 }

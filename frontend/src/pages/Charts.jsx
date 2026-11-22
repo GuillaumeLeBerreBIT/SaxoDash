@@ -24,7 +24,7 @@ import { usePersistedSize } from '../components/research/usePersistedSize'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
 
 
-export default function ResearchChart() {
+export default function Charts() {
   const { symbol, instrument, resolving, position, positions, selectSymbol } = useResearchInstrument()
   const controls = useChartControls()
   const workspace = useChartWorkspace({ symbol, instrument, selectSymbol })

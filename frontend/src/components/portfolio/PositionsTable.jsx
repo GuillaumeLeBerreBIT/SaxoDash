@@ -15,6 +15,7 @@ import PriceBasisNote from '../PriceBasisNote'
 import { FundChange, FundShares } from '../investors/FundHoldings'
 import CongressActivity from '../congress/CongressActivity'
 import ActionBadge from '../verdicts/ActionBadge'
+import ChartLink from '../ChartLink'
 
 const WEIGHT_SCALE_PCT = 30
 const STICKY = 'sticky top-0 z-10 bg-pane'
@@ -57,36 +58,39 @@ function WeightBar({ weight }) {
 function InstrumentCell({ position }) {
   const c = useChartColors()
   return (
-    <Link to={researchHref(position.ticker)} className="flex items-center gap-2.5 group min-w-0">
-      <InstrumentLogo
-        symbol={position.ticker}
-        fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorForTicker(position.ticker, c) }} />}
-      />
-      <span className="min-w-0">
-        <span className="flex items-center gap-1.5 min-w-0">
-          <span className="font-semibold text-ink group-hover:underline truncate max-w-[200px]" title={position.name}>
-            {position.name}
-          </span>
-          {position.type === 'ETF' && <Tag tone="warn">ETF</Tag>}
-          {position.has_thesis === false && (
-            <PenLine
-              size={12}
-              className="text-ink-3 shrink-0"
-              title="No thesis written yet — add one on the Research page"
-            />
-          )}
-        </span>
-        <span className="flex items-center gap-1 text-[12px] text-ink-3">
-          <span>{position.ticker}</span>
-          {position.sector && <span className="truncate max-w-[160px]">· {position.sector}</span>}
-          {position.price_source !== 'live' && (
-            <span title={priceBasis(position.price_source).note} className="md:hidden shrink-0 text-warn">
-              est.
+    <span className="flex items-center gap-1 min-w-0">
+      <Link to={researchHref(position.ticker)} className="flex items-center gap-2.5 group min-w-0">
+        <InstrumentLogo
+          symbol={position.ticker}
+          fallback={<span className="w-2 h-2 rounded-full shrink-0" style={{ background: colorForTicker(position.ticker, c) }} />}
+        />
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="font-semibold text-ink group-hover:underline truncate max-w-[200px]" title={position.name}>
+              {position.name}
             </span>
-          )}
+            {position.type === 'ETF' && <Tag tone="warn">ETF</Tag>}
+            {position.has_thesis === false && (
+              <PenLine
+                size={12}
+                className="text-ink-3 shrink-0"
+                title="No thesis written yet — add one on the Research page"
+              />
+            )}
+          </span>
+          <span className="flex items-center gap-1 text-[12px] text-ink-3">
+            <span>{position.ticker}</span>
+            {position.sector && <span className="truncate max-w-[160px]">· {position.sector}</span>}
+            {position.price_source !== 'live' && (
+              <span title={priceBasis(position.price_source).note} className="md:hidden shrink-0 text-warn">
+                est.
+              </span>
+            )}
+          </span>
         </span>
-      </span>
-    </Link>
+      </Link>
+      <ChartLink symbol={position.ticker} instrument={{ uic: position.uic, assetType: position.asset_type }} />
+    </span>
   )
 }
 

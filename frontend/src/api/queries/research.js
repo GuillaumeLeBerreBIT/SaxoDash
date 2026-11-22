@@ -9,16 +9,20 @@ import {
   addWatchlistItem,
   createPriceLine,
   createTextAnnotation,
+  createChartZone,
   createTrendLine,
   createWatchlist,
   deleteTextAnnotation,
   deletePriceLine,
+  deleteChartZone,
   deleteTrendLine,
   deleteWatchlist,
   getChart,
+  getChartZones,
   getCompanyNews,
   getDiscover,
   getDiscoverShelf,
+  getSectors,
   getEarningsCalendar,
   getFilings,
   getFundamentals,
@@ -68,9 +72,11 @@ export const researchKeys = {
   priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
   textAnnotations: (uic, assetType) => ['text-annotations', instrumentKey(uic, assetType)],
   trendLines: (uic, assetType) => ['trend-lines', instrumentKey(uic, assetType)],
+  chartZones: (uic, assetType) => ['chart-zones', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
   discover: ['discover'],
   discoverShelf: (key) => ['discover', key],
+  sectors: ['sectors'],
 }
 
 export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
@@ -362,6 +368,31 @@ export function useTrendLines(uic, assetType) {
   })
 }
 
+export function useChartZones(uic, assetType) {
+  return useQuery({
+    queryKey: researchKeys.chartZones(uic, assetType),
+    queryFn: () => getChartZones({ uic, assetType }),
+    enabled: Boolean(uic && assetType),
+  })
+}
+
+export function useChartZoneMutations(uic, assetType) {
+  const queryClient = useQueryClient()
+  const key = researchKeys.chartZones(uic, assetType)
+  const refetch = () => queryClient.invalidateQueries({ queryKey: key })
+
+  return {
+    create: useMutation({
+      mutationFn: (payload) => createChartZone({ uic, assetType, ...payload }),
+      onSettled: refetch,
+    }),
+    remove: useMutation({
+      mutationFn: (id) => deleteChartZone(id),
+      onSettled: refetch,
+    }),
+  }
+}
+
 export function useTrendLineMutations(uic, assetType) {
   const queryClient = useQueryClient()
   const key = researchKeys.trendLines(uic, assetType)
@@ -461,7 +492,10 @@ export function useWatchlists() {
  */
 export function useWatchlistMutations() {
   const queryClient = useQueryClient()
-  const onSuccess = () => queryClient.invalidateQueries({ queryKey: researchKeys.watchlists })
+  const onSuccess = () => Promise.all([
+    queryClient.invalidateQueries({ queryKey: researchKeys.watchlists }),
+    queryClient.invalidateQueries({ queryKey: ['discover-explorer', 'saved'] }),
+  ])
 
   return {
     create: useMutation({ mutationFn: createWatchlist, onSuccess }),
@@ -497,6 +531,14 @@ export function useDiscoverShelf(key) {
     queryKey: researchKeys.discoverShelf(key),
     queryFn: () => getDiscoverShelf(key),
     enabled: !!key,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useSectors() {
+  return useQuery({
+    queryKey: researchKeys.sectors,
+    queryFn: getSectors,
     staleTime: 5 * 60_000,
   })
 }

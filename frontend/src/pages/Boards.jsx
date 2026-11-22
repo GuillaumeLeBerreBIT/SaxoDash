@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, NavLink, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 
 import {
@@ -13,53 +13,55 @@ import {
 import BoardGrid from '../components/boards/BoardGrid'
 import PanelLibrary from '../components/boards/PanelLibrary'
 import { Button, Card, Input } from '../components/ui'
-import ResearchChart from './ResearchChart'
 
 const TAB =
   'inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[15px] font-bold whitespace-nowrap transition-colors'
-const tabClass = ({ isActive }) => `${TAB} ${isActive ? 'bg-pill text-ink' : 'text-ink-3 hover:text-ink'}`
+const NAMED_TAB = `${TAB} max-w-[16rem] shrink-0`
+const tabClass = ({ isActive }) => `${NAMED_TAB} ${isActive ? 'bg-pill text-ink' : 'text-ink-3 hover:text-ink'}`
 const DISARM_MS = 3000
 const EDIT_MIN_WIDTH = 760
 
-function BoardTab({ to, editing, current = false, children }) {
+function BoardTab({ to, editing, current = false, name }) {
   if (editing) {
     return (
-      <span aria-disabled="true" title="Save or cancel your edits first" className={`${TAB} ${current ? 'bg-pill text-ink' : 'text-ink-3 opacity-60'}`}>
-        {children}
+      <span aria-disabled="true" title="Save or cancel your edits first" className={`${NAMED_TAB} ${current ? 'bg-pill text-ink' : 'text-ink-3 opacity-60'}`}>
+        <span className="truncate">{name}</span>
       </span>
     )
   }
   return (
-    <NavLink to={to} end className={tabClass}>
-      {children}
+    <NavLink to={to} end title={name} className={tabClass}>
+      <span className="truncate">{name}</span>
     </NavLink>
   )
 }
 
 function BoardTabs({ boards, currentId, editing, onNew, onEdit, canEdit }) {
+  const listRef = useRef(null)
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+  }, [currentId, boards.length])
+
   return (
-    <div className="flex items-center gap-2 mb-3 min-w-0">
-      <nav aria-label="Boards" className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none]">
-        <BoardTab to="/boards" editing={editing}>
-          Chart
-        </BoardTab>
-        {boards.map((board) => (
-          <BoardTab key={board.id} to={`/boards/${board.id}`} editing={editing} current={board.id === currentId}>
-            {board.name}
-          </BoardTab>
-        ))}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 min-w-0">
+      <nav aria-label="Boards" className="flex flex-1 items-center gap-1 min-w-0">
+        <div ref={listRef} className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none]">
+          {boards.map((board) => (
+            <BoardTab key={board.id} to={`/boards/${board.id}`} editing={editing} current={board.id === currentId} name={board.name} />
+          ))}
+        </div>
         <button
           type="button"
           onClick={onNew}
           disabled={editing}
-          className={`${TAB} hidden min-[760px]:inline-flex text-ink-2 hover:text-ink disabled:opacity-40`}
+          className={`${TAB} shrink-0 max-[759px]:hidden text-ink-2 hover:text-ink disabled:opacity-40`}
         >
           <Plus size={14} aria-hidden="true" /> New board
         </button>
       </nav>
       {canEdit ? (
-        <div className="ml-auto shrink-0">
-          <Button className="hidden min-[760px]:inline-flex" onClick={onEdit}>
+        <div className="shrink-0 max-[759px]:basis-full">
+          <Button className="max-[759px]:hidden" onClick={onEdit}>
             Edit board
           </Button>
           <span className="min-[760px]:hidden text-[12px] text-ink-3">Editing needs a wider screen</span>
@@ -122,13 +124,31 @@ function EmptyBoard({ onStart }) {
   )
 }
 
+function NoBoards({ onStart, canStart }) {
+  return (
+    <Card className="grid place-items-center text-center min-h-64">
+      <div>
+        <h2 className="text-[17px] font-bold text-ink">No boards yet</h2>
+        <p className="mt-1 mb-3 text-[14px] text-ink-2">A board keeps the panels you check every day in one place.</p>
+        {canStart ? (
+          <Button variant="primary" onClick={onStart}>
+            <Plus size={14} aria-hidden="true" /> New board
+          </Button>
+        ) : (
+          <p className="text-[12px] text-ink-3">Creating a board needs a wider screen</p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function MissingBoard() {
   return (
     <Card title="No such board">
       <p className="text-[14px] text-ink-2">
         This board is not saved in this browser.{' '}
         <Link to="/boards" className="font-semibold text-ink hover:underline">
-          Back to the Chart board
+          Back to your boards
         </Link>
       </p>
     </Card>
@@ -138,6 +158,7 @@ function MissingBoard() {
 export default function Boards() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { search } = useLocation()
   const [boards, setBoards] = useState(loadBoards)
   const [edit, setEdit] = useState(null)
   const [saveFailed, setSaveFailed] = useState(false)
@@ -248,11 +269,14 @@ export default function Boards() {
   ) : null
 
   if (!id) {
+    if (new URLSearchParams(search).has('symbol')) return <Navigate to={`/charts${search}`} replace />
+    if (boards[0]) return <Navigate to={`/boards/${boards[0].id}`} replace />
     return (
       <>
+        <h1 className="sr-only">Boards</h1>
         {tabs}
         {saveNote}
-        <ResearchChart />
+        <NoBoards onStart={newBoard} canStart={canEditHere()} />
       </>
     )
   }
@@ -260,7 +284,7 @@ export default function Boards() {
   if (!board) {
     return (
       <>
-        <h1 className="sr-only">Charts</h1>
+        <h1 className="sr-only">Boards</h1>
         {tabs}
         {saveNote}
         <MissingBoard />

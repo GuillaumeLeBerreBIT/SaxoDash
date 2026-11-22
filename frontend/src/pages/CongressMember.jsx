@@ -11,6 +11,7 @@ import { basisNote, filedLine, partyLabel } from '../lib/congress'
 import { copySentence } from '../lib/copySentence'
 import { fmtNum, fmtPct } from '../lib/format'
 import { researchHref } from '../lib/research'
+import ChartLink from '../components/ChartLink'
 
 const SPAN_8 = 'min-[1100px]:col-span-8'
 const SPAN_4 = 'min-[1100px]:col-span-4'
@@ -53,10 +54,13 @@ function Holdings({ holdings }) {
             {holdings.map((held) => (
               <Tr key={held.ticker}>
                 <Td edge>
-                  <Link to={researchHref(held.ticker, 'congress')} className="inline-flex items-center gap-2.5 font-bold text-ink hover:underline">
-                    <StockLogo ticker={held.ticker} size={28} />
-                    {held.ticker}
-                  </Link>
+                  <span className="flex items-center gap-1">
+                    <Link to={researchHref(held.ticker, 'congress')} className="inline-flex items-center gap-2.5 font-bold text-ink hover:underline">
+                      <StockLogo ticker={held.ticker} size={28} />
+                      {held.ticker}
+                    </Link>
+                    <ChartLink symbol={held.ticker} />
+                  </span>
                 </Td>
                 <Td edge align="right">
                   <div className="flex items-center justify-end gap-2">

@@ -92,14 +92,14 @@ describe('DiscoverShelf', () => {
     renderPage()
     expect(screen.getByRole('link', { name: 'Open FICO chart' })).toHaveAttribute(
       'href',
-      '/boards?symbol=FICO&uic=42&assetType=Stock',
+      '/charts?symbol=FICO&uic=42&assetType=Stock',
     )
   })
 
   it('adds a stock to a watchlist without leaving the page', async () => {
     renderPage()
     await userEvent.click(screen.getByRole('button', { name: 'Add FICO to a list' }))
-    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: /Ideas/ }))
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitemcheckbox', { name: /Ideas/ }))
     expect(toggleList).toHaveBeenCalledWith({ id: 1, name: 'Ideas', items: [] })
     expect(screen.queryByText('Research page')).not.toBeInTheDocument()
   })

@@ -37,6 +37,7 @@ COVERED = {
     'research.PriceLine',
     'research.SymbolNote',
     'research.TextAnnotation',
+    'research.ChartZone',
     'research.TrendLine',
     'research.Watchlist',
     'saxo.SaxoCredential',

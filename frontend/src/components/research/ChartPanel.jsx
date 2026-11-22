@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { CandlestickChart, Crosshair, Maximize2, Sigma } from 'lucide-react'
+import { CandlestickChart, Crosshair, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
 import { Card } from '../ui'
@@ -7,8 +6,7 @@ import { Menu } from './menu'
 import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import EntryBanner from './EntryBanner'
-import PeChip from './PeChip'
-import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
+import { ChartViewSwitch, LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
 
@@ -32,7 +30,8 @@ export default function ChartPanel({
   onDeleteLine,
   onEditLineLabel,
   lineSaveFailed = false,
-  expandHref,
+  viewSwitch,
+  facts = null,
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
@@ -61,18 +60,8 @@ export default function ChartPanel({
         <LineSaveAlert failed={lineSaveFailed} />
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <PeChip chip={guides?.chip} />
+          {viewSwitch ? <ChartViewSwitch value={viewSwitch.value} onChange={viewSwitch.onChange} /> : null}
           <PeriodChange bars={bars} />
-          {expandHref ? (
-            <Link
-              to={expandHref}
-              aria-label="Open advanced chart"
-              title="Open advanced chart"
-              className="w-7 h-7 rounded-[7px] flex items-center justify-center text-ink-3 hover:text-ink hover:bg-hover"
-            >
-              <Maximize2 size={13} />
-            </Link>
-          ) : null}
         </div>
       </div>
 
@@ -101,6 +90,7 @@ export default function ChartPanel({
         priceHeight={CHART_HEIGHT}
         paneHeights={DEFAULT_PANE_HEIGHTS}
       />
+      {facts ? <div className="px-3.5 pb-3.5">{facts}</div> : null}
     </Card>
   )
 }

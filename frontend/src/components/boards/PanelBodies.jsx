@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Link2 } from 'lucide-react'
 
 import {
@@ -11,6 +11,7 @@ import {
   usePortfolioSummary,
   usePositionQuotes,
   usePositions,
+  useSectors,
 } from '../../api/queries'
 import { useSize } from '../../lib/chartGeometry'
 import { DEFAULT_PANE_HEIGHTS } from '../../lib/chartOptions'
@@ -19,8 +20,9 @@ import { COMPANY_DATA, TAB_GATE, tabGate } from '../../lib/companyData'
 import { fmtDate, fmtEur, fmtMoney, fmtNum } from '../../lib/format'
 import { ownershipTickers } from '../../lib/ownership'
 import { trailingReturns } from '../../lib/performance'
+import { pickedSector } from '../../lib/sectors'
 import { DAILY_HORIZON, WIDEST_RANGE_COUNT, chartHref, researchHref } from '../../lib/research'
-import { Alert, Card, InstrumentLogo, Move, Skeleton } from '../ui'
+import { Alert, Card, InstrumentLogo, Move, Skeleton, Tag } from '../ui'
 import AllocationPanel from '../dashboard/AllocationPanel'
 import PortfolioHeatmap from '../dashboard/PortfolioHeatmap'
 import PositionsPanel from '../dashboard/PositionsPanel'
@@ -78,42 +80,10 @@ function usePortfolioRows() {
   return { positionsQuery, positions, quotes }
 }
 
-function FixedList({ board, panel, onFollow }) {
-  const list = panel.cfg.list
-  return (
-    <Card
-      className={FILL}
-      context={`Custom list · ${list.length} symbol${list.length === 1 ? '' : 's'}`}
-      dot="off"
-      title={panel.cfg.title || 'Watchlist'}
-    >
-      <ul className="-mx-2">
-        {list.map((symbol) => (
-          <li key={symbol}>
-            <button
-              type="button"
-              aria-current={symbol === board.sym || undefined}
-              onClick={() => onFollow(symbol)}
-              className={`w-full text-left flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
-                symbol === board.sym ? 'bg-selected' : 'hover:bg-hover'
-              }`}
-            >
-              <InstrumentLogo symbol={symbol} size={24} />
-              <span className="text-[13.5px] font-semibold text-ink">{symbol}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-[12px] text-ink-3">A fixed list carries tickers only; quotes show in your saved watchlists.</p>
-    </Card>
-  )
-}
-
-export function WatchlistPanel({ board, panel, onFollow }) {
+export function WatchlistPanel({ board, onFollow }) {
   const positions = usePositions().data ?? NO_POSITIONS
   const held = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
-  if (Array.isArray(panel.cfg?.list)) return <FixedList board={board} panel={panel} onFollow={onFollow} />
-  return <WatchlistRail fill symbol={board.sym} onSelectSymbol={(symbol) => onFollow(symbol)} heldSymbols={held} />
+  return <WatchlistRail fill gridView symbol={board.sym} onSelectSymbol={(symbol) => onFollow(symbol)} heldSymbols={held} />
 }
 
 function chartDot({ error, instrument, resolving }) {
@@ -411,6 +381,90 @@ export function NetWorthPanel() {
         {day?.abs != null ? <span className="num text-ink-2">{fmtEur(day.abs, { sign: true, decimals: 0 })}</span> : null}
         <span className="text-[12px] font-normal text-ink-3">day</span>
       </div>
+    </Card>
+  )
+}
+
+function useSectorPick(board) {
+  const [params, setParams] = useSearchParams()
+  const query = useSectors()
+  const sector = pickedSector(query.data?.sectors, params.get('sector'), board.sym)
+  const pick = (name) => setParams({ sector: name }, { replace: true })
+  return { query, sector, pick }
+}
+
+export function SectorFlowPanel({ board }) {
+  const { query, sector, pick } = useSectorPick(board)
+  if (query.isLoading) return <LoadingCard context="Discover" title="Sector money flow" />
+  if (query.error || !query.data) return <Unavailable title="Sector money flow" what="the sectors" />
+  return (
+    <Card
+      className={FILL}
+      context={`Equal-weight average of each sector's stocks · scan ${fmtDate(query.data.as_of)}`}
+      dot="warn"
+      title="Sector money flow"
+    >
+      <div className="flex items-center gap-2 px-2 pb-1 text-[11px] text-ink-3">
+        <span className="flex-1">Sector</span>
+        <span className="w-[76px] text-right">Today</span>
+        <span className="w-[76px] text-right">1 month</span>
+      </div>
+      <ul className="-mx-2">
+        {query.data.sectors.map((entry) => (
+          <li key={entry.sector}>
+            <button
+              type="button"
+              aria-current={entry.sector === sector?.sector || undefined}
+              onClick={() => pick(entry.sector)}
+              className={`flex items-center gap-2 w-full min-h-11 px-2 rounded-lg text-left ${
+                entry.sector === sector?.sector ? 'bg-selected' : 'hover:bg-hover'
+              }`}
+            >
+              <span className="flex-1 min-w-0 truncate text-[13.5px] font-semibold text-ink">{entry.sector}</span>
+              <Move value={entry.change_1d} className="w-[76px] text-right text-[13px]" />
+              <Move value={entry.change_1m} className="w-[76px] text-right text-[13px]" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+export function SectorStocksPanel({ board, onFollow }) {
+  const { query, sector } = useSectorPick(board)
+  const positions = usePositions().data ?? NO_POSITIONS
+  const held = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
+  if (query.isLoading) return <LoadingCard context="Discover" title="Sector stocks" />
+  if (query.error || !sector) return <Unavailable title="Sector stocks" what="the sector's stocks" />
+  return (
+    <Card
+      className={FILL}
+      context={`Sector · ${sector.count} stock${sector.count === 1 ? '' : 's'}, largest first`}
+      dot="warn"
+      title={sector.sector}
+    >
+      <ul className="-mx-2">
+        {sector.stocks.map((stock) => (
+          <li key={stock.ticker}>
+            <button
+              type="button"
+              aria-current={stock.ticker === board.sym || undefined}
+              onClick={() => onFollow(stock.ticker)}
+              className={`flex items-center gap-2.5 w-full min-h-11 px-2 rounded-lg text-left ${
+                stock.ticker === board.sym ? 'bg-selected' : 'hover:bg-hover'
+              }`}
+            >
+              <InstrumentLogo symbol={stock.ticker} size={24} />
+              <span className="w-14 shrink-0 text-[13.5px] font-semibold text-ink">{stock.ticker}</span>
+              <span title={stock.name} className="flex-1 min-w-0 truncate text-[12px] text-ink-3">{stock.name}</span>
+              {held.has(stock.ticker) ? <Tag tone="held">Held</Tag> : null}
+              <span className="text-[13px] num text-ink">{fmtMoney(stock.last_close, 'USD')}</span>
+              <Move value={stock.change_1d} className="w-[72px] text-right text-[13px]" />
+            </button>
+          </li>
+        ))}
+      </ul>
     </Card>
   )
 }

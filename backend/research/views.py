@@ -21,10 +21,11 @@ from saxo.credentials import connection_state
 from users.owner import owner
 from users.permissions import IsOwner
 
-from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
-from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
+from . import discover, earnings, filings, finnhub, market, scan_progress, sectors, shelves, statements, tasks
+from .models import ChartZone, PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
+    ChartZoneSerializer,
     PriceLineSerializer,
     SymbolNoteSerializer,
     TextAnnotationSerializer,
@@ -294,6 +295,27 @@ class TrendLineDetailView(RetrieveUpdateDestroyAPIView):
         return TrendLine.objects.filter(user=self.request.user)
 
 
+class ChartZoneListCreateView(ListCreateAPIView):
+    serializer_class = ChartZoneSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return ChartZone.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+
+class ChartZoneDetailView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ['patch', 'delete', 'options']
+    serializer_class = ChartZoneSerializer
+
+    def get_queryset(self):
+        return ChartZone.objects.filter(user=self.request.user)
+
+
 class TextAnnotationListCreateView(ListCreateAPIView):
     serializer_class = TextAnnotationSerializer
     pagination_class = None
@@ -317,11 +339,15 @@ class TextAnnotationDetailView(RetrieveUpdateDestroyAPIView):
 
 class DiscoverView(APIView):
     def get(self, request):
+        if request.query_params.get('view') == 'screens':
+            choices = [{'key': shelf.key, 'title': shelf.title, 'group': shelf.group} for shelf in shelves.SHELVES]
+        else:
+            choices = [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES]
         return Response({
             'as_of': discover.as_of(),
             'health': discover.health(),
             'groups': [{'key': key, 'title': title} for key, title in shelves.GROUPS],
-            'shelves': [shelves.payload(shelf, shelves.CARD_LIMIT) for shelf in shelves.SHELVES],
+            'shelves': choices,
         })
 
 
@@ -344,3 +370,8 @@ class DiscoverShelfView(APIView):
         if shelf is None:
             raise Http404
         return Response({**shelves.payload(shelf), 'as_of': discover.as_of()})
+
+
+class SectorsView(APIView):
+    def get(self, request):
+        return Response({'as_of': discover.as_of(), 'sectors': sectors.overview()})

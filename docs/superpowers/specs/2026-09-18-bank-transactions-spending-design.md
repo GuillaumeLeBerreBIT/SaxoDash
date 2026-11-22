@@ -41,7 +41,7 @@ summary tile).
 - **Saxo cash movements.** This is bank-transaction data only. Saxo's
   `transactions.Transaction` (BUY/SELL/DIVIDEND/DEPOSIT/FEE) is untouched; the
   existing `CashFlowChart` on the Accounts page keeps tracking that, separately
-  from the new "Spending" concept (see `CONTEXT.md`).
+  from the new "Spending" concept (see `GLOSSARY.md`).
 - **A category-management UI.** Categories are a fixed set in code (matching every
   other choices-driven field in this app: `Transaction.TYPE_CHOICES`,
   `EnableBankingCredential.BANK_CHOICES`, `BankSyncRun.OUTCOME_CHOICES`) — not a

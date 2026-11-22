@@ -8,6 +8,7 @@ import { EarlierCusipBadge, OptionBadge, YouBadge } from './HoldingBadges'
 import { fmtNum, fmtPct } from '../../lib/format'
 import { fmtUsdCompact, holdingLabel } from '../../lib/investors'
 import { researchHref } from '../../lib/research'
+import ChartLink from '../ChartLink'
 
 export default function HoldingsTable({ holdings, showChange = true, maxWeight }) {
   const navigate = useNavigate()
@@ -41,13 +42,16 @@ export default function HoldingsTable({ holdings, showChange = true, maxWeight }
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
                       {href ? (
-                        <Link
-                          to={href}
-                          onClick={(e) => e.stopPropagation()}
-                          className="font-bold text-ink hover:underline"
-                        >
-                          {h.ticker}
-                        </Link>
+                        <>
+                          <Link
+                            to={href}
+                            onClick={(e) => e.stopPropagation()}
+                            className="font-bold text-ink hover:underline"
+                          >
+                            {h.ticker}
+                          </Link>
+                          <ChartLink symbol={h.ticker} onClick={(e) => e.stopPropagation()} />
+                        </>
                       ) : (
                         <span className="font-semibold text-ink">{holdingLabel(h)}</span>
                       )}

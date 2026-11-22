@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   COLS,
   MIN_H,
@@ -60,10 +60,10 @@ afterEach(() => {
 })
 
 describe('PANEL_TYPES', () => {
-  it('lists the twelve panel types with a name, blurb and default size', () => {
+  it('lists the fourteen panel types with a name, blurb and default size', () => {
     expect(Object.keys(PANEL_TYPES)).toEqual([
       'watchlist', 'chart', 'heatmap', 'earnings', 'news', 'symbol',
-      'positions', 'allocation', 'shelf', 'funds', 'performance', 'networth',
+      'positions', 'allocation', 'shelf', 'funds', 'performance', 'sectors', 'sectorStocks', 'networth',
     ])
     for (const t of Object.values(PANEL_TYPES)) {
       expect(typeof t.name).toBe('string')
@@ -76,15 +76,17 @@ describe('PANEL_TYPES', () => {
 })
 
 describe('defaultBoards', () => {
-  it('returns Morning check and Semiconductors with the prototype layouts', () => {
+  it('returns Morning check, Semiconductors and Sectors with the prototype layouts', () => {
     const boards = defaultBoards()
     expect(boards.map((b) => [b.id, b.name, b.sym])).toEqual([
       ['morning', 'Morning check', 'GOOGL'],
       ['semis', 'Semiconductors', 'NVDA'],
+      ['sectors', 'Sectors', ''],
     ])
     expect(byId(boards[0], 'p3')).toEqual({ id: 'p3', type: 'heatmap', x: 9, y: 0, w: 3, h: 6 })
-    expect(byId(boards[1], 'p2').cfg).toEqual({ list: ['NVDA', 'AMD', 'TSM', 'AVGO', 'ASML'], title: 'Chips' })
+    expect(byId(boards[1], 'p2').cfg).toBeUndefined()
     expect(byId(boards[1], 'p3').cfg).toEqual({ shelf: 'above-moving-averages' })
+    expect(boards[2].panels.map((p) => p.type)).toEqual(['sectors', 'chart', 'sectorStocks', 'symbol'])
     boards.forEach((b) => {
       expectNoOverlap(b.panels)
       expectInGrid(b.panels)
@@ -277,6 +279,10 @@ describe('operations', () => {
 })
 
 describe('loadBoards and saveBoards', () => {
+  beforeEach(() => {
+    localStorage.setItem('saxodash:boards-seeded', JSON.stringify(['sectors']))
+  })
+
   it('returns the defaults when storage is empty', () => {
     expect(loadBoards()).toEqual(defaultBoards())
   })
@@ -337,6 +343,22 @@ describe('loadBoards and saveBoards', () => {
       ]),
     )
     expect(loadBoards().map((b) => b.name)).toEqual(['First', 'Third'])
+  })
+
+  it('returns the defaults when storage is empty', () => {
+    localStorage.clear()
+    expect(loadBoards()).toEqual(defaultBoards())
+  })
+
+  it('adds the Sectors board once to boards saved before it existed', () => {
+    localStorage.clear()
+    localStorage.setItem('saxodash:boards', JSON.stringify([{ id: 'mine', name: 'Mine', panels: [] }]))
+
+    expect(loadBoards().map((b) => b.id)).toEqual(['mine', 'sectors'])
+    expect(JSON.parse(localStorage.getItem('saxodash:boards')).map((b) => b.id)).toEqual(['mine', 'sectors'])
+
+    saveBoards([{ id: 'mine', name: 'Mine', panels: [] }])
+    expect(loadBoards().map((b) => b.id)).toEqual(['mine'])
   })
 
   it('swallows storage errors on save and reports false', () => {

@@ -121,6 +121,7 @@ describe('Dashboard', () => {
     expect(list).toHaveTextContent('NVIDIA is 100.0% of your portfolio')
     expect(list).toHaveTextContent('Trim')
     expect(within(list).getByRole('link', { name: 'NVIDIA is 100.0% of your portfolio' })).toHaveAttribute('href', expect.stringContaining('/research?symbol=NVDA'))
+    expect(within(list).getByRole('link', { name: 'Open NVDA chart' })).toHaveAttribute('href', expect.stringContaining('/charts?symbol=NVDA'))
   })
 
   it('says nothing needs doing when every holding is fine', () => {
@@ -143,6 +144,7 @@ describe('Dashboard', () => {
     const tickers = within(holdings).getAllByText(/^(AAA|BBB)$/).map((node) => node.textContent)
     expect(tickers).toEqual(['AAA', 'BBB'])
     expect(within(holdings).getByText('Passes quality screen')).toHaveClass('text-ink-3')
+    expect(within(holdings).getByRole('link', { name: 'Open AAA chart' })).toHaveAttribute('href', expect.stringContaining('/charts?symbol=AAA'))
   })
 
   it('keeps the data notes in one quiet line at the bottom', () => {

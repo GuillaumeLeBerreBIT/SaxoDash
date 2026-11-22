@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaxoDash · Automated Discover preview</title>
+<style>
+:root{color-scheme:dark;--top:#25211c;--page:#171512;--pane:#12100e;--pill:#1d1b19;--line:#35312d;--ink:#fff;--muted:#aaa6a2;--warn:#f5c542;--green:#5bc860}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(var(--top),var(--page) 560px);color:var(--ink);font:15px/1.55 Inter,system-ui,sans-serif;min-height:100vh}
+button,input{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid white;outline-offset:3px}
+header{position:sticky;top:0;z-index:2;background:#25211cf5}
+.bar{display:flex;align-items:center;gap:24px;padding:14px 24px}
+.pages{display:flex;align-items:center;gap:22px;overflow:auto;scrollbar-width:none}
+.pages span{color:var(--muted);white-space:nowrap;font-size:17px;font-weight:700}
+.pages [aria-current]{color:var(--ink)}
+.account{margin-left:auto;display:flex;align-items:center;gap:12px;white-space:nowrap}
+.search-pill,.avatar{background:var(--pill);border:1px solid var(--line);border-radius:9px;padding:5px 10px;color:var(--muted);font-size:13px}
+.search-pill kbd{margin-left:17px}.account small{display:block;color:var(--muted)}.avatar{color:white}.mobile-title,.mobile-nav{display:none}
+main{max-width:1500px;margin:auto;padding:8px 24px 36px}
+.section-nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:22px}
+.section-nav button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 5px 11px;color:var(--muted);font-weight:680}
+.section-nav button[aria-current=true]{color:white;border-bottom-color:white}
+.demo{font-size:12px;color:var(--muted);margin-left:auto}
+.button{border:1px solid var(--line);border-radius:8px;background:var(--pill);color:var(--ink);padding:7px 12px;font-weight:630}
+.button:hover{border-color:#79716b}.primary{background:white;color:var(--pane);border-color:white}
+h1{font-size:clamp(25px,4vw,36px);line-height:1.15;letter-spacing:-.035em;margin:6px 0 9px}
+h2{font-size:19px;line-height:1.25;margin:0}h3{font-size:13px;margin:0 0 4px}p{margin:0}
+.lede{max-width:74ch;color:var(--muted)}.edition{color:var(--muted);font-size:13px}
+.layout{display:grid;grid-template-columns:minmax(0,2.5fr) minmax(235px,1fr);gap:20px;margin-top:20px;align-items:start}
+.stack{display:grid;gap:12px}.panel{background:var(--pane);border:1px solid var(--line);border-radius:12px;padding:19px}
+.company{display:flex;align-items:center;gap:11px}.logo{display:grid;place-items:center;background:#292521;color:white;font-weight:750;width:38px;height:38px;border-radius:8px;flex-shrink:0}
+.muted{color:var(--muted);font-size:13px}.lead{margin-top:12px}
+.evidence{margin-top:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:12px}.evidence p{font-size:14px;color:var(--muted)}.risk h3{color:var(--warn)}
+.actions{margin-top:15px}.side p{margin-top:6px;color:var(--muted)}.side div+div{margin-top:14px;border-top:1px solid var(--line);padding-top:13px}
+.numbers{font-variant-numeric:tabular-nums}.wide{margin-top:20px}
+.scenario{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.scenario div{background:var(--pill);border-radius:7px;padding:12px}.scenario strong{display:block;font-size:23px}.scenario small{display:block;color:var(--muted)}
+details{margin-top:12px}summary{cursor:pointer;font-weight:650}ul{margin:9px 0 0;padding-left:20px}li+li{margin-top:6px}[hidden]{display:none!important}
+.search-field{width:100%;padding:10px 13px;background:var(--pane);border:1px solid #6b6865;border-radius:10px;color:white}.browse-layout{grid-template-columns:240px minmax(0,1fr)}.filters label{display:block;color:var(--muted);margin-top:8px}
+.stock-row{display:flex;justify-content:space-between;align-items:center;gap:10px}.stock-row+.stock-row{border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+.research-tabs{display:flex;gap:18px;overflow:auto;border-bottom:1px solid var(--line);margin-top:16px;padding-bottom:8px;color:var(--muted);white-space:nowrap}.research-tabs strong{color:white}
+@media(max-width:1050px){.pages{gap:14px}.pages span{font-size:14px}.search-pill kbd{display:none}}
+@media(max-width:759px){.bar,main{padding-inline:16px}.pages{display:none}.mobile-title{display:block;font-weight:750;font-size:20px}.layout,.evidence{grid-template-columns:1fr}.panel{padding:15px}.section-nav{margin-bottom:16px}.demo{margin-left:0}.account{gap:7px}main{padding-bottom:82px}.mobile-nav{position:fixed;bottom:0;display:flex;justify-content:space-around;gap:5px;padding:13px 6px;background:var(--pane);border-top:1px solid var(--line);width:100%;color:var(--muted);font-size:12px}.mobile-nav [aria-current]{color:white;font-weight:700}}
+@media(max-width:390px){.scenario{grid-template-columns:1fr}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.discover-search,.section-heading{display:flex;justify-content:space-between;align-items:center;gap:14px}
+.preview-controls{margin:0;position:relative;flex-shrink:0;font-size:12px;color:var(--muted)}
+.preview-controls div{position:absolute;right:0;top:24px;z-index:1;display:grid;gap:5px;background:var(--pane);padding:8px;border:1px solid var(--line);border-radius:9px;white-space:nowrap}
+.filters{margin:0}.filters summary{font-size:15px}.filters fieldset{border:0;border-top:1px solid var(--line);padding:12px 0;margin:12px 0}.filters legend{float:left;width:100%;font-weight:700;font-size:13px;margin-bottom:5px}
+
+:root{--mint:#b1d7c8;--sand:#e3c99a;--stock-blue:#9fbac7;--stock-blue-dark:#26353b;--stock-gold-dark:#393229}
+main{max-width:1320px;padding-top:20px}
+.discover-head,.browse-head,.story-foot,.tickerline,.toolbar,.screen-switch{display:flex;align-items:center;gap:12px}
+.discover-head,.browse-head,.story-foot{justify-content:space-between}
+.discover-head{margin-bottom:18px}.discover-head h1{font-size:25px;margin:0}.toolbar{gap:8px}.search-field{width:min(28vw,310px);font-size:14px;padding:9px 12px}
+.filters{position:relative}.filters summary{list-style:none}.filters summary::-webkit-details-marker{display:none}
+.filter-pop{position:absolute;z-index:3;right:0;min-width:220px;padding:0 16px 10px;background:var(--pane);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px #0006}
+.filters fieldset{margin:5px 0}.filters label{display:flex;gap:6px;align-items:center;min-height:32px}
+.edition-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:0}
+.edition-head h2,.browse-head h2{font-size:20px}.edition-date,.ticker,.reading,.sample{font-size:12px;letter-spacing:.015em;font-variant-numeric:tabular-nums}
+.edition-date,.ticker,.sample{color:var(--muted)}.sample{margin-left:8px}
+.stories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.story{--accent:var(--stock-blue);--tint:var(--stock-blue-dark);padding:18px 20px 0;border:1px solid var(--line);border-top:2px solid var(--accent);border-radius:12px;background:linear-gradient(155deg,#202222,var(--pane) 68%);min-width:0;display:flex;flex-direction:column}
+.story.gold{--accent:var(--sand);--tint:var(--stock-gold-dark);background:linear-gradient(155deg,#27241e,var(--pane) 68%)}
+.monogram{flex:none;display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--tint);color:var(--accent);font:bold 14px ui-monospace,monospace}
+.tickerline{gap:9px}.tickerline h3,.tickerline h2{font-size:15px;line-height:1.3;margin:0}.ticker{display:block}
+.thesis{font:500 clamp(21px,2vw,29px)/1.12 Georgia,serif;letter-spacing:-.025em;text-wrap:balance;margin:14px 0 12px;max-width:34ch}
+.facts{margin:0 0 10px}.facts figcaption{font-size:12px;color:var(--muted);margin-bottom:5px}
+.measure{display:grid;grid-template-columns:minmax(100px,1.3fr) minmax(40px,1fr) 52px;align-items:center;gap:10px;font-size:13px}.measure+.measure{margin-top:4px}
+.measure i{display:block;height:5px;background:var(--tint);border-radius:3px}.measure b{display:block;background:var(--accent);height:100%;border-radius:inherit}.measure strong{text-align:right;font-variant-numeric:tabular-nums}
+.caution{margin:2px 0 12px;font-size:13px;color:#d0cbc6}.caution strong{color:var(--sand);margin-right:6px}
+.story-foot{border-top:1px solid var(--line);margin-top:auto;gap:8px;min-height:44px}.reading{color:var(--muted)}
+a{color:inherit}.story-link,.jump{display:inline-flex;align-items:center;min-height:44px;font-size:13px;font-weight:650;text-decoration:none}.story-link{gap:6px}.story-link:hover,.jump:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid white;outline-offset:2px}.edition-context{margin:4px 0 0;font-size:13px;color:var(--muted)}.edition-context summary{width:fit-content;min-height:40px;align-content:center}.edition-context p{max-width:76ch}
+.browser{margin-top:16px;border-top:1px solid var(--line);padding-top:17px;scroll-margin-top:68px}.browse-head{flex-wrap:wrap;gap:6px}.screen-switch{gap:4px;flex-wrap:wrap}.screen-switch button{border:1px solid transparent;border-radius:7px;background:none;color:var(--muted);font:inherit;font-size:13px;font-weight:600;min-height:38px;padding:4px 10px}.screen-switch button[aria-pressed=true]{background:var(--pill);color:white;border-color:#655e56}.screen-switch button:hover{color:white}
+.browse-description{font-size:13px;color:var(--muted);margin:8px 0}.stock-list{border-top:1px solid var(--line)}.stock-list li{display:grid;grid-template-columns:minmax(180px,1.25fr) minmax(110px,.6fr) minmax(120px,1fr);gap:14px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);margin:0}
+.stock-list{list-style:none;padding:0;margin:0}.stock-list strong{font-size:14px}.stock-list .ticker{font-size:12px}.screen-value{text-align:right;font-size:14px}.jump{color:var(--muted)}.jump-mobile{display:none}
+.preview-footer{margin-top:20px;display:flex;align-items:center;gap:14px;color:var(--muted);font-size:12px}.preview-controls div{top:auto;bottom:100%;left:0;right:auto}
+.stock-row{min-height:50px}.results-head{display:flex;align-items:center;justify-content:space-between}.results-head h2{font-size:20px}.results-head{float:right}.edition-head h1{font-size:24px}
+@media(max-width:759px){main{padding-top:10px}.discover-head{gap:8px;margin-bottom:12px}.discover-head{flex-wrap:wrap}.discover-head .edition-head{width:100%}.toolbar{width:100%}.search-field{flex:1;min-width:0;width:auto}.edition-head{align-items:center;gap:5px}.stories{grid-template-columns:1fr;gap:10px}.story{padding:13px 14px 0}.thesis{font-size:22px;margin:10px 0}.sample{margin-left:6px}.jump-mobile{display:inline-flex;white-space:nowrap;font-size:12px}.browse-head{display:block}.screen-switch{margin-top:7px}.stock-list li{grid-template-columns:minmax(0,1fr) auto;gap:6px}.stock-list .sector{display:none}.filters summary,.search-field,.screen-switch button,.edition-context summary{min-height:44px}.preview-footer{padding-bottom:env(safe-area-inset-bottom)}.mobile-nav{z-index:2;padding-bottom:max(13px,env(safe-area-inset-bottom))}.edition-head h2{font-size:19px}.edition-date{font-size:12px}.story-foot,.reading{font-size:12px}}
+
+.index-search{display:flex;align-items:center;gap:16px;margin:0 0 18px}.index-search label{font-weight:700;white-space:nowrap}.index-search .search-field{flex:1;width:100%;min-width:0;background:var(--pane);min-height:46px}
+.workspace{display:grid;grid-template-columns:180px minmax(0,1fr) minmax(275px,29%);gap:24px;align-items:start}
+.facets{padding-right:12px;border-right:1px solid var(--line)}.facets h2{font-size:16px}.facets fieldset{min-inline-size:0;border:0;border-top:1px solid var(--line);padding:10px 0 4px;margin:9px 0}.facets legend{float:none;width:100%;margin-bottom:5px;font-weight:650;font-size:13px}.facets label{display:flex;gap:6px;align-items:center;min-height:28px;font-size:13px;color:#ddd7cf}.facets input{accent-color:#afd5c5}
+.directory-title,.count-line{display:flex;align-items:center;justify-content:space-between;gap:8px}.directory-title{margin-bottom:10px}.directory h2,#shortlist-title{font-size:21px}.directory .screen-switch{gap:3px}.screen-switch button{font-size:13px;padding-inline:8px}.screen-switch button[aria-pressed=true]{color:var(--mint);border-color:#647c71}
+.directory-controls{display:flex;gap:10px;margin:14px 0 8px}.directory-controls label{display:grid;gap:4px;flex:1;min-width:0;color:var(--muted);font-size:12px}.directory-controls select{min-width:0;width:100%;height:37px;border:1px solid var(--line);background:var(--pane);color:var(--ink);border-radius:7px;padding:0 6px;font:inherit;font-size:13px}
+.count-line{min-height:34px;color:var(--muted);font-size:13px}.count-line button{background:transparent;color:var(--ink);border:0;text-decoration:underline;font-size:13px}
+.listing{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,.85fr) minmax(0,1fr);gap:8px;align-items:center}
+.list-label{padding:7px 8px;background:var(--pill);color:var(--muted);font-size:12px}.stock-entry{margin:0;border-bottom:1px solid var(--line)}.stock-entry summary{padding:9px 8px;font-size:13px;font-weight:450;list-style:none}.stock-entry summary:hover{background:var(--pill)}.stock-entry summary::-webkit-details-marker{display:none}.stock-entry strong{font-size:14px;display:block}.stock-entry .ticker{font-size:11px}.stock-entry[open] summary{background:var(--pill)}.stock-detail{background:var(--pane);padding:10px 12px;color:var(--muted);font-size:13px}.stock-detail a{color:var(--ink);display:inline-block;padding:6px 0}.stock-entry .valuation{color:var(--sand)}#no-results,#show-more{margin:12px 0}#show-more{width:100%}
+#shortlist{scroll-margin-top:76px}.stories{grid-template-columns:1fr;gap:12px;margin-top:10px}.story{padding:14px 14px 0}.thesis{font-size:22px;margin:10px 0}.measure{grid-template-columns:minmax(99px,1.2fr) minmax(25px,1fr) 46px;gap:7px}.facts{margin-bottom:7px}.shortlist-jump,#filter-toggle{display:none}
+@media(max-width:1099px){.workspace{grid-template-columns:minmax(0,1fr) minmax(265px,31%);gap:14px}.facets{grid-column:1/-1;border:0;padding:0}.facet-title{display:none}#filter-toggle{display:block}.facets:not(.expanded) #facet-body{display:none}#facet-body{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.index-search{margin-bottom:8px}}
+@media(max-width:760px){.workspace{display:block}.directory-title{margin:8px 0 0}.shortlist-jump{display:inline-flex;color:var(--mint)}.index-search{display:block}.index-search label{display:block;font-size:13px;margin-bottom:4px}.facets{margin:7px 0 0}#facet-body{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.facets label{min-height:38px}.directory .screen-switch{margin:4px 0;gap:1px}.directory .screen-switch button{min-height:36px}.directory-controls{margin-top:8px}.directory-controls select{height:40px}.list-label,.stock-entry summary{font-size:12px}.stock-entry strong{font-size:13px}.listing{grid-template-columns:minmax(0,1.55fr) .72fr .85fr;gap:5px}#shortlist{margin-top:22px}.index-search .search-field{display:block}.search-pill{display:none}}
+
+.workspace{grid-template-columns:180px minmax(0,1fr)}.directory{min-width:0}.shortlist-button,.view-switch button,.reset{font:inherit;cursor:pointer}
+.shortlist-button{background:var(--pill);color:var(--sand);border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px}.shortlist-button[aria-expanded=true]{border-color:var(--sand)}
+#shortlist{padding:12px 0;margin:0}.stories{grid-template-columns:repeat(2,minmax(0,1fr))}
+.directory .screen-switch{border-bottom:1px solid var(--line);padding-bottom:7px;gap:4px}.screen-switch select,.sort-control select{font:inherit;font-size:13px;color:var(--ink);background:var(--pane);border:1px solid var(--line);border-radius:6px;height:35px;max-width:100%;padding-inline:6px}
+.screen-switch select{width:145px}.screen-switch select.selected{width:auto;max-width:100%;border-color:#647c71;color:var(--mint)}
+.explorer-tools,.view-switch,.card-foot,.card-identity,.price-strip,.research-top{display:flex;align-items:center;gap:10px}.explorer-tools{flex-wrap:wrap;margin:10px 0;color:var(--muted);font-size:13px}.sort-control{margin-left:auto;min-width:0}.sort-control label{display:flex;align-items:center;gap:6px}.view-switch{gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden}.view-switch button{border:0;background:var(--pane);color:var(--muted);height:33px;padding:0 12px}.view-switch [aria-pressed=true]{color:var(--ink);background:#3b3731}.view-switch button:focus-visible{outline-offset:-2px}.reset{border:0;background:transparent;text-decoration:underline;color:var(--ink);font-size:13px}
+.card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.result-card{min-width:0;background:var(--pane);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column}.card-identity{align-items:flex-start}.stock-mark{flex:none;display:grid;place-items:center;width:33px;height:33px;border-radius:8px;background:#263630;color:var(--mint);font:bold 13px ui-monospace,monospace}.result-card:nth-child(3n+2) .stock-mark{background:#32323c;color:#c8c9dd}.result-card:nth-child(3n) .stock-mark{background:#393229;color:var(--sand)}
+.card-identity h3{font-size:16px;line-height:1.25;margin:0}.card-identity a,.comparison th a{text-decoration:none}.card-identity a:hover,.comparison th a:hover{text-decoration:underline}.business{font-size:13px;color:var(--muted);margin:7px 0}.price-strip{justify-content:space-between;gap:8px;margin:5px 0}.price-strip strong{font-size:21px;font-variant-numeric:tabular-nums}.trend{margin:0;max-width:44%;width:105px;text-align:right}.trend canvas{display:block;width:100%;height:29px}.trend figcaption,.price-strip small{display:block;color:var(--muted);font-size:11px}.reason{font-size:14px;margin:8px 0 12px;line-height:1.42}.card-foot{justify-content:space-between;margin-top:auto;border-top:1px solid var(--line);padding-top:6px;font-size:13px}.card-foot a,.comparison a{color:var(--ink)}.save{font:inherit;font-size:13px;background:none;border:1px solid var(--line);border-radius:7px;padding:5px 9px;color:var(--muted)}.save[aria-pressed=true]{color:var(--mint);border-color:#607b6d}
+.table-wrap{overflow:auto}.comparison{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}.comparison th,.comparison td{text-align:left;padding:10px 6px;border-bottom:1px solid var(--line)}.comparison thead{color:var(--muted);background:var(--pill)}.comparison thead th{font-weight:500}.reason-cell{max-width:36ch}.research-top{justify-content:space-between}.research-price{font-size:30px}.overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.overview-grid dt{font-size:13px;color:var(--muted)}.overview-grid dd{margin:3px 0;font-weight:650}
+@media(max-width:1099px){.workspace{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:860px){.card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.card-grid,.stories{grid-template-columns:1fr}.directory-title{align-items:center;flex-wrap:wrap;margin-bottom:8px}.shortlist-button{font-size:12px;min-height:36px}.explorer-tools{gap:6px}.sort-control{order:3;flex-basis:100%;margin-left:0}.view-switch{margin-left:auto}.explorer-tools select{flex:1}.comparison :is(th,td).optional{display:none}.comparison th,.comparison td{padding:8px 3px}.overview-grid{grid-template-columns:1fr 1fr}.trend{max-width:40%}.result-card{padding:13px}.screen-switch select{width:130px}}
+.mobile-context{display:none}@media(max-width:620px){.mobile-context{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:4px}.comparison td{vertical-align:top}}
+
+.mobile-screen{display:none}
+@media(max-width:620px){
+#discover{position:relative}.index-search{padding-right:85px;margin-bottom:8px}.index-search label{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+#filter-toggle{position:absolute;right:0;top:0;min-height:46px;min-width:75px}.directory-title h2{font-size:19px}.directory-title{gap:5px}.shortlist-button{background:none;border:0;padding:0;font-size:12px}
+.directory .screen-switch{display:none}.mobile-screen{display:flex;align-items:center;font-size:13px;gap:8px;color:var(--muted)}.mobile-screen select{flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--pane);color:var(--ink);height:36px;padding:0 6px}
+.explorer-tools{margin:6px 0}.sort-control{flex:1;order:0}.sort-control label{font-size:0}.sort-control select{font-size:12px;width:100%;height:34px}.explorer-tools #result-count{flex:1 0 100%;font-size:12px}.view-switch button{padding-inline:9px}
+}
+
+.edition-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px}.edition-toolbar a{color:var(--mint)}
+#candidate-list{list-style:none;padding:0;margin:0}.candidate-labels,.candidate-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) minmax(0,1.3fr) 80px;align-items:start;gap:22px}
+.candidate-labels{margin-top:20px;padding:9px 14px;background:var(--pill);color:var(--muted);font-size:13px}
+.candidate-row{margin:0;padding:16px 14px;border-bottom:1px solid var(--line);font-size:14px}.candidate-row p{max-width:48ch}.candidate-row .reading{display:block;margin-top:4px}.candidate-row .save{justify-self:start}
+.candidate-name{font-weight:700}.candidate-risk{color:#d5cfca}.candidate-risk b{display:none}.candidate-row a:focus-visible{outline:2px solid var(--mint)}
+@media(max-width:720px){.candidate-labels{display:none}#candidate-list{margin-top:16px}.candidate-row{grid-template-columns:minmax(0,1fr) auto;gap:7px 10px;padding:14px 0}.candidate-name{font-size:16px}.candidate-intro{grid-column:1}.candidate-row .save{grid-column:2;grid-row:1}.candidate-note,.candidate-risk{grid-column:1/-1}.candidate-risk b{display:inline;color:var(--sand)}}
+
+#watchlist-picker{position:fixed;inset:auto;margin:0;width:min(220px,calc(100vw - 16px));padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--pane);color:var(--ink);box-shadow:0 8px 28px #0006}
+#watchlist-picker button{width:100%;min-height:40px;display:grid;grid-template-columns:16px 1fr auto;gap:8px;align-items:center;text-align:left;border:0;border-radius:6px;background:none;color:var(--ink);font:inherit;font-size:14px;padding:5px 8px}
+#watchlist-picker button:focus-visible,#watchlist-picker button:hover{background:var(--pill);outline:1px solid var(--line);outline-offset:-1px}
+.list-check{color:var(--mint)}.list-count{color:var(--muted);font-variant-numeric:tabular-nums}
+button.save{display:inline-grid;place-items:center;flex:none;width:36px;height:36px;padding:0;background:none;border:0;color:var(--muted)}button.save:hover,button.save:focus-visible{background:var(--pill);color:var(--ink)}
+button.save[data-listed=true]{color:var(--sand)}button.save svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}button.save[data-listed=true] svg{fill:currentColor}
+.card-identity .save{margin-left:auto}.card-identity{align-items:center}
+@media(max-width:720px){button.save,#watchlist-picker button{min-width:44px;min-height:44px}}
+
+#watchlist-picker{width:min(238px,calc(100vw - 16px));overflow-y:auto;overscroll-behavior:contain}
+.list-heading{display:flex;align-items:baseline;justify-content:space-between;padding:7px 9px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
+.list-heading strong{font-size:13px;color:var(--ink)}.list-check{width:15px;height:15px;display:grid;place-items:center;border:1px solid #77726c;border-radius:4px;font-size:11px;font-weight:750;line-height:1}
+#watchlist-picker [aria-checked=true] .list-check{background:var(--mint);border-color:var(--mint);color:var(--pane)}
+@supports (appearance:base-select) and selector(::picker(select)){
+  @media(min-width:621px){
+    .directory select,.directory select::picker(select){appearance:base-select}
+    .directory select::picker(select){min-width:anchor-size(width);width:max-content;max-width:min(320px,calc(100vw - 24px));max-height:min(420px,60dvh);overflow-y:auto;overscroll-behavior:contain;margin-block:4px;padding:4px;border:1px solid var(--line);border-radius:9px;background:var(--pane);color:var(--ink);box-shadow:0 8px 28px #0006;font:13px/1.35 Inter,system-ui,sans-serif}
+    .directory select optgroup{padding:8px 6px 3px;color:var(--muted);font-size:12px}.directory select optgroup+optgroup{margin-top:4px;border-top:1px solid var(--line)}
+    .directory select option{min-height:33px;padding:6px 8px;border-radius:5px;color:var(--ink);font:normal 13px/1.35 Inter,system-ui,sans-serif;white-space:normal}
+    .directory select option:checked{color:var(--mint);background:var(--pill)}.directory select option:hover,.directory select option:focus-visible{background:#312e2a;outline-offset:-2px}
+  }
+}
+</style>
+</head>
+<body>
+<header><div class="bar">
+<span class="mobile-title">Discover</span>
+<nav class="pages" aria-label="SaxoDash pages"><span>Overview</span><span>Portfolio</span><span id="nav-research">Research</span><span>Charts</span><span id="nav-discover" aria-current="page">Discover</span><span>Earnings</span><span>Investors</span><span>Analytics</span><span>Money</span></nav>
+<div class="account"><button class="search-pill" id="focus-search" aria-label="Search stock index">Search <kbd>⌘K</kbd></button><span><small>Portfolio</small>—</span><span class="avatar" aria-label="Example account">G</span></div>
+</div></header>
+<main>
+<section id="discover">
+<h1 tabindex="-1" class="sr-only">Discover</h1>
+<div class="index-search"><label for="stock-search">Search stocks</label><input id="stock-search" class="search-field" type="search" placeholder="Search the index by company or ticker" autocomplete="off"></div>
+<div class="workspace">
+<aside class="facets" aria-label="Stock filters"><button id="filter-toggle" aria-expanded="false" aria-controls="facet-body" class="button">Filters</button><h2 class="facet-title">Filters</h2><div id="facet-body"></div></aside>
+<section id="browse" class="directory" aria-labelledby="browse-title">
+<div class="directory-title"><h2 id="browse-title">Stock explorer</h2><button class="shortlist-button" id="weekly-toggle" aria-controls="shortlist" aria-expanded="false">This week’s shortlist</button></div>
+<section id="shortlist" hidden aria-label="Weekly shortlist"><p class="edition-date">US equities · <span id="edition-date">Week of 16 Nov 2026</span> · Illustrative edition</p>
+<div id="edition-content"><div class="edition-toolbar"><span id="weekly-preview-count" class="muted"></span><a id="open-edition" class="story-link" href="#weekly-list"></a></div><div class="stories">
+<article class="story"><div class="tickerline"><span class="monogram" aria-hidden="true">Nv</span><div><h3>Northvale Systems</h3><span class="ticker">NVLS · Nasdaq · Software</span></div></div>
+<p class="thesis">Shares fell 9% after earnings. Subscription sales kept growing.</p>
+<figure class="facts"><figcaption>Change from a year earlier · latest report</figcaption>
+<div class="measure"><span>Recurring revenue</span><i aria-hidden="true"><b style="width:93.33%"></b></i><strong>+14%</strong></div>
+<div class="measure"><span>Free cash flow</span><i aria-hidden="true"><b style="width:80%"></b></i><strong>+12%</strong></div></figure>
+<p class="caution"><strong>Watch</strong> Slower renewals could weaken both figures.</p>
+<div class="story-foot"><span class="reading">$48.00 · 13 Nov close</span><a class="story-link" href="#evidence">Read the case <span aria-hidden="true">→</span><span class="sr-only"> for Northvale Systems</span></a></div></article>
+<article class="story gold"><div class="tickerline"><span class="monogram" aria-hidden="true">Lm</span><div><h3>Lumenridge Motion</h3><span class="ticker">LRMO · NYSE · Industrial equipment</span></div></div>
+<p class="thesis">More cash per share, even as the company paid down debt.</p>
+<figure class="facts"><figcaption>Annual free cash flow per share · USD</figcaption>
+<div class="measure"><span>Fiscal 2023</span><i aria-hidden="true"><b style="width:73.33%"></b></i><strong>$2.20</strong></div>
+<div class="measure"><span>Fiscal 2026</span><i aria-hidden="true"><b style="width:91.33%"></b></i><strong>$2.74</strong></div></figure>
+<p class="caution"><strong>Watch</strong> Factory customers can delay equipment orders.</p>
+<div class="story-foot"><span class="reading">$42.00 · 13 Nov close</span><a class="story-link" href="#lumenridge">Read the case <span aria-hidden="true">→</span><span class="sr-only"> for Lumenridge Motion</span></a></div></article></div>
+<details class="edition-context"><summary>Inside this screen · how the shortlist was selected</summary><p>In this illustrative edition we look for growth, cash generation and manageable debt at the latest closing price. Northvale entered after earnings. Calder Valve left when its price rose beyond the screen’s range. Prices through 13 November.</p></details></div>
+<p id="empty-edition" class="panel muted" hidden>No candidates met the criteria this week. The stock explorer is still available.</p></section>
+<label class="mobile-screen">Screen<select id="mobile-screen"></select></label><div class="screen-switch" role="group" aria-label="Choose a stock screen"><button data-screen="all" aria-pressed="true">All stocks</button><button data-screen="strong" aria-pressed="false">Strong companies</button><button data-screen="fall" aria-pressed="false">Price pullbacks</button><button data-screen="funds" aria-pressed="false">Fund buying</button><select id="ideas" aria-label="More stock screens"><option value="" hidden>More screens…</option></select></div>
+<div class="explorer-tools"><p id="result-count" aria-live="polite"></p><button id="clear-filters" class="reset" hidden>Reset</button><div class="sort-control"><label>Sort by<select id="sort"><option value="checks">Most quality checks passed</option><option value="discount">Furthest below usual P/E</option><option value="fall">Biggest fall from high</option><option value="funds">Most funds adding shares</option></select></label></div><div class="view-switch" role="group" aria-label="Result layout"><button data-layout="cards" aria-pressed="true">Cards</button><button data-layout="table" aria-pressed="false">Table</button></div></div>
+<div id="screen-list"></div><p id="no-results" hidden>No matching stocks. Change the screen or reset the filters.</p><button id="show-more" class="button" hidden>Show more stocks</button></section>
+</div>
+<footer class="preview-footer"><details class="preview-controls"><summary>Preview states</summary><div><button class="button" type="button" data-edition="populated">Five-company edition</button><button class="button" type="button" data-edition="two">Two-company edition</button><button class="button" type="button" data-edition="empty">No qualifying candidates</button></div></details><span>Fictional companies and figures</span></footer>
+</section>
+<section id="weekly-list" hidden aria-labelledby="full-edition-heading">
+<a href="#weekly-preview" class="jump">← Back to stock explorer</a>
+<div class="wide"><p class="edition" id="full-edition-date"></p><h1 id="full-edition-heading" tabindex="-1">Weekly shortlist</h1><p class="lede" id="full-edition-count"></p></div>
+<div class="candidate-labels" aria-hidden="true"><span>Company</span><span>Why it surfaced</span><span>What to check next</span><span>Watchlist</span></div>
+<ul id="candidate-list" aria-label="Companies in this edition"></ul>
+</section>
+<section id="evidence" hidden>
+<button type="button" class="button" data-view="shortlist">← Back to Discover</button>
+<div class="wide"><p class="edition">NVLS · Nasdaq · USD · Illustrative case</p><h1 tabindex="-1">Northvale Systems</h1><p class="lede">$48.00 at the 13 November close. Earnings released 12 November.</p></div>
+<div class="layout"><article class="panel"><h2>What today’s price assumes</h2><p class="lead">Illustrative share prices in five years, based on cash flow per share and the multiple investors might pay for it.</p>
+<div class="scenario numbers"><div><h3>Downside</h3><strong>$33</strong><small>2% growth · 14× multiple</small></div><div><h3>Base</h3><strong>$62</strong><small>10% growth · 18× multiple</small></div><div><h3>Upside</h3><strong>$90</strong><small>16% growth · 20× multiple</small></div></div>
+<details><summary>See the calculation</summary><p>Starting cash flow per share of $2.14 grows at the stated annual rate for five years, then is multiplied by the exit multiple. Figures exclude dividends, fees and taxes.</p></details></article>
+<aside class="panel side"><div><h3>Why it surfaced</h3><p>Recurring software revenue grew 14% year over year and free cash flow grew 12%. Shares fell 9% after earnings while the company maintained its outlook.</p></div><div class="risk"><h3>What to check first</h3><p>If renewal rates fall, the base case may overstate growth. The downside scenario is below today’s price.</p></div><div><h3>Source evidence</h3><ul><li>12 November earnings release · revenue and renewals</li><li>12 November cash-flow statement · cash flow per share</li><li>13 November exchange close · price</li></ul><div class="actions"><button class="button" type="button" data-view="research">Open Financials in Research ↗</button></div></div></aside></div>
+</section>
+<section id="lumenridge" hidden><button class="button" data-view="shortlist">← Back to Discover</button>
+<div class="wide"><p class="edition">LRMO · NYSE · USD · Illustrative case</p><h1 tabindex="-1">Lumenridge Motion</h1><p class="lede">$42.00 at the 13 November close. Earnings released 12 November.</p></div>
+<div class="layout"><article class="panel"><h2>What today’s price assumes</h2><p class="lead">Illustrative share prices in five years, starting from $2.74 of annual free cash flow per share.</p>
+<div class="scenario numbers"><div><h3>Downside</h3><strong>$30</strong><small>0% growth · 11× multiple</small></div><div><h3>Base</h3><strong>$58</strong><small>6% growth · 16× multiple</small></div><div><h3>Upside</h3><strong>$70</strong><small>9% growth · 16.5× multiple</small></div></div><details><summary>See the calculation</summary><p>Grow cash flow per share at each assumed rate for five years, then apply the exit multiple. Figures exclude dividends, fees and taxes.</p></details></article>
+<aside class="panel side"><div><h3>Why it surfaced</h3><p>Annual free cash flow per share rose from $2.20 to $2.74 between fiscal 2023 and 2026. Net debt fell from $410m to $320m over the same period.</p></div><div class="risk"><h3>What to check first</h3><p>Factories can postpone upgrades. Check the order backlog before assuming cash growth continues.</p></div><div><h3>Source evidence</h3><ul><li>12 November annual release · free cash flow, shares and net debt</li><li>13 November exchange close · share price</li></ul></div></aside></div></section>
+<section id="research" hidden>
+<button type="button" class="button" data-view="evidence">← Back to Discover evidence</button>
+<div class="wide"><p class="edition">NVLS · Nasdaq · USD · Illustrative case</p><h1 tabindex="-1">Northvale Systems</h1><p class="lede">$48.00 at the 13 November close</p></div>
+<div class="research-tabs" aria-label="Research sections"><span>Overview</span><strong>Financials</strong><span>Statistics</span><span>Peers</span><span>Earnings</span><span>Funds</span><span>Congress</span><span>Filings</span><span>News</span></div>
+<div class="layout"><article class="panel"><h2>Cash flow</h2><p class="lead">Cash flow per share <strong>$2.14</strong></p><p class="muted">Trailing twelve months · Earnings release dated 12 November</p><p class="lead">Free cash flow grew 12% year over year.</p></article><aside class="panel side"><h3>From Discover</h3><p>This is the starting cash flow per share used in the five-year scenarios.</p></aside></div>
+</section>
+<section id="company-research" hidden><a class="jump" href="#discover">← Back to stock explorer</a><div id="research-overview"></div></section>
+</main>
+<div id="watchlist-picker" popover="auto" role="menu" aria-label="Watchlists"></div>
+<div class="sr-only" role="status" id="save-status"></div>
+<div class="mobile-nav" aria-hidden="true"><span>Overview</span><span>Portfolio</span><span>Research</span><span>Discover</span><span>More</span></div>
+<script>
+const search = document.getElementById('stock-search')
+const stockData = [
+  ['NVLS','Northvale Systems','Nasdaq','Technology',6,7,12,18,0,3,false,'growth,volume,above'],
+  ['LRMO','Lumenridge Motion','NYSE','Industrials',6,7,8,16,1.4,4,false,'growth,lowpe'],
+  ['WFCT','Westfall Controls','NYSE','Industrials',5,6,17,26.4,3.1,0,true,'profitable,oversold'],
+  ['BRMD','Brookmere Data','Nasdaq','Technology',6,7,22,28.1,0,2,false,'oversold,profitable'],
+  ['PHTC','Pine Harbor Tech','Nasdaq','Technology',5,6,13,25.2,0,1,false,'growth,reports'],
+  ['CDVL','Calder Valve','NYSE','Industrials',4,7,-12,8,2.2,6,false,'above,overbought'],
+  ['ALGS','Alder Glass','NYSE','Materials',7,7,4,11,3.4,2,false,'lowpe,above'],
+  ['EDMH','Eastmere Health','Nasdaq','Health care',6,7,0,7,1.1,0,true,'growth,above'],
+  ['SRFD','Stonefield Foods','NYSE','Consumer staples',6,7,6,17,3.7,0,false,'lowpe,reports'],
+  ['HLGW','Highland Gridworks','NYSE','Utilities',5,7,0,9,4.2,1,false,'lowpe'],
+  ['FBSY','Foxbridge Systems','Nasdaq','Technology',7,7,-9,3,0,3,true,'volume,above,overbought'],
+  ['ARMD','Arden Medical','NYSE','Health care',4,7,14,30,0,0,false,'oversold,reports'],
+  ['CMST','Cairn Materials','NYSE','Materials',2,7,25,36,4.5,0,false,'oversold,lowpe'],
+  ['MRLW','Marlow Water','NYSE','Utilities',6,7,0,12,3.2,2,true,'above'],
+  ['SBEQ','Southbank Equipment','NYSE','Industrials',6,7,20,29,1.9,0,false,'profitable,volume'],
+  ['HLFD','Holloway Foods','Nasdaq','Consumer staples',5,7,-4,6,2.6,1,false,'above,reports'],
+  ['BVPT','Bayview Photonics','Nasdaq','Technology',3,7,-17,33,0,0,false,'volume'],
+  ['FBHL','Fairbrook Health','NYSE','Health care',7,7,0,5,0.8,2,false,'growth,above']
+]
+const stocks = stockData.map(([ticker,name,exchange,sector,checks,total,discount,fall,yieldPct,funds,held,tags]) => ({
+  ticker,name,exchange,sector,checks,total,discount,fall,yieldPct,funds,held,
+  tags:tags.split(','),quality:checks >= 5 ? 'Strong' : checks >= 3 ? 'Mixed' : 'Weak',
+  valuation:discount > 0 ? 'Below' : discount < 0 ? 'Above' : 'Within'
+}))
+const profiles = {
+  NVLS:['Subscription software for businesses',[46,47,50,52,53,48]],
+  LRMO:['Motion controls for factory equipment',[39,40,39.5,41,40.8,42]],
+  WFCT:['Sensors for industrial automation',[71,69,67,68,64,62]],
+  BRMD:['Cloud data storage and analytics',[42,41,38,40,37,36]],
+  PHTC:['Network equipment for enterprises',[55,53,54,49,48,46]],
+  CDVL:['Valves for industrial pipelines',[51,52,51,55,54,56]],
+  ALGS:['Specialty glass for buildings',[62,64,63,67,65,66]],
+  EDMH:['Diagnostic equipment for hospitals',[80,82,81,84,83,85]],
+  SRFD:['Packaged foods for grocery retailers',[32,33,31,32,34,33]],
+  HLGW:['Electricity transmission networks',[46,45,47,46,48,47]],
+  FBSY:['Enterprise security software',[81,84,83,89,87,91]],
+  ARMD:['Surgical devices and supplies',[61,59,60,55,54,52]],
+  CMST:['Aggregates for construction',[26,25,23,24,21,20]],
+  MRLW:['Regional water distribution',[48,49,48,50,49,51]],
+  SBEQ:['Heavy equipment for construction',[74,70,72,66,65,64]],
+  HLFD:['Bakery products for retailers',[29,30,29,31,32,31]],
+  BVPT:['Optical components for networks',[39,37,40,34,32,31]],
+  FBHL:['Outpatient clinics and diagnostics',[68,70,69,72,71,73]]
+}
+
+const idea = document.getElementById('ideas')
+const sort = document.getElementById('sort')
+const mobileScreen = document.getElementById('mobile-screen')
+function addScreenGroup(select, label, options) {
+  const group = document.createElement('optgroup')
+  group.label = label
+  for (const [value, name] of options) group.append(new Option(name, value))
+  select.append(group)
+}
+const commonScreens = [...document.querySelectorAll('[data-screen]')].map(button => [button.dataset.screen, button.textContent])
+addScreenGroup(mobileScreen, 'Browse stocks', commonScreens)
+for (const select of [idea, mobileScreen]) {
+  addScreenGroup(select, 'Your watchlists', [['saved', 'Saved stocks']])
+  addScreenGroup(select, 'Business & valuation', [
+    ['lowpe', 'P/E under 15'], ['yield', 'Dividend yield of 3% or more'],
+    ['growth', '5-year earnings growth of 15% or more'], ['profitable', 'Profitable & below the 200-day average']
+  ])
+  addScreenGroup(select, 'Price & trading', [
+    ['oversold', 'Oversold'], ['overbought', 'Overbought'],
+    ['above', 'Above the 50- and 200-day averages'], ['volume', 'Unusual volume']
+  ])
+  addScreenGroup(select, 'Upcoming earnings', [['reports', 'Reporting in the next 7 days']])
+}
+mobileScreen.onchange = () => {
+  const button = document.querySelector('[data-screen="'+mobileScreen.value+'"]')
+  if (button) button.click()
+  else {
+    idea.value = mobileScreen.value
+    idea.dispatchEvent(new Event('change'))
+  }
+}
+const groups = {
+  valuation:['Price against its own history', ['Below','Within','Above'].map(v => [v,v+' usual P/E'])],
+  quality:['Company quality', ['Strong','Mixed','Weak'].map(v => [v,v])],
+  sector:['Sector', [...new Set(stocks.map(s=>s.sector))].sort().map(v=>[v,v])],
+  more:['More', [['yield','Pays 3% or more'],['fall','25% or more below high'],['unheld','Not in my portfolio']]]
+}
+const facets = document.getElementById('facet-body')
+for (const [key,[title,options]] of Object.entries(groups)) {
+  const fieldset = document.createElement('fieldset')
+  const legend = document.createElement('legend')
+  legend.textContent = title
+  fieldset.append(legend)
+  for (const [value,label] of options) {
+    const option = document.createElement('label')
+    const input = document.createElement('input')
+    input.type = 'checkbox'
+    input.name = key
+    input.value = value
+    option.append(input,label)
+    fieldset.append(option)
+  }
+  facets.append(fieldset)
+}
+const weeklyCandidates = [
+  {ticker:'NVLS', evidence:'Recurring revenue grew 14% year over year. Shares fell 9% after earnings.', risk:'Are customers renewing at the same rate? Slower renewals would put cash growth under pressure.'},
+  {ticker:'LRMO', evidence:'Annual free cash flow per share rose from $2.20 to $2.74 between fiscal 2023 and 2026 as net debt fell.', risk:'Check the order backlog. Factory customers can postpone upgrades.'},
+  {ticker:'EDMH', evidence:'Diagnostic equipment sales grew 11% year over year, and service contracts grew 15%.', risk:'How much growth depends on hospitals replacing equipment early?'},
+  {ticker:'PHTC', evidence:'Network sales grew 13% year over year. Shares closed about a quarter below their one-year high.', risk:'Check how much of the order book comes from its largest customer.'},
+  {ticker:'FBHL', evidence:'Visits to existing clinics grew 8% year over year, alongside a rise in cash flow per share.', risk:'Are higher staffing costs absorbing the extra revenue per visit?'}
+]
+const editions = {
+  populated:{date:'Week of 16 Nov 2026',closeDate:'13 Nov',members:weeklyCandidates},
+  two:{date:'Week of 16 Nov 2026',closeDate:'13 Nov',members:weeklyCandidates.slice(0,2)},
+  empty:{date:'Week of 23 Nov 2026',closeDate:'20 Nov',members:[]}
+}
+let edition = editions.populated
+function renderEdition() {
+  const count = edition.members.length
+  const featuredCount = Math.min(count,2)
+  const countText = count+' '+(count === 1 ? 'company' : 'companies')
+  weeklyToggle.textContent = 'This week’s shortlist · '+countText
+  document.getElementById('edition-content').hidden = count === 0
+  document.getElementById('empty-edition').hidden = count !== 0
+  document.getElementById('edition-date').textContent = edition.date
+  document.getElementById('weekly-preview-count').textContent = count > featuredCount ? 'Showing '+featuredCount+' of '+count+' companies' : ''
+  const open = document.getElementById('open-edition')
+  open.hidden = count <= featuredCount
+  open.textContent = 'See all '+count+' companies →'
+  document.getElementById('full-edition-date').textContent = edition.date+' · US equities · Fictional edition'
+  document.getElementById('full-edition-count').textContent = count ? countText+' · Closing prices in USD on '+edition.closeDate+'.' : 'No companies qualified this week.'
+  document.querySelector('.candidate-labels').hidden = !count
+  document.getElementById('candidate-list').innerHTML = edition.members.map(candidate => {
+    const stock = stocks.find(item => item.ticker === candidate.ticker)
+    return `<li class="candidate-row"><div class="candidate-intro"><a class="candidate-name" href="#research/${stock.ticker}?from=weekly-list" aria-label="Open ${stock.name} in Research">${stock.name}</a><span class="ticker">${stock.ticker} · ${stock.exchange}</span><small class="reading">${profiles[stock.ticker][0]}</small></div>
+      <div class="candidate-note"><p>${candidate.evidence}</p><small class="reading">${closePrice(stock)} · ${valuationText(stock)}</small></div>
+      <p class="candidate-risk"><b>Check next · </b>${candidate.risk}</p>${saveButton(stock)}</li>`
+  }).join('')
+}
+const detailLinks = {NVLS:'#evidence', LRMO:'#lumenridge'}
+let screen = 'all'
+let layout = 'cards'
+const listNames = {research:'Research queue',growth:'Growth ideas',price:'Waiting for a price',previous:'Previously saved'}
+const watchlistKey = 'saxodash-discover-demo-watchlists'
+function loadWatchlists() {
+  const lists = {research:[],growth:[],price:[]}
+  try {
+    const stored = JSON.parse(localStorage.getItem(watchlistKey))
+    const source = stored || {previous:JSON.parse(localStorage.getItem('saxodash-discover-demo-saved'))}
+    for (const id of Object.keys(listNames)) {
+      if (!Array.isArray(source[id])) continue
+      const members = stocks.filter(stock => source[id].includes(stock.ticker)).map(stock => stock.ticker)
+      if (id !== 'previous' || members.length) lists[id] = members
+    }
+  } catch {}
+  return lists
+}
+let watchlists = loadWatchlists()
+function memberships(ticker) {
+  return Object.keys(watchlists).filter(id => watchlists[id].includes(ticker))
+}
+const picker = document.getElementById('watchlist-picker')
+let starTrigger
+function positionPicker() {
+  if (!starTrigger || !picker.matches(':popover-open')) return
+  const rect = starTrigger.getBoundingClientRect()
+  const below = Math.max(0,window.innerHeight-rect.bottom-12)
+  const above = Math.max(0,rect.top-12)
+  picker.style.maxHeight = Math.max(below,above)+'px'
+  const left = Math.min(rect.right-picker.offsetWidth,window.innerWidth-picker.offsetWidth-8)
+  const top = rect.bottom+picker.offsetHeight+8 <= window.innerHeight ? rect.bottom+4 : rect.top-picker.offsetHeight-4
+  picker.style.left = Math.max(8,left)+'px'
+  picker.style.top = Math.max(8,top)+'px'
+}
+function chooseWatchlists(button) {
+  if (picker.matches(':popover-open') && starTrigger === button) return
+  starTrigger = button
+  const ticker = button.dataset.save
+  picker.setAttribute('aria-label',ticker+' watchlists')
+  picker.innerHTML = '<div class="list-heading" aria-hidden="true"><strong>'+ticker+' watchlists</strong><span>Stocks</span></div>'+Object.keys(watchlists).map(id =>
+    `<button role="menuitemcheckbox" type="button" tabindex="-1" aria-checked="${watchlists[id].includes(ticker)}" data-list="${id}"><span aria-hidden="true" class="list-check">${watchlists[id].includes(ticker) ? '✓' : ''}</span><span>${listNames[id]}</span><span class="list-count" aria-label="${watchlists[id].length} stocks">${watchlists[id].length}</span></button>`
+  ).join('')
+}
+picker.addEventListener('toggle', () => {
+  const open = picker.matches(':popover-open')
+  if (starTrigger) starTrigger.setAttribute('aria-expanded',String(open))
+  if (open) {
+    positionPicker()
+    const first = picker.querySelector('[aria-checked=true]') || picker.querySelector('button')
+    first?.focus({preventScroll:true})
+  } else if (screen === 'saved' && starTrigger?.closest('#screen-list') && !memberships(starTrigger.dataset.save).length) {
+    const refocus = document.activeElement === starTrigger || document.activeElement === document.body
+    renderDirectory()
+    if (refocus) (mobileScreen.offsetWidth ? mobileScreen : idea).focus({preventScroll:true})
+  }
+})
+picker.addEventListener('keydown', event => {
+  const items = [...picker.querySelectorAll('button')]
+  const index = items.indexOf(document.activeElement)
+  if (event.key === 'Tab') {
+    picker.hidePopover()
+    starTrigger?.focus({preventScroll:true})
+    return
+  }
+  const destinations = {ArrowDown:(index+1)%items.length,ArrowUp:(index-1+items.length)%items.length,Home:0,End:items.length-1}
+  if (event.key in destinations) {
+    event.preventDefault()
+    items[destinations[event.key]].focus()
+  }
+})
+picker.addEventListener('click', event => {
+  const row = event.target.closest('[data-list]')
+  if (!row || !starTrigger) return
+  const id = row.dataset.list
+  const ticker = starTrigger.dataset.save
+  const selected = !watchlists[id].includes(ticker)
+  watchlists[id] = selected ? [...watchlists[id],ticker] : watchlists[id].filter(member => member !== ticker)
+  try {localStorage.setItem(watchlistKey,JSON.stringify(watchlists))} catch {}
+  row.setAttribute('aria-checked',String(selected))
+  row.querySelector('.list-check').textContent = selected ? '✓' : ''
+  const count = row.querySelector('.list-count')
+  count.textContent = watchlists[id].length
+  count.setAttribute('aria-label',watchlists[id].length+' stocks')
+  const stock = stocks.find(item => item.ticker === ticker)
+  for (const button of document.querySelectorAll('[data-save="'+ticker+'"]')) {
+    button.dataset.listed = String(memberships(ticker).length > 0)
+    button.title = watchlistLabel(stock)
+    button.setAttribute('aria-label',button.title)
+  }
+  if (screen === 'saved' && !starTrigger.closest('#screen-list')) renderDirectory()
+  document.getElementById('save-status').textContent = ticker+(selected ? ' added to ' : ' removed from ')+listNames[id]+'.'
+})
+window.addEventListener('resize',positionPicker)
+document.addEventListener('scroll',positionPicker,true)
+const pageSize = 9
+let limit = pageSize
+function closePrice(stock) {
+  return '$'+profiles[stock.ticker][1].at(-1).toFixed(2)
+}
+function valuationText(stock) {
+  return stock.discount ? Math.abs(stock.discount)+'% '+stock.valuation.toLowerCase()+' its usual P/E range' : 'Within its usual P/E range'
+}
+function reason(stock) {
+  const checks = stock.checks+' of '+stock.total+' business quality checks pass'
+  if (screen === 'fall') return stock.fall+'% below its one-year high. '+checks+'.'
+  if (screen === 'funds') return stock.funds+' tracked '+(stock.funds === 1 ? 'fund added' : 'funds added')+' shares last disclosed quarter.'
+  if (screen === 'yield') return 'Its dividend yield is '+stock.yieldPct+'%, above the screen’s 3% minimum.'
+  if (screen === 'reports') return 'Scheduled to report earnings within seven days of the sample close.'
+  if (screen === 'lowpe') return 'Its shares trade at less than 15 times earnings.'
+  if (screen === 'growth') return 'Five-year earnings per share growth meets the screen’s 15% threshold.'
+  if (screen === 'above') return 'Shares closed above the 50-day average, which is above the 200-day average.'
+  if (screen === 'volume') return 'Trading volume was at least twice its recent average.'
+  if (screen === 'profitable') return 'Profitable with growing earnings, while trading below its 200-day average.'
+  if (screen === 'oversold' || screen === 'overbought') return 'Its 14-day relative strength index reached '+(screen === 'oversold' ? '30 or lower.' : '70 or higher.')
+  return checks+'. '+valuationText(stock)+'.'
+}
+function watchlistLabel(stock) {
+  const names = memberships(stock.ticker).map(id => listNames[id])
+  return names.length ? stock.name+' is in '+names.join(', ')+'. Edit watchlists' : 'Add '+stock.name+' to a watchlist'
+}
+function saveButton(stock) {
+  const label = watchlistLabel(stock)
+  return `<button type="button" class="save" data-save="${stock.ticker}" data-listed="${memberships(stock.ticker).length > 0}" aria-haspopup="menu" aria-controls="watchlist-picker" aria-expanded="false" popovertarget="watchlist-picker" title="${label}" aria-label="${label}"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.4-5.7-3-5.7 3 1.1-6.4L2.8 9.7l6.4-.9z"/></svg></button>`
+}
+function card(stock) {
+  const [business,closes] = profiles[stock.ticker]
+  const url = '#research/'+stock.ticker
+  return `<article class="result-card"><div class="card-identity"><span class="stock-mark" aria-hidden="true">${stock.name.split(' ').map(word=>word[0]).join('')}</span><div><h3><a href="${url}">${stock.name}</a></h3><span class="ticker">${stock.ticker} · ${stock.exchange}</span></div>${saveButton(stock)}</div>
+    <p class="business">${business}</p><div class="price-strip"><div><strong>${closePrice(stock)}</strong><small>13 Nov close · USD</small></div><figure class="trend"><canvas data-trend="${stock.ticker}" role="img" aria-label="Six weekly closes in USD: ${closes.join(', ')}"></canvas><figcaption>6 weekly closes</figcaption></figure></div>
+    <p class="reason">${reason(stock)}</p><div class="card-foot"><a class="story-link" href="${url}" aria-label="Open ${stock.name} in Research">Open in Research →</a></div></article>`
+}
+function drawTrend(canvas) {
+  const values = profiles[canvas.dataset.trend][1]
+  canvas.width = 212
+  canvas.height = 58
+  const context = canvas.getContext('2d')
+  if (!context) return
+  const low = Math.min(...values)
+  const range = Math.max(...values)-low || 1
+  context.beginPath()
+  context.lineWidth = 3
+  context.strokeStyle = '#9fbac7'
+  context.lineJoin = 'round'
+  values.forEach((value,i) => {
+    const x = 3+i*206/(values.length-1)
+    const y = 51-44*(value-low)/range
+    if (i === 0) context.moveTo(x,y)
+    else context.lineTo(x,y)
+  })
+  context.stroke()
+}
+function comparison(shown) {
+  const rows = shown.map(stock => `<tr><th scope="row"><a href="#research/${stock.ticker}" aria-label="Open ${stock.name} in Research">${stock.name}</a><span class="ticker">${stock.ticker} · ${stock.exchange}</span><span class="mobile-context">${reason(stock)}</span></th>
+    <td>${closePrice(stock)}</td><td class="optional">${stock.checks} of ${stock.total}</td><td class="optional reason-cell">${reason(stock)}</td><td>${saveButton(stock)}</td></tr>`).join('')
+  return `<table class="comparison"><caption class="sr-only">Stock comparison. Company names open Research. Prices in USD at the 13 November close.</caption><thead><tr><th>Company ↗</th><th>13 Nov close</th><th class="optional">Checks</th><th class="optional">Screen context</th><th>Watchlist</th></tr></thead><tbody>${rows}</tbody></table>`
+}
+function renderResearch(stock) {
+  document.getElementById('research-overview').innerHTML = `<div class="research-top"><div><p class="edition">${stock.ticker} · ${stock.exchange} · USD · Research preview</p><h1 tabindex="-1">${stock.name}</h1><p class="lede">${profiles[stock.ticker][0]}</p></div>${saveButton(stock)}</div>
+    <article class="panel wide"><h2>Company snapshot</h2><p class="lead"><strong class="research-price">${closePrice(stock)}</strong> · 13 November 2026 close</p>
+    <dl class="overview-grid"><div><dt>Quality checks passed</dt><dd>${stock.checks} of ${stock.total}</dd></div><div><dt>Price against its history</dt><dd>${valuationText(stock)}</dd></div><div><dt>Below one-year high</dt><dd>${stock.fall}%</dd></div><div><dt>Dividend yield</dt><dd>${stock.yieldPct}%</dd></div><div><dt>Funds adding last quarter</dt><dd>${stock.funds}</dd></div><div><dt>Sector</dt><dd>${stock.sector}</dd></div></dl>
+    ${detailLinks[stock.ticker] ? '<a class="story-link" href="'+detailLinks[stock.ticker]+'">Read the weekly case →</a>' : ''}</article><p class="preview-footer">Design preview · fictional company and figures</p>`
+}
+
+function renderDirectory() {
+  const query = search.value.trim().toLowerCase()
+  const checked = [...facets.querySelectorAll(':checked')]
+  const groupsMatch = stock => ['valuation','quality','sector'].every(key => {
+    const selected = checked.filter(input => input.name === key)
+    return !selected.length || selected.some(input => input.value === stock[key])
+  })
+  const more = checked.filter(input => input.name === 'more').map(input => input.value)
+  const matches = stocks.filter(stock =>
+    (stock.name+' '+stock.ticker).toLowerCase().includes(query) && groupsMatch(stock) &&
+    (!more.includes('yield') || stock.yieldPct >= 3) && (!more.includes('fall') || stock.fall >= 25) &&
+    (!more.includes('unheld') || !stock.held) &&
+    (!idea.value || (idea.value === 'saved' ? memberships(stock.ticker).length > 0 : idea.value === 'yield' ? stock.yieldPct >= 3 : stock.tags.includes(idea.value))) &&
+    (screen !== 'strong' || stock.quality === 'Strong') &&
+    (screen !== 'fall' || (stock.quality === 'Strong' && stock.fall >= 25)) &&
+    (screen !== 'funds' || stock.funds > 0)
+  ).sort((a,b)=> b[sort.value]-a[sort.value] || a.name.localeCompare(b.name))
+  const shown = matches.slice(0,limit)
+  const list = document.getElementById('screen-list')
+  list.className = layout === 'cards' ? 'card-grid' : 'table-wrap'
+  list.innerHTML = layout === 'cards' ? shown.map(card).join('') : shown.length ? comparison(shown) : ''
+  for (const canvas of list.querySelectorAll('canvas')) drawTrend(canvas)
+  document.getElementById('result-count').textContent = shown.length+' of '+matches.length+' sample stocks'
+  for (const button of document.querySelectorAll('[data-layout]')) button.setAttribute('aria-pressed',String(button.dataset.layout === layout))
+  mobileScreen.value = screen
+  idea.classList.toggle('selected',Boolean(idea.value))
+  document.getElementById('no-results').hidden = matches.length !== 0
+  document.getElementById('clear-filters').hidden = !(query || checked.length || idea.value || screen !== 'all' || sort.value !== 'checks')
+  const moreButton = document.getElementById('show-more')
+  moreButton.hidden = shown.length === matches.length
+  moreButton.textContent = 'Show '+Math.min(pageSize,matches.length-shown.length)+' more stocks'
+  document.getElementById('filter-toggle').textContent = checked.length ? 'Filters ('+checked.length+')' : 'Filters'
+  for (const button of document.querySelectorAll('[data-screen]')) button.setAttribute('aria-pressed', String(button.dataset.screen === screen))
+}
+function refreshDirectory() {
+  limit = pageSize
+  renderDirectory()
+}
+search.addEventListener('input', refreshDirectory)
+facets.addEventListener('change', refreshDirectory)
+idea.addEventListener('change', () => {
+  screen = idea.value || 'all'
+  refreshDirectory()
+})
+for (const button of document.querySelectorAll('[data-layout]')) button.onclick = () => {
+  layout = button.dataset.layout
+  renderDirectory()
+}
+const weeklyToggle = document.getElementById('weekly-toggle')
+weeklyToggle.onclick = () => {
+  const shortlist = document.getElementById('shortlist')
+  shortlist.hidden = !shortlist.hidden
+  weeklyToggle.setAttribute('aria-expanded',String(!shortlist.hidden))
+}
+sort.addEventListener('change', refreshDirectory)
+for (const button of document.querySelectorAll('[data-screen]')) {
+  button.onclick = () => {
+    screen = button.dataset.screen
+    idea.value = ''
+    sort.value = screen === 'fall' || screen === 'funds' ? screen : 'checks'
+    refreshDirectory()
+  }
+}
+document.getElementById('clear-filters').onclick = () => {
+  for (const input of facets.querySelectorAll(':checked')) input.checked = false
+  screen = 'all'
+  idea.value = ''
+  sort.value = 'checks'
+  search.value = ''
+  refreshDirectory()
+  search.focus()
+}
+document.getElementById('show-more').onclick = () => {
+  limit += pageSize
+  renderDirectory()
+}
+const toggle = document.getElementById('filter-toggle')
+toggle.onclick = () => toggle.setAttribute('aria-expanded',String(toggle.parentElement.classList.toggle('expanded')))
+function focusIndex() {
+  if (document.getElementById('discover').hidden) {
+    location.hash = 'discover'
+    window.addEventListener('hashchange', () => search.focus(), {once:true})
+  } else search.focus()
+}
+document.getElementById('focus-search').onclick = focusIndex
+document.addEventListener('keydown', event => {
+  if (picker.matches(':popover-open')) return
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    focusIndex()
+  }
+})
+
+function showView(focus) {
+  if (picker.matches(':popover-open')) picker.hidePopover()
+  const [requested, origin] = location.hash.slice(1).split('?')
+  const stock = stocks.find(item => requested === 'research/'+item.ticker)
+  const view = stock ? 'company-research' : ['weekly-list','evidence', 'lumenridge', 'research'].includes(requested) ? requested : 'discover'
+  for (const id of ['discover', 'evidence', 'lumenridge', 'research','company-research','weekly-list']) document.getElementById(id).hidden = id !== view
+  if (stock) {
+    renderResearch(stock)
+    const back = document.querySelector('#company-research > a')
+    back.href = origin === 'from=weekly-list' ? '#weekly-list' : '#discover'
+    back.textContent = origin === 'from=weekly-list' ? '← Back to weekly shortlist' : '← Back to stock explorer'
+  }
+  if (requested === 'weekly-preview') {
+    if (document.getElementById('shortlist').hidden) weeklyToggle.click()
+    if (focus) weeklyToggle.focus()
+    return
+  }
+  const currentPage = stock || view === 'research' ? 'Research' : 'Discover'
+  for (const link of document.querySelectorAll('.pages span, .mobile-nav span, .mobile-nav strong')) {
+    if (link.textContent === currentPage) link.setAttribute('aria-current', 'page')
+    else link.removeAttribute('aria-current')
+  }
+  document.querySelector('.mobile-title').textContent = currentPage
+  if (focus) document.querySelector('#' + view + ' h1').focus()
+}
+document.addEventListener('click', event => {
+  const button = event.target.closest('button')
+  if (!button) return
+  if (button.dataset.save) chooseWatchlists(button)
+  if (button.dataset.view) {
+    location.hash = button.dataset.view === 'shortlist' ? 'discover' : button.dataset.view
+  }
+  if (button.dataset.edition) {
+    edition = editions[button.dataset.edition]
+    renderEdition()
+    button.closest('details').open = false
+    if (document.getElementById('shortlist').hidden) weeklyToggle.click()
+    weeklyToggle.focus()
+  }
+})
+window.addEventListener('hashchange', () => showView(true))
+renderDirectory()
+renderEdition()
+showView(false)
+</script>
+</body>
+</html>

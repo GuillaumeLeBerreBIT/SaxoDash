@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react'
 
 import { fmtNum, fmtPct } from '../../lib/format'
 import { SNAPSHOT_GROUPS } from '../../lib/snapshot'
-import { Card, InfoTip, Move } from '../ui'
+import { InfoTip, Move, Panel } from '../ui'
 import FundamentalsGate from './FundamentalsGate'
 import VerdictBadge from './VerdictBadge'
 
@@ -57,15 +57,17 @@ function withPageReturns(data, returns = []) {
   return { ...data, ...own }
 }
 
-export default function SnapshotSection({ fundamentals, returns, valuationGrade }) {
+export default function SnapshotSection({ fundamentals, returns, valuationGrade, bare = false }) {
   return (
     <FundamentalsGate
       fundamentals={fundamentals}
+      bare={bare}
       title="Investment snapshot"
       fallback="A snapshot needs company fundamentals, which are unavailable for this symbol."
     >
       {(data) => (
-        <Card
+        <Panel
+          bare={bare}
           context="Five reads of the last twelve months. Open one for its figures."
           title="Investment snapshot"
           right={
@@ -84,7 +86,7 @@ export default function SnapshotSection({ fundamentals, returns, valuationGrade 
               <Group key={group.key} group={group} data={withPageReturns(data, returns)} valuationGrade={valuationGrade} />
             ))}
           </div>
-        </Card>
+        </Panel>
       )}
     </FundamentalsGate>
   )

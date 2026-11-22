@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react'
 
-import { fmtCompact, fmtEur, fmtMoney, fmtNum, fmtPct } from '../../lib/format'
+import { fmtCompact, fmtMoney, fmtNum } from '../../lib/format'
 import { chartHref, isEtf, moveCaption } from '../../lib/research'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
-import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
+import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag } from '../ui'
 import { Menu, MenuRow } from './menu'
 
 const LINK_BUTTON =
@@ -75,30 +75,6 @@ function Price({ quote, bars, currency }) {
   )
 }
 
-function InlinePosition({ position }) {
-  const pnl = position.pnl == null ? null : Number(position.pnl)
-  return (
-    <div data-testid="header-position" className="flex flex-wrap gap-x-[22px] gap-y-1.5 mt-3.5 text-[13px] num">
-      <span>
-        <span className="text-ink-3">Your value</span>{' '}
-        <b className="text-ink">{fmtEur(position.value, { decimals: 0 })}</b>
-      </span>
-      <span>
-        <span className="text-ink-3">Return</span> <Move value={position.pnl_pct} className="font-bold" />
-        {pnl == null ? null : (
-          <span className="ml-1.5 text-ink-3">{fmtEur(pnl, { sign: true, decimals: 0 })}</span>
-        )}
-      </span>
-      {position.weight != null && (
-        <span>
-          <span className="text-ink-3">Weight</span>{' '}
-          <b className="text-ink">{fmtPct(position.weight, { sign: false, decimals: 1 })}</b>
-        </span>
-      )}
-    </div>
-  )
-}
-
 export default function ResearchHeader({
   symbol,
   instrument,
@@ -110,10 +86,6 @@ export default function ResearchHeader({
   currency,
   watchlists = [],
   onToggleList,
-  tabs,
-  activeTab,
-  onSelectTab,
-  showPosition = false,
   className = '',
 }) {
   const name = details?.description ?? position?.name ?? symbol
@@ -134,7 +106,7 @@ export default function ResearchHeader({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3.5 mt-2.5 mb-3.5">
+      <div className="flex flex-wrap items-center gap-3.5 mt-2.5">
         <InstrumentLogo
           symbol={symbol}
           size={36}
@@ -157,26 +129,6 @@ export default function ResearchHeader({
             : `Could not resolve ${symbol} to a Saxo instrument.`}
         </p>
       )}
-
-      <TabList
-        label="Instrument sections"
-        className="pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none] border-b-0"
-      >
-        {tabs.map(([key, label]) => (
-          <TabButton
-            key={key}
-            id={`research-tab-${key}`}
-            controls={`research-panel-${key}`}
-            active={activeTab === key}
-            onClick={() => onSelectTab(key)}
-            className="shrink-0 px-3! first:pl-0! md:h-8!"
-          >
-            {label}
-          </TabButton>
-        ))}
-      </TabList>
-
-      {showPosition && position ? <InlinePosition position={position} /> : null}
     </Card>
   )
 }

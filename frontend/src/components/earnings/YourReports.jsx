@@ -4,6 +4,7 @@ import { lastResults, resultWord, whenWords } from '../../lib/earningsBrief'
 import { fmtEur, fmtNum, fmtPct } from '../../lib/format'
 import { displayName } from '../../lib/names'
 import { InstrumentLogo, LetterAvatar } from '../ui'
+import ChartLink from '../ChartLink'
 
 const TONE = { up: 'text-up bg-up-subtle', down: 'text-down bg-down-subtle', flat: 'text-ink-2 bg-pill', warn: 'text-warn-text bg-pill' }
 const TEXT_TONE = { up: 'text-up', down: 'text-down', flat: 'text-ink-2', warn: 'text-warn-text' }
@@ -75,13 +76,16 @@ function ReportCard({ event, onOpen }) {
       >
         {event.held && event.value != null ? fmtEur(event.value, { decimals: 0 }) : event.symbol}
       </Field>
-      <button
-        type="button"
-        onClick={() => onOpen(event.symbol)}
-        className="h-10 justify-self-start whitespace-nowrap rounded-[10px] bg-accent px-4 text-[14px] font-bold text-on-accent hover:bg-accent-hover md:justify-self-end"
-      >
-        {`Open ${event.symbol}`}
-      </button>
+      <div className="flex items-center gap-1 justify-self-start md:justify-self-end">
+        <ChartLink symbol={event.symbol} />
+        <button
+          type="button"
+          onClick={() => onOpen(event.symbol)}
+          className="h-10 whitespace-nowrap rounded-[10px] bg-accent px-4 text-[14px] font-bold text-on-accent hover:bg-accent-hover"
+        >
+          {`Open ${event.symbol}`}
+        </button>
+      </div>
     </article>
   )
 }

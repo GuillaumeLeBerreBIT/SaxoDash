@@ -28,6 +28,7 @@ vi.mock('./components/money/TransactionsSection', () => page('Transactions secti
 vi.mock('./components/money/BudgetsSection', () => page('Budgets section'))
 vi.mock('./components/money/OverviewSection', () => page('Overview section'))
 vi.mock('./pages/Research', () => page('Research page'))
+vi.mock('./pages/Charts', () => page('Charts page'))
 vi.mock('./pages/Boards', () => page('Boards page'))
 vi.mock('./pages/Discover', () => page('Discover page'))
 vi.mock('./pages/DiscoverShelf', () => page('DiscoverShelf page'))
@@ -56,7 +57,7 @@ function renderAt(url) {
 
 describe('legacy routes redirect with their query', () => {
   it.each([
-    ['/research/chart?symbol=NVDA', '/boards?symbol=NVDA', 'Boards page'],
+    ['/research/chart?symbol=NVDA', '/charts?symbol=NVDA', 'Charts page'],
     ['/transactions', '/portfolio?view=transactions', 'Portfolio page'],
     ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Portfolio page'],
     ['/accounts', '/money?section=accounts', 'Accounts section'],
@@ -86,6 +87,7 @@ describe('new routes', () => {
     ['/money?section=accounts', 'Accounts section'],
     ['/money?section=transactions', 'Transactions section'],
     ['/money/accounts/3', 'AccountTransactions page'],
+    ['/charts', 'Charts page'],
     ['/boards', 'Boards page'],
     ['/boards/b1', 'Boards page'],
   ])('%s renders %s inside the frame', async (url, rendered) => {

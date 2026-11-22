@@ -53,6 +53,17 @@ export const updateTrendLine = (id, patch) =>
   jsonRequest(`/api/research/trend-lines/${id}/`, 'PATCH', patch)
 export const deleteTrendLine = (id) =>
   apiFetch(`/api/research/trend-lines/${id}/`, { method: 'DELETE' })
+export const getChartZones = ({ uic, assetType }) =>
+  apiFetch(`/api/research/zones/${uic}/${assetType}/`)
+export const createChartZone = ({ uic, assetType, startBarDate, endBarDate, lowPrice, highPrice }) =>
+  jsonRequest(`/api/research/zones/${uic}/${assetType}/`, 'POST', {
+    start_bar_date: startBarDate,
+    end_bar_date: endBarDate,
+    low_price: lowPrice,
+    high_price: highPrice,
+  })
+export const deleteChartZone = (id) =>
+  apiFetch(`/api/research/zones/${id}/`, { method: 'DELETE' })
 
 export const getTextAnnotations = ({ uic, assetType }) =>
   apiFetch(`/api/research/text-annotations/${uic}/${assetType}/`)
@@ -75,6 +86,7 @@ export const addWatchlistItem = (id, item) =>
 export const removeWatchlistItem = (id, itemId) =>
   apiFetch(`/api/research/watchlists/${id}/items/${itemId}/`, { method: 'DELETE' })
 
-export const getDiscover = () => apiFetch('/api/research/discover/')
+export const getDiscover = () => apiFetch('/api/research/discover/?view=screens')
 export const startDiscoverScan = () => jsonRequest('/api/research/discover/scan/', 'POST', {})
 export const getDiscoverShelf = (key) => apiFetch(`/api/research/discover/${key}/`)
+export const getSectors = () => apiFetch('/api/research/sectors/')

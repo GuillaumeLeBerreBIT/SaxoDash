@@ -57,10 +57,14 @@ def _number(params, name, cast=float, low=None, high=None):
 class BrowseView(APIView):
     def get(self, request):
         params = request.query_params
-        sort = params.get('sort') or 'opportunity'
+        screen = params.get('screen', 'all')
+        if screen not in browse.SCREENS:
+            raise ValidationError({'screen': 'Unknown stock screen.'})
+        sort = params.get('sort') or {'pullbacks': 'fall', 'fund-buying': 'funds'}.get(screen, 'opportunity')
         if sort not in browse.SORTS:
             raise ValidationError({'sort': f'Use one of {", ".join(browse.SORTS)}.'})
         query = browse.Query(
+            screen=screen,
             valuation=_csv(params, 'valuation', browse.VALUATIONS),
             quality=_csv(params, 'quality', browse.QUALITIES),
             sector=_csv(params, 'sector'),

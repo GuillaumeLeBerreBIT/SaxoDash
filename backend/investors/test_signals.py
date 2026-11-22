@@ -76,6 +76,16 @@ class HubShelvesTest(TestCase):
         self.assertEqual([face['slug'] for face in item['investors']], ['fund-1', 'fund-2', 'fund-3'])
         self.assertEqual(item['investors'][0], {'slug': 'fund-1', 'name': item['investors'][0]['name'], 'photo_url': None, 'logo_url': None})
 
+    def test_discover_keeps_buyers_beyond_the_hub_preview(self):
+        additions = []
+        for index in range(signals.SHELF_LIMIT + 1):
+            cusip = f'{index:09d}'
+            Security.objects.create(cusip=cusip, ticker=f'T{index}')
+            additions.append((cusip, f'Company {index}', 10, 200))
+        for investor in self.funds[:3]:
+            self.after(investor, BEFORE + additions)
+        self.assertEqual(signals.reported_buyers()['T12'], {'fund_count': 3, 'fund_quarter': Q2})
+
     def test_two_buyers_are_not_convergent(self):
         for investor in self.funds[:2]:
             self.after(investor, [*BEFORE, (NVDA, 'NVIDIA CORP', 10, 250)])

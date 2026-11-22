@@ -21,7 +21,7 @@ describe('WatchlistStar', () => {
     expect(star).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(star)
     expect(star).toHaveAttribute('aria-expanded', 'true')
-    await userEvent.click(screen.getByRole('menuitem', { name: /Ideas/ }))
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /Ideas/ }))
     expect(toggleList).toHaveBeenCalledWith(watchlists[1])
   })
 
@@ -29,7 +29,7 @@ describe('WatchlistStar', () => {
     render(<WatchlistStar ticker="AAPL" name="Apple Inc." uic={211} assetType="Stock" />)
     const star = screen.getByRole('button', { name: 'AAPL is on a list' })
     await userEvent.click(star)
-    expect(screen.getAllByRole('menuitem')[0]).toHaveFocus()
+    expect(screen.getAllByRole('menuitemcheckbox')[0]).toHaveFocus()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     expect(star).toHaveFocus()
