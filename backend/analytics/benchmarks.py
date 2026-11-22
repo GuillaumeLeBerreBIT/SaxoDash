@@ -31,6 +31,20 @@ BENCHMARKS = {
     'world': {'name': 'World Index', 'uic': 50629, 'asset_type': 'Etf', 'currency': 'EUR'},
 }
 
+SECTOR_FUNDS = {
+    'Communication Services': {'ticker': 'XLC', 'uic': 10457306, 'asset_type': 'Etf'},
+    'Consumer Discretionary': {'ticker': 'XLY', 'uic': 35443, 'asset_type': 'Etf'},
+    'Consumer Staples': {'ticker': 'XLP', 'uic': 35418, 'asset_type': 'Etf'},
+    'Energy': {'ticker': 'XLE', 'uic': 35415, 'asset_type': 'Etf'},
+    'Financials': {'ticker': 'XLF', 'uic': 35416, 'asset_type': 'Etf'},
+    'Health Care': {'ticker': 'XLV', 'uic': 35420, 'asset_type': 'Etf'},
+    'Industrials': {'ticker': 'XLI', 'uic': 35442, 'asset_type': 'Etf'},
+    'Information Technology': {'ticker': 'XLK', 'uic': 35417, 'asset_type': 'Etf'},
+    'Materials': {'ticker': 'XLB', 'uic': 35414, 'asset_type': 'Etf'},
+    'Real Estate': {'ticker': 'XLRE', 'uic': 5008102, 'asset_type': 'Etf'},
+    'Utilities': {'ticker': 'XLU', 'uic': 35419, 'asset_type': 'Etf'},
+}
+
 
 def eur_closes(benchmark_key, *, user):
     """Daily closes for one benchmark, converted to EUR - (date, float) pairs.
