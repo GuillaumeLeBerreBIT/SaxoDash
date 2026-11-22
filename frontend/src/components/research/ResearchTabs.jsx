@@ -1,13 +1,13 @@
 import { TabButton, TabList } from '../ui'
 
-const STRIP = 'overflow-x-auto whitespace-nowrap [scrollbar-width:none] border-b-0'
+const STRIP = 'shrink-0 border-b-0'
 const TAB = 'shrink-0 px-3! first:pl-0! md:h-8!'
 
 export default function ResearchTabs({ groups, activeGroup, onSelectGroup, subTabs, activeTab, onSelectTab }) {
   const groupLabel = groups.find(([key]) => key === activeGroup)?.[1] ?? ''
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+    <div className="flex items-center gap-x-6 overflow-x-auto whitespace-nowrap [scrollbar-width:none]">
       <TabList label="Instrument sections" className={`pb-px ${STRIP}`}>
         {groups.map(([key, label]) => (
           <TabButton key={key} id={`research-group-${key}`} active={activeGroup === key} onClick={() => onSelectGroup(key)} className={TAB}>
@@ -17,7 +17,7 @@ export default function ResearchTabs({ groups, activeGroup, onSelectGroup, subTa
       </TabList>
 
       {subTabs.length > 1 ? (
-        <TabList label={`${groupLabel} sections`} className={`pb-px min-[900px]:ml-auto max-w-full ${STRIP}`}>
+        <TabList label={`${groupLabel} sections`} className={`pb-px ml-auto ${STRIP}`}>
           {subTabs.map(([key, label]) => (
             <TabButton
               key={key}
