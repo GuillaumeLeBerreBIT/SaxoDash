@@ -22,6 +22,7 @@ import {
   getCompanyNews,
   getDiscover,
   getDiscoverShelf,
+  getSectors,
   getEarningsCalendar,
   getFilings,
   getFundamentals,
@@ -75,6 +76,7 @@ export const researchKeys = {
   watchlists: ['watchlists'],
   discover: ['discover'],
   discoverShelf: (key) => ['discover', key],
+  sectors: ['sectors'],
 }
 
 export function useChart({ uic, assetType, horizon = 1440, count = 252 }) {
@@ -529,6 +531,14 @@ export function useDiscoverShelf(key) {
     queryKey: researchKeys.discoverShelf(key),
     queryFn: () => getDiscoverShelf(key),
     enabled: !!key,
+    staleTime: 5 * 60_000,
+  })
+}
+
+export function useSectors() {
+  return useQuery({
+    queryKey: researchKeys.sectors,
+    queryFn: getSectors,
     staleTime: 5 * 60_000,
   })
 }

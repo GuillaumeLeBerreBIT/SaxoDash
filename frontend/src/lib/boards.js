@@ -5,6 +5,8 @@ export const ROW_H = 64
 export const NEW_BOARD_NAME = 'Untitled board'
 
 const STORAGE_KEY = 'saxodash:boards'
+const SEEDED_KEY = 'saxodash:boards-seeded'
+const ADDED_LATER = ['sectors']
 
 export const PANEL_TYPES = {
   watchlist: { name: 'Watchlist', blurb: 'Your watchlists, shared with Charts; drives linked panels', w: 3, h: 6 },
@@ -18,6 +20,8 @@ export const PANEL_TYPES = {
   shelf: { name: 'Discover shelf', blurb: 'Any lens from Discover, live with the scan', w: 6, h: 5 },
   funds: { name: 'Smart money', blurb: 'Fund share changes in your names', w: 4, h: 5 },
   performance: { name: 'Vs the US 500', blurb: 'Time-weighted return against the index', w: 4, h: 4 },
+  sectors: { name: 'Sector money flow', blurb: 'The 11 sectors ranked by today’s move; pick one to fill the stock list', w: 4, h: 7 },
+  sectorStocks: { name: 'Sector stocks', blurb: 'Stocks in the picked sector, with your holdings marked', w: 4, h: 7 },
   networth: { name: 'Net worth', blurb: 'Headline number with today’s move', w: 3, h: 3 },
 }
 
@@ -45,6 +49,17 @@ export function defaultBoards() {
         { id: 'p2', type: 'watchlist', x: 8, y: 0, w: 4, h: 6 },
         { id: 'p3', type: 'shelf', x: 0, y: 6, w: 7, h: 5, cfg: { shelf: 'above-moving-averages' } },
         { id: 'p4', type: 'symbol', x: 7, y: 6, w: 5, h: 5 },
+      ],
+    },
+    {
+      id: 'sectors',
+      name: 'Sectors',
+      sym: '',
+      panels: [
+        { id: 'p1', type: 'sectors', x: 0, y: 0, w: 4, h: 8 },
+        { id: 'p2', type: 'chart', x: 4, y: 0, w: 8, h: 6 },
+        { id: 'p3', type: 'sectorStocks', x: 4, y: 6, w: 8, h: 7 },
+        { id: 'p4', type: 'symbol', x: 0, y: 8, w: 4, h: 5 },
       ],
     },
   ]
@@ -195,12 +210,32 @@ export function createBoard(boards, sym = '') {
   return { id: `board-${n}`, name: NEW_BOARD_NAME, sym, panels: [] }
 }
 
+function readSeeded() {
+  try {
+    const seeded = JSON.parse(localStorage.getItem(SEEDED_KEY))
+    return Array.isArray(seeded) ? seeded : []
+  } catch {
+    return []
+  }
+}
+
+function withLateDefaults(boards) {
+  const seeded = readSeeded()
+  const missing = defaultBoards().filter(
+    (b) => ADDED_LATER.includes(b.id) && !seeded.includes(b.id) && !boards.some((existing) => existing.id === b.id),
+  )
+  if (missing.length === 0) return boards
+  const next = [...boards, ...missing]
+  saveBoards(next)
+  return next
+}
+
 export function loadBoards() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY))
     if (!Array.isArray(stored)) return defaultBoards()
     const seen = new Set()
-    return stored
+    const boards = stored
       .filter((b) => b && typeof b === 'object' && typeof b.id === 'string' && b.id && typeof b.name === 'string' && b.name)
       .filter((b) => {
         if (seen.has(b.id)) return false
@@ -208,6 +243,7 @@ export function loadBoards() {
         return true
       })
       .map(normaliseBoard)
+    return withLateDefaults(boards)
   } catch {
     return defaultBoards()
   }
@@ -216,6 +252,9 @@ export function loadBoards() {
 export function saveBoards(boards) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(boards))
+    const seeded = new Set(readSeeded())
+    ADDED_LATER.forEach((id) => seeded.add(id))
+    localStorage.setItem(SEEDED_KEY, JSON.stringify([...seeded]))
     return true
   } catch {
     return false

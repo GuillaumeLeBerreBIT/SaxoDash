@@ -21,7 +21,7 @@ from saxo.credentials import connection_state
 from users.owner import owner
 from users.permissions import IsOwner
 
-from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
+from . import discover, earnings, filings, finnhub, market, scan_progress, sectors, shelves, statements, tasks
 from .models import ChartZone, PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -370,3 +370,8 @@ class DiscoverShelfView(APIView):
         if shelf is None:
             raise Http404
         return Response({**shelves.payload(shelf), 'as_of': discover.as_of()})
+
+
+class SectorsView(APIView):
+    def get(self, request):
+        return Response({'as_of': discover.as_of(), 'sectors': sectors.overview()})
