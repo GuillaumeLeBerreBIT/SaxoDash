@@ -16,46 +16,52 @@ import { Button, Card, Input } from '../components/ui'
 
 const TAB =
   'inline-flex items-center gap-1.5 h-[34px] px-3.5 rounded-[10px] text-[15px] font-bold whitespace-nowrap transition-colors'
-const tabClass = ({ isActive }) => `${TAB} ${isActive ? 'bg-pill text-ink' : 'text-ink-3 hover:text-ink'}`
+const NAMED_TAB = `${TAB} max-w-[16rem] shrink-0`
+const tabClass = ({ isActive }) => `${NAMED_TAB} ${isActive ? 'bg-pill text-ink' : 'text-ink-3 hover:text-ink'}`
 const DISARM_MS = 3000
 const EDIT_MIN_WIDTH = 760
 
-function BoardTab({ to, editing, current = false, children }) {
+function BoardTab({ to, editing, current = false, name }) {
   if (editing) {
     return (
-      <span aria-disabled="true" title="Save or cancel your edits first" className={`${TAB} ${current ? 'bg-pill text-ink' : 'text-ink-3 opacity-60'}`}>
-        {children}
+      <span aria-disabled="true" title="Save or cancel your edits first" className={`${NAMED_TAB} ${current ? 'bg-pill text-ink' : 'text-ink-3 opacity-60'}`}>
+        <span className="truncate">{name}</span>
       </span>
     )
   }
   return (
-    <NavLink to={to} end className={tabClass}>
-      {children}
+    <NavLink to={to} end title={name} className={tabClass}>
+      <span className="truncate">{name}</span>
     </NavLink>
   )
 }
 
 function BoardTabs({ boards, currentId, editing, onNew, onEdit, canEdit }) {
+  const listRef = useRef(null)
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'nearest', block: 'nearest' })
+  }, [currentId, boards.length])
+
   return (
-    <div className="flex items-center gap-2 mb-3 min-w-0">
-      <nav aria-label="Boards" className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none]">
-        {boards.map((board) => (
-          <BoardTab key={board.id} to={`/boards/${board.id}`} editing={editing} current={board.id === currentId}>
-            {board.name}
-          </BoardTab>
-        ))}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 min-w-0">
+      <nav aria-label="Boards" className="flex flex-1 items-center gap-1 min-w-0">
+        <div ref={listRef} className="flex items-center gap-1 min-w-0 overflow-x-auto [scrollbar-width:none]">
+          {boards.map((board) => (
+            <BoardTab key={board.id} to={`/boards/${board.id}`} editing={editing} current={board.id === currentId} name={board.name} />
+          ))}
+        </div>
         <button
           type="button"
           onClick={onNew}
           disabled={editing}
-          className={`${TAB} hidden min-[760px]:inline-flex text-ink-2 hover:text-ink disabled:opacity-40`}
+          className={`${TAB} shrink-0 max-[759px]:hidden text-ink-2 hover:text-ink disabled:opacity-40`}
         >
           <Plus size={14} aria-hidden="true" /> New board
         </button>
       </nav>
       {canEdit ? (
-        <div className="ml-auto shrink-0">
-          <Button className="hidden min-[760px]:inline-flex" onClick={onEdit}>
+        <div className="shrink-0 max-[759px]:basis-full">
+          <Button className="max-[759px]:hidden" onClick={onEdit}>
             Edit board
           </Button>
           <span className="min-[760px]:hidden text-[12px] text-ink-3">Editing needs a wider screen</span>
