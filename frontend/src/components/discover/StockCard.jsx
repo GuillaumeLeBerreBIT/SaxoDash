@@ -1,24 +1,23 @@
 import { Link } from 'react-router-dom'
 
 import { checksLine, priceLine } from '../../lib/discoverBrowse'
-import { fmtMoney } from '../../lib/format'
+import { fmtDate, fmtMoney } from '../../lib/format'
 import { displayName } from '../../lib/names'
+import { hasPriceRange } from '../../lib/priceBar'
 import { researchHref } from '../../lib/research'
 import { InstrumentLogo } from '../ui'
 import ActionBadge from '../verdicts/ActionBadge'
-import PriceBar from '../verdicts/PriceBar'
 import PriceSpark from './PriceSpark'
 import WatchlistStar from './WatchlistStar'
 
-const LINE_TONE = { up: 'text-up', neutral: 'text-ink-2' }
-
-export default function StockCard({ stock, note, className = '' }) {
+export default function StockCard({ stock, note, qualitySummary, className = '' }) {
   const line = priceLine(stock)
   const instrument = { uic: stock.uic, assetType: 'Stock' }
   return (
     <article
       data-testid="stock-card"
-      className={`group relative flex min-w-0 flex-col gap-3 rounded-[14px] bg-pane p-4 transition-colors hover:bg-hover ${className}`}
+      data-listing={stock.ticker}
+      className={`sd-panel group relative flex min-w-0 flex-col gap-3 rounded-[14px] bg-pane p-4 transition-colors hover:bg-hover ${className}`}
     >
       <div className="flex items-center gap-2.5 pr-9">
         <InstrumentLogo symbol={stock.ticker} size={34} />
@@ -33,23 +32,33 @@ export default function StockCard({ stock, note, className = '' }) {
           <div className="truncate text-[12px] text-ink-3">{[stock.ticker, stock.sector].filter(Boolean).join(' · ')}</div>
         </div>
       </div>
-      <PriceSpark
-        values={stock.spark}
-        cheapBelow={stock.cheap_below}
-        expensiveAbove={stock.expensive_above}
-        label={`${stock.name}, weekly closes over the last year`}
-      />
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[20px] font-bold text-ink num">{fmtMoney(stock.last_close, 'USD')}</span>
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="num text-[20px] font-bold leading-tight text-ink">{fmtMoney(stock.last_close, 'USD')}</span>
+        <span className="text-[12px] text-ink-3">{stock.close_date ? `Close · ${fmtDate(stock.close_date)}` : 'Close date unavailable'}</span>
         {stock.held ? <span className="text-[12px] font-semibold text-held">You own it</span> : null}
       </div>
-      <div className="flex flex-col gap-1.5">
-        <PriceBar price={stock.last_close} cheapBelow={stock.cheap_below} expensiveAbove={stock.expensive_above} labels={false} />
-        {line ? <span className={`text-[12px] font-semibold num ${LINE_TONE[line.tone]}`}>{line.text}</span> : null}
-      </div>
-      <p className="min-h-[36px] text-[13px] leading-snug text-ink-2">{note ?? checksLine(stock)}</p>
-      <div className="mt-auto flex items-center justify-between border-t border-line pt-2.5">
-        <ActionBadge verdict={stock} className="text-[14px]" />
+      <figure className="flex flex-col gap-1.5">
+        {stock.spark?.length >= 2 && <span className="text-[12px] text-ink-3">Weekly closes</span>}
+        <PriceSpark
+          values={stock.spark}
+          cheapBelow={stock.cheap_below}
+          expensiveAbove={stock.expensive_above}
+          label={`${stock.name}, recent weekly closes`}
+        />
+        {hasPriceRange(stock.cheap_below, stock.expensive_above) ? (
+          <figcaption className="flex flex-wrap items-baseline justify-between gap-x-2 text-[12px]">
+            <span className="text-ink-3">P/E-based range</span>
+            <span className="num whitespace-nowrap text-ink-2">{fmtMoney(stock.cheap_below, 'USD')}–{fmtMoney(stock.expensive_above, 'USD')}</span>
+          </figcaption>
+        ) : <figcaption className="text-[12px] text-ink-3">P/E range unavailable</figcaption>}
+      </figure>
+      {line ? <span className="num text-[12px] font-semibold text-ink-2">{line}</span> : null}
+      <p className="text-[13px] leading-snug text-ink-2">{note ?? checksLine(stock)}</p>
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-line pt-2.5">
+        <div className="flex min-w-0 flex-col">
+          {qualitySummary && <span className="num text-[13px] font-semibold text-ink-2">{qualitySummary}</span>}
+          {(!qualitySummary || !['buy', 'add'].includes(stock.action)) && <ActionBadge verdict={stock} className="text-[14px]" />}
+        </div>
         <span className="text-[12px] text-ink-3 transition-colors group-hover:text-ink-2">Open in Research →</span>
       </div>
       <div className="absolute right-2.5 top-3 z-10">

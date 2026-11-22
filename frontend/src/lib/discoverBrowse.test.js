@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { EMPTY_FILTERS, browseQuery, checksLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, toggled } from './discoverBrowse'
+import { EMPTY_FILTERS, browseQuery, checksLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, qualityCount, toggled } from './discoverBrowse'
 
 describe('filters and the URL', () => {
   it('round-trips through search params', () => {
@@ -14,7 +14,7 @@ describe('filters and the URL', () => {
   })
 
   it('ignores a sort it does not know', () => {
-    expect(filtersFromParams(new URLSearchParams('sort=random')).sort).toBe('opportunity')
+    expect(filtersFromParams(new URLSearchParams('sort=random')).sort).toBe('checks')
   })
 
   it('counts sorting alone as no filter, so the shelves stay', () => {
@@ -43,19 +43,28 @@ describe('toggled', () => {
 })
 
 describe('card lines', () => {
-  it('leads with how far below its usual P/E range a stock is, without calling it good', () => {
-    expect(priceLine({ discount_pct: 55.4, below_high_pct: 40 })).toEqual({ text: '55% below its usual P/E range', tone: 'neutral' })
-  })
-
-  it('falls back to the fall from the high, then to the valuation word', () => {
-    expect(priceLine({ discount_pct: -5, below_high_pct: 31.2, valuation: 'fair' })).toEqual({ text: '31% below its 1-year high', tone: 'neutral' })
-    expect(priceLine({ discount_pct: null, below_high_pct: 2, valuation: 'expensive' })).toEqual({ text: 'Above its usual P/E range', tone: 'neutral' })
+  it('uses the filtered grade for the price description', () => {
+    expect(priceLine({ valuation: 'cheap', discount_pct: 55.4 })).toBe('55% below its usual P/E range')
+    expect(priceLine({ valuation: 'cheap', discount_pct: 0.2 })).toBe('Below its usual P/E range')
+    expect(priceLine({ valuation: 'fair', below_high_pct: 31 })).toBe('Within its usual P/E range')
+    expect(priceLine({ valuation: 'expensive' })).toBe('Above its usual P/E range')
+    expect(priceLine({ valuation: 'not_judged', below_high_pct: 31.2 })).toBe('31% below its 1-year high')
     expect(priceLine({ valuation: 'not_judged' })).toBeNull()
   })
 
-  it('says how many checks pass and names the ones that fail', () => {
-    expect(checksLine({ checks_passed: 7, checks_answered: 7, failed_checks: [] })).toBe('7 of 7 quality checks pass.')
-    expect(checksLine({ checks_passed: 6, checks_answered: 7, failed_checks: ['Debt'] })).toBe('6 of 7 quality checks pass; debt fails.')
-    expect(checksLine({ checks_passed: 0, checks_answered: 0, failed_checks: [] })).toBe('Too few figures to judge the business.')
+  it('counts only assessed checks and leaves missing counts out', () => {
+    expect(qualityCount({ checks_passed: 4, checks_answered: 5 })).toBe('4 of 5 quality checks passed')
+    expect(qualityCount({ checks_passed: 0, checks_answered: 0 })).toBeNull()
+    expect(qualityCount({ checks_answered: 5 })).toBeNull()
+  })
+
+  it('pairs recorded growth with a failed check and skips unanswered checks', () => {
+    expect(checksLine({ revenue_growth_5y: 8.24, failed_checks: ['Debt'] }))
+      .toBe('Five-year revenue growth was 8.2% a year. Misses the debt check.')
+    expect(checksLine({ revenue_growth_5y: null })).toBe('Too few figures to judge the business.')
+    expect(checksLine({ failed_checks: ['Debt'] })).toBe('Misses the debt check.')
+    expect(checksLine({ passed_checks: ['Return on equity'] })).toBe('Passes on return on equity.')
+    expect(checksLine({ failed_checks: ['Debt', 'Margins', 'Revenue growth'] })).toBe('Misses 3 checks, including debt and margins.')
+    expect(checksLine({ revenue_growth_5y: 0 })).toContain('0.0%')
   })
 })

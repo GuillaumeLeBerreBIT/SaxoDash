@@ -40,6 +40,13 @@ class DiscoverViewTest(APITestCase):
         self.client.force_authenticate(None)
         self.assertEqual(self.client.get(reverse('research-discover')).status_code, 401)
 
+    @mock.patch('research.shelves.matching', side_effect=AssertionError('Preview query'))
+    def test_screen_picker_loads_only_definitions(self, matching):
+        data = self.client.get(reverse('research-discover'), {'view': 'screens'}).data
+        self.assertIn('health', data)
+        self.assertIn({'key': 'overbought', 'title': 'Overbought', 'group': 'price'}, data['shelves'])
+        matching.assert_not_called()
+
     def test_lists_every_shelf_with_totals_and_top_cards(self):
         self.run_at('ok', 1)
         for i in range(25):

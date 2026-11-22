@@ -48,7 +48,7 @@ export function MenuTrigger(props) {
   return <DropdownPrimitive.Trigger {...props} />
 }
 
-export function MenuContent({ children, width, align = 'start', side = 'bottom', sideOffset = 4, className = '', onOpenAutoFocus }) {
+export function MenuContent({ children, width, align = 'start', side = 'bottom', sideOffset = 4, className = '', onOpenAutoFocus, onCloseAutoFocus }) {
   return (
     <DropdownPrimitive.Portal>
       <DropdownPrimitive.Content
@@ -57,6 +57,7 @@ export function MenuContent({ children, width, align = 'start', side = 'bottom',
         sideOffset={sideOffset}
         collisionPadding={8}
         onOpenAutoFocus={onOpenAutoFocus}
+        onCloseAutoFocus={onCloseAutoFocus}
         style={width ? { width } : undefined}
         className={`${SURFACE} p-1.5 min-w-[8rem] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto ${className}`}
       >
@@ -75,6 +76,20 @@ export function MenuItem({ onSelect, danger = false, children, className = '', .
     >
       {children}
     </DropdownPrimitive.Item>
+  )
+}
+
+export function MenuCheckboxItem({ children, checked, onChange, disabled }) {
+  return (
+    <DropdownPrimitive.CheckboxItem
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onChange}
+      onSelect={(event) => event.preventDefault()}
+      className={`${ITEM} w-full text-ink-2`}
+    >
+      {children}
+    </DropdownPrimitive.CheckboxItem>
   )
 }
 
