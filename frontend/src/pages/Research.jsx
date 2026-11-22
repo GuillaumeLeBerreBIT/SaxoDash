@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
 import { COMPANY_DATA, TAB_GATE, tabGate } from '../lib/companyData'
-import { chartHref } from '../lib/research'
 import { reportsWithin } from '../lib/earnings'
 import { entrySentence } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
@@ -20,14 +19,16 @@ import NotesTab from '../components/research/NotesTab'
 import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
+import PricePanel from '../components/research/PricePanel'
 import PeersTab from '../components/research/PeersTab'
 import OwnershipSignals from '../components/research/OwnershipSignals'
 import ResearchHeader from '../components/research/ResearchHeader'
+import ResearchTabs from '../components/research/ResearchTabs'
 import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
-import { useResearchChartType } from '../components/research/useResearchChartType'
+import { useResearchChartView } from '../components/research/useResearchChartView'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useTradeRisk } from '../components/research/useTradeRisk'
 import { useWatchlistToggle } from '../components/research/useWatchlistToggle'
@@ -78,7 +79,7 @@ export default function Research() {
   const { symbol, instrument, resolving, position, positions, positionsReady, selectSymbol } = useResearchInstrument()
 
   const controls = useChartControls()
-  const [chartType, setChartType] = useResearchChartType()
+  const [chartView, setChartView] = useResearchChartView()
   const [hover, setHover] = useState(null)
   const rawTab = params.get('tab')
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
@@ -208,6 +209,11 @@ export default function Research() {
       currency={currency}
       watchlists={watchlists}
       onToggleList={toggleList}
+    />
+  )
+
+  const tabs = (
+    <ResearchTabs
       groups={visibleGroups}
       activeGroup={activeGroup}
       onSelectGroup={selectGroup}
@@ -217,15 +223,33 @@ export default function Research() {
     />
   )
 
-  const chartPanel = (
+  const viewSwitch = { value: chartView, onChange: setChartView }
+
+  const priceView = (
+    <PricePanel
+      bars={bars}
+      allBars={allBars}
+      controls={controls}
+      isLoading={chart.isLoading}
+      error={chart.error}
+      symbol={symbol}
+      unresolved={!instrument && !chart.isLoading}
+      currency={currency}
+      pe={company?.pe_ratio}
+      nextEarnings={nextReport}
+      viewSwitch={viewSwitch}
+    />
+  )
+
+  const advancedView = (
     <ChartPanel
       bars={bars}
       ind={ind}
       timeWindow={timeWindow}
       isLoading={chart.isLoading}
       error={chart.error}
-      controls={{ ...controls, type: chartType }}
-      typeSwitch={{ value: chartType, onChange: setChartType }}
+      controls={controls}
+      viewSwitch={viewSwitch}
       hover={safeHover}
       setHover={setHover}
       symbol={symbol}
@@ -239,7 +263,6 @@ export default function Research() {
       onDeleteLine={priceLines.remove}
       onEditLineLabel={priceLines.setLabel}
       lineSaveFailed={priceLines.saveFailed}
-      expandHref={chartHref(symbol, instrument)}
     />
   )
 
@@ -317,8 +340,9 @@ export default function Research() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       {header}
-      {chartPanel}
+      {chartView === 'price' ? priceView : advancedView}
       {answer}
+      {tabs}
       <div className="grid grid-cols-1 min-[1440px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
         <div {...panelProps} className="min-w-0 min-[1440px]:col-span-9">
           {body}

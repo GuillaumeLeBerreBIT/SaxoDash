@@ -21,7 +21,7 @@ describe('KeyFactsStrip', () => {
     render(<KeyFactsStrip fundamentals={facts} />)
 
     expect(value('Market cap')).toBe('4.98T')
-    expect(value('P/E')).toBe('34.80')
+    expect(screen.queryByText('P/E')).not.toBeInTheDocument()
     expect(value('EPS (TTM)')).toBe('7.46')
     expect(value('Dividend yield')).toBe('0.41%')
     expect(value('Listed since')).toBe('1980')
@@ -59,7 +59,6 @@ describe('KeyFactsStrip', () => {
     expect(screen.queryByText('Website')).not.toBeInTheDocument()
     expect(screen.queryByText('Country')).not.toBeInTheDocument()
     expect(screen.queryByText('Listed since')).not.toBeInTheDocument()
-    expect(screen.queryByText('P/E')).not.toBeInTheDocument()
   })
 
   it('does not link a website that is not http or https', () => {

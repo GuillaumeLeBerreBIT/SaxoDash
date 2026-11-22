@@ -48,7 +48,7 @@ describe('OverviewTab fundamentals', () => {
       />
     )
 
-    expect(screen.getAllByText('32.10').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('3.1T').length).toBeGreaterThan(0)
   })
 
   it('renders the investment snapshot from the same fundamentals', () => {

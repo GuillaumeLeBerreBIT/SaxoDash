@@ -1,19 +1,14 @@
-import { Link } from 'react-router-dom'
-import { CandlestickChart, Crosshair, Maximize2, Sigma } from 'lucide-react'
+import { CandlestickChart, Crosshair, Sigma } from 'lucide-react'
 
 import { CHART_TYPES, DEFAULT_PANE_HEIGHTS, activeIndicatorCount } from '../../lib/chartOptions'
-import { Card, Segmented } from '../ui'
+import { Card } from '../ui'
 import { Menu } from './menu'
 import { ChartTypeMenuItems, GuideMenuItems, IndicatorMenuItems } from './chartMenus'
 import ChartCanvas from './ChartCanvas'
 import EntryBanner from './EntryBanner'
-import { LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
+import { ChartViewSwitch, LineSaveAlert, PeriodChange, RangeButtons } from './chartHeader'
 
 const CHART_HEIGHT = 390
-const CHART_STYLE_OPTIONS = [
-  { value: 'line', label: 'Line' },
-  { value: 'candles', label: 'Candles' },
-]
 
 export default function ChartPanel({
   bars,
@@ -35,8 +30,7 @@ export default function ChartPanel({
   onDeleteLine,
   onEditLineLabel,
   lineSaveFailed = false,
-  expandHref,
-  typeSwitch,
+  viewSwitch,
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
@@ -48,11 +42,9 @@ export default function ChartPanel({
 
         <span className="w-px h-5 bg-line mx-1" />
 
-        {typeSwitch ? null : (
-          <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
-            <ChartTypeMenuItems controls={controls} />
-          </Menu>
-        )}
+        <Menu label={Object.fromEntries(CHART_TYPES)[type]} icon={CandlestickChart} width={160}>
+          <ChartTypeMenuItems controls={controls} />
+        </Menu>
 
         <Menu label={`Indicators${activeCount ? ` · ${activeCount}` : ''}`} icon={Sigma} width={230}>
           <IndicatorMenuItems controls={controls} />
@@ -67,25 +59,8 @@ export default function ChartPanel({
         <LineSaveAlert failed={lineSaveFailed} />
 
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          {typeSwitch ? (
-            <Segmented
-              label="Chart style"
-              value={typeSwitch.value}
-              onChange={typeSwitch.onChange}
-              options={CHART_STYLE_OPTIONS}
-            />
-          ) : null}
+          {viewSwitch ? <ChartViewSwitch value={viewSwitch.value} onChange={viewSwitch.onChange} /> : null}
           <PeriodChange bars={bars} />
-          {expandHref ? (
-            <Link
-              to={expandHref}
-              aria-label="Open advanced chart"
-              title="Open advanced chart"
-              className="w-7 h-7 rounded-[7px] flex items-center justify-center text-ink-3 hover:text-ink hover:bg-hover"
-            >
-              <Maximize2 size={13} />
-            </Link>
-          ) : null}
         </div>
       </div>
 

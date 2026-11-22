@@ -4,7 +4,7 @@ import { Star } from 'lucide-react'
 import { fmtCompact, fmtMoney, fmtNum } from '../../lib/format'
 import { chartHref, isEtf, moveCaption } from '../../lib/research'
 import SaxoConnectionStatus from '../SaxoConnectionStatus'
-import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag, TabButton, TabList } from '../ui'
+import { Card, InstrumentLogo, LetterAvatar, Move, StatusDot, Tag } from '../ui'
 import { Menu, MenuRow } from './menu'
 
 const LINK_BUTTON =
@@ -86,12 +86,6 @@ export default function ResearchHeader({
   currency,
   watchlists = [],
   onToggleList,
-  groups,
-  activeGroup,
-  onSelectGroup,
-  subTabs,
-  activeTab,
-  onSelectTab,
   className = '',
 }) {
   const name = details?.description ?? position?.name ?? symbol
@@ -112,7 +106,7 @@ export default function ResearchHeader({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3.5 mt-2.5 mb-3.5">
+      <div className="flex flex-wrap items-center gap-3.5 mt-2.5">
         <InstrumentLogo
           symbol={symbol}
           size={36}
@@ -135,40 +129,6 @@ export default function ResearchHeader({
             : `Could not resolve ${symbol} to a Saxo instrument.`}
         </p>
       )}
-
-      <TabList
-        label="Instrument sections"
-        className="pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none] border-b-0"
-      >
-        {groups.map(([key, label]) => (
-          <TabButton
-            key={key}
-            id={`research-group-${key}`}
-            active={activeGroup === key}
-            onClick={() => onSelectGroup(key)}
-            className="shrink-0 px-3! first:pl-0! md:h-8!"
-          >
-            {label}
-          </TabButton>
-        ))}
-      </TabList>
-
-      {subTabs.length > 1 ? (
-        <TabList label={`${groups.find(([key]) => key === activeGroup)?.[1] ?? ''} sections`} className="mt-2 pb-px overflow-x-auto whitespace-nowrap [scrollbar-width:none] border-b-0">
-          {subTabs.map(([key, label]) => (
-            <TabButton
-              key={key}
-              id={`research-tab-${key}`}
-              controls={`research-panel-${key}`}
-              active={activeTab === key}
-              onClick={() => onSelectTab(key)}
-              className="shrink-0 px-3! first:pl-0! md:h-8!"
-            >
-              {label}
-            </TabButton>
-          ))}
-        </TabList>
-      ) : null}
     </Card>
   )
 }

@@ -16,7 +16,6 @@ function companyFacts(fundamentals) {
   const site = websiteLink(fundamentals.website)
   return [
     ['Market cap', fundamentals.market_cap == null ? null : fmtCompact(fundamentals.market_cap)],
-    ['P/E', fundamentals.pe_ratio == null ? null : fmtNum(fundamentals.pe_ratio, 2)],
     ['EPS (TTM)', fundamentals.eps_ttm == null ? null : fmtNum(fundamentals.eps_ttm, 2)],
     ['Dividend yield', fundamentals.dividend_yield == null ? null : fmtPct(fundamentals.dividend_yield, { sign: false })],
     ['Listed since', fundamentals.ipo_date ? fundamentals.ipo_date.slice(0, 4) : null],
