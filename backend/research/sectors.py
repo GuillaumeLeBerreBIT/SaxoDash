@@ -1,3 +1,5 @@
+from analytics.benchmarks import SECTOR_FUNDS
+
 from .models import ScreenerRow
 
 STOCK_FIELDS = ('ticker', 'name', 'uic', 'asset_type', 'last_close', 'change_1d', 'change_1m', 'market_cap')
@@ -24,6 +26,7 @@ def overview():
     sectors = [
         {
             'sector': name,
+            'fund': SECTOR_FUNDS.get(name),
             'count': len(stocks),
             'change_1d': _average(stock['change_1d'] for stock in stocks),
             'change_1m': _average(stock['change_1m'] for stock in stocks),

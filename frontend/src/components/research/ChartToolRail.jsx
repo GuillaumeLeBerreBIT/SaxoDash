@@ -11,16 +11,16 @@ function RailDivider({ className = '' }) {
   return <span role="separator" className={`w-px h-6 mx-1 lg:w-6 lg:h-px lg:mx-0 lg:my-1 bg-line ${className}`} />
 }
 
-function RailButton({ label, icon: Icon, pressed, disabled = false, onClick }) {
+function RailButton({ label, icon: Icon, pressed, disabled = false, hint = null, onClick }) {
   return (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={hint ?? label}
       aria-pressed={pressed}
       disabled={disabled}
       onClick={onClick}
-      className={`${RAIL_BUTTON} disabled:opacity-35 disabled:pointer-events-none ${
+      className={`${RAIL_BUTTON} disabled:opacity-35 ${hint ? 'disabled:cursor-not-allowed' : 'disabled:pointer-events-none'} ${
         pressed ? 'bg-selected text-ink' : 'text-ink-3 hover:text-ink hover:bg-hover'
       }`}
     >
@@ -48,6 +48,7 @@ export default function ChartToolRail({
   tool,
   onToolChange,
   canAnnotate,
+  annotateHint = null,
   backHref,
   layout = '1',
   onLayoutChange,
@@ -63,6 +64,7 @@ export default function ChartToolRail({
         icon={Minus}
         pressed={tool === 'hline'}
         disabled={!canAnnotate}
+        hint={annotateHint}
         onClick={() => onToolChange(tool === 'hline' ? 'crosshair' : 'hline')}
       />
       <RailButton
@@ -70,6 +72,7 @@ export default function ChartToolRail({
         icon={Slash}
         pressed={tool === 'ray'}
         disabled={!canAnnotate}
+        hint={annotateHint}
         onClick={() => onToolChange(tool === 'ray' ? 'crosshair' : 'ray')}
       />
       <RailButton
@@ -77,6 +80,7 @@ export default function ChartToolRail({
         icon={Square}
         pressed={tool === 'zone'}
         disabled={!canAnnotate}
+        hint={annotateHint}
         onClick={() => onToolChange(tool === 'zone' ? 'crosshair' : 'zone')}
       />
       <RailButton
@@ -84,6 +88,7 @@ export default function ChartToolRail({
         icon={Type}
         pressed={tool === 'text'}
         disabled={!canAnnotate}
+        hint={annotateHint}
         onClick={() => onToolChange(tool === 'text' ? 'crosshair' : 'text')}
       />
 

@@ -19,6 +19,7 @@ import {
 import { daysUntil, sessionWords } from '../../lib/earnings'
 import { fmtDate, fmtNum, fmtPct, pctToneClass } from '../../lib/format'
 import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceLines'
+import { percentLabel } from '../../lib/compare'
 import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
 import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
@@ -41,7 +42,10 @@ import { useChartColors } from '../../theme/useChartColors'
  *  body's props stable enough for memo to bite.
  */
 
-function PriceAxis({ ticks, scaleY, width, colors }) {
+const tickLabel = (value, base) => (base ? percentLabel(value, base, 0) : value.toFixed(value > 100 ? 0 : 2))
+const tagLabel = (value, base) => (base ? percentLabel(value, base) : value.toFixed(2))
+
+function PriceAxis({ ticks, scaleY, width, colors, base }) {
   return ticks.map((value) => (
     <g key={value}>
       <line
@@ -58,7 +62,7 @@ function PriceAxis({ ticks, scaleY, width, colors }) {
         fontSize="11"
         className="num"
       >
-        {value.toFixed(value > 100 ? 0 : 2)}
+        {tickLabel(value, base)}
       </text>
     </g>
   ))
@@ -249,7 +253,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
   )
 }
 
-const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, guides, plan, clipId, colors }) {
+const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry, width, earningsMarkers, onInspectEarnings, guides, plan, clipId, colors, compareLines }) {
   const { xAt, scaleY, chartH, chartW } = geometry
   const closes = data.map((bar) => bar.close)
   const pricePath = linePath(closes, xAt, scaleY)
@@ -264,7 +268,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
         </clipPath>
       </defs>
 
-      <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} />
+      <PriceAxis ticks={geometry.ticks} scaleY={scaleY} width={width} colors={colors} base={geometry.percentBase} />
 
       <g clipPath={`url(#${clipId})`}>
         {guides ? (
@@ -288,8 +292,19 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
             <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" />
           </g>
         ) : null}
-        {type === 'line' ? <path d={pricePath} fill="none" stroke={colors.primary} strokeWidth="1.5" /> : null}
+        {type === 'line' ? <path d={pricePath} fill="none" stroke={geometry.percentBase ? colors.ink : colors.primary} strokeWidth={geometry.percentBase ? 2 : 1.5} /> : null}
         {type === 'candles' ? <Candles data={data} geometry={geometry} colors={colors} /> : null}
+        {compareLines.map((line) => (
+          <path
+            key={line.key}
+            data-testid="compare-line"
+            d={linePath(line.prices, xAt, scaleY)}
+            fill="none"
+            stroke={line.color}
+            strokeWidth={line.dashed ? 1.5 : 1.6}
+            strokeDasharray={line.dashed ? '4 3' : undefined}
+          />
+        ))}
         {type === 'bars' ? <Bars data={data} geometry={geometry} colors={colors} /> : null}
 
         {overlays.bb ? (
@@ -370,7 +385,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           fontSize="11"
           className="num"
         >
-          {last.toFixed(2)}
+          {tagLabel(last, geometry.percentBase)}
         </text>
       </g>
     </g>
@@ -406,7 +421,7 @@ function Crosshair({ bar, index, geometry, width, dimmed, colors }) {
         fontSize="11"
         className="num"
       >
-        {bar.close.toFixed(2)}
+        {tagLabel(bar.close, geometry.percentBase)}
       </text>
     </g>
   )
@@ -416,6 +431,7 @@ const NO_LINES = []
 const NO_TREND_LINES = []
 const NO_TEXT_ANNOTATIONS = []
 const NO_ZONES = []
+const NO_COMPARE_LINES = []
 
 function ScaleHandle({ width, height, yScale, onChange, onClickAt, onReset }) {
   const drag = useRef(null)
@@ -506,6 +522,7 @@ export function TVChart({
   tool = 'crosshair',
   onPlaced,
   placerRef,
+  compare = null,
 }) {
   const [ref, width] = useWidth()
   const focusBack = useRef(null)
@@ -552,8 +569,21 @@ export function TVChart({
   )
 
   const geometry = useMemo(
-    () => priceGeometry({ data, ind, width, height, withBands: overlays.bb, yScale, yShift, slots, lane }),
-    [data, ind, width, height, overlays.bb, yScale, yShift, slots, lane],
+    () =>
+      priceGeometry({
+        data,
+        ind,
+        width,
+        height,
+        withBands: overlays.bb,
+        yScale,
+        yShift,
+        slots,
+        lane,
+        extra: compare ? compare.lines.map((line) => line.prices) : NO_COMPARE_LINES,
+        percentBase: compare?.base ?? null,
+      }),
+    [data, ind, width, height, overlays.bb, yScale, yShift, slots, lane, compare],
   )
 
   const canPan = Boolean(onTimeOffsetChange || onYShiftChange)
@@ -601,7 +631,8 @@ export function TVChart({
     return { barDate: bar.date, price: roundPrice(bar.close), x: geometry.xAt(index), y: geometry.scaleY(bar.close), keyed: true }
   }
 
-  const openEditor = (open) => (id) => {
+  const openEditor = (open, save) => (id) => {
+    if (!save) return
     focusBack.current = document.activeElement
     open(id)
   }
@@ -779,13 +810,14 @@ export function TVChart({
           plan={tradePlan}
           clipId={clipId}
           colors={colors}
+          compareLines={compare?.lines ?? NO_COMPARE_LINES}
         />
         <ScaleHandle
           width={width}
           height={height}
           yScale={yScale}
           onChange={onYScaleChange}
-          onClickAt={lines.length > 0 ? editAt : undefined}
+          onClickAt={lines.length > 0 && onMoveLine ? editAt : undefined}
           onReset={onPriceScaleReset}
         />
         <PriceLines
@@ -799,7 +831,7 @@ export function TVChart({
             textSelection.clear()
             freeSelection.select(id)
           }}
-          onEditLabel={openEditor(setEditingFreeLineId)}
+          onEditLabel={openEditor(setEditingFreeLineId, onEditLineLabel)}
         />
         <ChartZones
           zones={zones}
@@ -824,7 +856,7 @@ export function TVChart({
             trendSelection.select(id)
           }}
           onMoveEndpoint={(line, endpoint, point) => onMoveTrendLineEndpoint?.(line, endpoint, point)}
-          onEdit={openEditor(setEditingTrendLineId)}
+          onEdit={openEditor(setEditingTrendLineId, onEditTrendLineLabel)}
         />
         <TextAnnotations
           items={textAnnotations}
@@ -837,7 +869,7 @@ export function TVChart({
             textSelection.select(id)
           }}
           onMove={(item, point) => onMoveTextAnnotation?.(item, point)}
-          onEdit={openEditor(setEditingTextId)}
+          onEdit={openEditor(setEditingTextId, onEditTextAnnotationText)}
         />
         {rayStart && rayEnd && tool === 'zone' ? (
           <rect

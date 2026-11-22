@@ -38,6 +38,8 @@ const view = {
 
 function stub() {
   queries.useChart.mockImplementation(({ uic } = {}) => (uic ? { data: bars, isLoading: false, error: null } : { ...idle }))
+  queries.useSectors.mockReturnValue(idle)
+  queries.useCharts.mockImplementation((instruments) => ({ data: instruments.map(() => undefined), status: instruments.map(() => 'loading') }))
   queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { currency: 'USD' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: null })

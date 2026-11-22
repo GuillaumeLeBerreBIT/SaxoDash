@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react'
 import { MemoryRouter, useSearchParams } from 'react-router-dom'
 
 import { useChartWorkspace } from './useChartWorkspace'
+import { COMPARE_OFF } from '../../lib/chartWorkspace'
 
 const KEY = 'saxodash:chart-workspace'
 const nvda = { symbol: 'NVDA', uic: 211, assetType: 'Stock' }
@@ -107,7 +108,14 @@ describe('useChartWorkspace', () => {
   it('persists the workspace', () => {
     const { result } = renderWorkspace()
     act(() => result.current.workspace.setLayout('2v'))
-    expect(stored()).toEqual({ layout: '2v', slots: [nvda, null], active: 1, linked: false })
+    expect(stored()).toEqual({ layout: '2v', slots: [nvda, null], active: 1, linked: false, compares: [COMPARE_OFF, COMPARE_OFF] })
+  })
+
+  it('keeps a Compare change to one pane in that pane only', () => {
+    store({ layout: '2h', slots: [nvda, nvda], active: 0 })
+    const { result } = renderWorkspace()
+    act(() => result.current.workspace.setCompare(1, { on: true, sp500: true }))
+    expect(stored().compares).toEqual([COMPARE_OFF, { ...COMPARE_OFF, on: true, sp500: true }])
   })
 
   it('is unlinked until asked, and remembers the choice', () => {
