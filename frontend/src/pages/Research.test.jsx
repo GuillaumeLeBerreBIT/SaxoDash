@@ -698,7 +698,7 @@ describe('Research panning', () => {
   it('keeps the tab row inside its own scroller instead of widening the page', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const row = screen.getByRole('tab', { name: 'Overview' }).parentElement
+    const row = screen.getByRole('tablist', { name: 'Instrument sections' }).parentElement
     expect(row).toHaveClass('overflow-x-auto', 'whitespace-nowrap')
     expect(screen.getByRole('tab', { name: 'Notes and plan' })).toHaveClass('shrink-0')
   })
