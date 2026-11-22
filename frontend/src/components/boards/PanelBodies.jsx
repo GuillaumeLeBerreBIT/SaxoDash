@@ -78,42 +78,10 @@ function usePortfolioRows() {
   return { positionsQuery, positions, quotes }
 }
 
-function FixedList({ board, panel, onFollow }) {
-  const list = panel.cfg.list
-  return (
-    <Card
-      className={FILL}
-      context={`Custom list · ${list.length} symbol${list.length === 1 ? '' : 's'}`}
-      dot="off"
-      title={panel.cfg.title || 'Watchlist'}
-    >
-      <ul className="-mx-2">
-        {list.map((symbol) => (
-          <li key={symbol}>
-            <button
-              type="button"
-              aria-current={symbol === board.sym || undefined}
-              onClick={() => onFollow(symbol)}
-              className={`w-full text-left flex items-center gap-2.5 min-h-11 px-2 rounded-lg cursor-pointer ${
-                symbol === board.sym ? 'bg-selected' : 'hover:bg-hover'
-              }`}
-            >
-              <InstrumentLogo symbol={symbol} size={24} />
-              <span className="text-[13.5px] font-semibold text-ink">{symbol}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-[12px] text-ink-3">A fixed list carries tickers only; quotes show in your saved watchlists.</p>
-    </Card>
-  )
-}
-
-export function WatchlistPanel({ board, panel, onFollow }) {
+export function WatchlistPanel({ board, onFollow }) {
   const positions = usePositions().data ?? NO_POSITIONS
   const held = useMemo(() => new Set(positions.map((p) => p.ticker)), [positions])
-  if (Array.isArray(panel.cfg?.list)) return <FixedList board={board} panel={panel} onFollow={onFollow} />
-  return <WatchlistRail fill symbol={board.sym} onSelectSymbol={(symbol) => onFollow(symbol)} heldSymbols={held} />
+  return <WatchlistRail fill gridView symbol={board.sym} onSelectSymbol={(symbol) => onFollow(symbol)} heldSymbols={held} />
 }
 
 function chartDot({ error, instrument, resolving }) {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
 import { ChartBoardPanel, SymbolStatsPanel, WatchlistPanel } from './PanelBodies'
@@ -94,11 +94,9 @@ describe('PanelBodies', () => {
     expect(queries.usePositionQuotes).not.toHaveBeenCalled()
   })
 
-  it('lists a fixed watchlist and follows a row', () => {
-    const onFollow = vi.fn()
-    renderWithProviders(<WatchlistPanel board={board} panel={panel('watchlist', { list: ['AMD', 'NVDA'], title: 'Chips' })} onFollow={onFollow} />)
+  it('offers the grid view and ignores a legacy fixed list', () => {
+    renderWithProviders(<WatchlistPanel board={board} panel={panel('watchlist', { list: ['AMD'], title: 'Chips' })} onFollow={vi.fn()} />)
 
-    within(screen.getByRole('list')).getByRole('button', { name: /AMD/ }).click()
-    expect(onFollow).toHaveBeenCalledWith('AMD')
+    expect(screen.getByRole('button', { name: 'Grid view' })).toBeInTheDocument()
   })
 })
