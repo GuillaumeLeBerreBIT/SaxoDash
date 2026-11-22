@@ -10,7 +10,7 @@ import { Button, Move, Skeleton } from '../ui'
 const PLAIN = { sign: false, decimals: 1 }
 const WORD_TONE = { up: 'text-up', warn: 'text-warn-text' }
 const STATUS_TONE = { fail: 'text-down' }
-const CELL = 'bg-tile rounded-[10px] px-3.5 py-3 min-w-0 flex flex-col gap-1'
+const CELL = 'min-w-0 flex flex-col gap-1 py-3 min-[900px]:py-0 min-[900px]:px-5 min-[900px]:first:pl-0 min-[900px]:last:pr-0'
 const CELL_LABEL = 'text-[12px] font-medium text-ink-3'
 const CELL_VALUE = 'text-[17px] font-bold text-ink'
 const CELL_LINE = 'text-[13px] text-ink-2 num'
@@ -179,8 +179,8 @@ function Headline({ verdict, sentence, note }) {
   }
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span className={`inline-block text-[30px] font-extrabold leading-none lowercase first-letter:uppercase ${WORD_TONE[sentence.tone] ?? 'text-ink-2'}`}>{sentence.word}</span>
-      <span className="text-[18px] font-semibold text-ink">{sentence.why}</span>
+      <span className={`inline-block text-[22px] font-bold leading-none lowercase first-letter:uppercase ${WORD_TONE[sentence.tone] ?? 'text-ink-2'}`}>{sentence.word}</span>
+      <span className="text-[16px] font-medium text-ink">{sentence.why}</span>
       {sentence.next ? <span className="basis-full text-[14px] text-ink-2 num">{sentence.next}</span> : null}
     </div>
   )
@@ -191,7 +191,7 @@ export default function AnswerCard({ verdict, sentence, position, note }) {
   return (
     <section data-testid="answer-card" aria-label="What to do" className="sd-panel bg-pane rounded-xl px-4 py-4 flex flex-col gap-3">
       <Headline verdict={verdict} sentence={sentence} note={note} />
-      <div className={`grid gap-2 grid-cols-1 ${data ? 'min-[900px]:grid-cols-3' : ''}`}>
+      <div className={`grid grid-cols-1 border-t border-line divide-y divide-line min-[900px]:divide-y-0 ${data ? 'min-[900px]:grid-cols-3 min-[900px]:divide-x min-[900px]:pt-3' : ''}`}>
         {data ? <CompanyCell verdict={data} /> : null}
         {data ? <PriceCell verdict={data} /> : null}
         <YouCell position={position} verdict={data} />

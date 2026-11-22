@@ -13,9 +13,9 @@ import SnapshotSection from './SnapshotSection'
 const GAP = 'gap-[var(--sd-gap,12px)]'
 function Fact({ label, value }) {
   return (
-    <div className="bg-tile rounded-[10px] px-3.5 py-3 min-w-0">
+    <div className="min-w-0">
       <span className="block text-[12px] text-ink-3">{label}</span>
-      <span className="block mt-1 text-[17px] font-bold num text-ink">{value ?? '—'}</span>
+      <span className="block text-[15px] font-semibold num text-ink">{value ?? '—'}</span>
     </div>
   )
 }
@@ -45,7 +45,7 @@ function RangeFacts({ bars, range }) {
           style={{ left: `${marker}%` }}
         />
       </div>
-      <div className="grid gap-2 grid-cols-3">
+      <div className="grid gap-3 grid-cols-3 pt-3 border-t border-line">
         <Fact label={`${range} low`} value={fmtNum(stats.low, 2)} />
         <Fact label={`${range} high`} value={fmtNum(stats.high, 2)} />
         <Fact label="Average volume" value={fmtShares(stats.avgVolume)} />
