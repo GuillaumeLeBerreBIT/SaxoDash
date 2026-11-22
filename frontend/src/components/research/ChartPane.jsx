@@ -60,6 +60,8 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
     priceLines,
     trendLines,
     trendLineActions,
+    zones,
+    zoneActions,
     textAnnotations,
     textAnnotationActions,
     quote,
@@ -101,7 +103,7 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
         quote={quote}
         rangeBars={rangeBars}
         windowBars={bars}
-        lineSaveFailed={priceLines.saveFailed || trendLineActions.saveFailed || textAnnotationActions.saveFailed}
+        lineSaveFailed={priceLines.saveFailed || trendLineActions.saveFailed || zoneActions.saveFailed || textAnnotationActions.saveFailed}
         showIdentity={split}
       />
       <div ref={canvasRef} className="flex-1 min-h-0 overflow-hidden">
@@ -129,6 +131,9 @@ function FilledPane({ slot, controls, view, tool, onPlaced, paneHeights, split }
           onCreateTrendLine={trendLineActions.create}
           onDeleteTrendLine={trendLineActions.remove}
           onEditTrendLineLabel={trendLineActions.setLabel}
+          zones={zones}
+          onCreateZone={zoneActions.create}
+          onDeleteZone={zoneActions.remove}
           textAnnotations={textAnnotations}
           onMoveTextAnnotation={textAnnotationActions.move}
           onCreateTextAnnotation={textAnnotationActions.create}

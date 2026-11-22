@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
+from .models import ChartZone, PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 
 
 def _positive_or_none(value):
@@ -96,6 +96,34 @@ class TrendLineSerializer(serializers.ModelSerializer):
         end = attrs.get('end_bar_date', getattr(self.instance, 'end_bar_date', None))
         if start is not None and end is not None and start == end:
             raise serializers.ValidationError('A trend line needs two different bars.')
+        return attrs
+
+
+class ChartZoneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChartZone
+        fields = [
+            'id', 'uic', 'asset_type',
+            'start_bar_date', 'end_bar_date', 'low_price', 'high_price',
+            'label', 'created_at',
+        ]
+        read_only_fields = ['id', 'uic', 'asset_type', 'created_at']
+
+    def validate_low_price(self, value):
+        return _positive_or_none(value)
+
+    def validate_high_price(self, value):
+        return _positive_or_none(value)
+
+    def validate(self, attrs):
+        start = attrs.get('start_bar_date', getattr(self.instance, 'start_bar_date', None))
+        end = attrs.get('end_bar_date', getattr(self.instance, 'end_bar_date', None))
+        low = attrs.get('low_price', getattr(self.instance, 'low_price', None))
+        high = attrs.get('high_price', getattr(self.instance, 'high_price', None))
+        if start is not None and end is not None and start > end:
+            raise serializers.ValidationError('A zone must end on or after the day it starts.')
+        if low is not None and high is not None and low >= high:
+            raise serializers.ValidationError('A zone needs a high above its low.')
         return attrs
 
 

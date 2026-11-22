@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CandlestickChart, Check, Crosshair, LayoutGrid, Link2, Minimize2, Minus, RotateCcw, Sigma, Slash, Type } from 'lucide-react'
+import { CandlestickChart, Check, Crosshair, LayoutGrid, Link2, Minimize2, Minus, RotateCcw, Sigma, Slash, Square, Type } from 'lucide-react'
 
 import { Menu, MenuRow } from './menu'
 import { ChartTypeMenuItems, IndicatorMenuItems } from './chartMenus'
@@ -71,6 +71,13 @@ export default function ChartToolRail({
         pressed={tool === 'ray'}
         disabled={!canAnnotate}
         onClick={() => onToolChange(tool === 'ray' ? 'crosshair' : 'ray')}
+      />
+      <RailButton
+        label="Zone"
+        icon={Square}
+        pressed={tool === 'zone'}
+        disabled={!canAnnotate}
+        onClick={() => onToolChange(tool === 'zone' ? 'crosshair' : 'zone')}
       />
       <RailButton
         label="Text"

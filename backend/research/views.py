@@ -22,9 +22,10 @@ from users.owner import owner
 from users.permissions import IsOwner
 
 from . import discover, earnings, filings, finnhub, market, scan_progress, shelves, statements, tasks
-from .models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
+from .models import ChartZone, PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
+    ChartZoneSerializer,
     PriceLineSerializer,
     SymbolNoteSerializer,
     TextAnnotationSerializer,
@@ -292,6 +293,27 @@ class TrendLineDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return TrendLine.objects.filter(user=self.request.user)
+
+
+class ChartZoneListCreateView(ListCreateAPIView):
+    serializer_class = ChartZoneSerializer
+    pagination_class = None
+
+    def get_queryset(self):
+        return ChartZone.objects.filter(
+            user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type']
+        )
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user, uic=self.kwargs['uic'], asset_type=self.kwargs['asset_type'])
+
+
+class ChartZoneDetailView(RetrieveUpdateDestroyAPIView):
+    http_method_names = ['patch', 'delete', 'options']
+    serializer_class = ChartZoneSerializer
+
+    def get_queryset(self):
+        return ChartZone.objects.filter(user=self.request.user)
 
 
 class TextAnnotationListCreateView(ListCreateAPIView):

@@ -9,13 +9,16 @@ import {
   addWatchlistItem,
   createPriceLine,
   createTextAnnotation,
+  createChartZone,
   createTrendLine,
   createWatchlist,
   deleteTextAnnotation,
   deletePriceLine,
+  deleteChartZone,
   deleteTrendLine,
   deleteWatchlist,
   getChart,
+  getChartZones,
   getCompanyNews,
   getDiscover,
   getDiscoverShelf,
@@ -68,6 +71,7 @@ export const researchKeys = {
   priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
   textAnnotations: (uic, assetType) => ['text-annotations', instrumentKey(uic, assetType)],
   trendLines: (uic, assetType) => ['trend-lines', instrumentKey(uic, assetType)],
+  chartZones: (uic, assetType) => ['chart-zones', instrumentKey(uic, assetType)],
   watchlists: ['watchlists'],
   discover: ['discover'],
   discoverShelf: (key) => ['discover', key],
@@ -360,6 +364,31 @@ export function useTrendLines(uic, assetType) {
     queryFn: () => getTrendLines({ uic, assetType }),
     enabled: Boolean(uic && assetType),
   })
+}
+
+export function useChartZones(uic, assetType) {
+  return useQuery({
+    queryKey: researchKeys.chartZones(uic, assetType),
+    queryFn: () => getChartZones({ uic, assetType }),
+    enabled: Boolean(uic && assetType),
+  })
+}
+
+export function useChartZoneMutations(uic, assetType) {
+  const queryClient = useQueryClient()
+  const key = researchKeys.chartZones(uic, assetType)
+  const refetch = () => queryClient.invalidateQueries({ queryKey: key })
+
+  return {
+    create: useMutation({
+      mutationFn: (payload) => createChartZone({ uic, assetType, ...payload }),
+      onSettled: refetch,
+    }),
+    remove: useMutation({
+      mutationFn: (id) => deleteChartZone(id),
+      onSettled: refetch,
+    }),
+  }
 }
 
 export function useTrendLineMutations(uic, assetType) {

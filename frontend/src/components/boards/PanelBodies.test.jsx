@@ -33,6 +33,8 @@ function stub() {
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
   queries.usePriceLineMutations.mockReturnValue(mutations())
   queries.useTrendLines.mockReturnValue({ ...idle, data: [] })
+  queries.useChartZones.mockReturnValue({ data: [] })
+  queries.useChartZoneMutations.mockReturnValue({ create: { mutate: vi.fn() }, remove: { mutate: vi.fn() } })
   queries.useTrendLineMutations.mockReturnValue(mutations())
   queries.useTextAnnotations.mockReturnValue({ ...idle, data: [] })
   queries.useTextAnnotationMutations.mockReturnValue(mutations())

@@ -20,6 +20,8 @@ from .views import (
     SymbolEarningsView,
     SymbolNoteReviewView,
     SymbolNoteView,
+    ChartZoneDetailView,
+    ChartZoneListCreateView,
     TextAnnotationDetailView,
     TextAnnotationListCreateView,
     TrendLineDetailView,
@@ -66,6 +68,12 @@ urlpatterns = [
         name='research-trend-lines',
     ),
     path('trend-lines/<int:pk>/', TrendLineDetailView.as_view(), name='research-trend-line'),
+    re_path(
+        r'^zones/(?P<uic>[0-9]+)/(?P<asset_type>[A-Za-z]{1,20})/$',
+        ChartZoneListCreateView.as_view(),
+        name='research-zones',
+    ),
+    path('zones/<int:pk>/', ChartZoneDetailView.as_view(), name='research-zone'),
     re_path(
         r'^text-annotations/(?P<uic>[0-9]+)/(?P<asset_type>[A-Za-z]{1,20})/$',
         TextAnnotationListCreateView.as_view(),
