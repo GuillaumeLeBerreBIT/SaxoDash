@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
 import { useFundamentals, useMarkReviewedMutation, usePortfolioSummary, useSignals, useStockSignals, useSymbolNoteMutation, useVerdict } from '../api/queries'
@@ -81,6 +81,8 @@ export default function Research() {
   const controls = useChartControls()
   const [chartView, setChartView] = useResearchChartView()
   const [hover, setHover] = useState(null)
+  const panelRef = useRef(null)
+  const [panelFloor, setPanelFloor] = useState(0)
   const rawTab = params.get('tab')
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
@@ -88,6 +90,7 @@ export default function Research() {
   const [scaledSymbol, setScaledSymbol] = useState(symbol)
   if (scaledSymbol !== symbol) {
     setScaledSymbol(symbol)
+    setPanelFloor(0)
     controls.resetView()
   }
 
@@ -174,7 +177,11 @@ export default function Research() {
   const shown = (key) => tab === key && gate === TAB_GATE.show
   const activeGroup = GROUP_OF[tab]
   const activeSubTabs = visibleGroups.find(([key]) => key === activeGroup)?.[2] ?? []
-  const selectGroup = (group) => setTab(visibleGroups.find(([key]) => key === group)?.[2][0] ?? 'overview')
+  const openTab = (next) => {
+    setPanelFloor(panelRef.current?.offsetHeight ?? 0)
+    setTab(next)
+  }
+  const selectGroup = (group) => openTab(visibleGroups.find(([key]) => key === group)?.[2][0] ?? 'overview')
   const noteMutation = useSymbolNoteMutation(symbol)
   const reviewMutation = useMarkReviewedMutation(symbol)
   const { watchlists, toggleList } = useWatchlistToggle({
@@ -219,7 +226,7 @@ export default function Research() {
       onSelectGroup={selectGroup}
       subTabs={activeSubTabs.map((key) => TABS.find(([tabKey]) => tabKey === key))}
       activeTab={tab}
-      onSelectTab={setTab}
+      onSelectTab={openTab}
     />
   )
 
@@ -349,12 +356,12 @@ export default function Research() {
             currency={currency}
             companyData={companyData}
             recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null}
-            onOpenTab={setTab}
+            onOpenTab={openTab}
           />
         </div>
         <div className="min-w-0 order-2 min-[1100px]:order-none min-[1100px]:col-span-12 flex flex-col gap-[var(--sd-gap,12px)]">
           {tabs}
-          <div {...panelProps} className="min-w-0">
+          <div {...panelProps} ref={panelRef} style={{ minHeight: panelFloor }} className="min-w-0">
             {body}
           </div>
         </div>

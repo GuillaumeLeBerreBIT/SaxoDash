@@ -7,7 +7,7 @@ export default function ResearchTabs({ groups, activeGroup, onSelectGroup, subTa
   const groupLabel = groups.find(([key]) => key === activeGroup)?.[1] ?? ''
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
       <TabList label="Instrument sections" className={`pb-px ${STRIP}`}>
         {groups.map(([key, label]) => (
           <TabButton key={key} id={`research-group-${key}`} active={activeGroup === key} onClick={() => onSelectGroup(key)} className={TAB}>
@@ -17,7 +17,7 @@ export default function ResearchTabs({ groups, activeGroup, onSelectGroup, subTa
       </TabList>
 
       {subTabs.length > 1 ? (
-        <TabList label={`${groupLabel} sections`} className={`pb-px ${STRIP}`}>
+        <TabList label={`${groupLabel} sections`} className={`pb-px min-[900px]:ml-auto max-w-full ${STRIP}`}>
           {subTabs.map(([key, label]) => (
             <TabButton
               key={key}

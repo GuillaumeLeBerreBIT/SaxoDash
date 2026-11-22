@@ -719,6 +719,26 @@ describe('Research panning', () => {
     expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
   })
 
+  it('holds the content area at the height of the tab it came from while the next one builds', async () => {
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get() {
+        return this.getAttribute('role') === 'tabpanel' ? 640 : 0
+      },
+    })
+    try {
+      renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+      expect(screen.getByRole('tabpanel').style.minHeight).toBe('0px')
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Fundamentals' }))
+
+      expect(screen.getByRole('tabpanel').style.minHeight).toBe('640px')
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original)
+    }
+  })
+
   it('keeps who else owns it beside the chart on every tab', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
 
