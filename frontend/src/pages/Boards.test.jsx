@@ -271,9 +271,29 @@ describe('Boards', () => {
   it('keeps editing off below 760 px by hiding Edit board and New board behind a note', () => {
     renderBoards('/boards/morning')
 
-    expect(screen.getByRole('button', { name: 'Edit board' })).toHaveClass('hidden', 'min-[760px]:inline-flex')
-    expect(tabs().getByRole('button', { name: /New board/ })).toHaveClass('hidden', 'min-[760px]:inline-flex')
+    expect(screen.getByRole('button', { name: 'Edit board' })).toHaveClass('max-[759px]:hidden')
+    expect(tabs().getByRole('button', { name: /New board/ })).toHaveClass('max-[759px]:hidden')
     expect(screen.getByText('Editing needs a wider screen')).toHaveClass('min-[760px]:hidden')
+  })
+
+  it('scrolls the current board tab into view and shows a long name in full on hover', () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    localStorage.setItem(
+      'saxodash:boards',
+      JSON.stringify([
+        { id: 'a', name: 'A', panels: [] },
+        { id: 'b', name: 'Dividend income candidates for the long run', panels: [] },
+      ]),
+    )
+    renderBoards('/boards/b')
+
+    expect(scrollIntoView).toHaveBeenCalled()
+    expect(tabs().getByRole('link', { name: 'Dividend income candidates for the long run' })).toHaveAttribute(
+      'title',
+      'Dividend income candidates for the long run',
+    )
+    delete Element.prototype.scrollIntoView
   })
 
   it('never enters edit mode at a phone width', async () => {
