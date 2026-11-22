@@ -55,9 +55,9 @@ export default function KeyFactsStrip({ fundamentals, details, detailsLoading = 
       dot="off"
       title="Company facts"
     >
-      <dl>
+      <dl className="grid grid-cols-1 sm:grid-cols-2 min-[1100px]:grid-cols-4 gap-x-8">
         {facts.map(([label, value]) => (
-          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line first:border-t-0">
+          <div key={label} className="flex items-baseline justify-between gap-3 py-2 border-t border-line">
             <dt className="text-[13px] text-ink-2 shrink-0">{label}</dt>
             <dd title={typeof value === 'string' ? value : undefined} className="text-[13.5px] font-semibold num text-ink truncate text-right">
               {value}

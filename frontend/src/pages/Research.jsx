@@ -21,6 +21,7 @@ import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
 import PricePanel from '../components/research/PricePanel'
 import PeersTab from '../components/research/PeersTab'
+import NextEarningsCard from '../components/research/NextEarningsCard'
 import OwnershipSignals from '../components/research/OwnershipSignals'
 import ResearchHeader from '../components/research/ResearchHeader'
 import ResearchTabs from '../components/research/ResearchTabs'
@@ -48,7 +49,7 @@ const TABS = [
 ]
 
 const GROUPS = [
-  ['overview', 'Chart', ['overview']],
+  ['overview', 'Overview', ['overview']],
   ['fundamentals', 'Fundamentals', ['financials', 'statistics', 'peers', 'earnings']],
   ['activity', 'Activity', ['funds', 'congress', 'filings', 'news']],
   ['notes', 'Notes and plan', ['notes', 'guide']],
@@ -302,9 +303,6 @@ export default function Research() {
           verdict={verdict}
           chartSignals={chartSignals}
           companyData={companyData}
-          earnings={earnings}
-          onOpenTab={setTab}
-          signals={<OwnershipSignals symbol={symbol} currency={currency} companyData={companyData} recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null} onOpenTab={setTab} />}
         />
       ) : null}
       {shown('notes') ? (
@@ -340,15 +338,27 @@ export default function Research() {
   return (
     <div className="flex flex-col gap-[var(--sd-gap,12px)]">
       {header}
-      {chartView === 'price' ? priceView : advancedView}
-      {answer}
-      {tabs}
-      <div className="grid grid-cols-1 min-[1440px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
-        <div {...panelProps} className="min-w-0 min-[1440px]:col-span-9">
-          {body}
+      <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-start">
+        <div className="min-w-0 order-1 min-[1100px]:order-none min-[1100px]:col-span-8 flex flex-col gap-[var(--sd-gap,12px)]">
+          {chartView === 'price' ? priceView : advancedView}
+          {answer}
         </div>
-        <div className="min-w-0 min-[1440px]:col-span-3">
+        <div className="min-w-0 order-3 min-[1100px]:order-none min-[1100px]:col-span-4 flex flex-col gap-[var(--sd-gap,12px)]">
           <WatchlistRail collapsible symbol={symbol} onSelectSymbol={selectSymbol} heldSymbols={heldSymbols} />
+          <NextEarningsCard earnings={earnings} onOpenTab={setTab} />
+          <OwnershipSignals
+            symbol={symbol}
+            currency={currency}
+            companyData={companyData}
+            recommendation={fundamentals?.data?.available ? fundamentals.data.recommendation : null}
+            onOpenTab={setTab}
+          />
+        </div>
+        <div className="min-w-0 order-2 min-[1100px]:order-none min-[1100px]:col-span-12 flex flex-col gap-[var(--sd-gap,12px)]">
+          {tabs}
+          <div {...panelProps} className="min-w-0">
+            {body}
+          </div>
         </div>
       </div>
     </div>

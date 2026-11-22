@@ -211,18 +211,6 @@ describe('OverviewTab on the new design', () => {
     expect(screen.getByText('P/E high for its own history')).toBeInTheDocument()
   })
 
-  it('shows the next earnings date from the earnings calendar', () => {
-    renderOverview({
-      earnings: {
-        isLoading: false,
-        data: { available: true, next: { date: '2026-11-19', session: 'amc', eps_estimate: 1.25, revenue_estimate: 54_000_000_000 } },
-      },
-    })
-
-    expect(screen.getByRole('heading', { name: 'Next earnings' })).toBeInTheDocument()
-    expect(screen.getByText(/EPS est\. 1\.25/)).toBeInTheDocument()
-  })
-
   it('collects the company facts and the Saxo reference data in one panel', () => {
     renderOverview({
       details: { symbol: 'AAPL', exchange_name: 'Nasdaq', currency: 'USD', isin: 'US0378331005', uic: 211 },
@@ -232,11 +220,5 @@ describe('OverviewTab on the new design', () => {
     const panel = screen.getByRole('heading', { name: 'Company facts' }).closest('.sd-panel')
     expect(panel).toHaveTextContent('Technology')
     expect(panel).toHaveTextContent('US0378331005')
-  })
-
-  it('places the funds and Congress slot in the side column', () => {
-    renderOverview({ signals: <div data-testid="side-slot" /> })
-
-    expect(screen.getByTestId('overview-col-side')).toContainElement(screen.getByTestId('side-slot'))
   })
 })

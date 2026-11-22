@@ -339,7 +339,7 @@ describe('Research', () => {
 
     expect(screen.getByRole('tab', { name: 'Funds' })).toHaveAttribute('aria-selected', 'true')
     expect(queries.useOwnership).toHaveBeenCalledWith('SPY')
-    expect(screen.getByText('No 13F filings imported yet')).toBeInTheDocument()
+    expect(within(screen.getByRole('tabpanel')).getByText('No 13F filings imported yet')).toBeInTheDocument()
   })
 
   it('opens on the Earnings tab when ?tab=earnings is in the URL', () => {
@@ -352,7 +352,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=SPY' })
 
     expect(screen.queryByRole('tab', { name: 'Fundamentals' })).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Chart' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Notes and plan' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Activity' }))
     expect(screen.queryByRole('tab', { name: 'Filings' })).not.toBeInTheDocument()
@@ -363,7 +363,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const groups = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(groups.map((tab) => tab.textContent)).toEqual(['Chart', 'Fundamentals', 'Activity', 'Notes and plan'])
+    expect(groups.map((tab) => tab.textContent)).toEqual(['Overview', 'Fundamentals', 'Activity', 'Notes and plan'])
     const sectionsOf = async (group) => {
       await userEvent.click(screen.getByRole('tab', { name: group }))
       const sections = screen.getByRole('tablist', { name: `${group} sections` })
@@ -414,7 +414,7 @@ describe('Research', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=filings' })
 
-    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
     expect(queries.useFilings).not.toHaveBeenCalledWith('SPY')
   })
 
@@ -422,14 +422,14 @@ describe('Research', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=financials' })
 
-    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('falls back to Overview when a stale ?tab does not apply to an ETF', () => {
     stubQueries({ positions: [etfPosition] })
     renderWithProviders(<Research />, { route: '/research?symbol=SPY&tab=valuation' })
 
-    expect(screen.getByRole('tab', { name: 'Chart' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('badges an ETF instrument in the symbol bar', () => {
@@ -534,7 +534,7 @@ describe('Research', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=filings' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Activity', 'Notes and plan'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Activity', 'Notes and plan'])
     expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     for (const hook of [queries.useFundamentals, queries.useStatements, queries.useFilings, queries.useInsiders, queries.useSymbolEarnings]) {
       expect(hook).not.toHaveBeenCalledWith('NVDA')
@@ -698,7 +698,7 @@ describe('Research panning', () => {
   it('keeps the tab row inside its own scroller instead of widening the page', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
-    const row = screen.getByRole('tab', { name: 'Chart' }).parentElement
+    const row = screen.getByRole('tab', { name: 'Overview' }).parentElement
     expect(row).toHaveClass('overflow-x-auto', 'whitespace-nowrap')
     expect(screen.getByRole('tab', { name: 'Notes and plan' })).toHaveClass('shrink-0')
   })
@@ -707,7 +707,7 @@ describe('Research panning', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     expect(screen.getByRole('tablist', { name: 'Instrument sections' })).toBeInTheDocument()
-    const chart = screen.getByRole('tab', { name: 'Chart' })
+    const chart = screen.getByRole('tab', { name: 'Overview' })
     expect(screen.getByRole('tab', { name: 'Fundamentals' })).toHaveAttribute('aria-selected', 'false')
     expect(chart).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', chart.id)
@@ -719,10 +719,19 @@ describe('Research panning', () => {
     expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
   })
 
-  it('puts the tab body and the rail side by side from 1440px on the other tabs', () => {
+  it('keeps next earnings and who else owns it beside the chart on every tab', () => {
+    queries.useSymbolEarnings.mockReturnValue({
+      ...idle,
+      data: { available: true, next: { date: '2026-11-19', session: 'amc', eps_estimate: 1.25, revenue_estimate: 54_000_000_000 }, history: [] },
+    })
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA&tab=news' })
 
-    expect(screen.getByRole('tabpanel')).toHaveClass('min-[1440px]:col-span-9')
+    const panel = screen.getByRole('tabpanel')
+    for (const name of ['Next earnings', 'Who else owns it']) {
+      const heading = screen.getByRole('heading', { name })
+      expect(heading).toBeInTheDocument()
+      expect(panel).not.toContainElement(heading)
+    }
   })
 })
 
@@ -749,7 +758,7 @@ describe('Research header and Overview on the new design', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Fundamentals', 'Activity', 'Notes and plan'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Fundamentals', 'Activity', 'Notes and plan'])
     expect(screen.getByRole('heading', { level: 1, name: 'NVIDIA Corporation' })).toBeInTheDocument()
     expect(screen.getByText('NVDA · Semiconductors · 4.2T market cap · You own it')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Open in Chart' })).toHaveAttribute(
@@ -779,7 +788,7 @@ describe('Research header and Overview on the new design', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 
     const tabs = within(screen.getByRole('tablist', { name: 'Instrument sections' })).getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Chart', 'Activity', 'Notes and plan'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Activity', 'Notes and plan'])
     expect(screen.getByText(/listed outside the US/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Investment snapshot' })).not.toBeInTheDocument()
   })

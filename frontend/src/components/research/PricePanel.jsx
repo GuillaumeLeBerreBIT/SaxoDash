@@ -7,7 +7,7 @@ import { Card } from '../ui'
 import PriceChart from './PriceChart'
 import { ChartViewSwitch, PeriodChange, RangeButtons } from './chartHeader'
 
-const PLACEHOLDER_HEIGHT = 300
+const PLACEHOLDER_HEIGHT = 380
 
 function Fact({ label, value }) {
   return (
