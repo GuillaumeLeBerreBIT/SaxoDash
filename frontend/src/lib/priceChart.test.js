@@ -88,6 +88,21 @@ describe('priceChartGeometry', () => {
   })
 })
 
+describe('date axis over a year', () => {
+  it('never repeats a label when the range spans one calendar month twice', () => {
+    const start = new Date(2025, 10, 20)
+    const bars = Array.from({ length: 252 }, (_, i) => {
+      const day = new Date(start)
+      day.setDate(day.getDate() + Math.round(i * 1.45))
+      return bar(day.toISOString().slice(0, 10), 100 + i)
+    })
+    const labels = priceChartGeometry(bars, { width: 800, height: 300 }).dates.map((tick) => tick.text)
+
+    expect(new Set(labels).size).toBe(labels.length)
+    expect(labels[0]).toBe('Nov 25')
+  })
+})
+
 describe('indexAtPointer', () => {
   it('snaps a pointer to the nearest bar and clamps at both ends', () => {
     const geometry = priceChartGeometry(week, { width: 400, height: 200 })

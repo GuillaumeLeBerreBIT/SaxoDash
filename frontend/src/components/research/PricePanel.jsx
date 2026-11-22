@@ -4,19 +4,11 @@ import { chartPlaceholderFor } from '../../lib/chartState'
 import { fmtDate, fmtNum } from '../../lib/format'
 import { previousClose, yearRange } from '../../lib/priceChart'
 import { Card } from '../ui'
+import Fact from './Fact'
 import PriceChart from './PriceChart'
 import { ChartViewSwitch, PeriodChange, RangeButtons } from './chartHeader'
 
 const PLACEHOLDER_HEIGHT = 380
-
-function Fact({ label, value }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-[12px] text-ink-3">{label}</div>
-      <div className="text-[14px] font-semibold text-ink num">{value ?? '—'}</div>
-    </div>
-  )
-}
 
 function Toggle({ label, checked, onChange }) {
   return (
@@ -24,6 +16,18 @@ function Toggle({ label, checked, onChange }) {
       <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="accent-[var(--sd-accent)]" />
       {label}
     </label>
+  )
+}
+
+export function ChartFacts({ allBars, pe, nextEarnings, className = '' }) {
+  const year = yearRange(allBars)
+
+  return (
+    <div data-testid="price-facts" className={`pt-3 border-t border-line flex flex-wrap gap-x-10 gap-y-3 ${className}`}>
+      <Fact label="P/E" value={pe == null ? null : fmtNum(pe, 2)} />
+      <Fact label="52-week range" value={year ? `${fmtNum(year.low, 2)} – ${fmtNum(year.high, 2)}` : null} />
+      <Fact label="Next earnings" value={nextEarnings ? fmtDate(nextEarnings.date) : null} />
+    </div>
   )
 }
 
@@ -52,8 +56,6 @@ export default function PricePanel({
     symbol,
     unresolved,
   })
-  const year = yearRange(allBars)
-
   return (
     <Card title="Chart" right={<ChartViewSwitch value={viewSwitch.value} onChange={viewSwitch.onChange} />}>
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
@@ -76,11 +78,7 @@ export default function PricePanel({
         <Toggle label="Volume" checked={showVolume} onChange={setShowVolume} />
       </div>
 
-      <div data-testid="price-facts" className="mt-3.5 pt-3 border-t border-line grid grid-cols-3 gap-3">
-        <Fact label="P/E" value={pe == null ? null : fmtNum(pe, 2)} />
-        <Fact label="52-week range" value={year ? `${fmtNum(year.low, 2)} – ${fmtNum(year.high, 2)}` : null} />
-        <Fact label="Next earnings" value={nextEarnings ? fmtDate(nextEarnings.date) : null} />
-      </div>
+      <ChartFacts allBars={allBars} pe={pe} nextEarnings={nextEarnings} className="mt-3.5" />
     </Card>
   )
 }

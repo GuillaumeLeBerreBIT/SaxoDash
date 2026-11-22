@@ -17,9 +17,8 @@ function writeView(next) {
   try {
     localStorage.setItem(KEY, next)
   } catch {
-    return false
+    return
   }
-  return true
 }
 
 export function useResearchChartView() {

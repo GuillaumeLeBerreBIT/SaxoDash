@@ -58,7 +58,7 @@ export default function PriceChart({ bars, previous, showVolume, currency, symbo
               </g>
             ))}
             {geometry.dates.map((tick) => (
-              <text key={tick.text} x={tick.x} y={geometry.height - 6} fontSize="11" textAnchor={tick.anchor} fill={colors.axis}>
+              <text key={tick.x} x={tick.x} y={geometry.height - 6} fontSize="11" textAnchor={tick.anchor} fill={colors.axis}>
                 {tick.text}
               </text>
             ))}

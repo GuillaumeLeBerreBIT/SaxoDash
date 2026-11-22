@@ -19,7 +19,7 @@ import NotesTab from '../components/research/NotesTab'
 import FilingsTab from '../components/research/FilingsTab'
 import FinancialsTab from '../components/research/FinancialsTab'
 import OverviewTab from '../components/research/OverviewTab'
-import PricePanel from '../components/research/PricePanel'
+import PricePanel, { ChartFacts } from '../components/research/PricePanel'
 import PeersTab from '../components/research/PeersTab'
 import OwnershipSignals from '../components/research/OwnershipSignals'
 import ResearchHeader from '../components/research/ResearchHeader'
@@ -270,6 +270,7 @@ export default function Research() {
       onDeleteLine={priceLines.remove}
       onEditLineLabel={priceLines.setLabel}
       lineSaveFailed={priceLines.saveFailed}
+      facts={<ChartFacts allBars={allBars} pe={company?.pe_ratio} nextEarnings={nextReport} className="mt-1" />}
     />
   )
 
@@ -361,8 +362,10 @@ export default function Research() {
         </div>
         <div className="min-w-0 order-2 min-[1100px]:order-none min-[1100px]:col-span-12 flex flex-col gap-[var(--sd-gap,12px)]">
           {tabs}
-          <div {...panelProps} ref={panelRef} style={{ minHeight: panelFloor }} className="min-w-0">
-            {body}
+          <div {...panelProps} style={{ minHeight: panelFloor }} className="min-w-0">
+            <div ref={panelRef} className="flow-root">
+              {body}
+            </div>
           </div>
         </div>
       </div>

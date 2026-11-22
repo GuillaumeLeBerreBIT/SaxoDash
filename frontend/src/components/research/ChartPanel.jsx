@@ -31,6 +31,7 @@ export default function ChartPanel({
   onEditLineLabel,
   lineSaveFailed = false,
   viewSwitch,
+  facts = null,
 }) {
   const { type } = controls
   const activeCount = activeIndicatorCount(controls)
@@ -89,6 +90,7 @@ export default function ChartPanel({
         priceHeight={CHART_HEIGHT}
         paneHeights={DEFAULT_PANE_HEIGHTS}
       />
+      {facts ? <div className="px-3.5 pb-3.5">{facts}</div> : null}
     </Card>
   )
 }

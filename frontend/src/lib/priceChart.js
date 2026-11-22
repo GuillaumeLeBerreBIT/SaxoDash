@@ -1,6 +1,8 @@
+import { HIGH_WINDOW } from './indicators'
+import { niceTicks } from './niceTicks'
+
 const PAD = { left: 4, right: 64, top: 10, bottom: 22 }
 const VOLUME_HEIGHT = 36
-const TRADING_DAYS_IN_YEAR = 252
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const X_TICK_COUNT = 5
 const Y_TICK_TARGET = 4
@@ -12,44 +14,30 @@ export function previousClose(bars = []) {
 }
 
 export function yearRange(bars = []) {
-  if (bars.length < TRADING_DAYS_IN_YEAR) return null
-  const tail = bars.slice(-TRADING_DAYS_IN_YEAR)
+  if (bars.length < HIGH_WINDOW) return null
+  const tail = bars.slice(-HIGH_WINDOW)
   return {
     low: Math.min(...tail.map((bar) => bar.low)),
     high: Math.max(...tail.map((bar) => bar.high)),
   }
 }
 
-function niceStep(rough) {
-  const magnitude = 10 ** Math.floor(Math.log10(rough))
-  const fraction = rough / magnitude
-  const nice = fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 2.5 ? 2.5 : fraction <= 5 ? 5 : 10
-  return nice * magnitude
-}
-
-function priceTicks(low, high) {
-  const step = niceStep((high - low) / Y_TICK_TARGET)
-  const first = Math.ceil(low / step) * step
-  const ticks = []
-  for (let value = first; value <= high + step * 1e-9; value += step) ticks.push(value)
-  return ticks
-}
-
 function axisLabel(date, count) {
   const [year, month, day] = date.split('-').map(Number)
   if (count > 300) return String(year)
+  if (count > 150) return `${MONTHS[month - 1]} ${String(year).slice(2)}`
   if (count > 30) return MONTHS[month - 1]
   return `${day} ${MONTHS[month - 1]}`
 }
 
 function dateTicks(bars, x) {
   const labels = []
-  let previous = null
+  const seen = new Set()
   for (let step = 0; step < X_TICK_COUNT; step += 1) {
     const index = Math.round((step / (X_TICK_COUNT - 1)) * (bars.length - 1))
     const text = axisLabel(bars[index].date, bars.length)
-    if (text === previous) continue
-    previous = text
+    if (seen.has(text)) continue
+    seen.add(text)
     labels.push({
       x: x(index),
       text,
@@ -106,7 +94,9 @@ export function priceChartGeometry(bars, { width, height, showVolume = false, pr
     area,
     volume,
     previousY: previous == null ? null : y(previous),
-    ticks: priceTicks(low, high).map((value) => ({ value, y: y(value) })),
+    ticks: niceTicks(low, high, Y_TICK_TARGET)
+      .filter((value) => value >= low && value <= high)
+      .map((value) => ({ value, y: y(value) })),
     dates: dateTicks(bars, x),
   }
 }

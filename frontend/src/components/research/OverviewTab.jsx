@@ -6,11 +6,12 @@ import { trailingReturns } from '../../lib/performance'
 import { rangeStats } from '../../lib/research'
 import { Card, Panel } from '../ui'
 import SetupCard from '../signals/SetupCard'
+import Fact from './Fact'
 import KeyFactsStrip from './KeyFactsStrip'
 import PerformanceRows from './PerformanceRows'
 import SnapshotSection from './SnapshotSection'
 
-const COLUMN = 'min-w-0 flex-1 basis-0 min-[1100px]:px-6 min-[1100px]:first:pl-0 min-[1100px]:last:pr-0 min-[1100px]:border-l min-[1100px]:border-line min-[1100px]:first:border-l-0'
+const COLUMN = 'empty:hidden min-w-0 flex-1 basis-0 min-[1100px]:px-6 min-[1100px]:first:pl-0 min-[1100px]:last:pr-0 min-[1100px]:border-l min-[1100px]:border-line min-[1100px]:first:border-l-0'
 
 function RangeFacts({ bars, range }) {
   const stats = rangeStats(bars)
@@ -32,15 +33,6 @@ function RangeFacts({ bars, range }) {
         <Fact label={`${range} high`} value={fmtNum(stats.high, 2)} />
         <Fact label="Average volume" value={fmtShares(stats.avgVolume)} />
       </div>
-    </div>
-  )
-}
-
-function Fact({ label, value }) {
-  return (
-    <div className="min-w-0">
-      <span className="block text-[12px] text-ink-3">{label}</span>
-      <span className="block text-[15px] font-semibold num text-ink">{value ?? '—'}</span>
     </div>
   )
 }

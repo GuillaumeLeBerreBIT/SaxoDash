@@ -719,12 +719,13 @@ describe('Research panning', () => {
     expect(screen.getByText('No lists yet. Create one to start tracking symbols.')).toBeInTheDocument()
   })
 
-  it('holds the content area at the height of the tab it came from while the next one builds', async () => {
+  it('holds the content area at the natural height of the tab it came from, not at an earlier floor', async () => {
     const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
     Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
       configurable: true,
       get() {
-        return this.getAttribute('role') === 'tabpanel' ? 640 : 0
+        if (this.getAttribute('role') === 'tabpanel') return 9999
+        return this.parentElement?.getAttribute('role') === 'tabpanel' ? 640 : 0
       },
     })
     try {
@@ -737,6 +738,15 @@ describe('Research panning', () => {
     } finally {
       Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original)
     }
+  })
+
+  it('keeps the P/E, 52-week range and next earnings under the advanced chart too', async () => {
+    renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Advanced chart' }))
+
+    expect(within(screen.getByTestId('price-facts')).getByText('P/E')).toBeInTheDocument()
+    expect(screen.getAllByText('P/E')).toHaveLength(1)
   })
 
   it('keeps who else owns it beside the chart on every tab', () => {
