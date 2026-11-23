@@ -14,9 +14,9 @@ import {
 import { fmtDate, fmtQty } from '../lib/format'
 import { txPrice, txSignedTotal, txTone, txTotal } from '../lib/transactions'
 import { ownershipTickers } from '../lib/ownership'
-import { briefHeadline, briefItems } from '../lib/brief'
+import { briefHeadline, briefItems, checkNote } from '../lib/brief'
 import { dayChange } from '../lib/portfolioHero'
-import { positionVerdict, positionVerdictTickers } from '../lib/verdicts'
+import { positionVerdict, positionVerdictTicker, positionVerdictTickers } from '../lib/verdicts'
 import { Alert, Badge, Card, DataTable, EmptyState, Skeleton, Td, Th, Tr } from '../components/ui'
 import { BriefHero, BriefList, HoldingsList } from '../components/dashboard/DailyBrief'
 import VsBenchmark from '../components/dashboard/VsBenchmark'
@@ -28,13 +28,13 @@ const SPAN_4 = 'min-[1100px]:col-span-4'
 
 const totalTone = (t) => (txSignedTotal(t) > 0 ? 'text-up' : 'text-ink')
 
-function RecentTransactions({ rows, className }) {
+function RecentTransactions({ rows, failed, className }) {
   return (
     <Card
       flush
       className={className}
       context="Last 5 across all accounts"
-      dot={rows.length ? 'ok' : 'off'}
+      dot={failed ? 'error' : rows.length ? 'ok' : 'off'}
       title="Recent transactions"
       right={
         <Link to="/portfolio?view=transactions" className="text-[13px] font-semibold text-ink-2 hover:text-ink whitespace-nowrap">
@@ -42,7 +42,9 @@ function RecentTransactions({ rows, className }) {
         </Link>
       }
     >
-      {rows.length === 0 ? (
+      {failed ? (
+        <EmptyState title="Recent transactions could not be loaded" className="py-6" />
+      ) : rows.length === 0 ? (
         <EmptyState title="No recent transactions" className="py-6" />
       ) : (
         <DataTable label="Recent transactions">
@@ -101,9 +103,10 @@ export default function Dashboard() {
   const fundTickers = useMemo(() => ownershipTickers(holdings ?? NO_POSITIONS), [holdings])
   const ownership = useOwnershipSummary(fundTickers).data
   const verdictTickers = useMemo(() => positionVerdictTickers(holdings ?? NO_POSITIONS), [holdings])
-  const verdicts = useVerdictSummary(verdictTickers).data
+  const verdictSummary = useVerdictSummary(verdictTickers)
+  const verdicts = verdictSummary.data
 
-  const failed = insightsQuery.error || positionsQuery.error || summaryQuery.error || recentTxQuery.error
+  const failed = insightsQuery.error || positionsQuery.error || summaryQuery.error
 
   if (failed) return <Alert>Failed to load dashboard data</Alert>
   if (!insightsQuery.data || !summaryQuery.data)
@@ -132,16 +135,20 @@ export default function Dashboard() {
     fundSells: signalCounts(hub, 'most-sold', 'sold'),
     earnings: insights.upcoming_earnings,
   })
+  const checks = {
+    checking: Boolean(verdictSummary.isLoading),
+    unchecked: positions.filter((position) => positionVerdictTicker(position) && !verdictOf(position)).length,
+  }
   const notes = (insights.attention ?? []).map((item) => item.text).filter(Boolean)
 
   return (
     <>
       <h1 className="sr-only">Overview</h1>
       <div className="grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1">
-        <BriefHero className={SPAN_12} headline={briefHeadline(items.length)} summary={summary} day={dayChange(positions, quotes)} />
-        <BriefList className={SPAN_8} items={items} />
+        <BriefHero className={SPAN_12} headline={briefHeadline(items.length, checks)} summary={summary} day={dayChange(positions, quotes)} />
+        <BriefList className={SPAN_8} items={items} note={checkNote(checks)} />
         <HoldingsList className={SPAN_4} positions={positions} verdictOf={verdictOf} quotes={quotes} upcomingEarnings={insights.upcoming_earnings} />
-        <RecentTransactions className={SPAN_8} rows={recentTx} />
+        <RecentTransactions className={SPAN_8} rows={recentTx} failed={Boolean(recentTxQuery.error)} />
         <div className={`${SPAN_4} flex min-w-0 flex-col gap-[var(--sd-gap,12px)]`}>
           <SmartMoney positions={positions} ownership={ownership} />
           <VsBenchmark data={performanceQuery.data} />

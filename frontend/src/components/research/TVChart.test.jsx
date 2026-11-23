@@ -100,6 +100,17 @@ describe('earnings badges', () => {
     expect(badge(container, 'missed').querySelector('rect').getAttribute('stroke')).toBe(c.down)
   })
 
+  it('names a report with no estimate as reported, never in line', () => {
+    const unjudged = { index: 15, date: bars[15].date, sign: 0, actual: 1.2, estimate: null, surprise: null }
+    const { container } = renderChart({ earningsMarkers: [unjudged] })
+
+    const reported = badge(container, 'reported')
+    expect(reported.getAttribute('aria-label')).not.toContain('in line')
+    fireEvent.mouseEnter(reported)
+    expect(screen.getByTestId('earnings-card').textContent).toContain('reported')
+    expect(screen.getByTestId('earnings-card').textContent).not.toContain('in line')
+  })
+
   it('draws the next report dashed in the earnings colour', () => {
     const { container } = renderChart({ slots: 40, earningsMarkers: [next] })
 

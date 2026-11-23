@@ -327,7 +327,10 @@ and never re-resolve.
 **13F data is imported, not fetched.** `investors` stores EDGAR 13F filings and
 its endpoints read only its own tables; nothing calls EDGAR at request time.
 Amendments are applied at read time (`quarters.effective_filings`), never by
-rewriting stored filings. The `value` unit is decided by filing date, not
+rewriting stored filings. A share count that changes by a whole ratio (2×, 10×, or 1/10)
+while the reported value moves less than halfway to that ratio (geometrically) is a stock
+split and reads as unchanged at 0%, in `changes.position_change`, which the moves, the
+holdings table, the fund signals and ownership all call (2026-11-23). The `value` unit is decided by filing date, not
 quarter: the SEC moved it from thousands to dollars for filings from 2023-01-03,
 so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
 quarter). OpenFIGI tickers are normalised `/` to `.`. An identifier
@@ -401,7 +404,12 @@ ticker into `PriceHistory` — the benchmark, every ticker in a current top-20 n
 ticker only held in the past once. `copying.measure` then holds each fund's 20 largest
 disclosed stock positions at disclosed weights from the close of the first session after the
 filing date until the next filing's, against the S&P 500 ETF over the same days, and
-`CopyPerformance` caches the result per investor; the pages read only that table. A holding
+`CopyPerformance` caches the result per investor; the pages read only that table. Each filing
+starts its own period on its own filed date, holding what was known that day: an amendment
+filed later changes the basket from the first session after its filing, never back to the
+original's date, and an amendment to an older quarter is ignored once a newer quarter is filed
+(2026-11-23; before then a quarter was one period dated by its first filing with its final,
+amended holdings). A holding
 with no price is left out and the rest reweighted; a period priced for under half its copied
 value sits in cash and is counted; leading unpriceable periods are dropped, so `since` is the
 first day the clone could really be bought. Price return only, in USD, no dividends or costs.
@@ -512,7 +520,7 @@ sale of something never seen bought is ignored and counted. A full sale closes t
 `price_feed.add_ticker_source` is how congress tickers get daily bars. The Senate's eFD site is
 geo-blocked from where the app runs, so the Senate is out until the backend is hosted in the US.
 Holdings and copy performance are rebuilt for every member on each daily sync, not only for members with a newly parsed report, so tickers priced by the nightly refresh overnight are picked up the next day. Prices reach back about 4.7 years (1,200 daily bars), so the earliest backfilled trades show as unpriced; `basis.priced_from` records where pricing starts and the member page says so.
-Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
+Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; each kept copy counts from the first report that listed that many copies, so a copy only an amendment discloses is bought on the amendment's date (2026-11-23); an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
 A report's PDF is fetched through a `requests` session that retries 429/5xx three times; a 4xx marks only that report failed and retries it after one day, then three, then gives up (`Report.retry_after`), a parse error gives up at once, and a host still down after the retries stops the run with its reports untouched and records the sync as failed ("Clerk unreachable, N reports waiting"); `reparse_reports --failed` resets all of it.
 The daily sync, `backfill_house` and `reparse_reports` share one cache lock (`congress/run_lock.py`): it lives an hour and every paced PDF fetch renews it, a run releases it only while it still owns it, the sync records itself as `skipped` while it is held and the two commands refuse to start. Only a 404 or 410 means a report's PDF is missing; any other refusal (a 401 or 403 from the Clerk's front door) is an outage that stops the run. This year's index answering 404 means it is not published yet (the first days of January) and is no new reports, not a failure. A member matched through `member_aliases.csv` takes its party from the legislator dataset by bioguide id, and a known member stored without one gets it on its next report. The Congress column (Portfolio, Investors stocks) shows buyers ↑ / sellers ↓ in the window, else how many members hold it, and a dash only when nobody traded or holds it — the Research Congress tab already said "holding 1" while the column showed a dash.
 
