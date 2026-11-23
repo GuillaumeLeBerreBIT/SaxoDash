@@ -56,7 +56,7 @@ export function trendSentence(pctVsMa200) {
 
 export const verdictTicker = (instrument) => ownershipTicker(instrument)
 
-const positionVerdictTicker = (position) => (position.type === 'ETF' ? null : verdictTicker(position))
+export const positionVerdictTicker = (position) => (position.type === 'ETF' ? null : verdictTicker(position))
 
 export function watchlistVerdictTicker(item) {
   if (item.asset_type !== 'Stock') return null
