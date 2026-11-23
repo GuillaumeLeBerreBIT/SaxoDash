@@ -113,6 +113,7 @@ function Bars({ data, geometry, colors }) {
 export const EARNINGS_LANE = 24
 const BADGE_SIZE = 15
 const OUTCOME_WORDS = ['missed', 'in line', 'beat']
+const outcomeWord = (marker) => (marker.surprise == null ? 'reported' : OUTCOME_WORDS[marker.sign + 1])
 
 function badgeColor(marker, colors) {
   if (marker.upcoming) return colors.earn
@@ -125,7 +126,7 @@ function earningsLabel(marker) {
     return `Next earnings ${fmtDate(marker.date)} · ${sessionWords(marker.session)}${estimate}`
   }
   const figures = marker.actual == null ? '' : ` · EPS ${fmtNum(marker.actual, 2)} vs est ${fmtNum(marker.estimate, 2)}`
-  return `Earnings ${fmtDate(marker.date)} · ${OUTCOME_WORDS[marker.sign + 1]}${figures}`
+  return `Earnings ${fmtDate(marker.date)} · ${outcomeWord(marker)}${figures}`
 }
 
 function EarningsGuides({ markers, geometry, colors }) {
@@ -236,7 +237,7 @@ export function EarningsCard({ marker, x, bottom, width }) {
       ) : (
         <>
           <p className={`font-semibold text-[12px] ${tone}`}>
-            Earnings · {fmtDate(marker.date)} · {OUTCOME_WORDS[marker.sign + 1]}
+            Earnings · {fmtDate(marker.date)} · {outcomeWord(marker)}
           </p>
           <CardRow label="Session">{sessionWords(marker.session)}</CardRow>
           <CardRow label="EPS actual">{fmtNum(marker.actual, 2)}</CardRow>
