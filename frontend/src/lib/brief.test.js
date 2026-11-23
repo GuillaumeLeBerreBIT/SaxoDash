@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { BRIEF_LIMIT, briefHeadline, briefItems } from './brief'
+import { BRIEF_LIMIT, briefHeadline, briefItems, checkNote } from './brief'
 
 const position = (ticker, weight, extra = {}) => ({ ticker, name: `${ticker} Inc.`, weight, value: String(weight * 100), pnl_pct: 5, ...extra })
 const base = { total: 10_000, verdicts: {}, fundBuys: new Map(), fundSells: new Map(), earnings: [] }
@@ -68,5 +68,35 @@ describe('briefHeadline', () => {
     expect(briefHeadline(1)).toBe('One thing to look at in your portfolio today.')
     expect(briefHeadline(3)).toBe('Three things to look at in your portfolio today.')
     expect(briefHeadline(12)).toBe('12 things to look at in your portfolio today.')
+  })
+})
+
+describe('briefHeadline while the checks are incomplete', () => {
+  it('never gives the all-clear while the holdings are still being checked', () => {
+    expect(briefHeadline(0, { checking: true })).toBe('Checking your holdings.')
+  })
+
+  it('never gives the all-clear when a holding could not be checked', () => {
+    expect(briefHeadline(0, { unchecked: 2 })).toBe('Not every holding could be checked today.')
+  })
+
+  it('still counts what was found', () => {
+    expect(briefHeadline(1, { unchecked: 2 })).toBe('One thing to look at in your portfolio today.')
+  })
+})
+
+describe('checkNote', () => {
+  it('says nothing once every holding was checked', () => {
+    expect(checkNote({ unchecked: 0 })).toBeNull()
+    expect(checkNote()).toBeNull()
+  })
+
+  it('says the checks are still running', () => {
+    expect(checkNote({ checking: true, unchecked: 3 })).toBe('Still checking your holdings against the quality rules.')
+  })
+
+  it('names how many holdings could not be checked', () => {
+    expect(checkNote({ unchecked: 1 })).toBe('One holding could not be checked against the quality rules, so this list may be incomplete.')
+    expect(checkNote({ unchecked: 2 })).toBe('Two holdings could not be checked against the quality rules, so this list may be incomplete.')
   })
 })
