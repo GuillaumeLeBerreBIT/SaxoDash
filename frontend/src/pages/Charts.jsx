@@ -20,6 +20,7 @@ import IndicatorChips from '../components/research/IndicatorChips'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useChartWorkspace } from '../components/research/useChartWorkspace'
+import { useInstrumentReset } from '../components/research/useInstrumentReset'
 import { usePaneViews } from '../components/research/usePaneViews'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { usePersistedSize } from '../components/research/usePersistedSize'
@@ -49,11 +50,7 @@ export default function Charts() {
   }
   const [tool, setTool] = useState('crosshair')
 
-  const [shownSymbol, setShownSymbol] = useState(symbol)
-  if (shownSymbol !== symbol) {
-    setShownSymbol(symbol)
-    setTool('crosshair')
-  }
+  useInstrumentReset(instrument, () => setTool('crosshair'))
 
   useEffect(() => {
     if (tool === 'crosshair') return undefined

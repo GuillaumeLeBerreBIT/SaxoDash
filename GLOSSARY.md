@@ -18,6 +18,10 @@ _Avoid_: Holding (fine in page copy such as "Your holdings", but the stored conc
 The value Saxo reports for the user's account, in euros. The app never recomputes it from its own prices.
 _Avoid_: Net worth (that is the Money page's total, which adds bank and hand-entered accounts)
 
+**Investment Return**:
+How much the investments gained or lost over a period, as Saxo measures it time-weighted: a deposit or withdrawal changes the Portfolio Value but never the Investment Return.
+_Avoid_: Return (on its own), gain (for a change in Portfolio Value)
+
 **Weight**:
 A Position's share of the Portfolio Value. A stock that is not held has no Weight, which is different from a Weight of zero.
 
@@ -92,7 +96,7 @@ A layer the app draws on the candles from its own data: the Cheap and Expensive 
 _Avoid_: Indicator (RSI, MACD and moving averages), overlay
 
 **Cheap Zone / Expensive Zone**:
-The bands on the candles where the stock's P/E would be below its usual range (green, below the cheap line) or above it (red, above the expensive line), using the earnings known at each date. Always named in full, never just "zone".
+The bands on the candles where the stock's P/E would be below its usual range (green, below the cheap line) or above it (red, above the expensive line), using only the earnings published by each date. Always named in full, never just "zone".
 _Avoid_: Zone (on its own), P/E band, value zone
 
 **Volume Gap**:
@@ -172,7 +176,7 @@ The calendar quarter a 13F filing reports. Funds file up to 45 days after it end
 A stock that several Tracked Funds bought in the same Filing Quarter.
 
 **Copy Performance**:
-What holding a Tracked Fund's 20 largest disclosed stocks, from the first session after each filing until the next, would have returned against the S&P 500.
+What holding a Tracked Fund's 20 largest disclosed stocks, from the first session after each filing until the next, would have returned against the S&P 500. An amendment counts from the day it was filed, never back-dated to the filing it amends.
 
 **Congress Member**:
 A member of the US House of Representatives whose disclosed stock trades the app reads.

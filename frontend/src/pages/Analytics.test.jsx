@@ -152,7 +152,7 @@ describe('Analytics', () => {
     stubHappyPath()
     renderWithProviders(<Analytics />)
     expect(screen.getByTestId('performance-sentence')).toHaveTextContent(
-      'Over 1 month your portfolio returned +4.2%, 2.1 points ahead of World Index (+2.1%).',
+      'Over 1 month your Investment Return was +4.2%, 2.1 points ahead of World Index (+2.1%).',
     )
   })
 
@@ -161,10 +161,30 @@ describe('Analytics', () => {
     renderWithProviders(<Analytics />)
 
     expect(screen.getByTestId('performance-sentence')).toBeInTheDocument()
-    expect(screen.getByText(/deposits and withdrawals count as gains and losses/i)).toBeInTheDocument()
+    expect(screen.getByText(/Investment Return, time-weighted by Saxo · deposits and withdrawals left out/)).toBeInTheDocument()
     const legend = screen.getByTestId('growth-legend')
     expect(legend).toHaveTextContent('You+4.2%')
     expect(legend).toHaveTextContent('World Index+2.1%')
+  })
+
+  it('says why there is no history when Saxo cannot answer', () => {
+    queries.useRiskMetrics.mockReturnValue({
+      data: { has_data: false, history_warning: 'Saxo is not connected: Token expired.' }, isLoading: false, error: null,
+    })
+    stubPortfolioSummary()
+    renderWithProviders(<Analytics />)
+    expect(screen.getByText('Saxo is not connected: Token expired.')).toBeInTheDocument()
+    expect(screen.queryByText(/not enough history/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a stale-history warning above the figures', () => {
+    stubHappyPath()
+    queries.useRiskMetrics.mockReturnValue({
+      data: { ...summary, history_warning: 'Saxo is not connected: Token expired. Showing your history up to 28 Oct 2026.' },
+      isLoading: false, error: null,
+    })
+    renderWithProviders(<Analytics />)
+    expect(screen.getByText(/Showing your history up to 28 Oct 2026/)).toBeInTheDocument()
   })
 
   it('says how bumpy it was beside the returns', () => {
@@ -372,7 +392,7 @@ describe('Analytics', () => {
   it('names the history length in the placeholder', () => {
     mockRisk({ has_data: false, history_days: 1 })
     renderWithProviders(<Analytics />)
-    expect(screen.getByText(/at least two days of portfolio value \(1 so far\)/)).toBeInTheDocument()
+    expect(screen.getByText(/at least two days of history \(1 so far\)/)).toBeInTheDocument()
   })
 
   it('lets the benchmark selector wrap', () => {

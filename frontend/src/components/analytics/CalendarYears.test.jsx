@@ -9,10 +9,10 @@ describe('CalendarYears', () => {
     expect(screen.getByText('No full calendar year yet')).toBeInTheDocument()
   })
 
-  it('flags a year to date in the subtitle', () => {
+  it('flags a part year in the subtitle', () => {
     render(<CalendarYears years={[{ year: 2026, portfolio_pct: 3, benchmark_pct: 2, partial: true }]} benchmarkName="World" />)
 
-    expect(screen.getByText(/\* year to date/)).toBeInTheDocument()
+    expect(screen.getByText(/\* part of the year/)).toBeInTheDocument()
   })
 
   it('leaves out a year the portfolio did not exist in, even when the index has a figure', () => {

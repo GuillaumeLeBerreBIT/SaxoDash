@@ -209,6 +209,7 @@ describe('Portfolio holdings table', () => {
     renderWithProviders(<Portfolio />)
 
     expect(screen.getByTestId('portfolio-value')).toHaveTextContent('€31,567.81')
+    expect(screen.getByText(/^Portfolio value/)).toBeInTheDocument()
     expect(screen.getByTestId('portfolio-history')).toBeInTheDocument()
     expect(screen.queryByText('Total net worth')).not.toBeInTheDocument()
     expect(screen.queryByText('Bank balance')).not.toBeInTheDocument()

@@ -33,7 +33,7 @@ describe('ReturnsTable', () => {
   it('keeps period, portfolio and alpha visible below md and hides the benchmark', () => {
     render(<ReturnsTable periods={periods} benchmarkName="World Index" />)
 
-    for (const name of ['Period', 'Portfolio', 'Ahead / behind']) {
+    for (const name of ['Period', 'Investment Return', 'Ahead / behind']) {
       expect(screen.getByRole('columnheader', { name })).not.toHaveClass('hidden')
     }
     expect(screen.getByRole('columnheader', { name: 'World Index' })).toHaveClass('hidden', 'md:table-cell')

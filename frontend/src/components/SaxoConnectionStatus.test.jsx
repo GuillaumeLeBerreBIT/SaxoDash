@@ -80,6 +80,15 @@ describe('SaxoConnectionStatus full badge', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
+  it('explains an incomplete sync as figures from the last complete sync', () => {
+    mockStatus({ ...healthy, last_sync_outcome: 'incomplete', last_synced_at: null })
+    render(<SaxoConnectionStatus />)
+    expect(screen.getByText('Sync incomplete')).toHaveAttribute(
+      'title',
+      'The last sync could not read every position, so these figures are from the last complete sync',
+    )
+  })
+
   it('shows Connection failed when starting the connection throws', async () => {
     mockStatus({ connected: false })
     connectSaxo.mockRejectedValueOnce(new Error('boom'))

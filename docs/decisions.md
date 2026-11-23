@@ -18,6 +18,26 @@ fallback for an unsynced account only — it was the source of a €5,142.64
 overstatement, because it depends on prices Saxo may not give us and on a
 currency conversion we were not doing.
 
+**The Investment Return is Saxo's time-weighted return, not computed from our snapshots (2026-11-23).**
+`portfolio/account_performance.py` reads `/hist/v4/performance/timeseries` (the whole account
+history, daily, from the day the account opened) and hands Analytics the growth of one euro,
+`1 + TimeWeighted.Accumulated`, weekdays only; every metric is a ratio, so performance, calendar
+years, volatility, drawdown, Sharpe and beta run on that index unchanged. The snapshot series it
+replaced (`NetWorthSnapshot.saxo_account_value`) read deposits as gains (a €5k deposit was a +11%
+day) and kept the SIM account's €1M history, so the switch to live read as a −95% day. Saxo's figure
+agrees with a deposit-adjusted daily return on all but deposit days, where it books the flow at
+another point in the day. Calendar years and year to date start at the previous year's last value,
+and the benchmark is measured over the portfolio's own window, so a first partial year is compared
+fairly and no year before the account opened is listed. Cached an hour per user; when Saxo cannot
+answer, that user's last good history is served with `history_warning` saying up to when. The MCP
+`get_performance` tool runs the same views, so it returns the same figure. On screen the figure is
+named Investment Return and the account's worth Portfolio Value (see `GLOSSARY.md`). The same
+history rebuilds past net worth: `restate_saxo_history --user <name> --until <date> [--apply]`
+rewrites the Saxo leg of that user's snapshots from Saxo's figure for the day, or the last trading
+day before it, keeping the recorded bank balances; it recomputes rather than scales, so a second
+run changes nothing. It was run once on dev for the SIM days up to 2026-10-14; production is
+checked before it runs there.
+
 **Money carries its currency.** Totals go through `core.money.Money`, which
 raises `CurrencyMismatch` rather than adding EUR to USD. Instrument prices
 (`avg_cost`, `current_price`) stay in the position's own `currency`;
@@ -41,7 +61,7 @@ turns `price_source` into the words the UI shows; `PriceBasisNote` stays
 silent for a fully live book so the badge keeps meaning something.
 
 **Sync freshness lives on `SyncRun`, not on the credential.** Every sync
-task is wrapped in `@synced`, which records `ok` / `skipped` / `failed` per
+task is wrapped in `@synced`, which records `ok` / `skipped` / `incomplete` / `failed` per
 execution. A task that cannot get a credential used to `return` and be
 logged by Celery as a success; and `last_synced_at` on `SaxoCredential`
 was destroyed on every re-auth, since the callback deletes and recreates
@@ -117,6 +137,14 @@ It used to be a second task (`sync_transactions`) fetching the identical
 one fact, and nothing tied the two tables together, so a tick where one task
 failed and the other succeeded could leave them silently disagreeing about
 what Saxo actually reported.
+
+**`sync_positions` deletes only on a reply it fully understood.** Saxo's positions
+reply is read to its last page; if any row cannot be mapped (as a Position or as its
+entry trade), or the reply has no `Data` field at all, the sync upserts what it read,
+deletes nothing, and records its run as `incomplete`. A one-row parsing problem used
+to delete that Position as if it had been sold. A complete reply with no rows still
+clears the book, so selling everything is not trapped. `incomplete` is not `ok`, so
+`last_synced_at` keeps pointing at the last complete sync and the status badge shows it.
 
 **Company fundamentals come from Finnhub, fetched on demand.** `research/finnhub.py`
 mirrors `market.py`'s shape (call → shape → cache) but reads a static

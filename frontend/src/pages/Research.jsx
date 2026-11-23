@@ -28,6 +28,7 @@ import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
+import { useInstrumentReset } from '../components/research/useInstrumentReset'
 import { useResearchChartView } from '../components/research/useResearchChartView'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useTradeRisk } from '../components/research/useTradeRisk'
@@ -92,12 +93,10 @@ export default function Research() {
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
-  const [scaledSymbol, setScaledSymbol] = useState(symbol)
-  if (scaledSymbol !== symbol) {
-    setScaledSymbol(symbol)
+  useInstrumentReset(instrument, () => {
     setPanelFloor(0)
     controls.resetView()
-  }
+  })
 
 
   const {

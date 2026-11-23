@@ -125,7 +125,7 @@ class InstrumentSearchView(APIView):
 
     def get(self, request):
         keywords = request.query_params.get('q', '').strip()
-        if len(keywords) < 2:
+        if not keywords:
             return Response([])
 
         asset_types = request.query_params.get('asset_types', 'Stock,Etf')
