@@ -31,6 +31,7 @@ class SyncRun(models.Model):
     OUTCOME_CHOICES = [
         ('ok', 'Completed'),
         ('skipped', 'Skipped'),
+        ('incomplete', 'Incomplete'),
         ('failed', 'Failed'),
     ]
 
