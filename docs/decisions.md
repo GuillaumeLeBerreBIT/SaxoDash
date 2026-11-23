@@ -61,7 +61,7 @@ turns `price_source` into the words the UI shows; `PriceBasisNote` stays
 silent for a fully live book so the badge keeps meaning something.
 
 **Sync freshness lives on `SyncRun`, not on the credential.** Every sync
-task is wrapped in `@synced`, which records `ok` / `skipped` / `failed` per
+task is wrapped in `@synced`, which records `ok` / `skipped` / `incomplete` / `failed` per
 execution. A task that cannot get a credential used to `return` and be
 logged by Celery as a success; and `last_synced_at` on `SaxoCredential`
 was destroyed on every re-auth, since the callback deletes and recreates
@@ -137,6 +137,14 @@ It used to be a second task (`sync_transactions`) fetching the identical
 one fact, and nothing tied the two tables together, so a tick where one task
 failed and the other succeeded could leave them silently disagreeing about
 what Saxo actually reported.
+
+**`sync_positions` deletes only on a reply it fully understood.** Saxo's positions
+reply is read to its last page; if any row cannot be mapped (as a Position or as its
+entry trade), or the reply has no `Data` field at all, the sync upserts what it read,
+deletes nothing, and records its run as `incomplete`. A one-row parsing problem used
+to delete that Position as if it had been sold. A complete reply with no rows still
+clears the book, so selling everything is not trapped. `incomplete` is not `ok`, so
+`last_synced_at` keeps pointing at the last complete sync and the status badge shows it.
 
 **Company fundamentals come from Finnhub, fetched on demand.** `research/finnhub.py`
 mirrors `market.py`'s shape (call → shape → cache) but reads a static

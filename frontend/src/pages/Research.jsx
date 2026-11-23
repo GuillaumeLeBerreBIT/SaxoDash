@@ -7,6 +7,7 @@ import { reportsWithin } from '../lib/earnings'
 import { entrySentence } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
+import { instrumentKey } from '../lib/research'
 import { Card } from '../components/ui'
 import AnswerCard from '../components/research/AnswerCard'
 import ChartPanel from '../components/research/ChartPanel'
@@ -92,9 +93,10 @@ export default function Research() {
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
-  const [scaledSymbol, setScaledSymbol] = useState(symbol)
-  if (scaledSymbol !== symbol) {
-    setScaledSymbol(symbol)
+  const shownKey = instrumentKey(instrument?.uic, instrument?.assetType)
+  const [scaledKey, setScaledKey] = useState(shownKey)
+  if (scaledKey !== shownKey) {
+    setScaledKey(shownKey)
     setPanelFloor(0)
     controls.resetView()
   }
@@ -258,6 +260,7 @@ export default function Research() {
 
   const advancedView = (
     <ChartPanel
+      key={shownKey}
       bars={bars}
       ind={ind}
       timeWindow={timeWindow}

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 from cryptography.fernet import Fernet
 from django.core.cache import cache
@@ -291,10 +291,23 @@ class MarketDataViewTest(APITestCase):
         self.assertEqual(response.data[0]['uic'], 211)
 
     @patch('research.market.client.search_instruments')
-    def test_search_does_not_call_saxo_for_one_character(self, mock_search):
+    def test_search_finds_a_one_letter_ticker(self, mock_search):
+        self._connect_saxo()
+        mock_search.return_value = [
+            {**SAMPLE_INSTRUMENT, 'Identifier': 4521, 'Symbol': 'F:xnys', 'Description': 'Ford Motor Co.'},
+        ]
+
+        response = self.client.get('/api/research/instruments/?q=F')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([row['symbol'] for row in response.data], ['F'])
+        mock_search.assert_called_once_with(ANY, 'F', 'Stock,Etf')
+
+    @patch('research.market.client.search_instruments')
+    def test_search_does_not_call_saxo_for_a_blank_query(self, mock_search):
         self._connect_saxo()
 
-        response = self.client.get('/api/research/instruments/?q=n')
+        response = self.client.get('/api/research/instruments/?q=%20')
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, [])

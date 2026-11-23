@@ -261,6 +261,17 @@ class SaxoStatusFreshnessTest(APITestCase):
         self.assertIsNotNone(response.data['last_synced_at'])
         self.assertEqual(response.data['last_sync_outcome'], 'skipped')
 
+    def test_an_incomplete_position_sync_is_reported_and_keeps_the_last_complete_time(self):
+        complete = SyncRun.objects.create(user=self.user, task='sync_positions', outcome='ok', rows=5)
+        SyncRun.objects.create(user=self.user, task='sync_positions', outcome='incomplete', rows=4)
+        SyncRun.objects.create(user=self.user, task='sync_account_balance', outcome='skipped', detail='expired')
+
+        response = self.client.get('/api/saxo/status/')
+
+        self.assertEqual(response.data['last_sync_outcome'], 'incomplete')
+        self.assertEqual(response.data['last_synced_at'], complete.ran_at)
+        self.assertIn('sync_positions', response.data['failing_syncs'])
+
     def test_a_scan_run_is_not_reported_as_a_portfolio_sync(self):
         SyncRun.objects.create(user=self.user, task='scan_universe', outcome='ok', rows=500)
 

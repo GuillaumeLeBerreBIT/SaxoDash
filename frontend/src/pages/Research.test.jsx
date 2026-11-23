@@ -697,6 +697,33 @@ describe('Research panning', () => {
     expect(screen.getByText('1W high').parentElement).toHaveTextContent('143.00')
   })
 
+  it('returns a panned chart to the latest bar when another listing of the same ticker opens', async () => {
+    showAdvanced()
+    queries.useWatchlists.mockReturnValue({
+      ...idle,
+      data: [{
+        id: 1,
+        name: 'Listings',
+        items: [
+          { id: 7, symbol: 'NOW', uic: 501, asset_type: 'Stock', exchange: 'NYSE', description: 'ServiceNow Inc' },
+          { id: 8, symbol: 'NOW', uic: 502, asset_type: 'Stock', exchange: 'TSXV', description: 'NowVertical Group' },
+        ],
+      }],
+    })
+    renderWithProviders(<Research />, { route: '/research?symbol=NOW&uic=501&assetType=Stock' })
+    await userEvent.click(screen.getByRole('button', { name: '1W' }))
+    const plot = screen.getByTestId('price-scale').closest('svg').parentElement
+    fireEvent.pointerDown(plot, { clientX: 200, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 210, clientY: 150, pointerId: 1 })
+    fireEvent.pointerMove(plot, { clientX: 500, clientY: 150, pointerId: 1 })
+    fireEvent.pointerUp(plot, { clientX: 500, clientY: 150, pointerId: 1 })
+    expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getAllByRole('button', { name: /^NOW/ })[1])
+
+    expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument()
+  })
+
   it('keeps the tab row inside its own scroller instead of widening the page', () => {
     renderWithProviders(<Research />, { route: '/research?symbol=NVDA' })
 

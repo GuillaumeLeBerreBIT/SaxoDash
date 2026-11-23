@@ -378,10 +378,10 @@ class ThrottleTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def test_search_is_throttled_past_its_scope_rate(self):
-        # q=n stays under the 2-char floor, so it answers 200 without touching
+        # A blank q answers 200 without touching
         # Saxo - but the throttle still counts every request.
         codes = [
-            self.client.get('/api/research/instruments/?q=n').status_code
+            self.client.get('/api/research/instruments/?q=').status_code
             for _ in range(4)
         ]
         self.assertEqual(codes[:3], [200, 200, 200])
@@ -389,7 +389,7 @@ class ThrottleTest(APITestCase):
 
     def test_a_different_scope_keeps_its_own_budget(self):
         for _ in range(3):
-            self.client.get('/api/research/instruments/?q=n')
+            self.client.get('/api/research/instruments/?q=')
         # search is now exhausted; a market-scope call has its own budget.
         response = self.client.get('/api/research/chart/?uic=211&asset_type=Stock')
         self.assertNotEqual(response.status_code, 429)
