@@ -379,9 +379,13 @@ describe('isSearchResolving', () => {
     expect(isSearchResolving('NVDA', 'NVDA', false)).toBe(false)
   })
 
-  it('never resolves a query too short to search', () => {
+  it('never resolves a blank query', () => {
     expect(isSearchResolving('', '', false)).toBe(false)
-    expect(isSearchResolving('N', '', true)).toBe(false)
+    expect(isSearchResolving('', 'N', true)).toBe(false)
+  })
+
+  it('resolves a one-letter ticker like any other query', () => {
+    expect(isSearchResolving('F', '', false)).toBe(true)
   })
 })
 

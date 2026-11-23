@@ -27,11 +27,11 @@ describe('useInstrumentSearch', () => {
 
     const { rerender } = renderHook(({ query }) => useInstrumentSearch(query), {
       wrapper,
-      initialProps: { query: 'i' },
+      initialProps: { query: '' },
     })
 
     // Each keystroke of "iShares", arriving faster than the debounce window.
-    for (const query of ['is', 'ish', 'isha', 'ishar', 'ishare', 'ishares']) {
+    for (const query of ['i', 'is', 'ish', 'isha', 'ishar', 'ishare', 'ishares']) {
       rerender({ query })
       await act(() => vi.advanceTimersByTimeAsync(50))
     }
@@ -39,6 +39,18 @@ describe('useInstrumentSearch', () => {
     await act(() => vi.advanceTimersByTimeAsync(300))
     expect(searchInstruments).toHaveBeenCalledTimes(1)
     expect(searchInstruments).toHaveBeenCalledWith('ishares', 'Stock,Etf')
+  })
+
+  it('searches a one-letter ticker', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    renderHook(() => useInstrumentSearch('F'), { wrapper })
+
+    await act(() => vi.advanceTimersByTimeAsync(300))
+    expect(searchInstruments).toHaveBeenCalledWith('F', 'Stock,Etf')
   })
 })
 

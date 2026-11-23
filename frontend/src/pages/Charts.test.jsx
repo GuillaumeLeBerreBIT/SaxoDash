@@ -312,6 +312,49 @@ describe('Charts', () => {
     expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  describe('two Instruments sharing a ticker', () => {
+    const listings = {
+      id: 2,
+      name: 'Listings',
+      items: [
+        { id: 7, symbol: 'NOW', uic: 501, asset_type: 'Stock', exchange: 'NYSE', description: 'ServiceNow Inc' },
+        { id: 8, symbol: 'NOW', uic: 502, asset_type: 'Stock', exchange: 'TSXV', description: 'NowVertical Group' },
+      ],
+    }
+    const openFirstListing = () =>
+      renderWithProviders(<Charts />, { route: '/charts?symbol=NOW&uic=501&assetType=Stock' })
+    const switchToSecondListing = () =>
+      userEvent.click(within(rail()).getAllByRole('button', { name: /^NOW/ })[1])
+
+    beforeEach(() => {
+      queries.useWatchlists.mockReturnValue({ ...idle, data: [listings] })
+    })
+
+    it('disarms the line tool when the other listing opens', async () => {
+      openFirstListing()
+
+      await userEvent.click(screen.getByRole('button', { name: 'Horizontal line' }))
+      await switchToSecondListing()
+
+      expect(backLink()).toHaveAttribute('href', '/research?symbol=NOW&uic=502&assetType=Stock')
+      expect(screen.getByRole('button', { name: 'Horizontal line' })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    it('returns a panned chart to the latest bar when the other listing opens', async () => {
+      openFirstListing()
+      await userEvent.click(screen.getByRole('button', { name: '1W' }))
+      fireEvent.pointerDown(plot(), { clientX: 200, clientY: 150, pointerId: 1 })
+      fireEvent.pointerMove(plot(), { clientX: 210, clientY: 150, pointerId: 1 })
+      fireEvent.pointerMove(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+      fireEvent.pointerUp(plot(), { clientX: 500, clientY: 150, pointerId: 1 })
+      expect(screen.getByRole('button', { name: 'Jump to latest' })).toBeInTheDocument()
+
+      await switchToSecondListing()
+
+      expect(screen.queryByRole('button', { name: 'Jump to latest' })).not.toBeInTheDocument()
+    })
+  })
+
   it('remembers a lower pane turned on here after the page is left and reopened', async () => {
     const first = renderWithProviders(<Charts />, { route: '/charts?symbol=NVDA' })
     await userEvent.click(screen.getByRole('button', { name: 'Indicators' }))
