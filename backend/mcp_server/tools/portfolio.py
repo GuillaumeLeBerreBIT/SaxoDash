@@ -84,7 +84,8 @@ def get_performance(benchmark: str = ''):
         'performance': fetch_optional(PerformanceView, warnings, query=query),
         'risk': fetch_optional(RiskMetricsView, warnings, query=query),
     }
-    return Reply(data, warnings)
+    history_warnings = {(body or {}).get('history_warning') for body in data.values()} - {None}
+    return Reply(data, warnings + sorted(history_warnings))
 
 
 @tool('Transactions: recent transactions, newest first, capped at limit (default 50).', sources=['transactions'], saxo=True)

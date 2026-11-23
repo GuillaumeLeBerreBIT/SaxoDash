@@ -615,6 +615,28 @@ class BenchmarkEurClosesTest(TestCase):
 
         self.assertEqual(len(closes), 1)
 
+    @patch('analytics.benchmarks.market.chart_before')
+    @patch('analytics.benchmarks.market.chart')
+    def test_an_account_older_than_one_chart_reaches_back_to_its_first_day(self, mock_chart, mock_before):
+        first = date(2020, 1, 1)
+        recent = [{'date': (first + timedelta(days=1000 + n)).isoformat(), 'close': 50.0} for n in range(benchmarks.CHART_COUNT)]
+        older = [{'date': (first + timedelta(days=n)).isoformat(), 'close': 40.0} for n in range(1001)]
+        mock_chart.return_value = recent
+        mock_before.return_value = older
+
+        closes = benchmarks.eur_closes('world', user=USER, since=first)
+
+        self.assertEqual(closes[0], (first, 40.0))
+        self.assertEqual(len(closes), 1000 + benchmarks.CHART_COUNT)
+        mock_before.assert_called_once_with(50629, 'Etf', 1440, recent[0]['date'], user=USER)
+
+    @patch('analytics.benchmarks.market.chart_before')
+    @patch('analytics.benchmarks.market.chart')
+    def test_an_account_inside_one_chart_costs_one_call(self, mock_chart, mock_before):
+        mock_chart.return_value = [{'date': '2026-01-01', 'close': 50.0}, {'date': '2026-01-02', 'close': 51.0}]
+        benchmarks.eur_closes('world', user=USER, since=date(2025, 1, 1))
+        mock_before.assert_not_called()
+
     @patch('analytics.benchmarks.market.chart')
     def test_a_provider_failure_becomes_benchmark_unavailable(self, mock_chart):
         mock_chart.side_effect = ProviderNotConnected('Saxo is not connected.')
@@ -770,7 +792,7 @@ class RiskMetricsViewTest(HistoryMixin, APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/')
         self.assertEqual(response.data['benchmark']['key'], 'world')
-        mock_eur_closes.assert_called_once_with('world', user=self.user)
+        mock_eur_closes.assert_called_once_with('world', user=self.user, since=date(2026, 1, 1))
 
     @patch('analytics.benchmarks.eur_closes')
     def test_accepts_a_benchmark_query_param(self, mock_eur_closes):
@@ -780,7 +802,7 @@ class RiskMetricsViewTest(HistoryMixin, APITestCase):
         ]
         response = self.client.get('/api/analytics/risk/?benchmark=sp500')
         self.assertEqual(response.data['benchmark']['key'], 'sp500')
-        mock_eur_closes.assert_called_once_with('sp500', user=self.user)
+        mock_eur_closes.assert_called_once_with('sp500', user=self.user, since=date(2026, 1, 1))
 
     @patch('analytics.benchmarks.eur_closes')
     def test_an_unknown_benchmark_falls_back_to_world(self, mock_eur_closes):

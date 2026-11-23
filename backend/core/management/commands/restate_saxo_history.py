@@ -1,4 +1,5 @@
 from bisect import bisect_right
+from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
@@ -12,6 +13,7 @@ from portfolio.models import SAXO_SOURCE, PortfolioValuation
 from ...models import NetWorthSnapshot
 
 CENTS = Decimal('0.01')
+LONGEST_GAP = timedelta(days=7)
 
 
 def _account_currency(user):
@@ -19,8 +21,8 @@ def _account_currency(user):
     return valuation.currency if valuation else None
 
 
-def _day_on_or_before(days, day):
-    index = bisect_right([d.date for d in days], day)
+def _day_on_or_before(days, dates, day):
+    index = bisect_right(dates, day)
     return days[index - 1] if index else None
 
 
@@ -50,16 +52,21 @@ class Command(BaseCommand):
             )
 
         days = account_performance.account_days(user=user)
+        dates = [d.date for d in days]
         snapshots = NetWorthSnapshot.objects.filter(
             user=user, date__lt=timezone.localdate(), date__lte=options['until'],
         )
         if options['since']:
             snapshots = snapshots.filter(date__gte=options['since'])
 
-        changed = 0
+        changed = skipped = 0
         for row in snapshots.order_by('date'):
-            day = _day_on_or_before(days, row.date)
+            day = _day_on_or_before(days, dates, row.date)
             if day is None:
+                continue
+            if row.date - day.date > LONGEST_GAP:
+                self.stdout.write(f'{row.date}  skipped: nearest Saxo day is {day.date}, more than 7 days earlier')
+                skipped += 1
                 continue
             bank_only = row.bank_only_total or Decimal('0')
             new = {
@@ -75,4 +82,4 @@ class Command(BaseCommand):
             changed += 1
 
         verb = 'Rebuilt' if options['apply'] else 'Dry run: would rebuild'
-        self.stdout.write(f'{verb} {changed} snapshot(s).')
+        self.stdout.write(f'{verb} {changed} snapshot(s); skipped {skipped} too far from a Saxo day.')

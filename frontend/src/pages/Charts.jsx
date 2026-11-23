@@ -5,7 +5,7 @@ import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
 import { RAIL_WIDTH } from '../lib/railLayout'
-import { instrumentKey, researchHref } from '../lib/research'
+import { researchHref } from '../lib/research'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { Chip } from '../components/ui'
 import ChartPane from '../components/research/ChartPane'
@@ -20,6 +20,7 @@ import IndicatorChips from '../components/research/IndicatorChips'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
 import { useChartWorkspace } from '../components/research/useChartWorkspace'
+import { useInstrumentReset } from '../components/research/useInstrumentReset'
 import { usePaneViews } from '../components/research/usePaneViews'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { usePersistedSize } from '../components/research/usePersistedSize'
@@ -49,12 +50,7 @@ export default function Charts() {
   }
   const [tool, setTool] = useState('crosshair')
 
-  const shownKey = instrumentKey(instrument?.uic, instrument?.assetType)
-  const [toolKey, setToolKey] = useState(shownKey)
-  if (toolKey !== shownKey) {
-    setToolKey(shownKey)
-    setTool('crosshair')
-  }
+  useInstrumentReset(instrument, () => setTool('crosshair'))
 
   useEffect(() => {
     if (tool === 'crosshair') return undefined

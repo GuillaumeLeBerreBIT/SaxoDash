@@ -29,7 +29,7 @@ def _empty_benchmark(key, reason):
 
 def _benchmark(key, port_dated_values, user):
     try:
-        bench_dated_values = benchmarks.eur_closes(key, user=user)
+        bench_dated_values = benchmarks.eur_closes(key, user=user, since=port_dated_values[0][0])
     except benchmarks.BenchmarkUnavailable as exc:
         return _empty_benchmark(key, reason=str(exc))
 
@@ -60,7 +60,7 @@ def performance_report(port_dated_values, benchmark_key, *, user):
     reason = None
     if len(port_dated_values) >= metrics.MIN_DAILY_POINTS:
         try:
-            bench_dated_values = benchmarks.eur_closes(key, user=user)
+            bench_dated_values = benchmarks.eur_closes(key, user=user, since=port_dated_values[0][0])
         except benchmarks.BenchmarkUnavailable as exc:
             reason = str(exc)  # every benchmark_pct/alpha_pct then comes back None
 

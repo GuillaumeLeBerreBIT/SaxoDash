@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from portfolio.models import PortfolioValuation, Position
 from portfolio.views import PortfolioSummaryView
+from saxo.client import SaxoAPIError
 from saxo.models import SaxoCredential
 from transactions.models import Transaction
 
@@ -196,3 +197,11 @@ class PerformanceToolTest(APITestCase):
 
         self.assertAlmostEqual(since_inception(page['periods']), 4.0)
         self.assertEqual(since_inception(tool['periods']), since_inception(page['periods']))
+
+    def test_a_stale_history_reaches_the_warnings_once(self):
+        with patch('saxo.client.get_client_key', return_value='K'), \
+                patch('saxo.client.get_performance_timeseries', side_effect=SaxoAPIError('down')), \
+                patch('analytics.benchmarks.eur_closes', return_value=[]):
+            reply = get_performance()
+
+        self.assertEqual(reply['warnings'].count('Saxo did not answer the account history request.'), 1)

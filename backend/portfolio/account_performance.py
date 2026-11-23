@@ -11,6 +11,7 @@ from saxo.credentials import SaxoNotConnected, active_credential
 CACHE_TTL = 3600
 WEEKEND_FROM = 5
 UNANSWERED = 'Saxo did not answer the account history request.'
+UNREADABLE = "Saxo's account history reply could not be read."
 
 
 class GrowthSeries(NamedTuple):
@@ -72,6 +73,8 @@ def growth_series(*, user):
         return _fallback(f'Saxo is not connected: {error}', user)
     except SaxoAPIError:
         return _fallback(UNANSWERED, user)
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return _fallback(UNREADABLE, user)
     cache.set(_cache_key(user), growth, CACHE_TTL)
     cache.set(_last_good_key(user), growth, None)
     return GrowthSeries(growth, None)
