@@ -197,7 +197,7 @@ class PeriodsTest(TestCase):
         Security.objects.create(cusip='30231G102', ticker='XOM', inherited_via=Security.ALIAS)
         Security.objects.create(cusip='30233Q108', ticker='XOM')
 
-    def test_a_period_is_a_quarters_stock_holdings_from_its_first_filing_date(self):
+    def test_an_amendment_starts_a_new_period_on_its_own_filed_date(self):
         store_quarter(self.investor, self.Q1, [
             ('037833100', 'APPLE INC', 10, 600), ('999999999', 'ACME', 1, 300), ('037833100', 'APPLE INC', 1, 100, 'CALL'),
         ], filed_on=date(2026, 5, 15))
@@ -208,7 +208,39 @@ class PeriodsTest(TestCase):
 
         periods = copying.periods(self.investor)
 
-        self.assertEqual(periods, [Period(date(2026, 5, 15), [('AAPL', 700), (None, 300)], 1000)])
+        self.assertEqual(periods, [
+            Period(date(2026, 5, 15), [('AAPL', 600), (None, 300)], 900),
+            Period(date(2026, 6, 1), [('AAPL', 700), (None, 300)], 1000),
+        ])
+
+    def test_a_new_holdings_amendment_adds_to_the_basket_from_its_filed_date(self):
+        store_quarter(self.investor, self.Q1, [('037833100', 'APPLE INC', 10, 600)], filed_on=date(2026, 5, 15))
+        store_quarter(
+            self.investor, self.Q1, [('999999999', 'ACME', 1, 300)],
+            filed_on=date(2026, 6, 1), amendment_type='NEW HOLDINGS',
+        )
+
+        periods = copying.periods(self.investor)
+
+        self.assertEqual(periods, [
+            Period(date(2026, 5, 15), [('AAPL', 600)], 600),
+            Period(date(2026, 6, 1), [('AAPL', 600), (None, 300)], 900),
+        ])
+
+    def test_an_amendment_to_an_older_quarter_does_not_replace_a_newer_basket(self):
+        store_quarter(self.investor, self.Q1, [('037833100', 'APPLE INC', 10, 600)], filed_on=date(2026, 5, 15))
+        store_quarter(self.investor, self.Q2, [('999999999', 'ACME', 1, 300)], filed_on=date(2026, 8, 14))
+        store_quarter(
+            self.investor, self.Q1, [('037833100', 'APPLE INC', 10, 700)],
+            filed_on=date(2026, 9, 1), amendment_type='RESTATEMENT',
+        )
+
+        periods = copying.periods(self.investor)
+
+        self.assertEqual(periods, [
+            Period(date(2026, 5, 15), [('AAPL', 600)], 600),
+            Period(date(2026, 8, 14), [(None, 300)], 300),
+        ])
 
     def test_two_identifiers_of_one_stock_are_one_holding(self):
         store_quarter(self.investor, self.Q1, [
@@ -256,6 +288,21 @@ class RebuildTest(TestCase):
         self.assertEqual((stored.clone_return_pct, stored.benchmark_return_pct), (100.0, 10.0))
         self.assertEqual((stored.since, stored.until, stored.periods), (DAYS[1], DAYS[2], 1))
         self.assertEqual(stored.series[-1], [DAYS[2].isoformat(), 200.0, 110.0])
+
+    def test_an_amendment_is_bought_from_its_own_filed_date(self):
+        Security.objects.create(cusip='88160R101', ticker='TSLA')
+        store_quarter(
+            self.investor, self.Q1, [('88160R101', 'TESLA INC', 1, 600)],
+            filed_on=DAYS[2], amendment_type='RESTATEMENT',
+        )
+        self.history(copying.BENCHMARK_TICKER, [100, 100, 100, 100, 100])
+        self.history('AAPL', [50, 50, 100, 100, 100])
+        self.history('TSLA', [10, 10, 10, 10, 20])
+
+        copying.rebuild_all()
+
+        stored = CopyPerformance.objects.get(investor=self.investor)
+        self.assertEqual((stored.periods, stored.clone_return_pct), (2, 300.0))
 
     def test_rebuilding_replaces_the_measurement(self):
         self.history(copying.BENCHMARK_TICKER, [100, 100, 110])

@@ -47,11 +47,13 @@ def dedupe(rows):
         groups[_identity(row)].append(row)
     kept = []
     for members in groups.values():
-        copies = max(Counter(row.report for row in members).values())
+        per_report = Counter(row.report for row in members)
+        filed = {row.report: row.filed_on for row in members}
         amended = [row for row in members if row.amended]
         pool = amended or members
-        earliest = min(row.filed_on for row in members)
-        kept.extend(replace(row, filed_on=earliest) for row in pool[:copies])
+        for copy, row in enumerate(pool[:max(per_report.values())]):
+            disclosed = min(filed[report] for report, count in per_report.items() if count > copy)
+            kept.append(replace(row, filed_on=disclosed))
     return sorted(kept, key=lambda found: (found.filed_on, found.traded_on))
 
 

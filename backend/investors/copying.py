@@ -3,10 +3,9 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Min
-
-from .models import CopyPerformance, Filing, Investor, PositionMove, PriceHistory, Security
+from .models import CopyPerformance, Holding, Investor, PriceHistory, Security
 from .prices import Series
+from .quarters import effective_filings
 
 HOLDINGS = 20
 BENCHMARK_TICKER = 'SPY'
@@ -26,29 +25,51 @@ class Period:
     stock_value: int
 
 
-def periods(investor):
-    filed = dict(
-        Filing.objects.filter(investor=investor).values_list('quarter_end').annotate(first=Min('filed_on'))
-    )
-    rows = PositionMove.objects.filter(investor=investor, put_call='', shares__gt=0).values_list(
-        'quarter_end', 'cusip', 'value',
-    )
+def _baskets(investor):
     by_quarter = defaultdict(list)
-    for quarter_end, cusip, value in rows:
-        by_quarter[quarter_end].append((cusip, value))
+    latest = None
+    chosen = {}
+    for filing in investor.filings.order_by('filed_on', 'quarter_end', 'accession'):
+        by_quarter[filing.quarter_end].append(filing)
+        if latest is not None and filing.quarter_end < latest:
+            continue
+        latest = filing.quarter_end
+        chosen[filing.filed_on] = [effective.pk for effective in effective_filings(by_quarter[latest])]
+    return chosen
+
+
+def _stock_held(filing_ids):
+    held = defaultdict(list)
+    rows = Holding.objects.filter(filing_id__in=filing_ids, put_call='').values_list('filing_id', 'cusip', 'shares', 'value')
+    for filing_id, cusip, shares, value in rows:
+        held[filing_id].append((cusip, shares, value))
+    return held
+
+
+def periods(investor):
+    baskets = _baskets(investor)
+    held = _stock_held({pk for ids in baskets.values() for pk in ids})
     tickers = dict(
-        Security.objects.filter(cusip__in={cusip for held in by_quarter.values() for cusip, _ in held})
+        Security.objects.filter(cusip__in={row[0] for rows in held.values() for row in rows})
         .exclude(ticker__isnull=True).values_list('cusip', 'ticker')
     )
     known = set(tickers.values())
     found = []
-    for quarter_end in sorted(by_quarter):
+    for filed_on in sorted(baskets):
+        shares, values = defaultdict(int), defaultdict(int)
+        for filing_id in baskets[filed_on]:
+            for cusip, held_shares, value in held[filing_id]:
+                shares[cusip] += held_shares
+                values[cusip] += value
         merged = defaultdict(int)
-        for cusip, value in by_quarter[quarter_end]:
-            merged[tickers.get(cusip) or cusip] += value
-        largest = sorted(merged.items(), key=lambda held: (-held[1], held[0]))[:HOLDINGS]
+        for cusip, value in values.items():
+            if shares[cusip] > 0:
+                merged[tickers.get(cusip) or cusip] += value
+        if not merged:
+            continue
+        largest = sorted(merged.items(), key=lambda item: (-item[1], item[0]))[:HOLDINGS]
         holdings = [(name if name in known else None, value) for name, value in largest]
-        found.append(Period(filed[quarter_end], holdings, sum(merged.values())))
+        found.append(Period(filed_on, holdings, sum(merged.values())))
     return found
 
 

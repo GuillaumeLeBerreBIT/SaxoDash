@@ -45,10 +45,6 @@ def is_stale(investor, today):
     return investor.last_filing_at is not None and today - investor.last_filing_at > STALE_AFTER
 
 
-def _shares(snap):
-    return {key: row['shares'] for key, row in snap.items()}
-
-
 def _values(snap):
     return {key: row['value'] for key, row in snap.items()}
 
@@ -101,8 +97,7 @@ def _comparison(investor, quarter_end, previous):
     snap = quarters.snapshot(investor, quarter_end)
     previous_snap = quarters.snapshot(investor, previous) if previous else None
     previous_snap = quarters.carried_over(previous_snap, snap, quarters.tickers_held(investor))
-    previous_shares = _shares(previous_snap) if previous_snap is not None else None
-    per_key, sold_out = changes.compare(_shares(snap), previous_shares)
+    per_key, sold_out = changes.compare(snap, previous_snap)
     return snap, previous_snap, per_key, sold_out
 
 
