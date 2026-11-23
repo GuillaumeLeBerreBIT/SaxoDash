@@ -99,17 +99,20 @@ def _next_path(following):
     return following.removeprefix(base)
 
 
-def _report(access_token, path, params=None):
-    rows = []
+def _pages(access_token, path, params=None):
     body = _get(access_token, path, params=params)
     for page in range(1, MAX_REPORT_PAGES + 1):
-        rows.extend(body.get('Data') or [])
+        yield body
         following = body.get('__next')
         if not following:
-            return rows
+            return
         if page == MAX_REPORT_PAGES:
             raise SaxoPermanentError(f'{path} is longer than {MAX_REPORT_PAGES} pages')
         body = _get(access_token, _next_path(following))
+
+
+def _report(access_token, path, params=None):
+    return [row for body in _pages(access_token, path, params) for row in body.get('Data') or []]
 
 
 def get_closed_positions_report(access_token, client_key, from_date, to_date):
@@ -146,7 +149,12 @@ def refresh_access_token(refresh_token):
 
 def get_positions(access_token):
     params = {'FieldGroups': 'DisplayAndFormat,PositionBase,PositionView'}
-    return _get(access_token, '/port/v1/positions/me', params=params).get('Data', [])
+    rows = []
+    for body in _pages(access_token, '/port/v1/positions/me', params):
+        if not isinstance(body.get('Data'), list):
+            return None
+        rows.extend(body['Data'])
+    return rows
 
 
 def get_account_balance(access_token):
