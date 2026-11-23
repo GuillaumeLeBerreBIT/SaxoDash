@@ -16,7 +16,7 @@ export function performanceSentence(periods, benchmarkName) {
   const withIndex = shown.filter((row) => row.benchmark_pct != null)
   const row = withIndex[withIndex.length - 1] ?? shown[shown.length - 1]
   if (!row) return NO_HISTORY
-  const opening = `${lead(row.label)} your portfolio returned ${pct(row.portfolio_pct)}`
+  const opening = `${lead(row.label)} your Investment Return was ${pct(row.portfolio_pct)}`
   if (row.benchmark_pct == null) return `${opening}. ${benchmarkName} has no figure for that period.`
   const gap = Number(row.portfolio_pct) - Number(row.benchmark_pct)
   const index = `${benchmarkName} (${pct(row.benchmark_pct)})`

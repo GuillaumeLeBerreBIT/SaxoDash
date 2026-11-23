@@ -248,35 +248,21 @@ def annualize(total_pct, years):
 
 
 def calendar_year_returns(port_dated_values, bench_dated_values):
-    """One row per calendar year either series has data for.
-
-    The latest year is marked partial - it's presumptively still in
-    progress relative to the data on hand, not a claim about the calendar.
-    """
-    def by_year(dated_values):
-        buckets = {}
-        for d, v in dated_values:
-            buckets.setdefault(d.year, []).append((d, v))
-        return buckets
-
-    def year_pct(rows):
-        if len(rows) < MIN_DAILY_POINTS:
-            return None
-        return (float(rows[-1][1]) / float(rows[0][1]) - 1) * 100
-
-    port_years = by_year(port_dated_values)
-    bench_years = by_year(bench_dated_values)
     latest_year = port_dated_values[-1][0].year if port_dated_values else None
-
-    return [
-        {
+    rows = []
+    previous_end = None
+    for year in sorted({d.year for d, _ in port_dated_values}):
+        inside = [d for d, _ in port_dated_values if d.year == year]
+        start = previous_end or inside[0]
+        port_pct = window_return(port_dated_values, start, inside[-1])
+        rows.append({
             'year': year,
-            'portfolio_pct': year_pct(port_years.get(year, [])),
-            'benchmark_pct': year_pct(bench_years.get(year, [])),
-            'partial': year == latest_year,
-        }
-        for year in sorted(set(port_years) | set(bench_years))
-    ]
+            'portfolio_pct': port_pct,
+            'benchmark_pct': None if port_pct is None else benchmark_window_return(bench_dated_values, start, inside[-1]),
+            'partial': previous_end is None or year == latest_year,
+        })
+        previous_end = inside[-1]
+    return rows
 
 
 def growth_series(port_dated_values, bench_dated_values):
@@ -339,8 +325,10 @@ def performance_summary(port_dated_values, bench_dated_values):
     if not has_window:
         ytd_start, ytd_needs = None, history.days_missing(days, 1)
     else:
-        ytd_start = date(port_end.year, 1, 1)
-        ytd_needs = 0 if port_dated_values[0][0] <= ytd_start else None
+        new_year = date(port_end.year, 1, 1)
+        before = [d for d, _ in port_dated_values if d < new_year]
+        ytd_start = before[-1] if before else new_year
+        ytd_needs = 0 if before else None
     rows.insert(2, row('Year to date', ytd_start, ytd_needs))
 
     inception_start = port_dated_values[0][0] if has_window else None

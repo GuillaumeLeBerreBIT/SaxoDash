@@ -123,6 +123,10 @@ def get_trades_report(access_token, client_key, from_date, to_date):
     return _report(access_token, f'/cs/v1/reports/trades/{client_key}', params={'FromDate': from_date, 'ToDate': to_date})
 
 
+def get_performance_timeseries(access_token, client_key):
+    return _get(access_token, '/hist/v4/performance/timeseries', params={'ClientKey': client_key, 'StandardPeriod': 'AllTime'})
+
+
 def build_authorize_url(state):
     query = urlencode({
         'response_type': 'code',

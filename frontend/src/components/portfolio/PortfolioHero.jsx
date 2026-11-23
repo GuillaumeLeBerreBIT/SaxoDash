@@ -76,7 +76,7 @@ export default function PortfolioHero({ summary, positions, quotes, holdingsCoun
   const markers = useMemo(() => tradeMarkers(data, transactions.data), [data, transactions.data])
   const day = dayChange(positions, quotes)
   const placeholder = chartPlaceholderFor({ isLoading: history.isLoading, error: history.error, data, minPoints: 2, onRetry: history.refetch })
-  const label = holdingsCount == null ? 'Your portfolio' : `Your portfolio · ${holdingsCount} holding${holdingsCount === 1 ? '' : 's'} at Saxo`
+  const label = holdingsCount == null ? 'Portfolio value' : `Portfolio value · ${holdingsCount} holding${holdingsCount === 1 ? '' : 's'} at Saxo`
 
   return (
     <section aria-label="Your portfolio" data-testid="portfolio-hero" className="sd-panel bg-pane rounded-2xl p-4 md:p-6 flex flex-col gap-5 min-w-0">

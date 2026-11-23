@@ -13,12 +13,12 @@ import { fmtNum, fmtPct } from '../lib/format'
 import { performanceSentence } from '../lib/performanceAnswer'
 import { needsDaysNote, pctOrDash } from '../lib/portfolioStats'
 
-const CONTEXT = 'Daily portfolio value · computed from your own history'
-const RESULT_CONTEXT = 'Your Saxo account, day by day · deposits and withdrawals count as gains and losses'
+const CONTEXT = 'Investment Return · time-weighted by Saxo'
+const RESULT_CONTEXT = 'Investment Return, time-weighted by Saxo · deposits and withdrawals left out'
 const BOARD = 'grid grid-cols-1 min-[1100px]:grid-cols-12 gap-[var(--sd-gap,12px)] items-stretch [&>div>.sd-panel:only-child]:h-full [&>div.flex-col>.sd-panel:last-child]:flex-1'
 const SPAN_6 = 'min-[1100px]:col-span-6'
 const SPAN_12 = 'min-[1100px]:col-span-12'
-const AVG_RETURN_NOTE = 'Mean daily change of your Saxo account; deposits count as gains'
+const AVG_RETURN_NOTE = 'Mean daily time-weighted return of your Saxo account, deposits and withdrawals left out'
 const TABS = [
   ['performance', 'Performance'],
   ['risk', 'Risk'],
@@ -165,7 +165,7 @@ function RiskTab({ data }) {
           card to match Risk & return's height (now taller with the grouped
           tiles + definitions toggle) - a card whose border wraps far past
           its own 260px chart, empty for no reason. */}
-      <Card className={SPAN_6} context={`Daily portfolio value · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} dot="ok" title="Risk & return">
+      <Card className={SPAN_6} context={`Daily Investment Return · risk-free ${fmtNum(riskFreeAnnual * 100, 1)}%`} dot="ok" title="Risk & return">
         <RiskDefinitions />
         <div className="mt-4 space-y-4">
           <MetricGroup label="Return & risk">
@@ -255,7 +255,8 @@ export default function Analytics() {
           <ChartPlaceholder tone={error ? 'red' : undefined}>
             {isLoading && 'Loading…'}
             {!isLoading && error && 'Failed to load risk metrics'}
-            {!isLoading && !error && `Not enough history yet — risk metrics need at least two days of portfolio value (${data?.history_days ?? 0} so far).`}
+            {!isLoading && !error && (data?.history_warning
+              ?? `Not enough history yet — risk metrics need at least two days of history (${data?.history_days ?? 0} so far).`)}
           </ChartPlaceholder>
         </Card>
       </>
@@ -276,6 +277,8 @@ export default function Analytics() {
         </div>
         <BenchmarkSelector options={data.available_benchmarks} value={benchmark} onChange={setBenchmark} />
       </section>
+
+      {data.history_warning && <Alert tone="warning">{data.history_warning}</Alert>}
 
       {performance?.growth ? <GrowthChart growth={performance.growth} benchmarkName={performance.benchmark.name} /> : null}
 

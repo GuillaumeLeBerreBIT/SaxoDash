@@ -31,7 +31,7 @@ export default function CalendarYears({ years: allYears, benchmarkName, classNam
   return (
     <Card
       className={className}
-      context={`${CONTEXT}${partialYears.size ? ' · * year to date' : ''}`}
+      context={`${CONTEXT}${partialYears.size ? ' · * part of the year' : ''}`}
       dot="ok"
       title="Calendar-year returns"
       right={

@@ -1,17 +1,20 @@
 import json
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from django.core.cache import cache
 from django.test import override_settings
+from django.utils import timezone
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from portfolio.models import PortfolioValuation, Position
 from portfolio.views import PortfolioSummaryView
+from saxo.models import SaxoCredential
 from transactions.models import Transaction
 
-from .tools.portfolio import get_portfolio, get_transactions
+from .tools.portfolio import get_performance, get_portfolio, get_transactions
 from .views import ViewResult, call_view
 from users.testing import the_owner
 
@@ -163,3 +166,33 @@ class SerializedMoneyTest(APITestCase):
         Transaction.objects.create(user=the_owner(), date=date(2026, 1, 2), type='BUY', instrument='A', ticker='A', qty=Decimal('3'), price=Decimal('12.50'))
         item = get_transactions()['data']['items'][0]
         self.assertEqual((item['qty'], item['price']), (3.0, 12.5))
+
+
+@override_settings(CACHES=LOCMEM)
+class PerformanceToolTest(APITestCase):
+    def setUp(self):
+        cache.clear()
+        user = the_owner()
+        SaxoCredential.objects.create(
+            user=user, access_token='access', refresh_token='refresh',
+            expires_at=timezone.now() + timedelta(minutes=20),
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+
+    def test_the_tool_returns_the_investment_return_the_page_shows(self):
+        days = [date(2026, 3, 2) + timedelta(days=offset) for offset in range(5)]
+        body = {
+            'TimeWeighted': {'Accumulated': [{'Date': d.isoformat(), 'Value': v} for d, v in zip(days, [0, 0, 0.03, 0.03, 0.04])]},
+            'Balance': {'AccountValue': [{'Date': d.isoformat(), 'Value': v} for d, v in zip(days, [1000, 6000, 6180, 6180, 6240])]},
+        }
+        with patch('saxo.client.get_client_key', return_value='K'), \
+                patch('saxo.client.get_performance_timeseries', return_value=body), \
+                patch('analytics.benchmarks.eur_closes', return_value=[]):
+            page = self.client.get('/api/analytics/performance/').data
+            tool = get_performance()['data']['performance']
+
+        def since_inception(periods):
+            return next(row['portfolio_pct'] for row in periods if row['label'] == 'Since inception')
+
+        self.assertAlmostEqual(since_inception(page['periods']), 4.0)
+        self.assertEqual(since_inception(tool['periods']), since_inception(page['periods']))

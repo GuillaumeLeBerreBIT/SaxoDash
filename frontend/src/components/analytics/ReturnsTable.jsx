@@ -11,7 +11,7 @@ export default function ReturnsTable({ periods, benchmarkName, className = '' })
     <Card
       flush
       className={className}
-      context="Saxo account value change · deposits and withdrawals are not separated"
+      context="Investment Return · the index over the same window"
       dot="ok"
       title={`Returns vs ${benchmarkName}`}
     >
@@ -19,7 +19,7 @@ export default function ReturnsTable({ periods, benchmarkName, className = '' })
         <thead>
           <tr>
             <Th edge>Period</Th>
-            <Th align="right">Portfolio</Th>
+            <Th align="right">Investment Return</Th>
             <Th align="right" hideBelow="md">{benchmarkName}</Th>
             <Th align="right" edge>Ahead / behind</Th>
           </tr>

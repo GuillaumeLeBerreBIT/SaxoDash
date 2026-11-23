@@ -18,7 +18,7 @@ export default function MonthlyReturnsHeatmap({ monthlyReturns, className = '' }
   return (
     <Card
       className={className}
-      context="Portfolio value, month over month"
+      context="Investment Return, month over month"
       dot={years.length ? 'ok' : 'off'}
       title="Monthly returns"
       right={<ScaleLegend cap={PERFORMANCE_CAPS.month} />}
