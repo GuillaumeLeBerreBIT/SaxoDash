@@ -652,6 +652,22 @@ between 1 and 2 / above 2" and "P/E above / below / in line with its range" in n
 coloured corners and its axis reads lower and higher valuation, and the Guide's corner notes and the playbook lines
 built on a cheap or rich PEG no longer give advice.
 
+**A quarter's EPS counts in the P/E from the day it was published (2026-11-23).** Each quarterly EPS point
+is dated by `research/valuation.py::published_eps` before anything sums it: the EDGAR results release (8-K item
+2.02, found by `report_dates.attach`) when known, moved to the day after the period end if it falls on or before
+it, otherwise the period end plus 40 days, or plus 60 for a fiscal-year end (a quarter within a week of an
+annual period's month and day, so 52/53-week years match). The trailing P/E, the percentile range, the Valuation
+Grade and its bands, Discover's "below usual P/E", the yardsticks (which had their own 35-day lag) and the MCP
+valuation and compare tools all read that one dating. The nightly scan stores the release dates it finds as
+`fundamentals_history['eps_released']` (`{period: date}`, a separate key so the `[period, value]` pairs keep
+their shape), keeping earlier ones when the SEC cannot answer, since `filings.recent` only reaches about a
+year back; older quarters and foreign filers use the fallback. A release is counted on its own day even when
+it came after the close, as the spec asks. `manage.py recalculate_pe [--report PATH]` rebuilds the stored P/E
+range from `DailyBars` and the stored EPS, reruns the verdicts and, with `--report`, `grade_valuation`, with no
+Saxo, Finnhub or SEC call; until a scan has stored release dates it uses the fallback for every quarter. The
+figures quoted above from `docs/research/2026-11-valuation-yardsticks.md` were measured with the 35-day lag and
+are to be re-quoted once the report is regenerated. Open verdict calls keep the valuation recorded when they opened.
+
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the
 failure logged, so one ticker's bad data never stops the run (the task reports `N failed: ...` as

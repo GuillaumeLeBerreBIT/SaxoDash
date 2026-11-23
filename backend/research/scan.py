@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 
-from . import coverage, finnhub, history, market, scan_progress, technicals, valuation
+from . import coverage, finnhub, history, market, report_dates, scan_progress, technicals, valuation
 from .models import DailyBars, ScreenerRow
 from .providers import ProviderNotConnected, ProviderUnavailable
 from .universe import UNIVERSE_CSV, load_universe
@@ -42,15 +42,25 @@ def _dated_closes(bars):
     return [(date.fromisoformat(bar['date']), bar['close']) for bar in bars if bar.get('close') is not None]
 
 
+def _released(row, quarterly_eps):
+    known = (row.fundamentals_history or {}).get('eps_released') or {}
+    try:
+        reports = report_dates.company_reports(row.ticker)
+    except report_dates.SecUnavailable:
+        return known
+    found = report_dates.attach([{'date': period} for period, _ in quarterly_eps], reports)
+    return {**known, **{quarter['date']: quarter['reported_on'] for quarter in found if quarter['reported_on']}}
+
+
 def _refresh_fundamentals(row, bars):
     financials = finnhub.get_basic_financials(row.ticker)
     for field, value in finnhub.to_screener_fundamentals(financials).items():
         setattr(row, field, value)
     history = finnhub.to_screener_history(financials)
     if history['annual'] or history['quarterly_eps']:
+        history['eps_released'] = _released(row, history['quarterly_eps'])
         row.fundamentals_history = history
-        quarterly_eps = [(date.fromisoformat(period), value) for period, value in history['quarterly_eps']]
-        row.pe_history = valuation.pe_percentiles(_dated_closes(bars), quarterly_eps) or {}
+        row.pe_history = valuation.pe_percentiles(_dated_closes(bars), valuation.stored_eps(history)) or {}
     row.fundamentals_at = timezone.now()
 
 

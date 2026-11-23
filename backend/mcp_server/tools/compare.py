@@ -11,7 +11,7 @@ from ..envelope import Reply, Unavailable
 from ..throttled import look_up
 from ..views import app_user, fetch_optional
 from . import tool
-from .research import FINNHUB, SAXO, _scalar_metrics
+from .research import FINNHUB, SAXO, _scalar_metrics, released_dates
 from .smart_money import CONGRESS, EDGAR, ownership
 
 MIN_SYMBOLS = 2
@@ -109,7 +109,7 @@ def _history(listing, bars, warnings):
     except ProviderUnavailable as exc:
         warnings.append(exc.reason)
         return None
-    data, notes = valuation.history(listing.ticker, series, bars)
+    data, notes = valuation.history(listing.ticker, series, bars, released=released_dates(listing.ticker))
     warnings.extend(notes)
     return data
 

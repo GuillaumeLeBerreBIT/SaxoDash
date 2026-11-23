@@ -3,9 +3,9 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 
 from research.models import DailyBars
+from research.valuation import stored_eps
 from signals.series import from_bars
 from verdicts import yardstick_report
-from verdicts.compute import quarterly_eps
 
 
 class Command(BaseCommand):
@@ -21,7 +21,7 @@ class Command(BaseCommand):
             series = from_bars(stored.bars)
             if len(series):
                 series_by_ticker[stored.row.ticker] = series
-                eps_by_ticker[stored.row.ticker] = quarterly_eps(stored.row)
+                eps_by_ticker[stored.row.ticker] = stored_eps(stored.row.fundamentals_history)
         window = f' from {since}' if since else ''
         full = yardstick_report.grade_run(f'All stocks{window}', series_by_ticker, eps_by_ticker, since=since)
         runs = [full]
