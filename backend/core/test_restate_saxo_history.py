@@ -57,6 +57,15 @@ class RestateSaxoHistoryTests(TestCase):
         self.run_command('--until', '2026-10-11', '--apply')
         self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 11)).saxo_account_value, Decimal('44000.00'))
 
+    def test_a_snapshot_more_than_a_week_past_saxos_history_is_left_and_reported(self):
+        snapshot(date(2026, 10, 19))
+        snapshot(date(2026, 10, 20))
+        out = self.run_command('--until', '2026-10-20', '--apply')
+        self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 19)).saxo_account_value, Decimal('45000.00'))
+        self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 20)).net_worth, Decimal('1002000.00'))
+        self.assertIn('2026-10-20  skipped: nearest Saxo day is 2026-10-12', out)
+        self.assertIn('Rebuilt 1 snapshot(s); skipped 1', out)
+
     def test_unknown_bank_balances_count_as_none_and_are_reported(self):
         snapshot(date(2026, 10, 12), bank_only=None)
         out = self.run_command('--until', '2026-10-12', '--apply')

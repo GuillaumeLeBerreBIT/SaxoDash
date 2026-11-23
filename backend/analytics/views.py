@@ -6,7 +6,7 @@ from portfolio import account_performance
 from . import report
 
 
-def _with_history(build, request):
+def _report_on_account_history(build, request):
     growth, warning = account_performance.growth_series(user=request.user)
     body = build(growth, request.query_params.get('benchmark', ''), user=request.user)
     body['history_warning'] = warning
@@ -15,7 +15,7 @@ def _with_history(build, request):
 
 class RiskMetricsView(APIView):
     def get(self, request):
-        return _with_history(report.risk_report, request)
+        return _report_on_account_history(report.risk_report, request)
 
 
 class PerformanceView(APIView):
@@ -26,4 +26,4 @@ class PerformanceView(APIView):
     """
 
     def get(self, request):
-        return _with_history(report.performance_report, request)
+        return _report_on_account_history(report.performance_report, request)

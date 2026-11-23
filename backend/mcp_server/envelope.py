@@ -47,6 +47,9 @@ def saxo_warnings(user):
     state = connection_state(user)
     if not state.usable:
         warnings.append(state.reason)
-    if worst_recent_outcome(user) == 'failed':
+    outcome = worst_recent_outcome(user)
+    if outcome == 'failed':
         warnings.append('A Saxo sync task is failing, so positions may be stale.')
+    elif outcome == 'incomplete':
+        warnings.append('The last Saxo sync could not read every position, so positions are from the last complete sync.')
     return warnings

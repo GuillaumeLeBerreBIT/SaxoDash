@@ -7,7 +7,6 @@ import { reportsWithin } from '../lib/earnings'
 import { entrySentence } from '../lib/valueGuides'
 import { signalsForListing } from '../lib/signals'
 import { planFromPage } from '../lib/tradePlan'
-import { instrumentKey } from '../lib/research'
 import { Card } from '../components/ui'
 import AnswerCard from '../components/research/AnswerCard'
 import ChartPanel from '../components/research/ChartPanel'
@@ -29,6 +28,7 @@ import StatisticsTab from '../components/research/StatisticsTab'
 import WatchlistRail from '../components/research/WatchlistRail'
 import { useChartControls } from '../components/research/useChartControls'
 import { useChartData } from '../components/research/useChartData'
+import { useInstrumentReset } from '../components/research/useInstrumentReset'
 import { useResearchChartView } from '../components/research/useResearchChartView'
 import { useResearchInstrument } from '../components/research/useResearchInstrument'
 import { useTradeRisk } from '../components/research/useTradeRisk'
@@ -93,13 +93,10 @@ export default function Research() {
   const requestedTab = TAB_ALIASES[rawTab] ?? rawTab
   const [tab, setTab] = useState(TAB_KEYS.has(requestedTab) ? requestedTab : 'overview')
 
-  const shownKey = instrumentKey(instrument?.uic, instrument?.assetType)
-  const [scaledKey, setScaledKey] = useState(shownKey)
-  if (scaledKey !== shownKey) {
-    setScaledKey(shownKey)
+  useInstrumentReset(instrument, () => {
     setPanelFloor(0)
     controls.resetView()
-  }
+  })
 
 
   const {
@@ -260,7 +257,6 @@ export default function Research() {
 
   const advancedView = (
     <ChartPanel
-      key={shownKey}
       bars={bars}
       ind={ind}
       timeWindow={timeWindow}

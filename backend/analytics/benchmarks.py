@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 EURUSD_UIC = 21
 CHART_COUNT = 1200
+DAILY = 1440
+SHORT_PAGE_SLACK = 5
 
 
 class BenchmarkUnavailable(Exception):
@@ -46,7 +48,16 @@ SECTOR_FUNDS = {
 }
 
 
-def eur_closes(benchmark_key, *, user):
+def _daily_candles(uic, asset_type, since, user):
+    candles = market.chart(uic, asset_type, DAILY, CHART_COUNT, user=user)
+    page = candles
+    while since and candles and len(page) >= CHART_COUNT - SHORT_PAGE_SLACK and candles[0]['date'] > since.isoformat():
+        page = [c for c in market.chart_before(uic, asset_type, DAILY, candles[0]['date'], user=user) if c['date'] < candles[0]['date']]
+        candles = page + candles
+    return candles
+
+
+def eur_closes(benchmark_key, *, user, since=None):
     """Daily closes for one benchmark, converted to EUR - (date, float) pairs.
 
     Raises BenchmarkUnavailable for every reason the series can't be built.
@@ -54,8 +65,8 @@ def eur_closes(benchmark_key, *, user):
     info = BENCHMARKS[benchmark_key]
     needs_fx = info['currency'] != 'EUR'
     try:
-        candles = market.chart(info['uic'], info['asset_type'], 1440, CHART_COUNT, user=user)
-        fx_candles = market.chart(EURUSD_UIC, 'FxSpot', 1440, CHART_COUNT, user=user) if needs_fx else []
+        candles = _daily_candles(info['uic'], info['asset_type'], since, user)
+        fx_candles = _daily_candles(EURUSD_UIC, 'FxSpot', since, user) if needs_fx else []
     except ProviderError as exc:
         raise BenchmarkUnavailable(str(exc)) from exc
 
