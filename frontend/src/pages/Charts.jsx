@@ -5,7 +5,7 @@ import { ADVANCED_PANE_HEIGHTS, DEFAULT_PANE_HEIGHTS } from '../lib/chartOptions
 import { gridStyle, layoutById, paneStyle } from '../lib/chartLayouts'
 import { isTypingTarget } from '../lib/priceLines'
 import { RAIL_WIDTH } from '../lib/railLayout'
-import { researchHref } from '../lib/research'
+import { instrumentKey, researchHref } from '../lib/research'
 import SaxoConnectionStatus from '../components/SaxoConnectionStatus'
 import { Chip } from '../components/ui'
 import ChartPane from '../components/research/ChartPane'
@@ -49,9 +49,10 @@ export default function Charts() {
   }
   const [tool, setTool] = useState('crosshair')
 
-  const [shownSymbol, setShownSymbol] = useState(symbol)
-  if (shownSymbol !== symbol) {
-    setShownSymbol(symbol)
+  const shownKey = instrumentKey(instrument?.uic, instrument?.assetType)
+  const [toolKey, setToolKey] = useState(shownKey)
+  if (toolKey !== shownKey) {
+    setToolKey(shownKey)
     setTool('crosshair')
   }
 
