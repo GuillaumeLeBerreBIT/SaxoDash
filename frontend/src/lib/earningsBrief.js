@@ -51,10 +51,13 @@ export function marketSentence(stats) {
   return `${base}; ${Math.round((stats.beat / stats.reported) * 100)}% of those already out beat what analysts expected.`
 }
 
-const sign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
+const REPORTED = { word: 'Reported', tone: 'flat' }
+
+const sign = (value) => (value === 0 ? 0 : value > 0 ? 1 : -1)
+const surpriseResult = (surprise) => (surprise == null ? REPORTED : RESULT[sign(surprise) + 1])
 
 export function resultWord(event, today = new Date()) {
-  if (event.eps_actual != null) return RESULT[sign(event.eps_surprise_pct) + 1]
+  if (event.eps_actual != null) return surpriseResult(event.eps_surprise_pct)
   if (event.eps_estimate == null) return null
   return daysFrom(event.date, today) < 0 ? { word: 'Waiting', tone: 'warn' } : { word: 'Due', tone: 'flat' }
 }
@@ -63,5 +66,5 @@ export function lastResults(history, count = 4) {
   return (history ?? [])
     .filter((row) => row.eps_actual != null)
     .slice(-count)
-    .map((row) => ({ date: row.date, ...RESULT[sign(row.eps_surprise_pct) + 1] }))
+    .map((row) => ({ date: row.date, ...surpriseResult(row.eps_surprise_pct) }))
 }

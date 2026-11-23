@@ -11,18 +11,13 @@ import {
   YAxis,
 } from 'recharts'
 
-import { axisProps, chartTooltipProps, gridProps, surpriseSign } from '../../lib/charts'
+import { axisProps, chartTooltipProps, gridProps, surpriseColor } from '../../lib/charts'
 import { useChartColors } from '../../theme/useChartColors'
 import { fmtPct } from '../../lib/format'
 import { Card } from '../ui'
 import ChartFrame from '../ChartFrame'
 
 const surpriseTag = (v) => (v == null ? '' : fmtPct(v, { decimals: 1 }))
-
-function barColor(surprise, c) {
-  if (surprise == null) return c.primary
-  return [c.down, c.estimate, c.up][surpriseSign(surprise) + 1]
-}
 
 function Swatch({ color, children }) {
   return (
@@ -63,7 +58,7 @@ export default function EpsBarChart({ title, subtitle, data, format, control, cl
               style={{ fontSize: 11, fill: c.axisCategory }}
             />
             {data.map((row) => (
-              <Cell key={row.period} fill={barColor(row.surprise, c)} />
+              <Cell key={row.period} fill={surpriseColor(row.surprise, c)} />
             ))}
           </Bar>
         </BarChart>

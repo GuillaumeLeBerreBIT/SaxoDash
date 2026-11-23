@@ -4,7 +4,7 @@ import { THEMES, themeVars } from './theme'
 
 /** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
 export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
-export const surpriseColor = (value, c) => [c.down, c.estimate, c.up][surpriseSign(value) + 1]
+export const surpriseColor = (value, c) => (value == null ? c.primary : [c.down, c.estimate, c.up][surpriseSign(value) + 1])
 
 export const statementSeries = (c) => ({
   revenue: c.series[0],

@@ -42,6 +42,8 @@ const smallPositions = [
   { ticker: 'BBB', name: 'Beta', currency: 'USD', uic: 3, asset_type: 'Stock', value: '400.00', pnl: '5.00', pnl_pct: 1, weight: '12.0' },
 ]
 
+const small = { positions: smallPositions, summary: { total_value: '900.00', total_pnl: '15.00', total_pnl_pct: 1.7 } }
+
 const ownership = {
   quarter: '2026-06-30',
   stocks: { NVDA: { owners: 40, shares: 900_000_000, shares_change: 4_200_000, shares_change_pct: 0.5 } },
@@ -125,10 +127,43 @@ describe('Dashboard', () => {
   })
 
   it('says nothing needs doing when every holding is fine', () => {
-    stub({ positions: smallPositions, summary: { total_value: '900.00', total_pnl: '15.00', total_pnl_pct: 1.7 } })
+    stub({ ...small, verdicts: { AAA: { action: 'hold', uic: 2 }, BBB: { action: 'hold', uic: 3 } } })
     renderWithProviders(<Dashboard />)
     expect(screen.getByTestId('brief-headline')).toHaveTextContent('Nothing in your portfolio needs you today.')
     expect(screen.getByText(/Nothing to do today/)).toBeInTheDocument()
+  })
+
+  it('gives no all-clear while the verdicts are still loading', () => {
+    stub(small)
+    queries.useVerdictSummary.mockReturnValue({ data: undefined, isLoading: true })
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByTestId('brief-headline')).toHaveTextContent('Checking your holdings.')
+    expect(screen.queryByText(/Nothing to do today/)).toBeNull()
+    expect(panel('What to look at')).toHaveTextContent('Still checking your holdings against the quality rules.')
+  })
+
+  it('gives no all-clear when the verdicts failed to load', () => {
+    stub(small)
+    queries.useVerdictSummary.mockReturnValue({ data: undefined, isLoading: false })
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByTestId('brief-headline')).toHaveTextContent('Not every holding could be checked today.')
+    expect(screen.queryByText(/Nothing to do today/)).toBeNull()
+    expect(panel('What to look at')).toHaveTextContent('Two holdings could not be checked')
+  })
+
+  it('does not count a holding with no verdict as passing', () => {
+    stub({ ...small, verdicts: { AAA: { action: 'hold', uic: 2 } } })
+    renderWithProviders(<Dashboard />)
+    expect(screen.queryByText(/Nothing to do today/)).toBeNull()
+    expect(panel('What to look at')).toHaveTextContent('One holding could not be checked')
+  })
+
+  it('keeps the dashboard when only the recent transactions fail', () => {
+    stub()
+    queries.useTransactions.mockReturnValue({ ...idle, error: new Error('boom') })
+    renderWithProviders(<Dashboard />)
+    expect(screen.getByTestId('brief-hero')).toBeInTheDocument()
+    expect(panel('Recent transactions')).toHaveTextContent('Recent transactions could not be loaded')
   })
 
   it('adds what tracked funds bought among your holdings', () => {
