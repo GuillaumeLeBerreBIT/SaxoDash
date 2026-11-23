@@ -5,7 +5,9 @@ from django.core.cache import cache
 from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
-from research.valuation import NO_DAILY_PE_WARNING, current_pe, history, median_since, pe_percentiles, trailing_pe
+from research.valuation import (
+    NO_DAILY_PE_WARNING, current_pe, history, median_since, pe_percentiles, published_eps, stored_eps, trailing_pe,
+)
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
@@ -23,14 +25,63 @@ class TrailingPeTest(SimpleTestCase):
         closes = [(date(2025, 1, 5), 100.0)]
         self.assertEqual(trailing_pe(closes, quarters(-1, 0.2, 0.2, 0.2)), [(date(2025, 1, 5), None)])
 
-    def test_ttm_rolls_on_period_end(self):
-        eps = [(date(2024, 3, 31), 1.0), (date(2024, 6, 30), 1.0), (date(2024, 9, 30), 1.0),
-               (date(2024, 12, 31), 1.0), (date(2025, 3, 31), 2.0)]
-        closes = [(date(2025, 1, 1), 40.0), (date(2025, 4, 1), 60.0)]
-        self.assertEqual(trailing_pe(closes, eps), [(date(2025, 1, 1), 10.0), (date(2025, 4, 1), 12.0)])
+    def test_a_quarter_does_not_count_on_the_day_after_its_period_end(self):
+        eps = published_eps([(date(2024, 3, 31), 1.0), (date(2024, 6, 30), 1.0), (date(2024, 9, 30), 1.0),
+                             (date(2024, 12, 31), 1.0), (date(2025, 3, 31), 2.0)])
+        self.assertEqual(trailing_pe([(date(2025, 4, 1), 40.0)], eps), [(date(2025, 4, 1), 10.0)])
 
     def test_close_before_any_quarter_is_null(self):
         self.assertEqual(trailing_pe([(date(2020, 1, 1), 5.0)], quarters(1, 1, 1, 1)), [(date(2020, 1, 1), None)])
+
+
+FOUR_QUARTERS = [(date(2024, 3, 31), 1.0), (date(2024, 6, 30), 1.0), (date(2024, 9, 30), 1.0), (date(2024, 12, 31), 1.0)]
+NEW_QUARTER = (date(2025, 3, 31), 2.0)
+
+
+class PublicationDatingTest(SimpleTestCase):
+    def pe_on(self, day, eps):
+        return trailing_pe([(day, 50.0)], eps)[0][1]
+
+    def test_the_day_before_a_release_uses_the_previous_four_quarters(self):
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER], released={NEW_QUARTER[0]: date(2025, 4, 24)})
+        self.assertEqual(self.pe_on(date(2025, 4, 23), eps), 12.5)
+
+    def test_on_the_release_day_it_uses_the_new_quarter(self):
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER], released={NEW_QUARTER[0]: date(2025, 4, 24)})
+        self.assertEqual(self.pe_on(date(2025, 4, 24), eps), 10.0)
+
+    def test_an_unknown_release_counts_forty_days_after_the_quarter(self):
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER])
+        self.assertEqual(self.pe_on(date(2025, 5, 9), eps), 12.5)
+        self.assertEqual(self.pe_on(date(2025, 5, 10), eps), 10.0)
+
+    def test_an_unknown_fiscal_year_release_counts_sixty_days_after_the_year_end(self):
+        year_end = (date(2025, 6, 30), 2.0)
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER, year_end], year_ends=[date(2023, 6, 30)])
+        self.assertEqual(self.pe_on(date(2025, 8, 28), eps), 10.0)
+        self.assertEqual(self.pe_on(date(2025, 8, 29), eps), round(50 / 6, 2))
+
+    def test_a_fifty_two_week_year_end_still_reads_as_the_year_end(self):
+        year_end = (date(2025, 9, 27), 2.0)
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER, year_end], year_ends=[date(2022, 9, 24)])
+        self.assertEqual(self.pe_on(date(2025, 11, 25), eps), 10.0)
+
+    def test_a_release_on_or_before_the_period_end_never_counts_before_the_period_ends(self):
+        eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER], released={NEW_QUARTER[0]: date(2025, 3, 20)})
+        self.assertEqual(self.pe_on(date(2025, 3, 31), eps), 12.5)
+        self.assertEqual(self.pe_on(date(2025, 4, 1), eps), 10.0)
+
+    def test_stored_history_carries_its_release_dates_and_year_ends(self):
+        stored = {
+            'annual': [{'period': '2023-12-31', 'roe': 10.0}],
+            'quarterly_eps': [['2025-03-31', 99.0]] + [[day.isoformat(), value] for day, value in [*FOUR_QUARTERS, NEW_QUARTER]]
+                + [['bad', 1.0], ['2025-06-30', 'nan'], ['2024-09-30', None], ['2025-03-31', 2.0]],
+            'eps_released': {'2025-03-31': '2025-04-24'},
+        }
+        eps = stored_eps(stored)
+        self.assertEqual(eps[-1], (date(2025, 4, 24), 2.0))
+        self.assertEqual(eps[-2], (date(2025, 3, 1), 1.0))
+        self.assertEqual(len(eps), 5)
 
 
 class MedianTest(SimpleTestCase):
@@ -133,16 +184,26 @@ SERIES = {
     },
     'country': 'US',
 }
-BARS = [{'date': d, 'close': 40.0} for d in ('2025-01-06', '2025-01-07', '2025-01-10', '2025-01-13')]
+BARS = [{'date': d, 'close': 40.0} for d in ('2025-03-10', '2025-03-11', '2025-03-14', '2025-03-17')]
+JANUARY_BARS = [{'date': d, 'close': 40.0} for d in ('2025-01-06', '2025-01-07', '2025-01-10', '2025-01-13')]
 
 
 class HistoryTest(SimpleTestCase):
     def test_daily_pe_is_sampled_weekly_with_medians_and_latest(self):
         data, warnings = history('NVDA', SERIES, BARS, today=date(2025, 6, 1))
-        self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
+        self.assertEqual(data['daily_pe'], [['2025-03-14', 10.0], ['2025-03-17', 10.0]])
         self.assertEqual(data['latest'], {'pe_ttm': 40, 'ps_ttm': None, 'pfcf_ttm': None, 'ev_ebitda_ttm': None, 'daily_pe': 10.0})
         self.assertEqual(data['medians_5y']['pe_ttm'], 35)
         self.assertEqual(warnings, [])
+
+    def test_a_fiscal_year_quarter_counts_sixty_days_after_its_end(self):
+        data, _ = history('NVDA', SERIES, JANUARY_BARS, today=date(2025, 6, 1))
+        self.assertEqual(data['daily_pe'], [['2025-01-10', None], ['2025-01-13', None]])
+
+    def test_a_known_release_date_counts_from_that_day(self):
+        data, _ = history('NVDA', SERIES, JANUARY_BARS, today=date(2025, 6, 1),
+                          released={date(2024, 12, 31): date(2025, 1, 8)})
+        self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
 
     def test_no_bars_means_no_daily_pe_with_a_reason(self):
         data, warnings = history('NVDA', SERIES, None)

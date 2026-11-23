@@ -1,5 +1,4 @@
 import logging
-import math
 from datetime import date
 from typing import NamedTuple
 
@@ -30,20 +29,6 @@ def _price_line(row):
         return [], None
     stored =DailyBars.objects.filter(row=row).values_list('bars', flat=True).first()
     return price_line.from_bars(stored)
-
-
-def quarterly_eps(row):
-    parsed = {}
-    for entry in (row.fundamentals_history or {}).get('quarterly_eps') or []:
-        try:
-            period, value = entry
-            value = float(value)
-            if not math.isfinite(value):
-                continue
-            parsed[date.fromisoformat(period)] = value
-        except (TypeError, ValueError):
-            continue
-    return list(parsed.items())
 
 
 def _pe_percentiles(row):

@@ -8,7 +8,7 @@ from django.db import DatabaseError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from research import finnhub, scan, scan_progress
+from research import finnhub, report_dates, scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
 from research.models import DailyBars, ScreenerRow
 from research.providers import ProviderError, ProviderNotConnected, ProviderUnavailable
@@ -454,6 +454,27 @@ class ScanHistoryTest(TestCase):
         self.assertEqual(self.row.fundamentals_history['annual'], [{'period': '2023-12-31', 'roe': 31.2, 'eps': 6.1}])
         self.assertEqual(len(self.row.fundamentals_history['quarterly_eps']), 40)
         self.assertEqual(set(self.row.pe_history), {'current', 'p25', 'p75', 'eps_ttm', 'weeks'})
+        self.assertEqual(self.row.pe_history['eps_ttm'], 4.0)
+
+    def test_scan_stores_the_sec_release_dates_and_counts_each_quarter_from_its_release(self):
+        reports = {'releases': [{'date': date(2025, 4, 24), 'session': 'amc'}], 'fiscal_ends': [date(2025, 3, 31)]}
+        periods = [f'{year}-{end}' for year in (2022, 2023, 2024) for end in ('03-31', '06-30', '09-30', '12-31')]
+        financials = {'metric': {}, 'series': {'quarterly': {'eps': [
+            *({'period': period, 'v': 1.0} for period in periods), {'period': '2025-03-31', 'v': 2.0},
+        ]}}}
+        bars = [{**bar, 'date': (date(2023, 4, 27) + timedelta(days=7 * i)).isoformat(), 'close': 50.0}
+                for i, bar in enumerate(weekly_bars(105))]
+        with mock.patch('research.scan.report_dates.company_reports', return_value=reports):
+            self.scan_with(bars, financials)
+        self.assertEqual(self.row.fundamentals_history['eps_released'], {'2025-03-31': '2025-04-24'})
+        self.assertEqual(self.row.pe_history['eps_ttm'], 5.0)
+
+    def test_sec_unavailable_keeps_the_release_dates_already_known(self):
+        self.row.fundamentals_history = {'annual': [], 'quarterly_eps': [], 'eps_released': {'2018-12-31': '2019-01-29'}}
+        self.row.save()
+        with mock.patch('research.scan.report_dates.company_reports', side_effect=report_dates.SecUnavailable('down')):
+            self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertEqual(self.row.fundamentals_history['eps_released'], {'2018-12-31': '2019-01-29'})
         self.assertEqual(self.row.pe_history['eps_ttm'], 4.0)
 
     def test_unavailable_percentiles_are_stored_as_empty(self):
