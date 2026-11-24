@@ -140,6 +140,21 @@ def pe_percentiles(closes, quarterly_eps):
     }
 
 
+def daily_band(daily):
+    weekly = {}
+    band = []
+    for day, pe in daily:
+        if pe is not None and pe > 0:
+            weekly[day.isocalendar()[:2]] = pe
+        values = list(weekly.values())
+        if len(values) < MIN_PE_WEEKS:
+            band.append([day.isoformat(), None, None])
+            continue
+        quartiles = statistics.quantiles(values, n=4, method='inclusive')
+        band.append([day.isoformat(), round(quartiles[0], 2), round(quartiles[2], 2)])
+    return band
+
+
 def median_since(points, years=5, today=None):
     today = today or timezone.localdate()
     try:
@@ -198,6 +213,7 @@ def history(ticker, series, bars, today=None, released=None):
         'annual': series['annual'],
         'quarterly': quarterly,
         'daily_pe': _weekly(daily),
+        'daily_pe_band': daily_band(daily),
         'medians_5y': medians,
         'latest': latest,
     }

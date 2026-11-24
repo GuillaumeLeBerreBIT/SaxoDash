@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
 from research.valuation import (
-    NO_DAILY_PE_WARNING, current_pe, history, latest_quarter, median_since, pe_percentiles, published_eps, stored_eps,
+    NO_DAILY_PE_WARNING, current_pe, daily_band, history, latest_quarter, median_since, pe_percentiles, published_eps, stored_eps,
     trailing_pe,
 )
 
@@ -228,6 +228,54 @@ class HistoryTest(SimpleTestCase):
     def test_a_foreign_issuer_is_warned(self):
         _, warnings = history('TSM', {**SERIES, 'country': 'TW'}, BARS)
         self.assertIn('TW company', warnings[0])
+
+
+def weekdays(start, end, close_at):
+    bars = []
+    day = start
+    while day <= end:
+        if day.weekday() < 5:
+            bars.append({'date': day.isoformat(), 'close': close_at(day)})
+        day += timedelta(days=1)
+    return bars
+
+
+LONG_SERIES = {
+    **SERIES,
+    'quarterly': {
+        **SERIES['quarterly'],
+        'eps': [{'period': f'{year}-{end}', 'v': 1.0} for year in range(2020, 2027) for end in ('03-31', '06-30', '09-30', '12-31') if f'{year}-{end}' <= '2026-06-30'],
+    },
+}
+
+
+class DailyBandTest(SimpleTestCase):
+    def test_the_band_is_empty_until_two_years_of_weekly_pe_exist(self):
+        data, _ = history('NVDA', LONG_SERIES, weekdays(date(2024, 6, 3), date(2025, 6, 30), lambda d: 40.0))
+        self.assertTrue(all(low is None and high is None for _, low, high in data['daily_pe_band']))
+
+    def test_a_band_on_a_day_does_not_change_when_later_bars_arrive(self):
+        start = date(2024, 6, 3)
+        bars = weekdays(start, date(2026, 6, 30), lambda d: 40.0 + (d - start).days / 30)
+        full, _ = history('NVDA', LONG_SERIES, bars)
+        cut, _ = history('NVDA', LONG_SERIES, bars[:-120])
+        self.assertEqual(cut['daily_pe_band'], full['daily_pe_band'][:len(cut['daily_pe_band'])])
+
+    def test_a_price_above_its_history_widens_the_band(self):
+        bars = weekdays(date(2020, 6, 1), date(2026, 6, 30), lambda d: 40.0 if d < date(2023, 6, 1) else 400.0)
+        data, _ = history('NVDA', LONG_SERIES, bars)
+        before_jump = [row for row in data['daily_pe_band'] if row[0] == '2023-05-26'][0]
+        last = data['daily_pe_band'][-1]
+        self.assertEqual(before_jump[1:], [10.0, 10.0])
+        self.assertGreater(last[2], 10.0)
+
+    def test_the_latest_band_matches_the_percentiles_shown_elsewhere(self):
+        bars = weekdays(date(2020, 6, 1), date(2026, 6, 30), lambda d: 40.0 + (d - date(2020, 6, 1)).days / 100)
+        data, _ = history('NVDA', LONG_SERIES, bars)
+        closes = [(date.fromisoformat(b['date']), b['close']) for b in bars]
+        quarterly = [(date.fromisoformat(p['period']), p['v']) for p in LONG_SERIES['quarterly']['eps']]
+        percentiles = pe_percentiles(closes, published_eps(quarterly, None, [date(2023, 12, 31)]))
+        self.assertEqual(data['daily_pe_band'][-1][1:], [percentiles['p25'], percentiles['p75']])
 
 
 class CurrentPeTest(SimpleTestCase):
