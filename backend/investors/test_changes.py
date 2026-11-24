@@ -58,6 +58,9 @@ class PositionChangeTest(SimpleTestCase):
     def test_doubled_shares_with_the_value_doubling_is_added(self):
         self.assertEqual(changes.position_change(200, 100, 10000, 5000), (changes.ADDED, 100.0))
 
+    def test_a_half_trim_while_the_price_rises_is_trimmed(self):
+        self.assertEqual(changes.position_change(500, 1000, 7100, 10000), (changes.TRIMMED, -50.0))
+
     def test_doubled_shares_without_values_is_added(self):
         self.assertEqual(changes.position_change(200, 100), (changes.ADDED, 100.0))
 

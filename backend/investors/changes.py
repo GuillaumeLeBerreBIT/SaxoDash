@@ -4,6 +4,7 @@ TRIMMED = 'trimmed'
 UNCHANGED = 'unchanged'
 SOLD_OUT = 'sold_out'
 THRESHOLD_PCT = 1
+SPLIT_VALUE_TOLERANCE = 0.2
 
 
 def _whole_ratio(larger, smaller):
@@ -13,13 +14,9 @@ def _whole_ratio(larger, smaller):
 def is_split(shares, previous_shares, value, previous_value):
     if not value or not previous_value or not shares or not previous_shares:
         return False
-    share_ratio = shares / previous_shares
-    value_ratio = value / previous_value
-    if _whole_ratio(shares, previous_shares):
-        return value_ratio * value_ratio < share_ratio
-    if _whole_ratio(previous_shares, shares):
-        return value_ratio * value_ratio > share_ratio
-    return False
+    if not (_whole_ratio(shares, previous_shares) or _whole_ratio(previous_shares, shares)):
+        return False
+    return abs(value / previous_value - 1) <= SPLIT_VALUE_TOLERANCE
 
 
 def position_change(shares, previous_shares, value=None, previous_value=None):
