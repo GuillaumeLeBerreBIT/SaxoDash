@@ -61,7 +61,7 @@ def _refresh_fundamentals(row, bars):
         history['eps_released'] = _released(row, history['quarterly_eps'])
         row.fundamentals_history = history
         row.pe_history = valuation.pe_percentiles(_dated_closes(bars), valuation.stored_eps(history)) or {}
-    row.fundamentals_at = timezone.now()
+        row.fundamentals_at = timezone.now()
 
 
 PRICE_FIELDS = ('open', 'high', 'low', 'close')

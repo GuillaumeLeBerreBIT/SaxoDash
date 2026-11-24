@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .models import ScreenerRow
 from .screener_fields import FIELDS
+from .technicals import close_date
 
 CARD_LIMIT = 20
 EMPTY = 'No stocks match these criteria in the last session.'
@@ -202,6 +203,7 @@ def reasons(row, shelf):
 
 
 def card(row, shelf):
+    closed_on = close_date(row)
     return {
         'ticker': row.ticker,
         'name': row.name,
@@ -209,6 +211,7 @@ def card(row, shelf):
         'asset_type': row.asset_type,
         'sector': row.sector,
         'last_close': row.last_close,
+        'close_date': closed_on.isoformat() if closed_on else None,
         'change_1d': row.change_1d,
         'sparkline': row.sparkline,
         'reasons': reasons(row, shelf),

@@ -179,6 +179,7 @@ class ScanUniverseTest(TestCase):
         ])
 
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
+        financials.return_value = FINANCIALS_WITH_SERIES
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.assertEqual(self.run_scan(), 2)
         apple = ScreenerRow.objects.get(ticker='AAPL')
@@ -503,6 +504,17 @@ class ScanHistoryTest(TestCase):
         self.assertEqual(self.row.fundamentals_history['annual'][0]['roe'], 10.0)
         self.assertEqual(self.row.pe_history, {'current': 20.0})
 
+    def test_a_reply_with_no_series_does_not_move_the_fundamentals_date(self):
+        before = timezone.now() - timedelta(days=3)
+        self.row.fundamentals_at = before
+        self.row.save()
+        self.scan_with(weekly_bars(150), FINANCIALS)
+        self.assertEqual(self.row.fundamentals_at, before)
+
+    def test_a_reply_with_series_dates_the_fundamentals(self):
+        self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertIsNotNone(self.row.fundamentals_at)
+
     def test_technicals_still_read_the_last_260_bars(self):
         bars = weekly_bars(scan.HISTORY_BARS)
         with mock.patch('research.scan.technicals.technical_fields', return_value={}) as fields:
@@ -525,7 +537,7 @@ class ScanBudgetTest(TestCase):
     @mock.patch('research.scan.finnhub.seconds_until_budget_refills', return_value=17)
     @mock.patch('research.scan.finnhub.get_basic_financials')
     def test_a_busy_refusal_waits_for_the_budget_and_retries_once(self, mock_financials, mock_seconds, mock_chart):
-        mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS]
+        mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS_WITH_SERIES]
         pauses = []
 
         scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=pauses.append)

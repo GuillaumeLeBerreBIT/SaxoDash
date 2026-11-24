@@ -89,6 +89,19 @@ class ComputeTest(TestCase):
         self.assertEqual(verdict.spark[-3:], [242.0, 247.0, 252.0])
         self.assertEqual(verdict.high_1y, 252.5)
 
+    def test_verdict_keeps_the_latest_quarter_and_its_filing_date(self):
+        history = {**STRONG_HISTORY, 'quarterly_eps': [['2026-06-30', 1.0], ['2026-09-30', 1.2]],
+                   'eps_released': {'2026-09-30': '2026-10-30'}}
+        make_row('AAPL', fundamentals_history=history)
+        make_row('MSFT', fundamentals_history={**history, 'eps_released': {}})
+
+        compute.run(today=DAY_ONE)
+
+        apple = StockVerdict.objects.get(ticker='AAPL')
+        self.assertEqual((apple.fundamental_period, apple.published_on), (date(2026, 9, 30), date(2026, 10, 30)))
+        microsoft = StockVerdict.objects.get(ticker='MSFT')
+        self.assertEqual((microsoft.fundamental_period, microsoft.published_on), (date(2026, 9, 30), None))
+
     def test_a_row_without_stored_bars_has_no_price_line(self):
         make_row('AAPL')
 

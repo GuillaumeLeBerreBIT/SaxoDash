@@ -97,4 +97,13 @@ describe('AnswerCard', () => {
     renderCard({ verdict: undefined, sentence: null, note: 'This is an ETF, so there is no company to judge.' })
     expect(screen.getByText('This is an ETF, so there is no company to judge.')).toBeInTheDocument()
   })
+  it('dates each input: the close, the quarter, its release and the last fetch', () => {
+    renderCard({ verdict: { isLoading: false, data: verdictData({ close_date: '2026-11-13', fundamental_period: '2026-09-30', published_on: '2026-10-30' }) } })
+    expect(screen.getByText(/^Close 13 Nov 2026 · Quarter to 30 Sep 2026, released 30 Oct 2026 · Fetched 14 Nov 2026\./)).toBeInTheDocument()
+  })
+
+  it('says when an input date is unknown rather than hiding it', () => {
+    renderCard({ verdict: { isLoading: false, data: verdictData({ close_date: null, fundamental_period: '2026-09-30', published_on: null }) } })
+    expect(screen.getByText(/^Close date unknown · Quarter to 30 Sep 2026, release date unknown · Fetched 14 Nov 2026\./)).toBeInTheDocument()
+  })
 })

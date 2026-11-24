@@ -67,6 +67,14 @@ def stored_releases(fundamentals_history):
     return found
 
 
+def latest_quarter(fundamentals_history):
+    points = _stored_points((fundamentals_history or {}).get('quarterly_eps'))
+    if not points:
+        return None, None
+    period = max(point for point, _ in points)
+    return period, stored_releases(fundamentals_history).get(period)
+
+
 def stored_eps(fundamentals_history):
     stored = fundamentals_history or {}
     year_ends = _iso_dates(row.get('period') for row in stored.get('annual') or [] if isinstance(row, dict))

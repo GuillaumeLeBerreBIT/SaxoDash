@@ -103,6 +103,17 @@ function CompanyCell({ verdict }) {
   )
 }
 
+function quarterPart(verdict) {
+  if (!verdict.fundamental_period) return 'Quarter unknown'
+  const released = verdict.published_on ? `released ${fmtDate(verdict.published_on)}` : 'release date unknown'
+  return `Quarter to ${fmtDate(verdict.fundamental_period)}, ${released}`
+}
+
+function datesLine(verdict) {
+  const close = verdict.close_date ? `Close ${fmtDate(verdict.close_date)}` : 'Close date unknown'
+  return `${close} · ${quarterPart(verdict)} · Fetched ${fmtDate(verdict.as_of)}.`
+}
+
 function PriceCell({ verdict }) {
   const trend = trendSentence(verdict.pct_vs_ma200)
   const judged = verdict.cheap_below != null || verdict.expensive_above != null
@@ -202,7 +213,7 @@ export default function AnswerCard({ verdict, sentence, position, note }) {
         <YouCell position={position} verdict={data} />
       </div>
       {sentence?.earnings ? <p className="text-[13px] font-medium text-warn-text">{sentence.earnings}</p> : null}
-      {data ? <p className="text-[12px] text-ink-3">{`As of ${fmtDate(data.as_of)}. ${FOOTER}`}</p> : null}
+      {data ? <p className="text-[12px] text-ink-3">{`${datesLine(data)} ${FOOTER}`}</p> : null}
     </section>
   )
 }

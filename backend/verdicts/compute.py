@@ -1,11 +1,12 @@
 import logging
-from datetime import date
 from typing import NamedTuple
 
 from django.db import transaction
 from django.utils import timezone
 
 from research.models import DailyBars, ScreenerRow
+from research.technicals import close_date
+from research.valuation import latest_quarter
 
 from . import price_line, rules
 from .models import StockVerdict, VerdictCall
@@ -38,21 +39,10 @@ def _pe_percentiles(row):
     return levels['p25'], levels['p75']
 
 
-def _close_date(row):
-    if row.last_close is None or not row.recent_closes:
-        return None
-    bar = row.recent_closes[-1]
-    if isinstance(bar, dict) and bar.get('close') == row.last_close:
-        try:
-            return date.fromisoformat(bar['date'])
-        except (KeyError, TypeError, ValueError):
-            return None
-    return None
-
-
 def _store(row, quality, valuation, today):
     spark, high_1y = _price_line(row)
     pe_p25, pe_p75 = _pe_percentiles(row)
+    fundamental_period, published_on = latest_quarter(row.fundamentals_history)
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
@@ -67,11 +57,13 @@ def _store(row, quality, valuation, today):
             'pe_p25': pe_p25,
             'pe_p75': pe_p75,
             'last_close': row.last_close,
-            'close_date': _close_date(row),
+            'close_date': close_date(row),
             'pct_vs_ma200': row.pct_vs_ma200,
             'spark': spark,
             'high_1y': high_1y,
             'as_of': row.fundamentals_at.date(),
+            'fundamental_period': fundamental_period,
+            'published_on': published_on,
         },
     )
 

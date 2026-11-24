@@ -105,6 +105,15 @@ class VerdictApiTests(APITestCase):
         self.assertFalse(detail['held'])
         self.assertIsNone(detail['weight_pct'])
 
+    def test_the_detail_dates_each_input(self):
+        verdict('AAA', close_date=date(2026, 11, 20), fundamental_period=date(2026, 9, 30), published_on=date(2026, 10, 30))
+        self.client.force_authenticate(self.bob)
+        detail = self.client.get('/api/verdicts/AAA/').json()['verdict']
+        self.assertEqual(
+            (detail['as_of'], detail['close_date'], detail['fundamental_period'], detail['published_on']),
+            ('2026-11-10', '2026-11-20', '2026-09-30', '2026-10-30'),
+        )
+
     def test_a_user_without_positions_holds_nothing(self):
         verdict('AAA')
         self.client.force_authenticate(self.bob)
