@@ -121,6 +121,13 @@ class GrowthSeriesTests(SimpleTestCase):
         self.assertEqual(len(growth), 3)
         self.assertEqual(warning, 'Saxo did not answer the account history request. Showing your history up to 29 Oct 2026.')
 
+    def test_an_empty_reply_after_a_good_read_serves_the_history_it_had_and_says_so(self):
+        self.read()
+        cache.delete(account_performance._cache_key(OWNER))
+        (growth, warning), _ = self.read({'TimeWeighted': {'Accumulated': []}})
+        self.assertEqual(len(growth), 3)
+        self.assertEqual(warning, 'Saxo did not answer the account history request. Showing your history up to 29 Oct 2026.')
+
     def test_a_reply_without_a_time_weighted_series_is_an_empty_history(self):
         (growth, warning), _ = self.read({'Balance': {}})
         self.assertEqual(growth, [])
