@@ -128,6 +128,16 @@ class GrowthSeriesTests(SimpleTestCase):
         self.assertEqual(len(growth), 3)
         self.assertEqual(warning, 'Saxo did not answer the account history request. Showing your history up to 29 Oct 2026.')
 
+    def test_forget_clears_the_history_kept_for_the_user(self):
+        self.read()
+        account_performance.forget(user=OWNER)
+        with connected(), \
+                patch('saxo.client.get_client_key', return_value='K'), \
+                patch('saxo.client.get_performance_timeseries', side_effect=SaxoPermanentError('500')):
+            growth, warning = account_performance.growth_series(user=OWNER)
+        self.assertEqual(growth, [])
+        self.assertEqual(warning, 'Saxo did not answer the account history request.')
+
     def test_a_reply_without_a_time_weighted_series_is_an_empty_history(self):
         (growth, warning), _ = self.read({'Balance': {}})
         self.assertEqual(growth, [])
