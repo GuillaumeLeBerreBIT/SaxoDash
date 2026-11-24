@@ -138,20 +138,34 @@ def _levels(history) -> Optional[dict]:
     return history
 
 
+def price_zone(close, cheap_below, expensive_above):
+    if not close or close <= 0 or cheap_below is None or expensive_above is None:
+        return 'not_judged'
+    if not 0 < cheap_below < expensive_above:
+        return 'not_judged'
+    if close <= cheap_below:
+        return 'cheap'
+    if close >= expensive_above:
+        return 'expensive'
+    return 'fair'
+
+
 def valuation(row):
     history = _levels(getattr(row, 'pe_history', None))
     if history is None:
         return {'grade': 'not_judged', 'current_pe': None, 'cheap_below': None, 'expensive_above': None}
-    current = history['current']
-    if current <= history['p25']:
-        verdict = 'cheap'
-    elif current >= history['p75']:
-        verdict = 'expensive'
+    eps = history['eps_ttm']
+    cheap_below = round(eps * history['p25'], 2)
+    expensive_above = round(eps * history['p75'], 2)
+    close = getattr(row, 'last_close', None)
+    if close is None or close <= 0:
+        current = history['current']
+        close = eps * current
     else:
-        verdict = 'fair'
+        current = round(close / eps, 2)
     return {
-        'grade': verdict,
+        'grade': price_zone(round(close, 2), cheap_below, expensive_above),
         'current_pe': current,
-        'cheap_below': round(history['eps_ttm'] * history['p25'], 2),
-        'expensive_above': round(history['eps_ttm'] * history['p75'], 2),
+        'cheap_below': cheap_below,
+        'expensive_above': expensive_above,
     }

@@ -871,3 +871,12 @@ paged grid. Shelves stay below as "Browse by idea"; the shelf page merges share 
 name and sorts by action (`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
 the 15 largest companies, the rest behind one button. What was built and what is left:
 `docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
+
+**One price zone and one 1-year high, everywhere (2026-11-24).** Research, Overview, the MCP verdict tool
+and Discover's cards, filter and counts all judge the price with `rules.price_zone`: the latest close
+against the usual P/E range in dollars, the lines included (at the low line is below the usual P/E, at the
+high line is above it), and a flat or inverted range is not judged. `rules.valuation` takes the row's latest
+close, so the stored grade no longer lags at the close of the last fundamentals refresh while Discover
+judged today's close. The 1-year high is the highest intraday high of the last 252 sessions, and with fewer
+than 252 stored sessions there is none, as on the chart, the shelf cards and the Signal Lab
+(`verdicts/price_line.py`).

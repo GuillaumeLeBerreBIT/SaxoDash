@@ -222,6 +222,25 @@ class ValuationTest(SimpleTestCase):
                 self.assertEqual(rules.valuation(stub(pe_history=history))['grade'], 'not_judged')
 
 
+    def test_the_grade_follows_the_latest_close_not_the_refresh_pe(self):
+        row = stub(last_close=95.0, pe_history={'current': 25, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200})
+        self.assertEqual(rules.valuation(row), {
+            'grade': 'cheap', 'current_pe': 19.0, 'cheap_below': 100.0, 'expensive_above': 150.0,
+        })
+
+
+class PriceZoneTest(SimpleTestCase):
+    def test_boundaries_belong_to_cheap_and_expensive(self):
+        self.assertEqual(rules.price_zone(100.0, 100.0, 150.0), 'cheap')
+        self.assertEqual(rules.price_zone(150.0, 100.0, 150.0), 'expensive')
+        self.assertEqual(rules.price_zone(120.0, 100.0, 150.0), 'fair')
+
+    def test_missing_or_inverted_levels_are_not_judged(self):
+        for args in ((None, 100.0, 150.0), (0, 100.0, 150.0), (120.0, None, 150.0), (120.0, 150.0, 100.0), (100.0, 100.0, 100.0)):
+            with self.subTest(args=args):
+                self.assertEqual(rules.price_zone(*args), 'not_judged')
+
+
 class ThresholdParityTest(SimpleTestCase):
     def test_thresholds_match_frontend_snapshot_js_T_table(self):
         self.assertEqual(rules.THRESHOLDS, {

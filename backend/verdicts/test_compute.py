@@ -47,7 +47,7 @@ class ComputeTest(TestCase):
         )
 
     def test_verdict_carries_grades_levels_and_row_figures(self):
-        make_row('AAPL')
+        make_row('AAPL', last_close=90.0)
 
         compute.run(today=DAY_ONE)
 
@@ -56,7 +56,7 @@ class ComputeTest(TestCase):
         self.assertEqual(
             (verdict.current_pe, verdict.cheap_below, verdict.expensive_above), (18, 100.0, 150.0),
         )
-        self.assertEqual((verdict.last_close, verdict.pct_vs_ma200), (100.0, 4.5))
+        self.assertEqual((verdict.last_close, verdict.pct_vs_ma200), (90.0, 4.5))
         self.assertEqual(verdict.as_of, date(2026, 11, 10))
         self.assertEqual(len(verdict.checks), 7)
         self.assertEqual(verdict.name, 'AAPL Inc')
@@ -81,13 +81,13 @@ class ComputeTest(TestCase):
 
     def test_verdict_keeps_a_weekly_price_line_and_the_year_high_from_the_stored_bars(self):
         row = make_row('AAPL')
-        DailyBars.objects.create(row=row, bars=[[f'd{i}', 1, 1, 1, float(i), 1] for i in range(1, 21)])
+        DailyBars.objects.create(row=row, bars=[[f'd{i}', 1, i + 0.5, 1, float(i), 1] for i in range(1, 253)])
 
         compute.run(today=DAY_ONE)
 
         verdict = StockVerdict.objects.get(ticker='AAPL')
-        self.assertEqual(verdict.spark, [5.0, 10.0, 15.0, 20.0])
-        self.assertEqual(verdict.high_1y, 20.0)
+        self.assertEqual(verdict.spark[-3:], [242.0, 247.0, 252.0])
+        self.assertEqual(verdict.high_1y, 252.5)
 
     def test_a_row_without_stored_bars_has_no_price_line(self):
         make_row('AAPL')
@@ -124,7 +124,7 @@ class ComputeTest(TestCase):
         self.assertFalse(VerdictCall.objects.exists())
 
     def test_a_fair_or_expensive_price_still_opens_a_call(self):
-        make_row('AAPL', pe_history=FAIR)
+        make_row('AAPL', pe_history=FAIR, last_close=125.0)
 
         compute.run(today=DAY_ONE)
 

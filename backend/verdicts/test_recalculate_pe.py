@@ -32,7 +32,7 @@ def eps_entries():
 
 
 def stored_row(ticker='AAPL', **overrides):
-    row = make_row(ticker, pe_history=OLD_RULE, fundamentals_history={
+    row = make_row(ticker, pe_history=OLD_RULE, last_close=50.0, fundamentals_history={
         **STRONG_HISTORY, 'quarterly_eps': eps_entries(),
     }, **overrides)
     DailyBars.objects.create(row=row, bars=daily_bars(900))
@@ -55,7 +55,7 @@ class RecalculatePeTest(TestCase):
         row.refresh_from_db()
         self.assertEqual((row.pe_history['eps_ttm'], row.pe_history['current']), (4.0, 12.5))
         verdict = StockVerdict.objects.get(ticker='AAPL')
-        self.assertEqual((verdict.current_pe, verdict.cheap_below, verdict.valuation), (12.5, 50.0, 'cheap'))
+        self.assertEqual((verdict.current_pe, verdict.cheap_below, verdict.expensive_above), (12.5, 50.0, 50.0))
 
     def test_a_stored_release_date_counts_the_quarter_from_that_day(self):
         row = stored_row()
