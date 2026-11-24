@@ -76,5 +76,6 @@ def growth_series(*, user):
     except (KeyError, TypeError, ValueError, AttributeError):
         return _fallback(UNREADABLE, user)
     cache.set(_cache_key(user), growth, CACHE_TTL)
-    cache.set(_last_good_key(user), growth, None)
+    if growth:
+        cache.set(_last_good_key(user), growth, None)
     return GrowthSeries(growth, None)
