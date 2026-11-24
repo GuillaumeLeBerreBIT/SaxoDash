@@ -101,8 +101,9 @@ B) with a one-off recalculation of everything already stored, release again.
     date, so that the bands are what I would have seen at the time.
 24. As the owner, I want the Valuation Grade to use the same dating, so that "below its usual P/E" means the
     same thing everywhere.
-25. As the owner, I want the yardstick and Signal Lab grades that read the P/E history recalculated once with
-    the corrected dating, so that their published results are not built on the old figures.
+25. As the owner, I want the yardstick grades that read the P/E history recalculated once with the corrected
+    dating, so that their published results are not built on the old figures. Signal Lab does not read the P/E,
+    so it needs no recalculation.
 26. As the owner, I want Discover's "below usual P/E" to use the same corrected range, so that it agrees with
     Research.
 27. As an MCP user, I want the valuation history and verdict tools to use the corrected P/E, so that Claude's
@@ -181,8 +182,9 @@ B) with a one-off recalculation of everything already stored, release again.
 - **House replays (B2)**: the House replay is checked for the same rule (a trade counts from its disclosure
   date, not its transaction date) and fixed the same way if it does not hold.
 - **Recalculation (B1, B2)**: each B pull request ships a one-off management command, or uses an existing one,
-  that recalculates what it changes: the stored scan P/E history and grades, verdict calls, yardstick and
-  Signal Lab results for B1; copy performance, moves and alerts for B2. Run on dev before merge and on
+  that recalculates what it changes: the stored scan P/E history and grades, verdict calls and the yardstick
+  report for B1 (Signal Lab reads no P/E and is not recalculated); copy performance and moves for B2. Alerts
+  and the investor shelves read moves when shown, so they follow a moves rebuild. Run on dev before merge and on
   production after release.
 - **B3–B5**: each finding is checked against the code before work starts and gets its own pull request if it
   holds. Missing values read as unknown; each input carries its market close, fundamental period, release date
