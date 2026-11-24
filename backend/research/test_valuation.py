@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
 from research.valuation import (
-    NO_DAILY_PE_WARNING, current_pe, daily_band, history, latest_quarter, median_since, pe_percentiles, published_eps, stored_eps,
+    NO_DAILY_PE_WARNING, current_pe, history, latest_quarter, median_since, pe_percentiles, published_eps, stored_eps,
     trailing_pe,
 )
 
