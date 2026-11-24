@@ -95,7 +95,7 @@ class ComputeTest(TestCase):
         make_row('AAPL', fundamentals_history=history)
         make_row('MSFT', fundamentals_history={**history, 'eps_released': {}})
 
-        compute.run(today=DAY_ONE)
+        compute.run(today=date(2026, 11, 15))
 
         apple = StockVerdict.objects.get(ticker='AAPL')
         self.assertEqual((apple.fundamental_period, apple.published_on), (date(2026, 9, 30), date(2026, 10, 30)))

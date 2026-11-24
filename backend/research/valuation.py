@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.utils import timezone
 
 QUARTERS_PER_YEAR = 4
-QUARTER_RELEASE_LAG = timedelta(days=40)
+QUARTER_RELEASE_LAG = timedelta(days=45)
 YEAR_END_RELEASE_LAG = timedelta(days=60)
 YEAR_END_TOLERANCE_DAYS = 7
 DAYS_PER_YEAR = 365.2425

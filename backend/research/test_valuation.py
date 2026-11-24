@@ -51,10 +51,10 @@ class PublicationDatingTest(SimpleTestCase):
         eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER], released={NEW_QUARTER[0]: date(2025, 4, 24)})
         self.assertEqual(self.pe_on(date(2025, 4, 24), eps), 10.0)
 
-    def test_an_unknown_release_counts_forty_days_after_the_quarter(self):
+    def test_an_unknown_release_counts_forty_five_days_after_the_quarter(self):
         eps = published_eps([*FOUR_QUARTERS, NEW_QUARTER])
-        self.assertEqual(self.pe_on(date(2025, 5, 9), eps), 12.5)
-        self.assertEqual(self.pe_on(date(2025, 5, 10), eps), 10.0)
+        self.assertEqual(self.pe_on(date(2025, 5, 14), eps), 12.5)
+        self.assertEqual(self.pe_on(date(2025, 5, 15), eps), 10.0)
 
     def test_an_unknown_fiscal_year_release_counts_sixty_days_after_the_year_end(self):
         year_end = (date(2025, 6, 30), 2.0)
@@ -94,8 +94,8 @@ class PublicationDatingTest(SimpleTestCase):
 
     def test_a_latest_quarter_without_a_release_date_counts_from_the_fallback(self):
         stored = {'quarterly_eps': [['2025-03-31', 2.0]]}
-        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 9)), (None, None))
-        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 10)), (date(2025, 3, 31), None))
+        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 14)), (None, None))
+        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 15)), (date(2025, 3, 31), None))
 
 
 class MedianTest(SimpleTestCase):
