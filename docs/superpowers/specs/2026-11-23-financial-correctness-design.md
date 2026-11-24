@@ -26,14 +26,13 @@ The MCP tools call the same code as the pages, so Claude Desktop repeats every o
 
 ## Solution
 
-Fix the numbers about the owner's own money first (group A), release, then fix the research numbers (group
-B) with a one-off recalculation of everything already stored, release again.
+Fix the numbers about the owner's own money (group A) and the research numbers (group B), release both
+together, then run the one-off recalculation of everything already stored.
 
 - A sync that cannot read every row keeps the last complete set of Positions and reports the sync as
   incomplete. Only a reply that is fully understood can remove a Position.
 - Analytics shows the Investment Return as Saxo measures it, time-weighted, so a deposit or withdrawal changes
-  the Portfolio Value but never the Investment Return. This revives work built on 2026-10-29 and never
-  merged.
+  the Portfolio Value but never the Investment Return. This builds on the 2026-10-29 work, merged in PR #85.
 - Instrument search finds one-letter tickers, and chart state follows the Instrument.
 - Earnings count in the P/E only from the day they were published.
 - Copy Performance treats each amendment as new information on the day it was filed, and a share change that
@@ -95,14 +94,15 @@ B) with a one-off recalculation of everything already stored, release again.
     that the usual P/E range never uses a number nobody could have known on that day.
 21. As the owner, I want the publication date to be the company's earnings release when the app knows it, so
     that the P/E changes on the real report day.
-22. As the owner, I want a conservative fallback when the release date is unknown (40 days after a quarter, 60
+22. As the owner, I want a conservative fallback when the release date is unknown (45 days after a quarter, 60
     after a fiscal year), so that an unknown date never counts too early.
 23. As the owner, I want the Cheap Zone and Expensive Zone on the candles to use only earnings published by each
     date, so that the bands are what I would have seen at the time.
 24. As the owner, I want the Valuation Grade to use the same dating, so that "below its usual P/E" means the
     same thing everywhere.
-25. As the owner, I want the yardstick and Signal Lab grades that read the P/E history recalculated once with
-    the corrected dating, so that their published results are not built on the old figures.
+25. As the owner, I want the yardstick grades that read the P/E history recalculated once with the corrected
+    dating, so that their published results are not built on the old figures. Signal Lab does not read the P/E,
+    so it needs no recalculation.
 26. As the owner, I want Discover's "below usual P/E" to use the same corrected range, so that it agrees with
     Research.
 27. As an MCP user, I want the valuation history and verdict tools to use the corrected P/E, so that Claude's
@@ -136,25 +136,27 @@ B) with a one-off recalculation of everything already stored, release again.
 38. As the owner, I want Discover's filter and its card to use one definition of each measure, so that the
     same company never passes and fails the same test.
 39. As the owner, I want "one-year high" to mean one thing on every screen, so that the label is trustworthy.
+39a. As the owner, I want a company with several unanswered Quality Checks never to read as strong, so that
+    missing figures cannot add up to a good grade (added 2026-11-24).
 
 ### Release
 
-40. As the owner, I want group A released to production before group B is finished, so that the fixes about my
-    own money do not wait for research work.
+40. As the owner, I want groups A and B kept in develop and released to production together in one release
+    (revised 2026-11-24; the first plan released A on its own).
 41. As the owner, I want each recalculation to run as a one-off command on dev first and on production after
     release, so that the stored numbers change once, deliberately, and can be checked.
 
 ## Implementation Decisions
 
 - **Delivery**: one branch and one pull request into `develop` per item, each carrying its acceptance test.
-  `develop` is released to `main` after A1, A2 and A4 (search part) are merged, and again after B.
+  `develop` is released to `main` once, after B, together with A (story 40).
 - **Sync (A1)**: the position sync counts the rows it could not map. If any row failed, or the reply has no
-  positions field, the sync upserts the rows it understood, deletes nothing, and records itself as incomplete
+  positions field, the sync writes no positions and deletes nothing, still writes the entry trades it understood, and records itself as incomplete
   through the existing sync-run record. Pruning happens only on a fully mapped reply, including a genuinely
   empty one. The Saxo client distinguishes "no positions field" from "an empty list" instead of defaulting to
   an empty list. Entry trades follow the same rule because they come from the same fetch. Paged replies are
   followed to the end before deciding.
-- **Investment Return (A2)**: revive commits `da1197f` and `c61734e`, rebased onto `develop`. Analytics reads
+- **Investment Return (A2)**: built on `fix/financial-correctness-a` (merged as PR #85). Analytics reads
   Saxo's account performance timeseries (time-weighted, daily since the account opened) through a portfolio
   module, runs the existing metrics on the growth of one euro, caches it for an hour, and serves the last good
   history with a dated warning when Saxo cannot answer. Calendar years and year to date start at the previous
@@ -166,25 +168,34 @@ B) with a one-off recalculation of everything already stored, release again.
   resets key on the Instrument (uic and asset type), not the ticker. The broader collision work (two listings
   sharing a ticker across boards, saved lists and targets) and the 1,000-row transaction export are after B.
 - **P/E dating (B1)**: each quarterly EPS point carries the date it became public. That date is the EDGAR
-  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise the quarter end
-  plus 40 days (plus 60 for a fiscal-year end). The trailing P/E and the percentile range include a quarter
+  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise 45 days after the
+  quarter end (the latest 10-Q deadline, so a late small-cap filing is not counted early), or 60 days after a fiscal-year end. The trailing P/E and the percentile range include a quarter
   only from that date. Everything downstream reads the same history: the Valuation Grade, the Cheap/Expensive
   Zones, the yardsticks, the verdict and Discover. A foreign filer with no EDGAR release uses the fallback.
 - **Copy Performance (B2)**: the replay builds one period per filing, each with the holdings that filing
   reported, at the first session after its own filed date. An amendment starts a new period on its filed date
   rather than replacing the original's holdings back to the original date. The share-change classifier
-  compares shares and reported value: when shares change by a whole split ratio and the value does not move in
-  proportion, the change is a split and reads as unchanged. The existing rebuild commands for copy performance
+  compares shares and reported value: when shares change by a whole-number ratio and the position value stays within 20% of its
+  previous level, the change is a split and reads as unchanged. A split whose price also rose by more than 20%
+  reads as an addition: that is a known limit, since telling it apart needs split data the app does not hold. The existing rebuild commands for copy performance
   and moves are the recalculation path; new-filing alerts derived from moves are regenerated with them.
 - **House replays (B2)**: the House replay is checked for the same rule (a trade counts from its disclosure
   date, not its transaction date) and fixed the same way if it does not hold.
 - **Recalculation (B1, B2)**: each B pull request ships a one-off management command, or uses an existing one,
-  that recalculates what it changes: the stored scan P/E history and grades, verdict calls, yardstick and
-  Signal Lab results for B1; copy performance, moves and alerts for B2. Run on dev before merge and on
+  that recalculates what it changes: the stored scan P/E history and grades, verdict calls and the yardstick
+  report for B1 (Signal Lab reads no P/E and is not recalculated); copy performance and moves for B2. Alerts
+  and the investor shelves read moves when shown, so they follow a moves rebuild. Run on dev before merge and on
   production after release.
 - **B3–B5**: each finding is checked against the code before work starts and gets its own pull request if it
   holds. Missing values read as unknown; each input carries its market close, fundamental period, release date
   and last successful fetch; Discover's filter and card share one definition per measure.
+- **B6 (added 2026-11-24, owner decision)**: the Quality Grade gains an `incomplete` outcome. A stock that would
+  grade strong on its answered checks but has two or more unanswered checks is incomplete, not strong, and gets
+  no action. Mixed, weak and unknown are unchanged; open calls keep the grade they opened with.
+- **Usual P/E range on candles (follow-up after B, owner agreed 2026-11-24)**: drawn day by day from the range as
+  it stood on each candle and B1's release dates, neutral colours, off by default, toggled from Analysis. It
+  takes signal colours only if the re-run `grade_valuation` test shows that colouring the candles changes no
+  Valuation Grade; otherwise it stays neutral.
 - **Glossary**: Investment Return, the Cheap/Expensive Zone dating and the Copy Performance amendment rule are
   already in the glossary. A `docs/decisions.md` entry records that the Investment Return is Saxo's
   time-weighted figure rather than computed from the app's own snapshots.

@@ -6,6 +6,7 @@ THRESHOLDS = {'roe': 15, 'roic': 10, 'net_margin': 10, 'revenue_growth': 5, 'deb
 FINANCIAL_SECTORS = {'Financials', 'Real Estate', 'Banking', 'Insurance', 'Financial Services'}
 MIN_ANSWERED = 4
 STRONG_SHARE = 0.8
+MOST_UNKNOWN_FOR_STRONG = 1
 WEAK_SHARE = 0.5
 LATEST_MARGIN_FLOOR = 0.5
 CASH_CONVERSION_FLOOR = 80
@@ -112,7 +113,8 @@ def grade(checks):
         return 'unknown'
     share = passes / answered
     if share >= STRONG_SHARE:
-        return 'strong'
+        unknowns = len(checks) - answered
+        return 'strong' if unknowns <= MOST_UNKNOWN_FOR_STRONG else 'incomplete'
     if share < WEAK_SHARE:
         return 'weak'
     return 'mixed'
@@ -138,20 +140,34 @@ def _levels(history) -> Optional[dict]:
     return history
 
 
+def price_zone(close, cheap_below, expensive_above):
+    if not close or close <= 0 or cheap_below is None or expensive_above is None:
+        return 'not_judged'
+    if not 0 < cheap_below < expensive_above:
+        return 'not_judged'
+    if close <= cheap_below:
+        return 'cheap'
+    if close >= expensive_above:
+        return 'expensive'
+    return 'fair'
+
+
 def valuation(row):
     history = _levels(getattr(row, 'pe_history', None))
     if history is None:
         return {'grade': 'not_judged', 'current_pe': None, 'cheap_below': None, 'expensive_above': None}
-    current = history['current']
-    if current <= history['p25']:
-        verdict = 'cheap'
-    elif current >= history['p75']:
-        verdict = 'expensive'
+    eps = history['eps_ttm']
+    cheap_below = round(eps * history['p25'], 2)
+    expensive_above = round(eps * history['p75'], 2)
+    close = getattr(row, 'last_close', None)
+    if close is None or close <= 0:
+        current = history['current']
+        close = eps * current
     else:
-        verdict = 'fair'
+        current = round(close / eps, 2)
     return {
-        'grade': verdict,
+        'grade': price_zone(round(close, 2), cheap_below, expensive_above),
         'current_pe': current,
-        'cheap_below': round(history['eps_ttm'] * history['p25'], 2),
-        'expensive_above': round(history['eps_ttm'] * history['p75'], 2),
+        'cheap_below': cheap_below,
+        'expensive_above': expensive_above,
     }

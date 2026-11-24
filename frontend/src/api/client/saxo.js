@@ -2,6 +2,8 @@ import { apiFetch, BASE_URL } from './http'
 
 export const getSaxoStatus = () => apiFetch('/api/saxo/status/')
 
+export const clearAccountHistory = () => apiFetch('/api/portfolio/account-history/', { method: 'DELETE' })
+
 // A full-page redirect can't carry the JWT, so fetch a short-lived signed
 // ticket (authenticated) and hand that to the connect endpoint instead.
 export async function connectSaxo() {

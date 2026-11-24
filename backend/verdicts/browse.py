@@ -4,12 +4,12 @@ from investors.signals import reported_buyers
 from research import shelves
 from research.models import ScreenerRow, WatchlistItem
 
-from . import payload
+from . import payload, rules
 from .models import StockVerdict
 
 ACTION_RANK = ['buy', 'add', 'hold', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
 VALUATIONS = ['cheap', 'fair', 'expensive', 'not_judged']
-QUALITIES = ['strong', 'mixed', 'weak', 'unknown']
+QUALITIES = ['strong', 'incomplete', 'mixed', 'weak', 'unknown']
 SORTS = ['opportunity', 'discount', 'fall', 'checks', 'funds']
 SCREENS = {'all', 'strong', 'pullbacks', 'fund-buying', 'saved', *(shelf.key for shelf in shelves.SHELVES)}
 DEFAULT_LIMIT = 24
@@ -40,19 +40,9 @@ def _pct_under(price, level):
     return round((1 - price / level) * 100, 1)
 
 
-def _closing_price_zone(close, low, high):
-    if close is None or close <= 0 or low is None or high is None or not 0 < low < high:
-        return 'not_judged'
-    if close < low:
-        return 'cheap'
-    if close > high:
-        return 'expensive'
-    return 'fair'
-
-
 def _stock(verdict, row, summary):
     close = round(verdict.last_close, 2) if verdict.last_close is not None else None
-    zone = _closing_price_zone(close, verdict.cheap_below, verdict.expensive_above)
+    zone = rules.price_zone(close, verdict.cheap_below, verdict.expensive_above)
     passed = [check['label'] for check in verdict.checks if check['status'] == 'pass']
     failed = [check['label'] for check in verdict.checks if check['status'] == 'fail']
     revenue_growth = next((

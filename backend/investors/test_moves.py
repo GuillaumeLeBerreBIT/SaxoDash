@@ -55,6 +55,18 @@ class RebuildTest(TestCase):
             (0, 0, 0.0, 30.0, -100.0, 'ALLY FINL INC'),
         )
 
+    def test_a_split_is_stored_as_unchanged_and_buying_after_it_as_added(self):
+        store_quarter(self.investor, Q1, [(NVDA, 'NVIDIA CORP', 100, 5000), (AAPL, 'APPLE INC', 100, 5000)], rebuild=False)
+        store_quarter(self.investor, Q2, [(NVDA, 'NVIDIA CORP', 1000, 5200), (AAPL, 'APPLE INC', 250, 6250)], rebuild=False)
+
+        moves.rebuild(self.investor)
+
+        stored = {
+            row.cusip: (row.kind, row.change_pct)
+            for row in PositionMove.objects.filter(investor=self.investor, quarter_end=Q2)
+        }
+        self.assertEqual(stored, {NVDA: ('unchanged', 0.0), AAPL: ('added', 150.0)})
+
     def test_options_are_kept_apart_from_the_stock(self):
         store_quarter(self.investor, Q1, [(NVDA, 'NVIDIA CORP', 10, 100)], rebuild=False)
         store_quarter(self.investor, Q2, [

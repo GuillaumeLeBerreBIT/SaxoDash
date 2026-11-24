@@ -32,7 +32,7 @@ describe('verdict wording', () => {
   })
 
   it('names both grades in words', () => {
-    expect(GRADE_LABEL.quality).toEqual({ strong: 'Strong', mixed: 'Mixed', weak: 'Weak', unknown: 'Not enough data' })
+    expect(GRADE_LABEL.quality).toEqual({ strong: 'Strong', incomplete: 'Incomplete', mixed: 'Mixed', weak: 'Weak', unknown: 'Not enough data' })
     expect(GRADE_LABEL.valuation).toEqual({
       cheap: 'Below usual P/E',
       fair: 'Within usual P/E',

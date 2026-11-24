@@ -7,7 +7,7 @@ export function useInstrumentReset(instrument, reset) {
   const [seenKey, setSeenKey] = useState(key)
   if (seenKey !== key) {
     setSeenKey(key)
-    reset()
+    if (seenKey != null) reset()
   }
   return key
 }

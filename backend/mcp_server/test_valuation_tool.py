@@ -5,6 +5,7 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 
 from research.listings import Listing
+from research.models import ScreenerRow
 
 from .tools.research import get_valuation_history
 from users.testing import the_owner
@@ -26,9 +27,11 @@ SERIES = {
 }
 
 
-def candles():
-    days = ['2025-01-06', '2025-01-07', '2025-01-10', '2025-01-13']
+def candles(days=('2025-03-10', '2025-03-11', '2025-03-14', '2025-03-17')):
     return [{'date': d, 'close': 40.0} for d in days]
+
+
+JANUARY = ('2025-01-06', '2025-01-07', '2025-01-10', '2025-01-13')
 
 
 @override_settings(CACHES=LOCMEM)
@@ -49,10 +52,20 @@ class ValuationToolTest(APITestCase):
                 patch('research.finnhub.valuation_series', return_value=SERIES), \
                 patch('research.market.chart', return_value=candles()):
             data = get_valuation_history('NVDA')['data']
-        self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
+        self.assertEqual(data['daily_pe'], [['2025-03-14', 10.0], ['2025-03-17', 10.0]])
         self.assertEqual(data['latest']['pe_ttm'], 40)
         self.assertEqual(data['latest']['daily_pe'], 10.0)
         self.assertEqual(data['medians_5y']['pe_ttm'], 35.0)
+
+    def test_a_stored_release_date_counts_the_quarter_from_that_day(self):
+        ScreenerRow.objects.create(ticker='NVDA', name='NVIDIA', fundamentals_history={
+            'eps_released': {'2024-12-31': '2025-01-08'},
+        })
+        with patch('mcp_server.tools.research.look_up', return_value=instrument()), \
+                patch('research.finnhub.valuation_series', return_value=SERIES), \
+                patch('research.market.chart', return_value=candles(JANUARY)):
+            data = get_valuation_history('NVDA')['data']
+        self.assertEqual(data['daily_pe'], [['2025-01-10', 10.0], ['2025-01-13', 10.0]])
 
     def test_loss_making_company_has_null_pe(self):
         losing = {**SERIES, 'quarterly': {**SERIES['quarterly'], 'eps': [

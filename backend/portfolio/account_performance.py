@@ -63,6 +63,11 @@ def _fallback(reason, user):
     return GrowthSeries(growth, f'{reason} Showing your history up to {last.day} {last:%b %Y}.')
 
 
+def forget(*, user):
+    cache.delete(_cache_key(user))
+    cache.delete(_last_good_key(user))
+
+
 def growth_series(*, user):
     growth = cache.get(_cache_key(user))
     if growth is not None:
@@ -75,6 +80,9 @@ def growth_series(*, user):
         return _fallback(UNANSWERED, user)
     except (KeyError, TypeError, ValueError, AttributeError):
         return _fallback(UNREADABLE, user)
+    if not growth and cache.get(_last_good_key(user)):
+        return _fallback(UNANSWERED, user)
     cache.set(_cache_key(user), growth, CACHE_TTL)
-    cache.set(_last_good_key(user), growth, None)
+    if growth:
+        cache.set(_last_good_key(user), growth, None)
     return GrowthSeries(growth, None)

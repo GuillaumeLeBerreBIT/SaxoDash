@@ -141,10 +141,11 @@ describe('seriesAxis', () => {
 })
 
 describe('surpriseColor', () => {
-  it('colours a beat up, a miss down and an unjudged report as an estimate', () => {
+  it('colours a beat up, a miss down, in line as an estimate and a report with no estimate as primary', () => {
     expect(surpriseColor(0.4, palette)).toBe(palette.up)
     expect(surpriseColor(-0.4, palette)).toBe(palette.down)
-    expect(surpriseColor(null, palette)).toBe(palette.estimate)
+    expect(surpriseColor(0, palette)).toBe(palette.estimate)
+    expect(surpriseColor(null, palette)).toBe(palette.primary)
   })
 })
 

@@ -154,6 +154,15 @@ def synced(fn=None, *, reports_health=True, task=None, credential='each'):
     return run
 
 
+def _maps_both(raw_row):
+    try:
+        mapping.to_position_fields(raw_row)
+        mapping.to_transaction_fields(raw_row)
+    except (KeyError, TypeError, ValueError, ArithmeticError):
+        return False
+    return True
+
+
 def _mapped_rows(raw_rows, to_fields):
     for raw_row in raw_rows:
         try:
@@ -211,21 +220,20 @@ def sync_positions(credential):
     raw_rows = saxo_positions or []
     positions = list(_mapped_rows(raw_rows, mapping.to_position_fields))
     trades = list(_mapped_rows(raw_rows, mapping.to_transaction_fields))
-    unreadable = len(raw_rows) - min(len(positions), len(trades))
+    unreadable = len(raw_rows) - sum(1 for raw_row in raw_rows if _maps_both(raw_row))
     complete = saxo_positions is not None and not unreadable
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
     # half-built list of seen tickers.
+    merged = mapping.merge_lots(positions)
+    seen_tickers = [fields['ticker'] for fields in merged]
     with transaction.atomic():
-        seen_tickers = []
-        for fields in mapping.merge_lots(positions):
-            synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
-            Position.objects.update_or_create(
-                user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
-            )
-            seen_tickers.append(fields['ticker'])
-
         if complete:
+            for fields in merged:
+                synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
+                Position.objects.update_or_create(
+                    user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
+                )
             Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
 
         for fields in trades:

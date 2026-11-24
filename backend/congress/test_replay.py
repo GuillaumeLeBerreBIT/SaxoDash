@@ -119,3 +119,12 @@ class DedupeTest(SimpleTestCase):
         self.assertEqual(len(kept), 2)
         self.assertTrue(all(found.amended for found in kept))
         self.assertTrue(all(found.filed_on == D2 for found in kept))
+
+    def test_an_extra_copy_disclosed_by_an_amendment_counts_from_the_amendment(self):
+        rows = [
+            row('NVDA', report='R1', filed_on=D2),
+            row('NVDA', report='R2', filed_on=D3, amended=True),
+            row('NVDA', report='R2', filed_on=D3, amended=True),
+        ]
+        kept = dedupe(rows)
+        self.assertEqual(sorted(found.filed_on for found in kept), [D2, D3])

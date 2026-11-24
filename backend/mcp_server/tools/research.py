@@ -2,7 +2,7 @@ from research import daily, finnhub, valuation
 from research.listings import SEARCH_ASSET_TYPES
 from research.price_summary import summarise
 from research.providers import ProviderError, ProviderUnavailable
-from research.models import PriceLine, SymbolNote, Watchlist
+from research.models import PriceLine, ScreenerRow, SymbolNote, Watchlist
 from research.serializers import PriceLineSerializer, SymbolNoteSerializer
 from research.views import (
     ChartView,
@@ -230,6 +230,11 @@ def get_watchlists():
     return {'watchlists': watchlists}
 
 
+def released_dates(ticker):
+    stored = ScreenerRow.everything.filter(ticker__iexact=ticker).values_list('fundamentals_history', flat=True).first()
+    return valuation.stored_releases(stored)
+
+
 @tool(
     'Research › Statistics: valuation history for a US-listed stock (P/E, P/S, P/FCF and EV/EBITDA series), a daily trailing P/E sampled weekly, and 5-year medians.',
     sources=[FINNHUB, SAXO],
@@ -242,5 +247,5 @@ def get_valuation_history(symbol: str):
     except ProviderUnavailable as exc:
         raise Unavailable(*warnings, exc.reason) from exc
     bars, reason = throttled.available(listing)
-    data, notes = valuation.history(listing.ticker, series, bars)
+    data, notes = valuation.history(listing.ticker, series, bars, released=released_dates(listing.ticker))
     return Reply(data, [*warnings, *([reason] if reason else []), *notes])

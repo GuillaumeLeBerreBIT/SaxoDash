@@ -39,6 +39,7 @@ beforeEach(() => {
   queries.useSaxoStatus.mockReturnValue({ data: HEALTHY })
   queries.useEnableBankingStatus.mockReturnValue({ data: undefined })
   queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true } })
+  queries.useClearAccountHistory.mockReturnValue({ mutate: vi.fn(), isPending: false })
 })
 
 describe('Settings', () => {
@@ -138,6 +139,14 @@ describe('Settings', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Connections' }))
     expect(screen.getByRole('heading', { name: 'Connections' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Sync health' })).toBeInTheDocument()
+  })
+
+  it('clears the Saxo account history from the connections card', async () => {
+    const mutate = vi.fn()
+    queries.useClearAccountHistory.mockReturnValue({ mutate, isPending: false })
+    renderSettings('/settings?section=connections')
+    await userEvent.click(screen.getByRole('button', { name: 'Clear account history' }))
+    expect(mutate).toHaveBeenCalledTimes(1)
   })
 
   it('credits the logo provider', () => {

@@ -26,6 +26,12 @@ def _header():
     return {'quarter': signal['quarter'].isoformat(), 'filed': signal['filed'], 'tracked': signal['tracked']}
 
 
+def _comparable_previous_shares(position):
+    if changes.is_split(position['shares'], position['previous_shares'], position['value'], position['previous_value']):
+        return position['shares']
+    return position['previous_shares'] or 0
+
+
 def _counts(positions):
     counts = {'owners': 0, **{kind: 0 for kind in KINDS}, 'shares': 0, 'shares_change': 0}
     compared_before = 0
@@ -35,7 +41,7 @@ def _counts(positions):
             counts['owners'] += 1
         if position['kind'] is not None:
             counts[position['kind']] += 1
-            before = position['previous_shares'] or 0
+            before = _comparable_previous_shares(position)
             counts['shares_change'] += position['shares'] - before
             compared_before += before
     counts['shares_change_pct'] = (
@@ -66,7 +72,9 @@ def _change_pct(position):
         return -100.0
     if position['previous_shares'] is None:
         return None
-    return changes.position_change(position['shares'], position['previous_shares'])[1]
+    return changes.position_change(
+        position['shares'], position['previous_shares'], position['value'], position['previous_value'],
+    )[1]
 
 
 def _rank(position):

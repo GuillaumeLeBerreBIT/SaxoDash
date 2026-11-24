@@ -8,7 +8,7 @@ from django.db import DatabaseError
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from research import finnhub, scan, scan_progress
+from research import finnhub, report_dates, scan, scan_progress
 from research.finnhub import FinnhubAPIError, FinnhubNotConfigured
 from research.models import DailyBars, ScreenerRow
 from research.providers import ProviderError, ProviderNotConnected, ProviderUnavailable
@@ -179,6 +179,7 @@ class ScanUniverseTest(TestCase):
         ])
 
     def test_resolves_and_fills_technicals_and_fundamentals(self, search, chart, financials):
+        financials.return_value = FINANCIALS_WITH_SERIES
         self.search_for(search, {'AAPL': 211, 'BRK.B': 212})
         self.assertEqual(self.run_scan(), 2)
         apple = ScreenerRow.objects.get(ticker='AAPL')
@@ -456,6 +457,27 @@ class ScanHistoryTest(TestCase):
         self.assertEqual(set(self.row.pe_history), {'current', 'p25', 'p75', 'eps_ttm', 'weeks'})
         self.assertEqual(self.row.pe_history['eps_ttm'], 4.0)
 
+    def test_scan_stores_the_sec_release_dates_and_counts_each_quarter_from_its_release(self):
+        reports = {'releases': [{'date': date(2025, 4, 24), 'session': 'amc'}], 'fiscal_ends': [date(2025, 3, 31)]}
+        periods = [f'{year}-{end}' for year in (2022, 2023, 2024) for end in ('03-31', '06-30', '09-30', '12-31')]
+        financials = {'metric': {}, 'series': {'quarterly': {'eps': [
+            *({'period': period, 'v': 1.0} for period in periods), {'period': '2025-03-31', 'v': 2.0},
+        ]}}}
+        bars = [{**bar, 'date': (date(2023, 4, 27) + timedelta(days=7 * i)).isoformat(), 'close': 50.0}
+                for i, bar in enumerate(weekly_bars(105))]
+        with mock.patch('research.scan.report_dates.company_reports', return_value=reports):
+            self.scan_with(bars, financials)
+        self.assertEqual(self.row.fundamentals_history['eps_released'], {'2025-03-31': '2025-04-24'})
+        self.assertEqual(self.row.pe_history['eps_ttm'], 5.0)
+
+    def test_sec_unavailable_keeps_the_release_dates_already_known(self):
+        self.row.fundamentals_history = {'annual': [], 'quarterly_eps': [], 'eps_released': {'2018-12-31': '2019-01-29'}}
+        self.row.save()
+        with mock.patch('research.scan.report_dates.company_reports', side_effect=report_dates.SecUnavailable('down')):
+            self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertEqual(self.row.fundamentals_history['eps_released'], {'2018-12-31': '2019-01-29'})
+        self.assertEqual(self.row.pe_history['eps_ttm'], 4.0)
+
     def test_unavailable_percentiles_are_stored_as_empty(self):
         self.row.pe_history = {'current': 1.0}
         self.row.save()
@@ -482,6 +504,17 @@ class ScanHistoryTest(TestCase):
         self.assertEqual(self.row.fundamentals_history['annual'][0]['roe'], 10.0)
         self.assertEqual(self.row.pe_history, {'current': 20.0})
 
+    def test_a_reply_with_no_series_does_not_move_the_fundamentals_date(self):
+        before = timezone.now() - timedelta(days=3)
+        self.row.fundamentals_at = before
+        self.row.save()
+        self.scan_with(weekly_bars(150), FINANCIALS)
+        self.assertEqual(self.row.fundamentals_at, before)
+
+    def test_a_reply_with_series_dates_the_fundamentals(self):
+        self.scan_with(weekly_bars(150), FINANCIALS_WITH_SERIES)
+        self.assertIsNotNone(self.row.fundamentals_at)
+
     def test_technicals_still_read_the_last_260_bars(self):
         bars = weekly_bars(scan.HISTORY_BARS)
         with mock.patch('research.scan.technicals.technical_fields', return_value={}) as fields:
@@ -504,7 +537,7 @@ class ScanBudgetTest(TestCase):
     @mock.patch('research.scan.finnhub.seconds_until_budget_refills', return_value=17)
     @mock.patch('research.scan.finnhub.get_basic_financials')
     def test_a_busy_refusal_waits_for_the_budget_and_retries_once(self, mock_financials, mock_seconds, mock_chart):
-        mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS]
+        mock_financials.side_effect = [finnhub.FinnhubBusy(), FINANCIALS_WITH_SERIES]
         pauses = []
 
         scan.scan_row(self.row, with_fundamentals=True, user=USER, pause=pauses.append)

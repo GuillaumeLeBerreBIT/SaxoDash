@@ -378,8 +378,6 @@ class ThrottleTest(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
     def test_search_is_throttled_past_its_scope_rate(self):
-        # A blank q answers 200 without touching
-        # Saxo - but the throttle still counts every request.
         codes = [
             self.client.get('/api/research/instruments/?q=').status_code
             for _ in range(4)

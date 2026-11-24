@@ -123,6 +123,20 @@ class OwnershipApiTest(APITestCase):
             (stock['shares'], stock['shares_change'], stock['shares_change_pct']), (61, -39, -39.0),
         )
 
+    def test_a_split_adds_no_shares_to_the_change(self):
+        third = make_investor(name='Chris Hohn', firm='TCI', cik=1647251, slug='tci')
+        store_quarter(third, Q1, [held(NVIDIA, 100, 1000)])
+        store_quarter(third, Q2, [held(NVIDIA, 1000, 1100)])
+
+        stock = self.summary('NVDA').data['stocks']['NVDA']
+        tci = next(fund for fund in self.detail('NVDA').data['funds'] if fund['slug'] == 'tci')
+
+        self.assertEqual(
+            (stock['unchanged'], stock['shares'], stock['shares_change'], stock['shares_change_pct']),
+            (1, 1001, 1, 0.1),
+        )
+        self.assertEqual((tci['kind'], tci['change_pct']), ('unchanged', 0.0))
+
     def test_a_fund_with_nothing_to_compare_adds_shares_but_no_change(self):
         newcomer = make_investor(name='Li Lu', firm='Himalaya', cik=1709323, slug='himalaya')
         store_quarter(newcomer, Q2, [held(APPLE, 7, 70)])

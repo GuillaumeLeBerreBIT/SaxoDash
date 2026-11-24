@@ -176,12 +176,49 @@ class SyncPositionsTaskTest(TestCase):
 
         tasks.sync_positions()
 
-        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'MSFT', 'NVDA'})
+        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'MSFT'})
         self.assertEqual(Transaction.objects.get().ticker, 'NVDA')
         run = SyncRun.objects.get(task='sync_positions')
         self.assertEqual(run.outcome, 'incomplete')
         self.assertEqual(run.rows, 1)
         self.assertIn('1 of 2', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_two_rows_each_failing_a_different_mapping_are_both_counted_unread(self, mock_get_positions):
+        position_fails = {**SAMPLE_POSITION, 'PositionId': 'bad-position'}
+        trade_fails = {**SAMPLE_POSITION, 'PositionId': 'bad-trade'}
+        mock_get_positions.return_value = [position_fails, trade_fails, SAMPLE_POSITION]
+        real_position = mapping.to_position_fields
+        real_trade = mapping.to_transaction_fields
+
+        def position_side(raw_row):
+            if raw_row['PositionId'] == 'bad-position':
+                raise KeyError('PositionBase')
+            return real_position(raw_row)
+
+        def trade_side(raw_row):
+            if raw_row['PositionId'] == 'bad-trade':
+                raise KeyError('PositionId')
+            return real_trade(raw_row)
+
+        with patch('saxo.tasks.mapping.to_position_fields', new=position_side), \
+                patch('saxo.tasks.mapping.to_transaction_fields', new=trade_side):
+            tasks.sync_positions()
+
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'incomplete')
+        self.assertIn('Read 1 of 3', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_partial_reply_does_not_overwrite_a_held_position_with_fewer_shares(self, mock_get_positions):
+        self.held('NVDA')
+        Position.objects.filter(ticker='NVDA').update(qty=Decimal('20'))
+        mock_get_positions.return_value = [SAMPLE_POSITION, {'unexpected': 'shape'}]
+
+        tasks.sync_positions()
+
+        self.assertEqual(Position.objects.get(ticker='NVDA').qty, Decimal('20'))
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'incomplete')
 
     @patch('saxo.tasks.client.get_positions')
     def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):

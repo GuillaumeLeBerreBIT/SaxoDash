@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { connectEnableBanking } from '../api/client'
-import { useEnableBankingStatus, useMe, useSaxoStatus } from '../api/queries'
+import { useClearAccountHistory, useEnableBankingStatus, useMe, useSaxoStatus } from '../api/queries'
 import AccountSettings from '../components/settings/AccountSettings'
 import { Button, Card, PageHeader, Segmented, StatusDot } from '../components/ui'
 import { fmtDateTime } from '../lib/format'
@@ -101,12 +101,17 @@ function SourceRow({ dot, name, note, action }) {
   )
 }
 
-function saxoRow(status, failed, connect, connectFailed) {
+function saxoRow(status, failed, connect, connectFailed, clearHistory) {
   const derived = deriveSaxoStatus(status)
   if (!derived && failed) return { dot: 'warn', name: 'Saxo', note: 'Status unavailable' }
   if (!derived) return { dot: 'off', name: 'Saxo', note: 'Checking the connection…' }
   const synced = status.last_synced_at ? `last synced ${fmtDateTime(status.last_synced_at)}` : 'never synced'
   const base = 'Positions, prices, charts and performance'
+  const clearAction = (
+    <Button size="sm" disabled={clearHistory.isPending} onClick={() => clearHistory.mutate()}>
+      {clearHistory.isPending ? 'Clearing…' : 'Clear account history'}
+    </Button>
+  )
   if (derived.kind === 'not_connected') {
     return { dot: 'off', name: 'Saxo not connected', note: connectFailed ? 'Connection failed' : base, action: <Button variant="primary" size="sm" onClick={connect}>Connect</Button> }
   }
@@ -123,9 +128,9 @@ function saxoRow(status, failed, connect, connectFailed) {
   }
   const name = status.environment ? `Saxo · ${String(status.environment).toUpperCase()}` : 'Saxo'
   if (derived.kind === 'sync_degraded') {
-    return { dot: 'warn', name, note: `${base}. Last sync ${derived.outcome}; ${synced}.` }
+    return { dot: 'warn', name, note: `${base}. Last sync ${derived.outcome}; ${synced}.`, action: clearAction }
   }
-  return { dot: 'ok', name, note: `${base}. Connected; ${synced}.` }
+  return { dot: 'ok', name, note: `${base}. Connected; ${synced}.`, action: clearAction }
 }
 
 function bankRow(bank, state) {
@@ -156,7 +161,8 @@ function Connections() {
   const { data: me } = useMe()
   const { data: banks } = useEnableBankingStatus({ enabled: me?.is_owner === true })
   const { connect, failed: connectFailed } = useConnectSaxo()
-  const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
+  const clearHistory = useClearAccountHistory()
+  const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed, clearHistory), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Where SaxoDash gets its numbers" dot={dot} title="Connections">

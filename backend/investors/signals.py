@@ -76,7 +76,9 @@ def _combined(position, row):
     elif merged['shares'] == 0:
         merged['kind'] = changes.SOLD_OUT
     else:
-        merged['kind'] = changes.position_change(merged['shares'], merged['previous_shares'])[0]
+        merged['kind'] = changes.position_change(
+            merged['shares'], merged['previous_shares'], merged['value'], merged['previous_value'],
+        )[0]
     return merged
 
 

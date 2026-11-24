@@ -7,6 +7,10 @@ ALLY = ('02005N100', '')
 AAPL_CALL = ('037833100', 'CALL')
 
 
+def held(shares, value=1000):
+    return {'shares': shares, 'value': value}
+
+
 class PositionChangeTest(SimpleTestCase):
     def test_absent_before_is_new(self):
         self.assertEqual(changes.position_change(100, None), (changes.NEW, None))
@@ -39,26 +43,51 @@ class PositionChangeTest(SimpleTestCase):
     def test_zero_before_and_after_is_unchanged(self):
         self.assertEqual(changes.position_change(0, 0), (changes.UNCHANGED, None))
 
+    def test_doubled_shares_at_the_same_value_is_a_split_and_unchanged(self):
+        self.assertEqual(changes.position_change(200, 100, 5000, 5000), (changes.UNCHANGED, 0.0))
+
+    def test_a_ten_for_one_split_with_the_price_moving_is_unchanged(self):
+        self.assertEqual(changes.position_change(1000, 100, 11000, 10000), (changes.UNCHANGED, 0.0))
+
+    def test_a_reverse_split_at_the_same_value_is_unchanged(self):
+        self.assertEqual(changes.position_change(100, 1000, 9000, 10000), (changes.UNCHANGED, 0.0))
+
+    def test_buying_after_a_split_is_still_added(self):
+        self.assertEqual(changes.position_change(250, 100, 6250, 5000), (changes.ADDED, 150.0))
+
+    def test_doubled_shares_with_the_value_doubling_is_added(self):
+        self.assertEqual(changes.position_change(200, 100, 10000, 5000), (changes.ADDED, 100.0))
+
+    def test_a_half_trim_while_the_price_rises_is_trimmed(self):
+        self.assertEqual(changes.position_change(500, 1000, 7100, 10000), (changes.TRIMMED, -50.0))
+
+    def test_doubled_shares_without_values_is_added(self):
+        self.assertEqual(changes.position_change(200, 100), (changes.ADDED, 100.0))
+
 
 class CompareTest(SimpleTestCase):
     def test_a_first_quarter_has_no_change_column_and_nothing_sold(self):
-        per_key, sold_out = changes.compare({AAPL: 100}, None)
+        per_key, sold_out = changes.compare({AAPL: held(100)}, None)
         self.assertEqual(per_key, {AAPL: None})
         self.assertEqual(sold_out, [])
 
     def test_classifies_each_position_and_lists_sold_out_ones(self):
         per_key, sold_out = changes.compare(
-            {AAPL: 120, AAPL_CALL: 5},
-            {AAPL: 100, ALLY: 50},
+            {AAPL: held(120), AAPL_CALL: held(5)},
+            {AAPL: held(100), ALLY: held(50)},
         )
         self.assertEqual(per_key[AAPL], (changes.ADDED, 20.0))
         self.assertEqual(per_key[AAPL_CALL], (changes.NEW, None))
         self.assertEqual(sold_out, [ALLY])
 
     def test_an_empty_previous_quarter_makes_everything_new(self):
-        per_key, sold_out = changes.compare({AAPL: 1}, {})
+        per_key, sold_out = changes.compare({AAPL: held(1)}, {})
         self.assertEqual(per_key, {AAPL: (changes.NEW, None)})
         self.assertEqual(sold_out, [])
+
+    def test_a_split_reads_as_unchanged(self):
+        per_key, _ = changes.compare({AAPL: held(200, 5000)}, {AAPL: held(100, 5000)})
+        self.assertEqual(per_key[AAPL], (changes.UNCHANGED, 0.0))
 
 
 class TurnoverTest(SimpleTestCase):

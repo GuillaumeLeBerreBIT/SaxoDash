@@ -52,6 +52,11 @@ function WeightBar({ weight, cap }) {
   )
 }
 
+function passLine(answered, missing) {
+  if (missing === 0) return `${answered} of ${answered} checks pass`
+  return `${answered} of ${answered + missing} checks pass, ${missing} couldn't be checked`
+}
+
 function CompanyCell({ verdict }) {
   const [open, setOpen] = useState(false)
   const { failed, unknown, answered } = checkCount(verdict.checks ?? [])
@@ -63,7 +68,7 @@ function CompanyCell({ verdict }) {
         <span className={CELL_VALUE}>{GRADE_LABEL.quality[verdict.quality] ?? verdict.quality}</span>
         {answered > 0 ? (
           <span className={`text-[13px] font-semibold ${allPass ? 'text-up' : 'text-down'}`}>
-            {allPass ? `${answered} of ${answered} checks pass` : `${failed.length} of ${answered} checks fail`}
+            {allPass ? passLine(answered, unknown.length) : `${failed.length} of ${answered} checks fail`}
           </span>
         ) : null}
       </span>
@@ -96,6 +101,17 @@ function CompanyCell({ verdict }) {
       ) : null}
     </div>
   )
+}
+
+function quarterPart(verdict) {
+  if (!verdict.fundamental_period) return 'Quarter unknown'
+  const released = verdict.published_on ? `released ${fmtDate(verdict.published_on)}` : 'release date unknown'
+  return `Quarter to ${fmtDate(verdict.fundamental_period)}, ${released}`
+}
+
+function datesLine(verdict) {
+  const close = verdict.close_date ? `Close ${fmtDate(verdict.close_date)}` : 'Close date unknown'
+  return `${close} · ${quarterPart(verdict)} · Fetched ${fmtDate(verdict.as_of)}.`
 }
 
 function PriceCell({ verdict }) {
@@ -197,7 +213,7 @@ export default function AnswerCard({ verdict, sentence, position, note }) {
         <YouCell position={position} verdict={data} />
       </div>
       {sentence?.earnings ? <p className="text-[13px] font-medium text-warn-text">{sentence.earnings}</p> : null}
-      {data ? <p className="text-[12px] text-ink-3">{`As of ${fmtDate(data.as_of)}. ${FOOTER}`}</p> : null}
+      {data ? <p className="text-[12px] text-ink-3">{`${datesLine(data)} ${FOOTER}`}</p> : null}
     </section>
   )
 }

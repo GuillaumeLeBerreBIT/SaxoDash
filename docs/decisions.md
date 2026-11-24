@@ -327,7 +327,10 @@ and never re-resolve.
 **13F data is imported, not fetched.** `investors` stores EDGAR 13F filings and
 its endpoints read only its own tables; nothing calls EDGAR at request time.
 Amendments are applied at read time (`quarters.effective_filings`), never by
-rewriting stored filings. The `value` unit is decided by filing date, not
+rewriting stored filings. A share count that changes by a whole ratio (2×, 10×, or 1/10)
+while the reported value moves less than halfway to that ratio (geometrically) is a stock
+split and reads as unchanged at 0%, in `changes.position_change`, which the moves, the
+holdings table, the fund signals and ownership all call (2026-11-23). The `value` unit is decided by filing date, not
 quarter: the SEC moved it from thousands to dollars for filings from 2023-01-03,
 so Q4 2022 is already dollars (a quarter-based rule is 1000x off for that one
 quarter). OpenFIGI tickers are normalised `/` to `.`. An identifier
@@ -401,7 +404,12 @@ ticker into `PriceHistory` — the benchmark, every ticker in a current top-20 n
 ticker only held in the past once. `copying.measure` then holds each fund's 20 largest
 disclosed stock positions at disclosed weights from the close of the first session after the
 filing date until the next filing's, against the S&P 500 ETF over the same days, and
-`CopyPerformance` caches the result per investor; the pages read only that table. A holding
+`CopyPerformance` caches the result per investor; the pages read only that table. Each filing
+starts its own period on its own filed date, holding what was known that day: an amendment
+filed later changes the basket from the first session after its filing, never back to the
+original's date, and an amendment to an older quarter is ignored once a newer quarter is filed
+(2026-11-23; before then a quarter was one period dated by its first filing with its final,
+amended holdings). A holding
 with no price is left out and the rest reweighted; a period priced for under half its copied
 value sits in cash and is counted; leading unpriceable periods are dropped, so `since` is the
 first day the clone could really be bought. Price return only, in USD, no dividends or costs.
@@ -512,7 +520,7 @@ sale of something never seen bought is ignored and counted. A full sale closes t
 `price_feed.add_ticker_source` is how congress tickers get daily bars. The Senate's eFD site is
 geo-blocked from where the app runs, so the Senate is out until the backend is hosted in the US.
 Holdings and copy performance are rebuilt for every member on each daily sync, not only for members with a newly parsed report, so tickers priced by the nightly refresh overnight are picked up the next day. Prices reach back about 4.7 years (1,200 daily bars), so the earliest backfilled trades show as unpriced; `basis.priced_from` records where pricing starts and the member page says so.
-Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
+Amended reports are deduplicated per trade by the most copies any single report lists, so split fills survive and a restating amendment does not double-count; each kept copy counts from the first report that listed that many copies, so a copy only an amendment discloses is bought on the amendment's date (2026-11-23); an amendment that changes a trade's amount or date still counts twice, because the index does not link an amendment to its original.
 A report's PDF is fetched through a `requests` session that retries 429/5xx three times; a 4xx marks only that report failed and retries it after one day, then three, then gives up (`Report.retry_after`), a parse error gives up at once, and a host still down after the retries stops the run with its reports untouched and records the sync as failed ("Clerk unreachable, N reports waiting"); `reparse_reports --failed` resets all of it.
 The daily sync, `backfill_house` and `reparse_reports` share one cache lock (`congress/run_lock.py`): it lives an hour and every paced PDF fetch renews it, a run releases it only while it still owns it, the sync records itself as `skipped` while it is held and the two commands refuse to start. Only a 404 or 410 means a report's PDF is missing; any other refusal (a 401 or 403 from the Clerk's front door) is an outage that stops the run. This year's index answering 404 means it is not published yet (the first days of January) and is no new reports, not a failure. A member matched through `member_aliases.csv` takes its party from the legislator dataset by bioguide id, and a known member stored without one gets it on its next report. The Congress column (Portfolio, Investors stocks) shows buyers ↑ / sellers ↓ in the window, else how many members hold it, and a dash only when nobody traded or holds it — the Research Congress tab already said "holding 1" while the column showed a dash.
 
@@ -591,7 +599,7 @@ page (`findBy…`) before reading the location.
 
 
 **The verdict is rules over stored scan rows, never a provider call.** `verdicts/rules.py` grades
-quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
+quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`; a grade that would be `strong` with more than `MOST_UNKNOWN_FOR_STRONG` unanswered is `incomplete`, owner decision 2026-11-24, so four passes and three missing figures are not strong; `incomplete` gets no action, as `unknown`) and valuation
 (today's P/E against its own 25th and 75th percentile, else `not_judged`) from
 `ScreenerRow.fundamentals_history` and `pe_history`, which the nightly scan fills from the Finnhub and
 Saxo data it already fetches. The `verdicts` app imports neither `finnhub`, `market` nor `requests`, so
@@ -643,6 +651,22 @@ use another yardstick that was never tested, so they describe too (2026-11-19): 
 between 1 and 2 / above 2" and "P/E above / below / in line with its range" in neutral tone, the quadrant has no
 coloured corners and its axis reads lower and higher valuation, and the Guide's corner notes and the playbook lines
 built on a cheap or rich PEG no longer give advice.
+
+**A quarter's EPS counts in the P/E from the day it was published (2026-11-23).** Each quarterly EPS point
+is dated by `research/valuation.py::published_eps` before anything sums it: the EDGAR results release (8-K item
+2.02, found by `report_dates.attach`) when known, moved to the day after the period end if it falls on or before
+it, otherwise the period end plus 40 days, or plus 60 for a fiscal-year end (a quarter within a week of an
+annual period's month and day, so 52/53-week years match). The trailing P/E, the percentile range, the Valuation
+Grade and its bands, Discover's "below usual P/E", the yardsticks (which had their own 35-day lag) and the MCP
+valuation and compare tools all read that one dating. The nightly scan stores the release dates it finds as
+`fundamentals_history['eps_released']` (`{period: date}`, a separate key so the `[period, value]` pairs keep
+their shape), keeping earlier ones when the SEC cannot answer, since `filings.recent` only reaches about a
+year back; older quarters and foreign filers use the fallback. A release is counted on its own day even when
+it came after the close, as the spec asks. `manage.py recalculate_pe [--report PATH]` rebuilds the stored P/E
+range from `DailyBars` and the stored EPS, reruns the verdicts and, with `--report`, `grade_valuation`, with no
+Saxo, Finnhub or SEC call; until a scan has stored release dates it uses the fallback for every quarter. The
+figures quoted above from `docs/research/2026-11-valuation-yardsticks.md` were measured with the 35-day lag and
+are to be re-quoted once the report is regenerated. Open verdict calls keep the valuation recorded when they opened.
 
 **A verdict is retired, and its call ended, only when the ticker leaves `ScreenerRow.everything`.**
 `compute.run` judges rows with `status=ok` and a `fundamentals_at`, each in its own transaction with the
@@ -847,3 +871,20 @@ paged grid. Shelves stay below as "Browse by idea"; the shelf page merges share 
 name and sorts by action (`lib/shelfRows.js`). Earnings uses the day strip on every width; a day lists the user's names and
 the 15 largest companies, the rest behind one button. What was built and what is left:
 `docs/superpowers/specs/2026-11-15-ui-ux-audit-design.md`.
+
+**One price zone and one 1-year high, everywhere (2026-11-24).** Research, Overview, the MCP verdict tool
+and Discover's cards, filter and counts all judge the price with `rules.price_zone`: the latest close
+against the usual P/E range in dollars, the lines included (at the low line is below the usual P/E, at the
+high line is above it), and a flat or inverted range is not judged. `rules.valuation` takes the row's latest
+close, so the stored grade no longer lags at the close of the last fundamentals refresh while Discover
+judged today's close. The 1-year high is the highest intraday high of the last 252 sessions, and with fewer
+than 252 stored sessions there is none, as on the chart, the shelf cards and the Signal Lab
+(`verdicts/price_line.py`).
+
+**Every input carries its date (2026-11-24).** "Fundamentals as of" moves only when Finnhub's reply carried
+the history series; a reply with metrics but no series keeps the previous date, so a thin answer can no longer
+make old figures look fresh. Each verdict stores the newest quarter the P/E already counts (released, or past the
+40/60-day fallback) and that quarter's SEC release date (`StockVerdict.fundamental_period`, `published_on`, from `research.valuation.latest_quarter`).
+Research's answer card reads close date, quarter, release date and last fetch, and says "unknown" for any it
+lacks; the Discover cards date their close. The close date is `research.technicals.close_date` everywhere: the
+latest stored bar, and only when its close is the row's last close.

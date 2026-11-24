@@ -47,7 +47,7 @@ class ComputeTest(TestCase):
         )
 
     def test_verdict_carries_grades_levels_and_row_figures(self):
-        make_row('AAPL')
+        make_row('AAPL', last_close=90.0)
 
         compute.run(today=DAY_ONE)
 
@@ -56,7 +56,7 @@ class ComputeTest(TestCase):
         self.assertEqual(
             (verdict.current_pe, verdict.cheap_below, verdict.expensive_above), (18, 100.0, 150.0),
         )
-        self.assertEqual((verdict.last_close, verdict.pct_vs_ma200), (100.0, 4.5))
+        self.assertEqual((verdict.last_close, verdict.pct_vs_ma200), (90.0, 4.5))
         self.assertEqual(verdict.as_of, date(2026, 11, 10))
         self.assertEqual(len(verdict.checks), 7)
         self.assertEqual(verdict.name, 'AAPL Inc')
@@ -81,13 +81,26 @@ class ComputeTest(TestCase):
 
     def test_verdict_keeps_a_weekly_price_line_and_the_year_high_from_the_stored_bars(self):
         row = make_row('AAPL')
-        DailyBars.objects.create(row=row, bars=[[f'd{i}', 1, 1, 1, float(i), 1] for i in range(1, 21)])
+        DailyBars.objects.create(row=row, bars=[[f'd{i}', 1, i + 0.5, 1, float(i), 1] for i in range(1, 253)])
 
         compute.run(today=DAY_ONE)
 
         verdict = StockVerdict.objects.get(ticker='AAPL')
-        self.assertEqual(verdict.spark, [5.0, 10.0, 15.0, 20.0])
-        self.assertEqual(verdict.high_1y, 20.0)
+        self.assertEqual(verdict.spark[-3:], [242.0, 247.0, 252.0])
+        self.assertEqual(verdict.high_1y, 252.5)
+
+    def test_verdict_keeps_the_latest_quarter_and_its_filing_date(self):
+        history = {**STRONG_HISTORY, 'quarterly_eps': [['2026-06-30', 1.0], ['2026-09-30', 1.2]],
+                   'eps_released': {'2026-09-30': '2026-10-30'}}
+        make_row('AAPL', fundamentals_history=history)
+        make_row('MSFT', fundamentals_history={**history, 'eps_released': {}})
+
+        compute.run(today=date(2026, 11, 15))
+
+        apple = StockVerdict.objects.get(ticker='AAPL')
+        self.assertEqual((apple.fundamental_period, apple.published_on), (date(2026, 9, 30), date(2026, 10, 30)))
+        microsoft = StockVerdict.objects.get(ticker='MSFT')
+        self.assertEqual((microsoft.fundamental_period, microsoft.published_on), (date(2026, 9, 30), None))
 
     def test_a_row_without_stored_bars_has_no_price_line(self):
         make_row('AAPL')
@@ -124,7 +137,7 @@ class ComputeTest(TestCase):
         self.assertFalse(VerdictCall.objects.exists())
 
     def test_a_fair_or_expensive_price_still_opens_a_call(self):
-        make_row('AAPL', pe_history=FAIR)
+        make_row('AAPL', pe_history=FAIR, last_close=125.0)
 
         compute.run(today=DAY_ONE)
 
@@ -262,19 +275,6 @@ class ComputeTest(TestCase):
         self.assertEqual(list(VerdictCall.objects.values()), calls)
 
 
-def quarters(count=20, last=date(2026, 9, 30)):
-    ends = []
-    year, month = last.year, last.month
-    for _ in range(count):
-        ends.append(date(year, month, 30 if month in (6, 9) else 31))
-        month -= 3
-        if month < 1:
-            month += 12
-            year -= 1
-    ends.reverse()
-    return [(end, 1.0 + index * 0.1) for index, end in enumerate(ends)]
-
-
 class PercentilesStoredTest(TestCase):
     def test_stores_the_pe_percentiles(self):
         pe = {'p25': 20.0, 'p75': 30.0, 'current': 25.0, 'eps_ttm': 4.0, 'weeks': 200}
@@ -298,16 +298,3 @@ class PercentilesStoredTest(TestCase):
         verdict = StockVerdict.objects.get()
         self.assertIsNone(verdict.pe_p25)
         self.assertIsNone(verdict.pe_p75)
-
-
-class QuarterlyEpsTest(TestCase):
-    def test_unusable_entries_are_skipped_and_duplicate_period_ends_keep_the_last(self):
-        clean = quarters()
-        entries = [[end.isoformat(), value] for end, value in clean]
-        entries.insert(3, [clean[5][0].isoformat(), 99.0])
-        entries.insert(0, ['2020-03-31', None])
-        entries.insert(0, ['not a date', 1.0])
-        entries.insert(0, ['2020-06-30', 'n/a'])
-        row = make_row('AAPL', fundamentals_history={'quarterly_eps': entries})
-
-        self.assertEqual(sorted(compute.quarterly_eps(row)), clean)

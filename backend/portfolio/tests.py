@@ -136,6 +136,12 @@ class PortfolioAPITest(APITestCase):
         response = self.client.get('/api/portfolio/positions/')
         self.assertEqual(response.status_code, 401)
 
+    def test_deleting_the_account_history_clears_it_for_this_user(self):
+        with patch('portfolio.views.account_performance.forget') as forget:
+            response = self.client.delete('/api/portfolio/account-history/')
+        self.assertEqual(response.status_code, 204)
+        forget.assert_called_once_with(user=self.user)
+
 
 class PortfolioValuationTrustTest(TestCase):
     """The broker's figure is preferred, but only while it is evidence."""

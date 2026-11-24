@@ -1,7 +1,5 @@
-from datetime import timedelta
 from statistics import median
 
-REPORT_LAG_DAYS = 35
 ONE_OFF_HIGH = 2.5
 ONE_OFF_LOW = 0.4
 GROWTH_YEARS = 3
@@ -20,11 +18,11 @@ def _adjusted(values):
     return adjusted
 
 
-def _ttm_points(quarterly_eps):
-    ordered = sorted(quarterly_eps, key=lambda quarter: quarter[0])
+def _ttm_points(published_eps):
+    ordered = sorted(published_eps, key=lambda quarter: quarter[0])
     adjusted = _adjusted([value for _, value in ordered])
     return [
-        (ordered[index][0] + timedelta(days=REPORT_LAG_DAYS), sum(adjusted[index - 3:index + 1]))
+        (ordered[index][0], sum(adjusted[index - 3:index + 1]))
         for index in range(3, len(ordered))
     ]
 
@@ -33,8 +31,8 @@ def _line_end(known):
     return {'from': known.isoformat(), 'price': None, 'pe': None, 'growth': None, 'eps_ttm': None, 'capped': False}
 
 
-def steps(quarterly_eps):
-    points = _ttm_points(quarterly_eps)
+def steps(published_eps):
+    points = _ttm_points(published_eps)
     result = []
     lookback = GROWTH_YEARS * 4
     for index, (known, ttm) in enumerate(points):

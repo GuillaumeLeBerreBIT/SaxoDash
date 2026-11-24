@@ -2,7 +2,7 @@ import { Info } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { reasonsLine } from '../../lib/discover'
-import { PAGE_SIZE, checksLine, priceLine, qualityCount } from '../../lib/discoverBrowse'
+import { PAGE_SIZE, checksLine, fallLine, priceLine, qualityCount } from '../../lib/discoverBrowse'
 import { fmtDate, fmtMoney } from '../../lib/format'
 import { displayName } from '../../lib/names'
 import { hasPriceRange } from '../../lib/priceBar'
@@ -15,10 +15,9 @@ import ChartLink from '../ChartLink'
 
 const GRID = 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4'
 
-function reason(stock, screen) {
+function reason(stock) {
   if (stock.reasons?.length) return reasonsLine(stock.reasons)
   if (stock.fund_count) return `${stock.fund_count} tracked funds opened or added to positions in the quarter ending ${fmtDate(stock.fund_quarter)}.`
-  if (screen === 'pullbacks') return `${Math.round(stock.below_high_pct)}% below its 1-year high. ${checksLine(stock)}`
   return checksLine(stock)
 }
 
@@ -42,13 +41,19 @@ function RangeGuide() {
   )
 }
 
-function TablePriceContext({ stock }) {
-  const line = priceLine(stock)
-  if (hasPriceRange(stock.cheap_below, stock.expensive_above)) return line ?? '—'
-  return <>{line}<div className="text-ink-3">P/E range unavailable</div></>
+function priceContextLines(stock, showFall) {
+  const lines = [priceLine(stock), showFall ? fallLine(stock) : null]
+  return lines.filter((text, index) => text && lines.indexOf(text) === index)
 }
 
-function ResultsTable({ stocks, screen }) {
+function TablePriceContext({ stock, showFall }) {
+  const lines = priceContextLines(stock, showFall)
+  const text = lines.map((line) => <div key={line}>{line}</div>)
+  if (hasPriceRange(stock.cheap_below, stock.expensive_above)) return lines.length ? text : '—'
+  return <>{text}<div className="text-ink-3">P/E range unavailable</div></>
+}
+
+function ResultsTable({ stocks, screen, showFall }) {
   return (
     <DataTable label="Matching stocks" frameClassName="sd-panel rounded-[14px] bg-pane">
       <thead><tr><Th>Company</Th><Th align="right">Closing price</Th><Th>Price context</Th><Th>Screen evidence</Th><Th>Watchlists</Th></tr></thead>
@@ -62,10 +67,10 @@ function ResultsTable({ stocks, screen }) {
             <div className="text-ink-3">{[stock.ticker, stock.sector].filter(Boolean).join(' · ')}</div>
           </Td>
           <Td align="right" className="num">{fmtMoney(stock.last_close, 'USD')}<div className="text-ink-3">{stock.close_date ? fmtDate(stock.close_date) : 'Close date unavailable'}</div></Td>
-          <Td><TablePriceContext stock={stock} /></Td>
+          <Td><TablePriceContext stock={stock} showFall={showFall} /></Td>
           <Td className="min-w-40 whitespace-normal">
             {screen === 'strong' && <div className="num font-semibold">{qualityCount(stock)}</div>}
-            {reason(stock, screen)}
+            {reason(stock)}
           </Td>
           <Td>
             <div className="flex items-center gap-1">
@@ -79,7 +84,7 @@ function ResultsTable({ stocks, screen }) {
   )
 }
 
-export default function BrowseResults({ pages, screen, layout, health, onClear, onMore }) {
+export default function BrowseResults({ pages, screen, showFall = false, layout, health, onClear, onMore }) {
   const stocks = [...new Map(pages.flatMap((page) => page.data?.stocks ?? []).map((stock) => [stock.ticker, stock])).values()]
   const total = pages[0].data?.total ?? 0
   const failed = pages.find((page) => page.error)
@@ -93,10 +98,10 @@ export default function BrowseResults({ pages, screen, layout, health, onClear, 
           {stocks.some(stock => hasPriceRange(stock.cheap_below, stock.expensive_above)) && <RangeGuide />}
         </div>
       ) : null}
-      {stocks.length > 0 && (layout === 'table' ? <ResultsTable stocks={stocks} screen={screen} /> : (
+      {stocks.length > 0 && (layout === 'table' ? <ResultsTable stocks={stocks} screen={screen} showFall={showFall} /> : (
         <div className={GRID}>
           {stocks.map((stock) => (
-            <StockCard key={stock.ticker} stock={stock} note={reason(stock, screen)} qualitySummary={screen === 'strong' ? qualityCount(stock) : null}
+            <StockCard key={stock.ticker} stock={stock} note={reason(stock)} showFall={showFall} qualitySummary={screen === 'strong' ? qualityCount(stock) : null}
               className="[content-visibility:auto] [contain-intrinsic-size:auto_320px]" />
           ))}
         </div>

@@ -1,11 +1,10 @@
 import statistics
 from bisect import bisect_left, bisect_right
-from datetime import date, timedelta
+from datetime import date
 
 from research.valuation import MIN_PE_WEEKS, PE_WINDOW_BARS, trailing_pe
 
 from . import yardsticks_growth
-from .yardsticks_growth import REPORT_LAG_DAYS
 
 GROWTH_CHEAP = 0.9
 GROWTH_EXPENSIVE = 1.1
@@ -17,10 +16,9 @@ def _month_starts(dates):
     return [i for i, day in enumerate(dates) if i == 0 or day[:7] != dates[i - 1][:7]]
 
 
-def _daily_pe(series, quarterly_eps):
-    known = [(period + timedelta(days=REPORT_LAG_DAYS), value) for period, value in quarterly_eps]
+def _daily_pe(series, published_eps):
     closes = [(date.fromisoformat(day), close) for day, close in zip(series.dates, series.closes)]
-    return [pe for _, pe in trailing_pe(closes, known)]
+    return [pe for _, pe in trailing_pe(closes, published_eps)]
 
 
 def _week_ends(dates):
@@ -44,11 +42,11 @@ def _growth_step(line, starts, day):
     return line[found - 1] if found else None
 
 
-def monthly_flags(series, quarterly_eps):
+def monthly_flags(series, published_eps):
     flags = {key: bytearray(len(series)) for key in KEYS}
-    daily = _daily_pe(series, quarterly_eps)
+    daily = _daily_pe(series, published_eps)
     ends = _week_ends(series.dates)
-    line = yardsticks_growth.steps(quarterly_eps)
+    line = yardsticks_growth.steps(published_eps)
     starts = [step['from'] for step in line]
     for index in _month_starts(series.dates):
         pe = daily[index]
