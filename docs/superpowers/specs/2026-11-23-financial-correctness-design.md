@@ -26,14 +26,13 @@ The MCP tools call the same code as the pages, so Claude Desktop repeats every o
 
 ## Solution
 
-Fix the numbers about the owner's own money first (group A), release, then fix the research numbers (group
-B) with a one-off recalculation of everything already stored, release again.
+Fix the numbers about the owner's own money (group A) and the research numbers (group B), release both
+together, then run the one-off recalculation of everything already stored.
 
 - A sync that cannot read every row keeps the last complete set of Positions and reports the sync as
   incomplete. Only a reply that is fully understood can remove a Position.
 - Analytics shows the Investment Return as Saxo measures it, time-weighted, so a deposit or withdrawal changes
-  the Portfolio Value but never the Investment Return. This revives work built on 2026-10-29 and never
-  merged.
+  the Portfolio Value but never the Investment Return. This builds on the 2026-10-29 work, merged in PR #85.
 - Instrument search finds one-letter tickers, and chart state follows the Instrument.
 - Earnings count in the P/E only from the day they were published.
 - Copy Performance treats each amendment as new information on the day it was filed, and a share change that
@@ -150,7 +149,7 @@ B) with a one-off recalculation of everything already stored, release again.
 ## Implementation Decisions
 
 - **Delivery**: one branch and one pull request into `develop` per item, each carrying its acceptance test.
-  `develop` is released to `main` after A1, A2 and A4 (search part) are merged, and again after B.
+  `develop` is released to `main` once, after B, together with A (story 40).
 - **Sync (A1)**: the position sync counts the rows it could not map. If any row failed, or the reply has no
   positions field, the sync upserts the rows it understood, deletes nothing, and records itself as incomplete
   through the existing sync-run record. Pruning happens only on a fully mapped reply, including a genuinely
