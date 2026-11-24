@@ -113,6 +113,11 @@ export function priceLine(stock) {
   return null
 }
 
+export function fallLine(stock) {
+  if (stock.below_high_pct == null || stock.below_high_pct <= 0) return null
+  return `${Math.round(stock.below_high_pct)}% below its 1-year high`
+}
+
 const pairs = new Intl.ListFormat('en', { type: 'conjunction' })
 
 function checkNames(labels = []) {

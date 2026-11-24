@@ -186,7 +186,7 @@ export default function Discover() {
             <ScreenChooser screen={screen} data={data} onChange={(value) => update({ ...typed, sort: defaultSort(value) }, value)} />
             <Segmented label="Results layout" options={LAYOUTS} value={layout} onChange={(value) => update(typed, screen, value, depth)} />
           </div>
-          <BrowseResults pages={pages} layout={layout} screen={screen} health={data?.health}
+          <BrowseResults pages={pages} layout={layout} screen={screen} showFall={screen === 'pullbacks' || typed.minFall != null} health={data?.health}
             onClear={() => update(EMPTY_FILTERS, 'all')} onMore={() => update(typed, screen, layout, depth + 1)} />
         </div>
       </div>

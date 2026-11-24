@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { EMPTY_FILTERS, browseQuery, checksLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, qualityCount, toggled } from './discoverBrowse'
+import { EMPTY_FILTERS, browseQuery, checksLine, fallLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, qualityCount, toggled } from './discoverBrowse'
 
 describe('filters and the URL', () => {
   it('round-trips through search params', () => {
@@ -50,6 +50,13 @@ describe('card lines', () => {
     expect(priceLine({ valuation: 'expensive' })).toBe('Above its usual P/E range')
     expect(priceLine({ valuation: 'not_judged', below_high_pct: 31.2 })).toBe('31% below its 1-year high')
     expect(priceLine({ valuation: 'not_judged' })).toBeNull()
+  })
+
+  it('states the fall from the 1-year high whatever the P/E zone, and only when there is one', () => {
+    expect(fallLine({ valuation: 'fair', below_high_pct: 38.4 })).toBe('38% below its 1-year high')
+    expect(fallLine({ valuation: 'cheap', below_high_pct: 25 })).toBe('25% below its 1-year high')
+    expect(fallLine({ valuation: 'fair', below_high_pct: 0 })).toBeNull()
+    expect(fallLine({ valuation: 'fair', below_high_pct: null })).toBeNull()
   })
 
   it('counts only assessed checks and leaves missing counts out', () => {

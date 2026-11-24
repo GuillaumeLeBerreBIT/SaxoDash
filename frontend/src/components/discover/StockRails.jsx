@@ -20,7 +20,7 @@ function RailSkeleton() {
   )
 }
 
-function Rail({ title, sub, total, seeAll, query, notes }) {
+function Rail({ title, sub, total, seeAll, query, notes, showFall = false }) {
   const stocks = query.data?.stocks ?? []
   if (query.isSuccess && stocks.length === 0) return null
   return (
@@ -41,7 +41,7 @@ function Rail({ title, sub, total, seeAll, query, notes }) {
       ) : (
         <div className={GRID}>
           {stocks.map((stock) => (
-            <StockCard key={stock.ticker} stock={stock} note={notes?.(stock)} className={ITEM} />
+            <StockCard key={stock.ticker} stock={stock} note={notes?.(stock)} showFall={showFall} className={ITEM} />
           ))}
         </div>
       )}
@@ -71,7 +71,7 @@ export default function StockRails() {
   return (
     <div className="flex flex-col gap-10">
       <Rail title={opportunities.title} sub={opportunities.sub} total={first.data?.total} seeAll={seeAllFor(opportunities)} query={first} />
-      <Rail title={fell.title} sub={fell.sub} total={second.data?.total} seeAll={seeAllFor(fell)} query={second} />
+      <Rail title={fell.title} sub={fell.sub} total={second.data?.total} seeAll={seeAllFor(fell)} query={second} showFall />
       {bought.size > 0 ? (
         <Rail
           title="Funds are buying"

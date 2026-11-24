@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-import { checksLine, priceLine } from '../../lib/discoverBrowse'
+import { checksLine, fallLine, priceLine } from '../../lib/discoverBrowse'
 import { fmtDate, fmtMoney } from '../../lib/format'
 import { displayName } from '../../lib/names'
 import { hasPriceRange } from '../../lib/priceBar'
@@ -11,8 +11,9 @@ import PriceSpark from './PriceSpark'
 import WatchlistStar from './WatchlistStar'
 import ChartLink from '../ChartLink'
 
-export default function StockCard({ stock, note, qualitySummary, className = '' }) {
+export default function StockCard({ stock, note, qualitySummary, showFall = false, className = '' }) {
   const line = priceLine(stock)
+  const fall = showFall ? fallLine(stock) : null
   const instrument = { uic: stock.uic, assetType: 'Stock' }
   return (
     <article
@@ -54,6 +55,7 @@ export default function StockCard({ stock, note, qualitySummary, className = '' 
         ) : <figcaption className="text-[12px] text-ink-3">P/E range unavailable</figcaption>}
       </figure>
       {line ? <span className="num text-[12px] font-semibold text-ink-2">{line}</span> : null}
+      {fall && fall !== line ? <span className="num text-[12px] font-semibold text-ink-2">{fall}</span> : null}
       <p className="text-[13px] leading-snug text-ink-2">{note ?? checksLine(stock)}</p>
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-line pt-2.5">
         <div className="flex min-w-0 flex-col">
