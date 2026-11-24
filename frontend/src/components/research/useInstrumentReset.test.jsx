@@ -26,6 +26,15 @@ describe('useInstrumentReset', () => {
     expect(result.current).toBe('502:Stock')
   })
 
+  it('does not reset when the first Instrument resolves after the page opened', () => {
+    const reset = vi.fn()
+    const { rerender } = renderHook(({ instrument }) => useInstrumentReset(instrument, reset), {
+      initialProps: { instrument: undefined },
+    })
+    rerender({ instrument: nyse })
+    expect(reset).not.toHaveBeenCalled()
+  })
+
   it('resets when the asset type alone changes', () => {
     const reset = vi.fn()
     const { rerender } = renderHook(({ instrument }) => useInstrumentReset(instrument, reset), {
