@@ -156,7 +156,7 @@ B) with a one-off recalculation of everything already stored, release again.
   empty one. The Saxo client distinguishes "no positions field" from "an empty list" instead of defaulting to
   an empty list. Entry trades follow the same rule because they come from the same fetch. Paged replies are
   followed to the end before deciding.
-- **Investment Return (A2)**: revive commits `da1197f` and `c61734e`, rebased onto `develop`. Analytics reads
+- **Investment Return (A2)**: built on `fix/financial-correctness-a` (merged as PR #85). Analytics reads
   Saxo's account performance timeseries (time-weighted, daily since the account opened) through a portfolio
   module, runs the existing metrics on the growth of one euro, caches it for an hour, and serves the last good
   history with a dated warning when Saxo cannot answer. Calendar years and year to date start at the previous
@@ -168,8 +168,8 @@ B) with a one-off recalculation of everything already stored, release again.
   resets key on the Instrument (uic and asset type), not the ticker. The broader collision work (two listings
   sharing a ticker across boards, saved lists and targets) and the 1,000-row transaction export are after B.
 - **P/E dating (B1)**: each quarterly EPS point carries the date it became public. That date is the EDGAR
-  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise the quarter end
-  plus 40 days (plus 60 for a fiscal-year end). The trailing P/E and the percentile range include a quarter
+  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise 40 days after the
+  quarter end, or 60 days after a fiscal-year end. The trailing P/E and the percentile range include a quarter
   only from that date. Everything downstream reads the same history: the Valuation Grade, the Cheap/Expensive
   Zones, the yardsticks, the verdict and Discover. A foreign filer with no EDGAR release uses the fallback.
 - **Copy Performance (B2)**: the replay builds one period per filing, each with the holdings that filing
