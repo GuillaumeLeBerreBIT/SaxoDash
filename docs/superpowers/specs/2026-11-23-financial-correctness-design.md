@@ -94,7 +94,7 @@ together, then run the one-off recalculation of everything already stored.
     that the usual P/E range never uses a number nobody could have known on that day.
 21. As the owner, I want the publication date to be the company's earnings release when the app knows it, so
     that the P/E changes on the real report day.
-22. As the owner, I want a conservative fallback when the release date is unknown (40 days after a quarter, 60
+22. As the owner, I want a conservative fallback when the release date is unknown (45 days after a quarter, 60
     after a fiscal year), so that an unknown date never counts too early.
 23. As the owner, I want the Cheap Zone and Expensive Zone on the candles to use only earnings published by each
     date, so that the bands are what I would have seen at the time.
@@ -151,7 +151,7 @@ together, then run the one-off recalculation of everything already stored.
 - **Delivery**: one branch and one pull request into `develop` per item, each carrying its acceptance test.
   `develop` is released to `main` once, after B, together with A (story 40).
 - **Sync (A1)**: the position sync counts the rows it could not map. If any row failed, or the reply has no
-  positions field, the sync upserts the rows it understood, deletes nothing, and records itself as incomplete
+  positions field, the sync writes no positions and deletes nothing, still writes the entry trades it understood, and records itself as incomplete
   through the existing sync-run record. Pruning happens only on a fully mapped reply, including a genuinely
   empty one. The Saxo client distinguishes "no positions field" from "an empty list" instead of defaulting to
   an empty list. Entry trades follow the same rule because they come from the same fetch. Paged replies are
@@ -168,15 +168,16 @@ together, then run the one-off recalculation of everything already stored.
   resets key on the Instrument (uic and asset type), not the ticker. The broader collision work (two listings
   sharing a ticker across boards, saved lists and targets) and the 1,000-row transaction export are after B.
 - **P/E dating (B1)**: each quarterly EPS point carries the date it became public. That date is the EDGAR
-  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise 40 days after the
-  quarter end, or 60 days after a fiscal-year end. The trailing P/E and the percentile range include a quarter
+  results-release date the earnings module already finds (8-K item 2.02) when known, otherwise 45 days after the
+  quarter end (the latest 10-Q deadline, so a late small-cap filing is not counted early), or 60 days after a fiscal-year end. The trailing P/E and the percentile range include a quarter
   only from that date. Everything downstream reads the same history: the Valuation Grade, the Cheap/Expensive
   Zones, the yardsticks, the verdict and Discover. A foreign filer with no EDGAR release uses the fallback.
 - **Copy Performance (B2)**: the replay builds one period per filing, each with the holdings that filing
   reported, at the first session after its own filed date. An amendment starts a new period on its filed date
   rather than replacing the original's holdings back to the original date. The share-change classifier
-  compares shares and reported value: when shares change by a whole split ratio and the value does not move in
-  proportion, the change is a split and reads as unchanged. The existing rebuild commands for copy performance
+  compares shares and reported value: when shares change by a whole-number ratio and the position value stays within 20% of its
+  previous level, the change is a split and reads as unchanged. A split whose price also rose by more than 20%
+  reads as an addition: that is a known limit, since telling it apart needs split data the app does not hold. The existing rebuild commands for copy performance
   and moves are the recalculation path; new-filing alerts derived from moves are regenerated with them.
 - **House replays (B2)**: the House replay is checked for the same rule (a trade counts from its disclosure
   date, not its transaction date) and fixed the same way if it does not hold.
@@ -193,7 +194,8 @@ together, then run the one-off recalculation of everything already stored.
   no action. Mixed, weak and unknown are unchanged; open calls keep the grade they opened with.
 - **Usual P/E range on candles (follow-up after B, owner agreed 2026-11-24)**: drawn day by day from the range as
   it stood on each candle and B1's release dates, neutral colours, off by default, toggled from Analysis. It
-  takes signal colours only if the re-run `grade_valuation` test supports it.
+  takes signal colours only if the re-run `grade_valuation` test shows that colouring the candles changes no
+  Valuation Grade; otherwise it stays neutral.
 - **Glossary**: Investment Return, the Cheap/Expensive Zone dating and the Copy Performance amendment rule are
   already in the glossary. A `docs/decisions.md` entry records that the Investment Return is Saxo's
   time-weighted figure rather than computed from the app's own snapshots.
