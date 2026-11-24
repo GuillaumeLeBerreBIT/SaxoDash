@@ -68,3 +68,10 @@ class ActionTest(SimpleTestCase):
                 result = self.check('unknown', 'cheap', weight)
                 self.assertEqual(result['action'], 'no_verdict')
                 self.assertEqual(result['reason'], 'Not enough figures to judge the quality')
+
+    def test_incomplete_quality_is_no_verdict_held_or_not(self):
+        for weight in (None, 5, 30):
+            with self.subTest(weight=weight):
+                result = self.check('incomplete', 'cheap', weight)
+                self.assertEqual(result['action'], 'no_verdict')
+                self.assertEqual(result['reason'], 'Too many quality checks have no figure to call it strong')

@@ -26,6 +26,7 @@ CREATE_ONLY_FIELDS = frozenset({'sector'})
 class SyncReport(NamedTuple):
     rows: int
     detail: str = ''
+    outcome: str = 'ok'
 
 
 def _upsert_transaction(user, fields):
@@ -50,10 +51,6 @@ SYNC_TASK = {
 }
 
 
-class SyncRefused(Exception):
-    """Raised when a sync would corrupt what it is meant to keep current."""
-
-
 CREDENTIAL_MODES = ('each', 'owner', None)
 NO_OWNER = 'No user is the owner of this instance.'
 
@@ -70,7 +67,7 @@ def _recorded(name, user, fn, leading, args, kwargs, *, atomic):
         raise
     report = result if isinstance(result, SyncReport) else SyncReport(result)
     SyncRun.objects.create(
-        task=name, user=user, outcome='ok', rows=report.rows, detail=report.detail[:200],
+        task=name, user=user, outcome=report.outcome, rows=report.rows, detail=report.detail[:200],
     )
     return report.rows
 
@@ -157,6 +154,15 @@ def synced(fn=None, *, reports_health=True, task=None, credential='each'):
     return run
 
 
+def _maps_both(raw_row):
+    try:
+        mapping.to_position_fields(raw_row)
+        mapping.to_transaction_fields(raw_row)
+    except (KeyError, TypeError, ValueError, ArithmeticError):
+        return False
+    return True
+
+
 def _mapped_rows(raw_rows, to_fields):
     for raw_row in raw_rows:
         try:
@@ -211,33 +217,38 @@ def sync_positions(credential):
     exit trades await a real closed-position payload). One fetch feeding both tables means they
     can no longer silently diverge by running on separate schedules."""
     saxo_positions = client.get_positions(credential.access_token)
+    raw_rows = saxo_positions or []
+    positions = list(_mapped_rows(raw_rows, mapping.to_position_fields))
+    trades = list(_mapped_rows(raw_rows, mapping.to_transaction_fields))
+    unreadable = len(raw_rows) - sum(1 for raw_row in raw_rows if _maps_both(raw_row))
+    complete = saxo_positions is not None and not unreadable
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
     # half-built list of seen tickers.
+    merged = mapping.merge_lots(positions)
+    seen_tickers = [fields['ticker'] for fields in merged]
     with transaction.atomic():
-        seen_tickers = []
-        for fields in mapping.merge_lots(_mapped_rows(saxo_positions, mapping.to_position_fields)):
-            synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
-            Position.objects.update_or_create(
-                user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
-            )
-            seen_tickers.append(fields['ticker'])
+        if complete:
+            for fields in merged:
+                synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
+                Position.objects.update_or_create(
+                    user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
+                )
+            Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
 
-        # Saxo returning nothing is a real "you hold nothing" and should prune.
-        # Rows that all failed to map is a bug on our side, and pruning against
-        # it would delete the whole book.
-        if saxo_positions and not seen_tickers:
-            raise SyncRefused(
-                f'Saxo returned {len(saxo_positions)} positions and none could be '
-                f'mapped; refusing to prune the portfolio to empty.'
-            )
-
-        Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
-
-        for fields in _mapped_rows(saxo_positions, mapping.to_transaction_fields):
+        for fields in trades:
             _upsert_transaction(credential.user, fields)
 
-    return len(seen_tickers)
+    if complete:
+        return len(seen_tickers)
+    return SyncReport(len(seen_tickers), _incomplete_detail(saxo_positions, unreadable), outcome='incomplete')
+
+
+def _incomplete_detail(saxo_positions, unreadable):
+    if saxo_positions is None:
+        return 'Saxo sent no positions field; every position was kept.'
+    total = len(saxo_positions)
+    return f'Read {total - unreadable} of {total} Saxo positions; positions missing from the reply were kept.'
 
 
 @shared_task(**SYNC_TASK)

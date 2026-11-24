@@ -1,3 +1,5 @@
+from datetime import date
+
 RSI_PERIOD = 14
 RVOL_WINDOW = 20
 YEAR_SESSIONS = 252
@@ -88,3 +90,15 @@ def technical_fields(bars):
     for name, sessions in CHANGE_SESSIONS.items():
         fields[name] = _pct(last_close, closes[-1 - sessions]) if len(closes) > sessions else None
     return fields
+
+
+def close_date(row):
+    if row.last_close is None or not row.recent_closes:
+        return None
+    bar = row.recent_closes[-1]
+    if isinstance(bar, dict) and bar.get('close') == row.last_close:
+        try:
+            return date.fromisoformat(bar['date'])
+        except (KeyError, TypeError, ValueError):
+            return None
+    return None

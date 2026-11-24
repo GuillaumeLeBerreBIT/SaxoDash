@@ -72,7 +72,7 @@ def last_successful_sync(user):
 
 
 # Weakest first, so the badge reflects the worst thing currently happening.
-_OUTCOME_RANK = ['failed', 'skipped', 'ok']
+_OUTCOME_RANK = ['failed', 'incomplete', 'skipped', 'ok']
 
 
 SYNC_TASKS = ('sync_positions', 'sync_closed_positions', 'sync_account_balance')

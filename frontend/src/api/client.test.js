@@ -18,6 +18,7 @@ import {
   getPerformance,
   getChart,
   getQuotes,
+  clearAccountHistory,
   removeWatchlistItem,
   createWatchlist,
   startDiscoverScan,
@@ -461,6 +462,16 @@ describe('connectEnableBanking', () => {
 describe('research endpoints', () => {
   beforeEach(() => {
     localStorage.setItem('access', 'valid-access')
+  })
+
+  it('clears the Saxo account history with a DELETE and returns null on 204', async () => {
+    window.fetch = vi.fn().mockResolvedValue({ ok: true, status: 204, json: async () => { throw new Error('no body') } })
+
+    await expect(clearAccountHistory()).resolves.toBeNull()
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/portfolio/account-history/'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
   })
 
   it('returns null instead of throwing on a 204 delete', async () => {

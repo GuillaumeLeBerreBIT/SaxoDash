@@ -105,6 +105,15 @@ class VerdictApiTests(APITestCase):
         self.assertFalse(detail['held'])
         self.assertIsNone(detail['weight_pct'])
 
+    def test_the_detail_dates_each_input(self):
+        verdict('AAA', close_date=date(2026, 11, 20), fundamental_period=date(2026, 9, 30), published_on=date(2026, 10, 30))
+        self.client.force_authenticate(self.bob)
+        detail = self.client.get('/api/verdicts/AAA/').json()['verdict']
+        self.assertEqual(
+            (detail['as_of'], detail['close_date'], detail['fundamental_period'], detail['published_on']),
+            ('2026-11-10', '2026-11-20', '2026-09-30', '2026-10-30'),
+        )
+
     def test_a_user_without_positions_holds_nothing(self):
         verdict('AAA')
         self.client.force_authenticate(self.bob)
@@ -251,15 +260,15 @@ class BrowseTests(APITestCase):
         self.assertIsNone(second['revenue_growth_5y'])
         self.assertEqual(second['checks_answered'], 0)
 
-    def test_browse_uses_the_displayed_range_for_labels_filters_and_facets(self):
-        for ticker, close in [('LOW', 19.99), ('LEFT', 20), ('RIGHT', 28), ('SUB', 28.001), ('HIGH', 28.01)]:
+    def test_browse_judges_the_close_by_the_research_rule_lines_included(self):
+        for ticker, close in [('LOW', 19.99), ('LEFT', 20), ('MID', 24), ('RIGHT', 28), ('SUB', 28.001), ('HIGH', 28.01)]:
             listed(ticker, valuation='cheap', last_close=close)
         listed('MISSING', valuation='cheap', last_close=None)
         listed('HALF', valuation='cheap', expensive_above=None)
         listed('INVERTED', valuation='cheap', expensive_above=10)
         listed('FLAT', valuation='cheap', expensive_above=20)
         groups = {
-            'cheap': ['LOW'], 'fair': ['LEFT', 'RIGHT', 'SUB'], 'expensive': ['HIGH'],
+            'cheap': ['LEFT', 'LOW'], 'fair': ['MID'], 'expensive': ['HIGH', 'RIGHT', 'SUB'],
             'not_judged': ['FLAT', 'HALF', 'INVERTED', 'MISSING'],
         }
         for grade, tickers in groups.items():
@@ -289,6 +298,11 @@ class BrowseTests(APITestCase):
         self.assertEqual(facets['valuation'], {'cheap': 1, 'fair': 1})
         self.assertEqual(facets['sector'], {'Information Technology': 1, 'Health Care': 1})
         self.assertEqual(facets['quality'], {'strong': 1})
+
+    def test_can_filter_on_incomplete_quality(self):
+        listed('AAA')
+        listed('BBB', quality='incomplete')
+        self.assertEqual(self.tickers('?quality=incomplete'), ['BBB'])
 
     def test_can_leave_out_held_stocks_and_tickers_already_shown(self):
         listed('AAA', valuation='cheap')

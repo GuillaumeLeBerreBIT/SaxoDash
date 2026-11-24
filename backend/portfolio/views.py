@@ -4,10 +4,16 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from . import insights
+from . import account_performance, insights
 from .models import Position
 from .serializers import PositionSerializer
 from .services import get_portfolio_value, get_positions_value
+
+
+class AccountHistoryView(APIView):
+    def delete(self, request):
+        account_performance.forget(user=request.user)
+        return Response(status=204)
 
 
 class PositionListView(ListAPIView):

@@ -48,6 +48,10 @@ describe('resultWord', () => {
     expect(resultWord({ eps_actual: 1, eps_surprise_pct: 0, date: '2026-11-16' }, MONDAY)).toEqual({ word: 'In line', tone: 'flat' })
   })
 
+  it('reads a reported EPS with no estimate as reported, never in line', () => {
+    expect(resultWord({ eps_actual: 1.2, eps_surprise_pct: null, date: '2026-11-16' }, MONDAY)).toEqual({ word: 'Reported', tone: 'flat' })
+  })
+
   it('says due before the report and waiting after it until the figure arrives', () => {
     expect(resultWord({ eps_actual: null, eps_estimate: 2.5, date: '2026-11-17' }, MONDAY)).toEqual({ word: 'Due', tone: 'flat' })
     expect(resultWord({ eps_actual: null, eps_estimate: 2.5, date: '2026-11-13' }, MONDAY)).toEqual({ word: 'Waiting', tone: 'warn' })
@@ -69,6 +73,11 @@ describe('lastResults', () => {
       { date: '2026-08-01', eps_actual: null, eps_surprise_pct: null },
     ]
     expect(lastResults(history).map((row) => row.word)).toEqual(['Beat', 'In line', 'Beat', 'Beat'])
+  })
+
+  it('names a quarter with no estimate as reported', () => {
+    const history = [{ date: '2026-05-01', eps_actual: 1, eps_surprise_pct: null }]
+    expect(lastResults(history).map((row) => row.word)).toEqual(['Reported'])
   })
 
   it('is empty without history', () => {

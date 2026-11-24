@@ -2,6 +2,7 @@ from datetime import date, timedelta
 
 from django.test import SimpleTestCase
 
+from research.valuation import published_eps
 from signals.series import Series
 from verdicts import yardsticks
 
@@ -52,15 +53,24 @@ class PeRangeFlagsTest(SimpleTestCase):
         self.assertTrue(set(true_at(flags['pe_cheap'])) <= starts | {0})
         self.assertNotIn(month_after, true_at(flags['pe_expensive']))
 
-    def test_a_quarter_ending_twenty_days_before_a_session_is_not_yet_known(self):
+    def loss_quarter_flags(self, days_before, released_after=None):
         days = sessions(700)
         closes = cycling(days)
         month_start = next(i for i in range(600, len(days)) if days[i].month != days[i - 1].month)
         closes[month_start] = 60.0
-        loss_quarter = days[month_start] - timedelta(days=20)
-        eps = [(day, 1.0) for day in quarter_ends(2008, 2013) if day < loss_quarter] + [(loss_quarter, -50.0)]
-        flags = yardsticks.monthly_flags(series(days, closes), eps)
-        self.assertTrue(flags['pe_cheap'][month_start])
+        loss_quarter = days[month_start] - timedelta(days=days_before)
+        quarters = [(day, 1.0) for day in quarter_ends(2008, 2013) if day < loss_quarter - timedelta(days=60)]
+        eps = published_eps(
+            [*quarters, (loss_quarter, -50.0)],
+            released={loss_quarter: loss_quarter + timedelta(days=released_after)} if released_after else None,
+        )
+        return yardsticks.monthly_flags(series(days, closes), eps)['pe_cheap'][month_start]
+
+    def test_a_quarter_ending_thirty_nine_days_before_a_session_is_not_yet_known(self):
+        self.assertTrue(self.loss_quarter_flags(39))
+
+    def test_a_quarter_released_before_the_session_is_known(self):
+        self.assertFalse(self.loss_quarter_flags(20, released_after=5))
 
     def test_flags_on_a_day_never_change_when_later_prices_are_added(self):
         days = sessions(1500)

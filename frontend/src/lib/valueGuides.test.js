@@ -43,6 +43,10 @@ describe('entrySentence', () => {
     expect(entrySentence({ verdict: verdict({ valuation: 'not_judged' }), price: 100 }).why).toBe('Strong company, no valuation yet.')
   })
 
+  it('calls a company with too many missing checks incomplete, not strong', () => {
+    expect(entrySentence({ verdict: verdict({ quality: 'incomplete' }), price: 100 }).why).toMatch(/^Incomplete figures on the company,/)
+  })
+
   it('gives only the stop when there is no size', () => {
     expect(entrySentence({ verdict: verdict(), price: 100, plan: { ...plan, size: null } }).risk)
       .toBe("Stop-loss at US$340.00, 4.6% below today's close.")

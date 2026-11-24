@@ -162,29 +162,111 @@ class SyncPositionsTaskTest(TestCase):
         self.assertFalse(Position.objects.filter(ticker='OLD').exists())
         self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
 
+    def held(self, ticker):
+        return Position.objects.create(
+            user=the_owner(),
+            ticker=ticker, name=ticker, qty=1, avg_cost=Decimal('1'),
+            current_price=Decimal('1'), sector='Uncategorized', type='STOCK', color='#000000',
+        )
+
     @patch('saxo.tasks.client.get_positions')
-    def test_skips_malformed_rows_without_aborting(self, mock_get_positions):
+    def test_an_unreadable_row_keeps_every_position_and_marks_the_sync_incomplete(self, mock_get_positions):
+        self.held('MSFT')
         mock_get_positions.return_value = [{'unexpected': 'shape'}, SAMPLE_POSITION]
+
         tasks.sync_positions()
-        self.assertEqual(Position.objects.count(), 1)
-        self.assertEqual(Transaction.objects.count(), 1)
+
+        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'MSFT'})
+        self.assertEqual(Transaction.objects.get().ticker, 'NVDA')
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'incomplete')
+        self.assertEqual(run.rows, 1)
+        self.assertIn('1 of 2', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_two_rows_each_failing_a_different_mapping_are_both_counted_unread(self, mock_get_positions):
+        position_fails = {**SAMPLE_POSITION, 'PositionId': 'bad-position'}
+        trade_fails = {**SAMPLE_POSITION, 'PositionId': 'bad-trade'}
+        mock_get_positions.return_value = [position_fails, trade_fails, SAMPLE_POSITION]
+        real_position = mapping.to_position_fields
+        real_trade = mapping.to_transaction_fields
+
+        def position_side(raw_row):
+            if raw_row['PositionId'] == 'bad-position':
+                raise KeyError('PositionBase')
+            return real_position(raw_row)
+
+        def trade_side(raw_row):
+            if raw_row['PositionId'] == 'bad-trade':
+                raise KeyError('PositionId')
+            return real_trade(raw_row)
+
+        with patch('saxo.tasks.mapping.to_position_fields', new=position_side), \
+                patch('saxo.tasks.mapping.to_transaction_fields', new=trade_side):
+            tasks.sync_positions()
+
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'incomplete')
+        self.assertIn('Read 1 of 3', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_partial_reply_does_not_overwrite_a_held_position_with_fewer_shares(self, mock_get_positions):
+        self.held('NVDA')
+        Position.objects.filter(ticker='NVDA').update(qty=Decimal('20'))
+        mock_get_positions.return_value = [SAMPLE_POSITION, {'unexpected': 'shape'}]
+
+        tasks.sync_positions()
+
+        self.assertEqual(Position.objects.get(ticker='NVDA').qty, Decimal('20'))
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'incomplete')
 
     @patch('saxo.tasks.client.get_positions')
     def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):
-        # exclude(ticker__in=[]) matches every row, so an unguarded prune here
-        # deletes the whole book on a payload we simply failed to read.
-        Position.objects.create(
-            user=the_owner(),
-            ticker='NVDA', name='NVIDIA', qty=1, avg_cost=Decimal('1'),
-            current_price=Decimal('1'), sector='Uncategorized', type='STOCK',
-            color='#000000',
-        )
+        self.held('NVDA')
         mock_get_positions.return_value = [{'unexpected': 'shape'}]
-        with self.assertRaises(tasks.SyncRefused):
-            tasks.sync_positions()
+
+        tasks.sync_positions()
 
         self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
-        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'failed')
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'incomplete')
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_reply_without_a_positions_field_deletes_nothing(self, mock_get_positions):
+        self.held('NVDA')
+        mock_get_positions.return_value = None
+
+        tasks.sync_positions()
+
+        self.assertTrue(Position.objects.filter(ticker='NVDA').exists())
+        run = SyncRun.objects.get(task='sync_positions')
+        self.assertEqual(run.outcome, 'incomplete')
+        self.assertEqual(run.rows, 0)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_row_only_the_trade_ledger_cannot_read_still_keeps_sold_positions(self, mock_get_positions):
+        self.held('MSFT')
+        no_trade_id = {key: value for key, value in SAMPLE_POSITION.items() if key != 'PositionId'}
+        mock_get_positions.return_value = [no_trade_id]
+
+        tasks.sync_positions()
+
+        self.assertTrue(Position.objects.filter(ticker='MSFT').exists())
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'incomplete')
+
+    @patch('saxo.client._get')
+    def test_a_paged_reply_is_read_to_the_last_page_before_pruning(self, get):
+        self.held('OLD')
+        self.held('MSFT')
+        base = client._api_base_url()
+        get.side_effect = [
+            {'Data': [SAMPLE_POSITION], '__next': f'{base}/port/v1/positions/me?$skip=1'},
+            {'Data': [UNENTITLED_POSITION]},
+        ]
+
+        tasks.sync_positions()
+
+        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'NVDA', 'MSFT'})
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'ok')
 
     @patch('saxo.tasks.client.get_positions')
     def test_an_empty_saxo_response_still_prunes(self, mock_get_positions):

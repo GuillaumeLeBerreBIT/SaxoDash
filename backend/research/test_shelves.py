@@ -109,10 +109,11 @@ class ShelfTextTest(TestCase):
         self.assertEqual(shelves.order(shelves.by_key('profitable-below-200d')), 'Ordered by market cap, highest first')
 
     def test_card_reasons_follow_card_fields_with_short_labels(self):
-        stock = profitable('ACME', last_close=50.0, change_1d=-1.5, sector='Industrials', sparkline=[1.0, 2.0])
+        stock = profitable('ACME', last_close=50.0, change_1d=-1.5, sector='Industrials', sparkline=[1.0, 2.0],
+                           recent_closes=[{'date': '2026-11-20', 'close': 50.0}])
         self.assertEqual(shelves.card(stock, shelves.by_key('profitable-below-200d')), {
             'ticker': 'ACME', 'name': 'ACME', 'uic': stock.uic, 'asset_type': 'Stock', 'sector': 'Industrials',
-            'last_close': 50.0, 'change_1d': -1.5, 'sparkline': [1.0, 2.0],
+            'last_close': 50.0, 'close_date': '2026-11-20', 'change_1d': -1.5, 'sparkline': [1.0, 2.0],
             'reasons': [
                 {'field': 'roe', 'label': 'ROE', 'value': 20.0, 'format': 'pct'},
                 {'field': 'net_margin', 'label': 'Margin', 'value': 15.0, 'format': 'pct'},
@@ -120,6 +121,11 @@ class ShelfTextTest(TestCase):
                 {'field': 'pct_vs_ma200', 'label': 'vs 200D', 'value': -6.0, 'format': 'signed_pct'},
             ],
         })
+
+
+    def test_a_card_whose_close_is_not_the_latest_bar_has_no_close_date(self):
+        stock = profitable('ACME', last_close=50.0, recent_closes=[{'date': '2026-11-20', 'close': 49.0}])
+        self.assertIsNone(shelves.card(stock, shelves.by_key('profitable-below-200d'))['close_date'])
 
 
 class CatalogueTest(TestCase):

@@ -92,6 +92,7 @@ export default function SaxoConnectionStatus({ compact = false }) {
 const SYNC_OUTCOME_NOTE = {
   skipped: 'The last sync could not run, so this data may be stale',
   failed: 'The last sync failed, so this data may be stale',
+  incomplete: 'The last sync could not read every position, so these figures are from the last complete sync',
 }
 
 const ACTIONABLE_KINDS = new Set(['needs_reauth', 'not_connected', 'reconnecting'])

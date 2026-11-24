@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import { SPARKLINE_PERIOD, reasonParts } from '../../lib/discover'
-import { fmtMoney } from '../../lib/format'
+import { fmtDate, fmtMoney } from '../../lib/format'
 import { researchHref } from '../../lib/research'
 import { DayChange, InstrumentLogo } from '../ui'
 import Sparkline from './Sparkline'
@@ -26,6 +26,7 @@ export default function DiscoverCard({ item, className = '' }) {
           <span className="num text-[13px] text-ink">{fmtMoney(item.last_close, 'USD')}</span>
           <DayChange value={item.change_1d} className="text-[12px]" />
         </div>
+        <div className="text-[11px] text-ink-3">{item.close_date ? `Close · ${fmtDate(item.close_date)}` : 'Close date unavailable'}</div>
         <ul aria-label={`Why ${item.ticker} is here`} className="mt-1 flex flex-wrap gap-x-2 text-[12px]">
           {item.reasons.map((reason) => {
             const { label, value } = reasonParts(reason)

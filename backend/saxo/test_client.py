@@ -50,6 +50,33 @@ class SaxoClientTest(TestCase):
         result = client.get_positions('token')
         self.assertEqual(result, [{'PositionId': '1'}])
 
+    @patch('saxo.client._get')
+    def test_get_positions_reads_every_page(self, get):
+        base = client._api_base_url()
+        get.side_effect = [
+            {'Data': [{'PositionId': '1'}], '__next': f'{base}/port/v1/positions/me?$skip=1'},
+            {'Data': [{'PositionId': '2'}]},
+        ]
+        self.assertEqual(client.get_positions('token'), [{'PositionId': '1'}, {'PositionId': '2'}])
+        self.assertEqual(get.call_args_list[1].args[1], '/port/v1/positions/me?$skip=1')
+
+    @patch('saxo.client._get', return_value={'__count': 0})
+    def test_get_positions_without_a_data_field_is_not_an_empty_book(self, _get):
+        self.assertIsNone(client.get_positions('token'))
+
+    @patch('saxo.client._get')
+    def test_get_positions_with_a_later_page_missing_its_data_is_not_a_book(self, get):
+        base = client._api_base_url()
+        get.side_effect = [
+            {'Data': [{'PositionId': '1'}], '__next': f'{base}/port/v1/positions/me?$skip=1'},
+            {'__count': 2},
+        ]
+        self.assertIsNone(client.get_positions('token'))
+
+    @patch('saxo.client._get', return_value={'Data': []})
+    def test_get_positions_with_an_empty_data_list_is_an_empty_book(self, _get):
+        self.assertEqual(client.get_positions('token'), [])
+
     @patch('saxo.client.requests.get')
     def test_get_closed_positions_returns_data_list(self, mock_get):
         mock_get.return_value = Mock(ok=True, json=lambda: {'Data': [{'ClosedPositionUniqueId': 1}]})
@@ -241,6 +268,13 @@ class SaxoReportsTest(TestCase):
         get.return_value = {'Data': [{'Uic': 7}]}
         self.assertEqual(client.get_trades_report('token', 'K', '2025-01-01', '2026-10-24'), [{'Uic': 7}])
         self.assertEqual(get.call_args.kwargs['params'], {'FromDate': '2025-01-01', 'ToDate': '2026-10-24'})
+
+    @patch('saxo.client._get')
+    def test_performance_timeseries_asks_for_the_whole_account_history(self, get):
+        get.return_value = {'TimeWeighted': {'Accumulated': []}}
+        self.assertEqual(client.get_performance_timeseries('token', 'K'), {'TimeWeighted': {'Accumulated': []}})
+        self.assertEqual(get.call_args.args[1], '/hist/v4/performance/timeseries')
+        self.assertEqual(get.call_args.kwargs['params'], {'ClientKey': 'K', 'StandardPeriod': 'AllTime'})
 
     @patch('saxo.client._get', return_value={'ClientKey': 'K', 'Name': 'x'})
     def test_client_key(self, _get):

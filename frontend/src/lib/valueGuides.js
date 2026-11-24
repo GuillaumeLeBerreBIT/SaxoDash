@@ -2,7 +2,7 @@ import { fmtEur, fmtMoney } from './format'
 import { rollingHigh, volumeGaps } from './indicators'
 import { actionLabel, actionTone } from './verdicts'
 
-const QUALITY_WORDS = { strong: 'Strong company', mixed: 'Mixed company', weak: 'Weak company', unknown: 'Not enough figures on the company' }
+const QUALITY_WORDS = { strong: 'Strong company', incomplete: 'Incomplete figures on the company', mixed: 'Mixed company', weak: 'Weak company', unknown: 'Not enough figures on the company' }
 const ZONE_WORDS = { cheap: 'P/E below its usual range', fair: 'P/E within its usual range', expensive: 'P/E above its usual range' }
 const NOT_JUDGED = 'Too little P/E history to judge the price.'
 

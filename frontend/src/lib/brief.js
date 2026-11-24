@@ -77,8 +77,17 @@ export function briefItems({ positions, verdicts, total, fundBuys, fundSells, ea
   return items.slice(0, BRIEF_LIMIT)
 }
 
-export function briefHeadline(count) {
+export function briefHeadline(count, { checking = false, unchecked = 0 } = {}) {
+  if (count === 0 && checking) return 'Checking your holdings.'
+  if (count === 0 && unchecked) return 'Not every holding could be checked today.'
   if (count === 0) return 'Nothing in your portfolio needs you today.'
   const amount = WORDS[count] ?? String(count)
   return `${amount} ${count === 1 ? 'thing' : 'things'} to look at in your portfolio today.`
+}
+
+export function checkNote({ checking = false, unchecked = 0 } = {}) {
+  if (checking) return 'Still checking your holdings against the quality rules.'
+  if (!unchecked) return null
+  const holdings = unchecked === 1 ? 'One holding' : `${WORDS[unchecked] ?? unchecked} holdings`
+  return `${holdings} could not be checked against the quality rules, so this list may be incomplete.`
 }

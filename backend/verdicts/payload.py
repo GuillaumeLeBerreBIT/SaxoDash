@@ -32,6 +32,10 @@ def _failed_labels(verdict):
     return [check['label'] for check in verdict.checks if check['status'] == 'fail']
 
 
+def _iso(day):
+    return day.isoformat() if day else None
+
+
 def _summary(verdict, weight, held):
     weight_pct = float(weight or 0) if held else None
     decided = action(verdict.quality, weight_pct, _failed_labels(verdict))
@@ -56,6 +60,9 @@ def _detail(verdict, weight, held):
         'pe_p25': verdict.pe_p25,
         'pe_p75': verdict.pe_p75,
         'last_close': verdict.last_close,
+        'close_date': _iso(verdict.close_date),
+        'fundamental_period': _iso(verdict.fundamental_period),
+        'published_on': _iso(verdict.published_on),
         'pct_vs_ma200': verdict.pct_vs_ma200,
         'held': held,
         'weight_pct': round(float(weight), 1) if weight is not None else None,

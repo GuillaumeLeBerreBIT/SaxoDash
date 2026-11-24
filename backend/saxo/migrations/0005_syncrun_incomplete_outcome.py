@@ -1,0 +1,16 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('saxo', '0004_per_user'),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name='syncrun',
+            name='outcome',
+            field=models.CharField(choices=[('ok', 'Completed'), ('skipped', 'Skipped'), ('incomplete', 'Incomplete'), ('failed', 'Failed')], max_length=10),
+        ),
+    ]

@@ -18,6 +18,8 @@ class StockVerdict(models.Model):
     spark = models.JSONField(default=list, blank=True)
     high_1y = models.FloatField(null=True, blank=True)
     close_date = models.DateField(null=True, blank=True)
+    fundamental_period = models.DateField(null=True, blank=True)
+    published_on = models.DateField(null=True, blank=True)
     as_of = models.DateField(null=True, blank=True)
     computed_at = models.DateTimeField(auto_now=True)
 

@@ -174,6 +174,8 @@ class QualityTest(SimpleTestCase):
         cases = [
             ((5, 1, 0), 'strong'), ((4, 1, 1), 'strong'), ((3, 1, 2), 'mixed'),
             ((2, 3, 1), 'weak'), ((3, 0, 3), 'unknown'), ((2, 2, 2), 'mixed'),
+            ((6, 0, 1), 'strong'), ((4, 0, 3), 'incomplete'), ((5, 0, 2), 'incomplete'), ((4, 1, 2), 'incomplete'),
+            ((3, 2, 2), 'mixed'), ((1, 3, 3), 'weak'),
         ]
         for (passes, fails, unknowns), expected in cases:
             with self.subTest(passes=passes, fails=fails, unknowns=unknowns):
@@ -220,6 +222,25 @@ class ValuationTest(SimpleTestCase):
             with self.subTest(key=key):
                 history = {'current': 18, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200, key: 0}
                 self.assertEqual(rules.valuation(stub(pe_history=history))['grade'], 'not_judged')
+
+
+    def test_the_grade_follows_the_latest_close_not_the_refresh_pe(self):
+        row = stub(last_close=95.0, pe_history={'current': 25, 'p25': 20, 'p75': 30, 'eps_ttm': 5, 'weeks': 200})
+        self.assertEqual(rules.valuation(row), {
+            'grade': 'cheap', 'current_pe': 19.0, 'cheap_below': 100.0, 'expensive_above': 150.0,
+        })
+
+
+class PriceZoneTest(SimpleTestCase):
+    def test_boundaries_belong_to_cheap_and_expensive(self):
+        self.assertEqual(rules.price_zone(100.0, 100.0, 150.0), 'cheap')
+        self.assertEqual(rules.price_zone(150.0, 100.0, 150.0), 'expensive')
+        self.assertEqual(rules.price_zone(120.0, 100.0, 150.0), 'fair')
+
+    def test_missing_or_inverted_levels_are_not_judged(self):
+        for args in ((None, 100.0, 150.0), (0, 100.0, 150.0), (120.0, None, 150.0), (120.0, 150.0, 100.0), (100.0, 100.0, 100.0)):
+            with self.subTest(args=args):
+                self.assertEqual(rules.price_zone(*args), 'not_judged')
 
 
 class ThresholdParityTest(SimpleTestCase):

@@ -10,7 +10,7 @@ vi.mock('../research/useWatchlistToggle', () => ({
 
 const item = {
   ticker: 'AAPL', name: 'Apple Inc.', uic: 211, asset_type: 'Stock',
-  last_close: 230.5, change_1d: -1.25, sparkline: [1, 2, 3],
+  last_close: 230.5, close_date: '2026-11-20', change_1d: -1.25, sparkline: [1, 2, 3],
   reasons: [
     { field: 'roe', label: 'ROE', value: 31.2, format: 'pct' },
     { field: 'pct_vs_ma200', label: 'vs 200D', value: -6.4, format: 'signed_pct' },
@@ -29,6 +29,16 @@ describe('DiscoverCard', () => {
     renderCard()
     const reasons = screen.getByRole('list', { name: 'Why AAPL is here' })
     expect(within(reasons).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['ROE 31%', 'vs 200D -6.4%'])
+  })
+
+  it('dates the close it shows', () => {
+    renderCard()
+    expect(screen.getByText('Close · 20 Nov 2026')).toBeInTheDocument()
+  })
+
+  it('says when the close date is unknown', () => {
+    renderCard({ item: { ...item, close_date: null } })
+    expect(screen.getByText('Close date unavailable')).toBeInTheDocument()
   })
 
   it('shows the change with its sign, not colour alone', () => {

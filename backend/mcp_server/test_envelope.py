@@ -43,3 +43,11 @@ class SaxoWarningsTest(TestCase):
         with mock.patch('mcp_server.envelope.connection_state', return_value=ConnectionState(object(), None, False)), \
                 mock.patch('mcp_server.envelope.worst_recent_outcome', return_value='failed'):
             self.assertEqual(len(saxo_warnings(USER)), 1)
+
+    def test_incomplete_sync_says_the_figures_are_from_the_last_complete_sync(self):
+        with mock.patch('mcp_server.envelope.connection_state', return_value=ConnectionState(object(), None, False)), \
+                mock.patch('mcp_server.envelope.worst_recent_outcome', return_value='incomplete'):
+            self.assertEqual(
+                saxo_warnings(USER),
+                ['The last Saxo sync could not read every position, so positions are from the last complete sync.'],
+            )

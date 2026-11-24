@@ -10,10 +10,6 @@ def _weight(value, total):
     return round(value / total * 100, 2) if total else 0.0
 
 
-def _shares(snap):
-    return {key: row['shares'] for key, row in snap.items()}
-
-
 def _total(snap):
     return sum(row['value'] for row in snap.values())
 
@@ -29,7 +25,7 @@ def _first_quarter(investor, quarter_end, snap):
 
 def _compared_quarter(investor, quarter_end, snap, previous_snap):
     total, previous_total = _total(snap), _total(previous_snap)
-    per_key, sold_out = changes.compare(_shares(snap), _shares(previous_snap))
+    per_key, sold_out = changes.compare(snap, previous_snap)
     for key, row in snap.items():
         kind, pct = per_key[key]
         before = previous_snap.get(key)

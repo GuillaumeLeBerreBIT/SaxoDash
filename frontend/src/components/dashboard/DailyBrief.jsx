@@ -36,11 +36,11 @@ export function BriefHero({ headline, summary, day, today = new Date(), classNam
   )
 }
 
-export function BriefList({ items, className = '' }) {
+export function BriefList({ items, note = null, className = '' }) {
   return (
     <Card className={className} title="What to look at">
       {items.length === 0 ? (
-        <p className="text-[14px] text-ink-2">Every holding is inside your cap and passes its checks. Nothing to do today.</p>
+        <p className="text-[14px] text-ink-2">{note ?? 'Every holding is inside your cap and passes its checks. Nothing to do today.'}</p>
       ) : (
         <ul data-testid="brief-items">
           {items.map((item) => (
@@ -60,6 +60,7 @@ export function BriefList({ items, className = '' }) {
           ))}
         </ul>
       )}
+      {items.length > 0 && note ? <p className="mt-2 text-[12px] text-ink-3">{note}</p> : null}
     </Card>
   )
 }

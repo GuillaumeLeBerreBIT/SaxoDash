@@ -16,6 +16,7 @@ export const VALUATION_OPTIONS = [
 
 export const QUALITY_OPTIONS = [
   { value: 'strong', label: 'Strong' },
+  { value: 'incomplete', label: 'Incomplete' },
   { value: 'mixed', label: 'Mixed' },
   { value: 'weak', label: 'Weak' },
 ]
@@ -110,6 +111,11 @@ export function priceLine(stock) {
   if (PRICE_CONTEXT[stock.valuation]) return PRICE_CONTEXT[stock.valuation]
   if (stock.below_high_pct >= 10) return `${Math.round(stock.below_high_pct)}% below its 1-year high`
   return null
+}
+
+export function fallLine(stock) {
+  if (stock.below_high_pct == null || stock.below_high_pct <= 0) return null
+  return `${Math.round(stock.below_high_pct)}% below its 1-year high`
 }
 
 const pairs = new Intl.ListFormat('en', { type: 'conjunction' })

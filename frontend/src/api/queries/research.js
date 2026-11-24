@@ -142,7 +142,7 @@ export function usePositionQuotes(positions = []) {
   return useMemo(() => quotesByUic(data), [data])
 }
 
-const SEARCH_MIN_LENGTH = 2
+const SEARCH_MIN_LENGTH = 1
 
 export function useInstrumentSearch(query, assetTypes = ALL_ASSET_TYPES) {
   // Without this, every keystroke fires its own request - typing a symbol

@@ -1,9 +1,94 @@
+import math
 import statistics
 from bisect import bisect_right
-from datetime import date
+from datetime import date, timedelta
 from django.utils import timezone
 
 QUARTERS_PER_YEAR = 4
+QUARTER_RELEASE_LAG = timedelta(days=45)
+YEAR_END_RELEASE_LAG = timedelta(days=60)
+YEAR_END_TOLERANCE_DAYS = 7
+DAYS_PER_YEAR = 365.2425
+
+
+def _is_year_end(period, year_ends):
+    for end in year_ends:
+        drift = (period - end).days % DAYS_PER_YEAR
+        if min(drift, DAYS_PER_YEAR - drift) <= YEAR_END_TOLERANCE_DAYS:
+            return True
+    return False
+
+
+def published_on(period, released=None, year_end=False):
+    if released is not None:
+        return max(released, period + timedelta(days=1))
+    return period + (YEAR_END_RELEASE_LAG if year_end else QUARTER_RELEASE_LAG)
+
+
+def published_eps(quarterly_eps, released=None, year_ends=()):
+    released = released or {}
+    return sorted(
+        (published_on(period, released.get(period), _is_year_end(period, year_ends)), value)
+        for period, value in quarterly_eps
+    )
+
+
+def _iso_dates(values):
+    found = []
+    for value in values:
+        try:
+            found.append(date.fromisoformat(value))
+        except (TypeError, ValueError):
+            continue
+    return found
+
+
+def _stored_points(entries):
+    parsed = {}
+    for entry in entries or []:
+        try:
+            period, value = entry
+            value = float(value)
+            if not math.isfinite(value):
+                continue
+            parsed[date.fromisoformat(period)] = value
+        except (TypeError, ValueError):
+            continue
+    return list(parsed.items())
+
+
+def stored_releases(fundamentals_history):
+    found = {}
+    for period, day in ((fundamentals_history or {}).get('eps_released') or {}).items():
+        try:
+            found[date.fromisoformat(period)] = date.fromisoformat(day)
+        except (TypeError, ValueError):
+            continue
+    return found
+
+
+def _year_ends(stored):
+    return _iso_dates(row.get('period') for row in stored.get('annual') or [] if isinstance(row, dict))
+
+
+def latest_quarter(fundamentals_history, today=None):
+    stored = fundamentals_history or {}
+    today = today or timezone.localdate()
+    releases = stored_releases(stored)
+    year_ends = _year_ends(stored)
+    public = [
+        period for period, _ in _stored_points(stored.get('quarterly_eps'))
+        if published_on(period, releases.get(period), _is_year_end(period, year_ends)) <= today
+    ]
+    if not public:
+        return None, None
+    period = max(public)
+    return period, releases.get(period)
+
+
+def stored_eps(fundamentals_history):
+    stored = fundamentals_history or {}
+    return published_eps(_stored_points(stored.get('quarterly_eps')), stored_releases(stored), _year_ends(stored))
 
 
 def trailing_pe(closes, quarterly_eps):
@@ -88,7 +173,11 @@ def _weekly(points):
     return [[day.isoformat(), value] for day, value in sorted(last_of_week.values())]
 
 
-def history(ticker, series, bars, today=None):
+def _annual_periods(annual):
+    return _iso_dates(row.get('period') for rows in (annual or {}).values() for row in rows or [])
+
+
+def history(ticker, series, bars, today=None, released=None):
     warnings = []
     country = series.get('country')
     if country and country != HOME_COUNTRY:
@@ -99,7 +188,8 @@ def history(ticker, series, bars, today=None):
         daily = []
     else:
         closes = [(date.fromisoformat(bar['date']), bar['close']) for bar in bars if bar.get('close') is not None]
-        daily = trailing_pe(closes, _points(quarterly.get('eps')))
+        eps = published_eps(_points(quarterly.get('eps')), released, _annual_periods(series.get('annual')))
+        daily = trailing_pe(closes, eps)
     medians = {name: median_since(_points(quarterly.get(name)), today=today) for name in VALUATION_RATIOS}
     medians['daily_pe'] = median_since(daily, today=today)
     latest = {name: quarterly[name][-1]['v'] if quarterly.get(name) else None for name in VALUATION_RATIOS}
