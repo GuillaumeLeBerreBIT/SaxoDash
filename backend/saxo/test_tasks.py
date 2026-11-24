@@ -176,12 +176,23 @@ class SyncPositionsTaskTest(TestCase):
 
         tasks.sync_positions()
 
-        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'MSFT', 'NVDA'})
+        self.assertEqual(set(Position.objects.values_list('ticker', flat=True)), {'MSFT'})
         self.assertEqual(Transaction.objects.get().ticker, 'NVDA')
         run = SyncRun.objects.get(task='sync_positions')
         self.assertEqual(run.outcome, 'incomplete')
         self.assertEqual(run.rows, 1)
         self.assertIn('1 of 2', run.detail)
+
+    @patch('saxo.tasks.client.get_positions')
+    def test_a_partial_reply_does_not_overwrite_a_held_position_with_fewer_shares(self, mock_get_positions):
+        self.held('NVDA')
+        Position.objects.filter(ticker='NVDA').update(qty=Decimal('20'))
+        mock_get_positions.return_value = [SAMPLE_POSITION, {'unexpected': 'shape'}]
+
+        tasks.sync_positions()
+
+        self.assertEqual(Position.objects.get(ticker='NVDA').qty, Decimal('20'))
+        self.assertEqual(SyncRun.objects.get(task='sync_positions').outcome, 'incomplete')
 
     @patch('saxo.tasks.client.get_positions')
     def test_all_rows_failing_to_map_does_not_wipe_the_portfolio(self, mock_get_positions):

@@ -216,16 +216,15 @@ def sync_positions(credential):
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
     # half-built list of seen tickers.
+    merged = mapping.merge_lots(positions)
+    seen_tickers = [fields['ticker'] for fields in merged]
     with transaction.atomic():
-        seen_tickers = []
-        for fields in mapping.merge_lots(positions):
-            synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
-            Position.objects.update_or_create(
-                user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
-            )
-            seen_tickers.append(fields['ticker'])
-
         if complete:
+            for fields in merged:
+                synced = {key: value for key, value in fields.items() if key not in CREATE_ONLY_FIELDS}
+                Position.objects.update_or_create(
+                    user=credential.user, ticker=fields['ticker'], defaults=synced, create_defaults=fields
+                )
             Position.objects.filter(user=credential.user).exclude(ticker__in=seen_tickers).delete()
 
         for fields in trades:
