@@ -154,6 +154,15 @@ def synced(fn=None, *, reports_health=True, task=None, credential='each'):
     return run
 
 
+def _maps_both(raw_row):
+    try:
+        mapping.to_position_fields(raw_row)
+        mapping.to_transaction_fields(raw_row)
+    except (KeyError, TypeError, ValueError, ArithmeticError):
+        return False
+    return True
+
+
 def _mapped_rows(raw_rows, to_fields):
     for raw_row in raw_rows:
         try:
@@ -211,7 +220,7 @@ def sync_positions(credential):
     raw_rows = saxo_positions or []
     positions = list(_mapped_rows(raw_rows, mapping.to_position_fields))
     trades = list(_mapped_rows(raw_rows, mapping.to_transaction_fields))
-    unreadable = len(raw_rows) - min(len(positions), len(trades))
+    unreadable = len(raw_rows) - sum(1 for raw_row in raw_rows if _maps_both(raw_row))
     complete = saxo_positions is not None and not unreadable
 
     # Upsert and prune together, so a failure mid-loop cannot prune against a
