@@ -36,18 +36,6 @@ PERIODIC_TASKS = {
         'task': 'research.tasks.sync_watchlists',
         'interval': (30, IntervalSchedule.MINUTES),
     },
-    'Sync Enable Banking balances': {
-        'task': 'enablebanking.tasks.sync_enablebanking_balances',
-        'interval': (3, IntervalSchedule.HOURS),
-    },
-    'Sync Enable Banking transactions': {
-        'task': 'enablebanking.tasks.sync_enablebanking_transactions',
-        'interval': (3, IntervalSchedule.HOURS),
-    },
-    'Detect subscriptions': {
-        'task': 'enablebanking.tasks.detect_enablebanking_subscriptions',
-        'interval': (3, IntervalSchedule.HOURS),
-    },
     'Snapshot net worth': {
         'task': 'core.tasks.snapshot_net_worth',
         'crontab': {'minute': '40', 'hour': '23'},
@@ -105,7 +93,12 @@ _UNMANAGED_TASK_PREFIXES = ('celery.',)
 # Dead as of this plan: the task this pointed at (saxo.tasks.sync_transactions)
 # no longer exists in code, superseded by sync_closed_positions. Was already
 # disabled everywhere seen - removed outright rather than carried forward.
-_DEAD_TASKS = ('saxo.tasks.sync_transactions',)
+_DEAD_TASKS = (
+    'saxo.tasks.sync_transactions',
+    'enablebanking.tasks.sync_enablebanking_balances',
+    'enablebanking.tasks.sync_enablebanking_transactions',
+    'enablebanking.tasks.detect_enablebanking_subscriptions',
+)
 
 
 def sync_periodic_tasks(stdout=None, apps=global_apps):
