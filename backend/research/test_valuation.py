@@ -6,7 +6,8 @@ from django.test import SimpleTestCase, TestCase, override_settings
 
 from research import finnhub
 from research.valuation import (
-    NO_DAILY_PE_WARNING, current_pe, history, median_since, pe_percentiles, published_eps, stored_eps, trailing_pe,
+    NO_DAILY_PE_WARNING, current_pe, history, latest_quarter, median_since, pe_percentiles, published_eps, stored_eps,
+    trailing_pe,
 )
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
@@ -82,6 +83,19 @@ class PublicationDatingTest(SimpleTestCase):
         self.assertEqual(eps[-1], (date(2025, 4, 24), 2.0))
         self.assertEqual(eps[-2], (date(2025, 3, 1), 1.0))
         self.assertEqual(len(eps), 5)
+
+    def test_the_latest_quarter_is_the_newest_one_already_public(self):
+        stored = {
+            'quarterly_eps': [['2025-03-31', 2.0], ['2025-06-30', 2.5]],
+            'eps_released': {'2025-03-31': '2025-04-24', '2025-06-30': '2025-07-30'},
+        }
+        self.assertEqual(latest_quarter(stored, today=date(2025, 7, 29)), (date(2025, 3, 31), date(2025, 4, 24)))
+        self.assertEqual(latest_quarter(stored, today=date(2025, 7, 30)), (date(2025, 6, 30), date(2025, 7, 30)))
+
+    def test_a_latest_quarter_without_a_release_date_counts_from_the_fallback(self):
+        stored = {'quarterly_eps': [['2025-03-31', 2.0]]}
+        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 9)), (None, None))
+        self.assertEqual(latest_quarter(stored, today=date(2025, 5, 10)), (date(2025, 3, 31), None))
 
 
 class MedianTest(SimpleTestCase):

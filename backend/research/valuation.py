@@ -67,20 +67,28 @@ def stored_releases(fundamentals_history):
     return found
 
 
-def latest_quarter(fundamentals_history):
-    points = _stored_points((fundamentals_history or {}).get('quarterly_eps'))
-    if not points:
+def _year_ends(stored):
+    return _iso_dates(row.get('period') for row in stored.get('annual') or [] if isinstance(row, dict))
+
+
+def latest_quarter(fundamentals_history, today=None):
+    stored = fundamentals_history or {}
+    today = today or timezone.localdate()
+    releases = stored_releases(stored)
+    year_ends = _year_ends(stored)
+    public = [
+        period for period, _ in _stored_points(stored.get('quarterly_eps'))
+        if published_on(period, releases.get(period), _is_year_end(period, year_ends)) <= today
+    ]
+    if not public:
         return None, None
-    period = max(point for point, _ in points)
-    return period, stored_releases(fundamentals_history).get(period)
+    period = max(public)
+    return period, releases.get(period)
 
 
 def stored_eps(fundamentals_history):
     stored = fundamentals_history or {}
-    year_ends = _iso_dates(row.get('period') for row in stored.get('annual') or [] if isinstance(row, dict))
-    return published_eps(
-        _stored_points(stored.get('quarterly_eps')), stored_releases(stored), year_ends,
-    )
+    return published_eps(_stored_points(stored.get('quarterly_eps')), stored_releases(stored), _year_ends(stored))
 
 
 def trailing_pe(closes, quarterly_eps):

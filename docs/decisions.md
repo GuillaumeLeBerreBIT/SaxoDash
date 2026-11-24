@@ -883,8 +883,8 @@ than 252 stored sessions there is none, as on the chart, the shelf cards and the
 
 **Every input carries its date (2026-11-24).** "Fundamentals as of" moves only when Finnhub's reply carried
 the history series; a reply with metrics but no series keeps the previous date, so a thin answer can no longer
-make old figures look fresh. Each verdict stores the latest quarter its earnings came from and that quarter's
-SEC release date (`StockVerdict.fundamental_period`, `published_on`, from `research.valuation.latest_quarter`).
+make old figures look fresh. Each verdict stores the newest quarter the P/E already counts (released, or past the
+40/60-day fallback) and that quarter's SEC release date (`StockVerdict.fundamental_period`, `published_on`, from `research.valuation.latest_quarter`).
 Research's answer card reads close date, quarter, release date and last fetch, and says "unknown" for any it
 lacks; the Discover cards date their close. The close date is `research.technicals.close_date` everywhere: the
 latest stored bar, and only when its close is the row's last close.

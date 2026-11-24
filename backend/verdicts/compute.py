@@ -42,7 +42,7 @@ def _pe_percentiles(row):
 def _store(row, quality, valuation, today):
     spark, high_1y = _price_line(row)
     pe_p25, pe_p75 = _pe_percentiles(row)
-    fundamental_period, published_on = latest_quarter(row.fundamentals_history)
+    fundamental_period, published_on = latest_quarter(row.fundamentals_history, today)
     StockVerdict.objects.update_or_create(
         ticker=row.ticker,
         defaults={
