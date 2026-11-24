@@ -6,6 +6,7 @@ THRESHOLDS = {'roe': 15, 'roic': 10, 'net_margin': 10, 'revenue_growth': 5, 'deb
 FINANCIAL_SECTORS = {'Financials', 'Real Estate', 'Banking', 'Insurance', 'Financial Services'}
 MIN_ANSWERED = 4
 STRONG_SHARE = 0.8
+MOST_UNKNOWN_FOR_STRONG = 1
 WEAK_SHARE = 0.5
 LATEST_MARGIN_FLOOR = 0.5
 CASH_CONVERSION_FLOOR = 80
@@ -112,7 +113,8 @@ def grade(checks):
         return 'unknown'
     share = passes / answered
     if share >= STRONG_SHARE:
-        return 'strong'
+        unknowns = len(checks) - answered
+        return 'strong' if unknowns <= MOST_UNKNOWN_FOR_STRONG else 'incomplete'
     if share < WEAK_SHARE:
         return 'weak'
     return 'mixed'

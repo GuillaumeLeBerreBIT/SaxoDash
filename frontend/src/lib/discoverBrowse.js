@@ -16,6 +16,7 @@ export const VALUATION_OPTIONS = [
 
 export const QUALITY_OPTIONS = [
   { value: 'strong', label: 'Strong' },
+  { value: 'incomplete', label: 'Incomplete' },
   { value: 'mixed', label: 'Mixed' },
   { value: 'weak', label: 'Weak' },
 ]

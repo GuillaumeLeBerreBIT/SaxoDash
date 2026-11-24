@@ -52,6 +52,11 @@ function WeightBar({ weight, cap }) {
   )
 }
 
+function passLine(answered, missing) {
+  if (missing === 0) return `${answered} of ${answered} checks pass`
+  return `${answered} of ${answered + missing} checks pass, ${missing} couldn't be checked`
+}
+
 function CompanyCell({ verdict }) {
   const [open, setOpen] = useState(false)
   const { failed, unknown, answered } = checkCount(verdict.checks ?? [])
@@ -63,7 +68,7 @@ function CompanyCell({ verdict }) {
         <span className={CELL_VALUE}>{GRADE_LABEL.quality[verdict.quality] ?? verdict.quality}</span>
         {answered > 0 ? (
           <span className={`text-[13px] font-semibold ${allPass ? 'text-up' : 'text-down'}`}>
-            {allPass ? `${answered} of ${answered} checks pass` : `${failed.length} of ${answered} checks fail`}
+            {allPass ? passLine(answered, unknown.length) : `${failed.length} of ${answered} checks fail`}
           </span>
         ) : null}
       </span>

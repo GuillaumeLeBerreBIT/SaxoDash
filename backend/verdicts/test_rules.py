@@ -174,6 +174,8 @@ class QualityTest(SimpleTestCase):
         cases = [
             ((5, 1, 0), 'strong'), ((4, 1, 1), 'strong'), ((3, 1, 2), 'mixed'),
             ((2, 3, 1), 'weak'), ((3, 0, 3), 'unknown'), ((2, 2, 2), 'mixed'),
+            ((6, 0, 1), 'strong'), ((4, 0, 3), 'incomplete'), ((5, 0, 2), 'incomplete'), ((4, 1, 2), 'incomplete'),
+            ((3, 2, 2), 'mixed'), ((1, 3, 3), 'weak'),
         ]
         for (passes, fails, unknowns), expected in cases:
             with self.subTest(passes=passes, fails=fails, unknowns=unknowns):

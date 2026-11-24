@@ -136,11 +136,13 @@ B) with a one-off recalculation of everything already stored, release again.
 38. As the owner, I want Discover's filter and its card to use one definition of each measure, so that the
     same company never passes and fails the same test.
 39. As the owner, I want "one-year high" to mean one thing on every screen, so that the label is trustworthy.
+39a. As the owner, I want a company with several unanswered Quality Checks never to read as strong, so that
+    missing figures cannot add up to a good grade (added 2026-11-24).
 
 ### Release
 
-40. As the owner, I want group A released to production before group B is finished, so that the fixes about my
-    own money do not wait for research work.
+40. As the owner, I want groups A and B kept in develop and released to production together in one release
+    (revised 2026-11-24; the first plan released A on its own).
 41. As the owner, I want each recalculation to run as a one-off command on dev first and on production after
     release, so that the stored numbers change once, deliberately, and can be checked.
 
@@ -185,6 +187,12 @@ B) with a one-off recalculation of everything already stored, release again.
 - **B3–B5**: each finding is checked against the code before work starts and gets its own pull request if it
   holds. Missing values read as unknown; each input carries its market close, fundamental period, release date
   and last successful fetch; Discover's filter and card share one definition per measure.
+- **B6 (added 2026-11-24, owner decision)**: the Quality Grade gains an `incomplete` outcome. A stock that would
+  grade strong on its answered checks but has two or more unanswered checks is incomplete, not strong, and gets
+  no action. Mixed, weak and unknown are unchanged; open calls keep the grade they opened with.
+- **Usual P/E range on candles (follow-up after B, owner agreed 2026-11-24)**: drawn day by day from the range as
+  it stood on each candle and B1's release dates, neutral colours, off by default, toggled from Analysis. It
+  takes signal colours only if the re-run `grade_valuation` test supports it.
 - **Glossary**: Investment Return, the Cheap/Expensive Zone dating and the Copy Performance amendment rule are
   already in the glossary. A `docs/decisions.md` entry records that the Investment Return is Saxo's
   time-weighted figure rather than computed from the app's own snapshots.

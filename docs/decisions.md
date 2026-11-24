@@ -599,7 +599,7 @@ page (`findBy…`) before reading the location.
 
 
 **The verdict is rules over stored scan rows, never a provider call.** `verdicts/rules.py` grades
-quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`) and valuation
+quality (seven entries in `CHECKS`; fewer than `MIN_ANSWERED` answered is `unknown`; a grade that would be `strong` with more than `MOST_UNKNOWN_FOR_STRONG` unanswered is `incomplete`, owner decision 2026-11-24, so four passes and three missing figures are not strong; `incomplete` gets no action, as `unknown`) and valuation
 (today's P/E against its own 25th and 75th percentile, else `not_judged`) from
 `ScreenerRow.fundamentals_history` and `pe_history`, which the nightly scan fills from the Finnhub and
 Saxo data it already fetches. The `verdicts` app imports neither `finnhub`, `market` nor `requests`, so

@@ -36,6 +36,13 @@ describe('AnswerCard', () => {
     expect(screen.getByRole('button', { name: 'Hide the checks' })).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('counts missing checks against the total when nothing fails', () => {
+    const checks = [...PASSING, check('debt', 'Debt', 'pass'), check('cash', 'Cash behind the profit', 'unknown', null), check('margins2', 'Revenue growth', 'unknown', null), check('eg', 'Earnings growth', 'unknown', null)]
+    renderCard({ verdict: { isLoading: false, data: verdictData({ quality: 'incomplete', checks }) } })
+    expect(screen.getByText('Incomplete')).toBeInTheDocument()
+    expect(screen.getByText("4 of 7 checks pass, 3 couldn't be checked")).toBeInTheDocument()
+  })
+
   it('names the checks that fail', () => {
     const checks = [check('roe', 'Return on equity', 'pass'), check('debt', 'Debt', 'fail', 2.4), check('cash', 'Cash behind the profit', 'unknown', null)]
     renderCard({ verdict: { isLoading: false, data: verdictData({ quality: 'weak', checks }) } })

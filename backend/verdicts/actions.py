@@ -24,6 +24,8 @@ def _not_held(quality_grade, failed_labels):
 def action(quality_grade, weight_pct, failed_labels):
     if quality_grade == 'unknown':
         return _result('no_verdict', 'Not enough figures to judge the quality')
+    if quality_grade == 'incomplete':
+        return _result('no_verdict', 'Too many quality checks have no figure to call it strong')
     if weight_pct is None:
         return _not_held(quality_grade, failed_labels)
     return _held(quality_grade, weight_pct, failed_labels)

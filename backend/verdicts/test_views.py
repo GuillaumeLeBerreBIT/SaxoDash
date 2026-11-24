@@ -290,6 +290,11 @@ class BrowseTests(APITestCase):
         self.assertEqual(facets['sector'], {'Information Technology': 1, 'Health Care': 1})
         self.assertEqual(facets['quality'], {'strong': 1})
 
+    def test_can_filter_on_incomplete_quality(self):
+        listed('AAA')
+        listed('BBB', quality='incomplete')
+        self.assertEqual(self.tickers('?quality=incomplete'), ['BBB'])
+
     def test_can_leave_out_held_stocks_and_tickers_already_shown(self):
         listed('AAA', valuation='cheap')
         listed('BBB', valuation='cheap')

@@ -9,7 +9,7 @@ from .models import StockVerdict
 
 ACTION_RANK = ['buy', 'add', 'hold', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
 VALUATIONS = ['cheap', 'fair', 'expensive', 'not_judged']
-QUALITIES = ['strong', 'mixed', 'weak', 'unknown']
+QUALITIES = ['strong', 'incomplete', 'mixed', 'weak', 'unknown']
 SORTS = ['opportunity', 'discount', 'fall', 'checks', 'funds']
 SCREENS = {'all', 'strong', 'pullbacks', 'fund-buying', 'saved', *(shelf.key for shelf in shelves.SHELVES)}
 DEFAULT_LIMIT = 24

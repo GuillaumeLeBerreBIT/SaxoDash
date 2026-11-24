@@ -50,7 +50,7 @@ The app's rule-based reading of one stock: its Quality Grade, its Valuation Grad
 One of seven tests of the business (such as return on equity, debt, growth, and whether profit arrives as cash). A missing figure counts as unknown, never as a pass.
 
 **Quality Grade**:
-Strong, mixed or weak, from how many Quality Checks pass, or unknown when too few could be answered.
+Strong, mixed or weak, from how many Quality Checks pass, or unknown when too few could be answered. Incomplete when the answered checks would make it strong but two or more have no figure: a missing check never counts towards strong.
 
 **Valuation Grade**:
 Where today's P/E sits against the stock's own five-year range: below, within or above its usual P/E. It describes the price and never judges it.
