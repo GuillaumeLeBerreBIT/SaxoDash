@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The declared beat schedule has no Enable Banking entries
-- [ ] Running the schedule sync on a database that holds the three Enable Banking rows deletes them and keeps every declared task (test)
-- [ ] A migration applies the sync, so dev and production lose the rows on `migrate`
-- [ ] Housekeeping still prunes Saxo sync runs and no longer touches bank sync runs (the housekeeping test is updated)
-- [ ] Backend test suite green
+- [x] The declared beat schedule has no Enable Banking entries
+- [x] Running the schedule sync on a database that holds the three Enable Banking rows deletes them and keeps every declared task (test)
+- [x] A migration applies the sync, so dev and production lose the rows on `migrate`
+- [x] Housekeeping still prunes Saxo sync runs and no longer touches bank sync runs (the housekeeping test is updated)
+- [x] Backend test suite green
