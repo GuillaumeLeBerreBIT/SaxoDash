@@ -192,7 +192,7 @@ system-ui fallback.
 | `figure` | 20 / 700, −0.01em | Stat tile values, page title on phone |
 | `nav` | 17 / 700 | Top tabs; the active one is Ink, the rest Ink 3 |
 | `title` | 17 / 700 | Panel titles |
-| `subtab` | 15 / 700 | Board tabs and sub-tabs (Research tabs, Money sections) |
+| `subtab` | 15 / 700 | Board tabs and sub-tabs (Research tabs) |
 | `body` | 14 / 400–600 | Default |
 | `cell` | 13.5 / 400–600 | Table cells, list rows |
 | `context` | 13 / 500 | Panel context rows, buttons |
@@ -240,7 +240,6 @@ Every page is a **board**: a 12-column grid of panels with a 12 px gap and `alig
 | Earnings | Who reports, and how did my names react? |
 | Investors | What are the best funds and Congress buying? |
 | Analytics | Am I beating the market, and at what risk? |
-| Money | Cash, accounts, spending, budgets, subscriptions |
 | Settings | How the app looks and what it connects to |
 
 ### 5.3 Panel anatomy
@@ -268,7 +267,7 @@ Panels are `--sd-pane`, radius 12, with no border and no shadow (Porcelain adds 
 ### 5.4 Header (app frame)
 
 ```
-Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics  Money    [Search ⌘K] [€42,634.84] [€821.54] [Bell] (G•)
+Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics    [Search ⌘K] [€42,634.84] [Bell] (G•)
 ```
 
 - Tabs are 17/700 words, with 22 px between them. They scroll sideways if needed and never wrap.
@@ -276,10 +275,9 @@ Overview  Portfolio  Research  Boards  Discover  Earnings  Investors  Analytics 
   - Search: Ink 3 text and a ⌘K key.
   - Saxo account value. It shows the value alone until an endpoint provides the day move;
     the move joins then.
-  - Cash across accounts.
   - Account button with its initial and a status dot: Warning when Saxo needs re-authentication,
     OK otherwise.
-- Below 1420 px the cash pill hides. Below 760 px tabs and Search hide, the page title shows,
+- Below 760 px tabs and Search hide, the page title shows,
   and the bottom bar takes over.
 - The header is sticky. Its top band is painted so nothing scrolls under the safe-area inset.
 - The filing-alerts bell sits beside the account button, not inside its menu.
@@ -341,7 +339,7 @@ A Recharts chart sits in `ChartFrame` (`components/ChartFrame.jsx`): it takes th
 - **Crosshair** (dashed `--sd-crosshair`) plus a tooltip on `--sd-raised`: date, then rows of
   swatch, name and value.
 - **Bars**: radius 3, a 2 px gap between grouped bars, and the zero line in Ink 3. Highlight the
-  current period in Ink and leave the rest Ink 3 (monthly spending), or use Up/Down by sign
+  current period in Ink and leave the rest Ink 3, or use Up/Down by sign
   (yearly returns, EPS surprise).
 - **RSI sub-pane**: 84 px tall, fixed 0–100 domain, 30/70 dotted guides, and the current value
   named ("20.3 oversold").
@@ -379,8 +377,8 @@ Overlays are built on **Radix primitives**: Dialog, DropdownMenu, Popover and To
 
 ### 6.1 Top-level
 
-Overview · Portfolio · Research · **Boards** · Discover · Earnings · Investors · Analytics ·
-**Money**. **Settings** sits behind the account button.
+Overview · Portfolio · Research · **Boards** · Discover · Earnings · Investors · Analytics.
+**Settings** sits behind the account button.
 
 | Route | Page | Notes |
 |---|---|---|
@@ -393,7 +391,6 @@ Overview · Portfolio · Research · **Boards** · Discover · Earnings · Inves
 | `/earnings` | Earnings | |
 | `/investors`, `/investors/:slug`, `/investors/stocks`, `/investors/congress/:slug` | Investors | Funds / Congress switch |
 | `/analytics` | Analytics | |
-| `/money` | Money | Sections: Overview · Accounts · Spending · Budgets · Transactions (`?section=`) |
 | `/settings` | Settings | Appearance · Connections · Sync health |
 
 Old routes redirect and keep their query strings:
@@ -402,10 +399,7 @@ Old routes redirect and keep their query strings:
 |---|---|
 | `/research/chart` | `/charts` |
 | `/transactions` | `/portfolio?view=transactions` |
-| `/accounts` | `/money?section=accounts` |
-| `/accounts/:id` | `/money/accounts/:id` |
-| `/spending` | `/money?section=spending` |
-| `/spending/transactions` | `/money?section=transactions` |
+| `/money`, `/money/accounts/:id`, `/accounts`, `/accounts/:id`, `/spending`, `/spending/transactions` | `/` (Money was removed) |
 
 ### 6.2 Research keeps everything
 
@@ -496,7 +490,7 @@ The verdict wording and thresholds stay in `lib/snapshot.js`, `lib/quadrant.js` 
 ### 6.4 Phone (< 760 px)
 
 - Bottom bar: Overview · Portfolio · Research · Discover · More. "More" opens a sheet with
-  Boards, Earnings, Investors, Analytics, Money and Settings.
+  Boards, Earnings, Investors, Analytics and Settings.
 - The header becomes the page title, the value pill and the account button.
 - One column, in the order panels appear in the source. Tables hide `hidem` columns, and the
   Chart tool rail becomes a horizontal strip.
@@ -548,5 +542,5 @@ The verdict wording and thresholds stay in `lib/snapshot.js`, `lib/quadrant.js` 
 - Every panel's context row names its source and its as-of date.
 - A stale source turns the dot to Warning and says why.
 - Prices that are delayed or last-close are labelled so (`PriceBasisNote`).
-- Placeholder or example rows carry the **Example** tag. Banking details stay off screenshots
+- Placeholder or example rows carry the **Example** tag. Account details stay off screenshots
   and mockups.

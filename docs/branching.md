@@ -28,8 +28,7 @@ machines, never on the homelab.
 | **Production images** | Builds both Dockerfiles; checks the backend image has `pg_dump` 17 and its static files; validates the proxy's Caddyfile and `deploy/compose.yaml`; shellcheck and the deploy scripts' tests (`deploy/tests/run.sh`) |
 | **Only develop merges into main** | On a PR into `main`, fails unless it comes from this repository's `develop`; passes on any PR into `develop` |
 
-No secret is used. Enable Banking's two settings are placeholders, and the Saxo token
-encryption key is generated fresh on every run.
+No secret is used. The Saxo token encryption key is generated fresh on every run.
 
 ## Protecting the branches (GitHub settings, done once)
 

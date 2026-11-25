@@ -14,7 +14,6 @@ import * as queries from '../api/queries'
 vi.mock('../components/settings/AccountSettings', () => ({ default: () => <h2>Profile</h2> }))
 vi.mock('../api/client', () => ({
   connectSaxo: vi.fn(),
-  connectEnableBanking: vi.fn(),
 }))
 import { connectSaxo } from '../api/client'
 
@@ -37,7 +36,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   queries.useSaxoStatus.mockReturnValue({ data: HEALTHY })
-  queries.useEnableBankingStatus.mockReturnValue({ data: undefined })
   queries.useMe.mockReturnValue({ data: { username: 'demo', email: 'd@example.com', is_owner: true } })
   queries.useClearAccountHistory.mockReturnValue({ mutate: vi.fn(), isPending: false })
 })
@@ -50,13 +48,11 @@ describe('Settings', () => {
     expect(screen.getByRole('heading', { name: 'Profile' })).toBeInTheDocument()
   })
 
-  it('does not ask for bank status unless the user is the owner', () => {
+  it('lists Saxo as the only connection, with no bank rows', () => {
     renderSettings('/settings?section=connections')
-    expect(queries.useEnableBankingStatus).toHaveBeenLastCalledWith({ enabled: true })
-
-    queries.useMe.mockReturnValue({ data: { username: 'alice', email: 'a@example.com', is_owner: false } })
-    renderSettings('/settings?section=connections')
-    expect(queries.useEnableBankingStatus).toHaveBeenLastCalledWith({ enabled: false })
+    const connections = screen.getByRole('heading', { name: 'Connections' }).closest('.sd-panel')
+    expect(within(connections).queryByText(/KBC|Argenta|bank/i)).not.toBeInTheDocument()
+    expect(within(connections).queryByRole('button', { name: 'Connect' })).not.toBeInTheDocument()
   })
 
   it('says the Saxo status is unavailable when the status request fails, rather than checking forever', () => {
@@ -109,18 +105,16 @@ describe('Settings', () => {
     expect(connectSaxo).toHaveBeenCalledTimes(1)
   })
 
-  it('sync health says the status is unavailable when both status requests fail', () => {
+  it('sync health says the status is unavailable when the Saxo status request fails', () => {
     queries.useSaxoStatus.mockReturnValue({ data: undefined, isError: true })
-    queries.useEnableBankingStatus.mockReturnValue({ data: undefined, isError: true })
     renderSettings('/settings?section=sync')
     const health = screen.getByRole('heading', { name: 'Sync health' }).closest('.sd-panel')
-    expect(within(health).getAllByText('Status unavailable')).toHaveLength(2)
+    expect(within(health).getAllByText('Status unavailable')).toHaveLength(1)
     expect(screen.queryByText(/Nothing is connected/)).not.toBeInTheDocument()
   })
 
   it('sync health keeps the empty message when nothing is connected and the requests succeeded', () => {
     queries.useSaxoStatus.mockReturnValue({ data: { connected: false } })
-    queries.useEnableBankingStatus.mockReturnValue({ data: {} })
     renderSettings('/settings?section=sync')
     expect(screen.getByText(/Nothing is connected/)).toBeInTheDocument()
   })

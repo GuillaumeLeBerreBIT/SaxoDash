@@ -24,22 +24,19 @@ beforeEach(() => {
 afterEach(() => localStorage.clear())
 
 describe('CommandPalette', () => {
-  it.each([['mon', /Money/], ['disc', /Discover/], ['sett', /Settings/]])('offers the %s page', async (query, name) => {
+  it.each([['anal', /Analytics/], ['disc', /Discover/], ['sett', /Settings/]])('offers the %s page', async (query, name) => {
     renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
     await userEvent.type(screen.getByRole('combobox'), query)
     expect(screen.getByRole('option', { name })).toBeInTheDocument()
   })
 
-  it('offers the spending shortcut to the owner only', async () => {
-    const { unmount } = renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
-    await userEvent.type(screen.getByRole('combobox'), 'spend')
-    expect(screen.getByRole('option', { name: /Spending/ })).toBeInTheDocument()
-    unmount()
-
-    queries.useMe.mockReturnValue({ data: { username: 'alice', email: 'a@example.com', is_owner: false } })
+  it('offers no Money shortcuts', async () => {
     renderWithProviders(<CommandPalette open onClose={vi.fn()} />)
-    await userEvent.type(screen.getByRole('combobox'), 'spend')
-    expect(screen.queryByRole('option', { name: /Spending/ })).not.toBeInTheDocument()
+    for (const query of ['money', 'spend', 'accounts']) {
+      await userEvent.clear(screen.getByRole('combobox'))
+      await userEvent.type(screen.getByRole('combobox'), query)
+      expect(screen.queryByRole('option', { name: /Money|Spending|Accounts/ })).not.toBeInTheDocument()
+    }
   })
 
   it('renders nothing when closed', () => {

@@ -18,10 +18,10 @@ DAYS = [
 ]
 
 
-def snapshot(day, bank_only=Decimal('800.00'), user=None):
+def snapshot(day, user=None):
     return NetWorthSnapshot.objects.create(
         user=user or the_owner(), date=day, portfolio_value=Decimal('31000.00'), bank_total=Decimal('971000.00'),
-        bank_only_total=bank_only, net_worth=Decimal('1002000.00'), saxo_account_value=Decimal('1001900.00'),
+        net_worth=Decimal('1002000.00'), saxo_account_value=Decimal('1001900.00'),
     )
 
 
@@ -47,10 +47,9 @@ class RestateSaxoHistoryTests(TestCase):
         self.run_command('--until', '2026-10-12', '--apply')
         row = NetWorthSnapshot.objects.get(date=date(2026, 10, 12))
         self.assertEqual(row.portfolio_value, Decimal('44700.00'))
-        self.assertEqual(row.bank_total, Decimal('1100.00'))
-        self.assertEqual(row.net_worth, Decimal('45800.00'))
+        self.assertEqual(row.bank_total, Decimal('300.00'))
+        self.assertEqual(row.net_worth, Decimal('45000.00'))
         self.assertEqual(row.saxo_account_value, Decimal('45000.00'))
-        self.assertEqual(row.bank_only_total, Decimal('800.00'))
 
     def test_a_weekend_takes_the_last_trading_day_before_it(self):
         snapshot(date(2026, 10, 11))
@@ -65,14 +64,6 @@ class RestateSaxoHistoryTests(TestCase):
         self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 20)).net_worth, Decimal('1002000.00'))
         self.assertIn('2026-10-20  skipped: nearest Saxo day is 2026-10-12', out)
         self.assertIn('Rebuilt 1 snapshot(s); skipped 1', out)
-
-    def test_unknown_bank_balances_count_as_none_and_are_reported(self):
-        snapshot(date(2026, 10, 12), bank_only=None)
-        out = self.run_command('--until', '2026-10-12', '--apply')
-        row = NetWorthSnapshot.objects.get(date=date(2026, 10, 12))
-        self.assertEqual(row.net_worth, Decimal('45000.00'))
-        self.assertIsNone(row.bank_only_total)
-        self.assertIn('no bank balance recorded', out)
 
     def test_without_apply_nothing_is_written(self):
         snapshot(date(2026, 10, 12))
@@ -91,7 +82,7 @@ class RestateSaxoHistoryTests(TestCase):
         snapshot(date(2026, 10, 12))
         self.run_command('--until', '2026-10-12', '--apply')
         self.run_command('--until', '2026-10-12', '--apply')
-        self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 12)).net_worth, Decimal('45800.00'))
+        self.assertEqual(NetWorthSnapshot.objects.get(date=date(2026, 10, 12)).net_worth, Decimal('45000.00'))
 
     def test_only_the_named_users_snapshots_are_rebuilt(self):
         other = make_user('other')

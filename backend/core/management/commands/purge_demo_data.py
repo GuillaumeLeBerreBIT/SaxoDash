@@ -7,8 +7,6 @@ from portfolio.models import Position
 from transactions.models import Transaction
 from users.commands import add_user_argument, chosen_user
 
-SAXO_BANK = 'Saxo'
-
 
 class Command(BaseCommand):
     help = (
@@ -35,17 +33,11 @@ class Command(BaseCommand):
         # Demo transactions are the ones no Saxo sync ever claimed. Real rows
         # carry the PositionId that makes their upsert idempotent.
         demo_transactions = transactions.filter(saxo_trade_id=None)
-        demo_accounts = accounts.exclude(bank=SAXO_BANK)
 
-        # Every existing snapshot is discarded, not just the 364 synthetic
-        # ones: bank_total on the recent "real" snapshots still included the
-        # invented BNP/KBC/ING balances, so they are wrong the moment those
-        # accounts go away. ensure_todays_snapshot rebuilds from clean data.
         snapshots = NetWorthSnapshot.objects.filter(user=user)
 
         counts = {
             'transactions': demo_transactions.count(),
-            'bank accounts': demo_accounts.count(),
             'net worth snapshots': snapshots.count(),
         }
 
@@ -54,7 +46,7 @@ class Command(BaseCommand):
 
         kept = (
             f'Keeping {transactions.exclude(saxo_trade_id=None).count()} Saxo '
-            f'transactions, {accounts.filter(bank=SAXO_BANK).count()} Saxo '
+            f'transactions, {accounts.count()} Saxo '
             f'account, {Position.objects.filter(user=user).count()} positions.'
         )
 
@@ -66,7 +58,6 @@ class Command(BaseCommand):
             return
 
         snapshots.delete()
-        demo_accounts.delete()
         demo_transactions.delete()
 
         self.stdout.write(kept)

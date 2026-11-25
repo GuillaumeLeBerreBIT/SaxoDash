@@ -8,10 +8,10 @@ Read it before starting implementation work if you haven't already.
 A personal finance dashboard (Django REST Framework backend, Vite + React
 frontend) rebuilding the SaxoDash Claude Design mockup into a real app.
 Shipped: Overview, Portfolio (with transactions), Research, Boards, Discover,
-Earnings, Investors (13F and House trades), Analytics and Money, against the
-live Saxo OpenAPI plus Finnhub for company fundamentals. Money includes bank
-aggregation through Enable Banking (`enablebanking`, owner only), beside the
-hand-entered/Saxo-cash accounts in `accounts`; further banking work is paused.
+Earnings, Investors (13F and House trades) and Analytics, against the live Saxo
+OpenAPI plus Finnhub for company fundamentals. Net worth is the Saxo portfolio plus
+Saxo cash (the cash is mirrored into `accounts`). Money and bank aggregation were
+removed; see "Money and bank aggregation are removed" in `docs/decisions.md`.
 
 Research fundamentals (P/E, market cap, dividend yield, growth/valuation
 ratios) come from Finnhub's free tier — see "Company fundamentals come from

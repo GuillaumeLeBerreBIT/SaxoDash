@@ -11,7 +11,7 @@ from portfolio.services import get_portfolio_value
 from transactions.models import Transaction
 from accounts.models import BankAccount
 from saxo.mapping import SAXO_CASH_ACCOUNT_ID
-from accounts.services import get_total_bank_balance
+from accounts.services import get_broker_cash_balance
 from core.models import NetWorthSnapshot
 from users.commands import add_user_argument, chosen_user
 
@@ -67,9 +67,6 @@ TRANSACTIONS = [
 ]
 
 BANK_ACCOUNTS = [
-    dict(bank='ING', type='Checking', iban_masked='BE45 •••• •••• 9012',
-         balance=Decimal('2180.75'), available=Decimal('2180.75'),
-         gradient='from-orange-500 to-orange-700', accent='#ea580c'),
     dict(bank='Saxo', type='Cash', iban_masked='-',
          balance=Decimal('850.00'), available=Decimal('850.00'),
          gradient='from-slate-600 to-slate-800', accent='#334155',
@@ -77,37 +74,30 @@ BANK_ACCOUNTS = [
 ]
 
 
-def build_networth_snapshots(portfolio_target, bank_target, days=365):
+def build_networth_snapshots(portfolio_target, cash, days=365):
     rng = random.Random(42)
     today = timezone.localdate()
 
-    def walk(target, start_ratio, noise_pct, jump_chance=0.0, jump_range=(0, 0)):
+    def walk(target, start_ratio, noise_pct):
         values = []
         v = target * Decimal(str(start_ratio))
         for i in range(days):
             remaining = max(days - i, 1)
             drift = (target - v) / Decimal(remaining)
             noise = v * Decimal(str(rng.uniform(-noise_pct, noise_pct)))
-            jump = Decimal('0')
-            if jump_chance and rng.random() < jump_chance:
-                jump = Decimal(str(rng.uniform(*jump_range)))
-            v = max(v + drift + noise + jump, Decimal('0'))
+            v = max(v + drift + noise, Decimal('0'))
             values.append(v)
         values[-1] = target
         return values
 
     portfolio_values = walk(portfolio_target, 0.62, 0.015)
-    bank_values = walk(bank_target, 0.75, 0.01,
-                       jump_chance=0.06, jump_range=(-300, 500))
 
     snapshots = []
     for i in range(days):
         d = today - timedelta(days=days - 1 - i)
         pv = portfolio_values[i].quantize(Decimal('0.01'))
-        bv = bank_values[i].quantize(Decimal('0.01'))
         snapshots.append(NetWorthSnapshot(
-            date=d, portfolio_value=pv, bank_total=bv, bank_only_total=bv,
-            net_worth=pv + bv))
+            date=d, portfolio_value=pv, bank_total=cash, net_worth=pv + cash))
     return snapshots
 
 
@@ -132,7 +122,7 @@ class Command(BaseCommand):
             [BankAccount(user=user, **b) for b in BANK_ACCOUNTS])
 
         snapshots = build_networth_snapshots(
-            get_portfolio_value(user).amount, get_total_bank_balance(user).amount,
+            get_portfolio_value(user).amount, get_broker_cash_balance(user).amount,
         )
         for snapshot in snapshots:
             snapshot.user = user

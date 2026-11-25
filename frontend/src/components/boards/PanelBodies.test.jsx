@@ -3,7 +3,7 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { renderWithProviders } from '../../test/renderWithProviders'
-import { ChartBoardPanel, SectorFlowPanel, SectorStocksPanel, SymbolStatsPanel, WatchlistPanel } from './PanelBodies'
+import { ChartBoardPanel, NetWorthPanel, SectorFlowPanel, SectorStocksPanel, SymbolStatsPanel, WatchlistPanel } from './PanelBodies'
 
 vi.mock('../../api/queries')
 import * as queries from '../../api/queries'
@@ -156,5 +156,17 @@ describe('PanelBodies', () => {
     renderWithProviders(<SectorFlowPanel board={board} panel={panel('sectors')} />)
 
     expect(screen.getByText('Could not load the sectors.')).toBeInTheDocument()
+  })
+})
+
+describe('NetWorthPanel', () => {
+  it('names the figure as the portfolio plus Saxo cash, with no bank', () => {
+    queries.usePortfolioInsights.mockReturnValue({
+      ...idle,
+      data: { value: { net_worth: '10000.00' }, change: { day: null }, as_of: '2026-11-24', stale: false },
+    })
+    renderWithProviders(<NetWorthPanel />)
+    expect(screen.getByText(/Portfolio \+ Saxo cash/)).toBeInTheDocument()
+    expect(screen.queryByText(/bank/i)).not.toBeInTheDocument()
   })
 })

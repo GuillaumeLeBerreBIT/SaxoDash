@@ -21,12 +21,6 @@ const { page } = vi.hoisted(() => ({ page: (name) => ({ default: () => name }) }
 vi.mock('./pages/Dashboard', () => page('Dashboard page'))
 vi.mock('./pages/Portfolio', () => page('Portfolio page'))
 vi.mock('./pages/Analytics', () => page('Analytics page'))
-vi.mock('./components/money/AccountsSection', () => page('Accounts section'))
-vi.mock('./pages/AccountTransactions', () => page('AccountTransactions page'))
-vi.mock('./components/money/SpendingSection', () => page('Spending section'))
-vi.mock('./components/money/TransactionsSection', () => page('Transactions section'))
-vi.mock('./components/money/BudgetsSection', () => page('Budgets section'))
-vi.mock('./components/money/OverviewSection', () => page('Overview section'))
 vi.mock('./pages/Research', () => page('Research page'))
 vi.mock('./pages/Charts', () => page('Charts page'))
 vi.mock('./pages/Boards', () => page('Boards page'))
@@ -60,15 +54,6 @@ describe('legacy routes redirect with their query', () => {
     ['/research/chart?symbol=NVDA', '/charts?symbol=NVDA', 'Charts page'],
     ['/transactions', '/portfolio?view=transactions', 'Portfolio page'],
     ['/transactions?type=BUY&from=2026-01-01', '/portfolio?view=transactions&type=BUY&from=2026-01-01', 'Portfolio page'],
-    ['/accounts', '/money?section=accounts', 'Accounts section'],
-    ['/accounts/12', '/money/accounts/12', 'AccountTransactions page'],
-    ['/spending', '/money?section=spending', 'Spending section'],
-    ['/spending?period=3m', '/money?section=spending&period=3m', 'Spending section'],
-    [
-      '/spending/transactions?category=GROCERIES&from=2026-01-01',
-      '/money?section=transactions&category=GROCERIES&from=2026-01-01',
-      'Transactions section',
-    ],
   ])('%s → %s', async (from, to, rendered) => {
     renderAt(from)
     expect(await screen.findByText(rendered)).toBeInTheDocument()
@@ -77,16 +62,26 @@ describe('legacy routes redirect with their query', () => {
   })
 })
 
+describe('retired Money addresses land on Overview', () => {
+  it.each([
+    '/money',
+    '/money?section=budgets',
+    '/money/accounts/3',
+    '/accounts',
+    '/accounts/12',
+    '/spending?period=3m',
+    '/spending/transactions?category=GROCERIES',
+  ])('%s', async (from) => {
+    renderAt(from)
+    expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
+    expect(screen.getByTestId('where').textContent).toBe('/')
+  })
+})
+
 describe('new routes', () => {
   it.each([
     ['/portfolio', 'Portfolio page'],
     ['/portfolio?view=transactions', 'Portfolio page'],
-    ['/money', 'Overview section'],
-    ['/money?section=budgets', 'Budgets section'],
-    ['/money?section=overview', 'Overview section'],
-    ['/money?section=accounts', 'Accounts section'],
-    ['/money?section=transactions', 'Transactions section'],
-    ['/money/accounts/3', 'AccountTransactions page'],
     ['/charts', 'Charts page'],
     ['/boards', 'Boards page'],
     ['/boards/b1', 'Boards page'],

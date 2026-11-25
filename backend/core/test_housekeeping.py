@@ -12,7 +12,6 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core import housekeeping
 from core.scheduling import sync_periodic_tasks
 from core.tasks import prune_expired_records
-from enablebanking.models import BankSyncRun
 from saxo.models import SyncRun
 
 
@@ -106,23 +105,13 @@ class SyncRunHistoryTest(TestCase):
 
         self.assertCountEqual(SyncRun.objects.all(), [mine, theirs, balance, shared])
 
-    def test_bank_runs_follow_the_same_rule_per_bank_and_kind(self):
-        aged(BankSyncRun, 400, bank='kbc', kind='balances', outcome='ok')
-        kbc = aged(BankSyncRun, 300, bank='kbc', kind='balances', outcome='ok')
-        argenta = aged(BankSyncRun, 350, bank='argenta', kind='balances', outcome='ok')
-        transactions = aged(BankSyncRun, 350, bank='kbc', kind='transactions', outcome='ok')
-
-        counts = housekeeping.prune()
-
-        self.assertEqual(counts['bank_sync_runs'], 1)
-        self.assertCountEqual(BankSyncRun.objects.all(), [kbc, argenta, transactions])
 
 
 class PruneTaskTest(TestCase):
     def test_the_task_reports_what_it_removed(self):
         self.assertEqual(
             prune_expired_records(),
-            {'tokens': 0, 'sessions': 0, 'sync_runs': 0, 'bank_sync_runs': 0},
+            {'tokens': 0, 'sessions': 0, 'sync_runs': 0},
         )
 
     def test_it_is_scheduled_nightly(self):

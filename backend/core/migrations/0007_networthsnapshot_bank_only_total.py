@@ -5,11 +5,12 @@ from django.db import migrations, models
 
 def backfill_bank_only_total(apps, schema_editor):
     Snapshot = apps.get_model('core', 'NetWorthSnapshot')
-    rows = Snapshot.objects.filter(saxo_account_value__isnull=False, bank_only_total__isnull=True)
+    alias = schema_editor.connection.alias
+    rows = Snapshot.objects.using(alias).filter(saxo_account_value__isnull=False, bank_only_total__isnull=True)
     for snapshot in rows:
         saxo_cash = max(snapshot.saxo_account_value - snapshot.portfolio_value, Decimal('0'))
         snapshot.bank_only_total = max(snapshot.bank_total - saxo_cash, Decimal('0'))
-        snapshot.save(update_fields=['bank_only_total'])
+        snapshot.save(using=alias, update_fields=['bank_only_total'])
 
 
 class Migration(migrations.Migration):

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { PAGE_COMMANDS } from './commands'
-import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle, visibleTo } from './navigation'
+import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle } from './navigation'
 
 describe('top-level navigation', () => {
-  it('lists the ten tabs in order', () => {
+  it('lists the nine tabs in order', () => {
     expect(NAV_ITEMS).toEqual([
       { to: '/', label: 'Overview', end: true },
       { to: '/portfolio', label: 'Portfolio' },
@@ -14,7 +14,6 @@ describe('top-level navigation', () => {
       { to: '/earnings', label: 'Earnings' },
       { to: '/investors', label: 'Investors' },
       { to: '/analytics', label: 'Analytics' },
-      { to: '/money', label: 'Money' },
     ])
   })
 })
@@ -31,7 +30,6 @@ describe('mobile navigation split', () => {
       '/earnings',
       '/investors',
       '/analytics',
-      '/money',
       '/settings',
     ])
   })
@@ -43,24 +41,10 @@ describe('palette pages', () => {
       ...NAV_ITEMS.map(({ to, label }) => ({ to, label })),
       { to: '/settings', label: 'Settings' },
       { to: '/portfolio?view=transactions', label: 'Transactions' },
-      { to: '/money?section=accounts', label: 'Accounts' },
-      { to: '/money?section=spending', label: 'Spending', ownerOnly: true },
     ])
   })
 })
 
-describe('owner-only entries', () => {
-  const items = [{ to: '/a', label: 'A' }, { to: '/b', label: 'B', ownerOnly: true }]
-
-  it('are shown to the owner', () => {
-    expect(visibleTo(items, { is_owner: true })).toEqual(items)
-  })
-
-  it('are hidden from everyone else, and while the user is still loading', () => {
-    expect(visibleTo(items, { is_owner: false })).toEqual([items[0]])
-    expect(visibleTo(items, undefined)).toEqual([items[0]])
-  })
-})
 
 describe('legacy redirects', () => {
   const target = (from, params = {}, search = '') =>
@@ -70,26 +54,16 @@ describe('legacy redirects', () => {
     expect(LEGACY_REDIRECTS.map((r) => r.from)).toEqual([
       'research/chart',
       'transactions',
-      'accounts',
-      'accounts/:accountId',
-      'spending',
-      'spending/transactions',
     ])
   })
 
   it('keeps the query and puts the new section first', () => {
     expect(target('research/chart', {}, '?symbol=NVDA')).toBe('/charts?symbol=NVDA')
     expect(target('transactions', {}, '?type=BUY')).toBe('/portfolio?view=transactions&type=BUY')
-    expect(target('accounts')).toBe('/money?section=accounts')
-    expect(target('accounts/:accountId', { accountId: '7' }, '?x=1')).toBe('/money/accounts/7?x=1')
-    expect(target('spending', {}, '?period=3m')).toBe('/money?section=spending&period=3m')
-    expect(target('spending/transactions', {}, '?category=GROCERIES')).toBe(
-      '/money?section=transactions&category=GROCERIES',
-    )
   })
 
   it('lets the redirect own the section it sets', () => {
-    expect(target('spending', {}, '?section=accounts&period=1m')).toBe('/money?section=spending&period=1m')
+    expect(target('transactions', {}, '?view=positions&type=BUY')).toBe('/portfolio?view=transactions&type=BUY')
   })
 })
 
@@ -97,7 +71,7 @@ describe('pageTitle', () => {
   it('names the tab that owns the path', () => {
     expect(pageTitle('/')).toBe('Overview')
     expect(pageTitle('/investors/stocks')).toBe('Investors')
-    expect(pageTitle('/money/accounts/3')).toBe('Money')
+    expect(pageTitle('/analytics')).toBe('Analytics')
     expect(pageTitle('/settings')).toBe('Settings')
   })
 })

@@ -1,5 +1,5 @@
 // Split by backend app (portfolio/transactions/accounts/core/analytics/saxo/
-// enablebanking/research), mirroring api/client/ - see docs/design-system.md.
+// research), mirroring api/client/ - see docs/design-system.md.
 // Nothing outside `api/` should import a domain file directly; import from
 // here so the split stays an internal implementation detail.
 export { unwrap } from './shared'
@@ -10,7 +10,6 @@ export * from './auth'
 export * from './core'
 export * from './portfolioStats'
 export * from './saxo'
-export * from './enablebanking'
 export * from './research'
 export * from './investors'
 export * from './congress'
@@ -20,7 +19,6 @@ import { accountsKeys } from './accounts'
 import { authKeys } from './auth'
 import { analyticsKeys } from './portfolioStats'
 import { coreKeys } from './core'
-import { enableBankingKeys } from './enablebanking'
 import { investorsKeys } from './investors'
 import { portfolioKeys } from './portfolio'
 import { researchKeys } from './research'
@@ -38,7 +36,6 @@ export const queryKeys = {
   ...coreKeys,
   ...analyticsKeys,
   ...saxoKeys,
-  ...enableBankingKeys,
   ...researchKeys,
   ...investorsKeys,
 }

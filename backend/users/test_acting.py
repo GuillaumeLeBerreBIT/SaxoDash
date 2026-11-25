@@ -13,37 +13,9 @@ from .testing import make_user, the_owner
 
 LOCMEM = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
 
-BANKING_LISTS = [
-    '/api/enablebanking/status/',
-    '/api/enablebanking/transactions/',
-    '/api/enablebanking/spending/summary/',
-    '/api/enablebanking/spending/trend/',
-    '/api/enablebanking/subscriptions/',
-    '/api/enablebanking/budgets/',
-    '/api/enablebanking/budgets/progress/',
-    '/api/enablebanking/labeled-accounts/',
-    '/api/enablebanking/labeled-accounts/candidates/',
-]
-
-
 def sign_in(client, user):
     token = RefreshToken.for_user(user).access_token
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
-
-
-class BankingOwnerOnlyTest(APITestCase):
-    def test_non_owner_is_refused_banking(self):
-        the_owner()
-        sign_in(self.client, make_user('stranger'))
-        for url in BANKING_LISTS:
-            self.assertEqual(self.client.get(url).status_code, 403, url)
-        self.assertEqual(self.client.post('/api/enablebanking/connect-ticket/', {'bank': 'kbc'}).status_code, 403)
-        self.assertEqual(self.client.post('/api/enablebanking/sync/').status_code, 403)
-
-    def test_owner_may_read_banking(self):
-        sign_in(self.client, the_owner())
-        for url in BANKING_LISTS:
-            self.assertEqual(self.client.get(url).status_code, 200, url)
 
 
 class ActingUserTest(APITestCase):
@@ -61,14 +33,14 @@ class ActingUserTest(APITestCase):
 
     def test_acting_user_reset_after_request(self):
         sign_in(self.client, make_user('someone'))
-        self.assertEqual(self.client.get('/api/enablebanking/status/').status_code, 403)
+        self.assertEqual(self.client.post('/api/research/discover/scan/').status_code, 403)
         self.assertIsNone(current_user())
 
     def test_acting_user_reset_when_the_request_raises(self):
         sign_in(self.client, the_owner())
-        with patch('enablebanking.views.credentials.connection_state', side_effect=RuntimeError):
+        with patch('research.views.connection_state', side_effect=RuntimeError):
             with self.assertRaises(RuntimeError):
-                self.client.get('/api/enablebanking/status/')
+                self.client.post('/api/research/discover/scan/')
         self.assertIsNone(current_user())
 
 

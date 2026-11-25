@@ -120,9 +120,3 @@ export function fmtShares(count) {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
   return String(Math.round(n))
 }
-
-export function maskIban(iban) {
-  const compact = String(iban ?? '').replace(/\s+/g, '')
-  if (!compact) return ''
-  return compact.length <= 4 ? compact : `•••• ${compact.slice(-4)}`
-}
