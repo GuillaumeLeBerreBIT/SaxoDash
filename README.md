@@ -1,16 +1,16 @@
 # SaxoDash
 
-A personal finance dashboard combining live brokerage and bank data in one place.
+A personal investing dashboard built on live brokerage data.
 
 - **Backend:** Django REST Framework
 - **Frontend:** Vite + React
-- **Data sources:** Saxo OpenAPI (portfolio/positions), Finnhub (company fundamentals), Enable Banking (bank account aggregation)
+- **Data sources:** Saxo OpenAPI (portfolio/positions), Finnhub (company fundamentals)
 
 ## Features
 
-- Dashboard, Portfolio, Transactions, Money, Research, Discover, Earnings and Analytics views
+- Dashboard, Portfolio, Transactions, Research, Discover, Earnings and Analytics views
 - Investors (13F filings) and Congress (House trades) trackers
-- Live Saxo positions and P/L alongside hand-entered/aggregated bank accounts
+- Live Saxo positions and P/L, with net worth as the portfolio plus Saxo cash
 - Company research (valuation, earnings, fundamentals) via Finnhub
 
 ## Getting started

@@ -1,6 +1,6 @@
 # SaxoDash
 
-A personal finance dashboard for one owner and invited users: investments at Saxo, research on US stocks, what tracked funds and Congress members trade, and the owner's bank accounts at KBC and Argenta, in one place.
+A personal finance dashboard for one owner and invited users: investments at Saxo, research on US stocks, and what tracked funds and Congress members trade, in one place.
 
 ## Language
 
@@ -16,7 +16,11 @@ _Avoid_: Holding (fine in page copy such as "Your holdings", but the stored conc
 
 **Portfolio Value**:
 The value Saxo reports for the user's account, in euros. The app never recomputes it from its own prices.
-_Avoid_: Net worth (that is the Money page's total, which adds bank and hand-entered accounts)
+_Avoid_: Net worth (that adds the cash in the Saxo account)
+
+**Net Worth**:
+The Portfolio Value plus the cash in the user's Saxo account, now and across its history. No bank account counts.
+_Avoid_: Account value (that is Saxo's own total, the series Investment Return is measured on)
 
 **Investment Return**:
 How much the investments gained or lost over a period, as Saxo measures it time-weighted: a deposit or withdrawal changes the Portfolio Value but never the Investment Return.
@@ -184,33 +188,3 @@ A member of the US House of Representatives whose disclosed stock trades the app
 **House Trade**:
 One disclosed purchase or sale by a Congress Member, reported as an amount range and filed weeks after the trade.
 _Avoid_: Insider trade (that is a company insider's filing)
-
-### Money and banking
-
-**Bank Transaction**:
-A single booked (settled, not pending) line on a KBC or Argenta account. Distinct from a Transaction, which is Saxo trade and cash activity only.
-_Avoid_: Transaction (without qualifier, when bank data is meant), Activity
-
-**Category**:
-A label on a Bank Transaction saying what kind of spending or income it is (such as Groceries, Subscriptions or Utilities). It is assigned by a rule on the merchant or description, unless a Category Override exists.
-_Avoid_: Type, Tag (Type is already used for account type, e.g. "Current account")
-
-**Category Override**:
-A Category the user picked by hand for one Bank Transaction. It always wins over the rule, and a later sync never replaces it.
-
-**Subscription**:
-A group of Bank Transactions from the same merchant, at a similar amount, recurring on a roughly regular cadence (weekly, monthly or yearly). The user can confirm or dismiss it.
-_Avoid_: Recurring payment (fine in conversation, but the stored concept is Subscription)
-
-**Spending**:
-Net outflow from Bank Transactions over a stated period, grouped by Category: debits minus any Refund/Credit that nets against the same Category, leaving out Transfers and savings. A Spending figure without a period is a bug.
-_Avoid_: Cash flow (reserved for the Saxo deposits, dividends and fees chart)
-
-**Own Account**:
-A KBC or Argenta account the user has connected, as opposed to any other account a Bank Transaction might mention.
-
-**Transfer**:
-Money moved between the user's own accounts rather than spent: a Bank Transaction matched by amount and date to one on another Own Account, or a payment to one of a few accounts the user has confirmed as their own or their household's. Left out of Spending, but shown as its own line.
-
-**Refund/Credit**:
-An incoming Bank Transaction that is neither a Transfer nor income. When it matches an earlier payment's merchant it nets against that Category; otherwise it is counted on its own.

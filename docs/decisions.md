@@ -34,7 +34,7 @@ answer, that user's last good history is served with `history_warning` saying up
 named Investment Return and the account's worth Portfolio Value (see `GLOSSARY.md`). The same
 history rebuilds past net worth: `restate_saxo_history --user <name> --until <date> [--apply]`
 rewrites the Saxo leg of that user's snapshots from Saxo's figure for the day, or the last trading
-day before it, keeping the recorded bank balances; it recomputes rather than scales, so a second
+day before it, with the bank total set to that day's Saxo cash; it recomputes rather than scales, so a second
 run changes nothing. It was run once on dev for the SIM days up to 2026-10-14; production is
 checked before it runs there.
 
@@ -194,14 +194,13 @@ was `AllowAny`; it now requires a 120s `TimestampSigner` ticket minted by the
 authenticated `POST /api/saxo/connect-ticket/` (the redirect is a full-page
 navigation and can't carry the JWT). The callback stays `AllowAny`, still
 guarded by the session `state` nonce. The ticket is bound to the browser that minted it
-and works once (`core/connect_ticket.py`, shared with Enable Banking): minting also sets an
+and works once (`core/connect_ticket.py`, keyed by provider): minting also sets an
 HttpOnly `saxo_connect` cookie holding a nonce that is signed into the ticket, connect
 refuses a ticket whose nonce the cookie does not match, and a redeemed nonce is remembered
 in the cache for the ticket's lifetime. Without that, a stranger could mint a ticket for
 their own account, send the link, and receive the victim's Saxo tokens. The frontend mints
 with `credentials: 'include'` (`CORS_ALLOW_CREDENTIALS`), so the Vite dev origin can store
-the cookie too. A dev Enable Banking connect through an ngrok tunnel cannot see a cookie
-set on localhost, so it is refused there.
+the cookie too.
 
 **One seam maps a provider call to HTTP.** `research/providers.py` defines
 `ProviderError` (→502, logged), `ProviderNotConnected` (→409) and
@@ -546,7 +545,7 @@ the user named by `MCP_USER`, else the owner), so the assistant and the page can
 pages' throttles and the Finnhub budget still apply: even the domain modules' own Saxo
 calls (symbol lookup, daily closes) reach Saxo through the pages' views, passed in as a port
 (`mcp_server/throttled.py::PAGES`), and `get_quotes` takes at most 20 symbols. It never
-touches banking data or orders, and starts no sync. Its only writes are
+places orders, and starts no sync. Its only writes are
 `advisor.Recommendation` rows, whose entry price the server fills from Saxo, not the model.
 `mcp_server` only translates: one `@tool` decorator owns the envelope (Saxo warnings,
 `Unavailable` refusals, Redis down, Decimal money as JSON numbers), and the rules live in
@@ -564,8 +563,7 @@ verification, and does say when an email or username is taken (accepted in the s
 needs email verification, and the throttle bounds the probing); password reset is 5/hour and its confirm step 20/hour, the link lasts an hour
 and works once. The reset mail is queued with Celery on commit, so a known and an unknown
 address answer alike. On the first migrate the only existing user becomes the owner; with
-several, `SAXODASH_OWNER=<username>` must name one or migrate stops. Banking belongs to the
-owner alone. The owner's Saxo credential runs the shared jobs (the Discover scan, the
+several, `SAXODASH_OWNER=<username>` must name one or migrate stops. The owner's Saxo credential runs the shared jobs (the Discover scan, the
 copy-performance price feed, congress prices) and only the owner may start a scan.
 `NUM_PROXIES` (default 0, `X-Forwarded-For` ignored) must equal the proxies that append to it before
 gunicorn: 2 in `deploy/compose.yaml` (edge Caddy, then the compose `proxy` Caddy), the expected
@@ -587,8 +585,8 @@ pages. The acting user comes from `users.acting.current_user()`; MCP calls act a
 
 **One nightly job prunes what only grows.** `core.housekeeping.prune` (03:00, `core.tasks.prune_expired_records`)
 deletes expired refresh tokens with their blacklist entries, expired sessions (they only carry OAuth
-state), and `SyncRun` / `BankSyncRun` rows older than 90 days. The newest run and the newest `ok` run of
-every (user, task) and (bank, kind) are kept however old, because the status badges and "last synced"
+state), and `SyncRun` rows older than 90 days. The newest run and the newest `ok` run of
+every (user, task) are kept however old, because the status badges and "last synced"
 read exactly those rows.
 
 **Pages are loaded on demand.** `App.jsx` imports every page with `lazy`, so the entry bundle holds the
@@ -888,3 +886,16 @@ make old figures look fresh. Each verdict stores the newest quarter the P/E alre
 Research's answer card reads close date, quarter, release date and last fetch, and says "unknown" for any it
 lacks; the Discover cards date their close. The close date is `research.technicals.close_date` everywhere: the
 latest stored bar, and only when its close is the row's last close.
+
+**Money and bank aggregation are removed (2026-11-25).** Enable Banking is licensed for
+personal use only, and SaxoDash is meant to be offered to other users, so the Money page, bank
+syncing, spending, budgets, subscriptions and hand-entered accounts are gone. A Money tracker,
+if it returns, is a separate app that could connect over an API. Net worth is the Saxo
+portfolio plus Saxo cash, which stays mirrored into `accounts.BankAccount`
+(`saxo.mapping.SAXO_CASH_ACCOUNT_ID`). History was restated in one release so the chart has no
+step on removal day: `core` 0015 takes each snapshot's recorded bank-only total out of its bank
+total and net worth (a null counts as zero, as in `restate_saxo_history`), 0016 drops that
+column, and `enablebanking` 0006 deletes every account row but the Saxo cash before dropping
+the bank tables. The empty `enablebanking` app is uninstalled in the next release, once
+production has run 0006. Earlier notes in this file that mention banks describe the app before
+this change.

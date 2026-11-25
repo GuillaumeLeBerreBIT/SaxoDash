@@ -1,6 +1,8 @@
 from datetime import date
 from decimal import Decimal
 
+from django.conf import settings
+from django.core.checks import registry
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import SimpleTestCase, TransactionTestCase
@@ -25,6 +27,15 @@ class WithoutBankMoneyTest(SimpleTestCase):
         self.assertEqual(
             without_bank_money(Decimal('30000.00'), Decimal('1000.00'), None),
             (Decimal('1000.00'), Decimal('31000.00')),
+        )
+
+
+class NoBankConfigTest(SimpleTestCase):
+    def test_no_enable_banking_setting_or_system_check_remains(self):
+        self.assertEqual([name for name in dir(settings) if name.startswith('ENABLE_BANKING')], [])
+        self.assertEqual(
+            [check for check in registry.registry.get_checks() if check.__module__.startswith('enablebanking')],
+            [],
         )
 
 
