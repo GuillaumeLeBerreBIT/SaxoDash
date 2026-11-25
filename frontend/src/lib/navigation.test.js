@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PAGE_COMMANDS } from './commands'
-import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, RETIRED_PATHS, legacyTarget, mobileOverflow, pageTitle, visibleTo } from './navigation'
+import { LEGACY_REDIRECTS, MOBILE_PRIMARY, NAV_ITEMS, legacyTarget, mobileOverflow, pageTitle, visibleTo } from './navigation'
 
 describe('top-level navigation', () => {
   it('lists the nine tabs in order', () => {
@@ -79,18 +79,6 @@ describe('legacy redirects', () => {
   })
 })
 
-describe('retired Money paths', () => {
-  it('lists every Money address, old and new', () => {
-    expect(RETIRED_PATHS).toEqual([
-      'money',
-      'money/accounts/:accountId',
-      'accounts',
-      'accounts/:accountId',
-      'spending',
-      'spending/transactions',
-    ])
-  })
-})
 
 describe('pageTitle', () => {
   it('names the tab that owns the path', () => {

@@ -30,7 +30,6 @@ const DENSITY_OPTIONS = [
   { value: 'compact', label: 'Compact' },
 ]
 
-
 const OTHER_SOURCES = [
   { name: 'Finnhub', note: 'Fundamentals, statements, filings and news, with a key set on the server' },
   { name: 'SEC EDGAR', note: '13F filings of the tracked funds, imported on a schedule' },
@@ -134,14 +133,12 @@ function Connections() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
   const { connect, failed: connectFailed } = useConnectSaxo()
   const clearHistory = useClearAccountHistory()
-  const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed, clearHistory)]
-  const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
+  const saxoSource = saxoRow(saxo, saxoFailed, connect, connectFailed, clearHistory)
+  const dot = saxoSource.dot === 'warn' ? 'warn' : undefined
   return (
     <Card context="Where SaxoDash gets its numbers" dot={dot} title="Connections">
       <ul>
-        {rows.map((row) => (
-          <SourceRow key={row.name} {...row} />
-        ))}
+        <SourceRow {...saxoSource} />
       </ul>
       <h3 className="mt-5 mb-1 text-[13px] font-semibold text-ink-2">Other sources</h3>
       <ul>
@@ -154,36 +151,26 @@ function Connections() {
 }
 
 function syncRows(saxo, failed) {
-  const rows = []
-  const groups = [['Saxo', saxo]]
-  for (const [source, state] of groups) {
-    if (failed[source]) {
-      rows.push({ key: `${source}:unavailable`, dot: 'warn', name: source, note: 'Status unavailable' })
-      continue
-    }
-    if (!state?.connected) continue
-    const lastGood = state.last_synced_at ? fmtDateTime(state.last_synced_at) : 'never'
-    const failing = state.failing_syncs ?? []
-    for (const task of failing) {
-      rows.push({ key: `${source}:${task}`, dot: 'warn', name: task, mono: true, note: `${source} · failing · last good sync ${lastGood}` })
-    }
-    if (!failing.length) {
-      const outcome = state.last_sync_outcome
-      const degraded = outcome && outcome !== 'ok'
-      rows.push({
-        key: `${source}:sync`,
-        dot: degraded ? 'warn' : 'ok',
-        name: `${source} sync`,
-        note: degraded ? `Last run ${outcome} · last good sync ${lastGood}` : `Last synced ${lastGood}`,
-      })
-    }
+  if (failed) return [{ key: 'Saxo:unavailable', dot: 'warn', name: 'Saxo', note: 'Status unavailable' }]
+  if (!saxo?.connected) return []
+  const lastGood = saxo.last_synced_at ? fmtDateTime(saxo.last_synced_at) : 'never'
+  const failing = saxo.failing_syncs ?? []
+  if (failing.length) {
+    return failing.map((task) => ({ key: `Saxo:${task}`, dot: 'warn', name: task, mono: true, note: `Saxo · failing · last good sync ${lastGood}` }))
   }
-  return rows
+  const outcome = saxo.last_sync_outcome
+  const degraded = outcome && outcome !== 'ok'
+  return [{
+    key: 'Saxo:sync',
+    dot: degraded ? 'warn' : 'ok',
+    name: 'Saxo sync',
+    note: degraded ? `Last run ${outcome} · last good sync ${lastGood}` : `Last synced ${lastGood}`,
+  }]
 }
 
 function SyncHealth() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
-  const rows = syncRows(saxo, { Saxo: saxoFailed })
+  const rows = syncRows(saxo, saxoFailed)
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Latest run of each task" dot={dot} title="Sync health">
