@@ -61,8 +61,14 @@ describe('useChartData company data', () => {
     const { result } = render()
 
     expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('NVDA')
-    expect(queries.useUsualBand).toHaveBeenLastCalledWith('NVDA')
     expect(result.current.companyData).toBe('eligible')
+  })
+
+  it('asks for the usual band only while its guide is on', () => {
+    render({ usualBandOn: true })
+    expect(queries.useUsualBand).toHaveBeenLastCalledWith('NVDA')
+    render()
+    expect(queries.useUsualBand).toHaveBeenLastCalledWith('')
   })
 
   it('asks for no earnings when the listing is in another currency', () => {

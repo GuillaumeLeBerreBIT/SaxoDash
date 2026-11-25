@@ -27,10 +27,13 @@ const MOVE_OPTIONS = [
 
 const BAND_NAMES = { blue: 'Blue', orange: 'Orange', violet: 'Violet', yellow: 'Yellow' }
 
-const BAND_OPTIONS = Object.keys(BAND_COLOURS).map((name) => ({
-  value: name,
-  label: <><span aria-hidden="true" className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: bandColour(name, 'republic') }} />{BAND_NAMES[name]}</>,
-}))
+const bandOptions = (other) =>
+  Object.keys(BAND_COLOURS)
+    .filter((name) => name !== other)
+    .map((name) => ({
+      value: name,
+      label: <><span aria-hidden="true" className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: bandColour(name, 'republic') }} />{BAND_NAMES[name]}</>,
+    }))
 
 const DENSITY_OPTIONS = [
   { value: 'comfortable', label: 'Comfortable' },
@@ -86,9 +89,9 @@ function Appearance() {
         Blue and orange stay apart for red-green colour blindness. Arrows always carry the direction too.
       </p>
       <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Usual P/E range colours</h3>
-      <Segmented label="Cheap P/E colour" options={BAND_OPTIONS} value={cheapBand} onChange={(value) => setAppearance({ cheapBand: value })} />
+      <Segmented label="Cheap P/E colour" options={bandOptions(expensiveBand)} value={cheapBand} onChange={(value) => setAppearance({ cheapBand: value })} />
       <p className="mt-2 mb-3 text-[12px] text-ink-3">Cheap P/E: the price is at or below the low line of its usual range.</p>
-      <Segmented label="Expensive P/E colour" options={BAND_OPTIONS} value={expensiveBand} onChange={(value) => setAppearance({ expensiveBand: value })} />
+      <Segmented label="Expensive P/E colour" options={bandOptions(cheapBand)} value={expensiveBand} onChange={(value) => setAppearance({ expensiveBand: value })} />
       <p className="mt-2 text-[12px] text-ink-3">Expensive P/E: the price is at or above the high line of its usual range.</p>
       <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Density</h3>
       <Segmented label="Density" options={DENSITY_OPTIONS} value={density} onChange={(value) => setAppearance({ density: value })} />

@@ -109,6 +109,11 @@ MIN_PE_WEEKS = 104
 PE_WINDOW_BARS = 1200
 
 
+def trailing_eps(days, quarterly_eps):
+    ordered = sorted(quarterly_eps, key=lambda point: point[0])
+    return [_latest_eps_ttm(ordered, day) for day in days]
+
+
 def _latest_eps_ttm(ordered, last_day):
     known = bisect_right([period for period, _ in ordered], last_day)
     if known < QUARTERS_PER_YEAR:
@@ -204,6 +209,10 @@ def _annual_periods(annual):
     return _iso_dates(row.get('period') for rows in (annual or {}).values() for row in rows or [])
 
 
+def series_eps(series, released=None):
+    return published_eps(_points(series['quarterly'].get('eps')), released, _annual_periods(series.get('annual')))
+
+
 def history(ticker, series, bars, today=None, released=None):
     warnings = []
     country = series.get('country')
@@ -215,8 +224,7 @@ def history(ticker, series, bars, today=None, released=None):
         daily = []
     else:
         closes = [(date.fromisoformat(bar['date']), bar['close']) for bar in bars if bar.get('close') is not None]
-        eps = published_eps(_points(quarterly.get('eps')), released, _annual_periods(series.get('annual')))
-        daily = trailing_pe(closes, eps)
+        daily = trailing_pe(closes, series_eps(series, released))
     medians = {name: median_since(_points(quarterly.get(name)), today=today) for name in VALUATION_RATIOS}
     medians['daily_pe'] = median_since(daily, today=today)
     latest = {name: quarterly[name][-1]['v'] if quarterly.get(name) else None for name in VALUATION_RATIOS}

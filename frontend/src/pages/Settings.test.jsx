@@ -88,7 +88,8 @@ describe('Settings', () => {
     expect(screen.queryAllByRole('button', { name: /^(Green|Red)$/ })).toHaveLength(0)
     await userEvent.click(screen.getAllByRole('button', { name: 'Violet' })[1])
     expect(JSON.parse(localStorage.getItem('saxodash:appearance')).expensiveBand).toBe('violet')
-    expect(screen.getAllByRole('button', { name: 'Violet' })[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Violet' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryAllByRole('button', { name: 'Violet' })).toHaveLength(1)
   })
 
   it('density toggles compact', async () => {

@@ -117,6 +117,7 @@ export default function Research() {
     currency,
     usualBand,
   } = useChartData({
+    usualBandOn: controls.guides.band,
     symbol,
     instrument,
     range: controls.range,
@@ -152,7 +153,7 @@ export default function Research() {
     })
     const judged = signalsForListing(judgedVerdict, listingUic)
     return {
-      available: ['high52', 'gaps', 'band', ...(plan ? ['plan'] : [])],
+      available: ['high52', 'gaps', ...(companyData === COMPANY_DATA.eligible ? ['band'] : []), ...(plan ? ['plan'] : [])],
       currency: guideCurrency,
       valueGuides: {
         high: shown.high52,
@@ -168,7 +169,7 @@ export default function Research() {
         earnings: judged ? reportsWithin(nextReport, 10) : null, currency: guideCurrency,
       }),
     }
-  }, [controls.guides, allBars, usualBand, guideCurrency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, judgedVerdict, listingUic, nextReport])
+  }, [controls.guides, allBars, usualBand, companyData, guideCurrency, position, positions, note?.data, tradePlan.portfolioValue, riskPct, judgedVerdict, listingUic, nextReport])
 
   const gateOf = (key) => tabGate(TAB_NEEDS[key], companyData)
   const visibleGroups = GROUPS.map(([key, label, children]) => [
