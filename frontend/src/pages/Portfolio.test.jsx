@@ -205,7 +205,7 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
   })
 
-  it('opens on the portfolio value with its history and leaves net worth and bank cash to Overview and Money', () => {
+  it('opens on the portfolio value with its history and leaves net worth to Overview', () => {
     renderWithProviders(<Portfolio />)
 
     expect(screen.getByTestId('portfolio-value')).toHaveTextContent('€31,567.81')

@@ -64,13 +64,22 @@ class AccountsAPITest(APITestCase):
 
     def test_requires_auth(self):
         self.client.credentials()
-        response = self.client.get('/api/accounts/')
+        response = self.client.get('/api/accounts/net-worth/')
         self.assertEqual(response.status_code, 401)
 
-    def test_list_accounts(self):
-        response = self.client.get('/api/accounts/')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 2)  # unpaginated, plain list
+    def test_the_account_list_is_gone(self):
+        self.assertEqual(self.client.get('/api/accounts/').status_code, 404)
+
+    def test_every_banking_endpoint_is_gone(self):
+        for url in (
+            '/api/enablebanking/connect-ticket/', '/api/enablebanking/connect/kbc/', '/api/enablebanking/callback/',
+            '/api/enablebanking/status/', '/api/enablebanking/transactions/', '/api/enablebanking/transactions/1/category/',
+            '/api/enablebanking/sync/', '/api/enablebanking/spending/summary/', '/api/enablebanking/spending/trend/',
+            '/api/enablebanking/subscriptions/', '/api/enablebanking/subscriptions/1/', '/api/enablebanking/budgets/',
+            '/api/enablebanking/budgets/progress/', '/api/enablebanking/labeled-accounts/',
+            '/api/enablebanking/labeled-accounts/candidates/', '/api/enablebanking/labeled-accounts/1/',
+        ):
+            self.assertEqual(self.client.get(url).status_code, 404, url)
 
     def test_net_worth(self):
         response = self.client.get('/api/accounts/net-worth/')

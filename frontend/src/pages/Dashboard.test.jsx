@@ -75,15 +75,6 @@ function stub(over = {}) {
   queries.useOwnershipSummary.mockReturnValue({ ...idle, data: over.ownership ?? ownership })
   queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
-  queries.useSpendingSummary.mockReturnValue({
-    ...idle,
-    data: over.spending ?? { categories: [{ category: 'GROCERIES', amount: '50.00' }], total: '50.00', transfers: '0.00' },
-  })
-  queries.useBudgetProgress.mockReturnValue({
-    data: over.budgetProgress ?? [],
-    isLoading: false,
-    error: null,
-  })
   queries.usePositionQuotes.mockReturnValue(over.quotes ?? new Map())
   queries.useInvestorHub.mockReturnValue({ ...idle, data: over.hub ?? { shelves: [] } })
   queries.useVerdictSummary.mockReturnValue({ ...idle, data: over.verdicts ?? {} })

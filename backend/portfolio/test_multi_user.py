@@ -116,21 +116,6 @@ class PerUserPortfolioTest(APITestCase):
         self.assertEqual(self.client.delete(f'/api/transactions/{mine.pk}/').status_code, 404)
         self.assertTrue(Transaction.objects.filter(pk=mine.pk, qty=Decimal('1')).exists())
 
-    def test_bank_accounts_are_per_user(self):
-        mine = bank(self.alice, external_id='saxo:cash', name='Saxo')
-        bank(self.bob, external_id='saxo:cash', name='Saxo')
-        bank(self.bob, name='ING')
-
-        self.as_user(self.bob)
-        listed = self.client.get('/api/accounts/').data
-
-        self.assertCountEqual([row['bank'] for row in listed], ['Saxo', 'ING'])
-        self.assertNotIn(mine.pk, [row['id'] for row in listed])
-        self.assertEqual(self.client.get(f'/api/accounts/{mine.pk}/').status_code, 404)
-        self.assertEqual(self.client.patch(f'/api/accounts/{mine.pk}/', {'balance': '1'}).status_code, 404)
-        self.assertEqual(self.client.delete(f'/api/accounts/{mine.pk}/').status_code, 404)
-        self.assertTrue(BankAccount.objects.filter(pk=mine.pk, balance=Decimal('1000')).exists())
-
 
 @override_settings(CACHES=LOCMEM)
 class SnapshotPerUserTest(TestCase):

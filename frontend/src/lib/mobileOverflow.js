@@ -12,9 +12,6 @@ export const ROUTES = [
   '/investors',
   '/transactions',
   '/transactions?type=BUY&from=2026-01-01',
-  '/accounts',
-  '/spending',
-  '/spending/transactions?category=GROCERIES&from=2026-01-01&to=2026-12-31',
 ]
 
 export function routePath(route) {
@@ -25,7 +22,6 @@ const DEFAULTS = {
   base: 'http://localhost:5273',
   auth: '',
   width: 390,
-  accountId: '1',
   investorSlug: 'berkshire-hathaway',
 }
 
@@ -33,7 +29,6 @@ const FLAGS = {
   '--base': ['base', String],
   '--auth': ['auth', String],
   '--width': ['width', Number],
-  '--account-id': ['accountId', String],
   '--investor-slug': ['investorSlug', String],
 }
 

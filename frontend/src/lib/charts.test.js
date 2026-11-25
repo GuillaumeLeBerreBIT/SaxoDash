@@ -1,41 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_APPEARANCE } from './theme'
-import { PERFORMANCE_CAPS, chartPalette, colorForCategory, colorForRank, colorForTicker, performanceFill, seriesAxis, statementSeries, surpriseColor, withAlpha } from './charts'
+import { PERFORMANCE_CAPS, chartPalette, colorForRank, colorForTicker, performanceFill, seriesAxis, statementSeries, surpriseColor, withAlpha } from './charts'
 
 const palette = chartPalette(DEFAULT_APPEARANCE)
-
-describe('colorForCategory', () => {
-  it('gives TRANSFER and SAVINGS a distinct neutral color, not a budgetable category color', () => {
-    const transfer = colorForCategory('TRANSFER', palette)
-    const savings = colorForCategory('SAVINGS', palette)
-    const groceries = colorForCategory('GROCERIES', palette)
-    expect(transfer).not.toBe(groceries)
-    expect(savings).not.toBe(groceries)
-    expect(transfer).toBe(savings)
-  })
-
-  it('gives an unknown category the same neutral fallback, not GROCERIES colour', () => {
-    const unknown = colorForCategory('SOME_FUTURE_CATEGORY', palette)
-    const groceries = colorForCategory('GROCERIES', palette)
-    expect(unknown).not.toBe(groceries)
-  })
-
-  it('still gives every real budgetable category its own distinct color', () => {
-    const codes = ['GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS', 'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER']
-    const colors = codes.map((code) => colorForCategory(code, palette))
-    expect(new Set(colors).size).toBe(codes.length)
-  })
-
-  it('draws categories from the active palette when given one', () => {
-    const c = chartPalette({ theme: 'republic', moves: 'green-red' })
-    const codes = ['GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS', 'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER']
-    const colors = codes.map((code) => colorForCategory(code, c))
-    expect(colors[0]).toBe(c.series[0])
-    expect(new Set(colors).size).toBe(codes.length)
-    expect(colorForCategory('TRANSFER', c)).toBe(c.axis)
-    expect(colorForCategory('SOME_FUTURE_CATEGORY', c)).toBe(c.axis)
-  })
-})
 
 describe('performanceFill', () => {
   it('has no fill for an unknown move', () => {

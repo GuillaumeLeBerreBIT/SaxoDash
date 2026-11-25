@@ -34,7 +34,6 @@ describe('MobileNav', () => {
       'Earnings',
       'Investors',
       'Analytics',
-      'Money',
       'Settings',
     ])
   })
@@ -56,13 +55,13 @@ describe('MobileNav', () => {
   it('closes after navigating to an overflow destination', async () => {
     renderWithProviders(<MobileNav onOpenPalette={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'More' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Money' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Analytics' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('marks More active on an overflow route only', () => {
-    const { unmount } = renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/money/accounts/4' })
+    const { unmount } = renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/investors/stocks' })
     expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page')
     unmount()
     renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/portfolio' })
@@ -108,9 +107,9 @@ describe('MobileNav', () => {
   })
 
   it('closes when the link for the current route is tapped', async () => {
-    renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/money' })
+    renderWithProviders(<MobileNav onOpenPalette={() => {}} />, { route: '/analytics' })
     await userEvent.click(screen.getByRole('button', { name: 'More' }))
-    await userEvent.click(screen.getByRole('link', { name: 'Money' }))
+    await userEvent.click(screen.getByRole('link', { name: 'Analytics' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
