@@ -4,12 +4,12 @@
 
 **Blocked by:** 01 (the task code deleted here must no longer be scheduled).
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `/money`, `/money/accounts/1`, `/accounts` and `/spending` render Overview, and the nav has no Money item (vitest spec)
-- [ ] The Settings page has no bank connection status, and its spec is updated
-- [ ] The Enable Banking API client and query modules, Money components and Money-only helpers are deleted, and the command palette has no Money entries
-- [ ] `/api/enablebanking/...` and the account list return 404 (APITestCase)
-- [ ] The user-isolation and acting-as tests lose their banking cases and still pass
-- [ ] The Portfolio cash panel still shows Saxo cash
-- [ ] Backend tests, frontend tests, eslint and build green
+- [x] `/money`, `/money/accounts/1`, `/accounts` and `/spending` render Overview, and the nav has no Money item (vitest spec)
+- [x] The Settings page has no bank connection status, and its spec is updated
+- [x] The Enable Banking API client and query modules, Money components and Money-only helpers are deleted, and the command palette has no Money entries
+- [x] `/api/enablebanking/...` and the account list return 404 (APITestCase)
+- [x] The user-isolation and acting-as tests lose their banking cases and still pass
+- [x] The Portfolio cash panel still shows Saxo cash
+- [x] Backend tests, frontend tests, eslint and build green
