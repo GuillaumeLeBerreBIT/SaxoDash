@@ -68,15 +68,13 @@ class Command(BaseCommand):
                 self.stdout.write(f'{row.date}  skipped: nearest Saxo day is {day.date}, more than 7 days earlier')
                 skipped += 1
                 continue
-            bank_only = row.bank_only_total or Decimal('0')
             new = {
                 'portfolio_value': (day.value - day.cash).quantize(CENTS),
-                'bank_total': (bank_only + day.cash).quantize(CENTS),
-                'net_worth': (bank_only + day.value).quantize(CENTS),
+                'bank_total': day.cash.quantize(CENTS),
+                'net_worth': day.value.quantize(CENTS),
                 'saxo_account_value': day.value.quantize(CENTS),
             }
-            note = '' if row.bank_only_total is not None else '  (no bank balance recorded, counted as 0)'
-            self.stdout.write(f'{row.date}  net worth {row.net_worth} -> {new["net_worth"]}{note}')
+            self.stdout.write(f'{row.date}  net worth {row.net_worth} -> {new["net_worth"]}')
             if options['apply']:
                 NetWorthSnapshot.objects.filter(pk=row.pk).update(**new)
             changed += 1

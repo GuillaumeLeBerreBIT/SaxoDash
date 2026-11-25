@@ -26,9 +26,9 @@ vi.mock('recharts', async (importOriginal) => {
 })
 
 const stringHistory = [
-  { date: '2026-09-01', portfolio_value: '60000.00', bank_total: '40000.00', net_worth: '100000.00', bank_only_total: '40000.00' },
-  { date: '2026-09-02', portfolio_value: '62000.00', bank_total: '41000.00', net_worth: '103000.00', bank_only_total: '41000.00' },
-  { date: '2026-09-03', portfolio_value: '63000.00', bank_total: '42000.00', net_worth: '105000.00', bank_only_total: '42000.00' },
+  { date: '2026-09-01', portfolio_value: '60000.00', bank_total: '40000.00', net_worth: '100000.00' },
+  { date: '2026-09-02', portfolio_value: '62000.00', bank_total: '41000.00', net_worth: '103000.00' },
+  { date: '2026-09-03', portfolio_value: '63000.00', bank_total: '42000.00', net_worth: '105000.00' },
 ]
 
 function domainOf() {
@@ -43,7 +43,7 @@ describe('history charts with string-decimal rows', () => {
   })
 
   it('HistoryAreaChart sets a domain that does not start at zero', () => {
-    renderWithProviders(<HistoryAreaChart title="Bank" subtitle="s" dataKey="bank_only_total" name="Bank" color="#123456" />)
+    renderWithProviders(<HistoryAreaChart title="Bank" subtitle="s" dataKey="bank_total" name="Bank" color="#123456" />)
     expect(domainOf()[0]).toBeGreaterThan(0)
   })
 })

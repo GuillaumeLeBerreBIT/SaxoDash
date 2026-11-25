@@ -7,6 +7,8 @@ from django.utils import timezone
 from decimal import Decimal
 from accounts.models import BankAccount
 from core.models import NetWorthSnapshot
+from core.restatement import without_bank_money
+from core.services import ensure_todays_snapshot
 from portfolio import insights, sectors
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.serializers import PositionSerializer
@@ -684,20 +686,36 @@ class BuildInsightsTest(TestCase):
         self.assertGreater(payload['change']['day']['pct'], -1.0)
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
-    def test_value_splits_saxo_cash_from_external_banks(self, _mock):
+    def test_value_has_saxo_cash_and_no_bank_only_split(self, _mock):
         BankAccount.objects.create(
             user=the_owner(),
             bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('900.00'), available=Decimal('900.00'),
         )
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
-        )
         value = insights.build_insights(the_owner())['value']
         self.assertEqual(Decimal(value['broker_cash']), Decimal('900.00'))
-        self.assertEqual(Decimal(value['bank_only']), Decimal('2500.00'))
+        self.assertNotIn('bank_only', value)
+
+    @patch('portfolio.insights._upcoming_earnings', return_value=[])
+    def test_a_history_restated_without_bank_money_shows_no_step_on_removal_day(self, _mock):
+        BankAccount.objects.create(
+            user=the_owner(),
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
+            balance=Decimal('1000.00'), available=Decimal('1000.00'),
+        )
+        today = timezone.localdate()
+        for days_ago in (40, 8, 1):
+            bank_total, net_worth = without_bank_money(Decimal('0'), Decimal('3500.00'), Decimal('2500.00'))
+            NetWorthSnapshot.objects.create(
+                user=the_owner(), date=today - timedelta(days=days_ago), portfolio_value=Decimal('0'),
+                bank_total=bank_total, net_worth=net_worth,
+            )
+        ensure_todays_snapshot(the_owner())
+
+        change = insights.build_insights(the_owner())['change']
+
+        for window in ('day', 'week', 'all_time'):
+            self.assertEqual(change[window]['abs'], Decimal('0'), window)
 
 
 class PositionInsightsTest(TestCase):

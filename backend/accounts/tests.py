@@ -4,7 +4,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
-from accounts.services import get_bank_only_balance, get_total_bank_balance
+from accounts.services import get_total_bank_balance
 from core.money import Money
 from portfolio.models import Position
 from users.testing import the_owner
@@ -136,31 +136,3 @@ class SaxoExternalIdBackfillTest(TestCase):
 
         self.assertEqual(BankAccount.objects.count(), 1)
         self.assertIsNone(BankAccount.objects.get().external_id)
-
-
-class BankOnlyBalanceTest(TestCase):
-    def test_excludes_the_saxo_cash_mirror(self):
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('833.00'), available=Decimal('833.00'), external_id='enablebanking:kbc:acc-1',
-        )
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='Saxo', type='Cash', iban_masked='-',
-            balance=Decimal('971000.00'), available=Decimal('971000.00'), external_id='saxo:cash',
-        )
-
-        self.assertEqual(get_bank_only_balance(the_owner()), Money(Decimal('833.00'), 'EUR'))
-
-    def test_keeps_hand_entered_accounts_without_an_external_id(self):
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='ING', type='Checking', iban_masked='BE45 9012',
-            balance=Decimal('100.00'), available=Decimal('100.00'),
-        )
-
-        self.assertEqual(get_bank_only_balance(the_owner()), Money(Decimal('100.00'), 'EUR'))
-
-    def test_is_zero_with_no_accounts(self):
-        self.assertEqual(get_bank_only_balance(the_owner()), Money(Decimal('0'), 'EUR'))

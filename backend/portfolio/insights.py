@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from accounts.services import get_bank_only_balance, get_broker_cash_balance
+from accounts.services import get_broker_cash_balance
 from core.models import NetWorthSnapshot
 from core.services import current_net_worth
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
@@ -319,7 +319,6 @@ def build_insights(user):
             'net_worth': net_worth_value,
             'portfolio': portfolio_value,
             'bank': bank,
-            'bank_only': get_bank_only_balance(user).rounded().amount,
             'broker_cash': get_broker_cash_balance(user).rounded().amount,
         },
         'change': {

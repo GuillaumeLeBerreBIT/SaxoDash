@@ -19,14 +19,6 @@ def get_total_bank_balance(user):
     )
 
 
-def get_bank_only_balance(user):
-    return Money.total(
-        (Money(account.balance, account.currency)
-         for account in BankAccount.objects.filter(user=user).exclude(external_id=SAXO_CASH_ACCOUNT_ID)),
-        settings.REPORTING_CURRENCY,
-    )
-
-
 def get_broker_cash_balance(user):
     return Money.total(
         (Money(account.balance, account.currency)
