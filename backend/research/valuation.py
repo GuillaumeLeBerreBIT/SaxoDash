@@ -116,6 +116,35 @@ def _latest_eps_ttm(ordered, last_day):
     return sum(value for _, value in ordered[known - QUARTERS_PER_YEAR:known])
 
 
+def _usual_samples(window):
+    weekly = {}
+    for day, pe in window:
+        if pe is not None and pe > 0:
+            weekly[day.isocalendar()[:2]] = pe
+    return list(weekly.values())
+
+
+def _quartile_levels(values):
+    if len(values) < MIN_PE_WEEKS:
+        return None
+    quartiles = statistics.quantiles(values, n=4, method='inclusive')
+    return quartiles[0], quartiles[2]
+
+
+def usual_range_at(daily, index):
+    window = daily[max(0, index - PE_WINDOW_BARS + 1):index + 1]
+    return _quartile_levels(_usual_samples(window))
+
+
+def usual_band(daily):
+    band = []
+    for index, (day, _) in enumerate(daily):
+        levels = usual_range_at(daily, index)
+        low, high = (None, None) if levels is None else (round(levels[0], 2), round(levels[1], 2))
+        band.append([day.isoformat(), low, high])
+    return band
+
+
 def pe_percentiles(closes, quarterly_eps):
     points = [(day, close) for day, close in closes if close is not None]
     if not points:
@@ -124,35 +153,18 @@ def pe_percentiles(closes, quarterly_eps):
     eps_ttm = _latest_eps_ttm(ordered, points[-1][0])
     if eps_ttm is None or eps_ttm <= 0:
         return None
-    weekly = {}
-    for day, pe in trailing_pe(points, ordered):
-        weekly[day.isocalendar()[:2]] = pe
-    values = [pe for _, pe in sorted(weekly.items()) if pe is not None and pe > 0]
-    if len(values) < MIN_PE_WEEKS:
+    daily = trailing_pe(points, ordered)
+    values = _usual_samples(daily[-PE_WINDOW_BARS:])
+    levels = _quartile_levels(values)
+    if levels is None:
         return None
-    quartiles = statistics.quantiles(values, n=4, method='inclusive')
     return {
         'current': round(points[-1][1] / eps_ttm, 2),
-        'p25': round(quartiles[0], 2),
-        'p75': round(quartiles[2], 2),
+        'p25': round(levels[0], 2),
+        'p75': round(levels[1], 2),
         'eps_ttm': round(eps_ttm, 2),
         'weeks': len(values),
     }
-
-
-def daily_band(daily):
-    weekly = {}
-    band = []
-    for day, pe in daily:
-        if pe is not None and pe > 0:
-            weekly[day.isocalendar()[:2]] = pe
-        values = list(weekly.values())
-        if len(values) < MIN_PE_WEEKS:
-            band.append([day.isoformat(), None, None])
-            continue
-        quartiles = statistics.quantiles(values, n=4, method='inclusive')
-        band.append([day.isoformat(), round(quartiles[0], 2), round(quartiles[2], 2)])
-    return band
 
 
 def median_since(points, years=5, today=None):
@@ -213,7 +225,7 @@ def history(ticker, series, bars, today=None, released=None):
         'annual': series['annual'],
         'quarterly': quarterly,
         'daily_pe': _weekly(daily),
-        'daily_pe_band': daily_band(daily),
+        'daily_pe_band': usual_band(daily),
         'medians_5y': medians,
         'latest': latest,
     }
