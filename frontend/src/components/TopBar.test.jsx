@@ -21,7 +21,6 @@ beforeEach(() => {
   queries.useMe.mockReturnValue({ data: { username: 'guillaume', email: 'g@example.com', is_owner: true } })
   queries.useSaxoStatus.mockReturnValue({ data: { connected: true, usable: true, last_sync_outcome: 'ok' } })
   queries.usePortfolioSummary.mockReturnValue({ data: { total_value: '40000.00' } })
-  queries.useNetWorth.mockReturnValue({ data: { broker_cash: '2634.84', bank_total: '821.54' } })
   queries.useFilingAlerts.mockReturnValue({ data: { unread: 0, alerts: [] } })
   queries.useMarkAlertsRead.mockReturnValue({ mutate: vi.fn() })
 })

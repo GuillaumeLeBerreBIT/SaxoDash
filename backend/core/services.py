@@ -5,9 +5,10 @@ from django.db.models import Q
 from django.utils import timezone
 
 from accounts.models import BankAccount
-from accounts.services import get_total_bank_balance
+from accounts.services import get_broker_cash_balance
 from portfolio.models import Position
 from portfolio.services import get_portfolio_value, get_saxo_account_value
+from saxo.mapping import SAXO_CASH_ACCOUNT_ID
 
 from .models import NetWorthSnapshot
 from .money import Money
@@ -15,7 +16,7 @@ from .money import Money
 
 class NetWorth(NamedTuple):
     portfolio: Money
-    bank: Money
+    cash: Money
     total: Money
 
 
@@ -34,8 +35,8 @@ def current_net_worth(user):
     reads, so the headline figure and the chart cannot disagree.
     """
     portfolio = get_portfolio_value(user)
-    bank = get_total_bank_balance(user)
-    return NetWorth(portfolio, bank, portfolio + bank)
+    cash = get_broker_cash_balance(user)
+    return NetWorth(portfolio, cash, portfolio + cash)
 
 
 def ensure_todays_snapshot(user):
@@ -63,7 +64,7 @@ def ensure_todays_snapshot(user):
         date=today,
         defaults={
             'portfolio_value': net_worth.portfolio.rounded().amount,
-            'bank_total': net_worth.bank.rounded().amount,
+            'bank_total': net_worth.cash.rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
             'saxo_account_value': saxo_account_value,
         },
@@ -72,5 +73,5 @@ def ensure_todays_snapshot(user):
 
 
 def users_with_holdings():
-    holders = Q(pk__in=Position.objects.values('user')) | Q(pk__in=BankAccount.objects.values('user'))
+    holders = Q(pk__in=Position.objects.values('user')) | Q(pk__in=BankAccount.objects.filter(external_id=SAXO_CASH_ACCOUNT_ID).values('user'))
     return get_user_model().objects.filter(holders, is_active=True).order_by('pk')

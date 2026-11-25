@@ -77,7 +77,7 @@ class Command(BaseCommand):
 
     def _restate(self, snapshots, rate, apply):
         self.stdout.write(f'Restating the portfolio leg at {rate} '
-                          f'(bank balances were already in the reporting currency).\n')
+                          f'(Saxo cash was already in the reporting currency).\n')
         self.stdout.write(f'{"date":<12}{"was":>14}{"becomes":>14}{"net worth":>16}')
 
         for snapshot in snapshots:

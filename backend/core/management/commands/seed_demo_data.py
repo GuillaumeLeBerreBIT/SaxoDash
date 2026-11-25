@@ -11,7 +11,7 @@ from portfolio.services import get_portfolio_value
 from transactions.models import Transaction
 from accounts.models import BankAccount
 from saxo.mapping import SAXO_CASH_ACCOUNT_ID
-from accounts.services import get_total_bank_balance
+from accounts.services import get_broker_cash_balance
 from core.models import NetWorthSnapshot
 from users.commands import add_user_argument, chosen_user
 
@@ -122,7 +122,7 @@ class Command(BaseCommand):
             [BankAccount(user=user, **b) for b in BANK_ACCOUNTS])
 
         snapshots = build_networth_snapshots(
-            get_portfolio_value(user).amount, get_total_bank_balance(user).amount,
+            get_portfolio_value(user).amount, get_broker_cash_balance(user).amount,
         )
         for snapshot in snapshots:
             snapshot.user = user

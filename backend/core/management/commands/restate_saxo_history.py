@@ -48,7 +48,7 @@ class Command(BaseCommand):
         if currency != settings.REPORTING_CURRENCY:
             raise CommandError(
                 f'The Saxo account is in {currency or "an unknown currency"}, not {settings.REPORTING_CURRENCY}; '
-                'its history cannot be added to the other accounts.'
+                'its history cannot be restated in the reporting currency.'
             )
 
         days = account_performance.account_days(user=user)

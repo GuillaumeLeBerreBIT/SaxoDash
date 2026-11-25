@@ -106,9 +106,9 @@ describe('ui primitives', () => {
   })
 
   it('EmptyState renders a title and optional hint', () => {
-    render(<EmptyState title="No transactions yet" hint="Connect a bank to get started" />)
+    render(<EmptyState title="No transactions yet" hint="Connect Saxo to get started" />)
     expect(screen.getByText('No transactions yet')).toBeInTheDocument()
-    expect(screen.getByText('Connect a bank to get started')).toBeInTheDocument()
+    expect(screen.getByText('Connect Saxo to get started')).toBeInTheDocument()
   })
 
   it('Modal renders its title and children as a dialog', () => {

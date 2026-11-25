@@ -36,8 +36,8 @@ describe('performanceFill', () => {
 describe('seriesAxis', () => {
   it('rounds history-chart money ticks over the chosen series only', () => {
     const rows = [
-      { net_worth: 48210.5, bank_total: 12340.2 },
-      { net_worth: 51873.9, bank_total: 9120.8 },
+      { net_worth: 48210.5, portfolio_value: 12340.2 },
+      { net_worth: 51873.9, portfolio_value: 9120.8 },
     ]
     const { ticks, domain } = seriesAxis(rows, ['net_worth'])
     expect(ticks.every((t) => t % 1000 === 0)).toBe(true)
@@ -46,7 +46,7 @@ describe('seriesAxis', () => {
     expect(domain[1]).toBeGreaterThanOrEqual(51873.9)
   })
 
-  it('anchors spending bars at zero', () => {
+  it('anchors bar charts at zero', () => {
     const { domain } = seriesAxis([{ total: 412.7 }, { total: 389.1 }], ['total'], { includeZero: true })
     expect(domain[0]).toBe(0)
     expect(domain[1]).toBeGreaterThanOrEqual(412.7)

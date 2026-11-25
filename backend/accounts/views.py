@@ -25,7 +25,6 @@ class NetWorthView(APIView):
 
         return Response({
             'portfolio_value': net_worth.portfolio.rounded().amount,
-            'bank_total': net_worth.bank.rounded().amount,
             'broker_cash': broker_cash.rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
         })

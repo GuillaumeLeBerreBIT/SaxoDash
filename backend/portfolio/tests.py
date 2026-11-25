@@ -695,6 +695,7 @@ class BuildInsightsTest(TestCase):
         value = insights.build_insights(the_owner())['value']
         self.assertEqual(Decimal(value['broker_cash']), Decimal('900.00'))
         self.assertNotIn('bank_only', value)
+        self.assertNotIn('bank', value)
 
     @patch('portfolio.insights._upcoming_earnings', return_value=[])
     def test_a_history_restated_without_bank_money_shows_no_step_on_removal_day(self, _mock):
@@ -752,7 +753,7 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
         _pos('NVDA', '10', '100', '200')
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='-',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
@@ -770,7 +771,7 @@ class BuildInsightsHeadlineMatchesDeltasTest(TestCase):
         _pos('NVDA', '10', '100', '150')  # value = 1500.00
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='-',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
         yesterday = timezone.localdate() - timedelta(days=1)

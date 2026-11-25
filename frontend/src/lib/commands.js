@@ -5,6 +5,6 @@ export const DEEP_LINK_COMMANDS = [
 ]
 
 export const PAGE_COMMANDS = [
-  ...[...NAV_ITEMS, SETTINGS_ITEM].map(({ to, label, ownerOnly }) => ({ to, label, ...(ownerOnly ? { ownerOnly } : {}) })),
+  ...[...NAV_ITEMS, SETTINGS_ITEM].map(({ to, label }) => ({ to, label })),
   ...DEEP_LINK_COMMANDS,
 ]

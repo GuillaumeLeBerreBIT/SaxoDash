@@ -4,39 +4,8 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import BankAccount
-from accounts.services import get_total_bank_balance
-from core.money import Money
 from portfolio.models import Position
 from users.testing import the_owner
-
-
-class BankAccountModelTest(TestCase):
-    def test_create_bank_account(self):
-        account = BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 •••• •••• 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
-            gradient='from-blue-500 to-blue-700', accent='#1e40af',
-        )
-        self.assertEqual(BankAccount.objects.count(), 1)
-        self.assertEqual(account.bank, 'KBC')
-
-
-class BankAccountServiceTest(TestCase):
-    def setUp(self):
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
-        )
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='ING', type='Savings', iban_masked='BE68 5678',
-            balance=Decimal('1000.00'), available=Decimal('1000.00'),
-        )
-
-    def test_total_bank_balance(self):
-        self.assertEqual(get_total_bank_balance(the_owner()).amount, Decimal('3500.00'))
 
 
 class AccountsAPITest(APITestCase):
@@ -53,13 +22,8 @@ class AccountsAPITest(APITestCase):
         )
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
-        )
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='Saxo', type='Cash', iban_masked='-',
-            balance=Decimal('500.00'), available=Decimal('500.00'),
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
+            balance=Decimal('3000.00'), available=Decimal('3000.00'),
         )
 
     def test_requires_auth(self):
@@ -85,7 +49,7 @@ class AccountsAPITest(APITestCase):
         response = self.client.get('/api/accounts/net-worth/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['portfolio_value'], Decimal('1500.00'))
-        self.assertEqual(response.data['bank_total'], Decimal('3000.00'))
+        self.assertEqual(response.data['broker_cash'], Decimal('3000.00'))
         self.assertEqual(response.data['net_worth'], Decimal('4500.00'))
 
 class SaxoExternalIdBackfillTest(TestCase):

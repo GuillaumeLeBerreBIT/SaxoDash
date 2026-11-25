@@ -18,15 +18,15 @@ describe('mobile overflow helpers', () => {
     expect(parseArgs(['--width', '320', '--base', 'b', '--auth', 'c']).width).toBe(320)
   })
   it('formats a pass and a fail row', () => {
-    expect(formatRow('/spending', 0, [])).toMatch(/\/spending\s+over\s+0\s+OK/)
-    expect(formatRow('/spending', 81, ['button.x:471'])).toMatch(/FAIL.*button\.x:471/)
+    expect(formatRow('/portfolio', 0, [])).toMatch(/\/portfolio\s+over\s+0\s+OK/)
+    expect(formatRow('/portfolio', 81, ['button.x:471'])).toMatch(/FAIL.*button\.x:471/)
   })
   it('accepts a route that landed where it was sent and rendered main', () => {
-    expect(describeLoadFailure('/spending', '/spending', true)).toBeNull()
+    expect(describeLoadFailure('/portfolio', '/portfolio', true)).toBeNull()
   })
   it('describes a redirect and a missing main', () => {
     expect(describeLoadFailure('/accounts/9', '/login', true)).toBe('landed on /login')
-    expect(describeLoadFailure('/spending', '/spending', false)).toBe('no main element')
+    expect(describeLoadFailure('/portfolio', '/portfolio', false)).toBe('no main element')
     expect(describeLoadFailure('/accounts/9', '/', false)).toBe('landed on /, no main element')
   })
   it('formats a load failure row', () => {
@@ -47,6 +47,6 @@ describe('mobile overflow helpers', () => {
     expect(describeGateBlindness('hidden', 'hidden')).toBe('html overflow-x is hidden, body overflow-x is hidden')
   })
   it('formats a gate-blind row', () => {
-    expect(formatGateBlind('/spending', 'html overflow-x is hidden')).toMatch(/\/spending\s+GATE-BLIND\s+html overflow-x is hidden/)
+    expect(formatGateBlind('/portfolio', 'html overflow-x is hidden')).toMatch(/\/portfolio\s+GATE-BLIND\s+html overflow-x is hidden/)
   })
 })

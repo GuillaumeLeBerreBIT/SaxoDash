@@ -30,6 +30,14 @@ C="docker compose --env-file /srv/saxodash/.env -f deploy/compose.yaml"
 
    Only `saxo:cash` rows, no transactions and 0 snapshots without a bank-only total: nothing to keep, go to 3. Otherwise continue with 2.
 
+   **Stop if it counted snapshots without a bank-only total.** The restatement cannot take bank money out of those rows, and the column it would need is dropped. List them and decide before merging to `main`:
+
+   ```sh
+   $C exec web python manage.py shell -c "from core.models import NetWorthSnapshot as S; [print(r) for r in S.objects.filter(bank_only_total__isnull=True).order_by('user_id', 'date').values_list('user__username', 'date', 'portfolio_value', 'bank_total', 'net_worth')]"
+   ```
+
+   If their `bank_total` is about the Saxo cash of those days, nothing is wrong. If it holds the KBC and Argenta balances too, those days still count bank money and the chart steps down after them.
+
 2. Keep a copy of the bank data. A backup holds every table, so take one and keep its file outside the rotation:
 
    ```sh
@@ -42,8 +50,6 @@ C="docker compose --env-file /srv/saxodash/.env -f deploy/compose.yaml"
    ```sh
    $C exec -T postgres psql -U saxodash saxodash -c "\copy enablebanking_banktransaction TO STDOUT WITH CSV HEADER" > bank_transactions.csv
    ```
-
-   If step 1 counted snapshots with no bank-only total, check their bank total against Saxo cash before deploying: those rows keep any bank money they hold, so the chart would step down on removal day.
 
 3. Revoke the KBC and Argenta consents at Enable Banking.
 
