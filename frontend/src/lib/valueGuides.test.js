@@ -93,4 +93,19 @@ describe('visibleGuides', () => {
     expect(visibleGuides(guideSeries(full, { high: false, gaps: true }), full, full.slice(290)).gaps).toEqual([])
     expect(visibleGuides(guideSeries(full, { high: false, gaps: false }), full, full.slice(290)).gaps).toEqual([])
   })
+
+  it('lines the usual P/E band up with the visible bars by date, and leaves a bar with no band empty', () => {
+    const rows = [[day(270), 20, 30], [day(271), null, null], [day(272), 21, 31]]
+    const shown = visibleGuides(guideSeries(full, { high: false, gaps: false, band: rows }), full, full.slice(270, 290))
+
+    expect(shown.band).toHaveLength(20)
+    expect(shown.band[0]).toEqual([day(270), 20, 30])
+    expect(shown.band[1]).toBeNull()
+    expect(shown.band[2]).toEqual([day(272), 21, 31])
+    expect(shown.band[5]).toBeNull()
+  })
+
+  it('has no band when the band is switched off', () => {
+    expect(visibleGuides(guideSeries(full, { high: false, gaps: false, band: null }), full, full.slice(270, 290)).band).toBeNull()
+  })
 })

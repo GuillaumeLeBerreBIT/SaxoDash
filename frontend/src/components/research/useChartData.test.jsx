@@ -22,6 +22,7 @@ function stub() {
   queries.useChart.mockReturnValue({ data: bars, isLoading: false, error: null })
   queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { currency: 'USD' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false } })
+  queries.useUsualBand.mockReturnValue({ ...idle, data: { band: [] } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: null })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
@@ -60,6 +61,7 @@ describe('useChartData company data', () => {
     const { result } = render()
 
     expect(queries.useSymbolEarnings).toHaveBeenLastCalledWith('NVDA')
+    expect(queries.useUsualBand).toHaveBeenLastCalledWith('NVDA')
     expect(result.current.companyData).toBe('eligible')
   })
 

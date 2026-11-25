@@ -46,6 +46,7 @@ function stub() {
   queries.useQuotes.mockReturnValue({ ...idle, data: [] })
   queries.useQuotesByAssetType.mockReturnValue({ data: [], isLoading: false })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false } })
+  queries.useUsualBand.mockReturnValue({ ...idle, data: { band: [] } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: null })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })
   queries.usePriceLineMutations.mockReturnValue(mutations())

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BAND_COLOURS,
   DEFAULT_APPEARANCE,
   DENSITY,
   MOVES,
   ROLES,
   THEMES,
+  bandColour,
   contrastRatio,
   readAppearance,
   themeVars,
@@ -76,7 +78,18 @@ describe('readAppearance', () => {
     expect(readAppearance(null)).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('not json')).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('{"theme":"neon","moves":"x","density":9}')).toEqual(DEFAULT_APPEARANCE)
-    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable' })
+    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'blue', expensiveBand: 'orange' })
+  })
+
+  it('keeps only band colours from the list, never green or red', () => {
+    expect(readAppearance('{"cheapBand":"green","expensiveBand":"red"}')).toMatchObject({ cheapBand: 'blue', expensiveBand: 'orange' })
+    expect(readAppearance('{"cheapBand":"violet","expensiveBand":"yellow"}')).toMatchObject({ cheapBand: 'violet', expensiveBand: 'yellow' })
+    expect(Object.keys(BAND_COLOURS)).not.toEqual(expect.arrayContaining(['green', 'red']))
+  })
+
+  it('gives the band colour for each theme', () => {
+    expect(bandColour('blue', 'republic')).toBe(BAND_COLOURS.blue.dark)
+    expect(bandColour('orange', 'light')).toBe(BAND_COLOURS.orange.light)
   })
 
   it('keeps valid fields', () => {
@@ -84,6 +97,8 @@ describe('readAppearance', () => {
       theme: 'blue',
       moves: 'green-red',
       density: 'comfortable',
+      cheapBand: 'blue',
+      expensiveBand: 'orange',
     })
   })
 })

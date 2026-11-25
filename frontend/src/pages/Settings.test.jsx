@@ -83,6 +83,14 @@ describe('Settings', () => {
     expect(screen.getByRole('button', { name: /Blue \/ orange/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('usual P/E colours pick from blue, orange, violet and yellow, never green or red', async () => {
+    renderSettings()
+    expect(screen.queryAllByRole('button', { name: /^(Green|Red)$/ })).toHaveLength(0)
+    await userEvent.click(screen.getAllByRole('button', { name: 'Violet' })[1])
+    expect(JSON.parse(localStorage.getItem('saxodash:appearance')).expensiveBand).toBe('violet')
+    expect(screen.getAllByRole('button', { name: 'Violet' })[1]).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('density toggles compact', async () => {
     renderSettings()
     await userEvent.click(screen.getByRole('button', { name: 'Compact' }))

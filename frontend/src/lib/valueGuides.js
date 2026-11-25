@@ -6,21 +6,31 @@ const QUALITY_WORDS = { strong: 'Strong company', incomplete: 'Incomplete figure
 const ZONE_WORDS = { cheap: 'P/E below its usual range', fair: 'P/E within its usual range', expensive: 'P/E above its usual range' }
 const NOT_JUDGED = 'Too little P/E history to judge the price.'
 
-export function guideSeries(bars, { high, gaps }) {
+function alignBand(bars, rows) {
+  const byDate = new Map(rows.map((row) => [row[0], row]))
+  return bars.map((bar) => {
+    const row = byDate.get(bar.date)
+    return row && row[1] != null && row[2] != null ? row : null
+  })
+}
+
+export function guideSeries(bars, { high, gaps, band = null }) {
   return {
     highs: high ? rollingHigh(bars) : null,
     gaps: gaps ? volumeGaps(bars).map((gap) => ({ ...gap, filledOn: gap.filled ? bars[gap.end].date : null })) : [],
+    band: band ? alignBand(bars, band) : null,
   }
 }
 
 export function visibleGuides(series, bars, data) {
   const offset = data.length ? bars.findIndex((bar) => bar.date === data[0].date) : -1
-  if (offset < 0) return { highs: null, gaps: [] }
+  if (offset < 0) return { highs: null, gaps: [], band: null }
   return {
     highs: series.highs ? series.highs.slice(offset, offset + data.length) : null,
     gaps: series.gaps
       .map((gap) => ({ ...gap, index: gap.index - offset, end: gap.end - offset }))
       .filter((gap) => gap.end >= 0 && gap.index < data.length),
+    band: series.band ? series.band.slice(offset, offset + data.length) : null,
   }
 }
 

@@ -72,6 +72,7 @@ function stubQueries({ chart = { data: bars, isLoading: false, error: null }, po
   queries.useCongressOwnership.mockReturnValue({ ...idle, data: { window_days: 365, stock: null, members: [] } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'not configured' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useUsualBand.mockReturnValue({ ...idle, data: { band: [] } })
   queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })
   queries.useCompanyNews.mockReturnValue({ ...idle, data: { available: true, items: [] } })
   queries.usePeers.mockReturnValue({ ...idle, data: { available: false } })
@@ -173,7 +174,7 @@ describe('Research', () => {
 
   const judged = { action: 'wait', reason: 'Quality passes; price is not in its cheap range', quality: 'strong', valuation: 'fair', cheap_below: 100, expensive_above: 200, uic: 211, checks: [] }
 
-  it('describes today\'s usual P/E range as a rule of thumb once, in the answer, and offers no past P/E band', async () => {
+  it('describes today\'s usual P/E range as a rule of thumb once, in the answer, and offers it as a guide', async () => {
     showAdvanced()
     queries.useVerdict.mockReturnValue({
       ...idle,
@@ -189,10 +190,9 @@ describe('Research', () => {
     expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
     expect(screen.queryByTestId('value-zones')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
-    for (const name of [/52-week high/, /Volume gaps/]) {
+    for (const name of [/52-week high/, /Volume gaps/, /Usual P\/E range/]) {
       expect(await screen.findByRole('menuitem', { name })).toBeInTheDocument()
     }
-    expect(screen.queryByRole('menuitem', { name: /P\/E/ })).not.toBeInTheDocument()
   })
 
   it('says the price cannot be judged without a usual P/E range', () => {

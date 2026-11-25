@@ -85,6 +85,53 @@ export function GapBoxes({ gaps, geometry, colors }) {
   )
 }
 
+const BAND_LABEL_FONT = 10
+
+function bandRuns(band) {
+  const runs = []
+  let run = null
+  band.forEach((row, i) => {
+    if (row == null) {
+      run = null
+      return
+    }
+    if (run == null) {
+      run = []
+      runs.push(run)
+    }
+    run.push(i)
+  })
+  return runs
+}
+
+function bandLine(band, indexes, column, geometry) {
+  return indexes.map((i, n) => `${n ? 'L' : 'M'} ${geometry.xAt(i)} ${geometry.scaleY(band[i][column])}`).join(' ')
+}
+
+export function UsualBand({ band, geometry, colors }) {
+  const runs = band?.length ? bandRuns(band) : []
+  if (!runs.length) return null
+  const first = runs[0][0]
+  const lines = (column, stroke) =>
+    runs.map((indexes) => <path key={`${column}-${indexes[0]}`} d={bandLine(band, indexes, column, geometry)} fill="none" stroke={stroke} strokeWidth="1.2" />)
+  return (
+    <g data-testid="usual-band" pointerEvents="none">
+      {runs.map((indexes) => {
+        const bottom = [...indexes].reverse().map((i) => `L ${geometry.xAt(i)} ${geometry.scaleY(band[i][1])}`).join(' ')
+        return <path key={`fill-${indexes[0]}`} d={`${bandLine(band, indexes, 2, geometry)} ${bottom} Z`} fill={colors.accent} opacity="0.08" />
+      })}
+      <g data-testid="band-cheap">{lines(1, colors.bandCheap)}</g>
+      <g data-testid="band-expensive">{lines(2, colors.bandExpensive)}</g>
+      <text x={geometry.xAt(first) + 4} y={geometry.scaleY(band[first][1]) + 12} fill={colors.bandCheap} fontSize={BAND_LABEL_FONT} fontWeight="600" className="num">
+        Cheap P/E
+      </text>
+      <text x={geometry.xAt(first) + 4} y={geometry.scaleY(band[first][2]) - 4} fill={colors.bandExpensive} fontSize={BAND_LABEL_FONT} fontWeight="600" className="num">
+        Expensive P/E
+      </text>
+    </g>
+  )
+}
+
 const GUIDE_TAG_HEIGHT = 16
 const GUIDE_TAG_GAP = 17
 const GUIDE_FONT = 11

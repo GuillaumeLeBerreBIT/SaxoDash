@@ -104,7 +104,18 @@ export const DENSITY = {
   compact: { rowH: 38, gap: 8 },
 }
 
-export const DEFAULT_APPEARANCE = { theme: 'republic', moves: 'green-red', density: 'comfortable' }
+export const BAND_COLOURS = {
+  blue: { dark: '#4C9AFF', light: '#1F5FD1' },
+  orange: { dark: '#FF9A3C', light: '#C2570C' },
+  violet: { dark: '#B69CFF', light: '#6250D6' },
+  yellow: { dark: '#F5C542', light: '#8A6700' },
+}
+
+export function bandColour(name, theme) {
+  return BAND_COLOURS[name][theme === 'light' ? 'light' : 'dark']
+}
+
+export const DEFAULT_APPEARANCE = { theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'blue', expensiveBand: 'orange' }
 
 const SERIES_ROLE = /^s\d$/
 
@@ -153,5 +164,7 @@ export function readAppearance(raw) {
     theme: THEME_NAMES.includes(source.theme) ? source.theme : DEFAULT_APPEARANCE.theme,
     moves: Object.hasOwn(MOVES, source.moves) ? source.moves : DEFAULT_APPEARANCE.moves,
     density: Object.hasOwn(DENSITY, source.density) ? source.density : DEFAULT_APPEARANCE.density,
+    cheapBand: Object.hasOwn(BAND_COLOURS, source.cheapBand) ? source.cheapBand : DEFAULT_APPEARANCE.cheapBand,
+    expensiveBand: Object.hasOwn(BAND_COLOURS, source.expensiveBand) ? source.expensiveBand : DEFAULT_APPEARANCE.expensiveBand,
   }
 }

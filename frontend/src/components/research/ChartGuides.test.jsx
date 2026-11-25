@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 import * as ChartGuides from './ChartGuides'
-import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
+import { GapBoxes, GuideTags, HighLine, StopGuide, UsualBand } from './ChartGuides'
 import EntryBanner from './EntryBanner'
 
 const colors = { accent: 'accent', up: 'up', down: 'down', warn: 'warn', warnText: 'warnText', axisCategory: 'ink2', pane: 'pane', tooltip: { bg: 'raised' } }
@@ -87,9 +87,34 @@ describe('GapBoxes', () => {
   })
 })
 
-it('no longer draws flat price zones or a past P/E band', () => {
+it('no longer draws flat price zones', () => {
   expect(ChartGuides.PriceZones).toBeUndefined()
   expect(ChartGuides.ValueZones).toBeUndefined()
+})
+
+describe('UsualBand', () => {
+  const bandColors = { ...colors, bandCheap: 'blue', bandExpensive: 'orange', accent: 'accent' }
+  const rows = data.map((bar, i) => (i < 30 ? [bar.date, 90, 110] : null))
+  const drawn = (band) => draw(<UsualBand band={band} geometry={geometry()} colors={bandColors} />)
+
+  it('draws the low line in the cheap colour and the high line in the expensive colour, over a neutral band', () => {
+    drawn(rows)
+    expect(screen.getByTestId('usual-band')).toBeInTheDocument()
+    expect(screen.getByTestId('band-cheap').querySelector('path').getAttribute('stroke')).toBe('blue')
+    expect(screen.getByTestId('band-expensive').querySelector('path').getAttribute('stroke')).toBe('orange')
+    expect(screen.getByTestId('usual-band').querySelector('path[fill="accent"]')).not.toBeNull()
+  })
+
+  it('labels the two lines Cheap P/E and Expensive P/E', () => {
+    drawn(rows)
+    expect(screen.getByText('Cheap P/E')).toBeInTheDocument()
+    expect(screen.getByText('Expensive P/E')).toBeInTheDocument()
+  })
+
+  it('draws nothing where no bar has a band', () => {
+    drawn(data.map(() => null))
+    expect(screen.queryByTestId('usual-band')).toBeNull()
+  })
 })
 
 describe('StopGuide', () => {
