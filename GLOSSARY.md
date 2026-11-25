@@ -18,8 +18,12 @@ _Avoid_: Holding (fine in page copy such as "Your holdings", but the stored conc
 The value Saxo reports for the user's account, in euros. The app never recomputes it from its own prices.
 _Avoid_: Net worth (that adds the cash in the Saxo account)
 
+**Saxo Cash**:
+The uninvested cash in the user's Saxo account, as Saxo reports it. It is the only cash SaxoDash counts.
+_Avoid_: Bank balance, cash on hand
+
 **Net Worth**:
-The Portfolio Value plus the cash in the user's Saxo account, now and across its history. No bank account counts.
+The Portfolio Value plus the Saxo Cash, now and across its history. No bank account counts.
 _Avoid_: Account value (that is Saxo's own total, the series Investment Return is measured on)
 
 **Investment Return**:

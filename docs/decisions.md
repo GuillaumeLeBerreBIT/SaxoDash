@@ -894,8 +894,8 @@ if it returns, is a separate app that could connect over an API. Net worth is th
 portfolio plus Saxo cash, which stays mirrored into `accounts.BankAccount`
 (`saxo.mapping.SAXO_CASH_ACCOUNT_ID`). History was restated in one release so the chart has no
 step on removal day: `core` 0015 takes each snapshot's recorded bank-only total out of its bank
-total and net worth (a null counts as zero, as in `restate_saxo_history`), 0016 drops that
+total and net worth (a snapshot that never recorded one keeps its figures), 0016 drops that
 column, and `enablebanking` 0006 deletes every account row but the Saxo cash before dropping
 the bank tables. The empty `enablebanking` app is uninstalled in the next release, once
-production has run 0006. Earlier notes in this file that mention banks describe the app before
-this change.
+production has run 0006. Bank mentions in older entries were removed rather than kept as
+history; `restate_saxo_history` now sets a day's bank total to that day's Saxo cash.
