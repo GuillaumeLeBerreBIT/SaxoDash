@@ -13,8 +13,6 @@ class BankAccount(models.Model):
     gradient = models.CharField(max_length=100, blank=True, default='')
     accent = models.CharField(max_length=20, blank=True, default='')
 
-    # Stable key for synced accounts; null for ones entered by hand. `bank` is
-    # not unique because one bank can hold several accounts.
     external_id = models.CharField(max_length=64, null=True, blank=True,
                                    default=None)
 

@@ -364,14 +364,14 @@ export function PerformancePanel() {
 
 export function NetWorthPanel() {
   const insights = usePortfolioInsights()
-  if (insights.isLoading) return <LoadingCard context="Saxo + bank" title="Net worth" />
+  if (insights.isLoading) return <LoadingCard context="Portfolio + Saxo cash" title="Net worth" />
   if (insights.error || !insights.data) return <Unavailable title="Net worth" what="your net worth" />
   const { value, change, as_of: asOf, stale } = insights.data
   const day = change?.day
   return (
     <Card
       className={FILL}
-      context={`Saxo + bank · as of ${fmtDate(asOf)}${stale ? ' · stale' : ''}`}
+      context={`Portfolio + Saxo cash · as of ${fmtDate(asOf)}${stale ? ' · stale' : ''}`}
       dot={stale ? 'warn' : 'ok'}
       title="Net worth"
     >

@@ -40,10 +40,10 @@ def hold(user, ticker='NVDA', qty='10', price='100', avg='80'):
     )
 
 
-def bank(user, balance='1000', external_id=None, name='KBC'):
+def saxo_cash(user, balance='1000'):
     return BankAccount.objects.create(
-        user=user, bank=name, type='Current', iban_masked='BE** 0000',
-        balance=Decimal(balance), available=Decimal(balance), external_id=external_id,
+        user=user, bank='Saxo', type='Cash', iban_masked='-',
+        balance=Decimal(balance), available=Decimal(balance), external_id=mapping.SAXO_CASH_ACCOUNT_ID,
     )
 
 
@@ -78,7 +78,7 @@ class PerUserPortfolioTest(APITestCase):
 
     def test_summary_and_net_worth_are_per_user(self):
         hold(self.alice, qty='10', price='100')
-        bank(self.alice, balance='5000')
+        saxo_cash(self.alice, balance='5000')
         NetWorthSnapshot.objects.create(
             user=self.alice, date=timezone.localdate() - timedelta(days=3),
             portfolio_value=Decimal('900'), bank_total=Decimal('5000'), net_worth=Decimal('5900'),
@@ -116,21 +116,6 @@ class PerUserPortfolioTest(APITestCase):
         self.assertEqual(self.client.delete(f'/api/transactions/{mine.pk}/').status_code, 404)
         self.assertTrue(Transaction.objects.filter(pk=mine.pk, qty=Decimal('1')).exists())
 
-    def test_bank_accounts_are_per_user(self):
-        mine = bank(self.alice, external_id='saxo:cash', name='Saxo')
-        bank(self.bob, external_id='saxo:cash', name='Saxo')
-        bank(self.bob, name='ING')
-
-        self.as_user(self.bob)
-        listed = self.client.get('/api/accounts/').data
-
-        self.assertCountEqual([row['bank'] for row in listed], ['Saxo', 'ING'])
-        self.assertNotIn(mine.pk, [row['id'] for row in listed])
-        self.assertEqual(self.client.get(f'/api/accounts/{mine.pk}/').status_code, 404)
-        self.assertEqual(self.client.patch(f'/api/accounts/{mine.pk}/', {'balance': '1'}).status_code, 404)
-        self.assertEqual(self.client.delete(f'/api/accounts/{mine.pk}/').status_code, 404)
-        self.assertTrue(BankAccount.objects.filter(pk=mine.pk, balance=Decimal('1000')).exists())
-
 
 @override_settings(CACHES=LOCMEM)
 class SnapshotPerUserTest(TestCase):
@@ -141,7 +126,7 @@ class SnapshotPerUserTest(TestCase):
 
     def test_snapshot_net_worth_writes_one_row_per_user(self):
         hold(self.alice, qty='10', price='100')
-        bank(self.bob, balance='250')
+        saxo_cash(self.bob, balance='250')
 
         snapshot_net_worth()
 
@@ -176,7 +161,7 @@ class SaxoSyncPerUserTest(TestCase):
 
     def test_saxo_sync_writes_cash_account_for_credential_user(self):
         self.connect(self.bob, 'bob-token')
-        bank(self.alice, balance='42', external_id=mapping.SAXO_CASH_ACCOUNT_ID, name='Saxo')
+        saxo_cash(self.alice, balance='42')
 
         with patch('saxo.tasks.client.get_account_balance', return_value=BALANCE):
             tasks.sync_account_balance()

@@ -1,10 +1,8 @@
 import { useSearchParams } from 'react-router-dom'
-import { connectEnableBanking } from '../api/client'
-import { useClearAccountHistory, useEnableBankingStatus, useMe, useSaxoStatus } from '../api/queries'
+import { useClearAccountHistory, useSaxoStatus } from '../api/queries'
 import AccountSettings from '../components/settings/AccountSettings'
 import { Button, Card, PageHeader, Segmented, StatusDot } from '../components/ui'
 import { fmtDateTime } from '../lib/format'
-import { bankSyncBadge } from '../lib/bankSync'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
 import { useConnectSaxo } from '../lib/useConnectSaxo'
 import { THEMES } from '../lib/theme'
@@ -31,8 +29,6 @@ const DENSITY_OPTIONS = [
   { value: 'comfortable', label: 'Comfortable' },
   { value: 'compact', label: 'Compact' },
 ]
-
-const BANK_LABELS = { kbc: 'KBC', argenta: 'Argenta' }
 
 const OTHER_SOURCES = [
   { name: 'Finnhub', note: 'Fundamentals, statements, filings and news, with a key set on the server' },
@@ -133,43 +129,16 @@ function saxoRow(status, failed, connect, connectFailed, clearHistory) {
   return { dot: 'ok', name, note: `${base}. Connected; ${synced}.`, action: clearAction }
 }
 
-function bankRow(bank, state) {
-  const label = BANK_LABELS[bank] ?? bank
-  if (!state.connected) {
-    return {
-      dot: 'off',
-      name: `${label} not connected`,
-      note: 'Account balances and transactions',
-      action: <Button size="sm" onClick={() => connectEnableBanking(bank)}>Connect</Button>,
-    }
-  }
-  if (state.needs_reauth) {
-    return {
-      dot: 'warn',
-      name: `${label} needs re-authentication`,
-      note: 'Account balances and transactions',
-      action: <Button variant="primary" size="sm" onClick={() => connectEnableBanking(bank)}>Reconnect</Button>,
-    }
-  }
-  if (!state.usable) return { dot: 'warn', name: `${label} reconnecting`, note: state.unusable_reason ?? 'Account balances and transactions' }
-  const badge = bankSyncBadge(state)
-  return { dot: badge.tone === 'emerald' ? 'ok' : 'warn', name: label, note: `Account balances and transactions. ${badge.title}` }
-}
-
 function Connections() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
-  const { data: me } = useMe()
-  const { data: banks } = useEnableBankingStatus({ enabled: me?.is_owner === true })
   const { connect, failed: connectFailed } = useConnectSaxo()
   const clearHistory = useClearAccountHistory()
-  const rows = [saxoRow(saxo, saxoFailed, connect, connectFailed, clearHistory), ...Object.entries(banks ?? {}).map(([bank, state]) => bankRow(bank, state))]
-  const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
+  const saxoSource = saxoRow(saxo, saxoFailed, connect, connectFailed, clearHistory)
+  const dot = saxoSource.dot === 'warn' ? 'warn' : undefined
   return (
     <Card context="Where SaxoDash gets its numbers" dot={dot} title="Connections">
       <ul>
-        {rows.map((row) => (
-          <SourceRow key={row.name} {...row} />
-        ))}
+        <SourceRow {...saxoSource} />
       </ul>
       <h3 className="mt-5 mb-1 text-[13px] font-semibold text-ink-2">Other sources</h3>
       <ul>
@@ -181,39 +150,27 @@ function Connections() {
   )
 }
 
-function syncRows(saxo, banks, failed) {
-  const rows = []
-  const groups = [['Saxo', saxo], ['Banks', undefined], ...Object.entries(banks ?? {}).map(([bank, state]) => [BANK_LABELS[bank] ?? bank, state])]
-  for (const [source, state] of groups) {
-    if (failed[source]) {
-      rows.push({ key: `${source}:unavailable`, dot: 'warn', name: source, note: 'Status unavailable' })
-      continue
-    }
-    if (!state?.connected) continue
-    const lastGood = state.last_synced_at ? fmtDateTime(state.last_synced_at) : 'never'
-    const failing = state.failing_syncs ?? []
-    for (const task of failing) {
-      rows.push({ key: `${source}:${task}`, dot: 'warn', name: task, mono: true, note: `${source} · failing · last good sync ${lastGood}` })
-    }
-    if (!failing.length) {
-      const outcome = state.last_sync_outcome
-      const degraded = outcome && outcome !== 'ok'
-      rows.push({
-        key: `${source}:sync`,
-        dot: degraded ? 'warn' : 'ok',
-        name: `${source} sync`,
-        note: degraded ? `Last run ${outcome} · last good sync ${lastGood}` : `Last synced ${lastGood}`,
-      })
-    }
+function syncRows(saxo, failed) {
+  if (failed) return [{ key: 'Saxo:unavailable', dot: 'warn', name: 'Saxo', note: 'Status unavailable' }]
+  if (!saxo?.connected) return []
+  const lastGood = saxo.last_synced_at ? fmtDateTime(saxo.last_synced_at) : 'never'
+  const failing = saxo.failing_syncs ?? []
+  if (failing.length) {
+    return failing.map((task) => ({ key: `Saxo:${task}`, dot: 'warn', name: task, mono: true, note: `Saxo · failing · last good sync ${lastGood}` }))
   }
-  return rows
+  const outcome = saxo.last_sync_outcome
+  const degraded = outcome && outcome !== 'ok'
+  return [{
+    key: 'Saxo:sync',
+    dot: degraded ? 'warn' : 'ok',
+    name: 'Saxo sync',
+    note: degraded ? `Last run ${outcome} · last good sync ${lastGood}` : `Last synced ${lastGood}`,
+  }]
 }
 
 function SyncHealth() {
   const { data: saxo, isError: saxoFailed } = useSaxoStatus()
-  const { data: me } = useMe()
-  const { data: banks, isError: banksFailed } = useEnableBankingStatus({ enabled: me?.is_owner === true })
-  const rows = syncRows(saxo, banks, { Saxo: saxoFailed, Banks: banksFailed })
+  const rows = syncRows(saxo, saxoFailed)
   const dot = rows.some((row) => row.dot === 'warn') ? 'warn' : undefined
   return (
     <Card context="Latest run of each task" dot={dot} title="Sync health">

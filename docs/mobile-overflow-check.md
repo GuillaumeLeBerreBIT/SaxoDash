@@ -5,10 +5,8 @@ It loads every shell route in headless Chromium at phone width and fails when
 the page scrolls sideways: `documentElement.scrollWidth > innerWidth`.
 
 It covers `ROUTES` (`frontend/src/lib/mobileOverflow.js`, including the
-filtered `/transactions?type=BUY&from=...` and the
-`/spending/transactions?category=...` drill-down; the query is ignored when
-checking where the page landed), `/accounts/<id>`,
-`/investors/<slug>` and the Analytics Risk and Projection tabs.
+filtered `/transactions?type=BUY&from=...`; the query is ignored when
+checking where the page landed), `/investors/<slug>` and the Analytics Risk and Projection tabs.
 
 ## Running it
 
@@ -43,13 +41,13 @@ run it there, then delete the copies.
 
 ```bash
 node check-mobile-overflow.mjs --base http://localhost:5273 --auth auth.json \
-  [--width 390] [--account-id 1] [--investor-slug berkshire-hathaway]
+  [--width 390] [--investor-slug berkshire-hathaway]
 ```
 
 Exit codes: `0` every route passes, `1` at least one overflows or did not load,
 `2` setup problem (no Playwright, no `--auth`, a `--width` that is not a positive number).
 
-A route that redirects (expired token, unknown account id or investor slug) or
+A route that redirects (expired token or unknown investor slug) or
 renders no `<main>` is not measured; it prints `NOLOAD <what was found>` and
 forces exit `1`, as does a step that throws, such as a renamed tab button.
 
@@ -60,8 +58,8 @@ and fails instead of passing vacuously.
 ## Reading a row
 
 ```
-/spending                          over    0  OK
-/spending                          over   81  FAIL  button.x.y:471 | div.a.b:455
+/portfolio                         over    0  OK
+/portfolio                         over   81  FAIL  button.x.y:471 | div.a.b:455
 ```
 
 `over` is how many pixels the page is wider than the viewport. After FAIL come

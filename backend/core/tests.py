@@ -1,3 +1,5 @@
+from io import StringIO
+
 from django.test import TestCase
 from decimal import Decimal
 from datetime import date, timedelta
@@ -11,11 +13,11 @@ from django.core.management.base import CommandError
 
 from .models import NetWorthSnapshot
 from .money import CurrencyMismatch, Money
-from .services import current_net_worth, ensure_todays_snapshot
+from .services import current_net_worth, ensure_todays_snapshot, users_with_holdings
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
 from portfolio.services import get_portfolio_value
 from accounts.models import BankAccount
-from accounts.services import get_total_bank_balance
+from accounts.services import get_broker_cash_balance
 from users.testing import make_user, the_owner
 
 class NetWorthSnapshotModelTest(TestCase):
@@ -56,7 +58,7 @@ class EnsureTodaysSnapshotTest(TestCase):
         )
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
@@ -87,7 +89,7 @@ class SnapshotSaxoAccountValueTest(TestCase):
         )
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
@@ -213,16 +215,14 @@ class SeedDemoDataSnapshotsTest(TestCase):
         today = timezone.localdate()
         latest = NetWorthSnapshot.objects.get(date=today)
         self.assertEqual(latest.portfolio_value, get_portfolio_value(the_owner()).amount)
-        self.assertEqual(latest.bank_total, get_total_bank_balance(the_owner()).amount)
+        self.assertEqual(latest.bank_total, get_broker_cash_balance(the_owner()).amount)
 
-    def test_seeded_snapshots_carry_the_bank_only_total(self):
+    def test_seeded_snapshots_bank_only_the_saxo_cash(self):
         call_command('seed_demo_data')
 
-        mismatched = [
-            snap for snap in NetWorthSnapshot.objects.all()
-            if snap.bank_only_total != snap.bank_total
-        ]
-        self.assertEqual(mismatched, [])
+        cash = BankAccount.objects.get(user=the_owner(), external_id='saxo:cash').balance
+        self.assertEqual(set(NetWorthSnapshot.objects.values_list('bank_total', flat=True)), {cash})
+        self.assertEqual(list(BankAccount.objects.values_list('external_id', flat=True)), ['saxo:cash'])
 
     def test_seed_is_idempotent(self):
         call_command('seed_demo_data')
@@ -247,15 +247,6 @@ class MoneyTest(TestCase):
 
 
 class CurrentNetWorthDoesNotDoubleCountSaxoCashTest(TestCase):
-    """Saxo's cash is mirrored into a BankAccount row (external_id='saxo:cash',
-    saxo.mapping.SAXO_CASH_ACCOUNT_ID) by sync_account_balance, written
-    atomically alongside PortfolioValuation from the same balance response.
-    get_total_bank_balance(the_owner()) sums every BankAccount row, so it already
-    includes that mirrored cash - net worth must not also add
-    saxo_account_value on top of it, or the same cash gets counted twice.
-    Found live against the real dev database while verifying this fix -
-    see docs/superpowers/plans/2026-09-23-phase-a-data-trust-reliability.md."""
-
     def test_saxo_cash_is_counted_once_via_the_bank_account_mirror(self):
         Position.objects.create(
             user=the_owner(),
@@ -283,10 +274,7 @@ class CurrentNetWorthDoesNotDoubleCountSaxoCashTest(TestCase):
 
         net_worth = current_net_worth(the_owner())
 
-        # positions (1500) + Saxo cash (900, via the mirror) + KBC (2500) =
-        # 4900 - not 1500 + (900+2500 bank) + 2400 (saxo_account_value) = 7300,
-        # which would count the 900 of Saxo cash twice.
-        self.assertEqual(net_worth.total, Money(Decimal('4900.00'), 'EUR'))
+        self.assertEqual(net_worth.total, Money(Decimal('2400.00'), 'EUR'))
 
 
 class NetWorthCurrencyTest(TestCase):
@@ -295,7 +283,7 @@ class NetWorthCurrencyTest(TestCase):
     def test_a_foreign_bank_account_raises_rather_than_being_added(self):
         BankAccount.objects.create(
             user=the_owner(),
-            bank='Wise', type='Checking', iban_masked='-',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('1000.00'), available=Decimal('1000.00'),
             currency='USD',
         )
@@ -324,13 +312,9 @@ class PortfolioValuationPreferenceTest(TestCase):
             sector='Technology', type='STOCK', color='#00a4ef',
             currency='USD', fx_rate=Decimal('0.8600895'),
         )
-        # A plain external bank - this test is about get_portfolio_value(the_owner())'s
-        # own Saxo-figure-vs-local-marks preference, not about the separate
-        # Saxo-cash-as-BankAccount mirror (see
-        # CurrentNetWorthDoesNotDoubleCountSaxoCashTest for that).
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('2500.00'), available=Decimal('2500.00'),
         )
 
@@ -359,7 +343,7 @@ class SnapshotRefreshesTest(TestCase):
     def setUp(self):
         BankAccount.objects.create(
             user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='-',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('1000.00'), available=Decimal('1000.00'),
         )
 
@@ -443,122 +427,75 @@ class RepairNetWorthHistoryTest(TestCase):
         self.assertEqual(untouched.portfolio_value, Decimal('36714.55'))
 
 
-class SnapshotBankOnlyTotalTest(TestCase):
+class PurgeDemoDataTest(TestCase):
+    def test_purging_the_seed_keeps_the_saxo_cash_and_reports_no_bank_accounts(self):
+        the_owner()
+        call_command('seed_demo_data')
+        out = StringIO()
+
+        call_command('purge_demo_data', '--yes', stdout=out)
+
+        self.assertEqual(list(BankAccount.objects.values_list('external_id', flat=True)), ['saxo:cash'])
+        self.assertFalse(NetWorthSnapshot.objects.exists())
+        self.assertNotIn('bank accounts', out.getvalue())
+
+
+class SaxoOnlyNetWorthTest(APITestCase):
     def setUp(self):
+        user = the_owner()
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
         BankAccount.objects.create(
             user=the_owner(),
             bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('900.00'), available=Decimal('900.00'),
         )
+
+    def add_a_hand_entered_bank_account(self, user=None):
         BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
+            user=user or the_owner(),
+            bank='KBC', type='Checking', iban_masked='x',
+            balance=Decimal('5000.00'), available=Decimal('5000.00'),
         )
 
-    def test_snapshot_records_bank_only_total_alongside_bank_total(self):
-        snap = ensure_todays_snapshot(the_owner())
-
-        self.assertEqual(snap.bank_total, Decimal('3400.00'))
-        self.assertEqual(snap.bank_only_total, Decimal('2500.00'))
-
-    def test_net_worth_is_unchanged_by_the_new_field(self):
-        snap = ensure_todays_snapshot(the_owner())
-
-        self.assertEqual(snap.net_worth, snap.portfolio_value + snap.bank_total)
-
-
-class NetWorthHistoryBankOnlyTest(APITestCase):
-    def setUp(self):
-        user = the_owner()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
-
-    def test_history_rows_expose_bank_only_total_and_keep_bank_total(self):
-        NetWorthSnapshot.objects.create(
-            user=the_owner(),
-            date=timezone.localdate() - timedelta(days=3),
-            portfolio_value=Decimal('1000.00'), bank_total=Decimal('971833.00'),
-            bank_only_total=Decimal('833.00'), net_worth=Decimal('972833.00'),
-        )
-
-        response = self.client.get('/api/core/net-worth-history/?range=ALL')
-
-        row = next(r for r in response.data if r['date'] == str(timezone.localdate() - timedelta(days=3)))
-        self.assertEqual(row['bank_only_total'], '833.00')
-        self.assertEqual(row['bank_total'], '971833.00')
-
-    def test_a_row_without_the_figure_serialises_null(self):
-        NetWorthSnapshot.objects.create(
-            user=the_owner(),
-            date=timezone.localdate() - timedelta(days=5),
-            portfolio_value=Decimal('1.00'), bank_total=Decimal('1.00'), net_worth=Decimal('2.00'),
-        )
-
-        response = self.client.get('/api/core/net-worth-history/?range=ALL')
-
-        row = next(r for r in response.data if r['date'] == str(timezone.localdate() - timedelta(days=5)))
-        self.assertIsNone(row['bank_only_total'])
-
-
-class BankOnlyBackfillTest(TestCase):
-    def test_estimates_saxo_cash_from_the_broker_figure_and_subtracts_it(self):
-        import importlib
-        from django.apps import apps
-
-        migration = importlib.import_module('core.migrations.0007_networthsnapshot_bank_only_total')
-        estimated = NetWorthSnapshot.objects.create(
-            user=the_owner(),
-            date=date(2026, 6, 1), portfolio_value=Decimal('1000.00'), bank_total=Decimal('1833.00'),
-            saxo_account_value=Decimal('2000.00'), net_worth=Decimal('2833.00'),
-        )
-        unknown = NetWorthSnapshot.objects.create(
-            user=the_owner(),
-            date=date(2026, 6, 2), portfolio_value=Decimal('1000.00'), bank_total=Decimal('1833.00'),
-            net_worth=Decimal('2833.00'),
-        )
-
-        migration.backfill_bank_only_total(apps, None)
-
-        estimated.refresh_from_db()
-        unknown.refresh_from_db()
-        self.assertEqual(estimated.bank_only_total, Decimal('833.00'))
-        self.assertIsNone(unknown.bank_only_total)
-
-
-class NetWorthEndpointSplitsSaxoCashTest(APITestCase):
-    def setUp(self):
-        user = the_owner()
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
-
-    def _accounts(self, with_saxo=True):
-        if with_saxo:
-            BankAccount.objects.create(
-                user=the_owner(),
-                bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
-                balance=Decimal('900.00'), available=Decimal('900.00'),
-            )
-        BankAccount.objects.create(
-            user=the_owner(),
-            bank='KBC', type='Checking', iban_masked='BE68 1234',
-            balance=Decimal('2500.00'), available=Decimal('2500.00'),
-        )
-
-    def test_bank_total_still_includes_saxo_cash_and_the_split_is_exposed(self):
-        self._accounts()
-
+    def test_the_endpoint_is_portfolio_plus_saxo_cash_with_no_bank_field(self):
         body = self.client.get('/api/accounts/net-worth/').json()
 
-        self.assertEqual(Decimal(body['bank_total']), Decimal('3400.00'))
-        self.assertEqual(Decimal(body['bank_only_total']), Decimal('2500.00'))
+        self.assertNotIn('bank_only_total', body)
+        self.assertNotIn('bank_total', body)
         self.assertEqual(Decimal(body['broker_cash']), Decimal('900.00'))
+        self.assertEqual(Decimal(body['net_worth']), Decimal(body['portfolio_value']) + Decimal('900.00'))
 
-    def test_without_a_saxo_cash_row_the_broker_cash_is_zero(self):
-        self._accounts(with_saxo=False)
+    def test_an_account_that_is_not_saxo_cash_is_never_counted(self):
+        self.add_a_hand_entered_bank_account()
 
-        body = self.client.get('/api/accounts/net-worth/').json()
+        self.assertEqual(current_net_worth(the_owner()).cash.amount, Decimal('900.00'))
+        self.assertEqual(ensure_todays_snapshot(the_owner()).bank_total, Decimal('900.00'))
 
-        self.assertEqual(Decimal(body['broker_cash']), Decimal('0.00'))
-        self.assertEqual(Decimal(body['bank_only_total']), Decimal('2500.00'))
+    def test_a_user_with_only_a_bank_account_gets_no_snapshot_run(self):
+        bank_only = make_user('bank-only')
+        self.add_a_hand_entered_bank_account(bank_only)
+
+        self.assertNotIn(bank_only, list(users_with_holdings()))
+        self.assertIn(the_owner(), list(users_with_holdings()))
+
+    def test_accounts_cannot_be_added_in_the_admin(self):
+        from django.contrib import admin
+
+        self.assertFalse(admin.site.is_registered(BankAccount))
+
+    def test_the_snapshot_records_portfolio_plus_saxo_cash(self):
+        snap = ensure_todays_snapshot(the_owner())
+
+        self.assertEqual(snap.bank_total, Decimal('900.00'))
+        self.assertEqual(snap.net_worth, snap.portfolio_value + Decimal('900.00'))
+
+    def test_history_rows_have_no_bank_only_total(self):
+        ensure_todays_snapshot(the_owner())
+
+        row = self.client.get('/api/core/net-worth-history/?range=ALL').data[-1]
+
+        self.assertNotIn('bank_only_total', row)
+        self.assertEqual(row['bank_total'], '900.00')
 
 
 class NetWorthEndpointCurrencyMismatchTest(APITestCase):
@@ -569,7 +506,7 @@ class NetWorthEndpointCurrencyMismatchTest(APITestCase):
     def test_a_foreign_bank_account_answers_409_not_500(self):
         BankAccount.objects.create(
             user=the_owner(),
-            bank='Wise', type='Checking', iban_masked='-',
+            bank='Saxo', type='Cash', iban_masked='-', external_id='saxo:cash',
             balance=Decimal('1000.00'), available=Decimal('1000.00'),
             currency='USD',
         )

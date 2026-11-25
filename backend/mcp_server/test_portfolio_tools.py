@@ -103,7 +103,6 @@ class PortfolioToolsTest(APITestCase):
         banking = AssertionError('banking read')
         snapshots = Mock(objects=Mock(order_by=Mock(side_effect=banking)))
         with patch('portfolio.insights.current_net_worth', side_effect=banking), \
-                patch('portfolio.insights.get_bank_only_balance', side_effect=banking), \
                 patch('portfolio.insights.get_broker_cash_balance', side_effect=banking), \
                 patch('portfolio.insights.NetWorthSnapshot', snapshots):
             data = get_portfolio()['data']

@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
 
-import { useInstrumentSearch, useMe } from '../api/queries'
+import { useInstrumentSearch } from '../api/queries'
 import { PAGE_COMMANDS } from '../lib/commands'
-import { visibleTo } from '../lib/navigation'
 import { rankInstrumentResults, researchHref } from '../lib/research'
 import { readRecentSymbols } from '../lib/recentSymbols'
 import { Dialog } from './overlays'
@@ -26,10 +25,9 @@ function Panel({ onClose, hrefFor }) {
 
   const trimmed = query.trim()
   const { data: results = [] } = useInstrumentSearch(trimmed)
-  const { data: me } = useMe()
 
   const items = useMemo(() => {
-    const pages = visibleTo(PAGE_COMMANDS, me)
+    const pages = PAGE_COMMANDS
       .filter((c) => !trimmed || c.label.toLowerCase().includes(trimmed.toLowerCase()))
       .map((c) => ({ key: `page:${c.to}`, label: c.label, hint: 'Page', to: c.to }))
 
@@ -49,7 +47,7 @@ function Panel({ onClose, hrefFor }) {
       to: hrefFor(r.symbol, { uic: r.uic, assetType: r.asset_type }),
     }))
     return [...instruments, ...pages]
-  }, [trimmed, results, hrefFor, me])
+  }, [trimmed, results, hrefFor])
 
   // Focus only — no state written here, so no cascading render.
   useEffect(() => {

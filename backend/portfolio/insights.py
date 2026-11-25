@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
-from accounts.services import get_bank_only_balance, get_broker_cash_balance
+from accounts.services import get_broker_cash_balance
 from core.models import NetWorthSnapshot
 from core.services import current_net_worth
 from portfolio.models import SAXO_SOURCE, PortfolioValuation, Position
@@ -290,26 +290,18 @@ def _position_sections(positions, today, user):
 
 def build_insights(user):
     positions = list(Position.objects.filter(user=user))
-    # net_worth (portfolio_value + bank_total), not saxo_account_value alone -
-    # the latter excludes bank money entirely, which the headline never
-    # claimed to do. net_worth is already trade-neutral for a BUY/SELL: a
-    # sale drops portfolio_value and raises the Saxo-cash-mirror balance
-    # (part of bank_total) by the same amount, from the same sync. See
-    # core.services.current_net_worth.
     pairs = list(
         NetWorthSnapshot.objects
         .filter(user=user)
         .order_by('date')
         .values_list('date', 'net_worth')
     )
-    latest = NetWorthSnapshot.objects.filter(user=user).order_by('date').last()
     today = timezone.localdate()
     net_worth_value = current_net_worth(user).total.rounded().amount
     if pairs and pairs[-1][0] == today:
         pairs[-1] = (today, net_worth_value)
 
     portfolio_value = get_portfolio_value(user).rounded().amount
-    bank = latest.bank_total if latest else Decimal('0')
     sections = _position_sections(positions, today, user)
 
     return {
@@ -318,8 +310,6 @@ def build_insights(user):
         'value': {
             'net_worth': net_worth_value,
             'portfolio': portfolio_value,
-            'bank': bank,
-            'bank_only': get_bank_only_balance(user).rounded().amount,
             'broker_cash': get_broker_cash_balance(user).rounded().amount,
         },
         'change': {

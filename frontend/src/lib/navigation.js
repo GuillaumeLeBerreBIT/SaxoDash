@@ -10,12 +10,7 @@ export const NAV_ITEMS = [
   { to: '/earnings', label: 'Earnings' },
   { to: '/investors', label: 'Investors' },
   { to: '/analytics', label: 'Analytics' },
-  { to: '/money', label: 'Money' },
 ]
-
-export function visibleTo(items, me) {
-  return items.filter((item) => !item.ownerOnly || me?.is_owner === true)
-}
 
 export const SETTINGS_ITEM = { to: '/settings', label: 'Settings' }
 
@@ -38,10 +33,15 @@ export function pageTitle(pathname) {
 export const LEGACY_REDIRECTS = [
   { from: 'research/chart', to: '/charts' },
   { from: 'transactions', to: '/portfolio', set: { view: 'transactions' } },
-  { from: 'accounts', to: '/money', set: { section: 'accounts' } },
-  { from: 'accounts/:accountId', to: '/money/accounts/:accountId' },
-  { from: 'spending', to: '/money', set: { section: 'spending' } },
-  { from: 'spending/transactions', to: '/money', set: { section: 'transactions' } },
+]
+
+export const RETIRED_PATHS = [
+  'money',
+  'money/accounts/:accountId',
+  'accounts',
+  'accounts/:accountId',
+  'spending',
+  'spending/transactions',
 ]
 
 export function legacyTarget({ to, set = {} }, params = {}, search = '') {

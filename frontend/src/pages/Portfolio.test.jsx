@@ -43,7 +43,7 @@ function stub(positions = [msft]) {
   })
   queries.useNetWorth.mockReturnValue({
     ...idle,
-    data: { portfolio_value: '31567.81', bank_total: '968435.55', bank_only_total: '1435.55', broker_cash: '967000.00', net_worth: '1000003.36' },
+    data: { portfolio_value: '31567.81', broker_cash: '967000.00', net_worth: '1000003.36' },
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
@@ -205,7 +205,7 @@ describe('Portfolio holdings table', () => {
     expect(within(row).getByText('+€270.55')).toBeInTheDocument()
   })
 
-  it('opens on the portfolio value with its history and leaves net worth and bank cash to Overview and Money', () => {
+  it('opens on the portfolio value with its history and leaves net worth to Overview', () => {
     renderWithProviders(<Portfolio />)
 
     expect(screen.getByTestId('portfolio-value')).toHaveTextContent('€31,567.81')

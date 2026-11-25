@@ -45,8 +45,6 @@ jobs:
       DATABASE_URL: postgres://saxodash@localhost:5432/saxodash
       CACHE_URL: redis://localhost:6379/1
       CELERY_BROKER_URL: redis://localhost:6379/0
-      ENABLE_BANKING_APPLICATION_ID: ci-placeholder
-      ENABLE_BANKING_PRIVATE_KEY: ci-placeholder
     defaults:
       run:
         working-directory: backend
@@ -89,7 +87,6 @@ jobs:
       - name: Production build
         env:
           VITE_API_BASE_URL: ''
-          VITE_ENABLE_BANKING_CONNECT_BASE_URL: ''
         run: |
           npm run build
           if grep -q 'localhost:8000' dist/assets/*.js; then

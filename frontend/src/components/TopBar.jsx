@@ -4,7 +4,7 @@ import { Search } from 'lucide-react'
 import { logout } from '../api/client'
 import { useMe, usePortfolioSummary, useSaxoStatus } from '../api/queries'
 import { fmtEur } from '../lib/format'
-import { NAV_ITEMS, pageTitle, visibleTo } from '../lib/navigation'
+import { NAV_ITEMS, pageTitle } from '../lib/navigation'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
 import { MenuContent, MenuItem, MenuLabel, MenuRoot, MenuSeparator, MenuTrigger } from './overlays'
 import { useConnectSaxo } from '../lib/useConnectSaxo'
@@ -29,13 +29,12 @@ const SAXO_ACTION = {
 }
 
 function Tabs() {
-  const { data: me } = useMe()
   return (
     <nav
       aria-label="Pages"
       className="hidden min-[760px]:flex items-center gap-x-[22px] min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {visibleTo(NAV_ITEMS, me).map(({ to, label, end }) => (
+      {NAV_ITEMS.map(({ to, label, end }) => (
         <NavLink
           key={to}
           to={to}

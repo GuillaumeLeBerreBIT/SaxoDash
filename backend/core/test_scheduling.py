@@ -90,6 +90,26 @@ class SyncPeriodicTasksTest(TestCase):
             PeriodicTask.objects.filter(task='saxo.tasks.sync_transactions').exists()
         )
 
+    def test_declares_no_bank_tasks(self):
+        self.assertFalse([spec['task'] for spec in PERIODIC_TASKS.values() if spec['task'].startswith('enablebanking.')])
+
+    def test_removes_the_bank_sync_rows_and_keeps_every_declared_task(self):
+        every_three_hours = IntervalSchedule.objects.create(every=3, period=IntervalSchedule.HOURS)
+        for name, task in (
+            ('Sync Enable Banking balances', 'enablebanking.tasks.sync_enablebanking_balances'),
+            ('Sync Enable Banking transactions', 'enablebanking.tasks.sync_enablebanking_transactions'),
+            ('Detect subscriptions', 'enablebanking.tasks.detect_enablebanking_subscriptions'),
+        ):
+            PeriodicTask.objects.create(name=name, task=task, enabled=True, interval=every_three_hours)
+
+        sync_periodic_tasks()
+
+        self.assertFalse(PeriodicTask.objects.filter(task__startswith='enablebanking.').exists())
+        self.assertEqual(
+            PeriodicTask.objects.filter(name__in=PERIODIC_TASKS).count(),
+            len(PERIODIC_TASKS),
+        )
+
     def test_warns_about_an_enabled_task_not_in_the_canonical_list(self):
         PeriodicTask.objects.create(
             name='Some ad-hoc admin edit', task='some.app.tasks.mystery', enabled=True,

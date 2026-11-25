@@ -306,12 +306,3 @@ FINNHUB_OWNER_RESERVE = min(
 )
 SEC_USER_AGENT = os.environ.get('SEC_USER_AGENT', '')
 OPENFIGI_API_KEY = os.environ.get('OPENFIGI_API_KEY', '')
-
-# Enable Banking (bank account aggregation) - restricted-mode production
-# application, personal use only. See docs/superpowers/specs/
-# 2026-09-17-enable-banking-integration-design.md.
-ENABLE_BANKING_APPLICATION_ID = os.environ.get('ENABLE_BANKING_APPLICATION_ID', '')
-ENABLE_BANKING_PRIVATE_KEY = os.environ.get('ENABLE_BANKING_PRIVATE_KEY', '')
-ENABLE_BANKING_REDIRECT_URI = os.environ.get(
-    'ENABLE_BANKING_REDIRECT_URI', 'http://localhost:8000/api/enablebanking/callback/'
-)

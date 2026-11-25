@@ -57,13 +57,13 @@ guarantee cleanup. Saved keystrokes are a side effect, not the point.
 | `./scripts/dev.sh --reclaim` | A previous run was killed and still holds a port |
 | `./scripts/dev.sh --help` | Full usage, plus the ports it resolved from `.env` |
 
-`--no-<service>` accepts any of `ngrok postgres redis worker beat web ui`, and they combine.
+`--no-<service>` accepts any of `postgres redis worker beat web ui`, and they combine.
 A name that isn't a service is rejected with the valid list rather than
 silently skipping nothing:
 
 ```
 $ ./scripts/dev.sh --no-uii
-error: unknown service 'uii' — known services: ngrok postgres redis worker beat web ui
+error: unknown service 'uii' — known services: postgres redis worker beat web ui
 ```
 
 `--no-frontend` is kept as an alias for `--no-ui`.
@@ -124,7 +124,7 @@ Running your own Postgres instead: point `DATABASE_URL` at it and start with
 Postgres once:
 
 ```bash
-./scripts/dev.sh --no-worker --no-beat --no-web --no-ui --no-ngrok
+./scripts/dev.sh --no-worker --no-beat --no-web --no-ui
 cd backend && .venv/bin/python manage.py import_sqlite --flush
 ```
 
@@ -140,7 +140,7 @@ writes while the copy runs. Run the second in another terminal.
 - Skipped on purpose: sessions, JWT blacklist entries, admin history, content types and
   permissions (Postgres has its own, matched by name), and the Celery schedule
   (rewritten from `core/scheduling.py`).
-- Stored Saxo and Enable Banking tokens come along, readable as long as
+- Stored Saxo tokens come along, readable as long as
   `SAXO_TOKEN_ENCRYPTION_KEY` in `backend/.env` is the one they were saved with.
 
 A different file: `manage.py import_sqlite path/to/other.sqlite3 --flush`.
@@ -245,7 +245,7 @@ service flower  "$C_FLOWER" "$BACKEND"  5555  no     -                          
 | Field | Meaning |
 | --- | --- |
 | `port` | Checked before start, and used as the default readiness probe. `-` for services that bind nothing |
-| `adopt` | `yes` = if the probe already passes, reuse what's running and leave it alone on exit. Postgres, redis and ngrok use this |
+| `adopt` | `yes` = if the probe already passes, reuse what's running and leave it alone on exit. Postgres and redis use this |
 | `probe` | Readiness test, eval'd. `-` means "derive from `port`" |
 | command | Single-quoted — expanded at spawn time, not at table-definition time |
 
@@ -349,8 +349,7 @@ the same command.
 - **System**: `get_data_health`
 
 Every tool answers an envelope with `warnings`; a disconnected Saxo, a lapsed token or
-a busy provider is a warning with `data: null`, never an error. Banking data is not
-exposed and no tool places an order or starts a sync. The only writes are
+a busy provider is a warning with `data: null`, never an error. No tool places an order or starts a sync. The only writes are
 `advisor.Recommendation` rows (visible in Django admin), whose entry price the server
 fills.
 

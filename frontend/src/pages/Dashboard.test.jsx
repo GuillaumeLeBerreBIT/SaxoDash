@@ -14,7 +14,7 @@ const panel = (name) => screen.getByRole('heading', { name }).closest('.sd-panel
 
 const insights = {
   as_of: '2026-09-09', stale: false,
-  value: { net_worth: '10000.00', portfolio: '9000.00', bank: '1000.00', bank_only: '1000.00', broker_cash: '0.00' },
+  value: { net_worth: '10000.00', portfolio: '9000.00', broker_cash: '1000.00' },
   change: {
     day: { abs: '50.00', pct: 0.56 }, week: null, month: null,
     ytd: { abs: '800.00', pct: 9 }, all_time: { abs: '2000.00', pct: 25 },
@@ -75,15 +75,6 @@ function stub(over = {}) {
   queries.useOwnershipSummary.mockReturnValue({ ...idle, data: over.ownership ?? ownership })
   queries.useTransactions.mockReturnValue({ ...idle, data: [] })
   queries.useNetWorthHistory.mockReturnValue({ ...idle, data: [] })
-  queries.useSpendingSummary.mockReturnValue({
-    ...idle,
-    data: over.spending ?? { categories: [{ category: 'GROCERIES', amount: '50.00' }], total: '50.00', transfers: '0.00' },
-  })
-  queries.useBudgetProgress.mockReturnValue({
-    data: over.budgetProgress ?? [],
-    isLoading: false,
-    error: null,
-  })
   queries.usePositionQuotes.mockReturnValue(over.quotes ?? new Map())
   queries.useInvestorHub.mockReturnValue({ ...idle, data: over.hub ?? { shelves: [] } })
   queries.useVerdictSummary.mockReturnValue({ ...idle, data: over.verdicts ?? {} })

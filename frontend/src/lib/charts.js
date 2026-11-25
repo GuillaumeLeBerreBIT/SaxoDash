@@ -84,27 +84,6 @@ export function colorForRank(index, c) {
   return c.series[index % c.series.length]
 }
 
-// Fixed order (not hashed) so the same category always gets the same color
-// regardless of how many categories are present in a given period - unlike
-// colorForTicker, where an arbitrary/growing ticker set makes a stable hash
-// the only practical option.
-const CATEGORY_ORDER = [
-  'GROCERIES', 'DINING', 'TRANSPORT', 'UTILITIES', 'SUBSCRIPTIONS',
-  'SHOPPING', 'HEALTH', 'TRAVEL', 'ENTERTAINMENT', 'OTHER',
-]
-
-// Movement between your own accounts, not spending - a distinct neutral so
-// it never collides with a real spending category's color in a shared list.
-const NEUTRAL_CATEGORIES = ['TRANSFER', 'SAVINGS']
-
-export function colorForCategory(category, c) {
-  const palette = c.series
-  if (NEUTRAL_CATEGORIES.includes(category)) return c.axis
-  const idx = CATEGORY_ORDER.indexOf(category)
-  if (idx === -1) return c.axis
-  return idx < palette.length ? palette[idx] : withAlpha(palette[idx % palette.length], 0.55)
-}
-
 export const gridProps = (c) => ({ stroke: c.grid, vertical: false })
 
 export const axisProps = (c) => ({

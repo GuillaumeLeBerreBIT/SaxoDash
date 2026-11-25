@@ -1,22 +1,11 @@
 from rest_framework import status
-from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.money import CurrencyMismatch
 from core.services import current_net_worth
 
-from .models import BankAccount
-from .serializers import BankAccountSerializer
-from .services import get_bank_only_balance, get_broker_cash_balance
-
-
-class BankAccountListView(ListAPIView):
-    serializer_class = BankAccountSerializer
-    pagination_class = None
-
-    def get_queryset(self):
-        return BankAccount.objects.filter(user=self.request.user)
+from .services import get_broker_cash_balance
 
 
 class NetWorthView(APIView):
@@ -27,7 +16,6 @@ class NetWorthView(APIView):
         # instead of a 500 they cannot act on.
         try:
             net_worth = current_net_worth(request.user)
-            bank_only = get_bank_only_balance(request.user)
             broker_cash = get_broker_cash_balance(request.user)
         except CurrencyMismatch as exc:
             return Response(
@@ -37,8 +25,6 @@ class NetWorthView(APIView):
 
         return Response({
             'portfolio_value': net_worth.portfolio.rounded().amount,
-            'bank_total': net_worth.bank.rounded().amount,
-            'bank_only_total': bank_only.rounded().amount,
             'broker_cash': broker_cash.rounded().amount,
             'net_worth': net_worth.total.rounded().amount,
         })

@@ -22,7 +22,7 @@ try {
   process.exit(2)
 }
 if (!args.auth) {
-  console.error('usage: node check-mobile-overflow.mjs --base <url> --auth <auth.json> [--width 390] [--account-id 1] [--investor-slug berkshire-hathaway]')
+  console.error('usage: node check-mobile-overflow.mjs --base <url> --auth <auth.json> [--width 390] [--investor-slug berkshire-hathaway]')
   process.exit(2)
 }
 
@@ -86,7 +86,7 @@ try {
     localStorage.setItem('username', username)
   }, [auth.a, auth.r, auth.u])
 
-  const routes = [...ROUTES, `/accounts/${args.accountId}`, `/investors/${args.investorSlug}`]
+  const routes = [...ROUTES, `/investors/${args.investorSlug}`]
   for (const route of routes) {
     await attempt(route, async () => {
       await page.goto(args.base + route)

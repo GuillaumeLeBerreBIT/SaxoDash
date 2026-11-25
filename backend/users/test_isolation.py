@@ -1,5 +1,4 @@
 import logging
-import re
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -17,7 +16,6 @@ from rest_framework.test import APITestCase
 from accounts.models import BankAccount
 from advisor.models import Recommendation
 from core.models import NetWorthSnapshot
-from enablebanking.models import BankTransaction
 from investors.models import FilingAlert, FilingAlertRead, Investor, InvestorFollow
 from portfolio.models import PortfolioValuation, Position
 from research.models import PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
@@ -51,7 +49,6 @@ PROJECT_APPS = {config.label for config in apps.get_app_configs() if config.name
 
 SKIPPED_PREFIXES = (
     'healthz', 'admin/', 'api/token/', 'api/auth/', 'api/saxo/connect', 'api/saxo/callback',
-    'api/enablebanking/connect', 'api/enablebanking/callback',
 )
 
 SECRET = 'a-secret'
@@ -74,7 +71,6 @@ EXTRA_URLS = (
     f'/api/congress/ownership/{TICKER}/',
     f'/api/investors/ownership/{TICKER}/',
     '/api/investors/ownership/?tickers=' + TICKER,
-    '/api/enablebanking/transactions/?search=' + SECRET,
     f'/api/verdicts/{TICKER}/',
     '/api/verdicts/?tickers=' + TICKER,
     '/api/verdicts/track-record/',
@@ -110,16 +106,6 @@ def static_get_paths():
             continue
         paths.append('/' + route)
     return sorted(set(paths))
-
-
-def owner_only_banking_urls():
-    urls = []
-    for route, entry in walk(get_resolver().url_patterns):
-        if not route.startswith('api/enablebanking/') or route.startswith(('api/enablebanking/connect/', 'api/enablebanking/callback')):
-            continue
-        filled = re.sub(r'<int:\w+>', '1', route)
-        urls.append('/' + re.sub(r'<str:\w+>', 'kbc', filled))
-    return sorted(set(urls))
 
 
 def skipped_routes():
@@ -171,10 +157,6 @@ class IsolationSweepTests(APITestCase):
         account = BankAccount.objects.create(
             user=user, bank=BANK, type='current', iban_masked=IBAN, balance=Decimal('1'), available=Decimal('1'),
         )
-        bank_transaction = BankTransaction.objects.create(
-            bank='kbc', bank_account=account, external_id='ext-a', amount=Decimal('1'), currency='EUR',
-            booking_date=timezone.localdate(), counterparty_name=SECRET, description=SECRET,
-        )
         watchlist = Watchlist.objects.create(user=user, name=SECRET)
         WatchlistItem.objects.create(watchlist=watchlist, symbol=TICKER, uic=UIC, asset_type='Stock')
         note = SymbolNote.objects.create(user=user, symbol=TICKER, bull_case='a-secret-thesis')
@@ -199,7 +181,7 @@ class IsolationSweepTests(APITestCase):
         return {
             'credential': credential, 'run': run, 'position': position, 'valuation': valuation,
             'transaction': transaction, 'snapshot': snapshot, 'account': account,
-            'bank_transaction': bank_transaction, 'watchlist': watchlist, 'note': note,
+            'watchlist': watchlist, 'note': note,
             'price_line': price_line, 'trend_line': trend_line, 'annotation': annotation,
             'recommendation': recommendation, 'investor': investor,
         }
@@ -211,7 +193,6 @@ class IsolationSweepTests(APITestCase):
             f'/api/research/trend-lines/{rows["trend_line"].pk}/',
             f'/api/research/text-annotations/{rows["annotation"].pk}/',
             f'/api/research/watchlists/{rows["watchlist"].pk}/',
-            f'/api/enablebanking/transactions/{rows["bank_transaction"].pk}/category/',
         ]
 
     def offline(self):
@@ -244,32 +225,15 @@ class IsolationSweepTests(APITestCase):
             self.assertIn(status, (403, 404, 405), f'GET {url} answered {status}')
             self.assertNotIn(SECRET, body)
 
-    def test_non_owner_sees_nothing_of_the_owners_banking(self):
-        self.client.force_authenticate(self.bob)
-        for url in ('/api/enablebanking/status/', '/api/enablebanking/transactions/', '/api/enablebanking/budgets/'):
-            self.assertEqual(self.client.get(url).status_code, 403, url)
-        self.assertEqual(self.client.get('/api/accounts/').json(), [])
-
-    def test_non_owner_is_refused_every_banking_action(self):
-        urls = owner_only_banking_urls()
-        self.assertGreater(len(urls), 12)
-        self.client.force_authenticate(self.bob)
-        with self.offline():
-            for url in urls:
-                for method in ('get', 'post', 'put', 'patch', 'delete'):
-                    status = getattr(self.client, method)(url, {}, format='json').status_code
-                    self.assertEqual(status, 403, f'{method.upper()} {url} answered {status}')
-
     def test_other_user_changes_nothing_of_the_owners(self):
         self.client.force_authenticate(self.bob)
         for url in self.detail_urls():
             self.client.delete(url)
-            self.client.patch(url, {'label': 'x', 'category': 'OTHER'}, format='json')
+            self.client.patch(url, {'label': 'x'}, format='json')
         self.assertTrue(PriceLine.objects.filter(pk=self.rows['price_line'].pk, label=SECRET).exists())
         self.assertTrue(TrendLine.objects.filter(pk=self.rows['trend_line'].pk).exists())
         self.assertTrue(TextAnnotation.objects.filter(pk=self.rows['annotation'].pk).exists())
         self.assertTrue(Watchlist.objects.filter(pk=self.rows['watchlist'].pk).exists())
-        self.assertTrue(BankTransaction.objects.filter(pk=self.rows['bank_transaction'].pk, category_override=None).exists())
 
     def test_alice_sees_her_own_rows(self):
         self.client.force_authenticate(self.alice)

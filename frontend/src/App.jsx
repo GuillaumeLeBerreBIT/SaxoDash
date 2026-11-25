@@ -1,15 +1,14 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import RequireAuth from './components/RequireAuth'
 import LegacyRedirect from './routes/LegacyRedirect'
-import { LEGACY_REDIRECTS } from './lib/navigation'
+import { LEGACY_REDIRECTS, RETIRED_PATHS } from './lib/navigation'
 import PageFallback from './components/PageFallback'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Portfolio = lazy(() => import('./pages/Portfolio'))
 const Analytics = lazy(() => import('./pages/Analytics'))
-const AccountTransactions = lazy(() => import('./pages/AccountTransactions'))
 const Research = lazy(() => import('./pages/Research'))
 const Charts = lazy(() => import('./pages/Charts'))
 const Boards = lazy(() => import('./pages/Boards'))
@@ -25,7 +24,6 @@ const Signup = lazy(() => import('./pages/Signup'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const NotFound = lazy(() => import('./pages/NotFound'))
-const Money = lazy(() => import('./pages/Money'))
 const Settings = lazy(() => import('./pages/Settings'))
 
 function App() {
@@ -41,8 +39,6 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path='portfolio' element={<Portfolio />} />
             <Route path='analytics' element={<Analytics />} />
-            <Route path='money' element={<Money />} />
-            <Route path='money/accounts/:accountId' element={<AccountTransactions />} />
             <Route path='settings' element={<Settings />} />
             <Route path='research' element={<Research />} />
             <Route path='charts' element={<Charts />} />
@@ -57,6 +53,9 @@ function App() {
             <Route path='investors/:slug' element={<Investor />} />
             {LEGACY_REDIRECTS.map((redirect) => (
               <Route key={redirect.from} path={redirect.from} element={<LegacyRedirect redirect={redirect} />} />
+            ))}
+            {RETIRED_PATHS.map((path) => (
+              <Route key={path} path={path} element={<Navigate to='/' replace />} />
             ))}
             <Route path='*' element={<NotFound />} />
           </Route>

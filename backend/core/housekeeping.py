@@ -4,7 +4,6 @@ from django.contrib.sessions.models import Session
 from django.utils import timezone
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
-from enablebanking.models import BankSyncRun
 from saxo.models import SyncRun
 
 RUN_HISTORY = timedelta(days=90)
@@ -16,7 +15,6 @@ def prune(now=None):
         'tokens': _deleted(OutstandingToken.objects.filter(expires_at__lte=now), OutstandingToken),
         'sessions': _deleted(Session.objects.filter(expire_date__lt=now), Session),
         'sync_runs': _prune_runs(SyncRun, ('user', 'task'), now),
-        'bank_sync_runs': _prune_runs(BankSyncRun, ('bank', 'kind'), now),
     }
 
 
