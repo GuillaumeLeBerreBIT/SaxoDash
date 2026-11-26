@@ -896,6 +896,7 @@ portfolio plus Saxo cash, which stays mirrored into `accounts.BankAccount`
 step on removal day: `core` 0015 takes each snapshot's recorded bank-only total out of its bank
 total and net worth (a snapshot that never recorded one keeps its figures), 0016 drops that
 column, and `enablebanking` 0006 deletes every account row but the Saxo cash before dropping
-the bank tables. The empty `enablebanking` app is uninstalled in the next release, once
-production has run 0006. Bank mentions in older entries were removed rather than kept as
+the bank tables. Once production had run 0006, the empty `enablebanking` app was uninstalled
+and its migrations deleted; its leftover content types go with
+`remove_stale_contenttypes --include-stale-apps`. Bank mentions in older entries were removed rather than kept as
 history; `restate_saxo_history` now sets a day's bank total to that day's Saxo cash.
