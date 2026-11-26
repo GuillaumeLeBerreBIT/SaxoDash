@@ -10,12 +10,12 @@
 
 **Blocked by:** 02 (the models dropped here must have no remaining views, tasks or services).
 
-**Status:** done except the owner checks below
+**Status:** done
 
 - [x] The restatement function, tested with one snapshot that has a recorded bank-only total and one with a null one
 - [x] After migrating, only the Saxo cash account row remains, for every user
 - [x] The net-worth endpoint returns portfolio plus Saxo cash, with no `bank_only_total` (APITestCase)
 - [x] Insights day, week and all-time changes over a restated history show no step, and there is no `bank_only` key (APITestCase)
 - [x] The investment-performance series (Saxo account value) is unchanged
-- [ ] Manual check on the dev database: the Overview and Portfolio net-worth chart has no drop on removal day
+- [x] Manual check on the dev database: the Overview and Portfolio net-worth chart has no drop on removal day
 - [x] Backend test suite green

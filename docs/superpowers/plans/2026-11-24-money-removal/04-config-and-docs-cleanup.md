@@ -10,10 +10,10 @@
 
 **Blocked by:** 02 (the code that reads these settings is deleted there). Can run in parallel with 03.
 
-**Status:** done except the owner checks below
+**Status:** done
 
 - [x] No `ENABLE_BANKING_*` setting, system check, `install.sh` requirement, CI env, `.env` example entry or frontend build argument remains
 - [x] `scripts/dev.sh` starts without ngrok, and `docs/running-the-stack.md` matches
-- [ ] Saxo re-authentication works in dev without the tunnel (manual check, as the owner)
+- [x] Saxo re-authentication works in dev without the tunnel (manual check, as the owner)
 - [x] AGENTS.md, `docs/decisions.md` and GLOSSARY.md are updated as described
-- [ ] Backend tests, frontend tests and build green; CI green on the PR
+- [x] Backend tests, frontend tests and build green; CI green on the PR
