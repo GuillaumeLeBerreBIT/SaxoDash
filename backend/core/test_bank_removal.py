@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
+from django.apps import apps as installed_apps
 from django.conf import settings
 from django.core.checks import registry
 from django.db import connection
@@ -12,8 +13,6 @@ from core.restatement import without_bank_money
 CORE_BEFORE = ('core', '0014_drop_bank_sync_schedule')
 CORE_RESTATED = ('core', '0015_restate_without_bank_money')
 CORE_DROPPED = ('core', '0016_remove_networthsnapshot_bank_only_total')
-BANKING_BEFORE = [('enablebanking', '0005_banktransaction_reviewed'), ('accounts', '0006_per_user')]
-BANKING_DROPPED = ('enablebanking', '0006_drop_bank_data')
 
 
 class WithoutBankMoneyTest(SimpleTestCase):
@@ -37,6 +36,9 @@ class NoBankConfigTest(SimpleTestCase):
             [check for check in registry.registry.get_checks() if check.__module__.startswith('enablebanking')],
             [],
         )
+
+    def test_enablebanking_is_not_an_installed_app(self):
+        self.assertFalse(installed_apps.is_installed('enablebanking'))
 
 
 class MigrationTestCase(TransactionTestCase):
@@ -80,27 +82,3 @@ class RestateHistoryMigrationTest(MigrationTestCase):
         apps = self.migrate(CORE_DROPPED)
         fields = {field.name for field in apps.get_model('core', 'NetWorthSnapshot')._meta.get_fields()}
         self.assertNotIn('bank_only_total', fields)
-
-
-class DropBankDataMigrationTest(MigrationTestCase):
-    def test_only_the_saxo_cash_account_survives_for_every_user(self):
-        apps = self.migrate(*BANKING_BEFORE)
-        user_model = apps.get_model('auth', 'User')
-        account = apps.get_model('accounts', 'BankAccount')
-        for name in ('alice', 'bob'):
-            user = user_model.objects.create(username=name, password='!')
-            account.objects.create(user=user, bank='Saxo', type='Cash', iban_masked='-', balance=1, available=1, external_id='saxo:cash')
-            account.objects.create(user=user, bank='KBC', type='Checking', iban_masked='x', balance=2, available=2, external_id=f'enablebanking:kbc:{name}')
-            account.objects.create(user=user, bank='ING', type='Savings', iban_masked='y', balance=3, available=3)
-
-        apps = self.migrate(BANKING_DROPPED)
-
-        remaining = apps.get_model('accounts', 'BankAccount').objects.values_list('user__username', 'external_id')
-        self.assertCountEqual(remaining, [('alice', 'saxo:cash'), ('bob', 'saxo:cash')])
-        self.assertEqual(
-            [model for model in apps.get_models() if model._meta.app_label == 'enablebanking'],
-            [],
-        )
-        self.assertFalse(
-            {'enablebanking_banktransaction', 'enablebanking_budget'} & set(connection.introspection.table_names())
-        )

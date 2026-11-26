@@ -74,7 +74,6 @@ INSTALLED_APPS = [
     'transactions',
     'accounts',
     'saxo',
-    'enablebanking',
     'research',
     'analytics',
     'investors',
