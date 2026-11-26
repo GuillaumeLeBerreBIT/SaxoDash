@@ -1,3 +1,5 @@
+import { POSITION_LABEL } from './verdicts'
+
 /** Rule-based one-line reads for the Research Investment Snapshot. Pure and
  *  tested in isolation; the component only renders what these return. Thresholds
  *  are named here so the InfoTip copy and the code cannot drift apart. */
@@ -71,9 +73,9 @@ export function healthVerdict(f) {
 }
 
 const VERDICT_PE_PHRASE = {
-  cheap: 'P/E low for its own history',
-  fair: 'P/E in the middle of its own history',
-  expensive: 'P/E high for its own history',
+  cheap: POSITION_LABEL.cheap,
+  fair: POSITION_LABEL.fair,
+  expensive: POSITION_LABEL.expensive,
 }
 
 const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)

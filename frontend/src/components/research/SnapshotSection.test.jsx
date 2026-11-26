@@ -56,7 +56,7 @@ describe('SnapshotSection', () => {
 
   it('takes its P/E phrase from the verdict when the page has one', () => {
     render(<SnapshotSection fundamentals={{ data, isLoading: false }} valuationGrade="expensive" />)
-    expect(screen.getByText('PEG below 1; P/E high for its own history')).toBeInTheDocument()
+    expect(screen.getByText('PEG below 1; Upper part')).toBeInTheDocument()
     expect(screen.queryByText(/6-yr range/)).not.toBeInTheDocument()
   })
 

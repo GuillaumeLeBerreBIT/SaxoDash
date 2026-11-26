@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { hasPriceRange } from '../../lib/priceBar'
+import { POSITION_LABEL } from '../../lib/verdicts'
 import { useChartColors } from '../../theme/useChartColors'
 
 const WIDTH = 240
@@ -24,8 +25,8 @@ export default function PriceSpark({ values, cheapBelow, expensiveAbove, label }
   const showLower = hasRange && min < cheapBelow
   const showUpper = hasRange && max > expensiveAbove
   const bands = [
-    showLower && 'Lower band: prices below the usual P/E range',
-    showUpper && 'Upper band: prices above the usual P/E range',
+    showLower && POSITION_LABEL.cheap,
+    showUpper && POSITION_LABEL.expensive,
   ].filter(Boolean)
 
   return (

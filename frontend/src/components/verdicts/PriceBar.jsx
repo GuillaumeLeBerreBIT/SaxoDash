@@ -1,13 +1,12 @@
 import { fmtMoney } from '../../lib/format'
 import { priceBarPosition, priceZone } from '../../lib/priceBar'
-
-const ZONE_WORD = { cheap: 'below', fair: 'within', expensive: 'above' }
+import { POSITION_LABEL } from '../../lib/verdicts'
 
 export default function PriceBar({ price, cheapBelow, expensiveAbove, currency = 'USD', labels = true, className = '' }) {
   const position = priceBarPosition({ price, cheapBelow, expensiveAbove })
   if (position == null) return null
   const zone = priceZone({ price, cheapBelow, expensiveAbove })
-  const label = `${fmtMoney(price, currency)} is ${ZONE_WORD[zone]} the range its usual P/E spans, ${fmtMoney(cheapBelow, currency)} to ${fmtMoney(expensiveAbove, currency)}`
+  const label = `${fmtMoney(price, currency)}: ${POSITION_LABEL[zone]}. Usual P/E range ${fmtMoney(cheapBelow, currency)} to ${fmtMoney(expensiveAbove, currency)}`
   return (
     <div className={`flex flex-col gap-1.5 ${className}`} data-testid="price-bar" data-zone={zone}>
       <div role="img" aria-label={label} className="relative flex h-1.5 gap-px">

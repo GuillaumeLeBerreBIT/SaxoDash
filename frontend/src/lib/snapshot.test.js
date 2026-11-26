@@ -53,9 +53,9 @@ describe('valuationVerdict', () => {
     expect(valuationVerdict({ peg_ratio: 1.5 }).text).toBe('PEG between 1 and 2')
   })
   it.each([
-    ['cheap', 'P/E low for its own history'],
-    ['fair', 'P/E in the middle of its own history'],
-    ['expensive', 'P/E high for its own history'],
+    ['cheap', 'Lower part of usual range'],
+    ['fair', 'Middle'],
+    ['expensive', 'Upper part'],
   ])('takes the P/E phrase from a %s verdict, so the page gives one valuation answer', (grade, phrase) => {
     const f = { peg_ratio: 1.5, pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } }
     expect(valuationVerdict(f, grade).text).toBe(`PEG between 1 and 2; ${phrase}`)
@@ -65,8 +65,8 @@ describe('valuationVerdict', () => {
     expect(valuationVerdict(f, 'not_judged').text).toBe('P/E above its 6-yr range')
   })
   it('describes the verdict P/E against its own history without colouring it good or bad', () => {
-    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'neutral', text: 'P/E high for its own history' })
-    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'neutral', text: 'P/E low for its own history' })
+    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'neutral', text: 'Upper part' })
+    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'neutral', text: 'Lower part of usual range' })
   })
 })
 
