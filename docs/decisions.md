@@ -902,3 +902,14 @@ and its migrations deleted; its leftover content types go with
 history; `restate_saxo_history` now sets a day's bank total to that day's Saxo cash.
 
 **The chart draws the usual P/E range on every candle, in neutral colours, from the same yardstick as the verdict (2026-11-25).** Reverses the 2026-11-18 entry that removed the band from past candles: that band used earnings before their release and today's quartiles on earlier days. The band now uses the verdict's point-in-time rule: earnings count from their published day (`published_eps`), the window is the last 1,200 sessions ending on that day, and a week counts at its latest day with a P/E, so one blank day no longer drops the week. One function, `research.valuation.usual_range_at`, gives the range for the chart band, the stock's P/E percentiles and the verdict flags, so they cannot disagree. The chart colours the range pink (lower part) and teal (upper part) by default, and the user changes each in Settings › Appearance; green and red stay out, because a P/E band is not a judgement of the price. The user-facing name for where today's P/E sits is Valuation Grade (below, within or above the usual P/E).
+
+**One consensus for the P/E range (2026-11-26, supersedes the 2026-11-17, 11-18 and 11-25 entries on it).** The P/E range has no demonstrated edge. Graded on the stored history at 250 sessions, cheap-flagged stocks did worse than average (-2.6% full history, -7.4% since 2023), and expensive-flagged stocks showed no edge. The growth line was graded too and is not shown anywhere. So the range is a description, never a call:
+- One rule everywhere: `research.valuation.usual_range_at` gives the range for the chart band, the P/E percentiles and the verdict flags, using point-in-time earnings (`published_eps`), so they cannot disagree.
+- P/E is an indication of value, never a buy or sell signal. The zones on the chart show where the price sits in the usual range.
+- The zones are off by default and the user switches them on. When on, they are shaded in neutral colours and labelled by position only ("Lower part of usual range", "Middle", "Upper part"). Cheap and expensive are not used for P/E.
+- The verdict's valuation word ("Below / Within / Above usual P/E") is captioned "rule of thumb, not a buy or sell signal" wherever it appears, and never opens, blocks or labels a call.
+- Discover drops its value sort and the value filters. Its position filter uses the same three position labels and ranks nothing.
+- The growth line and its "expensive" warning are removed, not kept as a second view.
+- The grading report is `docs/research/2026-11-valuation-yardsticks.md`. Anyone who wants a P/E call must first pass a new, pre-registered test on out-of-sample data.
+
+The user-facing name for where today's P/E sits is Valuation Grade (below, within or above the usual P/E).
