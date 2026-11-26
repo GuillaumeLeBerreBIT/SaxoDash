@@ -27,18 +27,9 @@ export function qualityScore(f) {
   return parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) / parts.length) : null
 }
 
-/** Higher = pricier. PEG is the primary read (same bands as
- *  `valuationVerdict`); the P/E-vs-own-history comparison, when available,
- *  nudges the same direction that verdict's text already does. */
+/** Higher = pricier. PEG alone, on the same bands as `valuationVerdict`. */
 export function valuationScore(f) {
-  let score = bandScore(f.peg_ratio, T.pegCheap, T.pegRich)
-  const hist = f.valuation_history?.pe
-  if (hist && f.pe_ratio != null) {
-    const base = score ?? 50
-    if (f.pe_ratio > hist.median * (1 + T.histBand)) score = Math.min(100, base + 15)
-    else if (f.pe_ratio < hist.median * (1 - T.histBand)) score = Math.max(0, base - 15)
-  }
-  return score
+  return bandScore(f.peg_ratio, T.pegCheap, T.pegRich)
 }
 
 /** One quadrant point, or `null` when either axis can't be scored - a

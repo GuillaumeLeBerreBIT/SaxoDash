@@ -14,7 +14,6 @@ export const T = {
   deHigh: 2, deLow: 1, currLow: 1, currStrong: 1.5, coverLow: 3,
   pegCheap: 1, pegRich: 2,
   momUp: 10, momDown: -10,
-  histBand: 0.1,
 }
 
 const has = (...vals) => vals.some((v) => v != null)

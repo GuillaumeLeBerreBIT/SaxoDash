@@ -52,7 +52,7 @@ export const RATIO_GUIDE = [
   {
     label: 'Valuation multiples',
     metrics: [
-      { name: 'P/E, Forward P/E, PEG', text: 'PEG and P/E vs. own history are covered under Valuation above. A Forward P/E notably below trailing P/E usually signals expected earnings growth.' },
+      { name: 'P/E, Forward P/E, PEG', text: 'PEG is covered under Valuation above; P/E is shown as the usual range on the chart. A Forward P/E notably below trailing P/E usually signals expected earnings growth.' },
       { name: 'P/S', text: 'Price per dollar of revenue - useful for growth companies not yet profitable; only compare it within the same industry.' },
       { name: 'P/B', text: 'Price relative to book value - most meaningful for asset-heavy businesses like banks and insurers; less useful for asset-light software companies.' },
       { name: 'EV/EBITDA', text: "Enterprise value to EBITDA - like P/E but capital-structure neutral, so it's the fairer way to compare companies carrying different amounts of debt." },
@@ -72,10 +72,10 @@ export const RATIO_GUIDE = [
 ]
 
 export const QUADRANT_GUIDE = {
-  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is primarily PEG, nudged by P/E versus its own history. Same thresholds as Snapshot and Ratios, just combined into one picture. It places companies; no corner is a buy or a sell, because the valuation score was never tested as a signal.',
+  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is PEG. Same thresholds as Snapshot and Ratios, just combined into one picture. It places companies; no corner is a buy or a sell, because the valuation score was never tested as a signal.',
   corners: [
-    { label: 'Higher quality, lower valuation (top-left)', text: 'Stronger figures, and a lower PEG or P/E than the others or its own history.' },
-    { label: 'Higher quality, higher valuation (top-right)', text: 'Stronger figures, priced higher against growth or its own history.' },
+    { label: 'Higher quality, lower valuation (top-left)', text: 'Stronger figures, and a lower PEG than the others.' },
+    { label: 'Higher quality, higher valuation (top-right)', text: 'Stronger figures, priced higher against growth.' },
     { label: 'Lower quality, lower valuation (bottom-left)', text: 'Weaker figures and a lower valuation.' },
     { label: 'Lower quality, higher valuation (bottom-right)', text: 'Weaker figures and a higher valuation.' },
   ],

@@ -27,14 +27,13 @@ describe('valuationScore', () => {
     expect(valuationScore({ peg_ratio: 3 })).toBeGreaterThan(valuationScore({ peg_ratio: 0.5 }))
   })
 
-  it('nudges up when P/E sits above its own multi-year history', () => {
-    const withHistoryAbove = valuationScore({
+  it('ignores P/E against its own history, so the usual range is the only P/E position', () => {
+    const withHistory = valuationScore({
       peg_ratio: 1.5,
       pe_ratio: 40,
       valuation_history: { pe: { median: 20, n: 5 } },
     })
-    const withoutHistory = valuationScore({ peg_ratio: 1.5 })
-    expect(withHistoryAbove).toBeGreaterThan(withoutHistory)
+    expect(withHistory).toBe(valuationScore({ peg_ratio: 1.5 }))
   })
 })
 
