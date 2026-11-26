@@ -94,3 +94,9 @@ describe('readChartPrefs / writeChartPrefs', () => {
     expect(writeChartPrefs(DEFAULT_CHART_PREFS)).toBe(false)
   })
 })
+
+describe('usual range zones default', () => {
+  it('starts with the usual range zones off for a fresh user', () => {
+    expect(sanitizeChartPrefs({}).guides.band).toBe(false)
+  })
+})

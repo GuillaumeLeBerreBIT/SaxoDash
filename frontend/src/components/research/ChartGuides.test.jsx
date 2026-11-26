@@ -105,10 +105,10 @@ describe('UsualBand', () => {
     expect(screen.getByTestId('usual-band').querySelector('path[fill="accent"]')).not.toBeNull()
   })
 
-  it('labels the two lines Cheap P/E and Expensive P/E', () => {
+  it('labels the two lines by their position in the usual range', () => {
     drawn(rows)
-    expect(screen.getByText('Cheap P/E')).toBeInTheDocument()
-    expect(screen.getByText('Expensive P/E')).toBeInTheDocument()
+    expect(screen.getByText('Lower part of usual range')).toBeInTheDocument()
+    expect(screen.getByText('Upper part')).toBeInTheDocument()
   })
 
   it('draws nothing where no bar has a band', () => {

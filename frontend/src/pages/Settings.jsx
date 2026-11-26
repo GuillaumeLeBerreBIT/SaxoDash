@@ -88,11 +88,11 @@ function Appearance() {
       <p className="mt-2 text-[12px] text-ink-3">
         Blue and orange stay apart for red-green colour blindness. Arrows always carry the direction too.
       </p>
-      <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Usual P/E range colours</h3>
-      <Segmented label="Cheap P/E colour" options={bandOptions(expensiveBand)} value={cheapBand} onChange={(value) => setAppearance({ cheapBand: value })} />
-      <p className="mt-2 mb-3 text-[12px] text-ink-3">Cheap P/E: the price is at or below the low line of its usual range.</p>
-      <Segmented label="Expensive P/E colour" options={bandOptions(cheapBand)} value={expensiveBand} onChange={(value) => setAppearance({ expensiveBand: value })} />
-      <p className="mt-2 text-[12px] text-ink-3">Expensive P/E: the price is at or above the high line of its usual range.</p>
+      <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Usual range zone colours</h3>
+      <Segmented label="Lower part colour" options={bandOptions(expensiveBand)} value={cheapBand} onChange={(value) => setAppearance({ cheapBand: value })} />
+      <p className="mt-2 mb-3 text-[12px] text-ink-3">Lower part: the price is at or below the low line of its usual range.</p>
+      <Segmented label="Upper part colour" options={bandOptions(cheapBand)} value={expensiveBand} onChange={(value) => setAppearance({ expensiveBand: value })} />
+      <p className="mt-2 text-[12px] text-ink-3">Upper part: the price is at or above the high line of its usual range.</p>
       <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Density</h3>
       <Segmented label="Density" options={DENSITY_OPTIONS} value={density} onChange={(value) => setAppearance({ density: value })} />
     </Card>

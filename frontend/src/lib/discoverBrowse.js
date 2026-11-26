@@ -1,17 +1,17 @@
 import { fmtPct } from './format'
+import { POSITION_LABEL } from './verdicts'
 
 export const SORTS = [
   { value: 'checks', label: 'Most quality checks passed' },
   { value: 'opportunity', label: 'Portfolio action' },
   { value: 'funds', label: 'Most tracked buyers' },
-  { value: 'discount', label: 'Furthest below its usual P/E' },
   { value: 'fall', label: 'Biggest fall from 1-year high' },
 ]
 
 export const VALUATION_OPTIONS = [
-  { value: 'cheap', label: 'Below usual P/E' },
-  { value: 'fair', label: 'Within usual P/E' },
-  { value: 'expensive', label: 'Above usual P/E' },
+  { value: 'cheap', label: POSITION_LABEL.cheap },
+  { value: 'fair', label: POSITION_LABEL.fair },
+  { value: 'expensive', label: POSITION_LABEL.expensive },
 ]
 
 export const QUALITY_OPTIONS = [
@@ -99,16 +99,8 @@ export function toggled(list, value) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value]
 }
 
-const PRICE_CONTEXT = {
-  cheap: 'Below its usual P/E range',
-  fair: 'Within its usual P/E range',
-  expensive: 'Above its usual P/E range',
-}
-
 export function priceLine(stock) {
-  const discount = Math.round(stock.discount_pct)
-  if (stock.valuation === 'cheap' && discount > 0) return `${discount}% below its usual P/E range`
-  if (PRICE_CONTEXT[stock.valuation]) return PRICE_CONTEXT[stock.valuation]
+  if (POSITION_LABEL[stock.valuation]) return POSITION_LABEL[stock.valuation]
   if (stock.below_high_pct >= 10) return `${Math.round(stock.below_high_pct)}% below its 1-year high`
   return null
 }

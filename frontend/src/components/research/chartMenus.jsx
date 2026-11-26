@@ -39,7 +39,7 @@ export function IndicatorMenuItems({ controls }) {
 
 const GUIDES = {
   high52: ['52-week high', 'The highest price of the past year and how far below it today is'],
-  band: ['Usual P/E range', 'The stock\'s own middle half of P/E over five years, drawn on each candle'],
+  band: ['Usual P/E range', 'The stock\'s own middle half of P/E over five years, drawn on each candle as zones. An indication of value, not a buy or sell signal'],
   gaps: ['Volume gaps', 'Big opening gaps on heavy volume, until filled or 60 sessions pass'],
   plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
 }

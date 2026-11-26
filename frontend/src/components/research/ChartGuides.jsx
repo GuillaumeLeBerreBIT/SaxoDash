@@ -1,6 +1,7 @@
 import { PAD_R, PAD_T } from '../../lib/chartGeometry'
 import { fmtMoney } from '../../lib/format'
 import { badgePrice } from '../../lib/priceLines'
+import { POSITION_LABEL } from '../../lib/verdicts'
 
 const TAG_HEIGHT = 18
 const COMPACT_BELOW = 520
@@ -123,10 +124,10 @@ export function UsualBand({ band, geometry, colors }) {
       <g data-testid="band-cheap">{lines(1, colors.bandCheap)}</g>
       <g data-testid="band-expensive">{lines(2, colors.bandExpensive)}</g>
       <text x={geometry.xAt(first) + 4} y={geometry.scaleY(band[first][1]) + 12} fill={colors.bandCheap} fontSize={BAND_LABEL_FONT} fontWeight="600" className="num">
-        Cheap P/E
+        {POSITION_LABEL.cheap}
       </text>
       <text x={geometry.xAt(first) + 4} y={geometry.scaleY(band[first][2]) - 4} fill={colors.bandExpensive} fontSize={BAND_LABEL_FONT} fontWeight="600" className="num">
-        Expensive P/E
+        {POSITION_LABEL.expensive}
       </text>
     </g>
   )

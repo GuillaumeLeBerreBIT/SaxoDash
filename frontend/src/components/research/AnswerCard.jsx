@@ -4,7 +4,7 @@ import { fmtDate, fmtEur, fmtMoney, fmtPct, fmtQty } from '../../lib/format'
 import { priceZone } from '../../lib/priceBar'
 import { priceBasis } from '../../lib/pricing'
 import PriceBar from '../verdicts/PriceBar'
-import { CHECK_BASIS_NOTE, CHECK_STATUS_LABEL, GRADE_LABEL, checkLine, trendSentence } from '../../lib/verdicts'
+import { CHECK_BASIS_NOTE, CHECK_STATUS_LABEL, GRADE_LABEL, VALUATION_CAPTION, checkLine, trendSentence } from '../../lib/verdicts'
 import { Button, Move, Skeleton } from '../ui'
 
 const PLAIN = { sign: false, decimals: 1 }
@@ -122,6 +122,7 @@ function PriceCell({ verdict }) {
     <div data-testid="answer-price" className={CELL}>
       <span className={CELL_LABEL}>Price</span>
       <span className={CELL_VALUE}>{GRADE_LABEL.valuation[verdict.valuation] ?? verdict.valuation}</span>
+      <span className={CELL_LINE}>{VALUATION_CAPTION}</span>
       {barred ? (
         <PriceBar price={verdict.last_close} cheapBelow={verdict.cheap_below} expensiveAbove={verdict.expensive_above} className="mt-1.5" />
       ) : (

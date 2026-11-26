@@ -186,8 +186,8 @@ describe('Research', () => {
     expect(screen.queryByTestId('entry-banner')).not.toBeInTheDocument()
     expect(screen.queryByTestId('price-zones')).not.toBeInTheDocument()
     const card = screen.getByTestId('answer-card')
-    expect(card).toHaveTextContent('Strong company, P/E within its usual range.')
-    expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy signal.')
+    expect(card).toHaveTextContent('Strong company, P/E position: Middle.')
+    expect(card).toHaveTextContent('Its usual P/E of 45 to 77 spans US$100.00 to US$200.00. A rule of thumb, not a buy or sell signal.')
     expect(screen.queryByTestId('value-zones')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Guides' }))
     for (const name of [/52-week high/, /Volume gaps/, /Usual P\/E range/]) {
