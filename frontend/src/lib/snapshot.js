@@ -82,10 +82,8 @@ const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function valuationVerdict(f, verdictGrade) {
   const peg = f.peg_ratio
-  const pe = f.pe_ratio
-  const hist = f.valuation_history?.pe
   const fromVerdict = VERDICT_PE_PHRASE[verdictGrade]
-  if (!has(peg, pe) && !hist && !fromVerdict) return limited
+  if (!has(peg) && !fromVerdict) return limited
 
   const parts = []
   if (peg != null) {
@@ -93,13 +91,7 @@ export function valuationVerdict(f, verdictGrade) {
     else if (peg > T.pegRich) parts.push(`PEG above ${T.pegRich}`)
     else parts.push(`PEG between ${T.pegCheap} and ${T.pegRich}`)
   }
-  if (fromVerdict) {
-    parts.push(fromVerdict)
-  } else if (hist && pe != null) {
-    if (pe > hist.median * (1 + T.histBand)) parts.push(`P/E above its ${hist.n}-yr range`)
-    else if (pe < hist.median * (1 - T.histBand)) parts.push(`P/E below its ${hist.n}-yr range`)
-    else parts.push(`P/E in line with its ${hist.n}-yr range`)
-  }
+  if (fromVerdict) parts.push(fromVerdict)
   return { tone: 'neutral', text: capitalised(parts.join('; ')) || 'Limited data' }
 }
 

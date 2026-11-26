@@ -29,7 +29,7 @@ export const SNAPSHOT_GUIDE = [
     key: 'valuation',
     label: 'Valuation',
     meaning: "PEG (P/E relative to growth) and P/E measured against the stock's own multi-year range.",
-    read: `PEG below ${T.pegCheap} means the P/E is low next to earnings growth, above ${T.pegRich} high. A P/E more than ${Math.round(T.histBand * 100)}% above its own historical median is above its own history; that much below is below it. These describe the price and are not buy or sell signals: PEG was never tested. The graded evidence on the usual P/E range is under P/E chip in the chart guide.`,
+    read: `PEG below ${T.pegCheap} means the P/E is low next to earnings growth, above ${T.pegRich} high. The P/E position is the usual range, shown on the chart and in the verdict. These describe the price and are not buy or sell signals: PEG was never tested. The graded evidence on the usual P/E range is under P/E chip in the chart guide.`,
   },
   {
     key: 'momentum',

@@ -30,7 +30,7 @@ describe('SnapshotSection', () => {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
     expect(screen.getByText('Revenue growing fast; EPS outpacing revenue')).toBeInTheDocument()
-    expect(screen.getByText(/P\/E above its 6-yr range/)).toBeInTheDocument()
+    expect(screen.queryByText(/yr range/)).not.toBeInTheDocument()
   })
 
   it('takes its price returns from the page, so it agrees with the Performance card', () => {
