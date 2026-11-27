@@ -31,5 +31,5 @@ def usual_band(symbol, *, user):
         return {'band': [], 'warnings': [unavailable] if unavailable else []}
     series = finnhub.valuation_series(listing.ticker)
     released = released_dates(listing.ticker)
-    data, notes = valuation.history(listing.ticker, series, bars, released=released)
+    data, notes = valuation.history(listing.ticker, series, bars, released=released, band=True)
     return {'band': price_band(data['daily_pe_band'], valuation.series_eps(series, released)), 'warnings': notes}

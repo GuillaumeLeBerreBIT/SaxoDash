@@ -1,6 +1,6 @@
 import { fmtDayMonth, fmtEur } from './format'
 import { niceAxis } from './niceTicks'
-import { THEMES, bandColour, themeVars } from './theme'
+import { DEFAULT_APPEARANCE, THEMES, bandColour, themeVars } from './theme'
 
 /** -1 miss / 0 in line / +1 beat - the same >0 / <0 / ==0 split the backend uses. */
 export const surpriseSign = (value) => (value == null || value === 0 ? 0 : value > 0 ? 1 : -1)
@@ -21,7 +21,7 @@ export function withAlpha(hex, alpha) {
 export const PERFORMANCE_CAPS = { day: 3, sincePurchase: 30, month: 9 }
 export const FLAT_MOVE = 0.1
 
-export function chartPalette({ theme, moves, cheapBand = 'blue', expensiveBand = 'orange' }) {
+export function chartPalette({ theme, moves, cheapBand = DEFAULT_APPEARANCE.cheapBand, expensiveBand = DEFAULT_APPEARANCE.expensiveBand }) {
   const roles = themeVars(THEMES[theme] ? theme : 'republic', moves)
   const pick = (name) => roles[`--sd-${name}`]
   return {

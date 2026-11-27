@@ -109,13 +109,15 @@ export const BAND_COLOURS = {
   orange: { dark: '#FF9A3C', light: '#C2570C' },
   violet: { dark: '#B69CFF', light: '#6250D6' },
   yellow: { dark: '#F5C542', light: '#8A6700' },
+  pink: { dark: '#FF7AB6', light: '#B3246B' },
+  teal: { dark: '#2EC4B6', light: '#0F766E' },
 }
 
 export function bandColour(name, theme) {
   return BAND_COLOURS[name][theme === 'light' ? 'light' : 'dark']
 }
 
-export const DEFAULT_APPEARANCE = { theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'blue', expensiveBand: 'orange' }
+export const DEFAULT_APPEARANCE = { theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'pink', expensiveBand: 'teal' }
 
 const SERIES_ROLE = /^s\d$/
 

@@ -289,6 +289,18 @@ class BrowseTests(APITestCase):
         self.assertEqual(self.tickers('?min_yield=3'), ['CCC'])
         self.assertEqual(self.tickers('?min_fall=25'), ['AAA'])
 
+    def test_the_position_filter_keeps_the_unfiltered_order(self):
+        listed('MIX', quality='mixed', last_close=10.0)
+        listed('FIV', last_close=10.0, checks=[*CHECKS[:5], {**CHECKS[5], 'status': 'fail'}])
+        listed('SIX', last_close=40.0)
+        listed('FAIR', last_close=24.0)
+        full = self.tickers()
+        for grade, expected in [('cheap', {'FIV', 'MIX'}), ('expensive', {'SIX'})]:
+            with self.subTest(grade=grade):
+                filtered = self.tickers(f'?valuation={grade}')
+                self.assertEqual(set(filtered), expected)
+                self.assertEqual(filtered, [ticker for ticker in full if ticker in expected])
+
     def test_facet_counts_ignore_their_own_filter_but_keep_the_others(self):
         listed('AAA', last_close=15)
         listed('BBB', last_close=24)

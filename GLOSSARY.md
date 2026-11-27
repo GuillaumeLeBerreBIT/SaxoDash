@@ -107,9 +107,9 @@ _Avoid_: Indicator (RSI, MACD and moving averages), overlay
 The stock's own middle half of P/E over the last five years, from its weekly readings, drawn as a band on each candle using only the earnings published by that day. Its two lines are the cheap line and the expensive line.
 _Avoid_: Cheap Zone, Expensive Zone, green/red zone, value zone, P/E band (on its own)
 
-**Cheap P/E / Expensive P/E**:
-The two sides of the usual P/E range shown in the chart legend: Cheap P/E is at or below the low line, Expensive P/E at or above the high line. Their colours are the user's own choice in Settings, never green or red.
-_Avoid_: Cheap Zone, Expensive Zone
+**Position label**:
+Where the price sits in the usual P/E range, in the chart, Discover and the verdict: Lower part of usual range (at or below the low line), Middle, Upper part (at or above the high line). Zone colours are the user's own choice in Settings, never green or red.
+_Avoid_: Cheap P/E, Expensive P/E, Cheap Zone, Expensive Zone, cheap, expensive (for P/E)
 
 **Volume Gap**:
 A day that opens more than 4% away from the previous close on more than twice the usual volume, drawn as a box until the price trades back through the gap.

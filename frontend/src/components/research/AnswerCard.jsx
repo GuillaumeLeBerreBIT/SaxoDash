@@ -120,7 +120,7 @@ function PriceCell({ verdict }) {
   const barred = priceZone({ price: verdict.last_close, cheapBelow: verdict.cheap_below, expensiveAbove: verdict.expensive_above }) != null
   return (
     <div data-testid="answer-price" className={CELL}>
-      <span className={CELL_LABEL}>Price</span>
+      <span className={CELL_LABEL}>Valuation Grade</span>
       <span className={CELL_VALUE}>{GRADE_LABEL.valuation[verdict.valuation] ?? verdict.valuation}</span>
       <span className={CELL_LINE}>{VALUATION_CAPTION}</span>
       {barred ? (

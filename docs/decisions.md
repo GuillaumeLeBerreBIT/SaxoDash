@@ -653,7 +653,7 @@ built on a cheap or rich PEG no longer give advice.
 **A quarter's EPS counts in the P/E from the day it was published (2026-11-23).** Each quarterly EPS point
 is dated by `research/valuation.py::published_eps` before anything sums it: the EDGAR results release (8-K item
 2.02, found by `report_dates.attach`) when known, moved to the day after the period end if it falls on or before
-it, otherwise the period end plus 40 days, or plus 60 for a fiscal-year end (a quarter within a week of an
+it, otherwise the period end plus 45 days, or plus 60 for a fiscal-year end (a quarter within a week of an
 annual period's month and day, so 52/53-week years match). The trailing P/E, the percentile range, the Valuation
 Grade and its bands, Discover's "below usual P/E", the yardsticks (which had their own 35-day lag) and the MCP
 valuation and compare tools all read that one dating. The nightly scan stores the release dates it finds as

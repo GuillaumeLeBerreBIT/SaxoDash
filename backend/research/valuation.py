@@ -213,7 +213,7 @@ def series_eps(series, released=None):
     return published_eps(_points(series['quarterly'].get('eps')), released, _annual_periods(series.get('annual')))
 
 
-def history(ticker, series, bars, today=None, released=None):
+def history(ticker, series, bars, today=None, released=None, band=False):
     warnings = []
     country = series.get('country')
     if country and country != HOME_COUNTRY:
@@ -233,7 +233,7 @@ def history(ticker, series, bars, today=None, released=None):
         'annual': series['annual'],
         'quarterly': quarterly,
         'daily_pe': _weekly(daily),
-        'daily_pe_band': usual_band(daily),
+        'daily_pe_band': usual_band(daily) if band else None,
         'medians_5y': medians,
         'latest': latest,
     }

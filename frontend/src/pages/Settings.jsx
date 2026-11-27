@@ -25,7 +25,7 @@ const MOVE_OPTIONS = [
   { value: 'cvd', label: 'Blue / orange' },
 ]
 
-const BAND_NAMES = { blue: 'Blue', orange: 'Orange', violet: 'Violet', yellow: 'Yellow' }
+const BAND_NAMES = { blue: 'Blue', orange: 'Orange', violet: 'Violet', yellow: 'Yellow', pink: 'Pink', teal: 'Teal' }
 
 const bandOptions = (other) =>
   Object.keys(BAND_COLOURS)

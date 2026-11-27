@@ -78,13 +78,25 @@ describe('readAppearance', () => {
     expect(readAppearance(null)).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('not json')).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('{"theme":"neon","moves":"x","density":9}')).toEqual(DEFAULT_APPEARANCE)
-    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'blue', expensiveBand: 'orange' })
+    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'pink', expensiveBand: 'teal' })
   })
 
   it('keeps only band colours from the list, never green or red', () => {
-    expect(readAppearance('{"cheapBand":"green","expensiveBand":"red"}')).toMatchObject({ cheapBand: 'blue', expensiveBand: 'orange' })
+    expect(readAppearance('{"cheapBand":"green","expensiveBand":"red"}')).toMatchObject({ cheapBand: 'pink', expensiveBand: 'teal' })
     expect(readAppearance('{"cheapBand":"violet","expensiveBand":"yellow"}')).toMatchObject({ cheapBand: 'violet', expensiveBand: 'yellow' })
     expect(Object.keys(BAND_COLOURS)).not.toEqual(expect.arrayContaining(['green', 'red']))
+  })
+
+  it('defaults zones to colours that no gain, loss, warning or earnings colour uses in any theme', () => {
+    for (const theme of ['republic', 'blue', 'light']) {
+      for (const moves of ['green-red', 'cvd']) {
+        const vars = themeVars(theme, moves)
+        const taken = ['--sd-up', '--sd-down', '--sd-warn', '--sd-earn'].map((role) => vars[role])
+        for (const name of [DEFAULT_APPEARANCE.cheapBand, DEFAULT_APPEARANCE.expensiveBand]) {
+          expect(taken).not.toContain(bandColour(name, theme))
+        }
+      }
+    }
   })
 
   it('gives the band colour for each theme', () => {
@@ -97,8 +109,8 @@ describe('readAppearance', () => {
       theme: 'blue',
       moves: 'green-red',
       density: 'comfortable',
-      cheapBand: 'blue',
-      expensiveBand: 'orange',
+      cheapBand: 'pink',
+      expensiveBand: 'teal',
     })
   })
 })

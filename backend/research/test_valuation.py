@@ -251,19 +251,19 @@ LONG_SERIES = {
 
 class DailyBandTest(SimpleTestCase):
     def test_the_band_is_empty_until_two_years_of_weekly_pe_exist(self):
-        data, _ = history('NVDA', LONG_SERIES, weekdays(date(2024, 6, 3), date(2025, 6, 30), lambda d: 40.0))
+        data, _ = history('NVDA', LONG_SERIES, weekdays(date(2024, 6, 3), date(2025, 6, 30), lambda d: 40.0), band=True)
         self.assertTrue(all(low is None and high is None for _, low, high in data['daily_pe_band']))
 
     def test_a_band_on_a_day_does_not_change_when_later_bars_arrive(self):
         start = date(2024, 6, 3)
         bars = weekdays(start, date(2026, 6, 30), lambda d: 40.0 + (d - start).days / 30)
-        full, _ = history('NVDA', LONG_SERIES, bars)
-        cut, _ = history('NVDA', LONG_SERIES, bars[:-120])
+        full, _ = history('NVDA', LONG_SERIES, bars, band=True)
+        cut, _ = history('NVDA', LONG_SERIES, bars[:-120], band=True)
         self.assertEqual(cut['daily_pe_band'], full['daily_pe_band'][:len(cut['daily_pe_band'])])
 
     def test_a_price_above_its_history_widens_the_band(self):
         bars = weekdays(date(2020, 6, 1), date(2026, 6, 30), lambda d: 40.0 if d < date(2023, 6, 1) else 400.0)
-        data, _ = history('NVDA', LONG_SERIES, bars)
+        data, _ = history('NVDA', LONG_SERIES, bars, band=True)
         before_jump = [row for row in data['daily_pe_band'] if row[0] == '2023-05-26'][0]
         last = data['daily_pe_band'][-1]
         self.assertEqual(before_jump[1:], [10.0, 10.0])
@@ -271,7 +271,7 @@ class DailyBandTest(SimpleTestCase):
 
     def test_the_latest_band_matches_the_percentiles_shown_elsewhere(self):
         bars = weekdays(date(2020, 6, 1), date(2026, 6, 30), lambda d: 40.0 + (d - date(2020, 6, 1)).days / 100)
-        data, _ = history('NVDA', LONG_SERIES, bars)
+        data, _ = history('NVDA', LONG_SERIES, bars, band=True)
         closes = [(date.fromisoformat(b['date']), b['close']) for b in bars]
         quarterly = [(date.fromisoformat(p['period']), p['v']) for p in LONG_SERIES['quarterly']['eps']]
         percentiles = pe_percentiles(closes, published_eps(quarterly, None, [date(2023, 12, 31)]))
