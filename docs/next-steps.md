@@ -87,3 +87,22 @@ Follow-ups out of scope:
   between two instruments that happen to share a ticker doesn't reset them.
 - With the line tool armed, clicking the chart to close an open rail menu
   also places a line.
+
+## Usual P/E range: open items (PR #88, feat/candle-pe-band)
+
+Written down so they can be picked up after PR #88 merges. Nothing here blocks the merge
+except where marked.
+
+- **Browser check of the Settings zone colours.** The lower and upper part pickers in
+  Appearance have not been looked at in a real browser yet.
+- **Violet and yellow clash.** Both still sit close to the earnings and warning colours in
+  some themes. Decide whether to drop them from the choice list.
+- **Valuation Grade heading.** The Research answer card now labels the valuation cell
+  "Valuation Grade" instead of "Price". Confirm on screen.
+- **ValidationQuadrant.** No symbol with that name exists in the code. The nearest is
+  `valuationScore` in `frontend/src/lib/quadrant.js`, which uses PEG alone. Confirm which
+  behaviour was meant.
+- **Production recalc after release.** Run `manage.py recalculate_pe` on production once the
+  change is released, so stored P/E ranges follow the new definition.
+- **Local dev Celery.** The worker and beat were stopped during the recalc; restart them on
+  current code when needed.
