@@ -5,7 +5,7 @@ import { Button, Card, PageHeader, Segmented, StatusDot } from '../components/ui
 import { fmtDateTime } from '../lib/format'
 import { deriveSaxoStatus } from '../lib/saxoStatus'
 import { useConnectSaxo } from '../lib/useConnectSaxo'
-import { THEMES } from '../lib/theme'
+import { BAND_COLOURS, THEMES, bandColour } from '../lib/theme'
 import { useAppearance } from '../theme/ThemeProvider'
 
 const SECTIONS = [
@@ -24,6 +24,16 @@ const MOVE_OPTIONS = [
   { value: 'green-red', label: <><span className="text-up">▲</span> Green / <span className="text-down">▼</span> red</> },
   { value: 'cvd', label: 'Blue / orange' },
 ]
+
+const BAND_NAMES = { blue: 'Blue', orange: 'Orange', violet: 'Violet', yellow: 'Yellow', pink: 'Pink', teal: 'Teal' }
+
+const bandOptions = (other) =>
+  Object.keys(BAND_COLOURS)
+    .filter((name) => name !== other)
+    .map((name) => ({
+      value: name,
+      label: <><span aria-hidden="true" className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle" style={{ background: bandColour(name, 'republic') }} />{BAND_NAMES[name]}</>,
+    }))
 
 const DENSITY_OPTIONS = [
   { value: 'comfortable', label: 'Comfortable' },
@@ -65,7 +75,7 @@ function ThemeCard({ theme, active, onPick }) {
 }
 
 function Appearance() {
-  const { theme, moves, density, setAppearance } = useAppearance()
+  const { theme, moves, density, cheapBand, expensiveBand, setAppearance } = useAppearance()
   return (
     <Card context="Changes colours only; layout stays the same" title="Theme">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5">
@@ -78,6 +88,11 @@ function Appearance() {
       <p className="mt-2 text-[12px] text-ink-3">
         Blue and orange stay apart for red-green colour blindness. Arrows always carry the direction too.
       </p>
+      <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Usual range zone colours</h3>
+      <Segmented label="Lower part colour" options={bandOptions(expensiveBand)} value={cheapBand} onChange={(value) => setAppearance({ cheapBand: value })} />
+      <p className="mt-2 mb-3 text-[12px] text-ink-3">Lower part: the price is at or below the low line of its usual range.</p>
+      <Segmented label="Upper part colour" options={bandOptions(cheapBand)} value={expensiveBand} onChange={(value) => setAppearance({ expensiveBand: value })} />
+      <p className="mt-2 text-[12px] text-ink-3">Upper part: the price is at or above the high line of its usual range.</p>
       <h3 className="mt-6 mb-2 text-[15px] font-bold text-ink">Density</h3>
       <Segmented label="Density" options={DENSITY_OPTIONS} value={density} onChange={(value) => setAppearance({ density: value })} />
     </Card>

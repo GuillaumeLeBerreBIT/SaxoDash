@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BAND_COLOURS,
   DEFAULT_APPEARANCE,
   DENSITY,
   MOVES,
   ROLES,
   THEMES,
+  bandColour,
   contrastRatio,
   readAppearance,
   themeVars,
@@ -76,7 +78,30 @@ describe('readAppearance', () => {
     expect(readAppearance(null)).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('not json')).toEqual(DEFAULT_APPEARANCE)
     expect(readAppearance('{"theme":"neon","moves":"x","density":9}')).toEqual(DEFAULT_APPEARANCE)
-    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable' })
+    expect(DEFAULT_APPEARANCE).toEqual({ theme: 'republic', moves: 'green-red', density: 'comfortable', cheapBand: 'pink', expensiveBand: 'teal' })
+  })
+
+  it('keeps only band colours from the list, never green or red', () => {
+    expect(readAppearance('{"cheapBand":"green","expensiveBand":"red"}')).toMatchObject({ cheapBand: 'pink', expensiveBand: 'teal' })
+    expect(readAppearance('{"cheapBand":"violet","expensiveBand":"yellow"}')).toMatchObject({ cheapBand: 'violet', expensiveBand: 'yellow' })
+    expect(Object.keys(BAND_COLOURS)).not.toEqual(expect.arrayContaining(['green', 'red']))
+  })
+
+  it('defaults zones to colours that no gain, loss, warning or earnings colour uses in any theme', () => {
+    for (const theme of ['republic', 'blue', 'light']) {
+      for (const moves of ['green-red', 'cvd']) {
+        const vars = themeVars(theme, moves)
+        const taken = ['--sd-up', '--sd-down', '--sd-warn', '--sd-earn'].map((role) => vars[role])
+        for (const name of [DEFAULT_APPEARANCE.cheapBand, DEFAULT_APPEARANCE.expensiveBand]) {
+          expect(taken).not.toContain(bandColour(name, theme))
+        }
+      }
+    }
+  })
+
+  it('gives the band colour for each theme', () => {
+    expect(bandColour('blue', 'republic')).toBe(BAND_COLOURS.blue.dark)
+    expect(bandColour('orange', 'light')).toBe(BAND_COLOURS.orange.light)
   })
 
   it('keeps valid fields', () => {
@@ -84,6 +109,8 @@ describe('readAppearance', () => {
       theme: 'blue',
       moves: 'green-red',
       density: 'comfortable',
+      cheapBand: 'pink',
+      expensiveBand: 'teal',
     })
   })
 })

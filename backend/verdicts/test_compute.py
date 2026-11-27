@@ -143,6 +143,19 @@ class ComputeTest(TestCase):
 
         self.assertEqual(VerdictCall.objects.get().valuation, 'fair')
 
+    def test_the_call_is_the_same_with_and_without_a_pe_reading(self):
+        make_row('AAPL')
+        compute.run(today=DAY_ONE)
+        fields = ('opened_on', 'entry_close', 'quality', 'rule', 'checks', 'ended_on')
+        with_reading = VerdictCall.objects.values(*fields).get()
+
+        VerdictCall.objects.all().delete()
+        StockVerdict.objects.all().delete()
+        ScreenerRow.everything.filter(ticker='AAPL').update(pe_history={})
+        compute.run(today=DAY_ONE)
+
+        self.assertEqual(VerdictCall.objects.values(*fields).get(), with_reading)
+
     def test_mixed_quality_opens_no_call(self):
         make_row('AAPL', fundamentals_history=MIXED_HISTORY)
 

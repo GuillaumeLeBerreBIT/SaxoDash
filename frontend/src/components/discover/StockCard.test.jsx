@@ -25,13 +25,13 @@ const renderCard = (props = {}) =>
 describe('StockCard', () => {
   it('states the fall from the 1-year high when the screen asks for it', () => {
     renderCard({ showFall: true })
-    expect(screen.getByText('Within its usual P/E range')).toBeInTheDocument()
+    expect(screen.getByText('Middle')).toBeInTheDocument()
     expect(screen.getByText('38% below its 1-year high')).toBeInTheDocument()
   })
 
   it('leaves the fall out of an ordinary screen', () => {
     renderCard()
-    expect(screen.getByText('Within its usual P/E range')).toBeInTheDocument()
+    expect(screen.getByText('Middle')).toBeInTheDocument()
     expect(screen.queryByText(/1-year high/)).not.toBeInTheDocument()
   })
 

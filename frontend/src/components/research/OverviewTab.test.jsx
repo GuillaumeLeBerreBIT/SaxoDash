@@ -208,7 +208,7 @@ describe('OverviewTab on the new design', () => {
       fundamentals: { isLoading: false, data: { available: true, pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } } },
     })
 
-    expect(screen.getByText('P/E high for its own history')).toBeInTheDocument()
+    expect(screen.getByText('Upper part')).toBeInTheDocument()
   })
 
   it('collects the company facts and the Saxo reference data in one panel', () => {

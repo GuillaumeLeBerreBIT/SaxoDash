@@ -42,6 +42,7 @@ function stub() {
   queries.useCharts.mockImplementation((instruments) => ({ data: instruments.map(() => undefined), status: instruments.map(() => 'loading') }))
   queries.useInstrumentDetails.mockReturnValue({ ...idle, data: { currency: 'USD' } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false } })
+  queries.useUsualBand.mockReturnValue({ ...idle, data: { band: [] } })
   queries.useSymbolNote.mockReturnValue({ ...idle, data: null })
   queries.useNoteLevelMutation.mockReturnValue({ mutate: vi.fn() })
   queries.usePriceLines.mockReturnValue({ ...idle, data: [] })

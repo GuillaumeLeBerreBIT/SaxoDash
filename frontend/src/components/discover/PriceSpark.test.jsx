@@ -33,7 +33,7 @@ describe('Discover price sparkline', () => {
 
   it('labels a full-height upper zone when prices all sit above the range', () => {
     render(<PriceSpark values={[190, 200, 195]} cheapBelow={100} expensiveAbove={150} label="Weekly closes" />)
-    const chart = screen.getByRole('img', { name: /above the usual P\/E range/ })
+    const chart = screen.getByRole('img', { name: /Upper part/ })
     expect(chart.querySelector('[data-zone="expensive"]')).toHaveAttribute('height', '64')
     expect(chart.querySelector('[data-zone="cheap"]')).toBeNull()
   })
@@ -41,7 +41,7 @@ describe('Discover price sparkline', () => {
   it('identifies both bands, with different gradients for each chart', () => {
     const props = { values: [90, 110, 160], cheapBelow: 100, expensiveAbove: 150, label: 'Weekly closes' }
     render(<><PriceSpark {...props} /><PriceSpark {...props} /></>)
-    const charts = screen.getAllByRole('img', { name: /lower band.*upper band/i })
+    const charts = screen.getAllByRole('img', { name: /lower part of usual range.*upper part/i })
     const fills = charts.flatMap(chart => Array.from(chart.querySelectorAll('[data-zone]'), zone => zone.getAttribute('fill')))
     expect(new Set(fills).size).toBe(4)
     expect(charts[0].querySelectorAll('linearGradient')).toHaveLength(2)

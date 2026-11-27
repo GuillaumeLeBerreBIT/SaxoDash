@@ -29,7 +29,7 @@ export const SNAPSHOT_GUIDE = [
     key: 'valuation',
     label: 'Valuation',
     meaning: "PEG (P/E relative to growth) and P/E measured against the stock's own multi-year range.",
-    read: `PEG below ${T.pegCheap} means the P/E is low next to earnings growth, above ${T.pegRich} high. A P/E more than ${Math.round(T.histBand * 100)}% above its own historical median is above its own history; that much below is below it. These describe the price and are not buy or sell signals: PEG was never tested, and when the stock's own P/E range was tested on 23 years of history, stocks below it did worse than the average stock.`,
+    read: `PEG below ${T.pegCheap} means the P/E is low next to earnings growth, above ${T.pegRich} high. The P/E position is the usual range, shown on the chart and in the verdict. These describe the price and are not buy or sell signals: PEG was never tested. The graded evidence on the usual P/E range is under P/E chip in the chart guide.`,
   },
   {
     key: 'momentum',
@@ -52,7 +52,7 @@ export const RATIO_GUIDE = [
   {
     label: 'Valuation multiples',
     metrics: [
-      { name: 'P/E, Forward P/E, PEG', text: 'PEG and P/E vs. own history are covered under Valuation above. A Forward P/E notably below trailing P/E usually signals expected earnings growth.' },
+      { name: 'P/E, Forward P/E, PEG', text: 'PEG is covered under Valuation above; P/E is shown as the usual range on the chart. A Forward P/E notably below trailing P/E usually signals expected earnings growth.' },
       { name: 'P/S', text: 'Price per dollar of revenue - useful for growth companies not yet profitable; only compare it within the same industry.' },
       { name: 'P/B', text: 'Price relative to book value - most meaningful for asset-heavy businesses like banks and insurers; less useful for asset-light software companies.' },
       { name: 'EV/EBITDA', text: "Enterprise value to EBITDA - like P/E but capital-structure neutral, so it's the fairer way to compare companies carrying different amounts of debt." },
@@ -72,10 +72,10 @@ export const RATIO_GUIDE = [
 ]
 
 export const QUADRANT_GUIDE = {
-  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is primarily PEG, nudged by P/E versus its own history. Same thresholds as Snapshot and Ratios, just combined into one picture. It places companies; no corner is a buy or a sell, because the valuation score was never tested as a signal.',
+  meaning: 'Two 0-100 scores plotted against each other: quality averages ROE, net margin, and inverted leverage bands; valuation is PEG. Same thresholds as Snapshot and Ratios, just combined into one picture. It places companies; no corner is a buy or a sell, because the valuation score was never tested as a signal.',
   corners: [
-    { label: 'Higher quality, lower valuation (top-left)', text: 'Stronger figures, and a lower PEG or P/E than the others or its own history.' },
-    { label: 'Higher quality, higher valuation (top-right)', text: 'Stronger figures, priced higher against growth or its own history.' },
+    { label: 'Higher quality, lower valuation (top-left)', text: 'Stronger figures, and a lower PEG than the others.' },
+    { label: 'Higher quality, higher valuation (top-right)', text: 'Stronger figures, priced higher against growth.' },
     { label: 'Lower quality, lower valuation (bottom-left)', text: 'Weaker figures and a lower valuation.' },
     { label: 'Lower quality, higher valuation (bottom-right)', text: 'Weaker figures and a higher valuation.' },
   ],
@@ -101,7 +101,7 @@ export const SIGNALS_GUIDE = [
 ]
 
 export const CHART_GUIDES = [
-  { name: 'P/E chip', text: 'Beside the price: today\'s P/E against the middle half of the P/E the stock has traded at over about five years, in words (below, inside or above its usual range). It uses the verdict\'s own figures, so it always agrees with the verdict badge. It describes where the price sits and is not a buy or sell signal: on 23 years of history, stocks below their usual P/E did worse than the average stock over the next year. The chart does not draw this range on past candles, because a past band would need the earnings known on each day and the P/E range as it stood then.' },
+  { name: 'P/E chip', text: 'Beside the price: today\'s P/E against the middle half of the P/E the stock has traded at over about five years, in words (below, inside or above its usual range). It uses the verdict\'s own figures, so it always agrees with the verdict badge. It describes where the price sits, is an indication of value and never a buy or sell signal. The Usual P/E range guide draws the same range on each candle, using the earnings known on that day, and is off until you switch it on under Guides. Its graded evidence is under that guide.' },
   { name: '52-week high', text: 'The dotted line is the highest price of the past 252 sessions, and its tag says how far today\'s price is below it. It is a reference, not a signal: in the Signal Lab neither a new 1-year high nor a fall of more than 20% below it could be told apart from chance on its own.' },
   { name: 'Volume gaps', text: 'A box marks a day that opened more than 4% away from the previous close on more than twice the volume of the previous 20 sessions, using the Signal Lab\'s own rules; a gap up must also close at or above 98% of its open. The box runs from the previous close to that open, until the price trades back through the previous close or 60 sessions pass; an open gap has a dashed edge. In testing, gap up held up: stocks did better than the average stock over the next 60 sessions. Gap down cannot be judged fairly, because the test only knows companies still in the index today.' },
 ]

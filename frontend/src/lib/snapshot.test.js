@@ -43,9 +43,9 @@ describe('valuationVerdict', () => {
     const f = { pe_ratio: 10, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } }
     expect(valuationVerdict(f).tone).toBe('neutral')
   })
-  it('reads P/E against its own history', () => {
+  it('never compares P/E with its own median history, so the usual range is the only P/E position', () => {
     const v = valuationVerdict({ pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } })
-    expect(v.text).toMatch(/above its 6-yr range/)
+    expect(v).toEqual(valuationVerdict({}))
   })
   it('starts every pill with a capital letter', () => {
     expect(valuationVerdict({ peg_ratio: 0.8 }).text).toBe('PEG below 1')
@@ -53,20 +53,20 @@ describe('valuationVerdict', () => {
     expect(valuationVerdict({ peg_ratio: 1.5 }).text).toBe('PEG between 1 and 2')
   })
   it.each([
-    ['cheap', 'P/E low for its own history'],
-    ['fair', 'P/E in the middle of its own history'],
-    ['expensive', 'P/E high for its own history'],
+    ['cheap', 'Lower part of usual range'],
+    ['fair', 'Middle'],
+    ['expensive', 'Upper part'],
   ])('takes the P/E phrase from a %s verdict, so the page gives one valuation answer', (grade, phrase) => {
     const f = { peg_ratio: 1.5, pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } }
     expect(valuationVerdict(f, grade).text).toBe(`PEG between 1 and 2; ${phrase}`)
   })
-  it('keeps its own P/E phrase when the verdict did not judge the valuation', () => {
+  it('shows no P/E position when the verdict did not judge the valuation', () => {
     const f = { pe_ratio: 40, valuation_history: { pe: { min: 15, median: 25, max: 30, n: 6 } } }
-    expect(valuationVerdict(f, 'not_judged').text).toBe('P/E above its 6-yr range')
+    expect(valuationVerdict(f, 'not_judged')).toEqual(valuationVerdict({}))
   })
   it('describes the verdict P/E against its own history without colouring it good or bad', () => {
-    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'neutral', text: 'P/E high for its own history' })
-    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'neutral', text: 'P/E low for its own history' })
+    expect(valuationVerdict({ pe_ratio: 20 }, 'expensive')).toEqual({ tone: 'neutral', text: 'Upper part' })
+    expect(valuationVerdict({ pe_ratio: 20 }, 'cheap')).toEqual({ tone: 'neutral', text: 'Lower part of usual range' })
   })
 })
 

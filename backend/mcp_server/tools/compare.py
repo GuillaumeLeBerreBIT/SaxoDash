@@ -11,7 +11,8 @@ from ..envelope import Reply, Unavailable
 from ..throttled import look_up
 from ..views import app_user, fetch_optional
 from . import tool
-from .research import FINNHUB, SAXO, _scalar_metrics, released_dates
+from research.usual_band import released_dates
+from .research import FINNHUB, SAXO, _scalar_metrics
 from .smart_money import CONGRESS, EDGAR, ownership
 
 MIN_SYMBOLS = 2

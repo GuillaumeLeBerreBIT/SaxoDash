@@ -12,8 +12,8 @@ const plan = { stop: { price: 340, source: 'atr' }, stopDistancePct: -4.6, size:
 describe('entrySentence', () => {
   it('keeps the verdict word and why, and describes the usual P/E range as a rule of thumb', () => {
     const s = entrySentence({ verdict: verdict({ action: 'buy', valuation: 'cheap' }), price: 78, currency: 'USD' })
-    expect(s.why).toBe('Strong company, P/E below its usual range.')
-    expect(s.next).toBe('Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy signal.')
+    expect(s.why).toBe('Strong company, P/E position: Lower part of usual range.')
+    expect(s.next).toBe('Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy or sell signal.')
     expect(JSON.stringify(s)).not.toMatch(/cheap|expensive/i)
     expect(JSON.stringify(s)).not.toMatch(/growth|opportunity zone|updates tonight/i)
   })
@@ -32,15 +32,15 @@ describe('entrySentence', () => {
     expect(entrySentence({ verdict: verdict(), price: 100, plan, currency: 'USD' })).toEqual({
       word: 'PASSES QUALITY SCREEN',
       tone: undefined,
-      why: 'Strong company, P/E within its usual range.',
-      next: 'Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy signal.',
+      why: 'Strong company, P/E position: Middle.',
+      next: 'Its usual P/E of 20 to 30 spans US$80.00 to US$120.00. A rule of thumb, not a buy or sell signal.',
       risk: "Stop-loss at US$340.00, 4.6% below today's close. Buying 3 shares today would risk €45.",
       earnings: null,
     })
   })
 
   it('says no valuation yet when not judged', () => {
-    expect(entrySentence({ verdict: verdict({ valuation: 'not_judged' }), price: 100 }).why).toBe('Strong company, no valuation yet.')
+    expect(entrySentence({ verdict: verdict({ valuation: 'not_judged' }), price: 100 }).why).toBe('Strong company, P/E position: not yet known.')
   })
 
   it('calls a company with too many missing checks incomplete, not strong', () => {
@@ -92,5 +92,20 @@ describe('visibleGuides', () => {
     expect(shown.gaps[0]).toMatchObject({ index: -1, end: 0, filled: true, filledOn: full[281].date })
     expect(visibleGuides(guideSeries(full, { high: false, gaps: true }), full, full.slice(290)).gaps).toEqual([])
     expect(visibleGuides(guideSeries(full, { high: false, gaps: false }), full, full.slice(290)).gaps).toEqual([])
+  })
+
+  it('lines the usual P/E band up with the visible bars by date, and leaves a bar with no band empty', () => {
+    const rows = [[day(270), 20, 30], [day(271), null, null], [day(272), 21, 31]]
+    const shown = visibleGuides(guideSeries(full, { high: false, gaps: false, band: rows }), full, full.slice(270, 290))
+
+    expect(shown.band).toHaveLength(20)
+    expect(shown.band[0]).toEqual([day(270), 20, 30])
+    expect(shown.band[1]).toBeNull()
+    expect(shown.band[2]).toEqual([day(272), 21, 31])
+    expect(shown.band[5]).toBeNull()
+  })
+
+  it('has no band when the band is switched off', () => {
+    expect(visibleGuides(guideSeries(full, { high: false, gaps: false, band: null }), full, full.slice(270, 290)).band).toBeNull()
   })
 })

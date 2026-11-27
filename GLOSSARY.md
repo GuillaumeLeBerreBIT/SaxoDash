@@ -100,12 +100,16 @@ A Pane mode that shows how the stock moved against up to five other lines (the S
 _Avoid_: Overlay, benchmark view, Compare page (the old idea of a separate page)
 
 **Guide**:
-A layer the app draws on the candles from its own data: the Cheap and Expensive Zones, the 52-week high, Volume Gaps and the Stop-loss. Each can be switched on or off.
+A layer the app draws on the candles from its own data: the Usual P/E range, the 52-week high, Volume Gaps and the Stop-loss. Each can be switched on or off.
 _Avoid_: Indicator (RSI, MACD and moving averages), overlay
 
-**Cheap Zone / Expensive Zone**:
-The bands on the candles where the stock's P/E would be below its usual range (green, below the cheap line) or above it (red, above the expensive line), using only the earnings published by each date. Always named in full, never just "zone".
-_Avoid_: Zone (on its own), P/E band, value zone
+**Usual P/E range**:
+The stock's own middle half of P/E over the last five years, from its weekly readings, drawn as a band on each candle using only the earnings published by that day. Its two lines are the cheap line and the expensive line.
+_Avoid_: Cheap Zone, Expensive Zone, green/red zone, value zone, P/E band (on its own)
+
+**Position label**:
+Where the price sits in the usual P/E range, in the chart, Discover and the verdict: Lower part of usual range (at or below the low line), Middle, Upper part (at or above the high line). Zone colours are the user's own choice in Settings, never green or red.
+_Avoid_: Cheap P/E, Expensive P/E, Cheap Zone, Expensive Zone, cheap, expensive (for P/E)
 
 **Volume Gap**:
 A day that opens more than 4% away from the previous close on more than twice the usual volume, drawn as a box until the price trades back through the gap.

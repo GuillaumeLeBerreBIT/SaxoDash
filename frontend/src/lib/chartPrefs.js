@@ -9,7 +9,7 @@ export const DEFAULT_CHART_PREFS = {
   type: 'candles',
   overlays: { ma20: true, ma50: true, ma200: false, ema9: false, bb: false, vwap: false },
   panes: { volume: true, rsi: false, macd: false },
-  guides: { high52: true, gaps: true, plan: false },
+  guides: { high52: true, gaps: true, band: false, plan: false },
 }
 
 function sanitizeToggles(raw, defaults) {

@@ -6,6 +6,7 @@ import {
   useQuotes,
   useSymbolEarnings,
   useSymbolNote,
+  useUsualBand,
 } from '../../api/queries'
 import { COMPANY_DATA, companyDataStatus, listingCurrency } from '../../lib/companyData'
 import { computeIndicatorsForWindow } from '../../lib/indicators'
@@ -33,6 +34,7 @@ export function useChartData({
   position = null,
   resolving = false,
   requireInstrument = false,
+  usualBandOn = false,
 }) {
   const uic = instrument?.uic
   const assetType = instrument?.assetType
@@ -68,6 +70,7 @@ export function useChartData({
   })
   const earnings = useSymbolEarnings(companyData === COMPANY_DATA.eligible ? symbol : '')
   const note = useSymbolNote(symbol)
+  const usualBand = useUsualBand(companyData === COMPANY_DATA.eligible && usualBandOn ? symbol : '')
   const priceLines = useChartLines({ symbol, uic, assetType, note: note?.data })
   const savedTrendLines = useChartTrendLines({ symbol, uic, assetType })
   const trendLines = useMemo(
@@ -111,6 +114,7 @@ export function useChartData({
     futureDates,
     timeView: effectiveTimeView,
     earnings,
+    usualBand: usualBand.data?.band ?? null,
     companyData,
     currency,
     earningsMarkers,

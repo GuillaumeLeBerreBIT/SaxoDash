@@ -261,11 +261,18 @@ describe('ChartCanvas legend height', () => {
 
 describe('ChartCanvas value guides', () => {
   const legend = (container) => container.querySelector('.num.flex-wrap:not(.invisible)')
-  it('draws no past P/E band and gives no P/E reading in the legend, even if a band is passed', () => {
-    const { container } = render(canvas({ hover: 12, valueGuides: { line: [{ from: '2026-08-01', eps_ttm: 4.5 }], band: { low: 15, high: 25 }, high: true, gaps: true, currency: 'USD' } }))
+  it('gives no P/E reading in the legend', () => {
+    const { container } = render(canvas({ hover: 12, valueGuides: { line: [{ from: '2026-08-01', eps_ttm: 4.5 }], high: true, gaps: true, currency: 'USD' } }))
 
     expect(container.querySelector('[data-testid="value-zones"]')).toBeNull()
     expect(legend(container)).not.toHaveTextContent('P/E then')
+  })
+
+  it('draws the usual P/E band on the candles when its guide is on', () => {
+    const band = bars.map((bar) => [bar.date, 15, 25])
+    const { container } = render(canvas({ valueGuides: { high: false, gaps: false, band, currency: 'USD' } }))
+
+    expect(container.querySelector('[data-testid="usual-band"]')).not.toBeNull()
   })
 
   it('describes a gap on the hovered gap day', () => {

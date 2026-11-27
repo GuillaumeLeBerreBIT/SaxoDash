@@ -21,7 +21,7 @@ from saxo.credentials import connection_state
 from users.owner import owner
 from users.permissions import IsOwner
 
-from . import discover, earnings, filings, finnhub, market, scan_progress, sectors, shelves, statements, tasks
+from . import discover, earnings, filings, finnhub, market, scan_progress, sectors, shelves, statements, tasks, usual_band
 from .models import ChartZone, PriceLine, SymbolNote, TextAnnotation, TrendLine, Watchlist, WatchlistItem
 from .providers import provider_response
 from .serializers import (
@@ -220,6 +220,14 @@ class SymbolEarningsView(APIView):
     def get(self, request, symbol):
         symbol = _symbol(symbol)
         return provider_response(lambda: earnings.symbol_earnings(symbol))
+
+
+class UsualBandView(APIView):
+    throttle_scope = 'research.fundamentals'
+
+    def get(self, request, symbol):
+        symbol = _symbol(symbol)
+        return provider_response(lambda: usual_band.usual_band(symbol, user=request.user))
 
 
 class CompanyNewsView(APIView):
