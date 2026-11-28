@@ -33,6 +33,7 @@ import {
   getPriceLines,
   getQuotes,
   getSymbolEarnings,
+  getUsualBand,
   getSymbolNote,
   getTextAnnotations,
   getTrendLines,
@@ -68,6 +69,7 @@ export const researchKeys = {
   peers: (symbol) => ['peers', symbol],
   earningsCalendar: (scope = 'all', week = 0) => ['earnings-calendar', scope, week],
   symbolEarnings: (symbol) => ['symbol-earnings', symbol],
+  usualBand: (symbol) => ['usual-band', symbol],
   symbolNote: (symbol) => ['symbol-note', symbol],
   priceLines: (uic, assetType) => ['price-lines', instrumentKey(uic, assetType)],
   textAnnotations: (uic, assetType) => ['text-annotations', instrumentKey(uic, assetType)],
@@ -270,6 +272,15 @@ export function useEarningsCalendar(scope = 'all', week = 0) {
     queryKey: researchKeys.earningsCalendar(scope, week),
     queryFn: () => getEarningsCalendar(scope, week),
     staleTime: 12 * 60 * 60_000,
+  })
+}
+
+export function useUsualBand(symbol) {
+  return useQuery({
+    queryKey: researchKeys.usualBand(symbol),
+    queryFn: () => getUsualBand(symbol),
+    enabled: !!symbol,
+    staleTime: 24 * 60 * 60_000,
   })
 }
 

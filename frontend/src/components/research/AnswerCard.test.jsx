@@ -19,6 +19,13 @@ const renderCard = (over = {}) =>
   render(<AnswerCard symbol="AAPL" verdict={{ isLoading: false, data: verdictData() }} sentence={sentence} position={position} {...over} />)
 
 describe('AnswerCard', () => {
+  it('captions the valuation word as a rule of thumb, not a buy or sell signal', () => {
+    renderCard()
+    const cell = screen.getByTestId('answer-price')
+    expect(within(cell).getByText('Above usual P/E')).toBeInTheDocument()
+    expect(within(cell).getByText('Rule of thumb, not a buy or sell signal')).toBeInTheDocument()
+  })
+
   it('says what to do and why in one line', () => {
     renderCard()
     const card = screen.getByTestId('answer-card')

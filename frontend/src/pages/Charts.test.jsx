@@ -58,6 +58,7 @@ function stubQueries() {
   })
   queries.useSaxoStatus.mockReturnValue({ ...idle, data: { connected: true } })
   queries.useSymbolEarnings.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
+  queries.useUsualBand.mockReturnValue({ ...idle, data: { band: [] } })
   queries.useFundamentals.mockReturnValue({ ...idle, data: { available: false, reason: 'x' } })
   queries.useVerdict.mockReturnValue(idle)
   queries.useStatements.mockReturnValue({ ...idle, data: { available: false } })

@@ -27,6 +27,7 @@ import {
   getStatements,
   getEarningsCalendar,
   getSymbolEarnings,
+  getUsualBand,
   getCompanyNews,
   getPeers,
   getPortfolioInsights,
@@ -563,6 +564,17 @@ describe('research endpoints', () => {
 
     expect(window.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/research/earnings/calendar/?scope=mine&week=2'),
+      expect.anything()
+    )
+  })
+
+  it('getUsualBand puts the symbol in the valuation path', async () => {
+    window.fetch = vi.fn().mockResolvedValue(jsonResponse({ band: [] }))
+
+    await getUsualBand('AAPL')
+
+    expect(window.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/research/valuation/AAPL/'),
       expect.anything()
     )
   })

@@ -1,3 +1,5 @@
+import { POSITION_LABEL } from './verdicts'
+
 /** Rule-based one-line reads for the Research Investment Snapshot. Pure and
  *  tested in isolation; the component only renders what these return. Thresholds
  *  are named here so the InfoTip copy and the code cannot drift apart. */
@@ -12,7 +14,6 @@ export const T = {
   deHigh: 2, deLow: 1, currLow: 1, currStrong: 1.5, coverLow: 3,
   pegCheap: 1, pegRich: 2,
   momUp: 10, momDown: -10,
-  histBand: 0.1,
 }
 
 const has = (...vals) => vals.some((v) => v != null)
@@ -71,19 +72,17 @@ export function healthVerdict(f) {
 }
 
 const VERDICT_PE_PHRASE = {
-  cheap: 'P/E low for its own history',
-  fair: 'P/E in the middle of its own history',
-  expensive: 'P/E high for its own history',
+  cheap: POSITION_LABEL.cheap,
+  fair: POSITION_LABEL.fair,
+  expensive: POSITION_LABEL.expensive,
 }
 
 const capitalised = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 
 export function valuationVerdict(f, verdictGrade) {
   const peg = f.peg_ratio
-  const pe = f.pe_ratio
-  const hist = f.valuation_history?.pe
   const fromVerdict = VERDICT_PE_PHRASE[verdictGrade]
-  if (!has(peg, pe) && !hist && !fromVerdict) return limited
+  if (!has(peg) && !fromVerdict) return limited
 
   const parts = []
   if (peg != null) {
@@ -91,13 +90,7 @@ export function valuationVerdict(f, verdictGrade) {
     else if (peg > T.pegRich) parts.push(`PEG above ${T.pegRich}`)
     else parts.push(`PEG between ${T.pegCheap} and ${T.pegRich}`)
   }
-  if (fromVerdict) {
-    parts.push(fromVerdict)
-  } else if (hist && pe != null) {
-    if (pe > hist.median * (1 + T.histBand)) parts.push(`P/E above its ${hist.n}-yr range`)
-    else if (pe < hist.median * (1 - T.histBand)) parts.push(`P/E below its ${hist.n}-yr range`)
-    else parts.push(`P/E in line with its ${hist.n}-yr range`)
-  }
+  if (fromVerdict) parts.push(fromVerdict)
   return { tone: 'neutral', text: capitalised(parts.join('; ')) || 'Limited data' }
 }
 

@@ -24,6 +24,7 @@ export const getPeers = (symbol) => apiFetch(`/api/research/peers/${symbol}/`)
 export const getEarningsCalendar = (scope = 'all', week = 0) =>
   apiFetch(`/api/research/earnings/calendar/?scope=${scope}&week=${week}`)
 export const getSymbolEarnings = (symbol) => apiFetch(`/api/research/earnings/${symbol}/`)
+export const getUsualBand = (symbol) => apiFetch(`/api/research/valuation/${symbol}/`)
 
 export const getSymbolNote = (symbol) => apiFetch(`/api/research/notes/${symbol}/`)
 export const updateSymbolNote = (symbol, patch) =>

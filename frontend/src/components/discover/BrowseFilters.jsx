@@ -59,7 +59,7 @@ export default function BrowseFilters({ filters, facets, onChange }) {
           </button>
         ) : null}
       </div>
-      <ListGroup title="Price against its own history" options={VALUATION_OPTIONS} selected={filters.valuation} counts={facets?.valuation} onChange={(valuation) => set({ valuation })} />
+      <ListGroup title="Position in usual range" options={VALUATION_OPTIONS} selected={filters.valuation} counts={facets?.valuation} onChange={(valuation) => set({ valuation })} />
       <ListGroup title="Company quality" options={QUALITY_OPTIONS} selected={filters.quality} counts={facets?.quality} onChange={(quality) => set({ quality })} />
       <Group title="Sector">
         {shown.map((sector) => (

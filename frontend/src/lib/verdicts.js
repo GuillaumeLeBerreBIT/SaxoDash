@@ -19,6 +19,10 @@ export const GRADE_LABEL = {
   valuation: { cheap: 'Below usual P/E', fair: 'Within usual P/E', expensive: 'Above usual P/E', not_judged: 'Not judged' },
 }
 
+export const POSITION_LABEL = { cheap: 'Lower part of usual range', fair: 'Middle', expensive: 'Upper part' }
+
+export const VALUATION_CAPTION = 'Rule of thumb, not a buy or sell signal'
+
 export const CHECK_STATUS_LABEL = { pass: 'Pass', fail: 'Fail', unknown: 'Unknown' }
 
 const PERCENT_CHECKS = new Set(['roe', 'roic', 'margins', 'earnings_growth', 'revenue_growth', 'cash'])

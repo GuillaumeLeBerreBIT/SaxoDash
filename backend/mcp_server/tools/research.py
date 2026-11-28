@@ -1,8 +1,9 @@
 from research import daily, finnhub, valuation
 from research.listings import SEARCH_ASSET_TYPES
+from research.usual_band import released_dates
 from research.price_summary import summarise
 from research.providers import ProviderError, ProviderUnavailable
-from research.models import PriceLine, ScreenerRow, SymbolNote, Watchlist
+from research.models import PriceLine, SymbolNote, Watchlist
 from research.serializers import PriceLineSerializer, SymbolNoteSerializer
 from research.views import (
     ChartView,
@@ -228,11 +229,6 @@ def get_watchlists():
         ]
         watchlists.append({'name': watchlist.name, 'items': items})
     return {'watchlists': watchlists}
-
-
-def released_dates(ticker):
-    stored = ScreenerRow.everything.filter(ticker__iexact=ticker).values_list('fundamentals_history', flat=True).first()
-    return valuation.stored_releases(stored)
 
 
 @tool(

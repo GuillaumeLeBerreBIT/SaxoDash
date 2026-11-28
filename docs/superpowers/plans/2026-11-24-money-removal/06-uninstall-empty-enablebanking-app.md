@@ -4,13 +4,13 @@
 
 **Blocked by:** 03, 04, and production showing the `enablebanking` drop migration applied after release 1 deployed. Merging this first would skip the drop in production and leave the tables orphaned.
 
-**Status:** done once CI is green
+**Status:** done
 
 - [x] Production confirmed to have applied the final `enablebanking` migration before this is merged
 - [x] `enablebanking` is out of installed apps and its folder is gone
 - [x] `migrate` on a fresh database and on the dev database both succeed with no missing-dependency error
 - [x] `remove_stale_contenttypes` run on dev and production (2026-11-26, before this release: the app was still installed but had no models, so its types already counted as stale)
-- [ ] Backend test suite green; CI green
+- [x] Backend test suite green; CI green
 
 ## On the server, after this release deploys
 

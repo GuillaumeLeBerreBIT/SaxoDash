@@ -7,7 +7,7 @@ describe('PriceBar', () => {
   it('says in words where the price sits against its usual P/E range, without calling it cheap or expensive', () => {
     render(<PriceBar price={353.06} cheapBelow={249.55} expensiveAbove={316.01} />)
     expect(screen.getByRole('img')).toHaveAccessibleName(
-      'US$353.06 is above the range its usual P/E spans, US$249.55 to US$316.01',
+      'US$353.06: Upper part. Usual P/E range US$249.55 to US$316.01',
     )
     expect(screen.getByText('Usual P/E low US$249.55')).toBeInTheDocument()
     expect(screen.getByText('Usual P/E high US$316.01')).toBeInTheDocument()

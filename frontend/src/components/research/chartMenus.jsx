@@ -39,6 +39,7 @@ export function IndicatorMenuItems({ controls }) {
 
 const GUIDES = {
   high52: ['52-week high', 'The highest price of the past year and how far below it today is'],
+  band: ['Usual P/E range', 'The stock\'s own middle half of P/E over five years, drawn on each candle as zones. An indication of value, not a buy or sell signal. The research on it: stocks in the lower part of their usual range did worse than the average stock over the next 250 sessions, by 2.6% over the full history and 7.4% since 2023, graded worked against. Worked against means that return was negative after the flag fired, not that the flag pointed the right way. The upper part showed no clear edge.'],
   gaps: ['Volume gaps', 'Big opening gaps on heavy volume, until filled or 60 sessions pass'],
   plan: ['Stop-loss', 'A sell level below today\'s close, and what it would cost you'],
 }

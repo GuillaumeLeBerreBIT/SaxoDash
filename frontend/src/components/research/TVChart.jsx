@@ -22,7 +22,7 @@ import { badgePrice, edgeOf, isTypingTarget, roundPrice } from '../../lib/priceL
 import { percentLabel } from '../../lib/compare'
 import { guideSeries, visibleGuides } from '../../lib/valueGuides'
 import PriceLines, { PriceEditor } from './PriceLines'
-import { GapBoxes, GuideTags, HighLine, StopGuide } from './ChartGuides'
+import { GapBoxes, GuideTags, HighLine, StopGuide, UsualBand } from './ChartGuides'
 import TextAnnotations, { TextAnnotationEditor } from './TextAnnotations'
 import TrendLines, { LabelEditor } from './TrendLines'
 import ChartZones from './ChartZones'
@@ -276,6 +276,7 @@ const ChartBody = memo(function ChartBody({ data, ind, type, overlays, geometry,
           <g data-testid="value-guides">
             <GapBoxes gaps={guides.gaps} geometry={geometry} colors={colors} />
             <HighLine highs={guides.highs} geometry={geometry} colors={colors} />
+            <UsualBand band={guides.band} geometry={geometry} colors={colors} />
           </g>
         ) : null}
         {type === 'area' ? (
@@ -563,7 +564,8 @@ export function TVChart({
   const guideBars = valueGuides?.bars ?? data
   const showHigh = Boolean(valueGuides?.high)
   const showGaps = Boolean(valueGuides?.gaps)
-  const series = useMemo(() => guideSeries(guideBars, { high: showHigh, gaps: showGaps }), [guideBars, showHigh, showGaps])
+  const bandRows = valueGuides?.band ?? null
+  const series = useMemo(() => guideSeries(guideBars, { high: showHigh, gaps: showGaps, band: bandRows }), [guideBars, showHigh, showGaps, bandRows])
   const guides = useMemo(
     () => (valueGuides ? visibleGuides(series, guideBars, data) : null),
     [valueGuides, series, guideBars, data],

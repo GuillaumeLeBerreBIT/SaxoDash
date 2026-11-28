@@ -244,7 +244,8 @@ class BrowseTests(APITestCase):
         stock = self.browse().json()['stocks'][0]
         self.assertEqual(stock['action'], 'buy')
         self.assertEqual(stock['sector'], 'Information Technology')
-        self.assertEqual((stock['discount_pct'], stock['below_high_pct']), (25.0, 50.0))
+        self.assertEqual(stock['below_high_pct'], 50.0)
+        self.assertNotIn('discount_pct', stock)
         self.assertEqual(stock['spark'], [30.0, 20.0, 15.0])
         self.assertEqual((stock['checks_passed'], stock['checks_answered'], stock['failed_checks']), (6, 6, []))
         self.assertEqual(stock['passed_checks'], [check['label'] for check in CHECKS])
@@ -277,8 +278,6 @@ class BrowseTests(APITestCase):
                 self.assertEqual([stock['ticker'] for stock in body['stocks']], tickers)
                 self.assertTrue(all(stock['valuation'] == grade for stock in body['stocks']))
                 self.assertEqual(body['facets']['valuation'], {key: len(group) for key, group in groups.items()})
-                if grade == 'not_judged':
-                    self.assertTrue(all(stock['discount_pct'] is None for stock in body['stocks']))
 
     def test_filters_by_valuation_quality_sector_yield_and_fall(self):
         listed('AAA', valuation='cheap', last_close=15.0, high_1y=30.0)
@@ -289,6 +288,18 @@ class BrowseTests(APITestCase):
         self.assertEqual(self.tickers('?sector=Health%20Care'), ['CCC', 'DDD'])
         self.assertEqual(self.tickers('?min_yield=3'), ['CCC'])
         self.assertEqual(self.tickers('?min_fall=25'), ['AAA'])
+
+    def test_the_position_filter_keeps_the_unfiltered_order(self):
+        listed('MIX', quality='mixed', last_close=10.0)
+        listed('FIV', last_close=10.0, checks=[*CHECKS[:5], {**CHECKS[5], 'status': 'fail'}])
+        listed('SIX', last_close=40.0)
+        listed('FAIR', last_close=24.0)
+        full = self.tickers()
+        for grade, expected in [('cheap', {'FIV', 'MIX'}), ('expensive', {'SIX'})]:
+            with self.subTest(grade=grade):
+                filtered = self.tickers(f'?valuation={grade}')
+                self.assertEqual(set(filtered), expected)
+                self.assertEqual(filtered, [ticker for ticker in full if ticker in expected])
 
     def test_facet_counts_ignore_their_own_filter_but_keep_the_others(self):
         listed('AAA', last_close=15)
@@ -313,11 +324,11 @@ class BrowseTests(APITestCase):
         held = {stock['ticker']: stock['held'] for stock in self.browse().json()['stocks']}
         self.assertTrue(held['AAA'])
 
-    def test_sorts_by_discount_or_by_fall_from_the_high(self):
+    def test_sorts_by_fall_from_the_high_and_has_no_value_sort(self):
         listed('AAA', valuation='cheap', last_close=18.0, high_1y=100.0)
         listed('BBB', valuation='cheap', last_close=10.0, high_1y=12.0)
-        self.assertEqual(self.tickers('?sort=discount'), ['BBB', 'AAA'])
         self.assertEqual(self.tickers('?sort=fall'), ['AAA', 'BBB'])
+        self.assertEqual(self.browse('?sort=discount').status_code, 400)
 
     def test_pages_with_limit_and_offset_and_reports_the_total(self):
         for index in range(5):

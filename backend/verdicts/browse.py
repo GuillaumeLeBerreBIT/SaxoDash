@@ -10,7 +10,7 @@ from .models import StockVerdict
 ACTION_RANK = ['buy', 'add', 'hold', 'trim', 'not_a_fit', 'sell_review', 'no_verdict']
 VALUATIONS = ['cheap', 'fair', 'expensive', 'not_judged']
 QUALITIES = ['strong', 'incomplete', 'mixed', 'weak', 'unknown']
-SORTS = ['opportunity', 'discount', 'fall', 'checks', 'funds']
+SORTS = ['opportunity', 'fall', 'checks', 'funds']
 SCREENS = {'all', 'strong', 'pullbacks', 'fund-buying', 'saved', *(shelf.key for shelf in shelves.SHELVES)}
 DEFAULT_LIMIT = 24
 MAX_LIMIT = 60
@@ -58,7 +58,6 @@ def _stock(verdict, row, summary):
         'last_close': close,
         'cheap_below': verdict.cheap_below,
         'expensive_above': verdict.expensive_above,
-        'discount_pct': _pct_under(close, verdict.cheap_below) if zone != 'not_judged' else None,
         'below_high_pct': _pct_under(verdict.last_close, verdict.high_1y),
         'dividend_yield': row.get('dividend_yield'),
         'market_cap': row.get('market_cap'),
@@ -109,8 +108,6 @@ def _sort_key(query):
         return lambda stock: (by(stock['checks_passed'] if stock['checks_answered'] else None), stock['ticker'])
     if query.sort == 'funds':
         return lambda stock: (by(stock.get('fund_count')), stock['ticker'])
-    if query.sort == 'discount':
-        return lambda stock: (by(stock['discount_pct']), stock['ticker'])
     if query.sort == 'fall':
         return lambda stock: (by(stock['below_high_pct']), stock['ticker'])
     return lambda stock: (_rank(stock['action']), -stock['checks_passed'], stock['ticker'])

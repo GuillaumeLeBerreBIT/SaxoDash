@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { EMPTY_FILTERS, browseQuery, checksLine, fallLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, qualityCount, toggled } from './discoverBrowse'
+import { EMPTY_FILTERS, SORTS, VALUATION_OPTIONS, browseQuery, checksLine, fallLine, filtersActive, filtersFromParams, paramsFromFilters, priceLine, qualityCount, toggled } from './discoverBrowse'
+import { POSITION_LABEL } from './verdicts'
 
 describe('filters and the URL', () => {
   it('round-trips through search params', () => {
@@ -44,10 +45,9 @@ describe('toggled', () => {
 
 describe('card lines', () => {
   it('uses the filtered grade for the price description', () => {
-    expect(priceLine({ valuation: 'cheap', discount_pct: 55.4 })).toBe('55% below its usual P/E range')
-    expect(priceLine({ valuation: 'cheap', discount_pct: 0.2 })).toBe('Below its usual P/E range')
-    expect(priceLine({ valuation: 'fair', below_high_pct: 31 })).toBe('Within its usual P/E range')
-    expect(priceLine({ valuation: 'expensive' })).toBe('Above its usual P/E range')
+    expect(priceLine({ valuation: 'cheap', below_high_pct: 5 })).toBe('Lower part of usual range')
+    expect(priceLine({ valuation: 'fair', below_high_pct: 31 })).toBe('Middle')
+    expect(priceLine({ valuation: 'expensive' })).toBe('Upper part')
     expect(priceLine({ valuation: 'not_judged', below_high_pct: 31.2 })).toBe('31% below its 1-year high')
     expect(priceLine({ valuation: 'not_judged' })).toBeNull()
   })
@@ -73,5 +73,12 @@ describe('card lines', () => {
     expect(checksLine({ passed_checks: ['Return on equity'] })).toBe('Passes on return on equity.')
     expect(checksLine({ failed_checks: ['Debt', 'Margins', 'Revenue growth'] })).toBe('Misses 3 checks, including debt and margins.')
     expect(checksLine({ revenue_growth_5y: 0 })).toContain('0.0%')
+  })
+})
+
+describe('position without value ranking', () => {
+  it('offers no value sort and filters by the position labels only', () => {
+    expect(SORTS.map((sort) => sort.value)).not.toContain('discount')
+    expect(VALUATION_OPTIONS.map((option) => option.label)).toEqual([POSITION_LABEL.cheap, POSITION_LABEL.fair, POSITION_LABEL.expensive])
   })
 })

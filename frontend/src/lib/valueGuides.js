@@ -1,33 +1,42 @@
 import { fmtEur, fmtMoney } from './format'
 import { rollingHigh, volumeGaps } from './indicators'
-import { actionLabel, actionTone } from './verdicts'
+import { POSITION_LABEL, actionLabel, actionTone } from './verdicts'
 
 const QUALITY_WORDS = { strong: 'Strong company', incomplete: 'Incomplete figures on the company', mixed: 'Mixed company', weak: 'Weak company', unknown: 'Not enough figures on the company' }
-const ZONE_WORDS = { cheap: 'P/E below its usual range', fair: 'P/E within its usual range', expensive: 'P/E above its usual range' }
 const NOT_JUDGED = 'Too little P/E history to judge the price.'
 
-export function guideSeries(bars, { high, gaps }) {
+function alignBand(bars, rows) {
+  const byDate = new Map(rows.map((row) => [row[0], row]))
+  return bars.map((bar) => {
+    const row = byDate.get(bar.date)
+    return row && row[1] != null && row[2] != null ? row : null
+  })
+}
+
+export function guideSeries(bars, { high, gaps, band = null }) {
   return {
     highs: high ? rollingHigh(bars) : null,
     gaps: gaps ? volumeGaps(bars).map((gap) => ({ ...gap, filledOn: gap.filled ? bars[gap.end].date : null })) : [],
+    band: band ? alignBand(bars, band) : null,
   }
 }
 
 export function visibleGuides(series, bars, data) {
   const offset = data.length ? bars.findIndex((bar) => bar.date === data[0].date) : -1
-  if (offset < 0) return { highs: null, gaps: [] }
+  if (offset < 0) return { highs: null, gaps: [], band: null }
   return {
     highs: series.highs ? series.highs.slice(offset, offset + data.length) : null,
     gaps: series.gaps
       .map((gap) => ({ ...gap, index: gap.index - offset, end: gap.end - offset }))
       .filter((gap) => gap.end >= 0 && gap.index < data.length),
+    band: series.band ? series.band.slice(offset, offset + data.length) : null,
   }
 }
 
 function priceSentence(verdict, currency) {
   const { cheap_below: cheap, expensive_above: expensive, pe_p25: low, pe_p75: high } = verdict
   if (verdict.valuation === 'not_judged' || cheap == null || expensive == null || low == null || high == null) return NOT_JUDGED
-  return `Its usual P/E of ${Math.round(low)} to ${Math.round(high)} spans ${fmtMoney(cheap, currency)} to ${fmtMoney(expensive, currency)}. A rule of thumb, not a buy signal.`
+  return `Its usual P/E of ${Math.round(low)} to ${Math.round(high)} spans ${fmtMoney(cheap, currency)} to ${fmtMoney(expensive, currency)}. A rule of thumb, not a buy or sell signal.`
 }
 
 const percent = (value) => `${Math.abs(value).toFixed(1)}%`
@@ -50,11 +59,11 @@ export function entrySentence({ verdict, plan, held = false, earnings = null, cu
   const risk = riskLine(plan, held)
   if (!verdict) return risk || earnings ? { word: null, tone: undefined, why: null, next: null, risk, earnings } : null
   const quality = QUALITY_WORDS[verdict.quality] ?? QUALITY_WORDS.unknown
-  const valuation = ZONE_WORDS[verdict.valuation]
+  const position = POSITION_LABEL[verdict.valuation]
   return {
     word: actionLabel(verdict).toUpperCase(),
     tone: actionTone(verdict.action),
-    why: `${quality}, ${valuation ?? 'no valuation yet'}.`,
+    why: `${quality}, P/E position: ${position ?? 'not yet known'}.`,
     next: priceSentence(verdict, currency),
     risk,
     earnings,

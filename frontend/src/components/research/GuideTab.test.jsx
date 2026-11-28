@@ -53,10 +53,10 @@ describe('GuideTab', () => {
     expect(section).toHaveTextContent(/gap down cannot be judged fairly/i)
   })
 
-  it('no longer describes cheap and expensive zones, and says the range gave no edge', () => {
+  it('no longer describes cheap and expensive zones, and points the evidence to the Usual P/E range guide', () => {
     render(<GuideTab />)
     expect(screen.queryByText('Cheap and expensive zones')).not.toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Chart guides' })).toHaveTextContent(/did worse than the average stock/)
+    expect(screen.getByRole('region', { name: 'Chart guides' })).toHaveTextContent(/Its graded evidence is under that guide/)
   })
 
   it('leaves the list out before any scores exist', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ACTION_LABEL, GRADE_LABEL, actionLabel, actionTone, checkLine, trendSentence, verdictTicker } from './verdicts'
+import { ACTION_LABEL, GRADE_LABEL, POSITION_LABEL, VALUATION_CAPTION, actionLabel, actionTone, checkLine, trendSentence, verdictTicker } from './verdicts'
 
 describe('verdict wording', () => {
   it('labels every action the backend can send', () => {
@@ -95,5 +95,17 @@ describe('verdictTicker', () => {
   it('asks only about US-dollar listings', () => {
     expect(verdictTicker({ ticker: 'nvda', currency: 'USD' })).toBe('NVDA')
     expect(verdictTicker({ ticker: 'SAP', currency: 'EUR' })).toBeNull()
+  })
+})
+
+describe('usual range vocabulary', () => {
+  it('names the three positions once, and only by position', () => {
+    expect(POSITION_LABEL).toEqual({ cheap: 'Lower part of usual range', fair: 'Middle', expensive: 'Upper part' })
+    expect(JSON.stringify(POSITION_LABEL)).not.toMatch(/cheap price|expensive price/i)
+  })
+
+  it('captions the valuation word and never calls it a buy or sell signal', () => {
+    expect(VALUATION_CAPTION).toBe('Rule of thumb, not a buy or sell signal')
+    expect(GRADE_LABEL.valuation).toEqual({ cheap: 'Below usual P/E', fair: 'Within usual P/E', expensive: 'Above usual P/E', not_judged: 'Not judged' })
   })
 })
